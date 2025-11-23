@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 1000" preserveAspectRatio="none">
+  <defs>
+    <pattern id="knot" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="40" height="40" fill="white"/>
+      <path d="M0 20 H40 M20 0 V40 M0 0 L40 40 M40 0 L0 40" stroke="#8b7355" stroke-width="2" fill="none" opacity="0.5"/>
+    </pattern>
+    <clipPath id="wedge">
+      <path d="M200 0 Q150 70 160 160 L160 840 Q150 930 200 1000 L200 0 Z"/>
+    </clipPath>
+  </defs>
+  <rect x="0" y="0" width="200" height="1000" fill="url(#knot)" clip-path="url(#wedge)"/>
+</svg>

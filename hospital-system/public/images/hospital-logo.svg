@@ -1,0 +1,24 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <!-- Person 1 (Left - Brown) -->
+    <circle cx="25" cy="35" r="8" fill="#8b7355"/>
+    <path d="M 25 45 Q 20 50 18 60 L 32 60 Q 30 50 25 45 Z" fill="#8b7355"/>
+    
+    <!-- Person 2 (Center - Gray) -->
+    <circle cx="45" cy="30" r="10" fill="#a0a0a0"/>
+    <path d="M 45 42 Q 38 48 35 62 L 55 62 Q 52 48 45 42 Z" fill="#a0a0a0"/>
+    
+    <!-- Person 3 (Right - Teal) -->
+    <circle cx="65" cy="35" r="8" fill="#5fa8a8"/>
+    <path d="M 65 45 Q 60 50 58 60 L 72 60 Q 70 50 65 45 Z" fill="#5fa8a8"/>
+    
+    <!-- Curved line below figures -->
+    <path d="M 15 65 Q 45 70 75 65" stroke="#5fa8a8" stroke-width="2" fill="none"/>
+    
+    <!-- Concentric circles (Right side) -->
+    <circle cx="95" cy="40" r="20" fill="none" stroke="#5fa8a8" stroke-width="1.5" opacity="0.3"/>
+    <circle cx="95" cy="40" r="15" fill="none" stroke="#5fa8a8" stroke-width="1.5" opacity="0.5"/>
+    <circle cx="95" cy="40" r="10" fill="none" stroke="#5fa8a8" stroke-width="1.5" opacity="0.7"/>
+    
+    <!-- Large K letter -->
+    <text x="42" y="105" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#5fa8a8">K</text>
+</svg>

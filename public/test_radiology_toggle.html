@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار التبديل بين المختبر والأشعة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>اختبار التبديل بين قائمة المختبر والأشعة</h2>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="request_type" class="form-label">نوع الطلب</label>
+                    <select name="type" id="request_type" class="form-select">
+                        <option value="lab">فحوصات مختبرية</option>
+                        <option value="radiology">أشعة / تصوير</option>
+                    </select>
+                </div>
+
+                <!-- قسم المختبر -->
+                <div class="card border-0 shadow-sm" id="labTests" style="display: block;">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-microscope me-2"></i>
+                            الفحوصات المختبرية
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p>هذا قسم الفحوصات المختبرية</p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="test1">
+                            <label class="form-check-label" for="test1">
+                                تحليل دم كامل
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الأشعة -->
+                <div class="card border-0 shadow-sm mt-3" id="radiologyTests" style="display: none;">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-x-ray me-2"></i>
+                            فحوصات الأشعة
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p>هذا قسم فحوصات الأشعة</p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="rad1">
+                            <label class="form-check-label" for="rad1">
+                                أشعة عادية (X-ray)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const requestTypeSelect = document.getElementById('request_type');
+            const labCard = document.getElementById('labTests');
+            const radiologyCard = document.getElementById('radiologyTests');
+
+            function toggleRequestType(type) {
+                console.log('Toggle called with:', type);
+                console.log('Lab card:', labCard);
+                console.log('Radiology card:', radiologyCard);
+                
+                if (!labCard || !radiologyCard) {
+                    console.error('Cards not found!');
+                    return;
+                }
+                
+                if (type === 'radiology') {
+                    console.log('Showing radiology, hiding lab');
+                    labCard.style.display = 'none';
+                    radiologyCard.style.display = 'block';
+                } else {
+                    console.log('Showing lab, hiding radiology');
+                    labCard.style.display = 'block';
+                    radiologyCard.style.display = 'none';
+                }
+            }
+
+            if (requestTypeSelect) {
+                console.log('Type select found, adding listener');
+                requestTypeSelect.addEventListener('change', function() {
+                    console.log('Type changed to:', this.value);
+                    toggleRequestType(this.value);
+                });
+
+                // Initialize
+                toggleRequestType(requestTypeSelect.value || 'lab');
+            } else {
+                console.error('Type select not found!');
+            }
+        });
+    </script>
+</body>
+</html>
