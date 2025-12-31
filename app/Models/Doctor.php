@@ -15,6 +15,7 @@ class Doctor extends Model
         'department_id',
         'phone',
         'specialization',
+        'type',
         'qualification',
         'license_number',
         'experience_years',
@@ -43,6 +44,17 @@ class Doctor extends Model
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    public function visits()
+    {
+        return $this->hasMany(Visit::class);
+    }
+
+    public function patients()
+    {
+        return $this->belongsToMany(Patient::class, 'visits')
+            ->distinct();
     }
 
     public function getTodayAppointmentsCount()

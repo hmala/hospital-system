@@ -87,6 +87,12 @@ class Visit extends Model
         return $this->hasMany(LabResult::class);
     }
 
+    // العلاقة مع طلبات الأشعة
+    public function radiologyRequests()
+    {
+        return $this->hasMany(RadiologyRequest::class);
+    }
+
     // العلاقة مع العملية الجراحية
     public function surgery()
     {

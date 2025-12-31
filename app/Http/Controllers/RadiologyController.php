@@ -23,18 +23,18 @@ class RadiologyController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->isAdmin() || $user->isReceptionist()) {
+        if ($user->hasAnyRole(['admin', 'receptionist'])) {
             // الإداريون والاستقبال يرون جميع الطلبات
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
-        } elseif ($user->isDoctor()) {
+        } elseif ($user->hasRole('doctor')) {
             // الأطباء يرون طلباتهم فقط
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->where('doctor_id', $user->doctor->id)
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
-        } elseif ($user->isPatient()) {
+        } elseif ($user->hasRole('patient')) {
             // المرضى يرون طلباتهم فقط
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->where('patient_id', $user->patient->id)
@@ -62,7 +62,7 @@ class RadiologyController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->isAdmin() && !$user->isReceptionist() && !$user->isDoctor()) {
+        if (!$user->can('create radiology')) {
             abort(403, 'غير مصرح لك بإنشاء طلبات إشعة');
         }
 
@@ -142,8 +142,12 @@ class RadiologyController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->isAdmin() && !$user->isReceptionist() &&
-            ($user->isDoctor() && $radiology->doctor_id !== $user->doctor->id)) {
+        if (!$user->can('edit radiology')) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب');
+        }
+
+        // الأطباء يعدلون طلباتهم فقط
+        if ($user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
             abort(403, 'غير مصرح لك بتعديل هذا الطلب');
         }
 
@@ -199,8 +203,12 @@ class RadiologyController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->isAdmin() && !$user->isReceptionist() &&
-            ($user->isDoctor() && $radiology->doctor_id !== $user->doctor->id)) {
+        if (!$user->can('delete radiology')) {
+            abort(403, 'غير مصرح لك بحذف هذا الطلب');
+        }
+
+        // الأطباء يحذفون طلباتهم فقط
+        if ($user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
             abort(403, 'غير مصرح لك بحذف هذا الطلب');
         }
 

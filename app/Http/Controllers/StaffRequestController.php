@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SurgeryLabTestUpdated;
 use App\Models\Request as MedicalRequest;
 use App\Models\LabTestResult;
 use App\Models\LabResult;
@@ -43,19 +44,18 @@ class StaffRequestController extends Controller
 
         // تحديد نوع الطلبات حسب دور المستخدم
         $allowedTypes = [];
-        if ($user->role === 'lab_staff') {
+        if ($user->hasRole('lab_staff')) {
             $allowedTypes[] = 'lab';
         }
-        if ($user->role === 'radiology_staff') {
+        if ($user->hasRole('radiology_staff')) {
             $allowedTypes[] = 'radiology';
         }
-        if ($user->role === 'pharmacy_staff') {
+        if ($user->hasRole('pharmacy_staff')) {
             $allowedTypes[] = 'pharmacy';
         }
 
         // السماح للموظفين الآخرين برؤية جميع الأنواع
-        $adminRoles = ['receptionist', 'admin', 'doctor'];
-        if (in_array($user->role, $adminRoles)) {
+        if ($user->hasRole(['receptionist', 'admin', 'doctor'])) {
             $allowedTypes = ['lab', 'radiology', 'pharmacy'];
         }
 
@@ -83,14 +83,19 @@ class StaffRequestController extends Controller
 
         // التحقق من صلاحية المستخدم لعرض هذا النوع من الطلبات
         $allowedTypes = [];
-        if ($user->role === 'lab_staff') {
+        if ($user->hasRole('lab_staff')) {
             $allowedTypes[] = 'lab';
         }
-        if ($user->role === 'radiology_staff') {
+        if ($user->hasRole('radiology_staff')) {
             $allowedTypes[] = 'radiology';
         }
-        if ($user->role === 'pharmacy_staff') {
+        if ($user->hasRole('pharmacy_staff')) {
             $allowedTypes[] = 'pharmacy';
+        }
+        
+        // admin يستطيع رؤية كل شيء
+        if ($user->hasRole(['admin', 'receptionist', 'doctor'])) {
+            $allowedTypes = ['lab', 'radiology', 'pharmacy'];
         }
 
         if (!in_array($request->type, $allowedTypes)) {
@@ -284,12 +289,10 @@ class StaffRequestController extends Controller
         ]);
 
         // التحقق من الصلاحية (موظف استقبال أو أدمن أو موظف مختبر أو أي موظف)
-        $allowedRoles = ['receptionist', 'admin', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'];
-        if (!in_array($user->role, $allowedRoles)) {
+        if (!$user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'])) {
             \Log::warning('تم رفض الوصول لإنشاء زيارة مختبرية', [
                 'user_id' => $user->id,
-                'user_role' => $user->role,
-                'allowed_roles' => $allowedRoles
+                'roles' => $user->roles->pluck('name')->toArray()
             ]);
             abort(403, 'غير مصرح لك بإنشاء زيارات مختبرية');
         }
@@ -305,8 +308,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
         
         // التحقق من الصلاحية
-        $allowedRoles = ['receptionist', 'admin', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'];
-        if (!in_array($user->role, $allowedRoles)) {
+        if (!$user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بإنشاء زيارات مختبرية');
         }
 
@@ -366,7 +368,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحية
-        if ($user->role !== 'lab_staff' && $user->role !== 'admin' && $user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بالوصول إلى طلبات المختبر للعمليات');
         }
 
@@ -416,7 +418,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
         
         // التحقق من الصلاحية
-        if ($user->role !== 'lab_staff' && $user->role !== 'admin' && $user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -433,7 +435,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
         
         // التحقق من الصلاحية
-        if ($user->role !== 'lab_staff' && $user->role !== 'admin' && $user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
         }
 
@@ -457,7 +459,41 @@ class StaffRequestController extends Controller
 
         $test->update($validated);
 
+        // إرسال حدث التحديث في الوقت الفعلي
+        broadcast(new SurgeryLabTestUpdated($test))->toOthers();
+
         return redirect()->back()->with('success', 'تم تحديث الطلب بنجاح');
+    }
+
+    /**
+     * طباعة نتائج تحاليل العملية
+     */
+    public function printSurgeryLabTest(\App\Models\SurgeryLabTest $test)
+    {
+        $user = Auth::user();
+
+        // التحقق من الصلاحية
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بطباعة هذا الطلب');
+        }
+
+        // التحقق من وجود تحاليل مكتملة للعملية
+        $completedTests = \App\Models\SurgeryLabTest::where('surgery_id', $test->surgery_id)
+            ->where('status', 'completed')
+            ->count();
+
+        if ($completedTests === 0) {
+            abort(403, 'لا توجد تحاليل مكتملة لهذه العملية');
+        }
+
+        // جلب جميع التحاليل المتعلقة بنفس العملية والمكتملة
+        $surgeryLabTests = \App\Models\SurgeryLabTest::with(['surgery.patient.user', 'surgery.doctor.user', 'labTest'])
+            ->where('surgery_id', $test->surgery_id)
+            ->where('status', 'completed')
+            ->orderBy('created_at')
+            ->get();
+
+        return view('staff.surgery-lab-tests.print', compact('surgeryLabTests', 'test'));
     }
 
     /**
@@ -468,7 +504,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
         
         // التحقق من الصلاحية
-        if ($user->role !== 'radiology_staff' && $user->role !== 'admin' && $user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بالوصول إلى طلبات الأشعة للعمليات');
         }
 
@@ -518,7 +554,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
         
         // التحقق من الصلاحية
-        if ($user->role !== 'radiology_staff' && $user->role !== 'admin' && $user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -535,7 +571,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
         
         // التحقق من الصلاحية
-        if ($user->role !== 'radiology_staff' && $user->role !== 'admin' && $user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
         }
 

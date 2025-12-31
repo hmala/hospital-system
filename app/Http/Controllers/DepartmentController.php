@@ -9,6 +9,19 @@ use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
+    public function publicIndex()
+    {
+        $departments = Department::with(['hospital', 'doctors'])
+            ->where('is_active', true)
+            ->withCount(['appointments as today_appointments_count' => function($query) {
+                $query->whereDate('appointment_date', today());
+            }])
+            ->latest()
+            ->paginate(10);
+
+        return view('departments.public_index', compact('departments'));
+    }
+
     public function index()
     {
         $departments = Department::with(['hospital', 'doctors'])

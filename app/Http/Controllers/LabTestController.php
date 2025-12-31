@@ -12,14 +12,24 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        // التحقق من صلاحية الوصول (admin أو lab_staff)
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        // السماح بالمشاهدة للأطباء والموظفين، لكن التحرير محدود للمسؤولين وموظفي المختبر
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $query = LabTest::query();
 
-        // فلترة حسب الفئة إذا تم تحديدها
+        // فلترة حسب التصنيف الرئيسي
+        if (request('main_category')) {
+            $query->where('main_category', request('main_category'));
+        }
+
+        // فلترة حسب التصنيف الفرعي
+        if (request('subcategory')) {
+            $query->where('subcategory', request('subcategory'));
+        }
+
+        // فلترة حسب الفئة القديمة إذا تم تحديدها
         if (request('category')) {
             $query->where('category', request('category'));
         }
@@ -29,7 +39,16 @@ class LabTestController extends Controller
             $query->where('is_active', request('status') === 'active');
         }
 
-        $labTests = $query->orderBy('category')->orderBy('name')->paginate(15);
+        // البحث بالاسم
+        if (request('search')) {
+            $query->where('name', 'like', '%' . request('search') . '%');
+        }
+
+        $labTests = $query->orderBy('main_category')->orderBy('subcategory')->orderBy('name')->paginate(20);
+
+        // الحصول على جميع التصنيفات الرئيسية والفرعية الموجودة
+        $mainCategories = LabTest::select('main_category')->distinct()->whereNotNull('main_category')->pluck('main_category')->toArray();
+        $subcategories = LabTest::select('subcategory')->distinct()->whereNotNull('subcategory')->pluck('subcategory')->toArray();
 
         $categories = [
             'biochemistry' => 'كيمياء سريرية',
@@ -46,7 +65,7 @@ class LabTestController extends Controller
             'other' => 'أخرى'
         ];
 
-        return view('lab-tests.index', compact('labTests', 'categories'));
+        return view('lab-tests.index', compact('labTests', 'categories', 'mainCategories', 'subcategories'));
     }
 
     public function create()
@@ -99,7 +118,8 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        // السماح بمشاهدة تفاصيل الفحص للأطباء والموظفين
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

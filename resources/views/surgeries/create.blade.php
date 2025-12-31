@@ -20,7 +20,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="patient_id" class="form-label">المريض <span class="text-danger">*</span></label>
-                            <select name="patient_id" id="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required>
+                            <select name="patient_id" id="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required autofocus>
                                 <option value="">اختر المريض</option>
                                 @foreach($patients as $patient)
                                     <option value="{{ $patient->id }}" {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
@@ -105,6 +105,132 @@
                     </div>
                 </div>
                 
+                <!-- تفاصيل العملية المفصلة -->
+                @if(Auth::user()->hasRole(['admin', 'surgery_staff', 'doctor']))
+                <div class="card mb-3 border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-user-md me-2"></i>تفاصيل العملية المفصلة</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="anesthesiologist_id" class="form-label">الطبيب المخدر</label>
+                                    <select name="anesthesiologist_id" id="anesthesiologist_id" class="form-select @error('anesthesiologist_id') is-invalid @enderror">
+                                        <option value="">اختر الطبيب المخدر</option>
+                                        @foreach($doctors as $doctor)
+                                            <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_id') == $doctor->id) ? 'selected' : '' }}>
+                                                د. {{ $doctor->user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('anesthesiologist_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="anesthesiologist_2_id" class="form-label">الطبيب المخدر الثاني</label>
+                                    <select name="anesthesiologist_2_id" id="anesthesiologist_2_id" class="form-select @error('anesthesiologist_2_id') is-invalid @enderror">
+                                        <option value="">اختر الطبيب المخدر الثاني</option>
+                                        @foreach($doctors as $doctor)
+                                            <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_2_id') == $doctor->id) ? 'selected' : '' }}>
+                                                د. {{ $doctor->user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('anesthesiologist_2_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="surgical_assistant_name" class="form-label">اسم مساعد الجراح</label>
+                                    <input type="text" name="surgical_assistant_name" id="surgical_assistant_name" 
+                                           class="form-control @error('surgical_assistant_name') is-invalid @enderror" 
+                                           value="{{ old('surgical_assistant_name') }}">
+                                    @error('surgical_assistant_name')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="referring_physician" class="form-label">الطبيب المرسل</label>
+                                    <input type="text" name="referring_physician" id="referring_physician" 
+                                           class="form-control @error('referring_physician') is-invalid @enderror" 
+                                           value="{{ old('referring_physician') }}">
+                                    @error('referring_physician')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="start_time" class="form-label">وقت بدء العملية</label>
+                                    <input type="time" name="start_time" id="start_time" 
+                                           class="form-control @error('start_time') is-invalid @enderror" 
+                                           value="{{ old('start_time') }}">
+                                    @error('start_time')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="end_time" class="form-label">وقت انتهاء العملية</label>
+                                    <input type="time" name="end_time" id="end_time" 
+                                           class="form-control @error('end_time') is-invalid @enderror" 
+                                           value="{{ old('end_time') }}">
+                                    @error('end_time')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="anesthesia_type" class="form-label">نوع التخدير</label>
+                                    <input type="text" name="anesthesia_type" id="anesthesia_type" 
+                                           class="form-control @error('anesthesia_type') is-invalid @enderror" 
+                                           value="{{ old('anesthesia_type') }}">
+                                    @error('anesthesia_type')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="surgery_classification" class="form-label">تصنيف العملية</label>
+                                    <input type="text" name="surgery_classification" id="surgery_classification" 
+                                           class="form-control @error('surgery_classification') is-invalid @enderror" 
+                                           value="{{ old('surgery_classification') }}">
+                                    @error('surgery_classification')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="supplies" class="form-label">المستلزمات</label>
+                                    <textarea name="supplies" id="supplies" class="form-control @error('supplies') is-invalid @enderror" rows="2">{{ old('supplies') }}</textarea>
+                                    @error('supplies')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                
                 <!-- مصدر التحويل -->
                 <div class="card mb-3 border-primary">
                     <div class="card-header bg-primary text-white">
@@ -164,21 +290,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="description" class="form-label">وصف العملية</label>
-                    <textarea name="description" id="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ old('description') }}</textarea>
-                    @error('description')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="mb-3">
-                    <label for="notes" class="form-label">ملاحظات إضافية</label>
-                    <textarea name="notes" id="notes" class="form-control @error('notes') is-invalid @enderror" rows="2">{{ old('notes') }}</textarea>
-                    @error('notes')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
                 </div>
 
                 <!-- التحاليل والأشعة المطلوبة -->

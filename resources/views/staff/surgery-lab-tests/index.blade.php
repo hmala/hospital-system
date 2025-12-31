@@ -9,7 +9,7 @@
                     <i class="fas fa-flask me-2"></i>
                     طلبات المختبر للعمليات الجراحية
                 </h2>
-                <div class="stats-summary">
+                <div class="stats-summary realtime-section" data-section="stats">
                     <span class="badge bg-info me-2">
                         <i class="fas fa-clock me-1"></i>
                         {{ $labTests->where('status', 'pending')->count() }} في الانتظار
@@ -99,7 +99,7 @@
         </div>
         <div class="card-body">
             @if($labTests->count() > 0)
-            <div class="table-responsive">
+            <div class="table-responsive realtime-section" data-section="table">
                 <table class="table table-striped table-hover align-middle">
                     <thead class="table-dark">
                         <tr>
@@ -115,7 +115,7 @@
                     </thead>
                     <tbody>
                         @foreach($labTests as $index => $test)
-                        <tr class="test-row {{ $test->status == 'pending' ? 'table-warning' : ($test->status == 'completed' ? 'table-success' : 'table-danger') }}">
+                        <tr class="test-row {{ $test->status == 'pending' ? 'table-warning' : ($test->status == 'completed' ? 'table-success' : 'table-danger') }}" data-test-id="{{ $test->id }}">
                             <td class="text-center">{{ $loop->iteration }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
@@ -152,7 +152,7 @@
                                 </div>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-{{ $test->status_color }} fs-6">
+                                <span class="badge bg-{{ $test->status_color }} fs-6 status-badge">
                                     <i class="fas {{ $test->status == 'pending' ? 'fa-clock' : ($test->status == 'completed' ? 'fa-check-circle' : 'fa-times-circle') }} me-1"></i>
                                     {{ $test->status_text }}
                                 </span>
@@ -172,6 +172,25 @@
                                     <button class="btn btn-sm btn-outline-success" title="تحديث النتائج" onclick="quickUpdate({{ $test->id }}, 'completed')">
                                         <i class="fas fa-check"></i>
                                     </button>
+                                    @endif
+                                    @php
+                                        $completedTestsCount = \App\Models\SurgeryLabTest::where('surgery_id', $test->surgery_id)->where('status', 'completed')->count();
+                                    @endphp
+                                    @if($completedTestsCount > 0)
+                                    <a href="{{ route('staff.surgery-lab-tests.print', $test) }}"
+                                       class="btn btn-sm btn-outline-success"
+                                       target="_blank"
+                                       title="طباعة نتائج العملية">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                    @endif
+                                    @if($test->status == 'completed')
+                                    <a href="{{ route('staff.surgery-lab-tests.print', $test) }}"
+                                       class="btn btn-sm btn-outline-success"
+                                       target="_blank"
+                                       title="طباعة النتائج">
+                                        <i class="fas fa-print"></i>
+                                    </a>
                                     @endif
                                 </div>
                             </td>

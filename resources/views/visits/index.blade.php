@@ -96,7 +96,7 @@
         <div class="col-md-2 col-6">
             <div class="card bg-success text-white">
                 <div class="card-body text-center py-3">
-                    <h5 class="mb-0">{{ $visits->where('visit_date', today())->count() }}</h5>
+                    <h5 class="mb-0">{{ $visits->getCollection()->where('visit_date', today()->format('Y-m-d'))->count() }}</h5>
                     <small>زيارات اليوم</small>
                 </div>
             </div>

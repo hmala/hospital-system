@@ -28,7 +28,7 @@ class InquiryController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -55,7 +55,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -105,6 +105,7 @@ class InquiryController extends Controller
                 $query->where('is_active', true);
             })
             ->where('is_active', true)
+            ->where('type', 'consultant')
             ->get();
 
         return view('inquiry.create', compact('patient', 'requestTypes', 'doctors'));
@@ -117,7 +118,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -222,12 +223,6 @@ class InquiryController extends Controller
             ])
         ]);
 
-        // إذا كان التحويل التلقائي مفعّلاً
-        if ($httpRequest->auto_refer) {
-            return redirect()->route('staff.referrals.create', ['request_id' => $medicalRequest->id])
-                ->with('success', 'تم إنشاء الطلب بنجاح! جاري التحويل...');
-        }
-
         return redirect()->route('inquiry.index')
             ->with('success', 'تم إنشاء الطلب بنجاح! رقم الطلب: #' . $medicalRequest->id);
     }
@@ -239,7 +234,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -275,7 +270,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -307,7 +302,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -374,7 +369,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -421,7 +416,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

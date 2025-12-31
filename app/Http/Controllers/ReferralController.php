@@ -18,8 +18,8 @@ class ReferralController extends Controller
     {
         $user = Auth::user();
 
-        // التحقق من أن المستخدم موظف استقبال أو موظف طبي
-        if (!in_array($user->role, ['receptionist', 'staff', 'lab_technician'])) {
+        // التحقق من أن المستخدم موظف استقبال أو موظف طبي أو admin
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'lab_technician'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -41,7 +41,7 @@ class ReferralController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'staff', 'lab_technician'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'lab_technician'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -80,7 +80,7 @@ class ReferralController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -121,7 +121,7 @@ class ReferralController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

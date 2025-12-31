@@ -16,11 +16,65 @@ class RadiologyTypeController extends Controller
     /**
      * Display a listing of radiology types.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $types = RadiologyType::orderBy('name')->paginate(15);
+        $query = RadiologyType::query();
 
-        return view('radiology.types.index', compact('types'));
+        // البحث بالاسم أو الكود
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // الفلترة حسب الحالة
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->is_active);
+        }
+
+        // الفلترة حسب الحاجة لمادة تباين
+        if ($request->filled('requires_contrast')) {
+            $query->where('requires_contrast', $request->requires_contrast);
+        }
+
+        // الفلترة حسب الحاجة للتحضير
+        if ($request->filled('requires_preparation')) {
+            $query->where('requires_preparation', $request->requires_preparation);
+        }
+
+        // الفلترة حسب التصنيف الرئيسي
+        if ($request->filled('main_category')) {
+            $query->where('main_category', $request->main_category);
+        }
+
+        // الفلترة حسب التصنيف الفرعي
+        if ($request->filled('subcategory')) {
+            $query->where('subcategory', $request->subcategory);
+        }
+
+        // الفلترة حسب نطاق السعر
+        if ($request->filled('min_price')) {
+            $query->where('base_price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('base_price', '<=', $request->max_price);
+        }
+
+        // الترتيب
+        $sortBy = $request->get('sort_by', 'name');
+        $sortDir = $request->get('sort_dir', 'asc');
+        $query->orderBy($sortBy, $sortDir);
+
+        $types = $query->paginate(15)->withQueryString();
+        
+        // الحصول على التصنيفات المتاحة
+        $mainCategories = RadiologyType::distinct()->pluck('main_category');
+        $subcategories = RadiologyType::distinct()->pluck('subcategory');
+
+        return view('radiology.types.index', compact('types', 'mainCategories', 'subcategories'));
     }
 
     /**

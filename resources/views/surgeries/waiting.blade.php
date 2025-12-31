@@ -7,7 +7,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-clock me-2"></i>
-                    شاشة العمليات ({{ date('Y-m-d') }})
+                    شاشة العمليات (جميع العمليات المعلقة)
                 </h2>
                 <div>
                     <a href="{{ route('surgeries.control') }}" class="btn btn-primary me-2">
@@ -42,6 +42,7 @@
                                 <tr>
                                     <th>المريض</th>
                                     <th>العملية</th>
+                                    <th>التاريخ</th>
                                     <th>الوقت</th>
                                 </tr>
                             </thead>
@@ -53,12 +54,13 @@
                                         <small class="text-muted">د. {{ $surgery->doctor->user->name }}</small>
                                     </td>
                                     <td>{{ $surgery->surgery_type }}</td>
+                                    <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
                                     <td>{{ $surgery->scheduled_time }}</td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="3" class="text-center py-4 text-muted">
-                                        لا يوجد مرضى في الانتظار
+                                    <td colspan="4" class="text-center py-4 text-muted">
+                                        لا توجد عمليات في الانتظار
                                     </td>
                                 </tr>
                                 @endforelse

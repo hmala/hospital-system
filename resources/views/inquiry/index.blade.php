@@ -177,23 +177,6 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                @if($visit->requests->count() > 0)
-                                                    @foreach($visit->requests as $request)
-                                                        @if($request->status == 'pending')
-                                                            <a href="{{ route('staff.referrals.create', ['request_id' => $request->id]) }}" 
-                                                               class="btn btn-sm btn-primary"
-                                                               title="تحويل المريض">
-                                                                <i class="fas fa-arrow-right"></i>
-                                                            </a>
-                                                        @endif
-                                                    @endforeach
-                                                @else
-                                                    <a href="{{ route('inquiry.create', ['patient_id' => $visit->patient_id]) }}" 
-                                                       class="btn btn-sm btn-success"
-                                                       title="إنشاء طلب">
-                                                        <i class="fas fa-plus"></i>
-                                                    </a>
-                                                @endif
                                                 <a href="{{ Auth::user()->isDoctor() ? route('doctor.visits.show', $visit->id) : route('visits.show', $visit->id) }}" 
                                                    class="btn btn-sm btn-info"
                                                    title="التفاصيل">
@@ -241,13 +224,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-3">
-                            <a href="{{ route('staff.referrals.index') }}" class="btn btn-outline-primary w-100 mb-2">
-                                <i class="fas fa-exchange-alt me-2"></i>
-                                التحويلات المعلقة
-                            </a>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="{{ route('patients.index') }}" class="btn btn-outline-info w-100 mb-2">
                                 <i class="fas fa-users me-2"></i>
                                 قائمة المرضى

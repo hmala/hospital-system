@@ -6,11 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -64,38 +65,39 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\Doctor::class);
     }
 
-    // مساعدات الأدوار
-    public function hasRole($roles)
+    public function visits()
     {
-        if (is_string($roles)) {
-            $roles = [$roles];
-        }
-
-        return in_array($this->role, $roles);
+        return $this->hasMany(\App\Models\Visit::class, 'doctor_id');
     }
 
+    // مساعدات الأدوار - متوافقة مع Spatie Permission
     public function isAdmin()
     {
-        return $this->role === 'admin';
+        return $this->hasRole('admin');
     }
 
     public function isDoctor()
     {
-        return $this->role === 'doctor';
+        return $this->hasRole('doctor');
     }
 
     public function isPatient()
     {
-        return $this->role === 'patient';
+        return $this->hasRole('patient');
     }
 
     public function isReceptionist()
     {
-        return $this->role === 'receptionist';
+        return $this->hasRole('receptionist');
     }
 
     public function isStaff()
     {
-        return in_array($this->role, ['lab_staff', 'radiology_staff', 'pharmacy_staff']);
+        return $this->hasAnyRole(['lab_staff', 'radiology_staff', 'pharmacy_staff', 'surgery_staff']);
+    }
+
+    public function isSurgeryStaff()
+    {
+        return $this->hasRole('surgery_staff');
     }
 }

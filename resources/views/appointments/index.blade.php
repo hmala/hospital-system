@@ -81,7 +81,7 @@
                     <h5 class="mb-0">المواعيد النشطة</h5>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive" id="active-appointments-table">
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
@@ -230,4 +230,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+@endsection
+@section('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function reloadAppointmentsTable() {
+        $.ajax({
+            url: window.location.href,
+            type: 'GET',
+            dataType: 'html',
+            success: function(data) {
+                var newTable = $(data).find('#active-appointments-table').html();
+                $('#active-appointments-table').html(newTable);
+            }
+        });
+    }
+    setInterval(reloadAppointmentsTable, 5000); // كل 10 ثواني
+</script>
 @endsection

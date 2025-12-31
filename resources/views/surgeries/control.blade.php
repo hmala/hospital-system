@@ -37,6 +37,7 @@
                                 <tr>
                                     <th>المريض</th>
                                     <th>العملية</th>
+                                    <th>التاريخ</th>
                                     <th>الوقت</th>
                                     <th>الإجراء</th>
                                 </tr>
@@ -49,6 +50,7 @@
                                         <small class="text-muted">د. {{ $surgery->doctor->user->name }}</small>
                                     </td>
                                     <td>{{ $surgery->surgery_type }}</td>
+                                    <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
                                     <td>{{ $surgery->scheduled_time }}</td>
                                     <td>
                                         @if($surgery->status == 'scheduled')
@@ -70,8 +72,8 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">
-                                        لا يوجد مرضى في الانتظار
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        لا توجد عمليات في الانتظار
                                     </td>
                                 </tr>
                                 @endforelse

@@ -14,25 +14,61 @@ class AppointmentController extends Controller
 {
     public function index()
     {
-        // المواعيد النشطة (المجدولة والمؤكدة) - فقط القادمة أو اليوم
-        $activeAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
-            ->whereIn('status', ['scheduled', 'confirmed'])
-            ->whereDate('appointment_date', '>=', today())
-            ->latest('appointment_date')
-            ->paginate(20);
+        $user = auth()->user();
+        
+        // إذا كان المستخدم مريضاً، يرى مواعيده فقط
+        if ($user->hasRole('patient')) {
+            // التحقق من وجود سجل مريض وإنشاءه إذا لم يكن موجوداً
+            if (!$user->patient) {
+                Patient::create([
+                    'user_id' => $user->id,
+                    'medical_record_number' => 'P' . str_pad($user->id, 6, '0', STR_PAD_LEFT),
+                    'blood_type' => null,
+                ]);
+                $user->load('patient');
+            }
+            
+            $activeAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
+                ->where('patient_id', $user->patient->id)
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->whereDate('appointment_date', '>=', today())
+                ->latest('appointment_date')
+                ->paginate(20);
 
-        // المواعيد المكتملة والملغاة (آخر 10 فقط)
-        $completedAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
-            ->whereIn('status', ['completed', 'cancelled'])
-            ->latest('appointment_date')
-            ->limit(10)
-            ->get();
+            $completedAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
+                ->where('patient_id', $user->patient->id)
+                ->whereIn('status', ['completed', 'cancelled'])
+                ->latest('appointment_date')
+                ->limit(10)
+                ->get();
 
-        $todayAppointments = Appointment::with(['patient.user', 'doctor.user'])
-            ->whereIn('status', ['scheduled', 'confirmed'])
-            ->today()
-            ->orderBy('appointment_date')
-            ->get();
+            $todayAppointments = Appointment::with(['patient.user', 'doctor.user'])
+                ->where('patient_id', $user->patient->id)
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->today()
+                ->orderBy('appointment_date')
+                ->get();
+        } else {
+            // المواعيد النشطة (المجدولة والمؤكدة) - فقط القادمة أو اليوم
+            $activeAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->whereDate('appointment_date', '>=', today())
+                ->latest('appointment_date')
+                ->paginate(20);
+
+            // المواعيد المكتملة والملغاة (آخر 10 فقط)
+            $completedAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
+                ->whereIn('status', ['completed', 'cancelled'])
+                ->latest('appointment_date')
+                ->limit(10)
+                ->get();
+
+            $todayAppointments = Appointment::with(['patient.user', 'doctor.user'])
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->today()
+                ->orderBy('appointment_date')
+                ->get();
+        }
 
         return view('appointments.index', compact('activeAppointments', 'completedAppointments', 'todayAppointments'));
     }
@@ -136,20 +172,24 @@ class AppointmentController extends Controller
             return back()->withErrors(['appointment_time' => 'يوجد موعد محجوز مسبقاً لهذا الطبيب في هذا التاريخ والوقت'])->withInput();
         }
 
-        $appointment->update([
-            'patient_id' => $request->patient_id,
-            'doctor_id' => $request->doctor_id,
-            'department_id' => $request->department_id,
-            'appointment_date' => $appointmentDateTime,
-            'reason' => $request->reason,
-            'notes' => $request->notes,
-            'consultation_fee' => $request->consultation_fee,
-            'duration' => $request->duration ?? 30,
-            'status' => $request->status
-        ]);
+        try {
+            $appointment->update([
+                'patient_id' => $request->patient_id,
+                'doctor_id' => $request->doctor_id,
+                'department_id' => $request->department_id,
+                'appointment_date' => $appointmentDateTime,
+                'reason' => $request->reason,
+                'notes' => $request->notes,
+                'consultation_fee' => $request->consultation_fee,
+                'duration' => $request->duration ?? 30,
+                'status' => $request->status
+            ]);
 
-        return redirect()->route('appointments.index')
-            ->with('success', 'تم تحديث الموعد بنجاح');
+            return redirect()->route('appointments.index')
+                ->with('success', 'تم تحديث الموعد بنجاح');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ الموعد: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function destroy(Appointment $appointment)
@@ -182,6 +222,12 @@ class AppointmentController extends Controller
         $request->validate([
             'cancellation_reason' => 'nullable|string|max:500'
         ]);
+
+        // التحقق من أن الموعد لم يتم تحويله إلى زيارة
+        if ($appointment->visit) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن إلغاء موعد تم تحويله إلى زيارة بالفعل');
+        }
 
         $appointment->cancel($request->cancellation_reason ?: 'تم الإلغاء من قبل المستخدم');
 

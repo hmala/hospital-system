@@ -15,7 +15,8 @@ class SurgeryLabTest extends Model
         'status',
         'result',
         'result_file',
-        'completed_at'
+        'completed_at',
+        'notes'
     ];
 
     protected $casts = [

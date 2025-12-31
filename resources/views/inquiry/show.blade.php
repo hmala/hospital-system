@@ -197,12 +197,6 @@
                                             <i class="fas fa-edit me-1"></i>تعديل الاستعلام
                                         </a>
 
-                                        @if($visit->requests && $visit->requests->count() > 0)
-                                        <a href="{{ route('staff.referrals.create', ['request_id' => $visit->requests->first()->id]) }}" class="btn btn-info">
-                                            <i class="fas fa-exchange-alt me-1"></i>تحويل المريض
-                                        </a>
-                                        @endif
-
                                         <button type="button" class="btn btn-success" onclick="completeVisit({{ $visit->id }})">
                                             <i class="fas fa-check me-1"></i>إكمال الزيارة
                                         </button>

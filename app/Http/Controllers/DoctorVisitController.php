@@ -14,7 +14,7 @@ class DoctorVisitController extends Controller
     public function index()
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             $todayVisits = collect();
             $upcomingVisits = collect();
             $appointments = collect();
@@ -29,73 +29,75 @@ class DoctorVisitController extends Controller
             return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments'))->with('error', 'بيانات الطبيب غير مكتملة');
         }
 
-        // زيارات اليوم
-        $todayVisits = Visit::where('doctor_id', $doctor->id)
-            ->whereDate('visit_date', today())
+        // جميع الزيارات (الحالية والسابقة) - مرتبة حسب الأولوية
+        $allVisits = Visit::where('doctor_id', $doctor->id)
             ->with(['patient.user', 'appointment'])
+            ->orderByRaw("CASE 
+                WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURDATE() THEN 1
+                WHEN DATE(visit_date) = CURDATE() THEN 2
+                WHEN status = 'completed' AND DATE(visit_date) < CURDATE() THEN 3
+                WHEN DATE(visit_date) > CURDATE() THEN 4
+                ELSE 5
+            END")
+            ->orderBy('visit_date', 'desc')
+            ->orderBy('visit_time', 'desc')
+            ->limit(200)
             ->get();
+        
+        // للتوافق مع View القديمة
+        $todayVisits = $allVisits->filter(function($visit) {
+            return $visit->visit_date && $visit->visit_date->isToday();
+        });
+        
+        $upcomingVisits = $allVisits->filter(function($visit) {
+            return $visit->visit_date && $visit->visit_date->isFuture();
+        });
+        
+        $completedVisits = $allVisits->filter(function($visit) {
+            return $visit->status == 'completed' && $visit->visit_date && $visit->visit_date->isPast();
+        });
+        
+        $incompleteVisits = $allVisits->filter(function($visit) {
+            return $visit->status != 'completed' && $visit->status != 'cancelled' && $visit->visit_date && $visit->visit_date->isPast();
+        });
 
-        // زيارات قادمة
-        $upcomingVisits = Visit::where('doctor_id', $doctor->id)
-            ->whereDate('visit_date', '>', today())
-            ->with(['patient.user', 'appointment'])
-            ->limit(10)
-            ->get();
-
-        // زيارات مكتملة سابقة (آخر 10 زيارات)
-        $completedVisits = Visit::where('doctor_id', $doctor->id)
-            ->where('status', 'completed')
-            ->with(['patient.user', 'appointment'])
-            ->latest('visit_date')
-            ->limit(10)
-            ->get();
-
-        // زيارات غير مكتملة سابقة (آخر 10 زيارات)
-        $incompleteVisits = Visit::where('doctor_id', $doctor->id)
-            ->where('status', '!=', 'completed')
-            ->whereDate('visit_date', '<', today())
-            ->with(['patient.user', 'appointment'])
-            ->latest('visit_date')
-            ->limit(10)
-            ->get();
-
-        // المواعيد المجدولة (لم يتم تحويلها إلى زيارات بعد)
+        // جميع المواعيد المجدولة (لم يتم تحويلها إلى زيارات بعد)
         $appointments = Appointment::where('doctor_id', $doctor->id)
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->whereDoesntHave('visit')
             ->whereDate('appointment_date', '>=', today())
             ->with(['patient.user', 'department'])
-            ->orderBy('appointment_date')
-            ->limit(10)
+            ->orderBy('appointment_date', 'asc')
+            ->limit(50)
             ->get();
 
-        // الطلبات الطبية الأخيرة للطبيب
+        // جميع الطلبات الطبية الأخيرة للطبيب (آخر 50 طلب)
         $doctorRequests = MedicalRequest::whereHas('visit', function($query) use ($doctor) {
             $query->where('doctor_id', $doctor->id);
         })
         ->with(['visit.patient.user'])
         ->latest()
-        ->limit(10)
+        ->limit(50)
         ->get();
 
-        return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits'));
+        return view('doctors.visits.index', compact('allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits'));
     }
     public function convertAppointmentToVisit(Appointment $appointment)
     {
         $user = Auth::user();
 
-        // التحقق من الصلاحيات - الأطباء أو موظفي الاستقبال
-        if ($user->role !== 'doctor' && $user->role !== 'receptionist') {
+        // التحقق من الصلاحيات - الأطباء أو موظفي الاستقبال أو admin
+        if (!$user->hasRole(['admin', 'doctor', 'receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الوظيفة');
         }
 
         // التحقق من وجود علاقة الطبيب للأطباء
-        if ($user->role === 'doctor' && !$user->doctor) {
+        if ($user->hasRole('doctor') && !$user->doctor) {
             abort(403, 'لم يتم العثور على بيانات الطبيب');
         }
 
         // التحقق من أن الموعد يخص الطبيب الحالي (للأطباء فقط)
-        if ($user->role === 'doctor' && $appointment->doctor_id !== $user->doctor->id) {
+        if ($user->hasRole('doctor') && $appointment->doctor_id !== $user->doctor->id) {
             abort(403, 'غير مصرح لك بالوصول إلى هذا الموعد');
         }
 
@@ -122,7 +124,7 @@ class DoctorVisitController extends Controller
     public function show(Visit $visit)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 
@@ -345,7 +347,7 @@ class DoctorVisitController extends Controller
     public function update(HttpRequest $request, Visit $visit)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 
@@ -503,18 +505,21 @@ class DoctorVisitController extends Controller
     public function cancel(Visit $visit)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
-        }
-
-        // التحقق من وجود علاقة الطبيب
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
-        }
-
-        // التحقق من أن الزيارة تخص الطبيب الحالي
-        if ($visit->doctor_id !== $user->doctor->id) {
+        if (!$user->hasRole(['doctor', 'receptionist', 'admin'])) {
             abort(403, 'غير مصرح لك بإلغاء هذه الزيارة');
+        }
+
+        // التحقق من الصلاحيات حسب نوع المستخدم
+        if ($user->hasRole('doctor')) {
+            // التحقق من وجود علاقة الطبيب
+            if (!$user->doctor) {
+                abort(403, 'لم يتم العثور على بيانات الطبيب');
+            }
+
+            // التحقق من أن الزيارة تخص الطبيب الحالي
+            if ($visit->doctor_id !== $user->doctor->id) {
+                abort(403, 'غير مصرح لك بإلغاء هذه الزيارة');
+            }
         }
 
         // التحقق من أن الزيارة لم تكتمل بعد
@@ -522,24 +527,16 @@ class DoctorVisitController extends Controller
             return redirect()->back()->with('error', 'لا يمكن إلغاء زيارة مكتملة');
         }
 
-        // إلغاء جميع الطلبات المرتبطة بالزيارة
-        $visit->requests()->update(['status' => 'cancelled']);
+        // حذف الزيارة نهائياً بدلاً من إلغائها
+        $visit->delete();
 
-        // إلغاء الزيارة
-        $visit->update(['status' => 'cancelled']);
-
-        // إلغاء الموعد المرتبط بالزيارة إذا وجد
-        if ($visit->appointment) {
-            $visit->appointment->cancel('تم إلغاء الزيارة');
-        }
-
-        return redirect()->route('doctor.visits.index')->with('success', 'تم إلغاء الزيارة وجميع الطلبات المرتبطة بها بنجاح');
+        return redirect()->back()->with('success', 'تم حذف الزيارة بنجاح');
     }
 
     public function storeRequest(HttpRequest $request)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 
@@ -618,7 +615,7 @@ class DoctorVisitController extends Controller
     public function updateRequestStatus(HttpRequest $request, MedicalRequest $requestModel)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 
@@ -714,7 +711,7 @@ class DoctorVisitController extends Controller
     public function showSurgeryForm(Visit $visit)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 
@@ -738,7 +735,7 @@ class DoctorVisitController extends Controller
     public function markNeedsSurgery(HttpRequest $request, Visit $visit)
     {
         $user = Auth::user();
-        if ($user->role !== 'doctor') {
+        if (!$user->hasRole(['admin', 'doctor'])) {
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 

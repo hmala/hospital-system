@@ -136,7 +136,7 @@ class Appointment extends Model
 
     public function canBeCancelled()
     {
-        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed']);
+        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed']) && !$this->visit;
     }
 
     // تغيير حالة الموعد

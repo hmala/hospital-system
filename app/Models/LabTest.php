@@ -10,12 +10,14 @@ class LabTest extends Model
     use HasFactory;
 
     protected $fillable = [
+        'main_category',
+        'subcategory',
         'code',
         'name',
-        'category',
         'unit',
         'description',
         'is_active',
+        'notes',
     ];
 
     protected $casts = [

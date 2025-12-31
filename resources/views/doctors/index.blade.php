@@ -38,6 +38,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>الطبيب</th>
+                                    <th>النوع</th>
                                     <th>التخصص</th>
                                     <th>العيادة</th>
                                     <th>المؤهلات</th>
@@ -50,7 +51,7 @@
                             <tbody>
                                 @forelse($doctors as $doctor)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ ($doctors->currentPage() - 1) * $doctors->perPage() + $loop->iteration }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center">
@@ -63,6 +64,7 @@
                                             </div>
                                         </div>
                                     </td>
+                                    <td>@if($doctor->type == 'consultant')<span class="badge bg-info">استشاري</span>@elseif($doctor->type == 'anesthesiologist')<span class="badge bg-warning">تخدير</span>@else<span class="badge bg-danger">جراح</span>@endif</td>
                                     <td><span class="badge bg-info">{{ $doctor->specialization }}</span></td>
                                     <td>{{ $doctor->department ? $doctor->department->name : 'غير محدد' }}</td>
                                     <td>{{ $doctor->qualification }}</td>
@@ -82,7 +84,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="10" class="text-center text-muted py-4">
                                         <i class="fas fa-user-md fa-3x mb-3"></i><br>لا توجد أطباء مضافة حتى الآن
                                     </td>
                                 </tr>
@@ -90,7 +92,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="d-flex justify-content-center mt-4">{{ $doctors->links() }}</div>
+                    <div class="d-flex justify-content-center mt-4">{{ $doctors->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}</div>
                 </div>
             </div>
         </div>

@@ -10,6 +10,8 @@ class RadiologyType extends Model
     use HasFactory;
 
     protected $fillable = [
+        'main_category',
+        'subcategory',
         'name',
         'code',
         'description',
@@ -18,7 +20,8 @@ class RadiologyType extends Model
         'requires_contrast',
         'requires_preparation',
         'preparation_instructions',
-        'is_active'
+        'is_active',
+        'notes'
     ];
 
     protected $casts = [
