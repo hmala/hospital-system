@@ -125,6 +125,22 @@
                         @endcan
                         @endrole
 
+                        @role('admin|cashier')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('cashier.*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
+                                <i class="fas fa-cash-register"></i><span> الكاشير</span>
+                                @php
+                                    $pendingPayments = \App\Models\Appointment::where('payment_status', 'pending')
+                                        ->whereIn('status', ['scheduled', 'confirmed'])
+                                        ->count();
+                                @endphp
+                                @if($pendingPayments > 0)
+                                    <span class="badge bg-warning ms-2">{{ $pendingPayments }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endrole
+
                         @role('admin|patient')
                         @can('view own visits')
                         <li class="nav-item">
@@ -417,6 +433,7 @@
                 <nav class="navbar navbar-expand-lg navbar-light bg-white rounded shadow-sm mb-4">
                     <div class="container-fluid">
                         <div class="navbar-nav ms-auto">
+                            <!-- قائمة المستخدم -->
                             <div class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-user-circle me-2"></i>{{ Auth::user()->name }}

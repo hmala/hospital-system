@@ -2,14 +2,22 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid" id="appointments-content">
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h2><i class="fas fa-calendar-check me-2"></i>إدارة المواعيد</h2>
-                <a href="{{ route('appointments.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>حجز موعد جديد
-                </a>
+                <h2>
+                    <i class="fas fa-calendar-check me-2"></i>إدارة المواعيد
+                    <span class="badge bg-success" id="live-indicator">
+                        <i class="fas fa-circle fa-xs"></i> مباشر
+                    </span>
+                </h2>
+                <div>
+                    <small class="text-muted me-3" id="last-update">آخر تحديث: الآن</small>
+                    <a href="{{ route('appointments.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>حجز موعد جديد
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -38,7 +46,8 @@
                                     <th>الطبيب</th>
                                     <th>العيادة</th>
                                     <th>السبب</th>
-                                    <th>الحالة</th>
+                                    <th>حالة الموعد</th>
+                                    <th>حالة الدفع</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -51,8 +60,23 @@
                                     <td><small class="text-muted">{{ Str::limit($appointment->reason, 30) }}</small></td>
                                     <td><span class="badge bg-{{ $appointment->status_color }}">{{ $appointment->status_text }}</span></td>
                                     <td>
+                                        @if($appointment->payment_status === 'paid')
+                                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> مدفوع</span>
+                                        @else
+                                            <span class="badge bg-warning"><i class="fas fa-clock"></i> معلق</span>
+                                        @endif
+                                    </td>
+                                    <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="{{ route('appointments.show', $appointment) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
+                                            @if($appointment->payment_status === 'paid')
+                                                <form action="{{ route('visits.create-from-appointment', $appointment) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-success" title="تحويل إلى زيارة">
+                                                        <i class="fas fa-file-medical"></i> زيارة
+                                                    </button>
+                                                </form>
+                                            @endif
                                             @if($appointment->canBeCancelled())
                                             <button type="button" class="btn btn-warning" title="إلغاء" data-bs-toggle="modal" data-bs-target="#cancelAppointmentModal" data-appointment-id="{{ $appointment->id }}">
                                                 <i class="fas fa-times"></i>
@@ -91,7 +115,8 @@
                                     <th>الطبيب</th>
                                     <th>العيادة</th>
                                     <th>أجر الكشف</th>
-                                    <th>الحالة</th>
+                                    <th>حالة الموعد</th>
+                                    <th>حالة الدفع</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -103,11 +128,30 @@
                                     <td>{{ $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'مريض غير محدد' }}</td>
                                     <td>د. {{ $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'طبيب غير محدد' }}</td>
                                     <td>{{ $appointment->department ? $appointment->department->name : 'قسم غير محدد' }}</td>
-                                    <td><span class="text-success">{{ number_format($appointment->consultation_fee) }} د.ع</span></td>
+                                    <td><span class="text-success fw-bold">{{ number_format($appointment->consultation_fee) }} د.ع</span></td>
                                     <td><span class="badge bg-{{ $appointment->status_color }}">{{ $appointment->status_text }}</span></td>
+                                    <td>
+                                        @if($appointment->payment_status === 'paid')
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> مدفوع
+                                            </span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-clock"></i> معلق
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="{{ route('appointments.show', $appointment) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
+                                            @if($appointment->payment_status === 'paid')
+                                                <form action="{{ route('visits.create-from-appointment', $appointment) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-success" title="تحويل إلى زيارة">
+                                                        <i class="fas fa-file-medical"></i> زيارة
+                                                    </button>
+                                                </form>
+                                            @endif
                                             <a href="{{ route('appointments.edit', $appointment) }}" class="btn btn-warning" title="تعديل"><i class="fas fa-edit"></i></a>
                                             @if($appointment->canBeCancelled())
                                             <button type="button" class="btn btn-danger" title="إلغاء" data-bs-toggle="modal" data-bs-target="#cancelAppointmentModal" data-appointment-id="{{ $appointment->id }}">
@@ -124,7 +168,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         <i class="fas fa-calendar-times fa-3x mb-3"></i><br>لا توجد مواعيد نشطة حالياً
                                     </td>
                                 </tr>
@@ -155,7 +199,8 @@
                                     <th>المريض</th>
                                     <th>الطبيب</th>
                                     <th>العيادة</th>
-                                    <th>الحالة</th>
+                                    <th>حالة الموعد</th>
+                                    <th>حالة الدفع</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -167,6 +212,13 @@
                                     <td>د. {{ $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'طبيب غير محدد' }}</td>
                                     <td>{{ $appointment->department ? $appointment->department->name : 'قسم غير محدد' }}</td>
                                     <td><span class="badge bg-{{ $appointment->status_color }}">{{ $appointment->status_text }}</span></td>
+                                    <td>
+                                        @if($appointment->payment_status === 'paid')
+                                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> مدفوع</span>
+                                        @else
+                                            <span class="badge bg-secondary">غير مطلوب</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <a href="{{ route('appointments.show', $appointment) }}" class="btn btn-sm btn-info" title="عرض"><i class="fas fa-eye"></i></a>
                                     </td>
@@ -231,20 +283,56 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 @endsection
+
 @section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function reloadAppointmentsTable() {
-        $.ajax({
-            url: window.location.href,
-            type: 'GET',
-            dataType: 'html',
-            success: function(data) {
-                var newTable = $(data).find('#active-appointments-table').html();
-                $('#active-appointments-table').html(newTable);
+// تحديث تلقائي للصفحة كل 5 ثواني
+setInterval(function() {
+    $.ajax({
+        url: window.location.href,
+        type: 'GET',
+        success: function(response) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(response, 'text/html');
+            const newContent = doc.getElementById('appointments-content');
+            
+            if (newContent) {
+                const currentScroll = window.scrollY;
+                $('#appointments-content').html($(newContent).html());
+                window.scrollTo(0, currentScroll);
+                
+                // تحديث الوقت
+                const now = new Date();
+                const time = now.toLocaleTimeString('ar-IQ');
+                $('#last-update').text('آخر تحديث: ' + time);
             }
-        });
-    }
-    setInterval(reloadAppointmentsTable, 5000); // كل 10 ثواني
+        },
+        error: function(error) {
+            console.error('خطأ في التحديث:', error);
+        }
+    });
+}, 5000); // 5 ثواني
+
+// تحديث الوقت عند تحميل الصفحة
+$(document).ready(function() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('ar-IQ');
+    $('#last-update').text('آخر تحديث: ' + time);
+});
 </script>
+
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+#live-indicator {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+#live-indicator i {
+    color: #fff;
+}
+</style>
 @endsection

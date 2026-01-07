@@ -181,6 +181,42 @@ class VisitController extends Controller
             ->with('success', 'تم حذف الزيارة بنجاح');
     }
 
+    public function createFromAppointment(Appointment $appointment)
+    {
+        // التحقق من أن الموعد مدفوع
+        if ($appointment->payment_status !== 'paid') {
+            return redirect()->back()->with('error', 'لا يمكن تحويل الموعد إلى زيارة قبل الدفع');
+        }
+
+        // التحقق من عدم وجود زيارة مسبقة لهذا الموعد
+        if ($appointment->visit) {
+            return redirect()->route('visits.show', $appointment->visit)
+                ->with('info', 'تم تحويل هذا الموعد إلى زيارة مسبقاً');
+        }
+
+        // إنشاء الزيارة تلقائياً
+        $visit = Visit::create([
+            'patient_id' => $appointment->patient_id,
+            'doctor_id' => $appointment->doctor_id,
+            'department_id' => $appointment->department_id,
+            'appointment_id' => $appointment->id,
+            'visit_date' => now()->format('Y-m-d'),
+            'visit_time' => now()->format('H:i'),
+            'visit_type' => 'checkup',
+            'chief_complaint' => $appointment->reason ?? 'زيارة من موعد',
+            'is_completed' => false,
+            'status' => 'in_progress'
+        ]);
+
+        // تحديث حالة الموعد
+        $appointment->update([
+            'status' => 'completed'
+        ]);
+
+        return redirect()->route('visits.show', $visit)
+            ->with('success', 'تم تحويل الموعد إلى زيارة بنجاح');
+    }
+
     public function requestSurgery(Visit $visit)
     {
         // التحقق من أن الزيارة مكتملة

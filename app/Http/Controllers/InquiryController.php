@@ -159,14 +159,15 @@ class InquiryController extends Controller
                 'department_id' => $department->id,
                 'appointment_date' => Carbon::now(),
                 'reason' => $httpRequest->description ?? 'كشف طبي عام',
-                'notes' => 'تم الحجز من الاستعلامات',
+                'notes' => 'تم الحجز من الاستعلامات - بانتظار الدفع',
                 'consultation_fee' => $doctor->consultation_fee ?? $department->consultation_fee ?? 0,
                 'duration' => 30,
-                'status' => 'scheduled'
+                'status' => 'scheduled',
+                'payment_status' => 'pending' // حالة الدفع: معلق
             ]);
 
-            return redirect()->route('appointments.show', $appointment->id)
-                ->with('success', 'تم حجز الموعد بنجاح! رقم الموعد: #' . $appointment->id);
+            return redirect()->route('inquiry.index')
+                ->with('success', 'تم حجز الموعد بنجاح! رقم الموعد: #' . $appointment->id . ' - المريض: ' . $patient->user->name . '. يرجى توجيه المريض للكاشير.');
         }
 
         // ========================================

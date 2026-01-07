@@ -78,4 +78,24 @@ class Doctor extends Model
         // خلاف ذلك، افترض أن الطبيب متاح دائماً
         return true;
     }
+
+    // دالة لحساب أجر الطبيب بناءً على التخصص
+    public function getFeeBySpecializationAttribute()
+    {
+        // إذا كان هناك أجر محدد للطبيب، استخدمه
+        if ($this->consultation_fee) {
+            return $this->consultation_fee;
+        }
+
+        // خلاف ذلك، استخدم الأجر الافتراضي حسب التخصص
+        $fees = [
+            'استشاري' => 50000,    // 50,000 IQD
+            'تخدير' => 75000,      // 75,000 IQD
+            'جراح' => 100000,      // 100,000 IQD
+            'طبيب عام' => 25000,   // 25,000 IQD
+            'أخصائي' => 40000,     // 40,000 IQD
+        ];
+
+        return $fees[$this->specialization] ?? 30000; // أجر افتراضي 30,000 IQD
+    }
 }

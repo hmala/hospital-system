@@ -17,6 +17,8 @@ class Appointment extends Model
         'department_id',
         'appointment_date',
         'status',
+        'payment_status',
+        'payment_id',
         'reason',
         'notes',
         'consultation_fee',
@@ -68,6 +70,11 @@ class Appointment extends Model
     public function visit()
     {
         return $this->hasOne(Visit::class);
+    }
+
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class);
     }
 
     // النطاق (Scopes)

@@ -1,0 +1,29 @@
+معلومات تسجيل الدخول المحدثة:
+
+## حسابات النظام:
+
+### 1. حساب الكاشير
+- البريد: cashier@hospital.com
+- كلمة المرور: 123456
+- الدور: cashier
+- الصلاحيات:
+  * view appointments
+  * view patients
+  * create payments
+  * view payments
+  * edit payments
+
+### 2. حساب الاستعلامات
+- البريد: reception@hospital.com
+- الدور: receptionist
+
+### 3. حساب الإدارة
+- البريد: admin@hospital.com
+- الدور: admin
+
+## الخطوات:
+1. تسجيل الخروج من الحساب الحالي
+2. تسجيل الدخول بحساب الكاشير: cashier@hospital.com / 123456
+3. الآن يجب أن تظهر قائمة الكاشير في الـ sidebar
+
+تم إضافة الصلاحيات المطلوبة ومسح الـ cache ✅

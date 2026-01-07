@@ -85,12 +85,33 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inquiry/search/patients', [InquiryController::class, 'searchPatients'])->name('inquiry.search.patients');
     Route::resource('inquiry', InquiryController::class);
     
+    // مسارات الكاشير (Cashier Routes)
+    Route::prefix('cashier')->name('cashier.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\CashierController::class, 'index'])->name('index');
+        Route::get('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'showPaymentForm'])->name('payment.form');
+        Route::post('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'processPayment'])->name('payment.process');
+        Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
+        Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
+        Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
+    });
+    
+    // مسارات الإشعارات (Notifications Routes)
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+        Route::post('/{notification}/mark-as-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/mark-all-as-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+        Route::delete('/{notification}', [\App\Http\Controllers\NotificationController::class, 'destroy'])->name('destroy');
+        Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'getUnreadCount'])->name('unread-count');
+    });
+    
     // مسارات الزيارات
     Route::resource('visits', VisitController::class);
     Route::get('/visits/create/{patient_id}/{appointment_id}', [VisitController::class, 'create'])
          ->name('visits.create.from_appointment');
     Route::get('/visits/create/{patient_id}', [VisitController::class, 'create'])
          ->name('visits.create.for_patient');
+    Route::post('/appointments/{appointment}/convert-to-visit', [VisitController::class, 'createFromAppointment'])
+         ->name('visits.create-from-appointment');
     Route::put('/appointments/{appointment}/convert', [DoctorVisitController::class, 'convertAppointmentToVisit'])
          ->name('appointments.convert');
     Route::post('/visits/{visit}/request-surgery', [VisitController::class, 'requestSurgery'])

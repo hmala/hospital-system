@@ -38,24 +38,27 @@
                     @if($notifications->count() > 0)
                         <div class="list-group list-group-flush">
                             @foreach($notifications as $notification)
+                                @php
+                                    $data = is_string($notification->data) ? json_decode($notification->data, true) : $notification->data;
+                                @endphp
                                 <div class="list-group-item {{ $notification->read_at ? '' : 'bg-light' }}">
                                     <div class="d-flex w-100 justify-content-between">
                                         <div class="flex-grow-1">
                                             <h6 class="mb-1">
-                                                {{ $notification->data['title'] }}
+                                                {{ $data['title'] ?? 'إشعار' }}
                                                 @if(!$notification->read_at)
                                                     <span class="badge bg-primary ms-2">جديد</span>
                                                 @endif
                                             </h6>
-                                            <p class="mb-1">{{ $notification->data['message'] }}</p>
+                                            <p class="mb-1">{{ $data['message'] ?? '' }}</p>
                                             <small class="text-muted">
                                                 <i class="fas fa-clock me-1"></i>
                                                 {{ $notification->created_at->diffForHumans() }}
                                             </small>
                                         </div>
                                         <div class="d-flex flex-column align-items-end">
-                                            @if($notification->data['url'] && $notification->data['url'] !== '#')
-                                                <a href="{{ $notification->data['url'] }}" class="btn btn-sm btn-outline-primary mb-2">
+                                            @if(isset($data['url']) && $data['url'] !== '#')
+                                                <a href="{{ $data['url'] }}" class="btn btn-sm btn-outline-primary mb-2">
                                                     <i class="fas fa-eye me-1"></i>
                                                     عرض
                                                 </a>
