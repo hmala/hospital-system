@@ -26,6 +26,19 @@ Route::get('/', function () {
     return Auth::check() ? redirect('/dashboard') : redirect('/login');
 });
 
+// Test route
+Route::get('/test-cashier-data', function() {
+    $pendingRequests = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user'])
+        ->where('payment_status', 'pending')
+        ->whereHas('visit', function($q) {
+            $q->where('status', '!=', 'cancelled');
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(15, ['*'], 'requests_page');
+    
+    return view('test-cashier-view', compact('pendingRequests'));
+})->middleware('auth');
+
 // (Removed) Temporary local-only admin reset route
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -90,6 +103,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\CashierController::class, 'index'])->name('index');
         Route::get('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'showPaymentForm'])->name('payment.form');
         Route::post('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'processPayment'])->name('payment.process');
+        Route::get('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'showRequestPaymentForm'])->name('request.payment.form');
+        Route::post('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestPayment'])->name('request.payment.process');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');

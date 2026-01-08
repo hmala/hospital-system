@@ -130,8 +130,12 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <p class="text-muted mb-1">المواعيد المعلقة</p>
-                                            <h3 class="mb-0 text-warning">{{ $todayStats['pending_count'] }}</h3>
+                                            <p class="text-muted mb-1">المعاملات المعلقة</p>
+                                            <h3 class="mb-0 text-warning">{{ $todayStats['pending_appointments_count'] + $todayStats['pending_requests_count'] }}</h3>
+                                            <small class="text-muted">
+                                                مواعيد: {{ $todayStats['pending_appointments_count'] }} | 
+                                                طلبات: {{ $todayStats['pending_requests_count'] }}
+                                            </small>
                                         </div>
                                         <div class="bg-warning bg-opacity-10 p-3 rounded">
                                             <i class="fas fa-clock fa-2x text-warning"></i>
@@ -142,16 +146,19 @@
                         </div>
                     </div>
 
-                    <!-- قائمة المواعيد المعلقة -->
-                    <div class="card border-0 shadow-sm">
+                    <!-- قائمة المواعيد والطلبات المعلقة -->
+                    <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-light">
                             <h5 class="mb-0">
-                                <i class="fas fa-list me-2"></i>
+                                <i class="fas fa-calendar-check me-2"></i>
                                 المواعيد المعلقة - بانتظار الدفع
+                                @if(isset($pendingAppointments) && is_object($pendingAppointments) && method_exists($pendingAppointments, 'total') && $pendingAppointments->total() > 0)
+                                    <span class="badge bg-warning">{{ $pendingAppointments->total() }}</span>
+                                @endif
                             </h5>
                         </div>
                         <div class="card-body">
-                            @if($pendingAppointments->count() > 0)
+                            @if(isset($pendingAppointments) && is_object($pendingAppointments) && method_exists($pendingAppointments, 'total') && $pendingAppointments->total() > 0)
                                 <div class="table-responsive">
                                     <table class="table table-hover">
                                         <thead>
@@ -212,6 +219,155 @@
                                 <div class="text-center py-5">
                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                                     <p class="text-muted">لا توجد مواعيد معلقة حالياً</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- قائمة الطلبات المعلقة (تحاليل، أشعة، صيدلية) -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-file-medical me-2"></i>
+                                الطلبات الطبية المعلقة - بانتظار الدفع
+                                @if(isset($pendingRequests) && is_object($pendingRequests) && $pendingRequests->count() > 0)
+                                    <span class="badge bg-warning">{{ $pendingRequests->total() }}</span>
+                                @endif
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {{-- Debug Info --}}
+                            <div class="alert alert-info">
+                                <strong>Debug:</strong><br>
+                                isset: {{ isset($pendingRequests) ? 'نعم' : 'لا' }}<br>
+                                is_object: {{ is_object($pendingRequests ?? null) ? 'نعم' : 'لا' }}<br>
+                                type: {{ gettype($pendingRequests ?? null) }}<br>
+                                @if(isset($pendingRequests) && is_object($pendingRequests))
+                                    count: {{ $pendingRequests->count() }}<br>
+                                    total: {{ method_exists($pendingRequests, 'total') ? $pendingRequests->total() : 'N/A' }}
+                                @endif
+                            </div>
+                            
+                            @if(isset($pendingRequests) && is_object($pendingRequests))
+                                @forelse($pendingRequests as $request)
+                                @if($loop->first)
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>رقم الطلب</th>
+                                                <th>النوع</th>
+                                                <th>المريض</th>
+                                                <th>التفاصيل</th>
+                                                <th>التاريخ</th>
+                                                <th>الحالة</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                @endif
+                                                <tr>
+                                                    <td><strong>#{{ $request->id }}</strong></td>
+                                                    <td>
+                                                        @if($request->type === 'lab')
+                                                            <span class="badge bg-primary">
+                                                                <i class="fas fa-flask"></i> تحاليل
+                                                            </span>
+                                                        @elseif($request->type === 'radiology')
+                                                            <span class="badge bg-info">
+                                                                <i class="fas fa-x-ray"></i> أشعة
+                                                            </span>
+                                                        @elseif($request->type === 'pharmacy')
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-pills"></i> صيدلية
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-secondary">{{ $request->type }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        <div>{{ $request->visit->patient->user->name ?? 'غير محدد' }}</div>
+                                                        <small class="text-muted">{{ $request->visit->patient->national_id ?? 'غير محدد' }}</small>
+                                                    </td>
+                                                    <td>
+                                                        @php
+                                                            $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                                        @endphp
+                                                        
+                                                        @if($request->type === 'lab' && isset($details['lab_test_ids']))
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-vial"></i> 
+                                                                {{ count($details['lab_test_ids']) }} تحليل
+                                                                @php
+                                                                    $testNames = [];
+                                                                    foreach(array_slice($details['lab_test_ids'], 0, 2) as $testId) {
+                                                                        $test = \App\Models\LabTest::find($testId);
+                                                                        if($test) $testNames[] = $test->name;
+                                                                    }
+                                                                @endphp
+                                                                <br>{{ implode(', ', $testNames) }}
+                                                                @if(count($details['lab_test_ids']) > 2)
+                                                                    <br>... و {{ count($details['lab_test_ids']) - 2 }} أخرى
+                                                                @endif
+                                                            </small>
+                                                        @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-camera"></i> 
+                                                                {{ count($details['radiology_type_ids']) }} نوع إشعة
+                                                                @php
+                                                                    $typeNames = [];
+                                                                    foreach(array_slice($details['radiology_type_ids'], 0, 2) as $typeId) {
+                                                                        $type = \App\Models\RadiologyType::find($typeId);
+                                                                        if($type) $typeNames[] = $type->name;
+                                                                    }
+                                                                @endphp
+                                                                <br>{{ implode(', ', $typeNames) }}
+                                                                @if(count($details['radiology_type_ids']) > 2)
+                                                                    <br>... و {{ count($details['radiology_type_ids']) - 2 }} أخرى
+                                                                @endif
+                                                            </small>
+                                                        @else
+                                                            <small class="text-muted">{{ $request->description }}</small>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        <small>{{ $request->created_at->format('Y-m-d') }}</small>
+                                                        <br>
+                                                        <small class="text-muted">{{ $request->created_at->format('H:i') }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-warning">
+                                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                                            معلق
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ route('cashier.request.payment.form', $request->id) }}" 
+                                                           class="btn btn-success btn-sm">
+                                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                                            تسديد
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                @if($loop->last)
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mt-3">
+                                    {{ $pendingRequests->links('pagination::bootstrap-5') }}
+                                </div>
+                                @endif
+                                @empty
+                                <div class="text-center py-5">
+                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                    <p class="text-muted">لا توجد طلبات معلقة حالياً</p>
+                                </div>
+                                @endforelse
+                            @else
+                                <div class="text-center py-5">
+                                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                    <p class="text-muted">خطأ في تحميل البيانات</p>
                                 </div>
                             @endif
                         </div>
@@ -449,7 +605,8 @@
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// تحديث تلقائي للصفحة كل 5 ثواني
+// تحديث تلقائي للصفحة كل 5 ثواني - معطل مؤقتاً للاختبار
+/*
 setInterval(function() {
     // تحديث الإحصائيات والجدول بدون إعادة تحميل كامل
     $.ajax({
@@ -479,6 +636,7 @@ setInterval(function() {
         }
     });
 }, 5000); // 5 ثواني
+*/
 
 // دوال الطباعة والتصدير
 function printReport() {
@@ -493,7 +651,8 @@ function exportReport() {
         doctor_fees: {{ $todayStats['doctor_fees'] }},
         hospital_profit: {{ $todayStats['hospital_profit'] }},
         total_payments: {{ $todayStats['total_payments'] }},
-        pending_count: {{ $todayStats['pending_count'] }}
+        pending_appointments: {{ $todayStats['pending_appointments_count'] }},
+        pending_requests: {{ $todayStats['pending_requests_count'] }}
     };
 
     // تحويل البيانات إلى JSON وتنزيلها

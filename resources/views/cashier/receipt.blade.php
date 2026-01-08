@@ -101,6 +101,44 @@
                     </div>
                     @endif
 
+                    @if($payment->request)
+                    <!-- معلومات الطلب -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-file-medical me-2 text-warning"></i>
+                            تفاصيل الطلب الطبي
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted">رقم الطلب:</small>
+                                <div class="fw-bold">#{{ $payment->request->id }}</div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted">النوع:</small>
+                                <div class="fw-bold">
+                                    @if($payment->request->type === 'lab')
+                                        <span class="badge bg-primary">تحاليل</span>
+                                    @elseif($payment->request->type === 'radiology')
+                                        <span class="badge bg-info">أشعة</span>
+                                    @elseif($payment->request->type === 'pharmacy')
+                                        <span class="badge bg-success">صيدلية</span>
+                                    @else
+                                        <span class="badge bg-secondary">{{ $payment->request->type }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted">التاريخ:</small>
+                                <div class="fw-bold">{{ $payment->request->created_at->format('Y-m-d H:i') }}</div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted">الطبيب:</small>
+                                <div class="fw-bold">{{ $payment->request->visit->doctor ? 'د. ' . $payment->request->visit->doctor->user->name : 'غير محدد' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
                     <!-- تفاصيل الدفع -->
                     <div class="table-responsive mb-4">
                         <table class="table table-bordered">

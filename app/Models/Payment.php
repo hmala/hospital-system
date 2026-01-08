@@ -12,6 +12,7 @@ class Payment extends Model
 
     protected $fillable = [
         'appointment_id',
+        'request_id',
         'patient_id',
         'cashier_id',
         'receipt_number',
@@ -59,6 +60,14 @@ class Payment extends Model
     public function appointment()
     {
         return $this->belongsTo(Appointment::class);
+    }
+
+    /**
+     * العلاقة مع الطلب الطبي
+     */
+    public function request()
+    {
+        return $this->belongsTo(Request::class, 'request_id');
     }
 
     /**

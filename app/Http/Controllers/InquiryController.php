@@ -8,6 +8,8 @@ use App\Models\Patient;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Appointment;
+use App\Models\LabTest;
+use App\Models\RadiologyType;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -108,7 +110,11 @@ class InquiryController extends Controller
             ->where('type', 'consultant')
             ->get();
 
-        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors'));
+        // جلب أنواع التحاليل والأشعة
+        $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
+        $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
+
+        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes'));
     }
 
     /**
@@ -125,10 +131,14 @@ class InquiryController extends Controller
         $httpRequest->validate([
             'patient_id' => 'required|exists:patients,id',
             'request_type' => 'required|in:lab,radiology,pharmacy,checkup',
-            'description' => 'required|string|max:1000',
+            'description' => 'required_if:request_type,checkup,pharmacy|nullable|string|max:1000',
             'doctor_id' => 'nullable|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',
             'appointment_date' => 'nullable|date',
+            'lab_test_ids' => 'required_if:request_type,lab|array',
+            'lab_test_ids.*' => 'exists:lab_tests,id',
+            'radiology_type_ids' => 'required_if:request_type,radiology|array',
+            'radiology_type_ids.*' => 'exists:radiology_types,id',
             'auto_refer' => 'nullable|boolean'
         ]);
 
@@ -199,6 +209,8 @@ class InquiryController extends Controller
         }
 
         // إنشاء زيارة في قسم الاستعلامات
+        $description = $httpRequest->description ?? 'طلب ' . ($requestType === 'lab' ? 'تحاليل' : ($requestType === 'radiology' ? 'أشعة' : 'خدمة'));
+        
         $visit = Visit::create([
             'patient_id' => $patient->id,
             'department_id' => $inquiryDept->id,
@@ -206,26 +218,61 @@ class InquiryController extends Controller
             'visit_date' => Carbon::now(),
             'visit_time' => Carbon::now(),
             'visit_type' => $requestType,
-            'chief_complaint' => $httpRequest->description,
-            'status' => 'in_progress',
+            'chief_complaint' => $description,
+            'status' => 'pending_payment', // تعليق الزيارة حتى يتم الدفع في الكاشير
             'notes' => 'طلب من الاستعلامات - نوع: ' . $requestType
         ]);
 
         // إنشاء الطلب الطبي
+        $details = [
+            'created_by' => $user->id,
+            'created_at_inquiry' => true,
+            'auto_refer' => $httpRequest->auto_refer ?? false
+        ];
+        
+        // إضافة تفاصيل التحاليل أو الأشعة إذا كانت موجودة
+        if ($requestType === 'lab' && $httpRequest->lab_test_ids) {
+            $details['lab_test_ids'] = $httpRequest->lab_test_ids;
+        }
+        
+        if ($requestType === 'radiology' && $httpRequest->radiology_type_ids) {
+            $details['radiology_type_ids'] = $httpRequest->radiology_type_ids;
+        }
+        
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,
             'type' => $requestType,
-            'description' => $httpRequest->description,
+            'description' => $description,
             'status' => 'pending',
-            'details' => json_encode([
-                'created_by' => $user->id,
-                'created_at_inquiry' => true,
-                'auto_refer' => $httpRequest->auto_refer ?? false
-            ])
+            'payment_status' => 'pending',
+            'details' => json_encode($details)
         ]);
 
+        // رسالة نجاح مفصلة
+        $typeArabic = [
+            'lab' => 'تحاليل طبية',
+            'radiology' => 'أشعة',
+            'pharmacy' => 'صيدلية'
+        ];
+        
+        $message = '✅ تم إنشاء طلب ' . ($typeArabic[$requestType] ?? $requestType) . ' بنجاح!<br>';
+        $message .= '📋 رقم الطلب: <strong>#' . $medicalRequest->id . '</strong><br>';
+        $message .= '👤 المريض: <strong>' . $patient->user->name . '</strong><br>';
+        
+        if ($requestType === 'lab' && isset($details['lab_test_ids'])) {
+            $labCount = count($details['lab_test_ids']);
+            $message .= "🧪 عدد التحاليل: <strong>{$labCount}</strong><br>";
+        }
+        
+        if ($requestType === 'radiology' && isset($details['radiology_type_ids'])) {
+            $radiologyCount = count($details['radiology_type_ids']);
+            $message .= "📷 عدد الأشعة: <strong>{$radiologyCount}</strong><br>";
+        }
+        
+        $message .= '<br>💰 <strong>يرجى توجيه المريض للكاشير لدفع الأجور</strong>';
+
         return redirect()->route('inquiry.index')
-            ->with('success', 'تم إنشاء الطلب بنجاح! رقم الطلب: #' . $medicalRequest->id);
+            ->with('success', $message);
     }
 
     /**

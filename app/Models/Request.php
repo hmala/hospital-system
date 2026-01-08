@@ -12,6 +12,8 @@ class Request extends Model
         'description',
         'details',
         'status',
+        'payment_status',
+        'payment_id',
         'result'
     ];
 

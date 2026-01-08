@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Payment;
 use App\Models\Patient;
+use App\Models\Request as MedicalRequest;
+use App\Models\Visit;
+use App\Models\LabTest;
+use App\Models\RadiologyType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,14 +40,28 @@ class CashierController extends Controller
             ->orderBy('appointment_date')
             ->paginate(15);
 
+        // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية)
+        $pendingRequests = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
+            ->where('payment_status', 'pending')
+            ->whereHas('visit', function($q) {
+                $q->where('status', '!=', 'cancelled');
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'requests_page');
+
         // إحصائيات اليوم المحسنة
         $today = Carbon::today();
         $todayPayments = Payment::whereDate('paid_at', $today)->with('appointment.doctor')->get();
 
+        // حساب عدد المعلقات بشكل صحيح
+        $pendingAppointmentsCount = is_object($pendingAppointments) ? $pendingAppointments->total() : 0;
+        $pendingRequestsCount = is_object($pendingRequests) ? $pendingRequests->total() : 0;
+
         $todayStats = [
             'total_collected' => $todayPayments->sum('amount'),
             'total_payments' => $todayPayments->count(),
-            'pending_count' => $pendingAppointments->total(),
+            'pending_appointments_count' => $pendingAppointmentsCount,
+            'pending_requests_count' => $pendingRequestsCount,
             'doctor_fees' => 0,
             'hospital_profit' => 0,
         ];
@@ -69,7 +87,7 @@ class CashierController extends Controller
             'avg_daily' => $monthlyPayments->count() > 0 ? $monthlyPayments->sum('amount') / Carbon::now()->daysInMonth : 0,
         ];
 
-        return view('cashier.index', compact('pendingAppointments', 'todayStats', 'todayPayments', 'monthlyStats'));
+        return view('cashier.index', compact('pendingAppointments', 'pendingRequests', 'todayStats', 'todayPayments', 'monthlyStats'));
     }
 
     /**
@@ -163,7 +181,7 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'cashier']);
+        $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'request.visit.patient.user', 'request.visit.doctor.user', 'cashier']);
 
         return view('cashier.receipt', compact('payment'));
     }
@@ -173,7 +191,7 @@ class CashierController extends Controller
      */
     public function printReceipt(Payment $payment)
     {
-        $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'cashier']);
+        $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'request.visit.patient.user', 'request.visit.doctor.user', 'cashier']);
 
         // التحقق من وجود حزمة dompdf
         if (class_exists('Barryvdh\DomPDF\Facade\Pdf')) {
@@ -183,6 +201,86 @@ class CashierController extends Controller
 
         // بديل: عرض صفحة للطباعة عبر المتصفح
         return view('cashier.receipt-print', compact('payment'));
+    }
+
+    /**
+     * عرض نموذج دفع لطلب طبي
+     */
+    public function showRequestPaymentForm(MedicalRequest $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // التحقق من أن الطلب لم يتم دفعه بعد
+        if ($request->payment_status === 'paid') {
+            return redirect()->route('cashier.index')
+                ->with('warning', 'هذا الطلب تم دفعه مسبقاً');
+        }
+
+        $request->load(['visit.patient.user', 'visit.doctor.user']);
+
+        return view('cashier.request-payment-form', compact('request'));
+    }
+
+    /**
+     * معالجة دفع الطلب الطبي
+     */
+    public function processRequestPayment(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $httpRequest->validate([
+            'payment_method' => 'required|in:cash,card,insurance',
+            'amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        // التحقق من أن الطلب لم يتم دفعه بعد
+        if ($request->payment_status === 'paid') {
+            return redirect()->route('cashier.index')
+                ->with('error', 'هذا الطلب تم دفعه مسبقاً');
+        }
+
+        DB::beginTransaction();
+        try {
+            // إنشاء سجل الدفع
+            $payment = Payment::create([
+                'request_id' => $request->id,
+                'patient_id' => $request->visit->patient_id,
+                'cashier_id' => $user->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'amount' => $httpRequest->amount,
+                'payment_method' => $httpRequest->payment_method,
+                'payment_type' => 'request',
+                'description' => 'دفع رسوم طلب ' . $request->type . ' #' . $request->id,
+                'notes' => $httpRequest->notes,
+                'paid_at' => Carbon::now()
+            ]);
+
+            // تحديث حالة الدفع للطلب
+            $request->update([
+                'payment_status' => 'paid',
+                'payment_id' => $payment->id
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('cashier.receipt', $payment->id)
+                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**

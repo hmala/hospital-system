@@ -3,7 +3,7 @@
     // عدادات بسيطة للقائمة الجانبية
     $doctorIncompleteVisits = 0;
     $pendingSurgeries = 0;
-    $pendingRequests = 0;
+    $pendingRequestsCount = 0;
     $confirmedAppointments = 0;
     $incompleteVisits = 0;
     $pendingRadiology = 0;
@@ -17,7 +17,7 @@
                 $pendingSurgeries = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])->count();
             }
             if (Auth::user()->isAdmin() || Auth::user()->isReceptionist()) {
-                $pendingRequests = \App\Models\Request::where('status', 'pending')->count();
+                $pendingRequestsCount = \App\Models\Request::where('status', 'pending')->count();
                 $confirmedAppointments = \App\Models\Appointment::where('status', 'confirmed')->count();
                 $incompleteVisits = \App\Models\Visit::whereIn('status', ['pending', 'in_progress'])->count();
                 $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
@@ -119,7 +119,7 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.*') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
                                 <i class="fas fa-concierge-bell"></i><span> الاستعلامات</span>
-                                <span class="badge bg-secondary ms-2">{{ $pendingRequests }}</span>
+                                <span class="badge bg-secondary ms-2">{{ $pendingRequestsCount }}</span>
                             </a>
                         </li>
                         @endcan

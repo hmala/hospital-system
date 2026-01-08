@@ -65,7 +65,8 @@ class StaffRequestController extends Controller
 
         // فلترة الطلبات حسب النوع المسموح
         $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
-            ->whereIn('type', $allowedTypes);
+            ->whereIn('type', $allowedTypes)
+            ->where('payment_status', 'paid');
 
         // فلترة حسب النوع المحدد في URL
         if ($type && in_array($type, $allowedTypes)) {

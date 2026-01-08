@@ -218,43 +218,45 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="description" class="form-label">
-                                        <i class="fas fa-comment-medical me-1"></i>
-                                        وصف الحالة / التفاصيل <span class="text-danger">*</span>
-                                    </label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror" 
-                                              id="description" 
-                                              name="description" 
-                                              rows="4" 
-                                              required
-                                              placeholder="اكتب وصفاً تفصيلياً للحالة أو الخدمة المطلوبة...">{{ old('description') }}</textarea>
-                                    @error('description')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                            <!-- حقول عامة - تظهر للكشف الطبي والصيدلية فقط -->
+                            <div id="generalFields" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="description" class="form-label">
+                                            <i class="fas fa-comment-medical me-1"></i>
+                                            وصف الحالة / التفاصيل <span class="text-danger general-required">*</span>
+                                        </label>
+                                        <textarea class="form-control @error('description') is-invalid @enderror" 
+                                                  id="description" 
+                                                  name="description" 
+                                                  rows="4" 
+                                                  placeholder="اكتب وصفاً تفصيلياً للحالة أو الخدمة المطلوبة...">{{ old('description') }}</textarea>
+                                        @error('description')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label for="doctor_id" class="form-label">
-                                        <i class="fas fa-user-md me-1"></i>
-                                        الطبيب <span class="text-danger checkup-required" style="display: none;">*</span>
-                                    </label>
-                                    <select class="form-select @error('doctor_id') is-invalid @enderror" 
-                                            id="doctor_id" 
-                                            name="doctor_id">
-                                        <option value="">اختر الطبيب</option>
-                                        @foreach($doctors as $doctor)
-                                            <option value="{{ $doctor->id }}" 
-                                                    data-department="{{ $doctor->department_id }}"
-                                                    @selected(old('doctor_id') == $doctor->id)>
-                                                د. {{ $doctor->user->name }} - {{ $doctor->specialization }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('doctor_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                    <div class="col-md-6 mb-3">
+                                        <label for="doctor_id" class="form-label">
+                                            <i class="fas fa-user-md me-1"></i>
+                                            الطبيب <span class="text-danger checkup-required" style="display: none;">*</span>
+                                        </label>
+                                        <select class="form-select @error('doctor_id') is-invalid @enderror" 
+                                                id="doctor_id" 
+                                                name="doctor_id">
+                                            <option value="">اختر الطبيب</option>
+                                            @foreach($doctors as $doctor)
+                                                <option value="{{ $doctor->id }}" 
+                                                        data-department="{{ $doctor->department_id }}"
+                                                        @selected(old('doctor_id') == $doctor->id)>
+                                                    د. {{ $doctor->user->name }} - {{ $doctor->specialization }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('doctor_id')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
                                 </div>
                             </div>
 
@@ -294,6 +296,110 @@
                                                min="{{ date('Y-m-d') }}">
                                         @error('appointment_date')
                                             <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- حقول خاصة بالتحاليل -->
+                            <div id="labFields" style="display: none;">
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label for="lab_test_ids" class="form-label">
+                                            <i class="fas fa-flask me-1"></i>
+                                            أنواع التحاليل المطلوبة <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- حقل البحث -->
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="labSearchInput" 
+                                                   placeholder="ابحث عن تحليل بالاسم أو الرمز...">
+                                            <button class="btn btn-outline-secondary" type="button" id="clearLabSearch">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div class="border rounded p-3" id="labTestsContainer" style="max-height: 300px; overflow-y: auto;">
+                                            @foreach($labTests->groupBy('main_category') as $category => $tests)
+                                                <div class="mb-3">
+                                                    <h6 class="text-primary border-bottom pb-2">
+                                                        <i class="fas fa-folder-open me-1"></i>{{ $category }}
+                                                    </h6>
+                                                    @foreach($tests as $test)
+                                                        <div class="form-check">
+                                                            <input class="form-check-input lab-test-checkbox" 
+                                                                   type="checkbox" 
+                                                                   name="lab_test_ids[]" 
+                                                                   value="{{ $test->id }}" 
+                                                                   id="lab_{{ $test->id }}"
+                                                                   @if(is_array(old('lab_test_ids')) && in_array($test->id, old('lab_test_ids'))) checked @endif>
+                                                            <label class="form-check-label" for="lab_{{ $test->id }}">
+                                                                {{ $test->name }} 
+                                                                <small class="text-muted">({{ $test->code }})</small>
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        <div id="labSelectedCount" class="mt-2 text-muted small"></div>
+                                        @error('lab_test_ids')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- حقول خاصة بالأشعة -->
+                            <div id="radiologyFields" style="display: none;">
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label for="radiology_type_ids" class="form-label">
+                                            <i class="fas fa-x-ray me-1"></i>
+                                            أنواع الأشعة المطلوبة <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- حقل البحث -->
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="radiologySearchInput" 
+                                                   placeholder="ابحث عن نوع إشعة بالاسم أو الرمز...">
+                                            <button class="btn btn-outline-secondary" type="button" id="clearRadiologySearch">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 300px; overflow-y: auto;">
+                                            @foreach($radiologyTypes->groupBy('main_category') as $category => $types)
+                                                <div class="mb-3">
+                                                    <h6 class="text-info border-bottom pb-2">
+                                                        <i class="fas fa-folder-open me-1"></i>{{ $category }}
+                                                    </h6>
+                                                    @foreach($types as $type)
+                                                        <div class="form-check">
+                                                            <input class="form-check-input radiology-type-checkbox" 
+                                                                   type="checkbox" 
+                                                                   name="radiology_type_ids[]" 
+                                                                   value="{{ $type->id }}" 
+                                                                   id="rad_{{ $type->id }}"
+                                                                   @if(is_array(old('radiology_type_ids')) && in_array($type->id, old('radiology_type_ids'))) checked @endif>
+                                                            <label class="form-check-label" for="rad_{{ $type->id }}">
+                                                                {{ $type->name }} 
+                                                                <small class="text-muted">({{ $type->code }})</small>
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        <div id="radiologySelectedCount" class="mt-2 text-muted small"></div>
+                                        @error('radiology_type_ids')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
@@ -392,17 +498,30 @@ function selectRequestType(type) {
     
     // إذا كان النوع "كشف طبي" → إظهار حقول الموعد
     const checkupFields = document.getElementById('checkupFields');
+    const labFields = document.getElementById('labFields');
+    const radiologyFields = document.getElementById('radiologyFields');
+    const generalFields = document.getElementById('generalFields');
     const autoReferContainer = document.getElementById('autoReferContainer');
     const checkupRequired = document.querySelectorAll('.checkup-required');
+    const generalRequired = document.querySelectorAll('.general-required');
     const submitBtnText = document.getElementById('submitBtnText');
     const infoList = document.getElementById('infoList');
     const doctorSelect = document.getElementById('doctor_id');
+    const descriptionField = document.getElementById('description');
+    
+    // إخفاء جميع الحقول الخاصة
+    checkupFields.style.display = 'none';
+    labFields.style.display = 'none';
+    radiologyFields.style.display = 'none';
+    generalFields.style.display = 'none';
     
     if (type === 'checkup') {
         // إظهار حقول الكشف الطبي
         checkupFields.style.display = 'block';
+        generalFields.style.display = 'block';
         autoReferContainer.style.display = 'none';
         checkupRequired.forEach(el => el.style.display = 'inline');
+        generalRequired.forEach(el => el.style.display = 'inline');
         
         // تغيير نص الزر
         submitBtnText.textContent = 'حجز موعد';
@@ -414,15 +533,61 @@ function selectRequestType(type) {
             <li>سيتم إنشاء موعد في نظام المواعيد</li>
         `;
         
-        // جعل الطبيب والعيادة مطلوبين
+        // جعل الطبيب والعيادة ووصف الحالة مطلوبين
         doctorSelect.setAttribute('required', 'required');
+        descriptionField.setAttribute('required', 'required');
         document.getElementById('department_id').setAttribute('required', 'required');
         
-    } else {
-        // إخفاء حقول الكشف الطبي
-        checkupFields.style.display = 'none';
+    } else if (type === 'lab') {
+        // إظهار حقول التحاليل فقط
+        labFields.style.display = 'block';
         autoReferContainer.style.display = 'block';
         checkupRequired.forEach(el => el.style.display = 'none');
+        generalRequired.forEach(el => el.style.display = 'none');
+        
+        // تغيير نص الزر
+        submitBtnText.textContent = 'طلب تحاليل';
+        
+        // تغيير الملاحظات
+        infoList.innerHTML = `
+            <li>سيتم إنشاء طلب تحاليل للمريض</li>
+            <li>المريض يذهب للكاشير لدفع الأجور</li>
+            <li>بعد الدفع، يتوجه للمختبر لإجراء التحاليل</li>
+        `;
+        
+        // جعل الحقول العامة غير مطلوبة
+        doctorSelect.removeAttribute('required');
+        descriptionField.removeAttribute('required');
+        document.getElementById('department_id').removeAttribute('required');
+        
+    } else if (type === 'radiology') {
+        // إظهار حقول الأشعة فقط
+        radiologyFields.style.display = 'block';
+        autoReferContainer.style.display = 'block';
+        checkupRequired.forEach(el => el.style.display = 'none');
+        generalRequired.forEach(el => el.style.display = 'none');
+        
+        // تغيير نص الزر
+        submitBtnText.textContent = 'طلب أشعة';
+        
+        // تغيير الملاحظات
+        infoList.innerHTML = `
+            <li>سيتم إنشاء طلب أشعة للمريض</li>
+            <li>المريض يذهب للكاشير لدفع الأجور</li>
+            <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء التصوير</li>
+        `;
+        
+        // جعل الحقول العامة غير مطلوبة
+        doctorSelect.removeAttribute('required');
+        descriptionField.removeAttribute('required');
+        document.getElementById('department_id').removeAttribute('required');
+        
+    } else {
+        // الصيدلية أو أي نوع آخر - إظهار الحقول العامة
+        generalFields.style.display = 'block';
+        autoReferContainer.style.display = 'block';
+        checkupRequired.forEach(el => el.style.display = 'none');
+        generalRequired.forEach(el => el.style.display = 'inline');
         
         // إرجاع نص الزر
         submitBtnText.textContent = 'إنشاء الطلب';
@@ -434,7 +599,8 @@ function selectRequestType(type) {
             <li>أو اختر "التحويل التلقائي" للانتقال مباشرة</li>
         `;
         
-        // جعل الطبيب والعيادة اختياريين
+        // جعل وصف الحالة مطلوب، الباقي اختياري
+        descriptionField.setAttribute('required', 'required');
         doctorSelect.removeAttribute('required');
         document.getElementById('department_id').removeAttribute('required');
     }
@@ -468,12 +634,15 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    const description = document.getElementById('description').value.trim();
-    if (!description) {
-        e.preventDefault();
-        alert('يرجى كتابة وصف للحالة');
-        document.getElementById('description').focus();
-        return false;
+    // التحقق من وصف الحالة فقط للكشف الطبي والصيدلية
+    if (selectedType === 'checkup' || selectedType === 'pharmacy') {
+        const description = document.getElementById('description').value.trim();
+        if (!description) {
+            e.preventDefault();
+            alert('يرجى كتابة وصف للحالة');
+            document.getElementById('description').focus();
+            return false;
+        }
     }
     
     // إذا كان كشف طبي، التحقق من الطبيب والعيادة
@@ -495,7 +664,133 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
             return false;
         }
     }
+    
+    // إذا كان تحاليل، التحقق من اختيار التحاليل
+    if (selectedType === 'lab') {
+        const labTestCheckboxes = document.querySelectorAll('.lab-test-checkbox:checked');
+        
+        if (labTestCheckboxes.length === 0) {
+            e.preventDefault();
+            alert('يرجى اختيار نوع التحليل المطلوب على الأقل');
+            return false;
+        }
+    }
+    
+    // إذا كان أشعة، التحقق من اختيار الأشعة
+    if (selectedType === 'radiology') {
+        const radiologyTypeCheckboxes = document.querySelectorAll('.radiology-type-checkbox:checked');
+        
+        if (radiologyTypeCheckboxes.length === 0) {
+            e.preventDefault();
+            alert('يرجى اختيار نوع الإشعة المطلوب على الأقل');
+            return false;
+        }
+    }
 });
+
+// تحديث عداد التحاليل المختارة
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('lab-test-checkbox')) {
+        const checkedCount = document.querySelectorAll('.lab-test-checkbox:checked').length;
+        const counter = document.getElementById('labSelectedCount');
+        if (checkedCount > 0) {
+            counter.innerHTML = `<i class="fas fa-check-circle text-success"></i> تم اختيار ${checkedCount} تحليل`;
+        } else {
+            counter.innerHTML = '';
+        }
+    }
+});
+
+// وظيفة البحث في التحاليل
+const labSearchInput = document.getElementById('labSearchInput');
+const clearLabSearch = document.getElementById('clearLabSearch');
+
+if (labSearchInput) {
+    labSearchInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim().toLowerCase();
+        const labItems = document.querySelectorAll('#labTestsContainer .form-check');
+        const labCategories = document.querySelectorAll('#labTestsContainer > div');
+        
+        labItems.forEach(item => {
+            const label = item.querySelector('label');
+            const text = label ? label.textContent.toLowerCase() : '';
+            
+            if (text.includes(searchTerm) || searchTerm === '') {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // إخفاء/إظهار الفئات الفارغة
+        labCategories.forEach(category => {
+            const visibleItems = category.querySelectorAll('.form-check:not([style*="display: none"])');
+            if (visibleItems.length === 0 && searchTerm !== '') {
+                category.style.display = 'none';
+            } else {
+                category.style.display = '';
+            }
+        });
+    });
+    
+    clearLabSearch.addEventListener('click', function() {
+        labSearchInput.value = '';
+        labSearchInput.dispatchEvent(new Event('input'));
+        labSearchInput.focus();
+    });
+}
+
+// تحديث عداد الأشعة المختارة
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('radiology-type-checkbox')) {
+        const checkedCount = document.querySelectorAll('.radiology-type-checkbox:checked').length;
+        const counter = document.getElementById('radiologySelectedCount');
+        if (checkedCount > 0) {
+            counter.innerHTML = `<i class="fas fa-check-circle text-success"></i> تم اختيار ${checkedCount} نوع إشعة`;
+        } else {
+            counter.innerHTML = '';
+        }
+    }
+});
+
+// وظيفة البحث في الأشعة
+const radiologySearchInput = document.getElementById('radiologySearchInput');
+const clearRadiologySearch = document.getElementById('clearRadiologySearch');
+
+if (radiologySearchInput) {
+    radiologySearchInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim().toLowerCase();
+        const radiologyItems = document.querySelectorAll('#radiologyTypesContainer .form-check');
+        const radiologyCategories = document.querySelectorAll('#radiologyTypesContainer > div');
+        
+        radiologyItems.forEach(item => {
+            const label = item.querySelector('label');
+            const text = label ? label.textContent.toLowerCase() : '';
+            
+            if (text.includes(searchTerm) || searchTerm === '') {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // إخفاء/إظهار الفئات الفارغة
+        radiologyCategories.forEach(category => {
+            const visibleItems = category.querySelectorAll('.form-check:not([style*="display: none"])');
+            if (visibleItems.length === 0 && searchTerm !== '') {
+                category.style.display = 'none';
+            } else {
+                category.style.display = '';
+            }
+        });
+    });
+    
+    clearRadiologySearch.addEventListener('click', function() {
+        radiologySearchInput.value = '';
+        radiologySearchInput.dispatchEvent(new Event('input'));
+        radiologySearchInput.focus();
+    });
+}
 
 // إذا كان هناك خطأ في الصيغة، عرض النموذج مباشرة
 @if($errors->any())
