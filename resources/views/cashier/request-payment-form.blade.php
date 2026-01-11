@@ -68,41 +68,102 @@
                         <div class="border rounded p-3">
                             @php
                                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                $totalAmount = 0;
                             @endphp
 
                             @if($request->type === 'lab' && isset($details['lab_test_ids']))
-                                <div class="mb-3">
-                                    <strong>التحاليل المطلوبة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($details['lab_test_ids'] as $testId)
-                                            @php
-                                                $test = \App\Models\LabTest::find($testId);
-                                            @endphp
-                                            @if($test)
-                                                <li class="mb-1">
-                                                    <i class="fas fa-vial text-primary me-2"></i>
-                                                    {{ $test->name }} ({{ $test->code }})
-                                                </li>
-                                            @endif
-                                        @endforeach
-                                    </ul>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead class="table-primary">
+                                            <tr>
+                                                <th width="60">#</th>
+                                                <th>اسم التحليل</th>
+                                                <th>الرمز</th>
+                                                <th width="150" class="text-end">السعر (IQD)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($details['lab_test_ids'] as $index => $testId)
+                                                @php
+                                                    $test = \App\Models\LabTest::find($testId);
+                                                    if($test) {
+                                                        $price = $test->price ?? 0;
+                                                        $totalAmount += $price;
+                                                    }
+                                                @endphp
+                                                @if($test)
+                                                    <tr>
+                                                        <td>{{ $index + 1 }}</td>
+                                                        <td>
+                                                            <i class="fas fa-vial text-primary me-2"></i>
+                                                            {{ $test->name }}
+                                                        </td>
+                                                        <td><code>{{ $test->code }}</code></td>
+                                                        <td class="text-end">
+                                                            <strong>{{ number_format($price, 2) }}</strong>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-success">
+                                            <tr>
+                                                <th colspan="3" class="text-end">المجموع الكلي:</th>
+                                                <th class="text-end">
+                                                    <h5 class="mb-0 text-success">
+                                                        {{ number_format($totalAmount, 2) }} IQD
+                                                    </h5>
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
-                                <div class="mb-3">
-                                    <strong>الأشعة المطلوبة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($details['radiology_type_ids'] as $typeId)
-                                            @php
-                                                $type = \App\Models\RadiologyType::find($typeId);
-                                            @endphp
-                                            @if($type)
-                                                <li class="mb-1">
-                                                    <i class="fas fa-camera text-info me-2"></i>
-                                                    {{ $type->name }} ({{ $type->code }})
-                                                </li>
-                                            @endif
-                                        @endforeach
-                                    </ul>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead class="table-info">
+                                            <tr>
+                                                <th width="60">#</th>
+                                                <th>نوع الأشعة</th>
+                                                <th>الرمز</th>
+                                                <th width="150" class="text-end">السعر (IQD)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($details['radiology_type_ids'] as $index => $typeId)
+                                                @php
+                                                    $type = \App\Models\RadiologyType::find($typeId);
+                                                    if($type) {
+                                                        $price = $type->price ?? 0;
+                                                        $totalAmount += $price;
+                                                    }
+                                                @endphp
+                                                @if($type)
+                                                    <tr>
+                                                        <td>{{ $index + 1 }}</td>
+                                                        <td>
+                                                            <i class="fas fa-x-ray text-info me-2"></i>
+                                                            {{ $type->name }}
+                                                        </td>
+                                                        <td><code>{{ $type->code }}</code></td>
+                                                        <td class="text-end">
+                                                            <strong>{{ number_format($price, 2) }}</strong>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-success">
+                                            <tr>
+                                                <th colspan="3" class="text-end">المجموع الكلي:</th>
+                                                <th class="text-end">
+                                                    <h5 class="mb-0 text-success">
+                                                        {{ number_format($totalAmount, 2) }} IQD
+                                                    </h5>
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             @else
                                 <div class="mb-3">
@@ -155,9 +216,11 @@
                                                name="amount" 
                                                step="0.01" 
                                                min="0" 
-                                               value="{{ old('amount', 0) }}" 
-                                               required>
-                                        <span class="input-group-text">IQD</span>
+                                               value="{{ old('amount', $totalAmount) }}" 
+                                               required
+                                               readonly
+                                               style="background-color: #e9ecef;">
+                                        <span class="input-group-text bg-success text-white">IQD</span>
                                     </div>
                                     @error('amount')
                                         <div class="invalid-feedback">{{ $message }}</div>

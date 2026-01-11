@@ -197,7 +197,22 @@ function getTestUnit($testName, $labTests) {
                                 </button>
                             </div>
                             <div class="row">
-                                @foreach($request->details['tests'] ?? [] as $test)
+                                @php
+                                    // دعم كل من tests و lab_test_ids
+                                    $testsList = [];
+                                    if (isset($request->details['tests']) && is_array($request->details['tests'])) {
+                                        $testsList = $request->details['tests'];
+                                    } elseif (isset($request->details['lab_test_ids']) && is_array($request->details['lab_test_ids'])) {
+                                        // تحويل IDs إلى أسماء
+                                        foreach ($request->details['lab_test_ids'] as $testId) {
+                                            $labTest = \App\Models\LabTest::find($testId);
+                                            if ($labTest) {
+                                                $testsList[] = $labTest->name;
+                                            }
+                                        }
+                                    }
+                                @endphp
+                                @foreach($testsList as $test)
                                 <div class="col-md-4 mb-2">
                                     <div class="d-flex align-items-center border rounded p-2">
                                         <i class="{{ getTestIcon($test) }} me-2"></i>
@@ -533,7 +548,24 @@ function getTestUnit($testName, $labTests) {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach((isset($request->details['tests']) && is_array($request->details['tests'])) ? $request->details['tests'] : [] as $index => $test)
+                                                    @php
+                                                        // دعم كل من tests و lab_test_ids
+                                                        $testsList = [];
+                                                        $requestDetails = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                                        
+                                                        if (isset($requestDetails['tests']) && is_array($requestDetails['tests'])) {
+                                                            $testsList = $requestDetails['tests'];
+                                                        } elseif (isset($requestDetails['lab_test_ids']) && is_array($requestDetails['lab_test_ids'])) {
+                                                            // تحويل IDs إلى أسماء
+                                                            foreach ($requestDetails['lab_test_ids'] as $testId) {
+                                                                $labTest = \App\Models\LabTest::find($testId);
+                                                                if ($labTest) {
+                                                                    $testsList[] = $labTest->name;
+                                                                }
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @foreach($testsList as $index => $test)
                                                         @php
                                                             $testIcon = getTestIcon($test);
                                                         @endphp
@@ -616,7 +648,7 @@ function getTestUnit($testName, $labTests) {
                                                 </span>
                                                 <span class="stat-item">
                                                     <i class="fas fa-question-circle text-muted"></i>
-                                                    <span id="pending-count">{{ (isset($request->details['tests']) && is_array($request->details['tests'])) ? count($request->details['tests']) : 0 }}</span> غير مكتمل
+                                                    <span id="pending-count">{{ count($testsList) }}</span> غير مكتمل
                                                 </span>
                                             </div>
                                         </div>

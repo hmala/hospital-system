@@ -81,6 +81,7 @@
                                         <th>المريض</th>
                                         <th>الطبيب</th>
                                         <th>نوع الطلب</th>
+                                        <th>التفاصيل</th>
                                         <th>تاريخ الطلب</th>
                                         <th>الحالة</th>
                                         <th>الإجراءات</th>
@@ -96,6 +97,40 @@
                                             <span class="badge bg-{{ $request->type == 'lab' ? 'primary' : ($request->type == 'radiology' ? 'info' : 'success') }}">
                                                 {{ $request->type_text }}
                                             </span>
+                                        </td>
+                                        <td>
+                                            @php
+                                                $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                            @endphp
+                                            @if($request->type == 'lab' && isset($details['lab_test_ids']))
+                                                <small class="text-muted">
+                                                    @php
+                                                        $testNames = [];
+                                                        foreach($details['lab_test_ids'] as $testId) {
+                                                            $test = \App\Models\LabTest::find($testId);
+                                                            if ($test) {
+                                                                $testNames[] = $test->name;
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    {{ implode('، ', $testNames) }}
+                                                </small>
+                                            @elseif($request->type == 'radiology' && isset($details['radiology_type_ids']))
+                                                <small class="text-muted">
+                                                    @php
+                                                        $typeNames = [];
+                                                        foreach($details['radiology_type_ids'] as $typeId) {
+                                                            $type = \App\Models\RadiologyType::find($typeId);
+                                                            if ($type) {
+                                                                $typeNames[] = $type->name;
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    {{ implode('، ', $typeNames) }}
+                                                </small>
+                                            @else
+                                                <small class="text-muted">{{ $request->description ?? '-' }}</small>
+                                            @endif
                                         </td>
                                         <td>{{ $request->created_at->format('Y-m-d H:i') }}</td>
                                         <td>

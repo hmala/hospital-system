@@ -87,7 +87,15 @@ class CashierController extends Controller
             'avg_daily' => $monthlyPayments->count() > 0 ? $monthlyPayments->sum('amount') / Carbon::now()->daysInMonth : 0,
         ];
 
-        return view('cashier.index', compact('pendingAppointments', 'pendingRequests', 'todayStats', 'todayPayments', 'monthlyStats'));
+        // Debug: تأكد من نوع المتغير قبل إرساله
+        \Log::info('CashierController - pendingRequests type: ' . gettype($pendingRequests));
+        \Log::info('CashierController - pendingRequests class: ' . (is_object($pendingRequests) ? get_class($pendingRequests) : 'not object'));
+        \Log::info('CashierController - pendingRequests count: ' . (is_object($pendingRequests) ? $pendingRequests->count() : 'not object'));
+
+        // استخدام اسم مختلف لتجنب التعارض
+        $pendingMedicalRequests = $pendingRequests;
+
+        return view('cashier.index', compact('pendingAppointments', 'pendingMedicalRequests', 'todayStats', 'todayPayments', 'monthlyStats'));
     }
 
     /**
@@ -228,8 +236,12 @@ class CashierController extends Controller
     /**
      * معالجة دفع الطلب الطبي
      */
-    public function processRequestPayment(HttpRequest $httpRequest, MedicalRequest $request)
+    public function processRequestPayment(Request $httpRequest, MedicalRequest $request)
     {
+        \Log::info('========== processRequestPayment CALLED ==========');
+        \Log::info('Request ID: ' . $request->id);
+        \Log::info('HTTP Request data: ' . json_encode($httpRequest->all()));
+        
         $user = Auth::user();
 
         if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
@@ -250,7 +262,11 @@ class CashierController extends Controller
 
         DB::beginTransaction();
         try {
+            \Log::info('Starting payment process for request #' . $request->id);
+            \Log::info('Request data: patient_id=' . $request->visit->patient_id . ', cashier_id=' . $user->id);
+            
             // إنشاء سجل الدفع
+            \Log::info('Creating payment record...');
             $payment = Payment::create([
                 'request_id' => $request->id,
                 'patient_id' => $request->visit->patient_id,
@@ -258,11 +274,13 @@ class CashierController extends Controller
                 'receipt_number' => Payment::generateReceiptNumber(),
                 'amount' => $httpRequest->amount,
                 'payment_method' => $httpRequest->payment_method,
-                'payment_type' => 'request',
+                'payment_type' => 'lab', // استخدام 'lab' بدلاً من 'request' لأن الـ enum لا يحتوي على 'request'
                 'description' => 'دفع رسوم طلب ' . $request->type . ' #' . $request->id,
                 'notes' => $httpRequest->notes,
                 'paid_at' => Carbon::now()
             ]);
+
+            \Log::info('Payment created successfully: #' . $payment->id);
 
             // تحديث حالة الدفع للطلب
             $request->update([
@@ -270,7 +288,18 @@ class CashierController extends Controller
                 'payment_id' => $payment->id
             ]);
 
+            \Log::info('Request updated to paid');
+
+            // تحديث حالة الزيارة من pending_payment إلى in_progress لتظهر في المختبر
+            $request->visit->update([
+                'status' => 'in_progress'
+            ]);
+
+            \Log::info('Visit status updated to in_progress');
+
             DB::commit();
+
+            \Log::info('Transaction committed. Redirecting to receipt.');
 
             return redirect()->route('cashier.receipt', $payment->id)
                 ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number);

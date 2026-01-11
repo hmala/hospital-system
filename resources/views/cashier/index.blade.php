@@ -230,26 +230,13 @@
                             <h5 class="mb-0">
                                 <i class="fas fa-file-medical me-2"></i>
                                 الطلبات الطبية المعلقة - بانتظار الدفع
-                                @if(isset($pendingRequests) && is_object($pendingRequests) && $pendingRequests->count() > 0)
-                                    <span class="badge bg-warning">{{ $pendingRequests->total() }}</span>
+                                @if(isset($pendingMedicalRequests) && is_object($pendingMedicalRequests) && $pendingMedicalRequests->count() > 0)
+                                    <span class="badge bg-warning">{{ $pendingMedicalRequests->total() }}</span>
                                 @endif
                             </h5>
                         </div>
                         <div class="card-body">
-                            {{-- Debug Info --}}
-                            <div class="alert alert-info">
-                                <strong>Debug:</strong><br>
-                                isset: {{ isset($pendingRequests) ? 'نعم' : 'لا' }}<br>
-                                is_object: {{ is_object($pendingRequests ?? null) ? 'نعم' : 'لا' }}<br>
-                                type: {{ gettype($pendingRequests ?? null) }}<br>
-                                @if(isset($pendingRequests) && is_object($pendingRequests))
-                                    count: {{ $pendingRequests->count() }}<br>
-                                    total: {{ method_exists($pendingRequests, 'total') ? $pendingRequests->total() : 'N/A' }}
-                                @endif
-                            </div>
-                            
-                            @if(isset($pendingRequests) && is_object($pendingRequests))
-                                @forelse($pendingRequests as $request)
+                            @forelse($pendingMedicalRequests ?? [] as $request)
                                 @if($loop->first)
                                 <div class="table-responsive">
                                     <table class="table table-hover">
@@ -354,22 +341,18 @@
                                     </table>
                                 </div>
 
+                                @if(isset($pendingMedicalRequests) && method_exists($pendingMedicalRequests, 'links'))
                                 <div class="mt-3">
-                                    {{ $pendingRequests->links('pagination::bootstrap-5') }}
+                                    {{ $pendingMedicalRequests->links('pagination::bootstrap-5') }}
                                 </div>
                                 @endif
-                                @empty
+                                @endif
+                            @empty
                                 <div class="text-center py-5">
                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                                     <p class="text-muted">لا توجد طلبات معلقة حالياً</p>
                                 </div>
-                                @endforelse
-                            @else
-                                <div class="text-center py-5">
-                                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                                    <p class="text-muted">خطأ في تحميل البيانات</p>
-                                </div>
-                            @endif
+                            @endforelse
                         </div>
                     </div>
                 </div>
