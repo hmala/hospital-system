@@ -3,7 +3,7 @@ require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-$request = App\Models\Request::find(5);
+$request = App\Models\Request::find(8);
 if($request) {
     echo 'ID: ' . $request->id . PHP_EOL;
     echo 'Type: ' . $request->type . PHP_EOL;

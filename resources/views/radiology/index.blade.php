@@ -113,7 +113,13 @@
                                         <strong>{{ $request->radiologyType->name }}</strong><br>
                                         <small class="text-muted">{{ $request->radiologyType->code }}</small>
                                     </td>
-                                    <td>د. {{ $request->doctor->user->name }}</td>
+                                    <td>
+                                        @if($request->doctor)
+                                            د. {{ $request->doctor->user->name }}
+                                        @else
+                                            <span class="text-muted">من الاستعلامات</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <span class="badge bg-{{ $request->priority_color }}">
                                             {{ $request->priority_text }}

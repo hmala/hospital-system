@@ -588,8 +588,7 @@
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// تحديث تلقائي للصفحة كل 5 ثواني - معطل مؤقتاً للاختبار
-/*
+// تحديث تلقائي للصفحة كل 5 ثواني
 setInterval(function() {
     // تحديث الإحصائيات والجدول بدون إعادة تحميل كامل
     $.ajax({
@@ -619,7 +618,6 @@ setInterval(function() {
         }
     });
 }, 5000); // 5 ثواني
-*/
 
 // دوال الطباعة والتصدير
 function printReport() {

@@ -1,15 +1,23 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid" id="requests-content">
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h2>
-                    <i class="fas fa-clipboard-list me-2"></i>
-                    إدارة الطلبات الطبية
-                </h2>
-                <small class="text-muted">مرحباً {{ auth()->user()->name }}</small>
+                <div>
+                    <h2>
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        إدارة الطلبات الطبية
+                        <span class="badge bg-success" id="live-indicator">
+                            <i class="fas fa-circle fa-xs"></i> مباشر
+                        </span>
+                    </h2>
+                    <p class="text-muted mb-0">
+                        مرحباً {{ auth()->user()->name }} - 
+                        <small id="last-update">آخر تحديث: الآن</small>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -227,4 +235,56 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+// تحديث تلقائي للصفحة كل 5 ثواني
+setInterval(function() {
+    $.ajax({
+        url: window.location.href,
+        type: 'GET',
+        success: function(response) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(response, 'text/html');
+            const newContent = doc.getElementById('requests-content');
+            
+            if (newContent) {
+                const currentScroll = window.scrollY;
+                $('#requests-content').html($(newContent).html());
+                window.scrollTo(0, currentScroll);
+                
+                // تحديث الوقت
+                const now = new Date();
+                const time = now.toLocaleTimeString('ar-IQ');
+                $('#last-update').text('آخر تحديث: ' + time);
+            }
+        },
+        error: function(error) {
+            console.error('خطأ في التحديث:', error);
+        }
+    });
+}, 5000); // 5 ثواني
+
+$(document).ready(function() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('ar-IQ');
+    $('#last-update').text('آخر تحديث: ' + time);
+});
+</script>
+
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+#live-indicator {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+#live-indicator i {
+    color: #fff;
+}
+</style>
 @endsection

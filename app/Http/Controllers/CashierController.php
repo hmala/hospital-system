@@ -297,10 +297,77 @@ class CashierController extends Controller
 
             \Log::info('Visit status updated to in_progress');
 
+            // إذا كان الطلب أشعة، إنشاء سجل في radiology_requests إن لم يكن موجوداً
+            if ($request->type === 'radiology') {
+                \Log::info('Processing radiology request payment, request_id: ' . $request->id);
+                
+                $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                \Log::info('Request details: ' . json_encode($details));
+                
+                if (isset($details['radiology_type_ids']) && !empty($details['radiology_type_ids'])) {
+                    \Log::info('Found radiology_type_ids: ' . json_encode($details['radiology_type_ids']));
+                    
+                    // إنشاء سجل لكل نوع أشعة
+                    foreach ($details['radiology_type_ids'] as $radiologyTypeId) {
+                        // التحقق من عدم وجود سجل لنفس النوع في نفس الزيارة
+                        $exists = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
+                            ->where('radiology_type_id', $radiologyTypeId)
+                            ->exists();
+                        
+                        if (!$exists) {
+                            try {
+                                // الحصول على معلومات نوع الأشعة لحساب التكلفة
+                                $radiologyType = \App\Models\RadiologyType::find($radiologyTypeId);
+                                
+                                // تحديد الطبيب - إذا لم يكن موجوداً، نستخدم أي طبيب من القسم أو نتركه null
+                                $doctorId = $request->visit->doctor_id;
+                                if (!$doctorId && $request->visit->department_id) {
+                                    $doctor = \App\Models\Doctor::where('department_id', $request->visit->department_id)->first();
+                                    $doctorId = $doctor ? $doctor->id : null;
+                                }
+                                
+                                $radiologyRequest = \App\Models\RadiologyRequest::create([
+                                    'visit_id' => $request->visit_id,
+                                    'patient_id' => $request->visit->patient_id,
+                                    'doctor_id' => $doctorId,
+                                    'radiology_type_id' => $radiologyTypeId,
+                                    'requested_date' => $request->created_at ?? now(),
+                                    'status' => 'pending',
+                                    'priority' => $details['priority'] ?? 'normal',
+                                    'clinical_indication' => $request->description ?? 'طلب من الاستعلامات',
+                                    'total_cost' => $radiologyType ? $radiologyType->base_price : null,
+                                ]);
+                                
+                                \Log::info('Created radiology_request #' . $radiologyRequest->id . ' for type_id: ' . $radiologyTypeId);
+                            } catch (\Exception $e) {
+                                \Log::error('Failed to create radiology_request: ' . $e->getMessage());
+                            }
+                        } else {
+                            \Log::info('Radiology request already exists for visit_id: ' . $request->visit_id . ', type_id: ' . $radiologyTypeId);
+                        }
+                    }
+                } else {
+                    \Log::warning('No radiology_type_ids found in request details for request #' . $request->id);
+                }
+            }
+
             DB::commit();
 
-            \Log::info('Transaction committed. Redirecting to receipt.');
+            \Log::info('Transaction committed. Redirecting based on request type.');
 
+            // إذا كان الطلب أشعة، توجيه إلى صفحة الأشعة
+            if ($request->type === 'radiology') {
+                return redirect()->route('radiology.index')
+                    ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number . '. يمكنك الآن معالجة طلب الأشعة.');
+            }
+
+            // إذا كان الطلب مختبر، توجيه إلى صفحة طلبات المختبر
+            if ($request->type === 'lab') {
+                return redirect()->route('staff.requests.index', ['type' => 'lab'])
+                    ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number . '. يمكنك الآن معالجة طلب المختبر.');
+            }
+
+            // للطلبات الأخرى، عرض الإيصال
             return redirect()->route('cashier.receipt', $payment->id)
                 ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number);
 

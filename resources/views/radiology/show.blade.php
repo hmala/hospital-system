@@ -158,12 +158,20 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <p class="mb-2"><strong>الاسم:</strong></p>
-                    <p class="text-muted fs-5">د. {{ $radiology->doctor->user->name }}</p>
+                    @if($radiology->doctor)
+                        <p class="mb-2"><strong>الاسم:</strong></p>
+                        <p class="text-muted fs-5">د. {{ $radiology->doctor->user->name }}</p>
 
-                    @if($radiology->doctor->department)
-                    <p class="mb-2 mt-3"><strong>القسم:</strong></p>
-                    <p class="text-muted">{{ $radiology->doctor->department->name }}</p>
+                        @if($radiology->doctor->department)
+                        <p class="mb-2 mt-3"><strong>القسم:</strong></p>
+                        <p class="text-muted">{{ $radiology->doctor->department->name }}</p>
+                        @endif
+                    @else
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>طلب من الاستعلامات</strong>
+                            <p class="mb-0 mt-2">هذا الطلب تم إنشاؤه من خدمة الاستعلامات ولا يرتبط بطبيب محدد.</p>
+                        </div>
                     @endif
                 </div>
             </div>

@@ -331,25 +331,40 @@
                         @endcan
                         @endrole
 
-                        @role('admin|lab_staff|radiology_staff|pharmacy_staff')
+                        @role('admin|pharmacy_staff')
                         @php
                             $staffType = null;
-                            if (Auth::user()->hasRole('lab_staff')) $staffType = 'lab';
-                            elseif (Auth::user()->hasRole('radiology_staff')) $staffType = 'radiology';
-                            elseif (Auth::user()->hasRole('pharmacy_staff')) $staffType = 'pharmacy';
+                            if (Auth::user()->hasRole('pharmacy_staff')) $staffType = 'pharmacy';
                         @endphp
                         @if($staffType)
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.requests.*') ? 'active' : '' }}" href="{{ route('staff.requests.index') }}">
                                 <i class="fas fa-tasks"></i><span> الطلبات</span>
-                                @if($staffType == 'lab')
-                                    <span class="badge bg-secondary ms-2">{{ $pendingLab }}</span>
-                                @elseif($staffType == 'radiology')
-                                    <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
-                                @endif
                             </a>
                         </li>
                         @endif
+                        @endrole
+
+                        @role('lab_staff')
+                        @can('view lab tests')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('staff.requests.*') ? 'active' : '' }}" href="{{ route('staff.requests.index', ['type' => 'lab']) }}">
+                                <i class="fas fa-flask"></i><span> طلبات المختبر</span>
+                                <span class="badge bg-secondary ms-2">{{ $pendingLab }}</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @endrole
+
+                        @role('radiology_staff')
+                        @can('view radiology')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('radiology.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
+                                <i class="fas fa-x-ray"></i><span> طلبات الأشعة</span>
+                                <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
+                            </a>
+                        </li>
+                        @endcan
                         @endrole
 
                         @role('admin|lab_staff|receptionist')

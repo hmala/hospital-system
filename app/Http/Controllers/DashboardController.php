@@ -14,7 +14,47 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // إحصائيات عامة
+        $user = auth()->user();
+
+        // إحصائيات خاصة بموظف الأشعة
+        if ($user->hasRole('radiology_staff')) {
+            $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
+            $scheduledRadiology = \App\Models\RadiologyRequest::where('status', 'scheduled')->count();
+            $inProgressRadiology = \App\Models\RadiologyRequest::where('status', 'in_progress')->count();
+            $completedTodayRadiology = \App\Models\RadiologyRequest::where('status', 'completed')
+                ->whereDate('performed_at', today())
+                ->count();
+
+            $radiologyStats = [
+                'pending' => $pendingRadiology,
+                'scheduled' => $scheduledRadiology,
+                'in_progress' => $inProgressRadiology,
+                'completed_today' => $completedTodayRadiology,
+                'total' => \App\Models\RadiologyRequest::count(),
+            ];
+
+            return view('dashboard', compact('radiologyStats'));
+        }
+
+        // إحصائيات خاصة بموظف المختبر
+        if ($user->hasRole('lab_staff')) {
+            $pendingLab = \App\Models\Request::where('type', 'lab')
+                ->where('status', 'pending')
+                ->count();
+            $completedTodayLab = \App\Models\Request::where('type', 'lab')
+                ->where('status', 'completed')
+                ->whereDate('updated_at', today())
+                ->count();
+
+            $labStats = [
+                'pending' => $pendingLab,
+                'completed_today' => $completedTodayLab,
+            ];
+
+            return view('dashboard', compact('labStats'));
+        }
+
+        // إحصائيات عامة للمستخدمين الآخرين
         $stats = [
             'totalPatients' => User::role('patient')->count(),
             'totalDoctors' => User::role('doctor')->count(),
