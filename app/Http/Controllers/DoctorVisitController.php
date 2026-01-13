@@ -591,26 +591,30 @@ class DoctorVisitController extends Controller
             $radiologyDescription = null;
         }
 
-        MedicalRequest::create([
+        $medicalRequest = MedicalRequest::create([
             'visit_id' => $visit->id,
             'type' => $request->type,
             'description' => $request->type === 'radiology' && isset($radiologyDescription) 
                 ? $radiologyDescription 
                 : ($request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : 'صيدلية'))),
             'details' => $details,
-            'status' => 'pending'
+            'status' => 'pending',
+            'payment_status' => 'pending' // يجب الدفع عند الكاشير قبل الإرسال للقسم المختص
         ]);
 
         // التحقق من نوع الطلب (AJAX أو عادي)
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'تم إنشاء الطلب بنجاح',
-                'request_count' => $visit->requests()->count()
+                'message' => 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع',
+                'request_count' => $visit->requests()->count(),
+                'request_id' => $medicalRequest->id,
+                'requires_payment' => true, // إشارة للواجهة بأن الطلب يحتاج دفع
+                'cashier_url' => route('cashier.request.payment.form', $medicalRequest->id)
             ]);
         }
 
-        return redirect()->back()->with('success', 'تم إنشاء الطلب بنجاح');
+        return redirect()->back()->with('success', 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع');
     }
     public function updateRequestStatus(HttpRequest $request, MedicalRequest $requestModel)
     {

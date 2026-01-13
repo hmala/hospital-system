@@ -840,6 +840,25 @@ datalist option:hover {
                                     
                                     <!-- محتوى التبويبات -->
                                     <div class="tab-content border rounded p-4 bg-light" id="requestTypeContent">
+                                        
+                                        <!-- تنبيه مهم عن الدفع -->
+                                        <div class="alert alert-warning border-warning mb-4" role="alert">
+                                            <div class="d-flex align-items-start">
+                                                <i class="fas fa-exclamation-triangle me-3 mt-1" style="font-size: 1.5rem;"></i>
+                                                <div>
+                                                    <h6 class="alert-heading mb-2">
+                                                        <i class="fas fa-info-circle me-1"></i>
+                                                        تنبيه مهم - إجراءات الدفع
+                                                    </h6>
+                                                    <p class="mb-0">
+                                                        <strong>يجب تسديد رسوم التحاليل أو الأشعة عند الكاشير قبل إرسالها للقسم المختص.</strong>
+                                                        <br>
+                                                        بعد إضافة الطلب، سيتم توجيهك إلى صفحة الكاشير لإكمال عملية الدفع.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- تبويب التحاليل -->
                                         <div class="tab-pane fade show active" id="lab-content" role="tabpanel" aria-labelledby="lab-tab">
                                             <form action="{{ route('doctor.requests.store') }}" method="POST">
@@ -1018,6 +1037,7 @@ datalist option:hover {
                                                 <tr>
                                                     <th>النوع</th>
                                                     <th>التفاصيل</th>
+                                                    <th>حالة الدفع</th>
                                                     <th>الحالة</th>
                                                     <th>تاريخ الإنشاء</th>
                                                     <th>النتائج</th>
@@ -1057,6 +1077,29 @@ datalist option:hover {
                                                             {{ implode(', ', $radiologyNames) }}
                                                         @else
                                                             {{ Str::limit($request->details['description'] ?? '', 50) }}
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @php
+                                                            $paymentStatus = $request->payment_status ?? 'pending';
+                                                        @endphp
+                                                        @if($paymentStatus == 'paid')
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-check-circle me-1"></i>
+                                                                مدفوع
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="fas fa-exclamation-circle me-1"></i>
+                                                                معلق
+                                                            </span>
+                                                            <br>
+                                                            <a href="{{ route('cashier.request.payment.form', $request->id) }}" 
+                                                               class="btn btn-sm btn-outline-success mt-1"
+                                                               title="الذهاب للكاشير للدفع">
+                                                                <i class="fas fa-money-bill-wave me-1"></i>
+                                                                دفع
+                                                            </a>
                                                         @endif
                                                     </td>
                                                     <td>
@@ -2136,12 +2179,26 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // إغلاق المودال
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('requestModal'));
-                    modal.hide();
+                    // التحقق إذا كان الطلب يحتاج دفع
+                    if (data.requires_payment && data.cashier_url) {
+                        // عرض رسالة نجاح مع توجيه للكاشير
+                        const confirmPayment = confirm(data.message + '\n\nهل تريد الانتقال إلى صفحة الكاشير الآن؟');
+                        if (confirmPayment) {
+                            window.location.href = data.cashier_url;
+                        } else {
+                            // إغلاق المودال وإعادة تحميل الصفحة
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('requestModal'));
+                            modal.hide();
+                            location.reload();
+                        }
+                    } else {
+                        // إغلاق المودال
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('requestModal'));
+                        modal.hide();
 
-                    // إعادة تحميل الصفحة لتحديث البيانات
-                    location.reload();
+                        // إعادة تحميل الصفحة لتحديث البيانات
+                        location.reload();
+                    }
 
                     // أو يمكن استخدام تنبيه نجاح
                     // showSuccessAlert('تم إضافة الطلب بنجاح!');
