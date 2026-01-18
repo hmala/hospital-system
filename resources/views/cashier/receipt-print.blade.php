@@ -11,328 +11,445 @@
             }
             
             @page {
-                size: A4;
-                margin: 1cm;
+                size: A5;
+                margin: 0.5cm;
+            }
+            
+            body {
+                margin: 0;
+                padding: 10px;
             }
         }
         
         * {
-            font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Courier New', 'Arial', monospace;
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
         
         body {
             direction: rtl;
             text-align: right;
-            margin: 20px;
-            background-color: #f5f5f5;
+            background-color: white;
+            font-size: 12px;
+            line-height: 1.4;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 210mm;
             margin: 0 auto;
             background: white;
-            padding: 40px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 15px;
         }
         
         .header {
             text-align: center;
-            border-bottom: 3px solid #28a745;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
         
         .header h1 {
-            color: #28a745;
-            margin: 0;
-            font-size: 32px;
+            font-size: 20px;
+            margin: 5px 0;
+            font-weight: bold;
+            text-transform: uppercase;
         }
         
-        .header p {
+        .header .subtitle {
+            font-size: 11px;
+            color: #333;
+            margin: 3px 0;
+        }
+        
+        .receipt-number-box {
+            text-align: center;
+            padding: 8px;
+            border: 2px dashed #000;
             margin: 10px 0;
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .receipt-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .receipt-info div {
-            flex: 1;
+            background: #f9f9f9;
         }
         
         .receipt-number {
-            font-size: 24px;
-            color: #28a745;
+            font-size: 16px;
             font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .receipt-date {
+            font-size: 10px;
+            margin-top: 3px;
+        }
+        
+        .section {
+            margin: 12px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
         }
         
         .section-title {
-            background-color: #28a745;
-            color: white;
-            padding: 10px 15px;
-            margin: 25px 0 15px 0;
-            border-radius: 5px;
-            font-size: 16px;
             font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
         }
         
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-size: 11px;
         }
         
-        .info-item {
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .info-item .label {
-            color: #666;
-            font-size: 13px;
-            margin-bottom: 5px;
-        }
-        
-        .info-item .value {
+        .info-label {
             font-weight: bold;
-            font-size: 15px;
+            min-width: 80px;
         }
         
-        .payment-table {
+        .info-value {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .services-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 25px 0;
+            margin: 10px 0;
+            font-size: 11px;
         }
         
-        .payment-table th,
-        .payment-table td {
+        .services-table th {
+            background-color: #000;
+            color: white;
+            padding: 6px 4px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        .services-table td {
             border: 1px solid #ddd;
-            padding: 15px;
+            padding: 5px 4px;
             text-align: center;
         }
         
-        .payment-table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
+        .services-table td:nth-child(2) {
+            text-align: right;
         }
         
         .total-row {
-            background-color: #f8f9fa;
+            background-color: #000;
+            color: white;
             font-weight: bold;
-            font-size: 18px;
         }
         
         .total-amount {
-            color: #28a745;
-            font-size: 24px;
+            font-size: 14px;
         }
         
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-size: 13px;
+        .payment-info {
+            margin: 10px 0;
+            padding: 8px;
+            background: #f5f5f5;
+            border: 1px dashed #000;
+            text-align: center;
+        }
+        
+        .payment-method {
             font-weight: bold;
+            font-size: 13px;
         }
         
-        .badge-info {
-            background-color: #17a2b8;
-            color: white;
-        }
-        
-        .badge-primary {
-            background-color: #007bff;
-            color: white;
-        }
-        
-        .notes {
-            background-color: #e7f3ff;
-            padding: 15px;
-            border-right: 4px solid #0056b3;
-            margin: 20px 0;
-            border-radius: 4px;
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
         }
         
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 2px solid #000;
+            font-size: 10px;
         }
         
         .signature-box {
+            display: inline-block;
+            margin: 10px 20px;
             text-align: center;
         }
         
         .signature-line {
-            border-bottom: 2px solid #000;
-            width: 200px;
-            margin: 10px 0;
-            display: inline-block;
+            width: 120px;
+            border-bottom: 1px solid #000;
+            margin: 20px auto 5px;
         }
         
-        .bottom-footer {
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border: 1px solid #000;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .text-center {
             text-align: center;
-            margin-top: 40px;
-            font-size: 13px;
-            color: #666;
+        }
+        
+        .mt-5 {
+            margin-top: 5px;
+        }
+        
+        .mb-5 {
+            margin-bottom: 5px;
         }
         
         .print-button {
-            background-color: #28a745;
+            background-color: #000;
             color: white;
-            padding: 12px 30px;
+            padding: 10px 25px;
             border: none;
-            border-radius: 5px;
-            font-size: 16px;
+            border-radius: 3px;
+            font-size: 14px;
             cursor: pointer;
-            margin-bottom: 20px;
+            margin: 5px;
         }
         
         .print-button:hover {
-            background-color: #218838;
+            background-color: #333;
+        }
+        
+        .watermark {
+            text-align: center;
+            font-size: 9px;
+            color: #999;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Print Button -->
-        <div class="no-print" style="text-align: center;">
+        <!-- Print Buttons -->
+        <div class="no-print" style="text-align: center; margin-bottom: 20px;">
             <button class="print-button" onclick="window.print()">
-                🖨️ طباعة الإيصال
+                طباعة الإيصال
             </button>
-            <button class="print-button" onclick="window.history.back()" style="background-color: #6c757d;">
-                ◀️ العودة
+            <button class="print-button" onclick="window.history.back()" style="background-color: #666;">
+                العودة
             </button>
         </div>
 
         <!-- Header -->
         <div class="header">
-            <h1>🏥 مستشفى النظام الطبي</h1>
-            <p>إيصال دفع رسوم الخدمات الطبية</p>
+            <h1>مستشفى النظام الطبي</h1>
+            <div class="subtitle">إيصال دفع رسوم الخدمات الطبية</div>
+            <div class="subtitle">Medical Services Payment Receipt</div>
         </div>
 
-        <!-- Receipt Info -->
-        <div class="receipt-info">
-            <div>
-                <div style="color: #666; font-size: 14px;">رقم الإيصال:</div>
-                <div class="receipt-number">{{ $payment->receipt_number }}</div>
-            </div>
-            <div style="text-align: left;">
-                <div style="color: #666; font-size: 14px;">تاريخ ووقت الدفع:</div>
-                <div style="font-weight: bold; font-size: 16px;">{{ $payment->paid_at->format('Y-m-d H:i') }}</div>
-            </div>
+        <!-- Receipt Number -->
+        <div class="receipt-number-box">
+            <div class="receipt-number">رقم الإيصال: {{ $payment->receipt_number }}</div>
+            <div class="receipt-date">{{ $payment->paid_at->format('Y-m-d | H:i') }}</div>
         </div>
 
         <!-- Patient Info -->
-        <div class="section-title">👤 معلومات المريض</div>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="label">الاسم:</div>
-                <div class="value">{{ $payment->patient->user->name }}</div>
+        <div class="section">
+            <div class="section-title">معلومات المريض</div>
+            <div class="info-row">
+                <span class="info-label">الاسم:</span>
+                <span class="info-value">{{ $payment->patient->user->name }}</span>
             </div>
-            <div class="info-item">
-                <div class="label">الرقم الوطني:</div>
-                <div class="value">{{ $payment->patient->national_id ?? 'غير محدد' }}</div>
+            <div class="info-row">
+                <span class="info-label">الرقم الوطني:</span>
+                <span class="info-value">{{ $payment->patient->national_id ?? '-' }}</span>
             </div>
-            <div class="info-item">
-                <div class="label">رقم الهاتف:</div>
-                <div class="value">{{ $payment->patient->user->phone ?? 'غير محدد' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="label">البريد الإلكتروني:</div>
-                <div class="value">{{ $payment->patient->user->email ?? 'غير محدد' }}</div>
+            <div class="info-row">
+                <span class="info-label">رقم الهاتف:</span>
+                <span class="info-value">{{ $payment->patient->user->phone ?? '-' }}</span>
             </div>
         </div>
 
         @if($payment->appointment)
         <!-- Appointment Info -->
-        <div class="section-title">📅 تفاصيل الموعد</div>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="label">رقم الموعد:</div>
-                <div class="value">#{{ $payment->appointment->id }}</div>
+        <div class="section">
+            <div class="section-title">تفاصيل الموعد</div>
+            <div class="info-row">
+                <span class="info-label">رقم الموعد:</span>
+                <span class="info-value">#{{ $payment->appointment->id }}</span>
             </div>
-            <div class="info-item">
-                <div class="label">تاريخ الموعد:</div>
-                <div class="value">{{ $payment->appointment->appointment_date->format('Y-m-d H:i') }}</div>
+            <div class="info-row">
+                <span class="info-label">الطبيب:</span>
+                <span class="info-value">د. {{ $payment->appointment->doctor->user->name }}</span>
             </div>
-            <div class="info-item">
-                <div class="label">الطبيب:</div>
-                <div class="value">د. {{ $payment->appointment->doctor->user->name }}</div>
+            <div class="info-row">
+                <span class="info-label">القسم:</span>
+                <span class="info-value">{{ $payment->appointment->department->name }}</span>
             </div>
-            <div class="info-item">
-                <div class="label">القسم:</div>
-                <div class="value">{{ $payment->appointment->department->name }}</div>
+            <div class="info-row">
+                <span class="info-label">التاريخ:</span>
+                <span class="info-value">{{ $payment->appointment->appointment_date->format('Y-m-d H:i') }}</span>
             </div>
         </div>
         @endif
 
-        <!-- Payment Details -->
-        <div class="section-title">💰 تفاصيل الدفع</div>
-        <table class="payment-table">
+        @if($payment->request)
+        <!-- Request Info -->
+        <div class="section">
+            <div class="section-title">تفاصيل الطلب الطبي</div>
+            <div class="info-row">
+                <span class="info-label">رقم الطلب:</span>
+                <span class="info-value">#{{ $payment->request->id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">النوع:</span>
+                <span class="info-value">
+                    <span class="badge">
+                        @if($payment->request->type === 'lab')
+                            تحاليل مخبرية
+                        @elseif($payment->request->type === 'radiology')
+                            فحوصات أشعة
+                        @else
+                            {{ $payment->request->type }}
+                        @endif
+                    </span>
+                </span>
+            </div>
+            @if($payment->request->visit && $payment->request->visit->doctor)
+            <div class="info-row">
+                <span class="info-label">الطبيب:</span>
+                <span class="info-value">د. {{ $payment->request->visit->doctor->user->name }}</span>
+            </div>
+            @endif
+        </div>
+
+        @php
+            $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
+        @endphp
+
+        @if($payment->request->type === 'lab' && isset($details['lab_test_ids']))
+        <!-- Lab Tests Table -->
+        <table class="services-table">
             <thead>
                 <tr>
-                    <th>الوصف</th>
-                    <th>نوع الدفع</th>
-                    <th>طريقة الدفع</th>
-                    <th>المبلغ (IQD)</th>
+                    <th style="width: 40px;">#</th>
+                    <th>اسم التحليل</th>
+                    <th style="width: 80px;">الرمز</th>
+                    <th style="width: 100px;">السعر (IQD)</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>{{ $payment->description }}</td>
-                    <td><span class="badge badge-info">{{ $payment->payment_type_name }}</span></td>
-                    <td><span class="badge badge-primary">{{ $payment->payment_method_name }}</span></td>
-                    <td style="font-weight: bold;">{{ number_format($payment->amount, 2) }}</td>
-                </tr>
+                @php $totalAmount = 0; @endphp
+                @foreach($details['lab_test_ids'] as $index => $testId)
+                    @php
+                        $test = \App\Models\LabTest::find($testId);
+                        if($test) {
+                            $price = $test->price ?? 0;
+                            $totalAmount += $price;
+                        }
+                    @endphp
+                    @if($test)
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>{{ $test->name }}</td>
+                        <td>{{ $test->code }}</td>
+                        <td>{{ number_format($price, 0) }}</td>
+                    </tr>
+                    @endif
+                @endforeach
                 <tr class="total-row">
-                    <td colspan="3" style="text-align: left;">الإجمالي:</td>
-                    <td class="total-amount">{{ number_format($payment->amount, 2) }} IQD</td>
+                    <td colspan="3">الإجمالي</td>
+                    <td class="total-amount">{{ number_format($totalAmount, 0) }}</td>
                 </tr>
             </tbody>
         </table>
+        @elseif($payment->request->type === 'radiology' && isset($details['radiology_type_ids']))
+        <!-- Radiology Tests Table -->
+        <table class="services-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>نوع الأشعة</th>
+                    <th>الوصف</th>
+                    <th style="width: 100px;">السعر (IQD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php $totalAmount = 0; @endphp
+                @foreach($details['radiology_type_ids'] as $index => $typeId)
+                    @php
+                        $radiologyType = \App\Models\RadiologyType::find($typeId);
+                        if($radiologyType) {
+                            $price = $radiologyType->base_price ?? 0;
+                            $totalAmount += $price;
+                        }
+                    @endphp
+                    @if($radiologyType)
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>{{ $radiologyType->name }}</td>
+                        <td>{{ $radiologyType->description ?? '-' }}</td>
+                        <td>{{ number_format($price, 0) }}</td>
+                    </tr>
+                    @endif
+                @endforeach
+                <tr class="total-row">
+                    <td colspan="3">الإجمالي</td>
+                    <td class="total-amount">{{ number_format($totalAmount, 0) }}</td>
+                </tr>
+            </tbody>
+        </table>
+        @endif
+        @endif
+
+        <div class="divider"></div>
+
+        <!-- Payment Summary -->
+        <div class="payment-info">
+            <div class="mb-5">طريقة الدفع: <span class="payment-method">{{ $payment->payment_method_name }}</span></div>
+            <div style="font-size: 16px; font-weight: bold;">المبلغ المدفوع: {{ number_format($payment->amount, 0) }} IQD</div>
+        </div>
 
         @if($payment->notes)
-        <!-- Notes -->
-        <div class="notes">
-            <strong>📝 ملاحظات:</strong> {{ $payment->notes }}
+        <div class="section">
+            <div class="section-title">ملاحظات</div>
+            <div style="padding: 5px;">{{ $payment->notes }}</div>
         </div>
         @endif
 
-        <!-- Footer -->
-        <div class="footer">
-            <div>
-                <div style="color: #666; margin-bottom: 5px;">تم الاستلام بواسطة:</div>
-                <div style="font-weight: bold;">{{ $payment->cashier->name }}</div>
+        <div class="divider"></div>
+
+        <!-- Footer Signatures -->
+        <div class="text-center">
+            <div class="signature-box">
+                <div style="font-size: 10px; margin-bottom: 5px;">الكاشير</div>
+                <div>{{ $payment->cashier->name }}</div>
+                <div class="signature-line"></div>
+                <div style="font-size: 9px;">التوقيع</div>
             </div>
             <div class="signature-box">
-                <div style="color: #666; margin-bottom: 5px;">التوقيع:</div>
+                <div style="font-size: 10px; margin-bottom: 5px;">المريض</div>
+                <div>{{ $payment->patient->user->name }}</div>
                 <div class="signature-line"></div>
+                <div style="font-size: 9px;">التوقيع</div>
             </div>
         </div>
 
-        <!-- Bottom Footer -->
-        <div class="bottom-footer">
-            <p>✅ هذا إيصال رسمي صادر من نظام إدارة المستشفى</p>
-            <p>📞 للاستفسارات يرجى الاتصال على: 0790-XXX-XXXX</p>
-            <p style="margin-top: 20px; color: #999;">تم الطباعة في: {{ now()->format('Y-m-d H:i:s') }}</p>
+        <!-- Footer -->
+        <div class="footer">
+            <div>هذا إيصال رسمي صادر من نظام إدارة المستشفى</div>
+            <div class="mt-5">للاستفسارات: 0790-XXX-XXXX | info@hospital.com</div>
         </div>
+
+        <div class="watermark">طبع في: {{ now()->format('Y-m-d H:i:s') }}</div>
     </div>
 
     <script>
-        // Auto-print on page load (optional)
+        // Auto print option
         // window.onload = function() { window.print(); }
     </script>
 </body>

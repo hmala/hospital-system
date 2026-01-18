@@ -137,38 +137,130 @@
                             </div>
                         </div>
                     </div>
+
+                    @php
+                        $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
+                    @endphp
+
+                    @if($payment->request->type === 'lab' && isset($details['lab_test_ids']))
+                    <!-- Lab Tests Details -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-flask me-2 text-primary"></i>
+                            تفاصيل التحاليل المطلوبة
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th>اسم التحليل</th>
+                                        <th>الرمز</th>
+                                        <th style="width: 150px;" class="text-end">السعر (IQD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $totalAmount = 0; @endphp
+                                    @foreach($details['lab_test_ids'] as $index => $testId)
+                                        @php
+                                            $test = \App\Models\LabTest::find($testId);
+                                            if($test) {
+                                                $price = $test->price ?? 0;
+                                                $totalAmount += $price;
+                                            }
+                                        @endphp
+                                        @if($test)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>
+                                                <i class="fas fa-vial text-primary me-1"></i>
+                                                {{ $test->name }}
+                                            </td>
+                                            <td>{{ $test->code }}</td>
+                                            <td class="text-end fw-bold">{{ number_format($price, 2) }}</td>
+                                        </tr>
+                                        @endif
+                                    @endforeach
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="3" class="text-end fw-bold">الإجمالي:</td>
+                                        <td class="text-end fw-bold text-success">{{ number_format($totalAmount, 2) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    @elseif($payment->request->type === 'radiology' && isset($details['radiology_type_ids']))
+                    <!-- Radiology Types Details -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-x-ray me-2 text-info"></i>
+                            تفاصيل الفحوصات الإشعاعية المطلوبة
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-info">
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th>نوع الأشعة</th>
+                                        <th>الوصف</th>
+                                        <th style="width: 150px;" class="text-end">السعر (IQD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $totalAmount = 0; @endphp
+                                    @foreach($details['radiology_type_ids'] as $index => $typeId)
+                                        @php
+                                            $radiologyType = \App\Models\RadiologyType::find($typeId);
+                                            if($radiologyType) {
+                                                $price = $radiologyType->base_price ?? 0;
+                                                $totalAmount += $price;
+                                            }
+                                        @endphp
+                                        @if($radiologyType)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>
+                                                <i class="fas fa-camera text-info me-1"></i>
+                                                {{ $radiologyType->name }}
+                                            </td>
+                                            <td>{{ $radiologyType->description ?? '-' }}</td>
+                                            <td class="text-end fw-bold">{{ number_format($price, 2) }}</td>
+                                        </tr>
+                                        @endif
+                                    @endforeach
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="3" class="text-end fw-bold">الإجمالي:</td>
+                                        <td class="text-end fw-bold text-success">{{ number_format($totalAmount, 2) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
                     @endif
 
-                    <!-- تفاصيل الدفع -->
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>الوصف</th>
-                                    <th class="text-center">نوع الدفع</th>
-                                    <th class="text-center">طريقة الدفع</th>
-                                    <th class="text-end">المبلغ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ $payment->description }}</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info">{{ $payment->payment_type_name }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary">{{ $payment->payment_method_name }}</span>
-                                    </td>
-                                    <td class="text-end fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
-                                </tr>
-                            </tbody>
-                            <tfoot class="table-light">
-                                <tr>
-                                    <td colspan="3" class="text-end fw-bold">الإجمالي:</td>
-                                    <td class="text-end fw-bold text-success h5 mb-0">{{ number_format($payment->amount, 2) }} IQD</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <!-- ملخص الدفع -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                            ملخص الدفع
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted">طريقة الدفع:</small>
+                                <div class="fw-bold">
+                                    <span class="badge bg-primary">{{ $payment->payment_method_name }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted">المبلغ المدفوع:</small>
+                                <div class="fw-bold text-success" style="font-size: 1.5rem;">{{ number_format($payment->amount, 2) }} IQD</div>
+                            </div>
+                        </div>
                     </div>
 
                     @if($payment->notes)

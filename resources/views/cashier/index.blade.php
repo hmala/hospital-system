@@ -18,6 +18,12 @@
                         <small id="last-update">آخر تحديث: الآن</small>
                     </p>
                 </div>
+                <div>
+                    <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-danger">
+                        <i class="fas fa-procedures me-2"></i>
+                        كاشير العمليات الجراحية
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -26,6 +32,23 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-2"></i>
             {{ session('success') }}
+            @if(session('payment_id'))
+                <br>
+                <div class="mt-2">
+                    <a href="{{ route('cashier.receipt', session('payment_id')) }}" 
+                       class="btn btn-sm btn-light me-2" 
+                       target="_blank">
+                        <i class="fas fa-eye me-1"></i>
+                        عرض الإيصال
+                    </a>
+                    <a href="{{ route('cashier.receipt.print', session('payment_id')) }}" 
+                       class="btn btn-sm btn-light" 
+                       target="_blank">
+                        <i class="fas fa-print me-1"></i>
+                        طباعة الإيصال
+                    </a>
+                </div>
+            @endif
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
@@ -379,14 +402,33 @@
                                                 <th>طريقة الدفع</th>
                                                 <th>رقم الإيصال</th>
                                                 <th>الحالة</th>
+                                                <th>الإجراءات</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach($todayPayments as $payment)
                                                 <tr>
                                                     <td>{{ $payment->paid_at->format('H:i') }}</td>
-                                                    <td>{{ $payment->appointment->patient->user->name ?? 'غير محدد' }}</td>
-                                                    <td>د. {{ $payment->appointment->doctor->user->name ?? 'غير محدد' }}</td>
+                                                    <td>
+                                                        @if($payment->appointment)
+                                                            {{ $payment->appointment->patient->user->name ?? 'غير محدد' }}
+                                                        @elseif($payment->request && $payment->request->visit)
+                                                            {{ $payment->request->visit->patient->user->name ?? 'غير محدد' }}
+                                                        @elseif($payment->patient)
+                                                            {{ $payment->patient->user->name ?? 'غير محدد' }}
+                                                        @else
+                                                            غير محدد
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($payment->appointment && $payment->appointment->doctor)
+                                                            د. {{ $payment->appointment->doctor->user->name }}
+                                                        @elseif($payment->request && $payment->request->visit && $payment->request->visit->doctor)
+                                                            د. {{ $payment->request->visit->doctor->user->name }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
                                                     <td class="text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
                                                     <td>
                                                         <span class="badge bg-{{ $payment->payment_method == 'cash' ? 'success' : ($payment->payment_method == 'card' ? 'info' : 'warning') }}">
@@ -399,6 +441,20 @@
                                                             <i class="fas fa-check me-1"></i>
                                                             مكتمل
                                                         </span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ route('cashier.receipt', $payment->id) }}" 
+                                                           class="btn btn-sm btn-info me-1" 
+                                                           title="عرض الإيصال"
+                                                           target="_blank">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ route('cashier.receipt.print', $payment->id) }}" 
+                                                           class="btn btn-sm btn-primary" 
+                                                           title="طباعة الإيصال"
+                                                           target="_blank">
+                                                            <i class="fas fa-print"></i>
+                                                        </a>
                                                     </td>
                                                 </tr>
                                             @endforeach

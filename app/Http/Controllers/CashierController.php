@@ -9,6 +9,7 @@ use App\Models\Request as MedicalRequest;
 use App\Models\Visit;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
+use App\Models\Surgery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,9 @@ class CashierController extends Controller
 
         // إحصائيات اليوم المحسنة
         $today = Carbon::today();
-        $todayPayments = Payment::whereDate('paid_at', $today)->with('appointment.doctor')->get();
+        $todayPayments = Payment::whereDate('paid_at', $today)
+            ->with(['appointment.doctor', 'appointment.patient.user', 'request.visit.patient.user', 'request.visit.doctor.user', 'patient.user'])
+            ->get();
 
         // حساب عدد المعلقات بشكل صحيح
         $pendingAppointmentsCount = is_object($pendingAppointments) ? $pendingAppointments->total() : 0;
@@ -353,23 +356,12 @@ class CashierController extends Controller
 
             DB::commit();
 
-            \Log::info('Transaction committed. Redirecting based on request type.');
+            \Log::info('Transaction committed. Redirecting to cashier index.');
 
-            // إذا كان الطلب أشعة، توجيه إلى صفحة الأشعة
-            if ($request->type === 'radiology') {
-                return redirect()->route('radiology.index')
-                    ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number . '. يمكنك الآن معالجة طلب الأشعة.');
-            }
-
-            // إذا كان الطلب مختبر، توجيه إلى صفحة طلبات المختبر
-            if ($request->type === 'lab') {
-                return redirect()->route('staff.requests.index', ['type' => 'lab'])
-                    ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number . '. يمكنك الآن معالجة طلب المختبر.');
-            }
-
-            // للطلبات الأخرى، عرض الإيصال
-            return redirect()->route('cashier.receipt', $payment->id)
-                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number);
+            // العودة إلى صفحة الكاشير الرئيسية مع رسالة نجاح
+            return redirect()->route('cashier.index')
+                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number)
+                ->with('payment_id', $payment->id);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -416,5 +408,153 @@ class CashierController extends Controller
         $totalAmount = $query->sum('amount');
 
         return view('cashier.report', compact('payments', 'totalAmount'));
+    }
+
+    /**
+     * عرض واجهة الكاشير للعمليات الجراحية
+     */
+    public function surgeriesIndex()
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // جلب العمليات المعلقة (بانتظار الدفع)
+        $pendingSurgeries = Surgery::with([
+            'patient.user', 
+            'doctor.user', 
+            'department',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'visit'
+        ])
+        ->whereIn('status', ['scheduled', 'waiting'])
+        ->where('payment_status', 'pending')
+        ->orderBy('scheduled_date')
+        ->paginate(15);
+
+        // إحصائيات العمليات
+        $today = Carbon::today();
+        $surgeryStats = [
+            'pending_count' => Surgery::where('payment_status', 'pending')->count(),
+            'today_paid' => Payment::whereDate('paid_at', $today)
+                ->where('payment_type', 'surgery')
+                ->count(),
+            'today_revenue' => (float) Payment::whereDate('paid_at', $today)
+                ->where('payment_type', 'surgery')
+                ->sum('amount'),
+        ];
+
+        return view('cashier.surgeries.index', compact('pendingSurgeries', 'surgeryStats'));
+    }
+
+    /**
+     * عرض نموذج دفع العملية الجراحية
+     */
+    public function showSurgeryPaymentForm(Surgery $surgery)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // التحقق من أن العملية لم يتم دفعها
+        if ($surgery->payment_status === 'paid') {
+            return redirect()->route('cashier.surgeries.index')
+                ->with('warning', 'هذه العملية تم دفعها مسبقاً');
+        }
+
+        $surgery->load([
+            'patient.user', 
+            'doctor.user', 
+            'department',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'visit'
+        ]);
+
+        // حساب التكلفة الإجمالية
+        $surgeryFee = $surgery->surgery_fee ?? 0;
+        $labTestsFee = $surgery->labTests->sum(function($test) {
+            return $test->labTest->price ?? 0;
+        });
+        $radiologyTestsFee = $surgery->radiologyTests->sum(function($test) {
+            return $test->radiologyType->base_price ?? 0;
+        });
+        
+        $totalAmount = $surgeryFee + $labTestsFee + $radiologyTestsFee;
+
+        return view('cashier.surgeries.payment-form', compact('surgery', 'surgeryFee', 'labTestsFee', 'radiologyTestsFee', 'totalAmount'));
+    }
+
+    /**
+     * معالجة دفع العملية الجراحية
+     */
+    public function processSurgeryPayment(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $request->validate([
+            'payment_method' => 'required|in:cash,card,insurance',
+            'amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        // التحقق من أن العملية لم يتم دفعها
+        if ($surgery->payment_status === 'paid') {
+            return redirect()->route('cashier.surgeries.index')
+                ->with('error', 'هذه العملية تم دفعها مسبقاً');
+        }
+
+        DB::beginTransaction();
+        try {
+            // إنشاء سجل الدفع
+            $payment = Payment::create([
+                'patient_id' => $surgery->patient_id,
+                'cashier_id' => $user->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'amount' => $request->amount,
+                'payment_method' => $request->payment_method,
+                'payment_type' => 'surgery',
+                'description' => 'دفع رسوم العملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ')',
+                'notes' => $request->notes,
+                'paid_at' => Carbon::now()
+            ]);
+
+            // تحديث حالة دفع العملية
+            $surgery->update([
+                'payment_status' => 'paid',
+                'payment_id' => $payment->id
+            ]);
+
+            // تحديث حالة الطلبات المرتبطة (التحاليل والأشعة) إذا وجدت
+            if ($surgery->visit_id) {
+                MedicalRequest::where('visit_id', $surgery->visit_id)
+                    ->where('payment_status', 'pending')
+                    ->update(['payment_status' => 'paid']);
+                
+                // تحديث حالة الزيارة
+                $surgery->visit->update(['status' => 'in_progress']);
+            }
+
+            DB::commit();
+
+            return redirect()->route('cashier.surgeries.index')
+                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number)
+                ->with('payment_id', $payment->id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 }

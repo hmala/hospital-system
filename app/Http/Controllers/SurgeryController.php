@@ -150,24 +150,76 @@ class SurgeryController extends Controller
 
         $surgery = Surgery::create($surgeryData);
 
+        // إنشاء زيارة للعملية إذا لم تكن موجودة
+        if (!$surgery->visit_id) {
+            $visit = \App\Models\Visit::create([
+                'patient_id' => $surgery->patient_id,
+                'department_id' => $surgery->department_id,
+                'doctor_id' => $surgery->doctor_id,
+                'visit_date' => $surgery->scheduled_date,
+                'visit_time' => $surgery->scheduled_time,
+                'visit_type' => 'surgery',
+                'chief_complaint' => 'عملية جراحية: ' . $surgery->surgery_type,
+                'status' => 'pending_payment',
+                'notes' => 'زيارة خاصة بالعملية الجراحية #' . $surgery->id
+            ]);
+            $surgery->update(['visit_id' => $visit->id]);
+        } else {
+            $visit = $surgery->visit;
+        }
+
         // إنشاء التحاليل المخبرية المطلوبة
-        if ($request->has('lab_tests') && is_array($request->lab_tests)) {
+        if ($request->has('lab_tests') && is_array($request->lab_tests) && count($request->lab_tests) > 0) {
+            // حفظ في surgery_lab_tests
             foreach ($request->lab_tests as $labTestId) {
                 $surgery->labTests()->create([
                     'lab_test_id' => $labTestId,
                     'status' => 'pending'
                 ]);
             }
+            
+            // إنشاء طلب في جدول requests ليظهر في الكاشير
+            \App\Models\Request::create([
+                'visit_id' => $visit->id,
+                'type' => 'lab',
+                'description' => 'تحاليل ما قبل العملية الجراحية: ' . $surgery->surgery_type,
+                'status' => 'pending',
+                'payment_status' => 'pending',
+                'details' => json_encode([
+                    'lab_test_ids' => $request->lab_tests,
+                    'surgery_id' => $surgery->id,
+                    'surgery_type' => $surgery->surgery_type,
+                    'priority' => 'high',
+                    'source' => 'surgery'
+                ])
+            ]);
         }
 
         // إنشاء الأشعة المطلوبة
-        if ($request->has('radiology_tests') && is_array($request->radiology_tests)) {
+        if ($request->has('radiology_tests') && is_array($request->radiology_tests) && count($request->radiology_tests) > 0) {
+            // حفظ في surgery_radiology_tests
             foreach ($request->radiology_tests as $radiologyTypeId) {
                 $surgery->radiologyTests()->create([
                     'radiology_type_id' => $radiologyTypeId,
                     'status' => 'pending'
                 ]);
             }
+            
+            // إنشاء طلب في جدول requests ليظهر في الكاشير
+            \App\Models\Request::create([
+                'visit_id' => $visit->id,
+                'type' => 'radiology',
+                'description' => 'أشعة ما قبل العملية الجراحية: ' . $surgery->surgery_type,
+                'status' => 'pending',
+                'payment_status' => 'pending',
+                'details' => json_encode([
+                    'radiology_type_ids' => $request->radiology_tests,
+                    'surgery_id' => $surgery->id,
+                    'surgery_type' => $surgery->surgery_type,
+                    'priority' => 'high',
+                    'source' => 'surgery'
+                ])
+            ]);
         }
 
         broadcast(new SurgeryUpdated($surgery));
@@ -248,6 +300,24 @@ class SurgeryController extends Controller
 
         $surgery->update($surgeryData);
 
+        // التأكد من وجود زيارة
+        if (!$surgery->visit_id) {
+            $visit = \App\Models\Visit::create([
+                'patient_id' => $surgery->patient_id,
+                'department_id' => $surgery->department_id,
+                'doctor_id' => $surgery->doctor_id,
+                'visit_date' => $surgery->scheduled_date,
+                'visit_time' => $surgery->scheduled_time,
+                'visit_type' => 'surgery',
+                'chief_complaint' => 'عملية جراحية: ' . $surgery->surgery_type,
+                'status' => 'pending_payment',
+                'notes' => 'زيارة خاصة بالعملية الجراحية #' . $surgery->id
+            ]);
+            $surgery->update(['visit_id' => $visit->id]);
+        } else {
+            $visit = $surgery->visit;
+        }
+
         // تحديث التحاليل المخبرية
         $oldLabTestIds = $surgery->labTests->pluck('lab_test_id')->toArray();
         $newLabTestIds = $request->has('lab_tests') ? $request->lab_tests : [];
@@ -268,6 +338,48 @@ class SurgeryController extends Controller
             }
         }
 
+        // تحديث أو إنشاء طلب التحاليل في جدول requests
+        if (count($newLabTestIds) > 0) {
+            $existingLabRequest = \App\Models\Request::where('visit_id', $visit->id)
+                ->where('type', 'lab')
+                ->whereJsonContains('details->surgery_id', $surgery->id)
+                ->first();
+            
+            if ($existingLabRequest) {
+                $existingLabRequest->update([
+                    'description' => 'تحاليل ما قبل العملية الجراحية: ' . $surgery->surgery_type,
+                    'details' => json_encode([
+                        'lab_test_ids' => $newLabTestIds,
+                        'surgery_id' => $surgery->id,
+                        'surgery_type' => $surgery->surgery_type,
+                        'priority' => 'high',
+                        'source' => 'surgery'
+                    ])
+                ]);
+            } else {
+                \App\Models\Request::create([
+                    'visit_id' => $visit->id,
+                    'type' => 'lab',
+                    'description' => 'تحاليل ما قبل العملية الجراحية: ' . $surgery->surgery_type,
+                    'status' => 'pending',
+                    'payment_status' => 'pending',
+                    'details' => json_encode([
+                        'lab_test_ids' => $newLabTestIds,
+                        'surgery_id' => $surgery->id,
+                        'surgery_type' => $surgery->surgery_type,
+                        'priority' => 'high',
+                        'source' => 'surgery'
+                    ])
+                ]);
+            }
+        } else {
+            // حذف الطلب إذا لم يتبق أي تحاليل
+            \App\Models\Request::where('visit_id', $visit->id)
+                ->where('type', 'lab')
+                ->whereJsonContains('details->surgery_id', $surgery->id)
+                ->delete();
+        }
+
         // تحديث الأشعة
         $oldRadiologyTypeIds = $surgery->radiologyTests->pluck('radiology_type_id')->toArray();
         $newRadiologyTypeIds = $request->has('radiology_tests') ? $request->radiology_tests : [];
@@ -286,6 +398,48 @@ class SurgeryController extends Controller
                     'status' => 'pending'
                 ]);
             }
+        }
+
+        // تحديث أو إنشاء طلب الأشعة في جدول requests
+        if (count($newRadiologyTypeIds) > 0) {
+            $existingRadRequest = \App\Models\Request::where('visit_id', $visit->id)
+                ->where('type', 'radiology')
+                ->whereJsonContains('details->surgery_id', $surgery->id)
+                ->first();
+            
+            if ($existingRadRequest) {
+                $existingRadRequest->update([
+                    'description' => 'أشعة ما قبل العملية الجراحية: ' . $surgery->surgery_type,
+                    'details' => json_encode([
+                        'radiology_type_ids' => $newRadiologyTypeIds,
+                        'surgery_id' => $surgery->id,
+                        'surgery_type' => $surgery->surgery_type,
+                        'priority' => 'high',
+                        'source' => 'surgery'
+                    ])
+                ]);
+            } else {
+                \App\Models\Request::create([
+                    'visit_id' => $visit->id,
+                    'type' => 'radiology',
+                    'description' => 'أشعة ما قبل العملية الجراحية: ' . $surgery->surgery_type,
+                    'status' => 'pending',
+                    'payment_status' => 'pending',
+                    'details' => json_encode([
+                        'radiology_type_ids' => $newRadiologyTypeIds,
+                        'surgery_id' => $surgery->id,
+                        'surgery_type' => $surgery->surgery_type,
+                        'priority' => 'high',
+                        'source' => 'surgery'
+                    ])
+                ]);
+            }
+        } else {
+            // حذف الطلب إذا لم يتبق أي أشعة
+            \App\Models\Request::where('visit_id', $visit->id)
+                ->where('type', 'radiology')
+                ->whereJsonContains('details->surgery_id', $surgery->id)
+                ->delete();
         }
 
         broadcast(new SurgeryUpdated($surgery));
