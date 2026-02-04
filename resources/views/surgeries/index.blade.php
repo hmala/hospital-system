@@ -107,11 +107,7 @@ input[type="radio"]:checked + .frequency-btn {
                     <a href="{{ route('surgeries.waiting') }}" class="btn btn-info text-white me-2">
                         <i class="fas fa-list-ol me-2"></i>قائمة الانتظار
                     </a>
-                    @if(!auth()->user()->isDoctor())
-                    <a href="{{ route('surgeries.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>حجز عملية جديدة
-                    </a>
-                    @endif
+                  
                 </div>
             </div>
         </div>

@@ -105,14 +105,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'processPayment'])->name('payment.process');
         Route::get('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'showRequestPaymentForm'])->name('request.payment.form');
         Route::post('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestPayment'])->name('request.payment.process');
+        Route::get('/surgeries', [\App\Http\Controllers\CashierController::class, 'surgeriesIndex'])->name('surgeries.index');
+        Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
+        Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
-        
-        // واجهة العمليات الجراحية
-        Route::get('/surgeries', [\App\Http\Controllers\CashierController::class, 'surgeriesIndex'])->name('surgeries.index');
-        Route::get('/surgery-payment/{surgery}', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgery.payment.form');
-        Route::post('/surgery-payment/{surgery}', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgery.payment.process');
     });
     
     // مسارات الإشعارات (Notifications Routes)

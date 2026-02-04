@@ -12,12 +12,7 @@
                     </h2>
                     <p class="text-muted">إدارة استقبال المرضى وإنشاء الطلبات الطبية</p>
                 </div>
-                <div>
-                    <a href="{{ route('inquiry.search') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-plus-circle me-2"></i>
-                        طلب جديد
-                    </a>
-                </div>
+               
             </div>
         </div>
     </div>
@@ -201,10 +196,16 @@
                             <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
                             <h5 class="text-muted">لا توجد زيارات اليوم</h5>
                             <p class="text-muted">ابدأ بإنشاء طلب جديد للمريض</p>
-                            <a href="{{ route('inquiry.search') }}" class="btn btn-primary mt-3">
-                                <i class="fas fa-plus-circle me-2"></i>
-                                طلب جديد
-                            </a>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{{ route('inquiry.search') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-2"></i>
+                                    طلب جديد
+                                </a>
+                                <a href="{{ route('surgeries.create') }}" class="btn btn-success">
+                                    <i class="fas fa-procedures me-2"></i>
+                                    حجز عملية
+                                </a>
+                            </div>
                         </div>
                     @endif
                 </div>

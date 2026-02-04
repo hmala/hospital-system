@@ -23,10 +23,8 @@ class Surgery extends Model
         'payment_status',
         'payment_id',
         'surgery_fee',
-        'referral_source',
-        'external_doctor_name',
-        'external_hospital_name',
-        'referral_notes',
+        'referring_doctor_type',
+        'referring_doctor_name',
         'notes',
         'post_op_notes',
         'diagnosis',
@@ -75,6 +73,11 @@ class Surgery extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function surgicalOperation()
+    {
+        return $this->belongsTo(SurgicalOperation::class);
     }
 
     public function visit()

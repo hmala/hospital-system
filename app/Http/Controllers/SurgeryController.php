@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\Department;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
+use App\Models\SurgicalOperation;
 use App\Events\SurgeryUpdated;
 use Illuminate\Http\Request;
 
@@ -107,7 +108,8 @@ class SurgeryController extends Controller
         $departments = Department::where('is_active', true)->get();
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
-        return view('surgeries.create', compact('patients', 'doctors', 'departments', 'labTests', 'radiologyTypes'));
+        $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        return view('surgeries.create', compact('patients', 'doctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations'));
     }
 
     public function store(Request $request)
@@ -121,14 +123,13 @@ class SurgeryController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
             'department_id' => 'required|exists:departments,id',
-            'surgery_type' => 'required|string|max:255',
+            'surgery_category' => 'required|string|max:255',
+            'surgical_operation_id' => 'required|exists:surgical_operations,id',
             'description' => 'nullable|string',
             'scheduled_date' => 'required|date',
             'scheduled_time' => 'required|date_format:H:i',
-            'referral_source' => 'required|in:internal,external',
-            'external_doctor_name' => 'nullable|string|max:255',
-            'external_hospital_name' => 'nullable|string|max:255',
-            'referral_notes' => 'nullable|string',
+            'referring_doctor_type' => 'required|in:internal,external',
+            'referring_doctor_name' => 'required|string|max:255',
             'notes' => 'nullable|string',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
@@ -146,6 +147,13 @@ class SurgeryController extends Controller
         ]);
 
         $surgeryData = $request->except(['lab_tests', 'radiology_tests']);
+        
+        // استخراج اسم العملية من الجدول
+        $operation = SurgicalOperation::find($request->surgical_operation_id);
+        if ($operation) {
+            $surgeryData['surgery_type'] = $operation->name;
+        }
+        
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $request->scheduled_time);
 
         $surgery = Surgery::create($surgeryData);
