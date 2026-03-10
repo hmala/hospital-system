@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
+
+        // استثناء CSRF للـ API routes
+        $middleware->validateCsrfTokens(except: [
+            'api/consultant-availability/bulk-update',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

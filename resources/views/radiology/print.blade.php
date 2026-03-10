@@ -652,6 +652,11 @@
 
     <!-- صفحة ثانية للصور إذا وجدت -->
     @if($radiology->result && $radiology->result->images && count($radiology->result->images) > 0)
+    {{-- debug: list raw images and their computed URLs --}}
+    <div style="padding:10px; background:#fff3cd; color:#856404;">
+        <strong>debug:</strong> images array =
+        <pre>{{ json_encode($radiology->result->images) }}</pre>
+    </div>
     <div class="page">
         <div class="decorative-border">
             <div class="corner-pattern top-right"></div>
@@ -674,7 +679,13 @@
                             <small>{{ basename($image) }}</small>
                         </div>
                     @else
-                        <img src="{{ asset('storage/' . $image) }}" alt="صورة {{ $index + 1 }}">
+                        {{-- encode each segment to avoid spaces breaking URL --}}
+                        @php
+                            $pathPart = ltrim($image, '/');
+                            $encoded = implode('/', array_map('rawurlencode', explode('/', $pathPart)));
+                            $imgUrl = asset('storage/' . $encoded);
+                        @endphp
+                        <img src="{{ $imgUrl }}" alt="صورة {{ $index + 1 }}">
                     @endif
                 </div>
                 @endforeach

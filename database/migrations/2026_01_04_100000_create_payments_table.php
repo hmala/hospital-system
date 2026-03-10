@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('receipt_number')->unique(); // رقم الإيصال
             $table->decimal('amount', 10, 2); // المبلغ المدفوع
             $table->enum('payment_method', ['cash', 'card', 'insurance'])->default('cash'); // طريقة الدفع
-            $table->enum('payment_type', ['appointment', 'lab', 'radiology', 'pharmacy', 'surgery', 'other'])->default('appointment');
+            $table->enum('payment_type', ['appointment', 'lab', 'radiology', 'pharmacy', 'surgery', 'emergency', 'other'])->default('appointment');
             $table->text('description')->nullable(); // وصف الدفعة
             $table->text('notes')->nullable(); // ملاحظات
             $table->timestamp('paid_at'); // تاريخ ووقت الدفع

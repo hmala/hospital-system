@@ -39,15 +39,35 @@
 
                         <div class="row mb-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">طريقة الدفع *</label>
-                                <select name="payment_method" class="form-select @error('payment_method') is-invalid @enderror" required>
-                                    <option value="">اختر طريقة الدفع</option>
-                                    <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>نقدي</option>
-                                    <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>بطاقة</option>
-                                    <option value="insurance" {{ old('payment_method') == 'insurance' ? 'selected' : '' }}>تأمين</option>
-                                </select>
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-money-bill-wave me-1 text-success"></i>
+                                    طريقة الدفع *
+                                </label>
+                                <div class="payment-methods-group">
+                                    <div class="form-check form-check-lg mb-2">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" 
+                                               value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
+                                        <label class="form-check-label fw-semibold" for="payment_cash">
+                                            💵 نقدي (Cash)
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-lg mb-2">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_card" 
+                                               value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-semibold" for="payment_card">
+                                            💳 بطاقة ائتمان (Card)
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-lg">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_insurance" 
+                                               value="insurance" {{ old('payment_method') == 'insurance' ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-semibold" for="payment_insurance">
+                                            🏥 تأمين صحي (Insurance)
+                                        </label>
+                                    </div>
+                                </div>
                                 @error('payment_method')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
 
@@ -112,7 +132,7 @@
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">القسم:</small>
-                        <div class="fw-bold">{{ $appointment->department->name }}</div>
+                        <div class="fw-bold">{{ $appointment->department ? $appointment->department->name : 'غير محدد' }}</div>
                     </div>
                 </div>
             </div>
@@ -126,17 +146,20 @@
                     </h6>
                 </div>
                 <div class="card-body">
+                    @php
+                        $p = $appointment->patient;
+                    @endphp
                     <div class="mb-3">
                         <small class="text-muted">الاسم:</small>
-                        <div class="fw-bold">{{ $appointment->patient->user->name }}</div>
+                        <div class="fw-bold">{{ $p ? ($p->user->name ?? 'غير محدد') : 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">الرقم الوطني:</small>
-                        <div class="fw-bold">{{ $appointment->patient->national_id ?? 'غير محدد' }}</div>
+                        <div class="fw-bold">{{ $p ? ($p->national_id ?? 'غير محدد') : 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">رقم الهاتف:</small>
-                        <div class="fw-bold">{{ $appointment->patient->user->phone ?? 'غير محدد' }}</div>
+                        <div class="fw-bold">{{ $p ? ($p->user->phone ?? 'غير محدد') : 'غير محدد' }}</div>
                     </div>
                 </div>
             </div>
@@ -150,13 +173,16 @@
                     </h6>
                 </div>
                 <div class="card-body">
+                    @php
+                        $d = $appointment->doctor;
+                    @endphp
                     <div class="mb-3">
                         <small class="text-muted">الاسم:</small>
-                        <div class="fw-bold">د. {{ $appointment->doctor->user->name }}</div>
+                        <div class="fw-bold">د. {{ $d ? ($d->user->name ?? 'غير محدد') : 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">التخصص:</small>
-                        <div class="fw-bold">{{ $appointment->doctor->specialization }}</div>
+                        <div class="fw-bold">{{ $d ? $d->specialization : 'غير محدد' }}</div>
                     </div>
                 </div>
             </div>

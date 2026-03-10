@@ -13,10 +13,12 @@ class SurgeryLabTest extends Model
         'surgery_id',
         'lab_test_id',
         'status',
+        'payment_status',
         'result',
         'result_file',
         'completed_at',
-        'notes'
+        'notes',
+        'payment_id'
     ];
 
     protected $casts = [

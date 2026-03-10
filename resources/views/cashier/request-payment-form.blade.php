@@ -31,6 +31,8 @@
                                         <span class="badge bg-info">أشعة</span>
                                     @elseif($request->type === 'pharmacy')
                                         <span class="badge bg-success">صيدلية</span>
+                                    @elseif($request->type === 'emergency')
+                                        <span class="badge bg-danger">طوارئ</span>
                                     @else
                                         <span class="badge bg-secondary">{{ $request->type }}</span>
                                     @endif
@@ -165,6 +167,57 @@
                                         </tfoot>
                                     </table>
                                 </div>
+                            @elseif($request->type === 'emergency' && isset($details['emergency_priority']))
+                                @php
+                                    // حساب رسوم الطوارئ بناءً على الأولوية
+                                    $emergencyFees = [
+                                        'critical' => 50000,    // 50,000 IQD للحالات الحرجة
+                                        'urgent' => 35000,      // 35,000 IQD للحالات العاجلة
+                                        'semi_urgent' => 25000, // 25,000 IQD للحالات شبه العاجلة
+                                        'non_urgent' => 15000   // 15,000 IQD للحالات غير العاجلة
+                                    ];
+                                    $totalAmount = $emergencyFees[$details['emergency_priority']] ?? 25000;
+                                @endphp
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <tbody>
+                                            <tr>
+                                                <td width="200"><strong>الأولوية:</strong></td>
+                                                <td>
+                                                    @if($details['emergency_priority'] === 'critical')
+                                                        <span class="badge bg-danger">حرجة</span>
+                                                    @elseif($details['emergency_priority'] === 'urgent')
+                                                        <span class="badge bg-warning">عاجلة</span>
+                                                    @elseif($details['emergency_priority'] === 'semi_urgent')
+                                                        <span class="badge bg-info">شبه عاجلة</span>
+                                                    @else
+                                                        <span class="badge bg-secondary">غير عاجلة</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            @if(isset($details['emergency_type']))
+                                            <tr>
+                                                <td><strong>نوع الطوارئ:</strong></td>
+                                                <td>{{ \App\Models\Emergency::getEmergencyTypeText($details['emergency_type']) }}</td>
+                                            </tr>
+                                            @endif
+                                            @if(isset($details['symptoms_description']))
+                                            <tr>
+                                                <td><strong>الأعراض:</strong></td>
+                                                <td>{{ $details['symptoms_description'] }}</td>
+                                            </tr>
+                                            @endif
+                                            <tr class="table-success">
+                                                <td><strong>رسوم الطوارئ:</strong></td>
+                                                <td>
+                                                    <h5 class="mb-0 text-success">
+                                                        {{ number_format($totalAmount, 2) }} IQD
+                                                    </h5>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             @else
                                 <div class="mb-3">
                                     <strong>الوصف:</strong> {{ $request->description }}
@@ -181,25 +234,35 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="payment_method" class="form-label">
-                                        <i class="fas fa-credit-card me-1"></i>
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-money-bill-wave me-1 text-success"></i>
                                         طريقة الدفع <span class="text-danger">*</span>
                                     </label>
-                                    <select class="form-select @error('payment_method') is-invalid @enderror" 
-                                            id="payment_method" name="payment_method" required>
-                                        <option value="">اختر طريقة الدفع</option>
-                                        <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>
-                                            نقدي
-                                        </option>
-                                        <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>
-                                            بطاقة ائتمان
-                                        </option>
-                                        <option value="insurance" {{ old('payment_method') == 'insurance' ? 'selected' : '' }}>
-                                            تأمين صحي
-                                        </option>
-                                    </select>
+                                    <div class="payment-methods-group">
+                                        <div class="form-check form-check-lg mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="request_payment_cash" 
+                                                   value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
+                                            <label class="form-check-label fw-semibold" for="request_payment_cash">
+                                                💵 نقدي (Cash)
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-lg mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="request_payment_card" 
+                                                   value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="request_payment_card">
+                                                💳 بطاقة ائتمان (Card)
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-lg">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="request_payment_insurance" 
+                                                   value="insurance" {{ old('payment_method') == 'insurance' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="request_payment_insurance">
+                                                🏥 تأمين صحي (Insurance)
+                                            </label>
+                                        </div>
+                                    </div>
                                     @error('payment_method')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>

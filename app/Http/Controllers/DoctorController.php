@@ -25,7 +25,7 @@ class DoctorController extends Controller
 
     public function create()
     {
-        $departments = Department::where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
         return view('doctors.create', compact('departments'));
     }
 
@@ -36,6 +36,7 @@ class DoctorController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:15',
             'department_id' => 'required|exists:departments,id',
+            'type' => 'required|in:consultant,anesthesiologist,surgeon,emergency',
             'specialization' => 'required|string|max:255',
             'qualification' => 'required|string|max:255',
             'license_number' => 'required|string|unique:doctors,license_number',
@@ -56,6 +57,7 @@ class DoctorController extends Controller
         Doctor::create([
             'user_id' => $user->id,
             'department_id' => $request->department_id,
+            'type' => $request->type,
             'phone' => $request->phone, // حفظ رقم الهاتف في جدول doctors
             'specialization' => $request->specialization,
             'qualification' => $request->qualification,
@@ -82,7 +84,7 @@ class DoctorController extends Controller
 
     public function edit(Doctor $doctor)
     {
-        $departments = Department::where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
         $doctor->load('user');
         return view('doctors.edit', compact('doctor', 'departments'));
     }
@@ -94,6 +96,7 @@ class DoctorController extends Controller
             'email' => 'required|email|unique:users,email,' . $doctor->user_id,
             'phone' => 'required|string|max:15',
             'department_id' => 'required|exists:departments,id',
+            'type' => 'required|in:consultant,anesthesiologist,surgeon,emergency',
             'specialization' => 'required|string|max:255',
             'qualification' => 'required|string|max:255',
             'license_number' => 'required|string|unique:doctors,license_number,' . $doctor->id,
@@ -117,13 +120,31 @@ class DoctorController extends Controller
 
         // تحديث بيانات الطبيب
         $doctor->update($request->only([
-            'department_id', 'phone', 'specialization', 'qualification', 
+            'department_id', 'type', 'phone', 'specialization', 'qualification', 
             'license_number', 'experience_years', 'consultation_fee',
             'max_patients_per_day', 'bio', 'is_active'
         ]));
 
         return redirect()->route('doctors.index')
             ->with('success', 'تم تحديث بيانات الطبيب بنجاح');
+    }
+
+    public function updateAvailability(Request $request, Doctor $doctor)
+    {
+        $request->validate([
+            'is_available_today' => 'required|boolean',
+        ]);
+
+        $doctor->update([
+            'is_available_today' => $request->is_available_today,
+            'available_date' => today(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $request->is_available_today ? 'تم تفعيل التوفر اليومي' : 'تم إلغاء التوفر اليومي',
+            'is_available_today' => $request->is_available_today,
+        ]);
     }
 
     public function destroy(Doctor $doctor)

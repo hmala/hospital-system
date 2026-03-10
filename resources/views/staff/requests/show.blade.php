@@ -184,6 +184,81 @@ function getTestUnit($testName, $labTests) {
                     </div>
                     @if($request->type === 'lab')
                     <hr>
+                    <!-- قسم اختيار الخدمات للطلبات pending_service_selection -->
+                    @if($request->status === 'pending_service_selection')
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>تنبيه:</strong> هذا الطلب بانتظار تحديد التحاليل المطلوبة. الرجاء اختيار التحاليل أدناه.
+                            </div>
+                            <form action="{{ route('staff.requests.update', $request) }}" method="POST">
+                                @csrf
+                                @method('PUT')
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-flask me-1"></i>
+                                        <strong>اختر التحاليل المطلوبة:</strong>
+                                    </label>
+                                    
+                                    <!-- حقل البحث -->
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text bg-light">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="labSearchInput" 
+                                               placeholder="ابحث عن تحليل بالاسم أو الرمز...">
+                                        <button class="btn btn-outline-secondary" type="button" id="clearLabSearch">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="border rounded p-3" id="labTestsContainer" style="max-height: 400px; overflow-y: auto;">
+                                        @php
+                                            $labTests = \App\Models\LabTest::where('is_active', true)
+                                                ->orderBy('main_category')
+                                                ->orderBy('name')
+                                                ->get()
+                                                ->groupBy('main_category');
+                                        @endphp
+                                        
+                                        @foreach($labTests as $category => $tests)
+                                            <div class="mb-3">
+                                                <h6 class="text-primary border-bottom pb-2">
+                                                    <i class="fas fa-folder-open me-1"></i>{{ $category }}
+                                                </h6>
+                                                @foreach($tests as $test)
+                                                    <div class="form-check">
+                                                        <input class="form-check-input lab-test-checkbox" 
+                                                               type="checkbox" 
+                                                               name="lab_test_ids[]" 
+                                                               value="{{ $test->id }}" 
+                                                               id="lab_{{ $test->id }}">
+                                                        <label class="form-check-label" for="lab_{{ $test->id }}">
+                                                            {{ $test->name }} 
+                                                            <small class="text-muted">({{ $test->code }})</small>
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    
+                                    <div id="labSelectedCount" class="mt-2 text-muted small"></div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    تأكيد التحاليل وإرسال للكاشير
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    @else
+                    <!-- عرض الفحوصات المحددة مسبقاً -->
                     <div class="row">
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -223,6 +298,129 @@ function getTestUnit($testName, $labTests) {
                             </div>
                         </div>
                     </div>
+                    @endif
+                    @endif
+
+                    @if($request->type === 'radiology')
+                    <hr>
+                    <!-- قسم اختيار الخدمات للطلبات pending_service_selection -->
+                    @if($request->status === 'pending_service_selection')
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>تنبيه:</strong> هذا الطلب بانتظار تحديد أنواع الأشعة المطلوبة. الرجاء اختيار الأشعة أدناه.
+                            </div>
+                            <form action="{{ route('staff.requests.update', $request) }}" method="POST">
+                                @csrf
+                                @method('PUT')
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-x-ray me-1"></i>
+                                        <strong>اختر أنواع الأشعة المطلوبة:</strong>
+                                    </label>
+
+                                    <!-- حقل البحث -->
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text bg-light">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="radiologySearchInput"
+                                               placeholder="ابحث عن نوع إشعة بالاسم...">
+                                        <button class="btn btn-outline-secondary" type="button" id="clearRadiologySearch">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 400px; overflow-y: auto;">
+                                        @php
+                                            $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)
+                                                ->orderBy('main_category')
+                                                ->orderBy('name')
+                                                ->get()
+                                                ->groupBy('main_category');
+                                        @endphp
+
+                                        @foreach($radiologyTypes as $category => $types)
+                                            <div class="mb-3">
+                                                <h6 class="text-info border-bottom pb-2">
+                                                    <i class="fas fa-folder-open me-1"></i>{{ $category }}
+                                                </h6>
+                                                @foreach($types as $type)
+                                                    <div class="form-check">
+                                                        <input class="form-check-input radiology-type-checkbox"
+                                                               type="checkbox"
+                                                               name="radiology_type_ids[]"
+                                                               value="{{ $type->id }}"
+                                                               id="radiology_{{ $type->id }}">
+                                                        <label class="form-check-label" for="radiology_{{ $type->id }}">
+                                                            {{ $type->name }}
+                                                            <small class="text-muted">({{ $type->code }})</small>
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    <div id="radiologySelectedCount" class="mt-2 text-muted small"></div>
+                                </div>
+
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    تأكيد الأشعة وإرسال للكاشير
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    @else
+                    <!-- عرض أنواع الأشعة المحددة مسبقاً -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <p class="mb-0"><strong>أنواع الأشعة المطلوبة:</strong></p>
+                                    <small class="text-muted">اختر أنواع الأشعة المطلوبة من القائمة</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                @php
+                                    // دعم radiology_type_ids
+                                    $radiologyList = [];
+                                    if (isset($request->details['radiology_type_ids']) && is_array($request->details['radiology_type_ids'])) {
+                                        // تحويل IDs إلى أسماء
+                                        foreach ($request->details['radiology_type_ids'] as $typeId) {
+                                            $radiologyType = \App\Models\RadiologyType::find($typeId);
+                                            if ($radiologyType) {
+                                                $radiologyList[] = $radiologyType->name;
+                                            }
+                                        }
+                                    }
+                                @endphp
+                                @if(count($radiologyList) > 0)
+                                    @foreach($radiologyList as $type)
+                                    <div class="col-md-4 mb-2">
+                                        <div class="d-flex align-items-center border rounded p-2">
+                                            <i class="fas fa-x-ray me-2 text-info"></i>
+                                            <span>{{ $type }}</span>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                @else
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            لم يتم تحديد أنواع الأشعة بعد
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                     @endif
                 </div>
             </div>
@@ -1704,6 +1902,96 @@ $(document).ready(function() {
     // تحديث حالة الأيقونات عند التحميل
     $('.form-check-input:checked').each(function() {
         $(this).siblings('.form-check-label').find('.check-icon').removeClass('opacity-0');
+    });
+
+    // ========== البحث في قسم اختيار الخدمات للطلبات pending_service_selection ==========
+    $('#labSearchInput').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase().trim();
+        
+        if (searchTerm === '') {
+            $('.lab-test-checkbox').closest('.form-check').show();
+            $('#labSelectedCount').text('');
+            return;
+        }
+
+        let visibleCount = 0;
+        $('.lab-test-checkbox').each(function() {
+            const label = $(this).siblings('label').text().toLowerCase();
+            const formCheck = $(this).closest('.form-check');
+            
+            if (label.includes(searchTerm)) {
+                formCheck.show();
+                visibleCount++;
+            } else {
+                formCheck.hide();
+            }
+        });
+
+        if (visibleCount === 0) {
+            $('#labSelectedCount').html('<i class="fas fa-exclamation-circle text-warning"></i> لا توجد نتائج');
+        } else {
+            $('#labSelectedCount').html(`<i class="fas fa-check-circle text-success"></i> ${visibleCount} نتيجة`);
+        }
+    });
+
+    // زر مسح البحث
+    $('#clearLabSearch').on('click', function() {
+        $('#labSearchInput').val('').trigger('keyup');
+    });
+
+    // تحديث عداد التحاليل المختارة
+    $('.lab-test-checkbox').on('change', function() {
+        const selectedCount = $('.lab-test-checkbox:checked').length;
+        if (selectedCount > 0) {
+            $('#labSelectedCount').html(`<i class="fas fa-check-circle text-success"></i> تم اختيار ${selectedCount} تحليل`);
+        } else {
+            $('#labSelectedCount').text('');
+        }
+    });
+
+    // ========== البحث في قسم اختيار أنواع الأشعة ==========
+    $('#radiologySearchInput').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase().trim();
+
+        if (searchTerm === '') {
+            $('.radiology-type-checkbox').closest('.form-check').show();
+            $('#radiologySelectedCount').text('');
+            return;
+        }
+
+        let visibleCount = 0;
+        $('.radiology-type-checkbox').each(function() {
+            const label = $(this).siblings('label').text().toLowerCase();
+            const formCheck = $(this).closest('.form-check');
+
+            if (label.includes(searchTerm)) {
+                formCheck.show();
+                visibleCount++;
+            } else {
+                formCheck.hide();
+            }
+        });
+
+        if (visibleCount === 0) {
+            $('#radiologySelectedCount').html('<i class="fas fa-exclamation-circle text-warning"></i> لا توجد نتائج');
+        } else {
+            $('#radiologySelectedCount').html(`<i class="fas fa-check-circle text-success"></i> ${visibleCount} نتيجة`);
+        }
+    });
+
+    // زر مسح البحث للأشعة
+    $('#clearRadiologySearch').on('click', function() {
+        $('#radiologySearchInput').val('').trigger('keyup');
+    });
+
+    // تحديث عداد أنواع الأشعة المختارة
+    $('.radiology-type-checkbox').on('change', function() {
+        const selectedCount = $('.radiology-type-checkbox:checked').length;
+        if (selectedCount > 0) {
+            $('#radiologySelectedCount').html(`<i class="fas fa-check-circle text-success"></i> تم اختيار ${selectedCount} نوع إشعة`);
+        } else {
+            $('#radiologySelectedCount').text('');
+        }
     });
 });
 </script>

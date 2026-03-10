@@ -35,9 +35,6 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tests-tab" data-bs-toggle="tab" data-bs-target="#tests" type="button" role="tab" aria-controls="tests" aria-selected="false">
-                            <i class="fas fa-flask me-2"></i>الفحوصات المطلوبة
-                        </button>
                     </li>
                 </ul>
 
@@ -367,57 +364,7 @@
                         </div>
                     </div>
 
-                    <!-- Required Tests Tab -->
-                    <div class="tab-pane fade" id="tests" role="tabpanel" aria-labelledby="tests-tab">
-                        <div class="card border-info">
-                            <div class="card-header bg-info text-white">
-                                <h6 class="mb-0"><i class="fas fa-flask me-2"></i>الفحوصات المطلوبة قبل العملية</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6 class="text-primary mb-3"><i class="fas fa-vial me-2"></i>التحاليل المخبرية</h6>
-                                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                                            @foreach($labTests as $labTest)
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           name="lab_tests[]" 
-                                                           value="{{ $labTest->id }}" 
-                                                           id="lab_test_{{ $labTest->id }}"
-                                                           {{ in_array($labTest->id, old('lab_tests', $surgery->labTests->pluck('lab_test_id')->toArray())) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="lab_test_{{ $labTest->id }}">
-                                                        {{ $labTest->name }}
-                                                        @if($labTest->category)
-                                                            <small class="text-muted">({{ $labTest->category }})</small>
-                                                        @endif
-                                                    </label>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        @error('lab_tests')
-                                            <div class="text-danger mt-2">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="text-success mb-3"><i class="fas fa-x-ray me-2"></i>الأشعة والتصوير</h6>
-                                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                                            @foreach($radiologyTypes as $radiologyType)
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           name="radiology_tests[]" 
-                                                           value="{{ $radiologyType->id }}" 
-                                                           id="radiology_test_{{ $radiologyType->id }}"
-                                                           {{ in_array($radiologyType->id, old('radiology_tests', $surgery->radiologyTests->pluck('radiology_type_id')->toArray())) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="radiology_test_{{ $radiologyType->id }}">
-                                                        {{ $radiologyType->name }}
-                                                        @if($radiologyType->code)
-                                                            <small class="text-muted">({{ $radiologyType->code }})</small>
-                                                        @endif
-                                                    </label>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        @error('radiology_tests')
+
                                             <div class="text-danger mt-2">{{ $message }}</div>
                                         @enderror
                                     </div>

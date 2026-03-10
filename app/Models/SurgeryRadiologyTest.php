@@ -13,9 +13,11 @@ class SurgeryRadiologyTest extends Model
         'surgery_id',
         'radiology_type_id',
         'status',
+        'payment_status',
         'result',
         'result_file',
-        'completed_at'
+        'completed_at',
+        'payment_id'
     ];
 
     protected $casts = [

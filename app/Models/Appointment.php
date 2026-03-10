@@ -15,6 +15,7 @@ class Appointment extends Model
         'patient_id',
         'doctor_id', 
         'department_id',
+        'emergency_id',
         'appointment_date',
         'status',
         'payment_status',
@@ -65,6 +66,11 @@ class Appointment extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function emergency()
+    {
+        return $this->belongsTo(Emergency::class);
     }
 
     public function visit()

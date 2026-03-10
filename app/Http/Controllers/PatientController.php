@@ -38,16 +38,16 @@ class PatientController extends Controller
             'phone' => 'required|string|max:15',
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:male,female',
-            'emergency_contact' => 'required|string',
+            'emergency_contact' => 'nullable|string',
             'blood_type' => 'nullable|string|max:10',
-            'national_id' => 'nullable|string|unique:patients,national_id',
-            'mother_name' => 'nullable|string|max:255',
+            'national_id' => 'required|string|unique:patients,national_id',
+            'mother_name' => 'required|string|max:255',
             'country' => 'nullable|exists:countries,id',
             'governorate' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
             'neighborhood' => 'nullable|string|max:255',
-            'marital_status' => 'nullable|in:أعزب,متزوج,مطلق,أرمل',
-            'covered_by_insurance' => 'nullable|in:0,1',
+            'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
+            'covered_by_insurance' => 'required|in:0,1',
             'insurance_booklet_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
         ], [
@@ -55,7 +55,10 @@ class PatientController extends Controller
             'phone.required' => 'رقم الهاتف مطلوب',
             'date_of_birth.required' => 'تاريخ الميلاد مطلوب',
             'gender.required' => 'النوع مطلوب',
-            'emergency_contact.required' => 'رقم الطوارئ مطلوب',
+            'mother_name.required' => 'اسم الأم مطلوب',
+            'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
+            'covered_by_insurance.required' => 'يجب تحديد إذا كان مشمولاً بالضمان أم لا',
+            'national_id.required' => 'الرقم الوطني مطلوب',
             'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
             'national_id.unique' => 'الرقم الوطني مستخدم من قبل',
         ]);
@@ -140,21 +143,26 @@ $email = $request->email;
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $patient->user_id,
+            'email' => 'nullable|email|unique:users,email,' . $patient->user_id,
             'phone' => 'required|string|max:15',
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:male,female',
-            'emergency_contact' => 'required|string',
+            'emergency_contact' => 'nullable|string',
             'blood_type' => 'nullable|string|max:10',
-            'national_id' => 'nullable|string|unique:patients,national_id,' . $patient->id,
-            'mother_name' => 'nullable|string|max:255',
-            'marital_status' => 'nullable|in:أعزب,متزوج,مطلق,أرمل',
-            'covered_by_insurance' => 'nullable|in:0,1',
+            'national_id' => 'required|string|unique:patients,national_id,' . $patient->id,
+            'mother_name' => 'required|string|max:255',
+            'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
+            'covered_by_insurance' => 'required|in:0,1',
             'insurance_booklet_number' => 'nullable|string|max:255',
             'country' => 'nullable|exists:countries,id',
             'governorate' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
             'neighborhood' => 'nullable|string|max:255',
+        ], [
+            'mother_name.required' => 'اسم الأم مطلوب',
+            'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
+            'covered_by_insurance.required' => 'يجب تحديد إذا كان مشمولاً بالضمان أم لا',
+            'national_id.required' => 'الرقم الوطني مطلوب',
         ]);
 
         // التحقق من عدم تكرار الاسم واسم الأم (استثناء المريض الحالي)
@@ -171,9 +179,14 @@ $email = $request->email;
         }
 
         // تحديث بيانات المستخدم
+        $email = $request->email;
+        if (!$email) {
+            // إذا ترك الحقل فارغاً نولد بريد إلكتروني مؤقت مثل عند الإنشاء
+            $email = 'patient.' . $request->phone . '.' . time() . '@hospital.local';
+        }
         $patient->user->update([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => $email,
             'phone' => $request->phone,
             'date_of_birth' => $request->date_of_birth,
             'gender' => $request->gender,

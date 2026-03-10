@@ -48,7 +48,13 @@
                         @method('PUT')
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="code" class="form-label">الكود</label>
+                                <input type="text" class="form-control" id="code" name="code"
+                                       value="{{ old('code', $labTest->code) }}" maxlength="50">
+                                <div class="form-text">رمز مختصر للتعريف (اختياري)</div>
+                            </div>
+                            <div class="col-md-8 mb-3">
                                 <label for="name" class="form-label">اسم الفحص <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="name" name="name"
                                        value="{{ old('name', $labTest->name) }}" required>
@@ -56,15 +62,23 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="category" class="form-label">الفئة <span class="text-danger">*</span></label>
-                                <select class="form-select" id="category" name="category" required>
-                                    <option value="">اختر الفئة</option>
+                                <label for="main_category" class="form-label">الفئة الرئيسية <span class="text-danger">*</span></label>
+                                <select class="form-select" id="main_category" name="main_category" required>
+                                    <option value="">اختر الفئة الرئيسية</option>
                                     @foreach($categories as $key => $value)
-                                        <option value="{{ $key }}" {{ old('category', $labTest->category) == $key ? 'selected' : '' }}>
+                                        <option value="{{ $key }}" {{ old('main_category', $labTest->main_category) == $key ? 'selected' : '' }}>
                                             {{ $value }}
                                         </option>
                                     @endforeach
                                 </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="subcategory" class="form-label">الفئة الفرعية</label>
+                                <input type="text" class="form-control" id="subcategory" name="subcategory" value="{{ old('subcategory', $labTest->subcategory) }}" placeholder="اختياري">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="price" class="form-label">السعر (د.ع)</label>
+                                <input type="number" step="0.01" class="form-control" id="price" name="price" value="{{ old('price', $labTest->price) }}">
                             </div>
                         </div>
 

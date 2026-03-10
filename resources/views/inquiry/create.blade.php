@@ -20,6 +20,29 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <script>
+            // بعد عرض رسالة النجاح، إعادة تعيين الحالة حتى يمكن إنشاء طلب جديد بسهولة
+            document.addEventListener('DOMContentLoaded', function() {
+                // تأخير قصير للسماح بعرض الرسالة قبل المسح
+                setTimeout(() => {
+                    // إلغاء تحديد البطاقات
+                    document.querySelectorAll('.request-card').forEach(card => card.classList.remove('selected'));
+                    // إخفاء قسم التفاصيل
+                    const details = document.getElementById('requestDetails');
+                    if (details) details.style.display = 'none';
+                    // مسح الأنواع المختارة
+                    selectedTypes.clear();
+                    updateFormFields();
+                }, 500);
+            });
+        </script>
+    @endif
+
     <!-- معلومات المريض -->
     <div class="row mb-4">
         <div class="col-12">
@@ -72,6 +95,7 @@
             <h4 class="mb-3">
                 <i class="fas fa-list-check me-2"></i>
                 اختر نوع الخدمة المطلوبة
+                <small class="text-muted d-block mt-1">انقر على البطاقات لاختيار الخدمات (يمكن اختيار أكثر من خدمة)</small>
             </h4>
         </div>
     </div>
@@ -79,12 +103,14 @@
     <form action="{{ route('inquiry.store') }}" method="POST" id="requestForm">
         @csrf
         <input type="hidden" name="patient_id" value="{{ $patient->id }}">
-        <input type="hidden" name="request_type" id="requestType">
+        <div id="requestTypesContainer">
+            <!-- سيتم إضافة حقول request_type[] هنا عبر JavaScript -->
+        </div>
 
         <div class="row g-4 mb-4">
             <!-- بطاقة المختبر -->
             <div class="col-md-6 col-lg-3">
-                <div class="card h-100 shadow-sm request-card" data-type="lab" onclick="selectRequestType('lab')">
+                <div class="card h-100 shadow-sm request-card" data-type="lab" onclick="toggleRequestType('lab')">
                     <div class="card-body text-center p-4">
                         <div class="mb-3">
                             <i class="fas fa-flask fa-4x text-primary"></i>
@@ -114,7 +140,7 @@
 
             <!-- بطاقة الأشعة -->
             <div class="col-md-6 col-lg-3">
-                <div class="card h-100 shadow-sm request-card" data-type="radiology" onclick="selectRequestType('radiology')">
+                <div class="card h-100 shadow-sm request-card" data-type="radiology" onclick="toggleRequestType('radiology')">
                     <div class="card-body text-center p-4">
                         <div class="mb-3">
                             <i class="fas fa-x-ray fa-4x text-info"></i>
@@ -144,7 +170,7 @@
 
             <!-- بطاقة الصيدلية -->
             <div class="col-md-6 col-lg-3">
-                <div class="card h-100 shadow-sm request-card" data-type="pharmacy" onclick="selectRequestType('pharmacy')">
+                <div class="card h-100 shadow-sm request-card" data-type="pharmacy" onclick="toggleRequestType('pharmacy')">
                     <div class="card-body text-center p-4">
                         <div class="mb-3">
                             <i class="fas fa-pills fa-4x text-success"></i>
@@ -174,7 +200,7 @@
 
             <!-- بطاقة الكشف الطبي -->
             <div class="col-md-6 col-lg-3">
-                <div class="card h-100 shadow-sm request-card" data-type="checkup" onclick="selectRequestType('checkup')">
+                <div class="card h-100 shadow-sm request-card" data-type="checkup" onclick="toggleRequestType('checkup')">
                     <div class="card-body text-center p-4">
                         <div class="mb-3">
                             <i class="fas fa-stethoscope fa-4x text-warning"></i>
@@ -203,6 +229,54 @@
                         <span class="badge bg-warning">محدد</span>
                     </div>
                 </div>
+            </div>
+
+
+
+            <!-- بطاقة حجز عملية جراحية -->
+            <div class="col-md-6 col-lg-3">
+                <a href="{{ route('surgeries.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                    <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-procedures fa-4x text-danger"></i>
+                            </div>
+                            <h5 class="card-title text-dark">حجز عملية جراحية</h5>
+                            <p class="card-text text-muted small">
+                                حجز موعد لإجراء عملية جراحية
+                            </p>
+                            <div class="mt-2">
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-external-link-alt me-1"></i>
+                                    انتقال لنموذج الحجز
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- بطاقة رقود مبدايا -->
+            <div class="col-md-6 col-lg-3">
+                <a href="{{ route('bed-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                    <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-bed fa-4x text-info"></i>
+                            </div>
+                            <h5 class="card-title text-dark">حجز رقود مبدئي</h5>
+                            <p class="card-text text-muted small">
+                                احجز سريراً للإقامة أو التحضير للعملية
+                            </p>
+                            <div class="mt-2">
+                                <span class="badge bg-info">
+                                    <i class="fas fa-external-link-alt me-1"></i>
+                                    انتقال لنموذج الحجز
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
             </div>
         </div>
 
@@ -305,50 +379,11 @@
                             <div id="labFields" style="display: none;">
                                 <div class="row">
                                     <div class="col-12 mb-3">
-                                        <label for="lab_test_ids" class="form-label">
-                                            <i class="fas fa-flask me-1"></i>
-                                            أنواع التحاليل المطلوبة <span class="text-danger">*</span>
-                                        </label>
-                                        <!-- حقل البحث -->
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text bg-light">
-                                                <i class="fas fa-search"></i>
-                                            </span>
-                                            <input type="text" 
-                                                   class="form-control" 
-                                                   id="labSearchInput" 
-                                                   placeholder="ابحث عن تحليل بالاسم أو الرمز...">
-                                            <button class="btn btn-outline-secondary" type="button" id="clearLabSearch">
-                                                <i class="fas fa-times"></i>
-                                            </button>
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب تحويل عام للمختبر. 
+                                            سيقوم موظف المختبر لاحقاً بتحديد التحاليل المطلوبة بالتفصيل قبل الدفع.
                                         </div>
-                                        <div class="border rounded p-3" id="labTestsContainer" style="max-height: 300px; overflow-y: auto;">
-                                            @foreach($labTests->groupBy('main_category') as $category => $tests)
-                                                <div class="mb-3">
-                                                    <h6 class="text-primary border-bottom pb-2">
-                                                        <i class="fas fa-folder-open me-1"></i>{{ $category }}
-                                                    </h6>
-                                                    @foreach($tests as $test)
-                                                        <div class="form-check">
-                                                            <input class="form-check-input lab-test-checkbox" 
-                                                                   type="checkbox" 
-                                                                   name="lab_test_ids[]" 
-                                                                   value="{{ $test->id }}" 
-                                                                   id="lab_{{ $test->id }}"
-                                                                   @if(is_array(old('lab_test_ids')) && in_array($test->id, old('lab_test_ids'))) checked @endif>
-                                                            <label class="form-check-label" for="lab_{{ $test->id }}">
-                                                                {{ $test->name }} 
-                                                                <small class="text-muted">({{ $test->code }})</small>
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        <div id="labSelectedCount" class="mt-2 text-muted small"></div>
-                                        @error('lab_test_ids')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
                                     </div>
                                 </div>
                             </div>
@@ -357,56 +392,19 @@
                             <div id="radiologyFields" style="display: none;">
                                 <div class="row">
                                     <div class="col-12 mb-3">
-                                        <label for="radiology_type_ids" class="form-label">
-                                            <i class="fas fa-x-ray me-1"></i>
-                                            أنواع الأشعة المطلوبة <span class="text-danger">*</span>
-                                        </label>
-                                        <!-- حقل البحث -->
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text bg-light">
-                                                <i class="fas fa-search"></i>
-                                            </span>
-                                            <input type="text" 
-                                                   class="form-control" 
-                                                   id="radiologySearchInput" 
-                                                   placeholder="ابحث عن نوع إشعة بالاسم أو الرمز...">
-                                            <button class="btn btn-outline-secondary" type="button" id="clearRadiologySearch">
-                                                <i class="fas fa-times"></i>
-                                            </button>
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب تحويل عام لقسم الأشعة. 
+                                            سيقوم موظف الأشعة لاحقاً بتحديد أنواع الأشعة المطلوبة بالتفصيل قبل الدفع.
                                         </div>
-                                        <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 300px; overflow-y: auto;">
-                                            @foreach($radiologyTypes->groupBy('main_category') as $category => $types)
-                                                <div class="mb-3">
-                                                    <h6 class="text-info border-bottom pb-2">
-                                                        <i class="fas fa-folder-open me-1"></i>{{ $category }}
-                                                    </h6>
-                                                    @foreach($types as $type)
-                                                        <div class="form-check">
-                                                            <input class="form-check-input radiology-type-checkbox" 
-                                                                   type="checkbox" 
-                                                                   name="radiology_type_ids[]" 
-                                                                   value="{{ $type->id }}" 
-                                                                   id="rad_{{ $type->id }}"
-                                                                   @if(is_array(old('radiology_type_ids')) && in_array($type->id, old('radiology_type_ids'))) checked @endif>
-                                                            <label class="form-check-label" for="rad_{{ $type->id }}">
-                                                                {{ $type->name }} 
-                                                                <small class="text-muted">({{ $type->code }})</small>
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        <div id="radiologySelectedCount" class="mt-2 text-muted small"></div>
-                                        @error('radiology_type_ids')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
                                     </div>
                                 </div>
                             </div>
 
+
+
                             <div class="row mt-3">
-                                <div class="col-12" id="autoReferContainer">
+                                <div class="col-12" id="autoReferContainer"">
                                     <div class="form-check">
                                         <input class="form-check-input" 
                                                type="checkbox" 
@@ -464,7 +462,8 @@
 
 .request-card.selected {
     border-color: #0d6efd;
-    background-color: #f8f9fa;
+    background-color: #e3f2fd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
 .request-card.selected .card-footer {
@@ -474,135 +473,143 @@
 .request-card.selected .departments-list {
     display: block !important;
 }
+
+.surgery-card:hover {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.surgery-card:hover .fa-procedures {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
 </style>
 
 <script>
-let selectedType = null;
+let selectedTypes = new Set();
 
-function selectRequestType(type) {
-    // إلغاء التحديد السابق
-    document.querySelectorAll('.request-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    
-    // تحديد البطاقة الجديدة
+function toggleRequestType(type) {
     const card = document.querySelector(`.request-card[data-type="${type}"]`);
-    card.classList.add('selected');
     
-    // تحديث قيمة النوع
-    selectedType = type;
-    document.getElementById('requestType').value = type;
+    if (selectedTypes.has(type)) {
+        // إلغاء التحديد
+        selectedTypes.delete(type);
+        card.classList.remove('selected');
+        console.log('تم إلغاء اختيار:', type);
+    } else {
+        // إضافة التحديد
+        selectedTypes.add(type);
+        card.classList.add('selected');
+        console.log('تم اختيار:', type);
+    }
     
-    // عرض نموذج التفاصيل
-    document.getElementById('requestDetails').style.display = 'block';
+    // تحديث حقول النموذج
+    updateFormFields();
     
-    // إذا كان النوع "كشف طبي" → إظهار حقول الموعد
+    // عرض/إخفاء نموذج التفاصيل
+    const details = document.getElementById('requestDetails');
+    if (selectedTypes.size > 0) {
+        details.style.display = 'block';
+        updateDetailsForm();
+    } else {
+        details.style.display = 'none';
+    }
+}
+
+function updateFormFields() {
+    const container = document.getElementById('requestTypesContainer');
+    container.innerHTML = '';
+    
+    selectedTypes.forEach(type => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'request_type[]';
+        input.value = type;
+        container.appendChild(input);
+    });
+}
+
+function updateDetailsForm() {
     const checkupFields = document.getElementById('checkupFields');
     const labFields = document.getElementById('labFields');
     const radiologyFields = document.getElementById('radiologyFields');
     const generalFields = document.getElementById('generalFields');
     const autoReferContainer = document.getElementById('autoReferContainer');
-    const checkupRequired = document.querySelectorAll('.checkup-required');
-    const generalRequired = document.querySelectorAll('.general-required');
     const submitBtnText = document.getElementById('submitBtnText');
     const infoList = document.getElementById('infoList');
-    const doctorSelect = document.getElementById('doctor_id');
-    const descriptionField = document.getElementById('description');
     
-    // إخفاء جميع الحقول الخاصة
+    // إخفاء جميع الحقول الخاصة أولاً
     checkupFields.style.display = 'none';
     labFields.style.display = 'none';
     radiologyFields.style.display = 'none';
     generalFields.style.display = 'none';
+    autoReferContainer.style.display = 'none';
     
-    if (type === 'checkup') {
-        // إظهار حقول الكشف الطبي
+    // إظهار الحقول حسب الأنواع المحددة
+    if (selectedTypes.has('checkup')) {
         checkupFields.style.display = 'block';
         generalFields.style.display = 'block';
-        autoReferContainer.style.display = 'none';
-        checkupRequired.forEach(el => el.style.display = 'inline');
-        generalRequired.forEach(el => el.style.display = 'inline');
-        
-        // تغيير نص الزر
-        submitBtnText.textContent = 'حجز موعد';
-        
-        // تغيير الملاحظات
-        infoList.innerHTML = `
-            <li>سيتم حجز موعد للمريض مع الطبيب المحدد</li>
-            <li>يمكن تحديد تاريخ الموعد أو اختيار اليوم</li>
-            <li>سيتم إنشاء موعد في نظام المواعيد</li>
-        `;
-        
-        // جعل الطبيب والعيادة ووصف الحالة مطلوبين
-        doctorSelect.setAttribute('required', 'required');
-        descriptionField.setAttribute('required', 'required');
-        document.getElementById('department_id').setAttribute('required', 'required');
-        
-    } else if (type === 'lab') {
-        // إظهار حقول التحاليل فقط
+    }
+    
+    if (selectedTypes.has('lab')) {
         labFields.style.display = 'block';
         autoReferContainer.style.display = 'block';
-        checkupRequired.forEach(el => el.style.display = 'none');
-        generalRequired.forEach(el => el.style.display = 'none');
-        
-        // تغيير نص الزر
-        submitBtnText.textContent = 'طلب تحاليل';
-        
-        // تغيير الملاحظات
-        infoList.innerHTML = `
-            <li>سيتم إنشاء طلب تحاليل للمريض</li>
-            <li>المريض يذهب للكاشير لدفع الأجور</li>
-            <li>بعد الدفع، يتوجه للمختبر لإجراء التحاليل</li>
-        `;
-        
-        // جعل الحقول العامة غير مطلوبة
-        doctorSelect.removeAttribute('required');
-        descriptionField.removeAttribute('required');
-        document.getElementById('department_id').removeAttribute('required');
-        
-    } else if (type === 'radiology') {
-        // إظهار حقول الأشعة فقط
+    }
+    
+    if (selectedTypes.has('radiology')) {
         radiologyFields.style.display = 'block';
         autoReferContainer.style.display = 'block';
-        checkupRequired.forEach(el => el.style.display = 'none');
-        generalRequired.forEach(el => el.style.display = 'none');
-        
-        // تغيير نص الزر
-        submitBtnText.textContent = 'طلب أشعة';
-        
-        // تغيير الملاحظات
-        infoList.innerHTML = `
-            <li>سيتم إنشاء طلب أشعة للمريض</li>
-            <li>المريض يذهب للكاشير لدفع الأجور</li>
-            <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء التصوير</li>
-        `;
-        
-        // جعل الحقول العامة غير مطلوبة
-        doctorSelect.removeAttribute('required');
-        descriptionField.removeAttribute('required');
-        document.getElementById('department_id').removeAttribute('required');
-        
-    } else {
-        // الصيدلية أو أي نوع آخر - إظهار الحقول العامة
+    }
+    
+    if (selectedTypes.has('pharmacy')) {
         generalFields.style.display = 'block';
         autoReferContainer.style.display = 'block';
-        checkupRequired.forEach(el => el.style.display = 'none');
-        generalRequired.forEach(el => el.style.display = 'inline');
-        
-        // إرجاع نص الزر
-        submitBtnText.textContent = 'إنشاء الطلب';
-        
-        // إرجاع الملاحظات
+    }
+    
+    if (selectedTypes.has('emergency')) {
+        // حقول الطوارئ
+        document.getElementById('emergencyFields').style.display = 'block';
+    }
+    
+    // تحديث نص الزر والملاحظات
+    if (selectedTypes.size === 1) {
+        const type = Array.from(selectedTypes)[0];
+        if (type === 'checkup') {
+            submitBtnText.textContent = 'حجز موعد';
+            infoList.innerHTML = `
+                <li>سيتم حجز موعد للمريض مع الطبيب المحدد</li>
+                <li>يمكن تحديد تاريخ الموعد أو اختيار اليوم</li>
+                <li>سيتم إنشاء موعد في نظام المواعيد</li>
+            `;
+        } else if (type === 'lab') {
+            submitBtnText.textContent = 'طلب تحاليل';
+            infoList.innerHTML = `
+                <li>سيتم إنشاء طلب تحاليل للمريض</li>
+                <li>المريض يذهب للكاشير لدفع الأجور</li>
+                <li>بعد الدفع، يتوجه للمختبر لإجراء التحاليل</li>
+            `;
+        } else if (type === 'radiology') {
+            submitBtnText.textContent = 'طلب أشعة';
+            infoList.innerHTML = `
+                <li>سيتم إنشاء طلب أشعة للمريض</li>
+                <li>المريض يذهب للكاشير لدفع الأجور</li>
+                <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء التصوير</li>
+            `;
+        } else {
+            submitBtnText.textContent = 'إنشاء الطلب';
+            infoList.innerHTML = `
+                <li>سيتم إنشاء طلب جديد في قسم الاستعلامات</li>
+                <li>يمكنك بعد ذلك تحويل المريض للقسم المناسب</li>
+                <li>أو اختر "التحويل التلقائي" للانتقال مباشرة</li>
+            `;
+        }
+    } else {
+        submitBtnText.textContent = `إنشاء ${selectedTypes.size} طلبات`;
         infoList.innerHTML = `
-            <li>سيتم إنشاء طلب جديد في قسم الاستعلامات</li>
-            <li>يمكنك بعد ذلك تحويل المريض للقسم المناسب</li>
-            <li>أو اختر "التحويل التلقائي" للانتقال مباشرة</li>
+            <li>سيتم إنشاء ${selectedTypes.size} طلبات مختلفة للمريض</li>
+            <li>كل طلب سيتم معالجته حسب نوعه</li>
+            <li>المريض سيحتاج للدفع لكل خدمة على حدة</li>
         `;
-        
-        // جعل وصف الحالة مطلوب، الباقي اختياري
-        descriptionField.setAttribute('required', 'required');
-        doctorSelect.removeAttribute('required');
-        document.getElementById('department_id').removeAttribute('required');
     }
     
     // التمرير السلس للنموذج
@@ -628,14 +635,14 @@ document.getElementById('doctor_id').addEventListener('change', function() {
 
 // التحقق قبل الإرسال
 document.getElementById('requestForm').addEventListener('submit', function(e) {
-    if (!selectedType) {
+    if (selectedTypes.size === 0) {
         e.preventDefault();
         alert('يرجى اختيار نوع الخدمة أولاً');
         return false;
     }
     
-    // التحقق من وصف الحالة فقط للكشف الطبي والصيدلية
-    if (selectedType === 'checkup' || selectedType === 'pharmacy') {
+    // التحقق من وصف الحالة للخدمات التي تحتاجها
+    if (selectedTypes.has('checkup') || selectedTypes.has('pharmacy')) {
         const description = document.getElementById('description').value.trim();
         if (!description) {
             e.preventDefault();
@@ -646,7 +653,7 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
     }
     
     // إذا كان كشف طبي، التحقق من الطبيب والعيادة
-    if (selectedType === 'checkup') {
+    if (selectedTypes.has('checkup')) {
         const doctorId = document.getElementById('doctor_id').value;
         const departmentId = document.getElementById('department_id').value;
         
@@ -665,24 +672,15 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         }
     }
     
-    // إذا كان تحاليل، التحقق من اختيار التحاليل
-    if (selectedType === 'lab') {
-        const labTestCheckboxes = document.querySelectorAll('.lab-test-checkbox:checked');
+    // التحقق من حقول الطوارئ إذا تم اختيارها
+    if (selectedTypes.has('emergency')) {
+        const priority = document.getElementById('emergency_priority').value;
+        const type = document.getElementById('emergency_type').value;
+        const symptoms = document.getElementById('emergency_symptoms').value.trim();
         
-        if (labTestCheckboxes.length === 0) {
+        if (!priority || !type || !symptoms) {
             e.preventDefault();
-            alert('يرجى اختيار نوع التحليل المطلوب على الأقل');
-            return false;
-        }
-    }
-    
-    // إذا كان أشعة، التحقق من اختيار الأشعة
-    if (selectedType === 'radiology') {
-        const radiologyTypeCheckboxes = document.querySelectorAll('.radiology-type-checkbox:checked');
-        
-        if (radiologyTypeCheckboxes.length === 0) {
-            e.preventDefault();
-            alert('يرجى اختيار نوع الإشعة المطلوب على الأقل');
+            alert('يرجى ملء جميع حقول الطوارئ');
             return false;
         }
     }
@@ -740,66 +738,20 @@ if (labSearchInput) {
     });
 }
 
-// تحديث عداد الأشعة المختارة
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('radiology-type-checkbox')) {
-        const checkedCount = document.querySelectorAll('.radiology-type-checkbox:checked').length;
-        const counter = document.getElementById('radiologySelectedCount');
-        if (checkedCount > 0) {
-            counter.innerHTML = `<i class="fas fa-check-circle text-success"></i> تم اختيار ${checkedCount} نوع إشعة`;
-        } else {
-            counter.innerHTML = '';
-        }
-    }
-});
-
-// وظيفة البحث في الأشعة
-const radiologySearchInput = document.getElementById('radiologySearchInput');
-const clearRadiologySearch = document.getElementById('clearRadiologySearch');
-
-if (radiologySearchInput) {
-    radiologySearchInput.addEventListener('input', function() {
-        const searchTerm = this.value.trim().toLowerCase();
-        const radiologyItems = document.querySelectorAll('#radiologyTypesContainer .form-check');
-        const radiologyCategories = document.querySelectorAll('#radiologyTypesContainer > div');
-        
-        radiologyItems.forEach(item => {
-            const label = item.querySelector('label');
-            const text = label ? label.textContent.toLowerCase() : '';
-            
-            if (text.includes(searchTerm) || searchTerm === '') {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-        
-        // إخفاء/إظهار الفئات الفارغة
-        radiologyCategories.forEach(category => {
-            const visibleItems = category.querySelectorAll('.form-check:not([style*="display: none"])');
-            if (visibleItems.length === 0 && searchTerm !== '') {
-                category.style.display = 'none';
-            } else {
-                category.style.display = '';
-            }
-        });
-    });
-    
-    clearRadiologySearch.addEventListener('click', function() {
-        radiologySearchInput.value = '';
-        radiologySearchInput.dispatchEvent(new Event('input'));
-        radiologySearchInput.focus();
-    });
-}
-
 // إذا كان هناك خطأ في الصيغة، عرض النموذج مباشرة
 @if($errors->any())
     window.addEventListener('DOMContentLoaded', function() {
-        const oldType = '{{ old("request_type") }}';
-        if (oldType) {
-            selectRequestType(oldType);
+        const oldTypes = @json(old('request_type', []));
+        if (oldTypes && oldTypes.length > 0) {
+            oldTypes.forEach(type => {
+                toggleRequestType(type);
+            });
         }
     });
 @endif
 </script>
+
+<style>
+
+</style>
 @endsection

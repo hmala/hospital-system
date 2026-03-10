@@ -31,7 +31,7 @@ class DoctorVisitController extends Controller
 
         // جميع الزيارات (الحالية والسابقة) - مرتبة حسب الأولوية
         $allVisits = Visit::where('doctor_id', $doctor->id)
-            ->with(['patient.user', 'appointment'])
+            ->with(['patient.user', 'appointment.emergency'])
             ->orderByRaw("CASE 
                 WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURDATE() THEN 1
                 WHEN DATE(visit_date) = CURDATE() THEN 2
@@ -86,8 +86,8 @@ class DoctorVisitController extends Controller
     {
         $user = Auth::user();
 
-        // التحقق من الصلاحيات - الأطباء أو موظفي الاستقبال أو admin
-        if (!$user->hasRole(['admin', 'doctor', 'receptionist'])) {
+        // التحقق من الصلاحيات - الأطباء أو موظفي الاستقبال أو موظفي الاستشارية أو admin
+        if (!$user->hasRole(['admin', 'doctor', 'receptionist', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الوظيفة');
         }
 
@@ -118,6 +118,11 @@ class DoctorVisitController extends Controller
             'chief_complaint' => $appointment->reason ?: 'زيارة مجدولة',
             'status' => 'in_progress'
         ]);
+
+        // إذا كان المستخدم موظف استشارية، إرجاعه لصفحته
+        if ($user->hasRole('consultation_receptionist')) {
+            return redirect()->route('consultant-availability.index')->with('success', 'تم إدخال المريض للطبيب بنجاح');
+        }
 
         return redirect()->route('visits.index', $visit)->with('success', 'تم تحويل الموعد إلى زيارة بنجاح');
     }

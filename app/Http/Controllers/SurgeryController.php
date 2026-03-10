@@ -10,6 +10,7 @@ use App\Models\Department;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\SurgicalOperation;
+use App\Models\Room;
 use App\Events\SurgeryUpdated;
 use Illuminate\Http\Request;
 
@@ -23,12 +24,19 @@ class SurgeryController extends Controller
         }
 
         // العمليات النشطة (المجدولة والمنتظرة والجارية)
-        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'surgeryTreatments', 'radiologyTests', 'labTests'])
+        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests'])
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress']);
 
-        // فلترة حسب الطبيب إذا كان المستخدم طبيباً
+        // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->hasRole('doctor') && $user->doctor) {
-            $activeSurgeriesQuery->where('doctor_id', $user->doctor->id);
+            // إخفاء العمليات عن الأطباء الاستشاريين
+            if ($user->doctor->type === 'consultant') {
+                // لا نعرض أي عمليات للطبيب الاستشاري
+                $activeSurgeriesQuery->whereRaw('1 = 0');
+            } else {
+                // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
+                $activeSurgeriesQuery->where('doctor_id', $user->doctor->id);
+            }
         }
 
         // تطبيق البحث والفلترة
@@ -59,12 +67,19 @@ class SurgeryController extends Controller
             ->appends(request()->query());
 
         // العمليات المكتملة والملغاة
-        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'surgeryTreatments', 'radiologyTests', 'labTests'])
+        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests'])
             ->whereIn('status', ['completed', 'cancelled']);
 
-        // فلترة حسب الطبيب إذا كان المستخدم طبيباً
+        // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->hasRole('doctor') && $user->doctor) {
-            $completedSurgeriesQuery->where('doctor_id', $user->doctor->id);
+            // إخفاء العمليات عن الأطباء الاستشاريين
+            if ($user->doctor->type === 'consultant') {
+                // لا نعرض أي عمليات للطبيب الاستشاري
+                $completedSurgeriesQuery->whereRaw('1 = 0');
+            } else {
+                // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
+                $completedSurgeriesQuery->where('doctor_id', $user->doctor->id);
+            }
         }
 
         if (request('search')) {
@@ -103,13 +118,25 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
-        $patients = Patient::with('user')->get();
-        $doctors = Doctor::with('user')->where('is_active', true)->where('specialization', 'جراحة')->get();
-        $departments = Department::where('is_active', true)->get();
+        // احضر البيانات مع الترتيب الأبجدي للأسماء
+        $patients = Patient::with('user')->get()->sortBy(function($p) {
+            return $p->user->name;
+        });
+        $doctors = Doctor::with('user')
+                        ->where('is_active', true)
+                        ->where('specialization', 'جراحة')
+                        ->get()
+                        ->sortBy(function($d) {
+                            return $d->user->name;
+                        });
+        $departments = Department::where('is_active', true)
+                                  ->orderBy('name')
+                                  ->get();
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        return view('surgeries.create', compact('patients', 'doctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations'));
+        $rooms = Room::where('is_active', true)->orderBy('room_type')->orderBy('room_number')->get();
+        return view('surgeries.create', compact('patients', 'doctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms'));
     }
 
     public function store(Request $request)
@@ -123,6 +150,8 @@ class SurgeryController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
             'department_id' => 'required|exists:departments,id',
+            'room_id' => 'nullable|exists:rooms,id',
+            'expected_stay_days' => 'nullable|integer|min:1|max:365',
             'surgery_category' => 'required|string|max:255',
             'surgical_operation_id' => 'required|exists:surgical_operations,id',
             'description' => 'nullable|string',
@@ -130,6 +159,8 @@ class SurgeryController extends Controller
             'scheduled_time' => 'required|date_format:H:i',
             'referring_doctor_type' => 'required|in:internal,external',
             'referring_doctor_name' => 'required|string|max:255',
+            'referral_letter' => 'required_if:referring_doctor_type,external|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'custom_surgery_fee' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
@@ -146,15 +177,40 @@ class SurgeryController extends Controller
             'radiology_tests.*' => 'exists:radiology_types,id',
         ]);
 
-        $surgeryData = $request->except(['lab_tests', 'radiology_tests']);
+        $surgeryData = $request->except([]);
         
         // استخراج اسم العملية من الجدول
         $operation = SurgicalOperation::find($request->surgical_operation_id);
         if ($operation) {
             $surgeryData['surgery_type'] = $operation->name;
+            
+            // استخدام السعر المخصص دائماً (يدوياً في كلتا الحالتين)
+            if ($request->filled('custom_surgery_fee')) {
+                $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
+            } else {
+                // احتياطي: نسخ السعر من الجدول في حالة عدم وجود سعر مخصص
+                $surgeryData['surgery_fee'] = $operation->fee;
+            }
         }
         
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $request->scheduled_time);
+
+        // حساب أجرة الغرفة
+        if ($request->room_id && $request->expected_stay_days) {
+            $room = Room::find($request->room_id);
+            if ($room) {
+                $surgeryData['room_fee'] = $room->daily_fee * $request->expected_stay_days;
+                // تحديث حالة الغرفة لمحجوزة
+                $room->update(['status' => 'occupied']);
+            }
+        }
+
+        // handle referral letter upload if present
+        if ($request->hasFile('referral_letter')) {
+            $file = $request->file('referral_letter');
+            $path = $file->store('referrals', 'public');
+            $surgeryData['referral_letter_path'] = $path;
+        }
 
         $surgery = Surgery::create($surgeryData);
 
@@ -176,17 +232,15 @@ class SurgeryController extends Controller
             $visit = $surgery->visit;
         }
 
-        // إنشاء التحاليل المخبرية المطلوبة
-        if ($request->has('lab_tests') && is_array($request->lab_tests) && count($request->lab_tests) > 0) {
-            // حفظ في surgery_lab_tests
-            foreach ($request->lab_tests as $labTestId) {
-                $surgery->labTests()->create([
-                    'lab_test_id' => $labTestId,
-                    'status' => 'pending'
-                ]);
-            }
-            
-            // إنشاء طلب في جدول requests ليظهر في الكاشير
+        // إنشاء تحليل فيورولوجي افتراضي إذا وجد
+        $virology = \App\Models\LabTest::where('name', 'like', '%virology%')->first();
+        if ($virology) {
+            $surgery->labTests()->create([
+                'lab_test_id' => $virology->id,
+                'status' => 'pending'
+            ]);
+
+            // طلب للكاشير
             \App\Models\Request::create([
                 'visit_id' => $visit->id,
                 'type' => 'lab',
@@ -194,7 +248,7 @@ class SurgeryController extends Controller
                 'status' => 'pending',
                 'payment_status' => 'pending',
                 'details' => json_encode([
-                    'lab_test_ids' => $request->lab_tests,
+                    'lab_test_ids' => [$virology->id],
                     'surgery_id' => $surgery->id,
                     'surgery_type' => $surgery->surgery_type,
                     'priority' => 'high',
@@ -203,32 +257,6 @@ class SurgeryController extends Controller
             ]);
         }
 
-        // إنشاء الأشعة المطلوبة
-        if ($request->has('radiology_tests') && is_array($request->radiology_tests) && count($request->radiology_tests) > 0) {
-            // حفظ في surgery_radiology_tests
-            foreach ($request->radiology_tests as $radiologyTypeId) {
-                $surgery->radiologyTests()->create([
-                    'radiology_type_id' => $radiologyTypeId,
-                    'status' => 'pending'
-                ]);
-            }
-            
-            // إنشاء طلب في جدول requests ليظهر في الكاشير
-            \App\Models\Request::create([
-                'visit_id' => $visit->id,
-                'type' => 'radiology',
-                'description' => 'أشعة ما قبل العملية الجراحية: ' . $surgery->surgery_type,
-                'status' => 'pending',
-                'payment_status' => 'pending',
-                'details' => json_encode([
-                    'radiology_type_ids' => $request->radiology_tests,
-                    'surgery_id' => $surgery->id,
-                    'surgery_type' => $surgery->surgery_type,
-                    'priority' => 'high',
-                    'source' => 'surgery'
-                ])
-            ]);
-        }
 
         broadcast(new SurgeryUpdated($surgery));
 
@@ -237,6 +265,13 @@ class SurgeryController extends Controller
 
     public function show(Surgery $surgery)
     {
+        $user = auth()->user();
+        
+        // منع الأطباء الاستشاريين من عرض العمليات
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض العمليات الجراحية');
+        }
+        
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'visit.labResults', 'visit.radiologyRequests.radiologyType', 'visit.radiologyRequests.result', 'surgeryTreatments']);
         return view('surgeries.show', compact('surgery'));
     }
@@ -248,10 +283,15 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بتعديل العمليات الجراحية');
         }
 
+        // منع الأطباء الاستشاريين من تعديل العمليات
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتعديل العمليات الجراحية');
+        }
+
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user']);
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with('user')->where('is_active', true)->get();
-        $departments = Department::where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'departments', 'labTests', 'radiologyTypes'));
@@ -262,6 +302,11 @@ class SurgeryController extends Controller
         $user = auth()->user();
         if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor'])) {
             abort(403, 'غير مصرح لك بتعديل العمليات الجراحية');
+        }
+
+        // منع الأطباء الاستشاريين من تعديل العمليات
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتعديل العمليات الجراحية');
         }
 
         $request->validate([
@@ -277,6 +322,8 @@ class SurgeryController extends Controller
             'external_doctor_name' => 'nullable|string|max:255',
             'external_hospital_name' => 'nullable|string|max:255',
             'referral_notes' => 'nullable|string',
+            'referral_letter' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'custom_surgery_fee' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
             'post_op_notes' => 'nullable|string',
             'diagnosis' => 'nullable|string|max:1000',
@@ -303,9 +350,31 @@ class SurgeryController extends Controller
             'radiology_tests.*' => 'exists:radiology_types,id',
         ]);
 
-        $surgeryData = $request->except(['lab_tests', 'radiology_tests']);
+        $surgeryData = $request->except(['referral_letter']);
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $request->scheduled_time);
 
+        // if operation changed, refresh fee and type
+        if ($request->filled('surgical_operation_id')) {
+            $operation = SurgicalOperation::find($request->surgical_operation_id);
+            if ($operation) {
+                $surgeryData['surgery_type'] = $operation->name;
+                
+                // استخدام السعر المخصص دائماً (يدوياً في كلتا الحالتين)
+                if ($request->filled('custom_surgery_fee')) {
+                    $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
+                } else {
+                    // احتياطي: استخدام السعر من الجدول في حالة عدم وجود سعر مخصص
+                    $surgeryData['surgery_fee'] = $operation->fee;
+                }
+            }
+        }
+
+        // process referral letter if new file uploaded
+        if ($request->hasFile('referral_letter')) {
+            $file = $request->file('referral_letter');
+            $path = $file->store('referrals', 'public');
+            $surgeryData['referral_letter_path'] = $path;
+        }
         $surgery->update($surgeryData);
 
         // التأكد من وجود زيارة
@@ -326,43 +395,29 @@ class SurgeryController extends Controller
             $visit = $surgery->visit;
         }
 
-        // تحديث التحاليل المخبرية
-        $oldLabTestIds = $surgery->labTests->pluck('lab_test_id')->toArray();
-        $newLabTestIds = $request->has('lab_tests') ? $request->lab_tests : [];
-
-        // حذف التحاليل التي أزيلت
-        foreach ($surgery->labTests as $labTest) {
-            if (!in_array($labTest->lab_test_id, $newLabTestIds)) {
-                $labTest->delete();
-            }
-        }
-        // إضافة التحاليل الجديدة فقط
-        foreach ($newLabTestIds as $labTestId) {
-            if (!in_array($labTestId, $oldLabTestIds)) {
-                $surgery->labTests()->create([
-                    'lab_test_id' => $labTestId,
-                    'status' => 'pending'
-                ]);
-            }
-        }
-
-        // تحديث أو إنشاء طلب التحاليل في جدول requests
-        if (count($newLabTestIds) > 0) {
+        // تأكد من وجود تحليل فيورولوجي افتراضي
+        $virology = \App\Models\LabTest::where('name', 'like', '%virology%')->first();
+        if ($virology && !$surgery->labTests()->where('lab_test_id', $virology->id)->exists()) {
+            $surgery->labTests()->create([
+                'lab_test_id' => $virology->id,
+                'status' => 'pending'
+            ]);
+            // تحديث أو إنشاء طلب التحاليل
             $existingLabRequest = \App\Models\Request::where('visit_id', $visit->id)
                 ->where('type', 'lab')
                 ->whereJsonContains('details->surgery_id', $surgery->id)
                 ->first();
-            
+            $details = [
+                'lab_test_ids' => [$virology->id],
+                'surgery_id' => $surgery->id,
+                'surgery_type' => $surgery->surgery_type,
+                'priority' => 'high',
+                'source' => 'surgery'
+            ];
             if ($existingLabRequest) {
                 $existingLabRequest->update([
                     'description' => 'تحاليل ما قبل العملية الجراحية: ' . $surgery->surgery_type,
-                    'details' => json_encode([
-                        'lab_test_ids' => $newLabTestIds,
-                        'surgery_id' => $surgery->id,
-                        'surgery_type' => $surgery->surgery_type,
-                        'priority' => 'high',
-                        'source' => 'surgery'
-                    ])
+                    'details' => json_encode($details)
                 ]);
             } else {
                 \App\Models\Request::create([
@@ -371,83 +426,9 @@ class SurgeryController extends Controller
                     'description' => 'تحاليل ما قبل العملية الجراحية: ' . $surgery->surgery_type,
                     'status' => 'pending',
                     'payment_status' => 'pending',
-                    'details' => json_encode([
-                        'lab_test_ids' => $newLabTestIds,
-                        'surgery_id' => $surgery->id,
-                        'surgery_type' => $surgery->surgery_type,
-                        'priority' => 'high',
-                        'source' => 'surgery'
-                    ])
+                    'details' => json_encode($details)
                 ]);
             }
-        } else {
-            // حذف الطلب إذا لم يتبق أي تحاليل
-            \App\Models\Request::where('visit_id', $visit->id)
-                ->where('type', 'lab')
-                ->whereJsonContains('details->surgery_id', $surgery->id)
-                ->delete();
-        }
-
-        // تحديث الأشعة
-        $oldRadiologyTypeIds = $surgery->radiologyTests->pluck('radiology_type_id')->toArray();
-        $newRadiologyTypeIds = $request->has('radiology_tests') ? $request->radiology_tests : [];
-
-        // حذف الأشعة التي أزيلت
-        foreach ($surgery->radiologyTests as $radiologyTest) {
-            if (!in_array($radiologyTest->radiology_type_id, $newRadiologyTypeIds)) {
-                $radiologyTest->delete();
-            }
-        }
-        // إضافة الأشعة الجديدة فقط
-        foreach ($newRadiologyTypeIds as $radiologyTypeId) {
-            if (!in_array($radiologyTypeId, $oldRadiologyTypeIds)) {
-                $surgery->radiologyTests()->create([
-                    'radiology_type_id' => $radiologyTypeId,
-                    'status' => 'pending'
-                ]);
-            }
-        }
-
-        // تحديث أو إنشاء طلب الأشعة في جدول requests
-        if (count($newRadiologyTypeIds) > 0) {
-            $existingRadRequest = \App\Models\Request::where('visit_id', $visit->id)
-                ->where('type', 'radiology')
-                ->whereJsonContains('details->surgery_id', $surgery->id)
-                ->first();
-            
-            if ($existingRadRequest) {
-                $existingRadRequest->update([
-                    'description' => 'أشعة ما قبل العملية الجراحية: ' . $surgery->surgery_type,
-                    'details' => json_encode([
-                        'radiology_type_ids' => $newRadiologyTypeIds,
-                        'surgery_id' => $surgery->id,
-                        'surgery_type' => $surgery->surgery_type,
-                        'priority' => 'high',
-                        'source' => 'surgery'
-                    ])
-                ]);
-            } else {
-                \App\Models\Request::create([
-                    'visit_id' => $visit->id,
-                    'type' => 'radiology',
-                    'description' => 'أشعة ما قبل العملية الجراحية: ' . $surgery->surgery_type,
-                    'status' => 'pending',
-                    'payment_status' => 'pending',
-                    'details' => json_encode([
-                        'radiology_type_ids' => $newRadiologyTypeIds,
-                        'surgery_id' => $surgery->id,
-                        'surgery_type' => $surgery->surgery_type,
-                        'priority' => 'high',
-                        'source' => 'surgery'
-                    ])
-                ]);
-            }
-        } else {
-            // حذف الطلب إذا لم يتبق أي أشعة
-            \App\Models\Request::where('visit_id', $visit->id)
-                ->where('type', 'radiology')
-                ->whereJsonContains('details->surgery_id', $surgery->id)
-                ->delete();
         }
 
         broadcast(new SurgeryUpdated($surgery));
@@ -473,37 +454,21 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى قائمة الانتظار');
         }
 
-        $waitingSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department'])
-            ->whereNotIn('status', ['completed', 'cancelled'])
+        // العمليات المجدولة
+        $scheduledSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department', 'room'])
+            ->where('status', 'scheduled')
             ->orderBy('scheduled_date', 'asc')
             ->orderBy('scheduled_time', 'asc')
             ->get();
 
-        $inProgressSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department'])
-            ->where('status', 'in_progress')
-            ->get();
-            
-        return view('surgeries.waiting', compact('waitingSurgeries', 'inProgressSurgeries'));
-    }
-
-    public function controlPanel()
-    {
-        $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى لوحة التحكم');
-        }
-
-        $waitingSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department'])
-            ->whereNotIn('status', ['completed', 'cancelled'])
+        // العمليات في الانتظار والجارية
+        $activeSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department', 'room'])
+            ->whereIn('status', ['waiting', 'checked_in', 'in_progress'])
             ->orderBy('scheduled_date', 'asc')
             ->orderBy('scheduled_time', 'asc')
             ->get();
-
-        $inProgressSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department'])
-            ->where('status', 'in_progress')
-            ->get();
             
-        return view('surgeries.control', compact('waitingSurgeries', 'inProgressSurgeries'));
+        return view('surgeries.waiting', compact('scheduledSurgeries', 'activeSurgeries'));
     }
 
     public function checkIn(Surgery $surgery)
@@ -552,6 +517,39 @@ class SurgeryController extends Controller
         return redirect()->back()->with('success', 'تم إكمال العملية');
     }
 
+    public function discharge(Surgery $surgery)
+    {
+        $user = auth()->user();
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بإخراج المريض');
+        }
+
+        if ($surgery->status !== 'completed') {
+            return redirect()->back()->with('error', 'لا يمكن إخراج المريض إلا بعد إكمال العملية');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('warning', 'المريض خارج بالفعل');
+        }
+
+        $surgery->discharged_at = now();
+        $surgery->discharge_notes = request('discharge_notes');
+        $surgery->save();
+
+        // تحرير الغرفة إذا كانت محجوزة
+        if ($surgery->room_id) {
+            $room = $surgery->room;
+            if ($room && $room->status === 'occupied') {
+                $room->status = 'available';
+                $room->save();
+            }
+        }
+
+        broadcast(new SurgeryUpdated($surgery));
+
+        return redirect()->back()->with('success', 'تم إخراج المريض بنجاح');
+    }
+
     public function cancel(Surgery $surgery)
     {
         $user = auth()->user();
@@ -587,6 +585,11 @@ class SurgeryController extends Controller
         $user = auth()->user();
         if (!$user->hasRole(['admin', 'doctor', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بتحديث تفاصيل العملية');
+        }
+
+        // منع الأطباء الاستشاريين من تحديث تفاصيل العمليات
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتحديث تفاصيل العمليات الجراحية');
         }
 
         \Log::info('=== Update Surgery Details Started ===');

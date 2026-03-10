@@ -53,13 +53,12 @@
 
                             <!-- البريد الإلكتروني -->
                             <div class="col-md-6 mb-3">
-                                <label for="email" class="form-label">البريد الإلكتروني *</label>
+                                <label for="email" class="form-label">البريد الإلكتروني</label>
                                 <input type="email"
                                        class="form-control @error('email') is-invalid @enderror"
                                        id="email"
                                        name="email"
                                        value="{{ old('email', $patient->user ? $patient->user->email : '') }}"
-                                       required
                                        placeholder="example@email.com">
                                 @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -115,12 +114,13 @@
 
                             <!-- اسم الأم الثلاثي -->
                             <div class="col-md-6 mb-3">
-                                <label for="mother_name" class="form-label">اسم الأم الثلاثي</label>
+                                <label for="mother_name" class="form-label">اسم الأم الثلاثي *</label>
                                 <input type="text"
                                        class="form-control @error('mother_name') is-invalid @enderror"
                                        id="mother_name"
                                        name="mother_name"
                                        value="{{ old('mother_name', $patient->mother_name) }}"
+                                       required
                                        placeholder="ادخل اسم الأم الثلاثي">
                                 @error('mother_name')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -131,9 +131,9 @@
                         <div class="row">
                             <!-- الحالة الاجتماعية -->
                             <div class="col-md-6 mb-3">
-                                <label for="marital_status" class="form-label">الحالة الاجتماعية</label>
+                                <label for="marital_status" class="form-label">الحالة الاجتماعية *</label>
                                 <select class="form-select @error('marital_status') is-invalid @enderror"
-                                        id="marital_status" name="marital_status">
+                                        id="marital_status" name="marital_status" required>
                                     <option value="">اختر الحالة الاجتماعية</option>
                                     <option value="أعزب" {{ old('marital_status', $patient->marital_status) == 'أعزب' ? 'selected' : '' }}>أعزب</option>
                                     <option value="متزوج" {{ old('marital_status', $patient->marital_status) == 'متزوج' ? 'selected' : '' }}>متزوج</option>
@@ -153,13 +153,12 @@
                         <div class="row">
                             <!-- رقم الطوارئ -->
                             <div class="col-md-6 mb-3">
-                                <label for="emergency_contact" class="form-label">رقم الطوارئ *</label>
+                                <label for="emergency_contact" class="form-label">رقم الطوارئ</label>
                                 <input type="text"
                                        class="form-control @error('emergency_contact') is-invalid @enderror"
                                        id="emergency_contact"
                                        name="emergency_contact"
                                        value="{{ old('emergency_contact', $patient->emergency_contact) }}"
-                                       required
                                        placeholder="رقم شخص للطوارئ">
                                 @error('emergency_contact')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -190,12 +189,13 @@
                         <div class="row">
                             <!-- الرقم الوطني -->
                             <div class="col-md-6 mb-3">
-                                <label for="national_id" class="form-label">الرقم الوطني</label>
+                                <label for="national_id" class="form-label">الرقم الوطني *</label>
                                 <input type="text"
                                        class="form-control @error('national_id') is-invalid @enderror"
                                        id="national_id"
                                        name="national_id"
                                        value="{{ old('national_id', $patient->national_id) }}"
+                                       required
                                        placeholder="الرقم الوطني">
                                 @error('national_id')
                                     <div class="invalid-feedback">{{ $message }}</div>

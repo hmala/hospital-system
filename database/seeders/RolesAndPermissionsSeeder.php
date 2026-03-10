@@ -41,6 +41,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit appointments',
             'delete appointments',
             'cancel appointments',
+            // صلاحيات الكاشير
+            'view cashier',
             
             // صلاحيات الزيارات
             'view visits',
@@ -56,6 +58,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete surgeries',
             'manage surgery waiting list',
             'control surgeries',
+            'manage rooms',
             
             // صلاحيات الإشعة
             'view radiology',
@@ -81,20 +84,35 @@ class RolesAndPermissionsSeeder extends Seeder
             'view inquiries',
             'create inquiries',
             'manage inquiries',
+            
+            // صلاحيات توفر الأطباء الاستشاريين
+            'manage consultant availability',
+            
+            // صلاحيات إدارة النظام
+            'manage users',
+            'manage roles',
+            'manage permissions',
+            
+            // صلاحيات الطوارئ
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'delete emergencies',
+            'manage emergency vitals',
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // إنشاء الأدوار وتعيين الصلاحيات
 
         // دور المدير (Admin)
-        $adminRole = Role::create(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->givePermissionTo(Permission::all());
 
         // دور الطبيب (Doctor)
-        $doctorRole = Role::create(['name' => 'doctor']);
+        $doctorRole = Role::firstOrCreate(['name' => 'doctor']);
         $doctorRole->givePermissionTo([
             'view patients',
             'manage own visits',
@@ -109,10 +127,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view lab tests',
             'create lab tests',
             'manage surgery lab tests',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
         ]);
 
         // دور المريض (Patient)
-        $patientRole = Role::create(['name' => 'patient']);
+        $patientRole = Role::firstOrCreate(['name' => 'patient']);
         $patientRole->givePermissionTo([
             'view own visits',
             'view appointments',
@@ -123,7 +145,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // دور موظف الاستقبال (Receptionist)
-        $receptionistRole = Role::create(['name' => 'receptionist']);
+        $receptionistRole = Role::firstOrCreate(['name' => 'receptionist']);
         $receptionistRole->givePermissionTo([
             'view patients',
             'create patients',
@@ -142,6 +164,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit surgeries',
             'manage surgery waiting list',
             'control surgeries',
+            'manage rooms',
             'view radiology',
             'create radiology',
             'view lab tests',
@@ -149,10 +172,22 @@ class RolesAndPermissionsSeeder extends Seeder
             'view inquiries',
             'create inquiries',
             'manage inquiries',
+            'view cashier',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
+        ]);
+
+        // دور موظف استعلامات الاستشارية (Consultation Receptionist)
+        $consultationReceptionistRole = Role::firstOrCreate(['name' => 'consultation_receptionist']);
+        $consultationReceptionistRole->givePermissionTo([
+            'manage consultant availability',
+            'view doctors',
         ]);
 
         // دور موظف المختبر (Lab Staff)
-        $labStaffRole = Role::create(['name' => 'lab_staff']);
+        $labStaffRole = Role::firstOrCreate(['name' => 'lab_staff']);
         $labStaffRole->givePermissionTo([
             'view patients',
             'view lab tests',
@@ -161,7 +196,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // دور موظف الإشعة (Radiology Staff)
-        $radiologyStaffRole = Role::create(['name' => 'radiology_staff']);
+        $radiologyStaffRole = Role::firstOrCreate(['name' => 'radiology_staff']);
         $radiologyStaffRole->givePermissionTo([
             'view patients',
             'view radiology',
@@ -169,21 +204,59 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // دور موظف الصيدلية (Pharmacy Staff)
-        $pharmacyStaffRole = Role::create(['name' => 'pharmacy_staff']);
+        $pharmacyStaffRole = Role::firstOrCreate(['name' => 'pharmacy_staff']);
         $pharmacyStaffRole->givePermissionTo([
             'view patients',
             'view pharmacy',
             'process pharmacy requests',
         ]);
 
+        // دور الممرض (Nurse)
+        $nurseRole = Role::firstOrCreate(['name' => 'nurse']);
+        $nurseRole->givePermissionTo([
+            'view patients',
+            'view visits',
+            'create visits',
+            'edit visits',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
+            'view lab tests',
+            'create lab tests',
+            'view radiology',
+            'create radiology',
+        ]);
+
+        // دور موظف الطوارئ (Emergency Staff)
+        $emergencyStaffRole = Role::firstOrCreate(['name' => 'emergency_staff']);
+        $emergencyStaffRole->givePermissionTo([
+            'view patients',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
+            'view lab tests',
+            'create lab tests',
+            'view radiology',
+            'create radiology',
+        ]);
+
         // دور موظف العمليات (Surgery Staff)
-        $surgeryStaffRole = Role::create(['name' => 'surgery_staff']);
+        $surgeryStaffRole = Role::firstOrCreate(['name' => 'surgery_staff']);
         $surgeryStaffRole->givePermissionTo([
             'view patients',
             'view surgeries',
             'edit surgeries',
             'manage surgery waiting list',
             'control surgeries',
+            'manage rooms',
+        ]);
+
+        // دور الكاشير (Cashier)
+        $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
+        $cashierRole->givePermissionTo([
+            'view cashier',
         ]);
 
         // تعيين الأدوار للمستخدمين الحاليين بناءً على حقل role

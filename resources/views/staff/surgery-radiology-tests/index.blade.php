@@ -133,6 +133,13 @@
                             </td>
                             <td>
                                 <span class="badge bg-info">{{ $test->surgery->surgery_type }}</span>
+                                @if($test->surgery->surgery_fee_paid !== 'paid')
+                                <br>
+                                <span class="badge bg-danger mt-1" title="لا يمكن إجراء الأشعة قبل دفع رسوم العملية">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    غير مدفوعة
+                                </span>
+                                @endif
                             </td>
                             <td>
                                 <i class="fas fa-calendar-alt text-primary me-1"></i>
@@ -169,7 +176,10 @@
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if($test->status == 'pending')
-                                    <button class="btn btn-sm btn-outline-success" title="تحديث النتائج" onclick="quickUpdate({{ $test->id }}, 'completed')">
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            title="{{ $test->surgery->surgery_fee_paid !== 'paid' ? 'يجب دفع رسوم العملية أولاً' : 'تحديث النتائج' }}" 
+                                            onclick="quickUpdate({{ $test->id }}, 'completed')"
+                                            {{ $test->surgery->surgery_fee_paid !== 'paid' ? 'disabled' : '' }}>
                                         <i class="fas fa-check"></i>
                                     </button>
                                     @endif

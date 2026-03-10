@@ -18,12 +18,6 @@
                         <small id="last-update">آخر تحديث: الآن</small>
                     </p>
                 </div>
-                <div>
-                    <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-danger">
-                        <i class="fas fa-procedures me-2"></i>
-                        كاشير العمليات الجراحية
-                    </a>
-                </div>
             </div>
         </div>
     </div>
@@ -61,43 +55,9 @@
         </div>
     @endif
 
-    <!-- نظام التبويبات -->
+    <!-- لوحة التحكم الرئيسية -->
     <div class="row mb-4">
         <div class="col-12">
-            <ul class="nav nav-tabs" id="cashierTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="true">
-                        <i class="fas fa-tachometer-alt me-2"></i>
-                        لوحة التحكم
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="operations-tab" data-bs-toggle="tab" data-bs-target="#operations" type="button" role="tab" aria-controls="operations" aria-selected="false">
-                        <i class="fas fa-history me-2"></i>
-                        سجل العمليات
-                        @if($todayPayments && $todayPayments->count() > 0)
-                            <span class="badge bg-primary ms-2">{{ $todayPayments->count() }}</span>
-                        @endif
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab" aria-controls="reports" aria-selected="false">
-                        <i class="fas fa-chart-bar me-2"></i>
-                        التقارير والمخططات
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial" type="button" role="tab" aria-controls="financial" aria-selected="false">
-                        <i class="fas fa-calculator me-2"></i>
-                        الملخص المالي
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content mt-4" id="cashierTabContent">
-
-                <!-- Tab 1: لوحة التحكم الرئيسية -->
-                <div class="tab-pane fade show active" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
                     <!-- إحصائيات اليوم المحسنة -->
                     <div class="row mb-4">
                         <div class="col-md-3">
@@ -169,47 +129,50 @@
                         </div>
                     </div>
 
-                    <!-- قائمة المواعيد والطلبات المعلقة -->
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                <i class="fas fa-calendar-check me-2"></i>
-                                المواعيد المعلقة - بانتظار الدفع
-                                @if(isset($pendingAppointments) && is_object($pendingAppointments) && method_exists($pendingAppointments, 'total') && $pendingAppointments->total() > 0)
-                                    <span class="badge bg-warning">{{ $pendingAppointments->total() }}</span>
-                                @endif
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            @if(isset($pendingAppointments) && is_object($pendingAppointments) && method_exists($pendingAppointments, 'total') && $pendingAppointments->total() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>رقم الموعد</th>
-                                                <th>المريض</th>
-                                                <th>الطبيب</th>
-                                                <th>التخصص</th>
-                                                <th>أجر الطبيب</th>
-                                                <th>مبلغ الكشف</th>
-                                                <th>ربح المستشفى</th>
-                                                <th>الحالة</th>
-                                                <th>الإجراءات</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($pendingAppointments as $appointment)
-                                                @php
-                                                    $doctorFee = $appointment->doctor->fee_by_specialization ?? 0;
-                                                    $hospitalProfit = $appointment->consultation_fee - $doctorFee;
-                                                @endphp
-                                                <tr>
-                                                    <td><strong>#{{ $appointment->id }}</strong></td>
-                                                    <td>
-                                                        <div>{{ $appointment->patient->user->name }}</div>
-                                                        <small class="text-muted">{{ $appointment->patient->national_id ?? 'غير محدد' }}</small>
+                    <!-- عرض الأقسام المعلقة بدون تبويبات -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <!-- مواعيد -->
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-calendar-check me-2"></i>
+                                        المواعيد المعلقة - بانتظار الدفع
+                                        @if(isset($pendingAppointments) && is_object($pendingAppointments) && method_exists($pendingAppointments, 'total') && $pendingAppointments->total() > 0)
+                                            <span class="badge bg-warning">{{ $pendingAppointments->total() }}</span>
+                                        @endif
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    @if(isset($pendingAppointments) && is_object($pendingAppointments) && method_exists($pendingAppointments, 'total') && $pendingAppointments->total() > 0)
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>رقم الموعد</th>
+                                                        <th>المريض</th>
+                                                        <th>الطبيب</th>
+                                                        <th>التخصص</th>
+                                                        <th>أجر الطبيب</th>
+                                                        <th>مبلغ الكشف</th>
+                                                        <th>ربح المستشفى</th>
+                                                        <th>الحالة</th>
+                                                        <th>الإجراءات</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($pendingAppointments as $appointment)
+                                                        @php
+                                                            $doctorFee = $appointment->doctor->fee_by_specialization ?? 0;
+                                                            $hospitalProfit = $appointment->consultation_fee - $doctorFee;
+                                                        @endphp
+                                                        <tr>
+                                                            <td><strong>#{{ $appointment->id }}</strong></td>
+                                                            <td>
+                                                                <div>{{ optional(optional($appointment->patient)->user)->name ?? '-' }}</div>
+                                                                <small class="text-muted">{{ $appointment->patient->national_id ?? 'غير محدد' }}</small>
                                                     </td>
-                                                    <td>د. {{ $appointment->doctor->user->name }}</td>
+                                                    <td>د. {{ optional(optional($appointment->doctor)->user)->name ?? '-' }}</td>
                                                     <td>
                                                         <span class="badge bg-secondary">{{ $appointment->doctor->specialization ?? 'غير محدد' }}</span>
                                                     </td>
@@ -246,7 +209,10 @@
                             @endif
                         </div>
                     </div>
+                </div>
 
+                <!-- الطلبات الطبية -->
+                    
                     <!-- قائمة الطلبات المعلقة (تحاليل، أشعة، صيدلية) -->
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-light">
@@ -291,13 +257,17 @@
                                                             <span class="badge bg-success">
                                                                 <i class="fas fa-pills"></i> صيدلية
                                                             </span>
+                                                        @elseif($request->type === 'emergency')
+                                                            <span class="badge bg-danger">
+                                                                <i class="fas fa-ambulance"></i> طوارئ
+                                                            </span>
                                                         @else
                                                             <span class="badge bg-secondary">{{ $request->type }}</span>
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        <div>{{ $request->visit->patient->user->name ?? 'غير محدد' }}</div>
-                                                        <small class="text-muted">{{ $request->visit->patient->national_id ?? 'غير محدد' }}</small>
+                                                        <div>{{ optional(optional(optional($request->visit)->patient)->user)->name ?? 'غير محدد' }}</div>
+                                                        <small class="text-muted">{{ optional(optional($request->visit)->patient)->national_id ?? 'غير محدد' }}</small>
                                                     </td>
                                                     <td>
                                                         @php
@@ -334,6 +304,23 @@
                                                                 <br>{{ implode(', ', $typeNames) }}
                                                                 @if(count($details['radiology_type_ids']) > 2)
                                                                     <br>... و {{ count($details['radiology_type_ids']) - 2 }} أخرى
+                                                                @endif
+                                                            </small>
+                                                        @elseif($request->type === 'emergency' && isset($details['emergency_priority']))
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-exclamation-triangle"></i> 
+                                                                <strong>الأولوية:</strong> 
+                                                                @if($details['emergency_priority'] === 'critical')
+                                                                    <span class="badge badge-sm bg-danger">حرجة</span>
+                                                                @elseif($details['emergency_priority'] === 'urgent')
+                                                                    <span class="badge badge-sm bg-warning">عاجلة</span>
+                                                                @elseif($details['emergency_priority'] === 'semi_urgent')
+                                                                    <span class="badge badge-sm bg-info">شبه عاجلة</span>
+                                                                @else
+                                                                    <span class="badge badge-sm bg-secondary">غير عاجلة</span>
+                                                                @endif
+                                                                @if(isset($details['emergency_type']))
+                                                                    <br><strong>النوع:</strong> {{ \App\Models\Emergency::getEmergencyTypeText($details['emergency_type']) }}
                                                                 @endif
                                                             </small>
                                                         @else
@@ -380,269 +367,134 @@
                     </div>
                 </div>
 
-                <!-- Tab 2: سجل العمليات -->
-                <div class="tab-pane fade" id="operations" role="tabpanel" aria-labelledby="operations-tab">
+                <!-- خدمات الطوارئ -->
+                    
+                    <!-- قائمة خدمات الطوارئ المعلقة -->
                     <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-primary text-white">
+                        <div class="card-header bg-light">
                             <h5 class="mb-0">
-                                <i class="fas fa-history me-2"></i>
-                                سجل العمليات اليومية
+                                <i class="fas fa-ambulance me-2"></i>
+                                خدمات الطوارئ المعلقة - بانتظار الدفع
+                                @if(isset($pendingEmergencyPayments) && is_object($pendingEmergencyPayments) && $pendingEmergencyPayments->count() > 0)
+                                    <span class="badge bg-danger">{{ $pendingEmergencyPayments->total() }}</span>
+                                @endif
                             </h5>
                         </div>
                         <div class="card-body">
-                            @if($todayPayments && $todayPayments->count() > 0)
+                            @forelse($pendingEmergencyPayments ?? [] as $payment)
+                                @if($loop->first)
                                 <div class="table-responsive">
-                                    <table class="table table-sm">
+                                    <table class="table table-hover">
                                         <thead>
                                             <tr>
-                                                <th>الوقت</th>
+                                                <th>رقم الدفعة</th>
                                                 <th>المريض</th>
-                                                <th>الطبيب</th>
+                                                <th>حالة الطوارئ</th>
+                                                <th>الخدمات</th>
                                                 <th>المبلغ</th>
-                                                <th>طريقة الدفع</th>
-                                                <th>رقم الإيصال</th>
-                                                <th>الحالة</th>
+                                                <th>التاريخ</th>
                                                 <th>الإجراءات</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($todayPayments as $payment)
+                                @endif
                                                 <tr>
-                                                    <td>{{ $payment->paid_at->format('H:i') }}</td>
+                                                    <td><strong>#{{ $payment->id }}</strong></td>
                                                     <td>
-                                                        @if($payment->appointment)
-                                                            {{ $payment->appointment->patient->user->name ?? 'غير محدد' }}
-                                                        @elseif($payment->request && $payment->request->visit)
-                                                            {{ $payment->request->visit->patient->user->name ?? 'غير محدد' }}
-                                                        @elseif($payment->patient)
-                                                            {{ $payment->patient->user->name ?? 'غير محدد' }}
-                                                        @else
-                                                            غير محدد
-                                                        @endif
+                                                        <div>
+                                                            @php
+                                                                $em = $payment->emergency;
+                                                                if ($em->patient) {
+                                                                    $pname = optional(optional($em->patient)->user)->name ?? 'غير محدد';
+                                                                    $pphone = optional(optional($em->patient)->user)->phone ?? '---';
+                                                                } elseif ($em->emergencyPatient) {
+                                                                    $pname = $em->emergencyPatient->name;
+                                                                    $pphone = $em->emergencyPatient->phone ?? '---';
+                                                                } else {
+                                                                    $pname = 'غير محدد';
+                                                                    $pphone = '---';
+                                                                }
+                                                            @endphp
+                                                            <strong>{{ $pname }}</strong>
+                                                            <br>
+                                                            <small class="text-muted">{{ $pphone }}</small>
+                                                        </div>
                                                     </td>
                                                     <td>
-                                                        @if($payment->appointment && $payment->appointment->doctor)
-                                                            د. {{ $payment->appointment->doctor->user->name }}
-                                                        @elseif($payment->request && $payment->request->visit && $payment->request->visit->doctor)
-                                                            د. {{ $payment->request->visit->doctor->user->name }}
-                                                        @else
-                                                            -
-                                                        @endif
-                                                    </td>
-                                                    <td class="text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
-                                                    <td>
-                                                        <span class="badge bg-{{ $payment->payment_method == 'cash' ? 'success' : ($payment->payment_method == 'card' ? 'info' : 'warning') }}">
-                                                            {{ $payment->payment_method == 'cash' ? 'نقدي' : ($payment->payment_method == 'card' ? 'بطاقة' : 'تأمين') }}
+                                                        <span class="badge bg-{{ $payment->emergency->priority_color }}">
+                                                            {{ $payment->emergency->priority_text }}
                                                         </span>
-                                                    </td>
-                                                    <td><code>{{ $payment->receipt_number }}</code></td>
-                                                    <td>
-                                                        <span class="badge bg-success">
-                                                            <i class="fas fa-check me-1"></i>
-                                                            مكتمل
-                                                        </span>
+                                                        <br>
+                                                        <small class="text-muted">{{ $payment->emergency->emergency_type_text }}</small>
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('cashier.receipt', $payment->id) }}" 
-                                                           class="btn btn-sm btn-info me-1" 
-                                                           title="عرض الإيصال"
-                                                           target="_blank">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                        <a href="{{ route('cashier.receipt.print', $payment->id) }}" 
-                                                           class="btn btn-sm btn-primary" 
-                                                           title="طباعة الإيصال"
-                                                           target="_blank">
-                                                            <i class="fas fa-print"></i>
+                                                        <small>
+                                                            @if($payment->appointment_id)
+                                                                <span class="badge bg-primary">استشارة طبيب</span>
+                                                                @if($payment->appointment && $payment->appointment->doctor)
+                                                                    <br>
+                                                                    <span class="text-muted">د. {{ $payment->appointment->doctor->user->name ?? '' }}</span>
+                                                                @endif
+                                                            @endif
+                                                            @if($payment->emergency->services->count() > 0)
+                                                                @if($payment->appointment_id)<br>@endif
+                                                                @foreach($payment->emergency->services as $service)
+                                                                    <span class="badge bg-light text-dark">{{ $service->name }}</span>
+                                                                    @if(!$loop->last) | @endif
+                                                                @endforeach
+                                                            @endif
+                                                            @if(!$payment->appointment_id && $payment->emergency->services->count() == 0)
+                                                                <span class="text-muted">-</span>
+                                                            @endif
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        <strong class="text-success">{{ number_format($payment->amount, 2) }} IQD</strong>
+                                                    </td>
+                                                    <td>
+                                                        <small>{{ $payment->created_at->format('Y-m-d') }}</small>
+                                                        <br>
+                                                        <small class="text-muted">{{ $payment->created_at->format('H:i') }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" 
+                                                           class="btn btn-success btn-sm">
+                                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                                            تسديد
                                                         </a>
                                                     </td>
                                                 </tr>
-                                            @endforeach
+                                @if($loop->last)
                                         </tbody>
                                     </table>
                                 </div>
-                            @else
+
+                                @if(isset($pendingEmergencyPayments) && method_exists($pendingEmergencyPayments, 'links'))
+                                <div class="mt-3">
+                                    {{ $pendingEmergencyPayments->links('pagination::bootstrap-5') }}
+                                </div>
+                                @endif
+                                @endif
+                            @empty
                                 <div class="text-center py-5">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">لا توجد عمليات دفع اليوم</p>
+                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                    <p class="text-muted">لا توجد خدمات طوارئ معلقة حالياً</p>
                                 </div>
-                            @endif
+                            @endforelse
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab 3: التقارير والمخططات -->
-                <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
-                    <div class="row mb-4">
-                        <!-- مخطط الإيرادات اليومية -->
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-chart-pie me-2"></i>
-                                        توزيع الإيرادات اليوم
-                                    </h6>
-                                </div>
-                                <div class="card-body">
-                                    <div style="position: relative; height: 300px;">
-                                        <canvas id="revenueChart"></canvas>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="row text-center">
-                                            <div class="col-6">
-                                                <div class="text-info fw-bold">{{ number_format($todayStats['doctor_fees'], 2) }} IQD</div>
-                                                <small class="text-muted">أجور الأطباء</small>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="text-primary fw-bold">{{ number_format($todayStats['hospital_profit'], 2) }} IQD</div>
-                                                <small class="text-muted">ربح المستشفى</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- مخطط الأداء الشهري -->
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-chart-line me-2"></i>
-                                        الأداء الشهري
-                                    </h6>
-                                </div>
-                                <div class="card-body">
-                                    <div style="position: relative; height: 300px;">
-                                        <canvas id="monthlyChart"></canvas>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="row text-center">
-                                            <div class="col-4">
-                                                <div class="text-success fw-bold">{{ number_format($monthlyStats['total_revenue'] ?? 0, 0) }}</div>
-                                                <small class="text-muted">إجمالي الشهر</small>
-                                            </div>
-                                            <div class="col-4">
-                                                <div class="text-info fw-bold">{{ number_format($monthlyStats['avg_daily'] ?? 0, 0) }}</div>
-                                                <small class="text-muted">متوسط يومي</small>
-                                            </div>
-                                            <div class="col-4">
-                                                <div class="text-primary fw-bold">{{ $monthlyStats['total_payments'] ?? 0 }}</div>
-                                                <small class="text-muted">عدد العمليات</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab 4: الملخص المالي -->
-                <div class="tab-pane fade" id="financial" role="tabpanel" aria-labelledby="financial-tab">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fas fa-calculator me-2"></i>
-                                الملخص المالي التفصيلي
-                            </h5>
-                            <div>
-                                <button class="btn btn-sm btn-outline-dark me-2" onclick="printReport()">
-                                    <i class="fas fa-print me-1"></i>
-                                    طباعة
-                                </button>
-                                <button class="btn btn-sm btn-outline-dark" onclick="exportReport()">
-                                    <i class="fas fa-download me-1"></i>
-                                    تصدير
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <!-- الإيرادات -->
-                                <div class="col-md-3">
-                                    <div class="border-end pe-3">
-                                        <h6 class="text-success mb-3">
-                                            <i class="fas fa-plus-circle me-2"></i>
-                                            الإيرادات
-                                        </h6>
-                                        <div class="mb-2">
-                                            <small class="text-muted">كشوفات اليوم:</small>
-                                            <div class="fw-bold text-success">{{ number_format($todayStats['total_collected'], 2) }} IQD</div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <small class="text-muted">متوسط الكشف:</small>
-                                            <div class="fw-bold">{{ ($todayPayments && $todayPayments->count() > 0) ? number_format($todayStats['total_collected'] / $todayPayments->count(), 2) : '0.00' }} IQD</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- المصروفات -->
-                                <div class="col-md-3">
-                                    <div class="border-end pe-3">
-                                        <h6 class="text-danger mb-3">
-                                            <i class="fas fa-minus-circle me-2"></i>
-                                            المصروفات
-                                        </h6>
-                                        <div class="mb-2">
-                                            <small class="text-muted">أجور الأطباء:</small>
-                                            <div class="fw-bold text-info">{{ number_format($todayStats['doctor_fees'], 2) }} IQD</div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <small class="text-muted">نسبة الأطباء:</small>
-                                            <div class="fw-bold">{{ $todayStats['total_collected'] > 0 ? number_format(($todayStats['doctor_fees'] / $todayStats['total_collected']) * 100, 1) : '0.0' }}%</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- الأرباح -->
-                                <div class="col-md-3">
-                                    <div class="border-end pe-3">
-                                        <h6 class="text-primary mb-3">
-                                            <i class="fas fa-chart-line me-2"></i>
-                                            الأرباح
-                                        </h6>
-                                        <div class="mb-2">
-                                            <small class="text-muted">ربح المستشفى:</small>
-                                            <div class="fw-bold text-primary">{{ number_format($todayStats['hospital_profit'], 2) }} IQD</div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <small class="text-muted">هامش الربح:</small>
-                                            <div class="fw-bold">{{ $todayStats['total_collected'] > 0 ? number_format(($todayStats['hospital_profit'] / $todayStats['total_collected']) * 100, 1) : '0.0' }}%</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- الإحصائيات -->
-                                <div class="col-md-3">
-                                    <h6 class="text-secondary mb-3">
-                                        <i class="fas fa-chart-bar me-2"></i>
-                                        الإحصائيات
-                                    </h6>
-                                    <div class="mb-2">
-                                        <small class="text-muted">عدد المرضى:</small>
-                                        <div class="fw-bold">{{ $todayPayments ? $todayPayments->count() : 0 }}</div>
-                                    </div>
-                                    <div class="mb-2">
-                                        <small class="text-muted">متوسط لكل مريض:</small>
-                                        <div class="fw-bold">{{ ($todayPayments && $todayPayments->count() > 0) ? number_format($todayStats['total_collected'] / $todayPayments->count(), 0) : '0' }} IQD</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
+            </div> <!-- end sections container -->
+        </div> <!-- end col-12 -->
+    </div> <!-- end row mb-4 -->
 
 </div>
 
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // تحديث تلقائي للصفحة كل 5 ثواني
 setInterval(function() {
@@ -660,9 +512,6 @@ setInterval(function() {
                 $('#cashier-content').html($(newContent).html());
                 window.scrollTo(0, currentScroll);
                 
-                // إعادة إنشاء المخططات بعد التحديث
-                createCharts();
-                
                 // تحديث الوقت
                 const now = new Date();
                 const time = now.toLocaleTimeString('ar-IQ');
@@ -675,131 +524,29 @@ setInterval(function() {
     });
 }, 5000); // 5 ثواني
 
-// دوال الطباعة والتصدير
-function printReport() {
-    window.print();
-}
-
-function exportReport() {
-    // إنشاء محتوى التقرير
-    const reportData = {
-        date: new Date().toLocaleDateString('ar-IQ'),
-        total_collected: {{ $todayStats['total_collected'] }},
-        doctor_fees: {{ $todayStats['doctor_fees'] }},
-        hospital_profit: {{ $todayStats['hospital_profit'] }},
-        total_payments: {{ $todayStats['total_payments'] }},
-        pending_appointments: {{ $todayStats['pending_appointments_count'] }},
-        pending_requests: {{ $todayStats['pending_requests_count'] }}
-    };
-
-    // تحويل البيانات إلى JSON وتنزيلها
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `تقرير_كاشير_${reportData.date}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-}
-
-// تحسين تفاعل التبويبات
-function createCharts() {
-    // مخطط توزيع الإيرادات
-    const revenueCtx = document.getElementById('revenueChart');
-    if (revenueCtx) {
-        if (revenueCtx.chart) {
-            revenueCtx.chart.destroy();
-        }
-        revenueCtx.chart = new Chart(revenueCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['أجور الأطباء', 'ربح المستشفى'],
-                datasets: [{
-                    data: [
-                        {{ $todayStats['doctor_fees'] }},
-                        {{ $todayStats['hospital_profit'] }}
-                    ],
-                    backgroundColor: [
-                        '#17a2b8', // أزرق للأطباء
-                        '#007bff'  // أزرق داكن للمستشفى
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    }
-                }
-            }
-        });
-    }
-
-    // مخطط الأداء الشهري (بيانات تجريبية للعرض)
-    const monthlyCtx = document.getElementById('monthlyChart');
-    if (monthlyCtx) {
-        if (monthlyCtx.chart) {
-            monthlyCtx.chart.destroy();
-        }
-        
-        const daysInMonth = new Date().getDate();
-        const labels = [];
-        const data = [];
-        
-        // إنشاء بيانات تجريبية للأيام الماضية
-        for (let i = 1; i <= daysInMonth; i++) {
-            labels.push(i);
-            // بيانات عشوائية للعرض
-            data.push(Math.floor(Math.random() * 50000) + 10000);
-        }
-        
-        monthlyCtx.chart = new Chart(monthlyCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'الإيرادات اليومية',
-                    data: data,
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString() + ' IQD';
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-}
-
 $(document).ready(function() {
-    createCharts();
-    
     const now = new Date();
     const time = now.toLocaleTimeString('ar-IQ');
     $('#last-update').text('آخر تحديث: ' + time);
+
+    // restore tab from URL hash if present
+    var hash = window.location.hash;
+    if (hash) {
+        var btn = $('#pendingTabs button[data-bs-target="' + hash + '"]');
+        if (btn.length) {
+            btn.tab('show');
+        }
+    }
+});
+
+// keep URL hash in sync with selected tab
+$(document).on('shown.bs.tab', '#pendingTabs button', function(e) {
+    var target = $(e.target).data('bs-target');
+    if (history.replaceState) {
+        history.replaceState(null, null, target);
+    } else {
+        window.location.hash = target;
+    }
 });
 </script>
 

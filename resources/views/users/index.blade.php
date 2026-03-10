@@ -52,7 +52,8 @@
                                     $role->name == 'admin' ? 'danger' : 
                                     ($role->name == 'doctor' ? 'success' : 
                                     ($role->name == 'patient' ? 'info' : 
-                                    ($role->name == 'receptionist' ? 'warning' : 'secondary'))) 
+                                    ($role->name == 'receptionist' ? 'warning' : 
+                                    ($role->name == 'consultation_receptionist' ? 'info' : 'secondary')))) 
                                 }}">
                                     @switch($role->name)
                                         @case('admin') مدير النظام @break
@@ -62,6 +63,7 @@
                                         @case('lab_staff') موظف مختبر @break
                                         @case('radiology_staff') موظف أشعة @break
                                         @case('pharmacy_staff') موظف صيدلية @break
+                                        @case('consultation_receptionist') موظف استعلامات استشارية @break
                                         @case('surgery_staff') موظف عمليات @break
                                         @default {{ $role->name }}
                                     @endswitch

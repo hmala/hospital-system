@@ -145,8 +145,8 @@
                                             {{ Str::limit($labTest->description, 40) }}
                                         </td>
                                         <td>
-                                            @if($labTest->notes)
-                                                <strong class="text-success">{{ number_format($labTest->notes) }}</strong> د.ع
+                                            @if($labTest->price !== null)
+                                                <strong class="text-success">{{ number_format($labTest->price, 0) }}</strong> د.ع
                                             @else
                                                 -
                                             @endif

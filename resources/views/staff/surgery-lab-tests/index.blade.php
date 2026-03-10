@@ -115,16 +115,17 @@
                     </thead>
                     <tbody>
                         @foreach($labTests as $index => $test)
+                        @if($test->surgery && $test->surgery->patient)
                         <tr class="test-row {{ $test->status == 'pending' ? 'table-warning' : ($test->status == 'completed' ? 'table-success' : 'table-danger') }}" data-test-id="{{ $test->id }}">
                             <td class="text-center">{{ $loop->iteration }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2" style="width: 32px; height: 32px; background: linear-gradient(135deg, #007bff, #6610f2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                        {{ substr($test->surgery->patient->user->name, 0, 1) }}
+                                        {{ substr($test->surgery->patient->user->name ?? 'N', 0, 1) }}
                                     </div>
                                     <div>
                                         <a href="{{ route('patients.show', $test->surgery->patient) }}" class="text-decoration-none fw-bold">
-                                            {{ $test->surgery->patient->user->name }}
+                                            {{ $test->surgery->patient->user->name ?? 'غير محدد' }}
                                         </a>
                                         <br>
                                         <small class="text-muted">ID: {{ $test->surgery->patient->id }}</small>
@@ -133,6 +134,13 @@
                             </td>
                             <td>
                                 <span class="badge bg-info">{{ $test->surgery->surgery_type }}</span>
+                                @if($test->surgery->surgery_fee_paid !== 'paid')
+                                <br>
+                                <span class="badge bg-danger mt-1" title="لا يمكن إجراء التحليل قبل دفع رسوم العملية">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    غير مدفوعة
+                                </span>
+                                @endif
                             </td>
                             <td>
                                 <i class="fas fa-calendar-alt text-primary me-1"></i>
@@ -169,7 +177,10 @@
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if($test->status == 'pending')
-                                    <button class="btn btn-sm btn-outline-success" title="تحديث النتائج" onclick="quickUpdate({{ $test->id }}, 'completed')">
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            title="{{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'يجب دفع رسوم العملية أولاً' : 'تحديث النتائج' }}" 
+                                            onclick="quickUpdate({{ $test->id }}, 'completed')"
+                                            {{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'disabled' : '' }}>
                                         <i class="fas fa-check"></i>
                                     </button>
                                     @endif
@@ -195,6 +206,14 @@
                                 </div>
                             </td>
                         </tr>
+                        @else
+                        <tr>
+                            <td colspan="7" class="text-center text-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                بيانات العملية غير مكتملة - الطلب #{{ $test->id }}
+                            </td>
+                        </tr>
+                        @endif
                         @endforeach
                     </tbody>
                 </table>

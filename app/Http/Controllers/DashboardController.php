@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Department;
 use App\Models\Appointment;
 use App\Models\Visit;
+use App\Models\Room;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -67,6 +68,14 @@ class DashboardController extends Controller
             'todayVisits' => Visit::whereDate('visit_date', today())->count(),
         ];
 
+        // إحصائيات الغرف
+        $roomStats = [
+            'total' => Room::where('is_active', true)->count(),
+            'available' => Room::where('status', 'available')->where('is_active', true)->count(),
+            'occupied' => Room::where('status', 'occupied')->where('is_active', true)->count(),
+            'maintenance' => Room::where('status', 'maintenance')->where('is_active', true)->count(),
+        ];
+
         // مخطط الزيارات الأسبوعية (آخر 7 أيام)
         $weeklyVisits = Visit::select(DB::raw('DATE(visit_date) as date'), DB::raw('count(*) as count'))
             ->whereBetween('visit_date', [now()->subDays(6), now()])
@@ -120,6 +129,7 @@ class DashboardController extends Controller
 
         return view('dashboard', compact(
             'stats',
+            'roomStats',
             'visitsByDay',
             'appointmentsByStatus',
             'patientsByDepartment',

@@ -42,10 +42,18 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
+                            @if($labTest->code)
+                            <p><strong>الكود:</strong> <code>{{ $labTest->code }}</code></p>
+                            @endif
                             <p><strong>اسم الفحص:</strong> {{ $labTest->name }}</p>
-                            <p><strong>الفئة:</strong>
+                            <p><strong>الفئة الرئيسية:</strong>
                                 <span class="badge bg-secondary">{{ $labTest->category_text }}</span>
                             </p>
+                            @if($labTest->subcategory)
+                            <p><strong>الفئة الفرعية:</strong>
+                                <span class="badge bg-info">{{ $labTest->subcategory }}</span>
+                            </p>
+                            @endif
                             <p><strong>الحالة:</strong>
                                 <span class="badge bg-{{ $labTest->status_color }}">
                                     {{ $labTest->status_text }}
@@ -56,6 +64,9 @@
                             <p><strong>تاريخ الإضافة:</strong> {{ $labTest->created_at->format('Y-m-d H:i') }}</p>
                             <p><strong>آخر تحديث:</strong> {{ $labTest->updated_at->format('Y-m-d H:i') }}</p>
                             <p><strong>المعرف:</strong> #{{ $labTest->id }}</p>
+                            @if($labTest->price !== null)
+                            <p><strong>السعر:</strong> {{ number_format($labTest->price,0) }} د.ع</p>
+                            @endif
                         </div>
                     </div>
 

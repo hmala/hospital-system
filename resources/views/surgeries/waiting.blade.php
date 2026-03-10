@@ -7,12 +7,9 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-clock me-2"></i>
-                    شاشة العمليات (جميع العمليات المعلقة)
+                    قائمة انتظار العمليات الجراحية
                 </h2>
                 <div>
-                    <a href="{{ route('surgeries.control') }}" class="btn btn-primary me-2">
-                        <i class="fas fa-cogs me-2"></i>لوحة التحكم
-                    </a>
                     <a href="{{ route('surgeries.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-right me-2"></i>العودة للعمليات
                     </a>
@@ -29,38 +26,60 @@
     @endif
 
     <div class="row">
-        <!-- قائمة الانتظار -->
+        <!-- جدول العمليات المجدولة -->
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>قائمة الانتظار</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-check me-2"></i>
+                        العمليات المجدولة
+                        <span class="badge bg-light text-primary ms-2">{{ $scheduledSurgeries->count() }}</span>
+                    </h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
+                                    <th>#</th>
                                     <th>المريض</th>
                                     <th>العملية</th>
-                                    <th>التاريخ</th>
+                                    <th>الطبيب</th>
                                     <th>الوقت</th>
+                                    <th>الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($waitingSurgeries as $surgery)
+                                @forelse($scheduledSurgeries as $surgery)
                                 <tr>
+                                    <td><strong>#{{ $surgery->id }}</strong></td>
                                     <td>
                                         <div class="fw-bold">{{ $surgery->patient->user->name }}</div>
-                                        <small class="text-muted">د. {{ $surgery->doctor->user->name }}</small>
+                                        <small class="text-muted">{{ $surgery->patient->national_id ?? 'غير محدد' }}</small>
                                     </td>
                                     <td>{{ $surgery->surgery_type }}</td>
-                                    <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
-                                    <td>{{ $surgery->scheduled_time }}</td>
+                                    <td>{{ $surgery->doctor->user->name }}</td>
+                                    <td>
+                                        <div>{{ $surgery->scheduled_date->format('Y-m-d') }}</div>
+                                        <small>{{ $surgery->scheduled_time }}</small>
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-info mb-1">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-primary mb-1">
+                                                <i class="fas fa-sign-in-alt me-1"></i>دخول
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">
-                                        لا توجد عمليات في الانتظار
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="fas fa-info-circle fa-3x mb-3"></i>
+                                        <p class="mb-0">لا توجد عمليات مجدولة</p>
                                     </td>
                                 </tr>
                                 @endforelse
@@ -71,33 +90,79 @@
             </div>
         </div>
 
-        <!-- العمليات الجارية -->
+        <!-- جدول العمليات في الانتظار والجارية -->
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>العمليات الجارية</h5>
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-hourglass-half me-2"></i>
+                        العمليات في الانتظار والجارية
+                        <span class="badge bg-dark ms-2">{{ $activeSurgeries->count() }}</span>
+                    </h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
+                                    <th>#</th>
                                     <th>المريض</th>
                                     <th>العملية</th>
                                     <th>الطبيب</th>
+                                    <th>الوقت</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($inProgressSurgeries as $surgery)
-                                <tr class="table-success bg-opacity-10">
-                                    <td>{{ $surgery->patient->user->name }}</td>
+                                @forelse($activeSurgeries as $surgery)
+                                <tr>
+                                    <td><strong>#{{ $surgery->id }}</strong></td>
+                                    <td>
+                                        <div class="fw-bold">{{ $surgery->patient->user->name }}</div>
+                                        <small class="text-muted">{{ $surgery->patient->national_id ?? 'غير محدد' }}</small>
+                                    </td>
                                     <td>{{ $surgery->surgery_type }}</td>
                                     <td>{{ $surgery->doctor->user->name }}</td>
+                                    <td>
+                                        <div>{{ $surgery->scheduled_date->format('Y-m-d') }}</div>
+                                        <small>{{ $surgery->scheduled_time }}</small>
+                                    </td>
+                                    <td>
+                                        @if($surgery->status == 'waiting')
+                                            <span class="badge bg-warning">في الانتظار</span>
+                                        @elseif($surgery->status == 'checked_in')
+                                            <span class="badge bg-info">تم التسجيل</span>
+                                        @elseif($surgery->status == 'in_progress')
+                                            <span class="badge bg-success">جارية</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-info mb-1">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        @if($surgery->status == 'waiting' || $surgery->status == 'checked_in')
+                                            <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-success mb-1">
+                                                    <i class="fas fa-play me-1"></i>بدء
+                                                </button>
+                                            </form>
+                                        @elseif($surgery->status == 'in_progress')
+                                            <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-danger mb-1">
+                                                    <i class="fas fa-stop me-1"></i>إنهاء
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="3" class="text-center py-4 text-muted">
-                                        لا توجد عمليات جارية حالياً
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                                        <p class="mb-0">لا توجد عمليات في الانتظار حالياً</p>
                                     </td>
                                 </tr>
                                 @endforelse
@@ -113,9 +178,9 @@
 
 @section('scripts')
 <script>
-    // تحديث الصفحة تلقائياً كل 5 ثوانٍ للحصول على البيانات الحديثة
+    // تحديث الصفحة تلقائياً كل 30 ثانية للحصول على البيانات الحديثة
     setInterval(function() {
         location.reload();
-    }, 1000); // 5 ثوانٍ
+    }, 30000);
 </script>
 @endsection

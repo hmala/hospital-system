@@ -73,6 +73,24 @@
                         </div>
 
                         <div class="row mb-3">
+                            <label for="type" class="col-md-3 col-form-label text-md-end">نوع الطبيب</label>
+                            <div class="col-md-8">
+                                <select id="type" class="form-control @error('type') is-invalid @enderror" name="type" required>
+                                    <option value="">اختر نوع الطبيب</option>
+                                    <option value="consultant" {{ old('type', $doctor->type) == 'consultant' ? 'selected' : '' }}>استشاري</option>
+                                    <option value="anesthesiologist" {{ old('type', $doctor->type) == 'anesthesiologist' ? 'selected' : '' }}>مخدر</option>
+                                    <option value="surgeon" {{ old('type', $doctor->type) == 'surgeon' ? 'selected' : '' }}>جراح</option>
+                                    <option value="emergency" {{ old('type', $doctor->type) == 'emergency' ? 'selected' : '' }}>طوارئ</option>
+                                </select>
+                                @error('type')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
                             <label for="specialization" class="col-md-3 col-form-label text-md-end">التخصص</label>
                             <div class="col-md-8">
                                 <input id="specialization" type="text" class="form-control @error('specialization') is-invalid @enderror"

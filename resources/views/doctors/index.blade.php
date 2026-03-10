@@ -45,6 +45,7 @@
                                     <th>أجر الكشف</th>
                                     <th>مواعيد اليوم</th>
                                     <th>الحالة</th>
+                                    <th>التوفر اليومي</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -71,6 +72,27 @@
                                     <td><span class="text-success">{{ number_format($doctor->consultation_fee) }} د.ع</span></td>
                                     <td><span class="badge bg-primary">{{ $doctor->today_appointments_count }}</span></td>
                                     <td>@if($doctor->is_active)<span class="badge bg-success">نشط</span>@else<span class="badge bg-danger">غير نشط</span>@endif</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if($doctor->is_available_today)
+                                                <span class="badge bg-success me-2">متوفر</span>
+                                                <button type="button" class="btn btn-sm btn-outline-danger toggle-availability" 
+                                                        data-doctor-id="{{ $doctor->id }}" 
+                                                        data-available="0"
+                                                        title="إلغاء التوفر">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            @else
+                                                <span class="badge bg-danger me-2">غير متوفر</span>
+                                                <button type="button" class="btn btn-sm btn-outline-success toggle-availability" 
+                                                        data-doctor-id="{{ $doctor->id }}" 
+                                                        data-available="1"
+                                                        title="تفعيل التوفر">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="{{ route('doctors.show', $doctor) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
@@ -99,4 +121,65 @@
     </div>
 </div>
 <style>.avatar-sm { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; }</style>
+
+<script>
+$(document).ready(function() {
+    $('.toggle-availability').on('click', function() {
+        const button = $(this);
+        const doctorId = button.data('doctor-id');
+        const available = button.data('available');
+        const cell = button.closest('td');
+        
+        // تعطيل الزر مؤقتاً
+        button.prop('disabled', true);
+        
+        $.ajax({
+            url: `/doctors/${doctorId}/availability`,
+            method: 'PATCH',
+            data: {
+                is_available_today: available,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // تحديث الواجهة
+                    if (available == 1) {
+                        cell.html(`
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-success me-2">متوفر</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger toggle-availability" 
+                                        data-doctor-id="${doctorId}" 
+                                        data-available="0"
+                                        title="إلغاء التوفر">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `);
+                    } else {
+                        cell.html(`
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-danger me-2">غير متوفر</span>
+                                <button type="button" class="btn btn-sm btn-outline-success toggle-availability" 
+                                        data-doctor-id="${doctorId}" 
+                                        data-available="1"
+                                        title="تفعيل التوفر">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        `);
+                    }
+                    
+                    // إظهار رسالة نجاح
+                    toastr.success(response.message);
+                }
+            },
+            error: function(xhr) {
+                console.error('خطأ في تحديث التوفر:', xhr.responseText);
+                toastr.error('حدث خطأ في تحديث التوفر');
+                button.prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
 @endsection

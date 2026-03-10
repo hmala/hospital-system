@@ -104,10 +104,12 @@ input[type="radio"]:checked + .frequency-btn {
                     إدارة العمليات الجراحية
                 </h2>
                 <div>
-                    <a href="{{ route('surgeries.waiting') }}" class="btn btn-info text-white me-2">
-                        <i class="fas fa-list-ol me-2"></i>قائمة الانتظار
+                    <a href="{{ route('surgeries.waiting') }}" class="btn btn-warning text-white me-2">
+                        <i class="fas fa-clock me-2"></i>قائمة الانتظار
                     </a>
-                  
+                    <a href="{{ route('rooms.index') }}" class="btn btn-danger text-white me-2">
+                        <i class="fas fa-bed me-2"></i>إدارة الغرف
+                    </a>
                 </div>
             </div>
         </div>
@@ -235,6 +237,18 @@ input[type="radio"]:checked + .frequency-btn {
                                                         <td>{{ $surgery->surgery_type }}</td>
                                                         <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
                                                         <td>{{ $surgery->scheduled_time }}</td>
+                                                        <td>
+                                                            @if($surgery->room)
+                                                                <span class="badge bg-primary">
+                                                                    <i class="fas fa-bed me-1"></i>
+                                                                    {{ $surgery->room->room_number }}
+                                                                </span>
+                                                                <br>
+                                                                <small class="text-muted">{{ $surgery->room->room_type == 'vip' ? 'VIP' : 'عادية' }}</small>
+                                                            @else
+                                                                <span class="badge bg-secondary">غير محدد</span>
+                                                            @endif
+                                                        </td>
                                                         <td>
                                                                 @if($surgery->status == 'scheduled')
                                                                         <span class="badge bg-secondary">مجدولة</span>
@@ -499,7 +513,9 @@ input[type="radio"]:checked + .frequency-btn {
                                             <th>نوع العملية</th>
                                             <th>التاريخ</th>
                                             <th>الوقت</th>
+                                            <th>الغرفة</th>
                                             <th>الحالة</th>
+                                            <th>تاريخ الخروج</th>
                                             <th>الأشعة</th>
                                             <th>المختبر</th>
                                             <th>العلاج</th>
@@ -521,10 +537,47 @@ input[type="radio"]:checked + .frequency-btn {
                                             <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
                                             <td>{{ $surgery->scheduled_time }}</td>
                                             <td>
+                                                @if($surgery->room)
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-bed me-1"></i>
+                                                        {{ $surgery->room->room_number }}
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">{{ $surgery->room->room_type == 'vip' ? 'VIP' : 'عادية' }}</small>
+                                                @else
+                                                    <span class="badge bg-secondary">غير محدد</span>
+                                                @endif
+                                            </td>
+                                            <td>
                                                 @if($surgery->status == 'completed')
                                                     <span class="badge bg-success">مكتملة</span>
                                                 @else
                                                     <span class="badge bg-danger">ملغاة</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($surgery->discharged_at)
+                                                    <span class="text-success fw-bold">
+                                                        <i class="fas fa-calendar-check me-1"></i>
+                                                        {{ $surgery->discharged_at->format('Y-m-d') }}
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ $surgery->discharged_at->format('H:i') }}
+                                                    </small>
+                                                    @if($surgery->discharge_notes)
+                                                        <br>
+                                                        <small class="text-info" title="{{ $surgery->discharge_notes }}">
+                                                            <i class="fas fa-sticky-note me-1"></i>
+                                                            ملاحظات
+                                                        </small>
+                                                    @endif
+                                                @else
+                                                    <span class="text-muted">
+                                                        <i class="fas fa-minus-circle me-1"></i>
+                                                        لم يخرج بعد
+                                                    </span>
                                                 @endif
                                             </td>
                                             <td>
@@ -573,6 +626,12 @@ input[type="radio"]:checked + .frequency-btn {
                                                 @if($canManageSurgery && $surgery->status == 'completed')
                                                 <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#detailsModalCompleted{{ $surgery->id }}">
                                                     <i class="fas fa-clipboard-check"></i>
+                                                </button>
+                                                @endif
+
+                                                @if($canManageSurgery && $surgery->status == 'completed' && !$surgery->discharged_at)
+                                                <button class="btn btn-sm btn-primary me-1" data-bs-toggle="modal" data-bs-target="#dischargeModal{{ $surgery->id }}" title="إخراج المريض">
+                                                    <i class="fas fa-sign-out-alt"></i>
                                                 </button>
                                                 @endif
                                             </td>
@@ -967,10 +1026,10 @@ input[type="radio"]:checked + .frequency-btn {
                                                     <div class="mb-3">
                                                         <label for="anesthesia_position{{ $surgery->id }}" class="form-label fw-bold">
                                                             <i class="fas fa-bed text-warning me-1"></i>
-                                                            نمط الرقود
+                                                            وضعية التخدير
                                                         </label>
                                                         <select class="form-select" id="anesthesia_position{{ $surgery->id }}" name="anesthesia_position">
-                                                            <option value="">اختر نمط الرقود</option>
+                                                            <option value="">اختر وضعية التخدير</option>
                                                             <option value="supine" {{ $surgery->anesthesia_position == 'supine' ? 'selected' : '' }}>استلقاء على الظهر</option>
                                                             <option value="prone" {{ $surgery->anesthesia_position == 'prone' ? 'selected' : '' }}>استلقاء على البطن</option>
                                                             <option value="lateral" {{ $surgery->anesthesia_position == 'lateral' ? 'selected' : '' }}>الوضع الجانبي</option>
@@ -1795,6 +1854,61 @@ input[type="radio"]:checked + .frequency-btn {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discharge Modal -->
+        <div class="modal fade" id="dischargeModal{{ $surgery->id }}" tabindex="-1" aria-labelledby="dischargeModalLabel{{ $surgery->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="dischargeModalLabel{{ $surgery->id }}">
+                            <i class="fas fa-sign-out-alt me-2"></i>
+                            إخراج المريض
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
+                    <form action="{{ route('surgeries.discharge', $surgery) }}" method="POST">
+                        @csrf
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                سيتم إخراج المريض <strong>{{ $surgery->patient->user->name }}</strong> من الخدمة وتحرير الغرفة رقم 
+                                @if($surgery->room)
+                                    <strong>{{ $surgery->room->room_number }}</strong>
+                                @else
+                                    <strong>غير محدد</strong>
+                                @endif
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="discharge_notes{{ $surgery->id }}" class="form-label">
+                                    <i class="fas fa-sticky-note me-1"></i>
+                                    ملاحظات الخروج (اختياري)
+                                </label>
+                                <textarea class="form-control" id="discharge_notes{{ $surgery->id }}" name="discharge_notes" rows="3"
+                                          placeholder="أدخل أي ملاحظات متعلقة بخروج المريض..."></textarea>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDischarge{{ $surgery->id }}" required>
+                                <label class="form-check-label" for="confirmDischarge{{ $surgery->id }}">
+                                    أؤكد إخراج المريض وإتمام العملية بنجاح
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>
+                                إلغاء
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>
+                                تأكيد الخروج
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

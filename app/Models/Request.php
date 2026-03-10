@@ -43,6 +43,7 @@ class Request extends Model
             'lab' => 'مختبر',
             'radiology' => 'أشعة',
             'pharmacy' => 'صيدلية',
+            'emergency' => 'طوارئ',
             default => $this->type
         };
     }
@@ -67,5 +68,24 @@ class Request extends Model
             'cancelled' => 'danger',
             default => 'secondary'
         };
+    }
+
+    /**
+     * Ensure visit status updates when all related requests complete.
+     */
+    protected static function booted()
+    {
+        static::saved(function ($request) {
+            if ($request->isCompleted() && $request->visit) {
+                $remaining = $request->visit->requests()
+                    ->where('status', '!=', 'completed')
+                    ->count();
+
+                if ($remaining === 0 && $request->visit->status !== 'completed') {
+                    $request->visit->status = 'completed';
+                    $request->visit->save();
+                }
+            }
+        });
     }
 }

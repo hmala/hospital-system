@@ -22,6 +22,20 @@ class RadiologyController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $newSystemRequests = collect(); // متغير افتراضي فارغ
+
+        // إذا كان المستخدم موظف إشعة وهنالك طلبات جديدة من الاستعلامات
+        if ($user->hasRole('radiology_staff')) {
+            $count = \App\Models\Request::where('type', 'radiology')
+                        ->where(function($q) {
+                            $q->where('payment_status', 'paid')
+                              ->orWhere('status', 'pending_service_selection');
+                        })->count();
+            if ($count > 0) {
+                // إعادة التوجيه للوحة موظفي الأشعة حيث تُعرض الطلبات الحديثة
+                return redirect()->route('staff.requests.index', ['type' => 'radiology']);
+            }
+        }
 
         if ($user->hasAnyRole(['admin', 'receptionist'])) {
             // الإداريون والاستقبال يرون جميع الطلبات
@@ -41,7 +55,7 @@ class RadiologyController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
         } elseif ($user->hasRole('radiology_staff')) {
-            // موظفو الإشعة يرون جميع الطلبات
+            // موظفو الإشعة يرون جميع الطلبات من الجدول القديم فقط (ليس هناك جديدة)
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->whereIn('status', ['pending', 'scheduled', 'in_progress', 'completed'])
                 ->orderBy('priority', 'desc')
@@ -51,7 +65,16 @@ class RadiologyController extends Controller
             $requests = collect();
         }
 
-        return view('radiology.index', compact('requests'));
+        $emergencyRadiologyRequests = collect();
+        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['admin'])) {
+            $emergencyRadiologyRequests = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
+                ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+                ->orderBy('requested_at', 'asc')
+                ->get();
+        }
+
+        return view('radiology.index', compact('requests', 'newSystemRequests', 'emergencyRadiologyRequests'));
     }
 
     /**
@@ -369,6 +392,18 @@ class RadiologyController extends Controller
                 // تحديث الوصف ليعكس اكتمال النتائج
                 $medicalRequest->description = 'طلب أشعة - نتائج جاهزة';
                 $medicalRequest->save();
+
+                // إذا كانت الزيارة مرتبطة و جميع طلبات أشعة للزيارة مكتملة، نعلّم الزيارة كمكتملة
+                if ($medicalRequest->visit) {
+                    $allCompleted = \App\Models\Request::where('visit_id', $medicalRequest->visit_id)
+                        ->where('type', 'radiology')
+                        ->where('status', '!=', 'completed')
+                        ->count() === 0;
+                    if ($allCompleted) {
+                        $medicalRequest->visit->status = 'completed';
+                        $medicalRequest->visit->save();
+                    }
+                }
             }
         }
 

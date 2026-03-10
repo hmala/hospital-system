@@ -33,8 +33,14 @@ class VisitController extends Controller
     public function create($patientId = null, $appointmentId = null)
     {
         $patients = Patient::with('user')->get();
-        $doctors = Doctor::with('user')->where('is_active', true)->get();
-        $departments = Department::where('is_active', true)->get();
+        $doctors = Doctor::with('user')
+            ->where('is_active', true)
+            ->where(function($query) {
+                $query->where('type', '!=', 'consultant')
+                      ->orWhere('is_available_today', true);
+            })
+            ->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
 
         $selectedPatient = $patientId ? Patient::find($patientId) : null;
         $appointment = $appointmentId ? Appointment::with(['patient.user', 'doctor.user', 'department'])->find($appointmentId) : null;
@@ -121,7 +127,7 @@ class VisitController extends Controller
     {
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with('user')->where('is_active', true)->get();
-        $departments = Department::where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
 
         return view('visits.edit', compact('visit', 'patients', 'doctors', 'departments'));
     }

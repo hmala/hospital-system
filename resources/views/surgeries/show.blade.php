@@ -128,6 +128,35 @@
                             <td>{{ $surgery->referring_physician }}</td>
                         </tr>
                         @endif
+                        @if($surgery->referral_letter_path)
+                        <tr>
+                            <th>ورقة التحويل:</th>
+                            <td>
+                                @php
+                                    $url = asset('storage/' . $surgery->referral_letter_path);
+                                    $ext = pathinfo($surgery->referral_letter_path, PATHINFO_EXTENSION);
+                                @endphp
+                                @if(in_array(strtolower($ext), ['jpg','jpeg','png','gif']))
+                                    <div class="position-relative d-inline-block">
+                                        <a href="{{ $url }}" download class="position-absolute top-0 end-0 m-2 btn btn-sm btn-light shadow-sm" style="opacity:0.7;">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <a href="{{ $url }}" target="_blank">
+                                            <img src="{{ $url }}" alt="ورقة التحويل" class="img-fluid rounded" style="max-height:200px;">
+                                        </a>
+                                    </div>
+                                @elseif(strtolower($ext) === 'pdf')
+                                    <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-file-pdf me-1"></i>عرض الورقة
+                                    </a>
+                                @else
+                                    <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-file me-1"></i>عرض الورقة
+                                    </a>
+                                @endif
+                            </td>
+                        </tr>
+                        @endif
                         @if($surgery->anesthesia_type)
                         <tr>
                             <th>نوع التخدير:</th>
@@ -207,7 +236,13 @@
                             <tbody>
                                 @foreach($surgery->labTests as $labTest)
                                 <tr>
-                                    <td>{{ $labTest->labTest->name }}</td>
+                                    <td>
+                                        @if($labTest->labTest)
+                                            {{ $labTest->labTest->name }}
+                                        @else
+                                            <em>غير محدد</em> (ID #{{ $labTest->lab_test_id }})
+                                        @endif
+                                    </td>
                                     <td>{{ $labTest->labTest->category ?? 'غير محدد' }}</td>
                                     <td>
                                         <span class="badge bg-{{ $labTest->status_color }}">

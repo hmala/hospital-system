@@ -29,7 +29,7 @@ class ReferralController extends Controller
             ->latest()
             ->paginate(15);
 
-        $departments = Department::where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
 
         return view('staff.referrals.index', compact('pendingRequests', 'departments'));
     }
@@ -60,7 +60,7 @@ class ReferralController extends Controller
 
         $medicalRequest->load(['visit.patient.user', 'visit.doctor.user']);
 
-        $departments = Department::where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
         $visitTypes = [
             'checkup' => 'كشف دوري',
             'followup' => 'متابعة',

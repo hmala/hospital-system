@@ -102,7 +102,10 @@
                             <i class="fas fa-calendar-day me-2"></i>
                             زيارات اليوم
                         </h5>
-                        <div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ route('inquiry.search') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus-circle me-1"></i> طلب جديد
+                            </a>
                             <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
                                 <i class="fas fa-sync-alt me-1"></i>
                                 تحديث
@@ -201,10 +204,7 @@
                                     <i class="fas fa-plus-circle me-2"></i>
                                     طلب جديد
                                 </a>
-                                <a href="{{ route('surgeries.create') }}" class="btn btn-success">
-                                    <i class="fas fa-procedures me-2"></i>
-                                    حجز عملية
-                                </a>
+                               
                             </div>
                         </div>
                     @endif

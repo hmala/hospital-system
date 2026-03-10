@@ -29,19 +29,19 @@ class LabTestController extends Controller
             $query->where('subcategory', request('subcategory'));
         }
 
-        // فلترة حسب الفئة القديمة إذا تم تحديدها
-        if (request('category')) {
-            $query->where('category', request('category'));
-        }
 
         // فلترة حسب الحالة
         if (request('status') !== null) {
             $query->where('is_active', request('status') === 'active');
         }
 
-        // البحث بالاسم
+        // البحث بالاسم أو الكود
         if (request('search')) {
-            $query->where('name', 'like', '%' . request('search') . '%');
+            $term = '%' . request('search') . '%';
+            $query->where(function($q) use ($term) {
+                $q->where('name', 'like', $term)
+                  ->orWhere('code', 'like', $term);
+            });
         }
 
         $labTests = $query->orderBy('main_category')->orderBy('subcategory')->orderBy('name')->paginate(20);
@@ -103,9 +103,12 @@ class LabTestController extends Controller
         }
 
         $request->validate([
+            'code' => 'nullable|string|max:50|unique:lab_tests,code',
             'name' => 'required|string|max:255|unique:lab_tests,name',
             'description' => 'nullable|string|max:1000',
-            'category' => 'required|string|in:biochemistry,hematology,blood_bank,parasitology,microbiology,immunology,virology,hormones,clinical_immunology,cytology,miscellaneous,other',
+            'main_category' => 'required|string|in:biochemistry,hematology,blood_bank,parasitology,microbiology,immunology,virology,hormones,clinical_immunology,cytology,miscellaneous,other',
+            'subcategory' => 'nullable|string|max:255',
+            'price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean'
         ]);
 
@@ -161,9 +164,12 @@ class LabTestController extends Controller
         }
 
         $request->validate([
+            'code' => 'nullable|string|max:50|unique:lab_tests,code,' . $labTest->id,
             'name' => 'required|string|max:255|unique:lab_tests,name,' . $labTest->id,
             'description' => 'nullable|string|max:1000',
-            'category' => 'required|string|in:biochemistry,hematology,blood_bank,parasitology,microbiology,immunology,virology,hormones,clinical_immunology,cytology,miscellaneous,other',
+            'main_category' => 'required|string|in:biochemistry,hematology,blood_bank,parasitology,microbiology,immunology,virology,hormones,clinical_immunology,cytology,miscellaneous,other',
+            'subcategory' => 'nullable|string|max:255',
+            'price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean'
         ]);
 

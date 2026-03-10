@@ -23,12 +23,16 @@ class Doctor extends Model
         'schedule',
         'consultation_fee',
         'max_patients_per_day',
-        'is_active'
+        'is_active',
+        'is_available_today',
+        'available_date'
     ];
 
     protected $casts = [
         'schedule' => 'array',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'is_available_today' => 'boolean',
+        'available_date' => 'date'
     ];
 
     public function user()

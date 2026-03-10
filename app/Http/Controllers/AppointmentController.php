@@ -49,6 +49,15 @@ class AppointmentController extends Controller
                 ->orderBy('appointment_date')
                 ->get();
         } else {
+            // المواعيد الاستشارية من الطوارئ (معلقة الدفع)
+            $emergencyConsultations = Appointment::with(['patient.user', 'doctor.user', 'department', 'emergency'])
+                ->whereNotNull('emergency_id')
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->whereDate('appointment_date', '>=', today())
+                ->where('payment_status', 'pending')
+                ->latest('created_at')
+                ->get();
+
             // المواعيد النشطة (المجدولة والمؤكدة) - فقط القادمة أو اليوم
             $activeAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
                 ->whereIn('status', ['scheduled', 'confirmed'])
@@ -70,14 +79,20 @@ class AppointmentController extends Controller
                 ->get();
         }
 
-        return view('appointments.index', compact('activeAppointments', 'completedAppointments', 'todayAppointments'));
+        return view('appointments.index', compact('activeAppointments', 'completedAppointments', 'todayAppointments', 'emergencyConsultations'));
     }
 
     public function create()
     {
         $patients = Patient::with('user')->get();
-        $doctors = Doctor::with(['user', 'department'])->where('is_active', true)->get();
-        $departments = Department::where('is_active', true)->get();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function($query) {
+                $query->where('type', '!=', 'consultant')
+                      ->orWhere('is_available_today', true);
+            })
+            ->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
 
         return view('appointments.create', compact('patients', 'doctors', 'departments'));
     }
@@ -139,8 +154,14 @@ class AppointmentController extends Controller
     public function edit(Appointment $appointment)
     {
         $patients = Patient::with('user')->get();
-        $doctors = Doctor::with(['user', 'department'])->where('is_active', true)->get();
-        $departments = Department::where('is_active', true)->get();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function($query) {
+                $query->where('type', '!=', 'consultant')
+                      ->orWhere('is_available_today', true);
+            })
+            ->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
 
         return view('appointments.edit', compact('appointment', 'patients', 'doctors', 'departments'));
     }

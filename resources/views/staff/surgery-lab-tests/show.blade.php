@@ -213,6 +213,15 @@ function getTestUnit($testName, $labTests) {
                     <h6 class="mb-0"><i class="fas fa-edit me-2"></i>تحديث النتائج</h6>
                 </div>
                 <div class="card-body">
+                    @if($test->surgery && $test->surgery->surgery_fee_paid !== 'paid')
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> لا يمكن إجراء التحليل قبل دفع رسوم العملية الجراحية!
+                        <hr>
+                        <small>يرجى التوجه إلى كاشير العمليات لدفع رسوم العملية أولاً.</small>
+                    </div>
+                    @endif
+                    
                     <form action="{{ route('staff.surgery-lab-tests.update', $test) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
@@ -362,7 +371,7 @@ function getTestUnit($testName, $labTests) {
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100">
+                        <button type="submit" class="btn btn-primary w-100" {{ $test->surgery && $test->surgery->surgery_fee_paid !== 'paid' ? 'disabled' : '' }}>
                             <i class="fas fa-save me-2"></i>حفظ التحديثات
                         </button>
                     </form>

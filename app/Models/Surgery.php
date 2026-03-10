@@ -13,6 +13,9 @@ class Surgery extends Model
         'patient_id',
         'doctor_id',
         'department_id',
+        'room_id',
+        'expected_stay_days',
+        'room_fee',
         'visit_id',
         'surgery_type',
         'description',
@@ -21,6 +24,7 @@ class Surgery extends Model
         'started_at',
         'status',
         'payment_status',
+        'surgery_fee_paid',
         'payment_id',
         'surgery_fee',
         'referring_doctor_type',
@@ -48,6 +52,9 @@ class Surgery extends Model
         'surgical_notes',
         'treatment_plan',
         'follow_up_date',
+        'discharged_at',
+        'discharge_notes',
+        'referral_letter_path',
     ];
 
     protected $casts = [
@@ -57,6 +64,7 @@ class Surgery extends Model
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'follow_up_date' => 'date',
+        'discharged_at' => 'datetime',
         'status' => 'string',
     ];
 
@@ -73,6 +81,11 @@ class Surgery extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class);
     }
 
     public function surgicalOperation()

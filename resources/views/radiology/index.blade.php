@@ -79,6 +79,131 @@
         </div>
     </div>
 
+    <!-- طلبات الطوارئ - الأشعة -->
+    @if(isset($emergencyRadiologyRequests) && $emergencyRadiologyRequests->count() > 0)
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-ambulance me-2"></i>
+                        طلبات أشعة الطوارئ
+                        <span class="badge bg-light text-danger ms-2">{{ $emergencyRadiologyRequests->count() }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>المريض</th>
+                                    <th>أنواع الأشعة</th>
+                                    <th>الأولوية</th>
+                                    <th>الحالة</th>
+                                    <th>وقت الطلب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($emergencyRadiologyRequests as $emRequest)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>
+                                        <strong>{{ $emRequest->patient->user->name }}</strong><br>
+                                        <small class="text-muted">{{ $emRequest->patient->user->phone ?? 'لا يوجد رقم' }}</small>
+                                    </td>
+                                    <td>
+                                        @foreach($emRequest->radiologyTypes as $type)
+                                            <span class="badge bg-info me-1">{{ $type->name }}</span>
+                                        @endforeach
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ $emRequest->priority == 'critical' ? 'danger' : 'warning' }}">
+                                            {{ $emRequest->priority_text }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ $emRequest->status_badge_class }}">
+                                            {{ $emRequest->status_text }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $emRequest->requested_at->format('Y-m-d H:i') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            @if($emRequest->status == 'pending')
+                                                <form action="{{ route('staff.emergency-radiology.start', $emRequest) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-success" title="بدء الإجراء">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                </form>
+                                            @elseif($emRequest->status == 'in_progress')
+                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#completeEmergencyRadiologyModal{{ $emRequest->id }}" title="إكمال">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            @else
+                                                <span class="badge bg-success">تم</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                @if($emRequest->status == 'in_progress')
+                                <div class="modal fade" id="completeEmergencyRadiologyModal{{ $emRequest->id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <form action="{{ route('staff.emergency-radiology.complete', $emRequest) }}" method="POST">
+                                                @csrf
+                                                @method('PUT')
+                                                <div class="modal-header bg-success text-white">
+                                                    <h5 class="modal-title">
+                                                        <i class="fas fa-check-circle me-2"></i>
+                                                        إكمال طلب أشعة الطوارئ #{{ $emRequest->emergency_id }}
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="alert alert-info">
+                                                        <strong>المريض:</strong> {{ $emRequest->patient->user->name }}
+                                                    </div>
+                                                    <h6 class="mb-3">نتائج الفحوصات:</h6>
+                                                    @foreach($emRequest->radiologyTypes as $type)
+                                                    <div class="mb-3">
+                                                        <label class="form-label">
+                                                            <strong>{{ $type->name }}</strong>
+                                                        </label>
+                                                        <textarea name="results[{{ $type->id }}]" class="form-control" rows="3" placeholder="أدخل نتيجة الفحص...">{{ $type->pivot->result ?? '' }}</textarea>
+                                                    </div>
+                                                    @endforeach
+                                                    <div class="mb-3">
+                                                        <label class="form-label">ملاحظات إضافية</label>
+                                                        <textarea name="notes" class="form-control" rows="2">{{ $emRequest->notes }}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fas fa-check me-2"></i>
+                                                        إكمال وحفظ النتائج
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- جدول طلبات الإشعة -->
     <div class="row">
         <div class="col-12">
@@ -194,5 +319,93 @@
             </div>
         </div>
     </div>
+
+    @if(Auth::user()->hasRole('radiology_staff') && isset($newSystemRequests) && $newSystemRequests->count() > 0)
+    <!-- جدول طلبات الأشعة من النظام الجديد -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        طلبات جديدة من الاستعلامات (تتطلب تحديد أنواع الأشعة)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>المريض</th>
+                                    <th>الحالة</th>
+                                    <th>حالة الدفع</th>
+                                    <th>تاريخ الطلب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($newSystemRequests as $request)
+                                <tr>
+                                    <td><strong>#{{ $request->id }}</strong></td>
+                                    <td>
+                                        @if($request->visit && $request->visit->patient)
+                                        <strong>{{ $request->visit->patient->user->name }}</strong><br>
+                                        <small class="text-muted">{{ $request->visit->patient->user->phone ?? 'لا يوجد رقم' }}</small>
+                                        @else
+                                        <span class="text-muted">غير محدد</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($request->status === 'pending_service_selection')
+                                        <span class="badge bg-warning">بانتظار تحديد الأشعة</span>
+                                        @elseif($request->status === 'pending')
+                                        <span class="badge bg-info">بانتظار الدفع</span>
+                                        @else
+                                        <span class="badge bg-secondary">{{ $request->status }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($request->payment_status === 'not_applicable')
+                                        <span class="badge bg-secondary">غير مطبق</span>
+                                        @elseif($request->payment_status === 'pending')
+                                        <span class="badge bg-warning">معلق</span>
+                                        @elseif($request->payment_status === 'paid')
+                                        <span class="badge bg-success">مدفوع</span>
+                                        @else
+                                        <span class="badge bg-secondary">{{ $request->payment_status }}</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $request->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>
+                                        <a href="{{ route('staff.requests.show', $request) }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>
+                                            @if($request->status === 'pending_service_selection')
+                                            تحديد الأشعة المطلوبة
+                                            @else
+                                            عرض التفاصيل
+                                            @endif
+                                        </a>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    </div>
 </div>
+
+@push('scripts')
+<script>
+    // Simple polling to reload page every 20 seconds
+    setInterval(function(){
+        location.reload();
+    }, 20000);
+</script>
+@endpush
 @endsection

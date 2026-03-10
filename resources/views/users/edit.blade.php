@@ -109,6 +109,9 @@
                                                 @case('pharmacy_staff') 
                                                     <span class="badge bg-primary">موظف صيدلية</span>
                                                 @break
+                                                @case('consultation_receptionist') 
+                                                    <span class="badge bg-info">موظف استعلامات استشارية</span>
+                                                @break
                                                 @case('surgery_staff') 
                                                     <span class="badge bg-danger">موظف عمليات</span>
                                                 @break

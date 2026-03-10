@@ -262,20 +262,151 @@
             <div class="section-title">معلومات المريض</div>
             <div class="info-row">
                 <span class="info-label">الاسم:</span>
-                <span class="info-value">{{ $payment->patient->user->name }}</span>
+                @php
+                    $p = $payment->patient;
+                    if(!$p && $payment->emergency) {
+                        $ep = $payment->emergency->emergencyPatient;
+                        $pname = $ep ? $ep->name : '-';
+                    } else {
+                        $pname = $p ? ($p->user->name ?? '-') : '-';
+                    }
+                @endphp
+                <span class="info-value">{{ $pname }}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">الرقم الوطني:</span>
-                <span class="info-value">{{ $payment->patient->national_id ?? '-' }}</span>
+                @php
+                    $pid = $p ? ($p->national_id ?? '-') : '-';
+                    if(empty($pid) && isset($ep)) { $pid = '(طوارئ)'; }
+                @endphp
+                <span class="info-value">{{ $pid }}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">رقم الهاتف:</span>
-                <span class="info-value">{{ $payment->patient->user->phone ?? '-' }}</span>
+                @php
+                    $pphone = $p ? ($p->user->phone ?? '-') : '-';
+                    if($pphone === '-' && isset($ep)) { $pphone = $ep->phone ?? '-'; }
+                @endphp
+                <span class="info-value">{{ $pphone }}</span>
             </div>
         </div>
 
+        @php
+            $lineItems = [];
+            if($payment->emergency) {
+                foreach ($payment->emergency->services as $svc) {
+                    $lineItems[] = ['الخدمة'=>'خدمة طوارئ: '.$svc->name,'السعر'=>$svc->price ?? 0];
+                }
+            }
+            if($payment->appointment) {
+                $doctorFee = $payment->appointment->doctor->fee_by_specialization ?? 0;
+                $consultFee = $payment->appointment->consultation_fee ?? 0;
+                $hospitalProfit = $consultFee - $doctorFee;
+                $lineItems[] = ['الخدمة'=>'أجر الطبيب','السعر'=>$doctorFee];
+                $lineItems[] = ['الخدمة'=>'مبلغ الكشف','السعر'=>$consultFee];
+                $lineItems[] = ['الخدمة'=>'ربح المستشفى','السعر'=>$hospitalProfit];
+            }
+            if($payment->request) {
+                $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
+                if($payment->request->type==='lab' && isset($details['lab_test_ids'])) {
+                    foreach($details['lab_test_ids'] as $testId) {
+                        $test = \App\Models\LabTest::find($testId);
+                        if($test) {
+                            $lineItems[] = ['الخدمة'=>'تحاليل: '.$test->name,'السعر'=>$test->price ?? 0];
+                        }
+                    }
+                } elseif($payment->request->type==='radiology' && isset($details['radiology_type_ids'])) {
+                    foreach($details['radiology_type_ids'] as $typeId) {
+                        $type = \App\Models\RadiologyType::find($typeId);
+                        if($type) {
+                            $lineItems[] = ['الخدمة'=>'أشعة: '.$type->name,'السعر'=>$type->base_price ?? 0];
+                        }
+                    }
+                } elseif($payment->request->type==='pharmacy') {
+                    if(isset($details['tests']) && is_array($details['tests'])) {
+                        foreach($details['tests'] as $drugName) {
+                            $lineItems[] = ['الخدمة'=>'صيدلية: '.$drugName,'السعر'=>0];
+                        }
+                    }
+                } elseif($payment->request->type==='emergency') {
+                    if($payment->request->visit && $payment->request->visit->emergency) {
+                        foreach($payment->request->visit->emergency->services as $svc) {
+                            $lineItems[] = ['الخدمة'=>'خدمة طوارئ: '.$svc->name,'السعر'=>$svc->price ?? 0];
+                        }
+                    }
+                }
+            }
+
+            // إذا كان الدفع محصوراً بالعمليات نضيف بنود الوصف أيضاً
+            $surgery = null;
+            if ($payment->payment_type === 'surgery' && preg_match('/ID: #(\d+)/', $payment->description, $matches)) {
+                $surgery = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'department', 'labTests.labTest', 'radiologyTests.radiologyType'])->find($matches[1]);
+            }
+            if($payment->payment_type==='surgery' && $surgery) {
+                if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description, $descMatches)) {
+                    $itemLines = explode("\n", trim($descMatches[1]));
+                    foreach ($itemLines as $line) {
+                        $line = trim(str_replace('- ', '', $line));
+                        if (!empty($line)) {
+                            $price = 0;
+                            if (str_contains($line, 'رسوم العملية')) {
+                                $price = $surgery->surgery_fee ?? 0;
+                            } elseif (str_contains($line, 'تحليل:')) {
+                                $name = trim(str_replace('تحليل:', '', $line));
+                                foreach ($surgery->labTests as $labTest) {
+                                    if ($labTest->labTest && $labTest->labTest->name === $name) {
+                                        $price = $labTest->labTest->price ?? 0;
+                                        break;
+                                    }
+                                }
+                            } elseif (str_contains($line, 'أشعة:')) {
+                                $name = trim(str_replace('أشعة:', '', $line));
+                                foreach ($surgery->radiologyTests as $rad) {
+                                    if ($rad->radiologyType && $rad->radiologyType->name === $name) {
+                                        $price = $rad->radiologyType->base_price ?? 0;
+                                        break;
+                                    }
+                                }
+                            }
+                            $lineItems[] = ['الخدمة'=>$line,'السعر'=>$price];
+                        }
+                    }
+                }
+            }
+        @endphp
+
+        @if(count($lineItems) > 0)
+        <div class="section">
+            <div class="section-title">تفصيل الخدمات المقدمة</div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الخدمة</th>
+                            <th class="text-end">السعر (IQD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($lineItems as $idx=>$ln)
+                        <tr>
+                            <td>{{ $idx+1 }}</td>
+                            <td>{{ $ln['الخدمة'] }}</td>
+                            <td class="text-end">{{ number_format($ln['السعر'],2) }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @else
+        <div class="section">
+            <div class="section-title">تفاصيل الخدمة</div>
+            <p>{{ number_format($payment->amount,2) }} IQD</p>
+        </div>
+        @endif
+
         @if($payment->appointment)
-        <!-- Appointment Info -->
         <div class="section">
             <div class="section-title">تفاصيل الموعد</div>
             <div class="info-row">
@@ -406,6 +537,86 @@
         @endif
         @endif
 
+
+        @if($payment->payment_type === 'surgery' && $surgery)
+        <!-- Surgery Info -->
+        <div class="section">
+            <div class="section-title">تفاصيل العملية الجراحية</div>
+            <div class="info-row">
+                <span class="info-label">رقم العملية:</span>
+                <span class="info-value">#{{ $surgery->id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">نوع العملية:</span>
+                <span class="info-value">{{ $surgery->surgery_type }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">تاريخ العملية:</span>
+                <span class="info-value">{{ $surgery->scheduled_date->format('Y-m-d') }} - {{ $surgery->scheduled_time->format('H:i') }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">الجراح:</span>
+                <span class="info-value">د. {{ $surgery->doctor->user->name ?? 'غير محدد' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">القسم:</span>
+                <span class="info-value">{{ $surgery->department->name ?? 'غير محدد' }}</span>
+            </div>
+        </div>
+
+        @php
+            $surgeryFee = $surgery->surgery_fee ?? 0;
+            $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid';
+            
+            $totalLabFee = $surgery->labTests->sum(function($test) {
+                return $test->labTest->price ?? 0;
+            });
+            $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
+                return $test->labTest->price ?? 0;
+            });
+            
+            $totalRadFee = $surgery->radiologyTests->sum(function($test) {
+                return $test->radiologyType->base_price ?? 0;
+            });
+            $paidRadFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
+                return $test->radiologyType->base_price ?? 0;
+            });
+            
+            $totalSurgeryAmount = $surgeryFee + $totalLabFee + $totalRadFee;
+            $totalPaidAmount = ($surgeryFeePaid ? $surgeryFee : 0) + $paidLabFee + $paidRadFee;
+            $remainingAmount = $totalSurgeryAmount - $totalPaidAmount;
+        @endphp
+
+        <div class="section" style="text-align: center;">
+            <div class="section-title">ملخص حالة دفع العملية</div>
+            <div style="display: flex; justify-content: space-around; margin-top: 8px;">
+                <div>
+                    <div style="font-size: 10px; color: #666;">إجمالي العملية</div>
+                    <div style="font-weight: bold; font-size: 13px;">{{ number_format($totalSurgeryAmount, 0) }} IQD</div>
+                </div>
+                <div>
+                    <div style="font-size: 10px; color: #666;">المدفوع</div>
+                    <div style="font-weight: bold; font-size: 13px; color: green;">{{ number_format($totalPaidAmount, 0) }} IQD</div>
+                </div>
+                <div>
+                    <div style="font-size: 10px; color: #666;">المتبقي</div>
+                    <div style="font-weight: bold; font-size: 13px; color: {{ $remainingAmount > 0 ? 'orange' : 'green' }};">
+                        {{ number_format($remainingAmount, 0) }} IQD
+                    </div>
+                </div>
+            </div>
+            @if($remainingAmount > 0)
+            <div style="margin-top: 8px; padding: 5px; background: #fff3cd; border: 1px solid #ffc107; font-size: 10px;">
+                ⚠️ يوجد مبلغ متبقي سيُدفع لاحقاً
+            </div>
+            @else
+            <div style="margin-top: 8px; padding: 5px; background: #d4edda; border: 1px solid #28a745; font-size: 10px;">
+                ✓ تم سداد جميع رسوم العملية بالكامل
+            </div>
+            @endif
+        </div>
+        @endif
+
         <div class="divider"></div>
 
         <!-- Payment Summary -->
@@ -433,7 +644,7 @@
             </div>
             <div class="signature-box">
                 <div style="font-size: 10px; margin-bottom: 5px;">المريض</div>
-                <div>{{ $payment->patient->user->name }}</div>
+                <div>{{ $pname ?? '-' }}</div>
                 <div class="signature-line"></div>
                 <div style="font-size: 9px;">التوقيع</div>
             </div>

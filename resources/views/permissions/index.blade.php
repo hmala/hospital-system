@@ -31,6 +31,9 @@
                     @case('radiology') الأشعة @break
                     @case('tests') التحاليل @break
                     @case('inquiries') الاستعلامات @break
+                    @case('cashier') الكاشير @break
+                    @case('types') أنواع التحاليل @break
+                    @case('rooms') الغرف @break
                     @default {{ $module }}
                 @endswitch
                 <span class="badge bg-light text-dark ms-2">{{ $perms->count() }}</span>
@@ -51,7 +54,38 @@
                         <tr>
                             <td>
                                 <i class="fas fa-shield-alt text-primary"></i>
-                                <code>{{ $permission->name }}</code>
+                                @php
+                                    // translate English permission name into Arabic label
+                                    $parts = explode(' ', $permission->name);
+                                    $verb = $parts[0] ?? '';
+                                    $resource = $parts[1] ?? '';
+                                    $verbMap = [
+                                        'view' => 'عرض',
+                                        'create' => 'إنشاء',
+                                        'edit' => 'تعديل',
+                                        'delete' => 'حذف',
+                                        'manage' => 'إدارة',
+                                        'cancel' => 'إلغاء',
+                                        'process' => 'معالجة',
+                                    ];
+                                    $resourceMap = [
+                                        'patients' => 'المرضى',
+                                        'doctors' => 'الأطباء',
+                                        'departments' => 'العيادات',
+                                        'appointments' => 'المواعيد',
+                                        'visits' => 'الزيارات',
+                                        'surgeries' => 'العمليات',
+                                        'radiology' => 'الأشعة',
+                                        'tests' => 'التحاليل',
+                                        'inquiries' => 'الاستعلامات',
+                                        'pharmacy' => 'الصيدلية',
+                                        'referrals' => 'التحويلات',
+                                        'consultant' => 'الاستشاريين',
+                                        'rooms' => 'الغرف',
+                                    ];
+                                    $label = ($verbMap[$verb] ?? $verb) . ' ' . ($resourceMap[$resource] ?? $resource);
+                                @endphp
+                                <span>{{ $label }}</span>
                             </td>
                             <td>
                                 @if($permission->roles_count > 0)

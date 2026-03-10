@@ -10,6 +10,7 @@ use App\Models\Doctor;
 use App\Models\Appointment;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
+use App\Models\Emergency;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -80,25 +81,25 @@ class InquiryController extends Controller
                 'label' => 'تحاليل طبية',
                 'icon' => 'flask',
                 'color' => 'primary',
-                'departments' => Department::where('name', 'LIKE', '%مختبر%')->where('is_active', true)->get()
+                'departments' => Department::where('name', 'LIKE', '%مختبر%')->where('is_active', true)->orderBy('name')->get()
             ],
             'radiology' => [
                 'label' => 'أشعة',
                 'icon' => 'x-ray',
                 'color' => 'info',
-                'departments' => Department::where('name', 'LIKE', '%أشعة%')->orWhere('name', 'LIKE', '%راديولوجي%')->where('is_active', true)->get()
+                'departments' => Department::where('name', 'LIKE', '%أشعة%')->orWhere('name', 'LIKE', '%راديولوجي%')->where('is_active', true)->orderBy('name')->get()
             ],
             'pharmacy' => [
                 'label' => 'صيدلية',
                 'icon' => 'pills',
                 'color' => 'success',
-                'departments' => Department::where('name', 'LIKE', '%صيدلية%')->where('is_active', true)->get()
+                'departments' => Department::where('name', 'LIKE', '%صيدلية%')->where('is_active', true)->orderBy('name')->get()
             ],
             'checkup' => [
                 'label' => 'كشف طبي',
                 'icon' => 'stethoscope',
                 'color' => 'warning',
-                'departments' => Department::whereNotIn('name', ['مختبر', 'أشعة', 'صيدلية'])->where('is_active', true)->get()
+                'departments' => Department::whereNotIn('name', ['مختبر', 'أشعة', 'صيدلية'])->where('is_active', true)->orderBy('name')->get()
             ]
         ];
 
@@ -108,13 +109,31 @@ class InquiryController extends Controller
             })
             ->where('is_active', true)
             ->where('type', 'consultant')
+            ->where('is_available_today', true)
+            ->get();
+
+        // جلب أطباء الطوارئ المتاحين
+        $emergencyDoctors = Doctor::with(['user', 'department'])
+            ->whereHas('user', function($query) {
+                $query->where('is_active', true);
+            })
+            ->where('is_active', true)
+            ->where(function($query) {
+                $query->where('specialization', 'LIKE', '%طوارئ%')
+                      ->orWhere('specialization', 'LIKE', '%emergency%')
+                      ->orWhere('type', 'emergency')
+                      ->orWhereHas('department', function($q) {
+                          $q->where('name', 'LIKE', '%طوارئ%')
+                            ->orWhere('name', 'LIKE', '%emergency%');
+                      });
+            })
             ->get();
 
         // جلب أنواع التحاليل والأشعة
         $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
 
-        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes'));
+        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors'));
     }
 
     /**
@@ -130,54 +149,175 @@ class InquiryController extends Controller
 
         $httpRequest->validate([
             'patient_id' => 'required|exists:patients,id',
-            'request_type' => 'required|in:lab,radiology,pharmacy,checkup',
-            'description' => 'required_if:request_type,checkup,pharmacy|nullable|string|max:1000',
+            'request_type' => 'required|array|min:1',
+            'request_type.*' => 'required|in:lab,radiology,pharmacy,checkup,emergency',
+            'description' => 'nullable|string|max:1000',
             'doctor_id' => 'nullable|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',
             'appointment_date' => 'nullable|date',
-            'lab_test_ids' => 'required_if:request_type,lab|array',
+            'lab_test_ids' => 'nullable|array',  // اختياري - سيحدده موظف المختبر لاحقاً
             'lab_test_ids.*' => 'exists:lab_tests,id',
-            'radiology_type_ids' => 'required_if:request_type,radiology|array',
+            'radiology_type_ids' => 'nullable|array',  // اختياري - سيحدده موظف الأشعة لاحقاً
             'radiology_type_ids.*' => 'exists:radiology_types,id',
-            'auto_refer' => 'nullable|boolean'
+            'auto_refer' => 'nullable|boolean',
+            // حقول الطوارئ
+            'emergency_priority' => 'nullable|in:critical,urgent,semi_urgent,non_urgent',
+            'emergency_type' => 'nullable|in:trauma,cardiac,respiratory,neurological,poisoning,burns,allergic,pediatric,obstetric,general',
+            'emergency_symptoms' => 'nullable|string|max:2000',
+            'emergency_doctor_id' => 'nullable|exists:doctors,id',
+            'vital_signs' => 'nullable|string|max:500'
         ]);
 
         $patient = Patient::find($httpRequest->patient_id);
-        $requestType = $httpRequest->request_type;
+        $requestTypes = $httpRequest->request_type;
 
+        $messages = [];
+        $totalRequests = 0;
+
+        // معالجة كل نوع طلب على حدة
+        foreach ($requestTypes as $requestType) {
+            $totalRequests++;
+
+            // ========================================
+            // إذا كان النوع "كشف طبي" → إنشاء موعد
+            // ========================================
+            if ($requestType === 'checkup') {
+                // التحقق من البيانات المطلوبة للموعد
+                if (!$httpRequest->doctor_id || !$httpRequest->department_id) {
+                    $messages[] = "❌ فشل في إنشاء موعد الكشف الطبي: يجب تحديد الطبيب والعيادة";
+                    continue;
+                }
+
+                $doctor = Doctor::find($httpRequest->doctor_id);
+                $department = Department::find($httpRequest->department_id);
+
+                // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
+                $appointmentDate = $httpRequest->appointment_date ?? Carbon::today();
+
+                // إنشاء موعد
+                $appointment = Appointment::create([
+                    'patient_id' => $patient->id,
+                    'doctor_id' => $doctor->id,
+                    'department_id' => $department->id,
+                    'appointment_date' => Carbon::now(),
+                    'reason' => $httpRequest->description ?? 'كشف طبي عام',
+                    'notes' => 'تم الحجز من الاستعلامات - بانتظار الدفع',
+                    'consultation_fee' => $doctor->consultation_fee ?? $department->consultation_fee ?? 0,
+                    'duration' => 30,
+                    'status' => 'scheduled',
+                    'payment_status' => 'pending' // حالة الدفع: معلق
+                ]);
+
+                $messages[] = "✅ تم حجز الموعد بنجاح! رقم الموعد: #" . $appointment->id . " - كشف طبي";
+                continue;
+            }
         // ========================================
-        // إذا كان النوع "كشف طبي" → إنشاء موعد
+        // إذا كان النوع "طوارئ" → إنشاء زيارة طوارئ فورية
         // ========================================
-        if ($requestType === 'checkup') {
-            // التحقق من البيانات المطلوبة للموعد
-            if (!$httpRequest->doctor_id || !$httpRequest->department_id) {
-                return redirect()->back()
-                    ->with('error', 'يجب تحديد الطبيب والعيادة لحجز موعد الكشف الطبي')
-                    ->withInput();
+        if ($requestType === 'emergency') {
+            // البحث عن قسم الطوارئ
+            $emergencyDept = Department::where('name', 'LIKE', '%طوارئ%')
+                ->orWhere('name', 'LIKE', '%emergency%')
+                ->first();
+
+            if (!$emergencyDept) {
+                // إنشاء قسم طوارئ إذا لم يوجد
+                $hospital = \App\Models\Hospital::first();
+                $emergencyDept = Department::create([
+                    'name' => 'الطوارئ',
+                    'hospital_id' => $hospital->id ?? 1,
+                    'type' => 'emergency',
+                    'room_number' => 'ER-001',
+                    'consultation_fee' => 50.00, // رسوم طوارئ
+                    'working_hours_start' => '00:00:00',
+                    'working_hours_end' => '23:59:59',
+                    'is_active' => true
+                ]);
             }
 
-            $doctor = Doctor::find($httpRequest->doctor_id);
-            $department = Department::find($httpRequest->department_id);
+            // تحديد طبيب الطوارئ
+            $emergencyDoctor = null;
+            if ($httpRequest->emergency_doctor_id) {
+                $emergencyDoctor = Doctor::find($httpRequest->emergency_doctor_id);
+            } else {
+                // البحث عن طبيب طوارئ متاح تلقائياً
+                $emergencyDoctor = Doctor::whereHas('user', function($query) {
+                        $query->where('is_active', true);
+                    })
+                    ->where('is_active', true)
+                    ->where('is_available_today', true)
+                    ->where(function($query) {
+                        $query->where('specialization', 'LIKE', '%طوارئ%')
+                              ->orWhere('specialization', 'LIKE', '%emergency%')
+                              ->orWhere('type', 'emergency');
+                    })
+                    ->first();
+            }
 
-            // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
-            $appointmentDate = $httpRequest->appointment_date ?? Carbon::today();
+            // تحديد الأولوية بناءً على تصنيف الحالة
+            $priorityWeight = [
+                'critical' => 1,    // أولوية عليا
+                'urgent' => 2,      // أولوية عالية
+                'semi_urgent' => 3, // أولوية متوسطة
+                'non_urgent' => 4   // أولوية منخفضة
+            ];
 
-            // إنشاء موعد
-            $appointment = Appointment::create([
+            // إنشاء زيارة طوارئ
+            $visit = Visit::create([
                 'patient_id' => $patient->id,
-                'doctor_id' => $doctor->id,
-                'department_id' => $department->id,
-                'appointment_date' => Carbon::now(),
-                'reason' => $httpRequest->description ?? 'كشف طبي عام',
-                'notes' => 'تم الحجز من الاستعلامات - بانتظار الدفع',
-                'consultation_fee' => $doctor->consultation_fee ?? $department->consultation_fee ?? 0,
-                'duration' => 30,
-                'status' => 'scheduled',
-                'payment_status' => 'pending' // حالة الدفع: معلق
+                'department_id' => $emergencyDept->id,
+                'doctor_id' => $emergencyDoctor ? $emergencyDoctor->id : null,
+                'visit_date' => Carbon::now(),
+                'visit_time' => Carbon::now(),
+                'visit_type' => 'emergency',
+                'chief_complaint' => $httpRequest->emergency_symptoms,
+                'status' => ($httpRequest->emergency_priority === 'critical') ? 'active' : 'pending_payment',
+                'priority' => $priorityWeight[$httpRequest->emergency_priority] ?? 4,
+                'notes' => "طوارئ - {$httpRequest->emergency_type} - تصنيف: {$httpRequest->emergency_priority}"
             ]);
 
-            return redirect()->route('inquiry.index')
-                ->with('success', 'تم حجز الموعد بنجاح! رقم الموعد: #' . $appointment->id . ' - المريض: ' . $patient->user->name . '. يرجى توجيه المريض للكاشير.');
+            // إنشاء طلب طوارئ
+            $details = [
+                'emergency_priority' => $httpRequest->emergency_priority,
+                'emergency_type' => $httpRequest->emergency_type,
+                'vital_signs' => $httpRequest->vital_signs,
+                'symptoms_description' => $httpRequest->emergency_symptoms,
+                'assigned_doctor' => $emergencyDoctor ? $emergencyDoctor->user->name : 'سيتم التخصيص',
+                'admission_time' => Carbon::now()->format('H:i:s')
+            ];
+
+            $request = Request::create([
+                'patient_id' => $patient->id,
+                'visit_id' => $visit->id,
+                'type' => 'emergency',
+                'description' => $httpRequest->emergency_symptoms,
+                'status' => ($httpRequest->emergency_priority === 'critical') ? 'approved' : 'pending',
+                'priority' => $priorityWeight[$httpRequest->emergency_priority] ?? 4,
+                'details' => json_encode($details),
+                'requested_by' => $user->id,
+                'payment_status' => ($httpRequest->emergency_priority === 'critical') ? 'paid' : 'pending'
+            ]);
+
+            // للحالات الحرجة: تسجيل دخول فوري بدون انتظار دفع
+            if ($httpRequest->emergency_priority === 'critical') {
+                // إنشاء سجل طوارئ مباشرة للحالات الحرجة
+                \App\Models\Emergency::create([
+                    'patient_id' => $patient->id,
+                    'doctor_id' => $emergencyDoctor ? $emergencyDoctor->id : null,
+                    'priority' => $details['emergency_priority'],
+                    'emergency_type' => $details['emergency_type'],
+                    'symptoms' => $details['symptoms_description'],
+                    'vital_signs' => $details['vital_signs'] ?? [],
+                    'admission_time' => now(),
+                    'status' => 'waiting',
+                    'is_active' => true,
+                ]);
+                
+                $messages[] = "تم تسجيل حالة طوارئ حرجة! رقم الزيارة: #{$visit->id} - سيتم التعامل معها فوراً في قسم الطوارئ.";
+            } else {
+                $messages[] = "تم تسجيل حالة الطوارئ بنجاح! رقم الطلب: #{$request->id} - يرجى توجيه المريض للكاشير أولاً لتسديد الرسوم ثم التوجه لقسم الطوارئ.";
+            }
+            continue;
         }
 
         // ========================================
@@ -193,7 +333,13 @@ class InquiryController extends Controller
             $hospital = \App\Models\Hospital::first();
             
             if (!$hospital) {
-                return redirect()->back()->with('error', 'لا توجد مستشفيات في النظام. يرجى إضافة مستشفى أولاً.');
+                // إنشاء مستشفى افتراضي إذا لم يوجد
+                $hospital = \App\Models\Hospital::create([
+                    'name' => 'مستشفى افتراضي',
+                    'address' => 'غير محدد',
+                    'phone' => 'غير محدد',
+                    'email' => 'admin@example.com'
+                ]);
             }
             
             $inquiryDept = Department::create([
@@ -211,6 +357,12 @@ class InquiryController extends Controller
         // إنشاء زيارة في قسم الاستعلامات
         $description = $httpRequest->description ?? 'طلب ' . ($requestType === 'lab' ? 'تحاليل' : ($requestType === 'radiology' ? 'أشعة' : 'خدمة'));
         
+        // تحديد حالة الزيارة بناءً على ما إذا تم تحديد الخدمات أم لا
+        $hasServices = ($requestType === 'lab' && $httpRequest->lab_test_ids) || 
+                       ($requestType === 'radiology' && $httpRequest->radiology_type_ids);
+        
+        $visitStatus = $hasServices ? 'pending_payment' : 'pending_service_selection';
+        
         $visit = Visit::create([
             'patient_id' => $patient->id,
             'department_id' => $inquiryDept->id,
@@ -219,15 +371,16 @@ class InquiryController extends Controller
             'visit_time' => Carbon::now(),
             'visit_type' => $requestType,
             'chief_complaint' => $description,
-            'status' => 'pending_payment', // تعليق الزيارة حتى يتم الدفع في الكاشير
-            'notes' => 'طلب من الاستعلامات - نوع: ' . $requestType
+            'status' => $visitStatus,
+            'notes' => 'طلب من الاستعلامات - نوع: ' . $requestType . ($hasServices ? ' - تم تحديد الخدمات' : ' - بانتظار تحديد الخدمات')
         ]);
 
         // إنشاء الطلب الطبي
         $details = [
             'created_by' => $user->id,
             'created_at_inquiry' => true,
-            'auto_refer' => $httpRequest->auto_refer ?? false
+            'auto_refer' => $httpRequest->auto_refer ?? false,
+            'services_selected' => $hasServices  // هل تم تحديد الخدمات؟
         ];
         
         // إضافة تفاصيل التحاليل أو الأشعة إذا كانت موجودة
@@ -239,12 +392,15 @@ class InquiryController extends Controller
             $details['radiology_type_ids'] = $httpRequest->radiology_type_ids;
         }
         
+        // تحديد الحالة: إذا تم تحديد الخدمات -> pending للدفع، وإلا -> pending_service_selection
+        $requestStatus = $hasServices ? 'pending' : 'pending_service_selection';
+        
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,
             'type' => $requestType,
             'description' => $description,
-            'status' => 'pending',
-            'payment_status' => 'pending',
+            'status' => $requestStatus,
+            'payment_status' => $hasServices ? 'pending' : 'not_applicable',
             'details' => json_encode($details)
         ]);
 
@@ -270,9 +426,16 @@ class InquiryController extends Controller
         }
         
         $message .= '<br>💰 <strong>يرجى توجيه المريض للكاشير لدفع الأجور</strong>';
+        
+        $messages[] = $message;
+        }
 
+        // تجميع جميع الرسائل
+        $finalMessage = 'تم إنشاء ' . $totalRequests . ' طلبات بنجاح';
+
+        // إرجاع إلى صفحة الاستعلامات مع الرسالة
         return redirect()->route('inquiry.index')
-            ->with('success', $message);
+            ->with('success', $finalMessage);
     }
 
     /**

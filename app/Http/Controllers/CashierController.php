@@ -10,6 +10,7 @@ use App\Models\Visit;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Surgery;
+use App\Models\Emergency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -41,14 +42,27 @@ class CashierController extends Controller
             ->orderBy('appointment_date')
             ->paginate(15);
 
-        // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية)
+        // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات
         $pendingRequests = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where('payment_status', 'pending')
             ->whereHas('visit', function($q) {
-                $q->where('status', '!=', 'cancelled');
+                $q->where('status', '!=', 'cancelled')
+                  ->where(function($query) {
+                      $query->where('visit_type', '!=', 'surgery')
+                            ->orWhereNull('visit_type');
+                  });
             })
+            ->whereDoesntHave('visit.surgery')
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'requests_page');
+
+        // جلب خدمات الطوارئ المعلقة الدفع
+        $pendingEmergencyPayments = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'emergency.services', 'appointment.doctor.user'])
+            ->where('payment_type', 'emergency')
+            ->whereNull('appointment_id') // الاستشاري يُحسب كموعد مستقل
+            ->whereNull('paid_at') // لم يتم الدفع بعد
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'emergency_page');
 
         // إحصائيات اليوم المحسنة
         $today = Carbon::today();
@@ -59,12 +73,14 @@ class CashierController extends Controller
         // حساب عدد المعلقات بشكل صحيح
         $pendingAppointmentsCount = is_object($pendingAppointments) ? $pendingAppointments->total() : 0;
         $pendingRequestsCount = is_object($pendingRequests) ? $pendingRequests->total() : 0;
+        $pendingEmergencyCount = is_object($pendingEmergencyPayments) ? $pendingEmergencyPayments->total() : 0;
 
         $todayStats = [
             'total_collected' => $todayPayments->sum('amount'),
             'total_payments' => $todayPayments->count(),
             'pending_appointments_count' => $pendingAppointmentsCount,
             'pending_requests_count' => $pendingRequestsCount,
+            'pending_emergency_count' => $pendingEmergencyCount,
             'doctor_fees' => 0,
             'hospital_profit' => 0,
         ];
@@ -90,6 +106,7 @@ class CashierController extends Controller
             'avg_daily' => $monthlyPayments->count() > 0 ? $monthlyPayments->sum('amount') / Carbon::now()->daysInMonth : 0,
         ];
 
+
         // Debug: تأكد من نوع المتغير قبل إرساله
         \Log::info('CashierController - pendingRequests type: ' . gettype($pendingRequests));
         \Log::info('CashierController - pendingRequests class: ' . (is_object($pendingRequests) ? get_class($pendingRequests) : 'not object'));
@@ -98,7 +115,14 @@ class CashierController extends Controller
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
 
-        return view('cashier.index', compact('pendingAppointments', 'pendingMedicalRequests', 'todayStats', 'todayPayments', 'monthlyStats'));
+        return view('cashier.index', compact(
+            'pendingAppointments', 
+            'pendingMedicalRequests', 
+            'pendingEmergencyPayments', 
+            'todayStats', 
+            'todayPayments', 
+            'monthlyStats'
+        ));
     }
 
     /**
@@ -200,14 +224,20 @@ class CashierController extends Controller
     /**
      * طباعة إيصال الدفع (PDF)
      */
-    public function printReceipt(Payment $payment)
+    public function printReceipt(Request $request, Payment $payment)
     {
         $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'request.visit.patient.user', 'request.visit.doctor.user', 'cashier']);
+
+        // إذا تم طلب النسخة HTML (مثل "طباعة" أساسي)
+        if ($request->query('html')) {
+            return view('cashier.receipt-print', compact('payment'));
+        }
 
         // التحقق من وجود حزمة dompdf
         if (class_exists('Barryvdh\DomPDF\Facade\Pdf')) {
             $pdf = Pdf::loadView('cashier.receipt-pdf', compact('payment'));
-            return $pdf->download('receipt-' . $payment->receipt_number . '.pdf');
+            // افتح المستند في المتصفح بدل تنزيله
+            return $pdf->stream('receipt-' . $payment->receipt_number . '.pdf');
         }
 
         // بديل: عرض صفحة للطباعة عبر المتصفح
@@ -354,6 +384,37 @@ class CashierController extends Controller
                 }
             }
 
+            // إذا كان الطلب طوارئ، إنشاء سجل طوارئ
+            if ($request->type === 'emergency') {
+                \Log::info('Processing emergency request payment, request_id: ' . $request->id);
+                
+                $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                \Log::info('Emergency request details: ' . json_encode($details));
+                
+                if (isset($details['emergency_priority']) && isset($details['emergency_type'])) {
+                    try {
+                        // إنشاء سجل طوارئ
+                        $emergency = \App\Models\Emergency::create([
+                            'patient_id' => $request->visit->patient_id,
+                            'doctor_id' => $request->visit->doctor_id,
+                            'priority' => $details['emergency_priority'],
+                            'emergency_type' => $details['emergency_type'],
+                            'symptoms' => $details['symptoms_description'] ?? $request->description,
+                            'vital_signs' => $details['vital_signs'] ?? [],
+                            'admission_time' => now(),
+                            'status' => 'waiting',
+                            'is_active' => true,
+                        ]);
+                        
+                        \Log::info('Created emergency record #' . $emergency->id . ' for request #' . $request->id);
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to create emergency record: ' . $e->getMessage());
+                    }
+                } else {
+                    \Log::warning('Emergency request missing required details for request #' . $request->id);
+                }
+            }
+
             DB::commit();
 
             \Log::info('Transaction committed. Redirecting to cashier index.');
@@ -378,7 +439,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin'])) {
+        // السماح للكاشير والاستقبال بالإضافة إلى المسؤول
+        if (!$user->hasRole(['admin','cashier','receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -407,7 +469,8 @@ class CashierController extends Controller
 
         $totalAmount = $query->sum('amount');
 
-        return view('cashier.report', compact('payments', 'totalAmount'));
+        // استعلام من أجل صفحة السجل العامة
+        return view('cashier.payments', compact('payments', 'totalAmount'));
     }
 
     /**
@@ -417,28 +480,34 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // جلب العمليات المعلقة (بانتظار الدفع)
+        // جلب العمليات المعلقة (بانتظار الدفع أو دفع جزئي) مجمعة حسب المريض
         $pendingSurgeries = Surgery::with([
             'patient.user', 
             'doctor.user', 
             'department',
+            'surgicalOperation',
+            'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
             'visit'
         ])
         ->whereIn('status', ['scheduled', 'waiting'])
-        ->where('payment_status', 'pending')
+        ->whereIn('payment_status', ['pending', 'partial'])
         ->orderBy('scheduled_date')
-        ->paginate(15);
+        ->get();
+
+        // تجميع العمليات حسب المريض
+        $surgeriesByPatient = $pendingSurgeries->groupBy('patient_id');
 
         // إحصائيات العمليات
         $today = Carbon::today();
         $surgeryStats = [
-            'pending_count' => Surgery::where('payment_status', 'pending')->count(),
+            'pending_count' => Surgery::whereIn('payment_status', ['pending', 'partial'])->count(),
+            'patients_count' => $surgeriesByPatient->count(),
             'today_paid' => Payment::whereDate('paid_at', $today)
                 ->where('payment_type', 'surgery')
                 ->count(),
@@ -447,7 +516,67 @@ class CashierController extends Controller
                 ->sum('amount'),
         ];
 
-        return view('cashier.surgeries.index', compact('pendingSurgeries', 'surgeryStats'));
+        return view('cashier.surgeries.index', compact('pendingSurgeries', 'surgeriesByPatient', 'surgeryStats'));
+    }
+
+    /**
+     * عرض العمليات المدفوعة (كلياً أو جزئياً)
+     */
+    public function surgeriesPaid(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist', 'surgery_staff'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // بناء الاستعلام
+        $query = Payment::with(['patient.user', 'cashier'])
+            ->where('payment_type', 'surgery')
+            ->orderBy('paid_at', 'desc');
+
+        // فلترة بالتاريخ
+        if ($request->filled('from_date')) {
+            $query->whereDate('paid_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('paid_at', '<=', $request->to_date);
+        }
+
+        // فلترة باسم المريض
+        if ($request->filled('patient_name')) {
+            $query->whereHas('patient.user', function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->patient_name . '%');
+            });
+        }
+
+        // فلترة بطريقة الدفع
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        $payments = $query->paginate(20);
+
+        // إحصائيات
+        $today = Carbon::today();
+        $stats = [
+            'today_count' => Payment::where('payment_type', 'surgery')
+                ->whereDate('paid_at', $today)
+                ->count(),
+            'today_amount' => (float) Payment::where('payment_type', 'surgery')
+                ->whereDate('paid_at', $today)
+                ->sum('amount'),
+            'month_count' => Payment::where('payment_type', 'surgery')
+                ->whereMonth('paid_at', $today->month)
+                ->whereYear('paid_at', $today->year)
+                ->count(),
+            'month_amount' => (float) Payment::where('payment_type', 'surgery')
+                ->whereMonth('paid_at', $today->month)
+                ->whereYear('paid_at', $today->year)
+                ->sum('amount'),
+        ];
+
+        return view('cashier.surgeries.paid', compact('payments', 'stats'));
     }
 
     /**
@@ -471,12 +600,15 @@ class CashierController extends Controller
             'patient.user', 
             'doctor.user', 
             'department',
+            'surgicalOperation',
+            'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
             'visit'
         ]);
 
         // حساب التكلفة الإجمالية
+        // use the stored fee on the surgery itself (preserved at creation/edit time)
         $surgeryFee = $surgery->surgery_fee ?? 0;
         $labTestsFee = $surgery->labTests->sum(function($test) {
             return $test->labTest->price ?? 0;
@@ -504,38 +636,163 @@ class CashierController extends Controller
         $request->validate([
             'payment_method' => 'required|in:cash,card,insurance',
             'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
+            'inclusive' => 'nullable|boolean',
+            'pay_surgery' => 'nullable',
+            'pay_room' => 'nullable',
+            'pay_lab_tests' => 'nullable|array',
+            'pay_radiology_tests' => 'nullable|array',
         ]);
-
-        // التحقق من أن العملية لم يتم دفعها
+        // التحقق من أن العملية لم يتم دفعها بالكامل
         if ($surgery->payment_status === 'paid') {
             return redirect()->route('cashier.surgeries.index')
-                ->with('error', 'هذه العملية تم دفعها مسبقاً');
+                ->with('error', 'هذه العملية تم دفعها مسبقاً بالكامل');
+        }
+
+        // determine if user marked cost as inclusive
+        $isInclusive = $request->has('inclusive');
+
+        // التحقق من تحديد عنصر واحد على الأقل للدفع
+        $paySurgery = $request->has('pay_surgery');
+        $payRoom = $request->has('pay_room');
+        $payLabTests = $request->input('pay_lab_tests', []);
+        $payRadiologyTests = $request->input('pay_radiology_tests', []);
+
+        if (!$isInclusive && !$paySurgery && !$payRoom && empty($payLabTests) && empty($payRadiologyTests)) {
+            return redirect()->back()
+                ->with('error', 'يرجى تحديد عنصر واحد على الأقل للدفع')
+                ->withInput();
         }
 
         DB::beginTransaction();
         try {
+            // حساب المبلغ الفعلي للعناصر المحددة
+            $actualAmount = 0;
+            $paidItems = [];
+
+            if ($isInclusive) {
+                // if inclusive, treat everything as paid but amount = surgery fee only
+                $actualAmount = $surgery->surgery_fee ?? 0;
+                $paidItems[] = 'رسوم العملية الجراحية (شاملة)';
+                // mark all other pieces as intended to pay
+                $paySurgery = true;
+                $payRoom = true;
+                $payLabTests = $surgery->labTests->pluck('id')->toArray();
+                $payRadiologyTests = $surgery->radiologyTests->pluck('id')->toArray();
+            }
+
+            // رسوم العملية (فقط إذا لم تُدفع سابقاً)
+            if ($paySurgery && $surgery->surgery_fee_paid !== 'paid') {
+                if (!$isInclusive) {
+                    $actualAmount += $surgery->surgery_fee ?? 0;
+                    $paidItems[] = 'رسوم العملية الجراحية';
+                }
+            }
+
+            // رسوم الغرفة (فقط إذا لم تُدفع سابقاً)
+            if ($payRoom && $surgery->payment_status !== 'paid' && $surgery->room_fee > 0) {
+                if (!$isInclusive) {
+                    $actualAmount += $surgery->room_fee ?? 0;
+                    $paidItems[] = 'أجور الغرفة: ' . ($surgery->room->room_number ?? 'غير محدد');
+                }
+            }
+
+            // التحاليل المختارة (فقط غير المدفوعة)
+            if (!empty($payLabTests)) {
+                foreach ($surgery->labTests as $labTest) {
+                    if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
+                        if (!$isInclusive) {
+                            $actualAmount += $labTest->labTest->price ?? 0;
+                            $paidItems[] = 'تحليل: ' . ($labTest->labTest->name ?? 'غير محدد');
+                        }
+                    }
+                }
+            }
+
+            // الأشعة المختارة (فقط غير المدفوعة)
+            if (!empty($payRadiologyTests)) {
+                foreach ($surgery->radiologyTests as $radiologyTest) {
+                    if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
+                        if (!$isInclusive) {
+                            $actualAmount += $radiologyTest->radiologyType->base_price ?? 0;
+                            $paidItems[] = 'أشعة: ' . ($radiologyTest->radiologyType->name ?? 'غير محدد');
+                        }
+                    }
+                }
+            }
+
+            // التحقق من وجود مبلغ للدفع
+            if ($actualAmount <= 0) {
+                return redirect()->back()
+                    ->with('error', 'لا توجد عناصر معلقة لدفعها')
+                    ->withInput();
+            }
+
+            // إنشاء وصف الدفع
+            $description = 'دفع رسوم العملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ')';
+            if ($isInclusive) {
+                $description .= "\nملاحظة: الشاملة (التكاليف المسبقة مٌضمَّنة)";
+            }
+            $description .= "\nالعناصر المدفوعة:\n- " . implode("\n- ", $paidItems);
+
             // إنشاء سجل الدفع
             $payment = Payment::create([
                 'patient_id' => $surgery->patient_id,
                 'cashier_id' => $user->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => $request->amount,
+                'amount' => $actualAmount,
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'surgery',
-                'description' => 'دفع رسوم العملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ')',
+                'description' => $description,
                 'notes' => $request->notes,
+                'is_inclusive' => $isInclusive,
                 'paid_at' => Carbon::now()
             ]);
 
+            // تحديث حالة دفع رسوم العملية
+            if ($paySurgery && $surgery->surgery_fee_paid !== 'paid') {
+                $surgery->update(['surgery_fee_paid' => 'paid']);
+            }
+
+            // تحديث حالة التحاليل المدفوعة
+            if (!empty($payLabTests)) {
+                foreach ($surgery->labTests as $labTest) {
+                    if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
+                        $labTest->update([
+                            'payment_status' => 'paid',
+                            'payment_id' => $payment->id
+                        ]);
+                    }
+                }
+            }
+
+            // تحديث حالة الأشعة المدفوعة
+            if (!empty($payRadiologyTests)) {
+                foreach ($surgery->radiologyTests as $radiologyTest) {
+                    if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
+                        $radiologyTest->update([
+                            'payment_status' => 'paid',
+                            'payment_id' => $payment->id
+                        ]);
+                    }
+                }
+            }
+
+            // تحديد إذا تم دفع كل شيء أم لا
+            $surgery->refresh();
+            $allSurgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || !$surgery->surgery_fee;
+            $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
+            $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
+            $allPaid = $allSurgeryFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;
+
             // تحديث حالة دفع العملية
             $surgery->update([
-                'payment_status' => 'paid',
+                'payment_status' => $allPaid ? 'paid' : 'partial',
                 'payment_id' => $payment->id
             ]);
 
-            // تحديث حالة الطلبات المرتبطة (التحاليل والأشعة) إذا وجدت
-            if ($surgery->visit_id) {
+            // تحديث حالة الطلبات المرتبطة إذا تم الدفع الكامل
+            if ($allPaid && $surgery->visit_id) {
                 MedicalRequest::where('visit_id', $surgery->visit_id)
                     ->where('payment_status', 'pending')
                     ->update(['payment_status' => 'paid']);
@@ -546,8 +803,90 @@ class CashierController extends Controller
 
             DB::commit();
 
+            $successMessage = $allPaid 
+                ? 'تم تسجيل الدفع الكامل بنجاح!' 
+                : 'تم تسجيل الدفع الجزئي بنجاح! المتبقي سيُدفع لاحقاً.';
+            $successMessage .= ' رقم الإيصال: ' . $payment->receipt_number;
+
             return redirect()->route('cashier.surgeries.index')
-                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number)
+                ->with('success', $successMessage)
+                ->with('payment_id', $payment->id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * عرض نموذج دفع خدمات الطوارئ
+     */
+    public function showEmergencyPaymentForm(Payment $payment)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // التحقق من أن الدفعة تخص خدمات طوارئ ولم يتم دفعها بعد
+        if ($payment->payment_type !== 'emergency' || $payment->paid_at !== null || $payment->appointment_id !== null) {
+            return redirect()->route('cashier.index')
+                ->with('warning', 'هذه الدفعة غير متاحة للدفع');
+        }
+
+        $payment->load(['emergency.patient.user', 'emergency.services', 'appointment.doctor.user']);
+
+        return view('cashier.emergency-payment-form', compact('payment'));
+    }
+
+    /**
+     * معالجة دفع خدمات الطوارئ
+     */
+    public function processEmergencyPayment(Request $request, Payment $payment)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $request->validate([
+            'payment_method' => 'required|in:cash,card,insurance',
+            'amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        // التحقق من أن الدفعة تخص خدمات طوارئ ولم يتم دفعها بعد
+        if ($payment->payment_type !== 'emergency' || $payment->paid_at !== null || $payment->appointment_id !== null) {
+            return redirect()->route('cashier.index')
+                ->with('warning', 'هذه الدفعة غير متاحة للدفع');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // تحديث الدفعة
+            $payment->update([
+                'payment_method' => $request->payment_method,
+                'amount' => $request->amount,
+                'paid_at' => now(),
+                'cashier_id' => $user->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'notes' => $request->notes,
+            ]);
+
+            // تحديث حالة الدفع في حالة الطوارئ
+            $payment->emergency->update([
+                'payment_status' => 'paid',
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('cashier.index')
+                ->with('success', 'تم تسديد خدمات الطوارئ بنجاح! رقم الإيصال: ' . $payment->receipt_number)
                 ->with('payment_id', $payment->id);
 
         } catch (\Exception $e) {

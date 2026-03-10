@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use App\Models\Appointment;
@@ -27,6 +28,31 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        // تسجيل Blade directives لـ Spatie Permission
+        Blade::if('role', function ($role) {
+            return auth()->check() && auth()->user()->hasRole($role);
+        });
+
+        Blade::if('hasrole', function ($role) {
+            return auth()->check() && auth()->user()->hasRole($role);
+        });
+
+        Blade::if('hasanyrole', function ($roles) {
+            return auth()->check() && auth()->user()->hasAnyRole($roles);
+        });
+
+        Blade::if('hasallroles', function ($roles) {
+            return auth()->check() && auth()->user()->hasAllRoles($roles);
+        });
+
+        Blade::if('can', function ($permission) {
+            return auth()->check() && auth()->user()->can($permission);
+        });
+
+        Blade::if('haspermission', function ($permission) {
+            return auth()->check() && auth()->user()->can($permission);
+        });
 
         // الأدمن لديه صلاحيات كاملة لكل شيء تلقائياً
         Gate::before(function ($user, $ability) {

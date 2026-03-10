@@ -336,6 +336,14 @@
                                         $isCompleted = $visit->status == 'completed';
                                         $isCancelled = $visit->status == 'cancelled';
                                         
+                                        // التحقق من حالة الدفع للزيارات من الطوارئ
+                                        $isEmergencyVisit = $visit->appointment && $visit->appointment->emergency_id;
+                                        $isPaid = true; // افتراضي
+                                        if ($isEmergencyVisit) {
+                                            $payment = \App\Models\Payment::where('appointment_id', $visit->appointment_id)->first();
+                                            $isPaid = $payment && $payment->payment_method !== 'pending';
+                                        }
+                                        
                                         // تحديد نوع الصف
                                         if ($isIncomplete && $isPast) {
                                             $rowClass = 'incomplete-visit';
@@ -388,6 +396,12 @@
                                                 </div>
                                                 <div class="ms-2">
                                                     <strong>{{ $visit->patient->user->name }}</strong>
+                                                    @if($visit->appointment && $visit->appointment->emergency_id)
+                                                        <span class="badge bg-danger ms-2">
+                                                            <i class="fas fa-ambulance"></i>
+                                                            طوارئ
+                                                        </span>
+                                                    @endif
                                                     <br>
                                                     <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
                                                 </div>
@@ -427,7 +441,19 @@
                                             @endif
                                         </td>
                                         <td>
-                                            @if($isIncomplete)
+                                            @if($isEmergencyVisit)
+                                                @if(!$isPaid)
+                                                    <button class="btn btn-sm btn-secondary" disabled title="في انتظار الدفع">
+                                                        <i class="fas fa-lock me-1"></i>
+                                                        بانتظار الدفع
+                                                    </button>
+                                                @else
+                                                    <span class="badge bg-success p-2">
+                                                        <i class="fas fa-check-circle me-1"></i>
+                                                        تم متابعة الحالة
+                                                    </span>
+                                                @endif
+                                            @elseif($isIncomplete)
                                                 <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
                                                     <i class="fas fa-clipboard-check"></i>
                                                     إكمال الفحص

@@ -225,6 +225,67 @@
         </div>
     </div>
 
+    <!-- إحصائيات الغرف -->
+    @if(isset($roomStats) && $roomStats['total'] > 0)
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3"><i class="fas fa-bed me-2 text-danger"></i>حالة الغرف</h5>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                        <i class="fas fa-bed fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ $roomStats['total'] }}</h3>
+                        <small class="text-muted">إجمالي الغرف</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-25 p-3 me-3">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0 text-success">{{ $roomStats['available'] }}</h3>
+                        <small class="text-muted">متاحة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-circle bg-danger bg-opacity-25 p-3 me-3">
+                        <i class="fas fa-user fa-2x text-danger"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0 text-danger">{{ $roomStats['occupied'] }}</h3>
+                        <small class="text-muted">محجوزة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-25 p-3 me-3">
+                        <i class="fas fa-tools fa-2x text-warning"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0 text-warning">{{ $roomStats['maintenance'] }}</h3>
+                        <small class="text-muted">صيانة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- الإجراءات السريعة -->
     <div class="row">
         <div class="col-12">
@@ -251,6 +312,18 @@
                                 <i class="fas fa-file-medical fa-2x"></i>
                             </a>
                             <p class="mt-2 mb-0">زيارة جديدة</p>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <a href="{{ route('surgeries.create') }}" class="btn btn-outline-warning btn-lg p-3 rounded-circle">
+                                <i class="fas fa-procedures fa-2x"></i>
+                            </a>
+                            <p class="mt-2 mb-0">حجز عملية</p>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <a href="{{ route('rooms.index') }}" class="btn btn-outline-danger btn-lg p-3 rounded-circle">
+                                <i class="fas fa-bed fa-2x"></i>
+                            </a>
+                            <p class="mt-2 mb-0">إدارة الغرف</p>
                         </div>
                     </div>
                 </div>

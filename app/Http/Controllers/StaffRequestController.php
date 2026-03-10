@@ -66,7 +66,11 @@ class StaffRequestController extends Controller
         // فلترة الطلبات حسب النوع المسموح
         $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->whereIn('type', $allowedTypes)
-            ->where('payment_status', 'paid');
+            ->where(function($q) {
+                // عرض الطلبات المدفوعة أو التي بانتظار تحديد الخدمات
+                $q->where('payment_status', 'paid')
+                  ->orWhere('status', 'pending_service_selection');
+            });
 
         // فلترة حسب النوع المحدد في URL
         if ($type && in_array($type, $allowedTypes)) {
@@ -75,7 +79,41 @@ class StaffRequestController extends Controller
 
         $requests = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        return view('staff.requests.index', compact('requests', 'allowedTypes', 'type'));
+        // إضافة طلبات الطوارئ إذا كان المستخدم مختبراً أو موظف أشعة أو أدمن
+        $emergencyLabRequests = collect();
+        $emergencyRadiologyRequests = collect();
+
+        if ($user->hasRole('lab_staff') || $user->hasAnyRole(['admin'])) {
+            // show pending, in progress, and completed so that rows remain after completion
+            $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests'])
+                ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+                ->orderBy('requested_at', 'asc')
+                ->get();
+        }
+
+        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['admin'])) {
+            $emergencyRadiologyRequests = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
+                ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+                ->orderBy('requested_at', 'asc')
+                ->get();
+        }
+
+        return view('staff.requests.index', compact('requests', 'allowedTypes', 'type', 'emergencyLabRequests', 'emergencyRadiologyRequests'));
+    }
+
+    /**
+     * طباعة نتائج طلب تحاليل من الطوارئ
+     */
+    public function printEmergencyLab(\App\Models\EmergencyLabRequest $emergencyLab)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+        $emergencyLab->load(['patient.user', 'labTests']);
+        return view('staff.requests.emergency-lab-print', compact('emergencyLab'));
     }
 
     public function show(MedicalRequest $request)
@@ -132,7 +170,77 @@ class StaffRequestController extends Controller
         // تحميل النموذج مع العلاقات
         $request->load(['visit']);
 
-        // 1. حفظ التحاليل المختارة (من المودال)
+        // 1. حفظ اختيار الخدمات (للطلبات pending_service_selection)
+        if ($request->status === 'pending_service_selection' && $httpRequest->has('lab_test_ids')) {
+            $details = $request->details ?? [];
+            if (is_string($details)) {
+                $details = json_decode($details, true) ?? [];
+            }
+            if (!is_array($details)) {
+                $details = [];
+            }
+            
+            $details['lab_test_ids'] = $httpRequest->lab_test_ids;
+            $details['services_selected'] = true;
+            $details['services_selected_at'] = now()->toDateTimeString();
+            $details['services_selected_by'] = auth()->id();
+            
+            $request->details = $details;
+            $request->status = 'pending';
+            $request->payment_status = 'pending';
+            $request->save();
+            
+            // تحديث حالة الزيارة
+            $request->visit->status = 'pending_payment';
+            $request->visit->save();
+
+            Log::info('تم تحديد الخدمات المطلوبة (مختبر)', [
+                'request_id' => $request->id,
+                'lab_test_ids' => $httpRequest->lab_test_ids,
+                'selected_by' => auth()->user()->name
+            ]);
+
+            return redirect()
+                ->route('staff.requests.index', ['type' => $request->type])
+                ->with('success', 'تم تحديد التحاليل المطلوبة بنجاح. الطلب الآن بانتظار الدفع عند الكاشير.');
+        }
+
+        // حفظ اختيار خدمات الأشعة (للطلبات pending_service_selection)
+        if ($request->status === 'pending_service_selection' && $httpRequest->has('radiology_type_ids')) {
+            $details = $request->details ?? [];
+            if (is_string($details)) {
+                $details = json_decode($details, true) ?? [];
+            }
+            if (!is_array($details)) {
+                $details = [];
+            }
+            
+            $details['radiology_type_ids'] = $httpRequest->radiology_type_ids;
+            $details['services_selected'] = true;
+            $details['services_selected_at'] = now()->toDateTimeString();
+            $details['services_selected_by'] = auth()->id();
+            
+            $request->details = $details;
+            $request->status = 'pending';
+            $request->payment_status = 'pending';
+            $request->save();
+            
+            // تحديث حالة الزيارة
+            $request->visit->status = 'pending_payment';
+            $request->visit->save();
+
+            Log::info('تم تحديد الخدمات المطلوبة (أشعة)', [
+                'request_id' => $request->id,
+                'radiology_type_ids' => $httpRequest->radiology_type_ids,
+                'selected_by' => auth()->user()->name
+            ]);
+
+            return redirect()
+                ->route('staff.requests.index', ['type' => $request->type])
+                ->with('success', 'تم تحديد أنواع الأشعة المطلوبة بنجاح. الطلب الآن بانتظار الدفع عند الكاشير.');
+        }
+
+        // 2. حفظ التحاليل المختارة (من المودال - للطلبات القديمة)
         if ($httpRequest->has('tests') && is_array($httpRequest->tests)) {
             // تحويل details إلى array إذا كان string
             $details = $request->details ?? [];
@@ -299,7 +407,7 @@ class StaffRequestController extends Controller
         }
 
         $patients = \App\Models\Patient::with('user')->get();
-        $departments = \App\Models\Department::all();
+        $departments = \App\Models\Department::orderBy('name')->get();
 
         return view('staff.lab-visits.create', compact('patients', 'departments'));
     }
@@ -373,6 +481,11 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى طلبات المختبر للعمليات');
         }
 
+        // منع الأطباء الاستشاريين من الوصول
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
+        }
+
         $query = \App\Models\SurgeryLabTest::with(['surgery.patient.user', 'surgery.doctor.user', 'labTest']);
 
         // البحث
@@ -423,6 +536,11 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
+        // منع الأطباء الاستشاريين من العرض
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض تحاليل العمليات الجراحية');
+        }
+
         $test->load(['surgery.patient.user', 'surgery.doctor.user', 'labTest']);
 
         return view('staff.surgery-lab-tests.show', compact('test'));
@@ -438,6 +556,17 @@ class StaffRequestController extends Controller
         // التحقق من الصلاحية
         if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
+        }
+
+        // منع الأطباء الاستشاريين من التحديث
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتحديث تحاليل العمليات الجراحية');
+        }
+
+        // التحقق من دفع رسوم العملية أولاً
+        $test->load('surgery');
+        if ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') {
+            return redirect()->back()->with('error', 'لا يمكن إجراء التحليل قبل دفع رسوم العملية الجراحية');
         }
 
         $validated = $request->validate([
@@ -509,6 +638,11 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى طلبات الأشعة للعمليات');
         }
 
+        // منع الأطباء الاستشاريين من الوصول
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى أشعة العمليات الجراحية');
+        }
+
         $query = \App\Models\SurgeryRadiologyTest::with(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType']);
 
         // البحث
@@ -559,6 +693,11 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
+        // منع الأطباء الاستشاريين من الوصول
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض أشعة العمليات الجراحية');
+        }
+
         $test->load(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType']);
 
         return view('staff.surgery-radiology-tests.show', compact('test'));
@@ -574,6 +713,17 @@ class StaffRequestController extends Controller
         // التحقق من الصلاحية
         if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
+        }
+
+        // منع الأطباء الاستشاريين من التحديث
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتحديث أشعة العمليات الجراحية');
+        }
+
+        // التحقق من دفع رسوم العملية أولاً
+        $test->load('surgery');
+        if ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') {
+            return redirect()->back()->with('error', 'لا يمكن إجراء الأشعة قبل دفع رسوم العملية الجراحية');
         }
 
         $validated = $request->validate([
@@ -598,4 +748,154 @@ class StaffRequestController extends Controller
 
         return redirect()->back()->with('success', 'تم تحديث الطلب بنجاح');
     }
+
+    /**
+     * عرض تفاصيل طلب أشعة الطوارئ (نفس تدفق طلب الأشعة العادي)
+     */
+    public function showEmergencyRadiology(
+        \App\Models\EmergencyRadiologyRequest $emergencyRadiology
+    ) {
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['radiology_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes']);
+
+        return view('staff.requests.emergency-radiology-show', compact('emergencyRadiology'));
+    }
+
+    /**
+     * طباعة طلب أشعة الطوارئ
+     */
+    public function printEmergencyRadiology(
+        \App\Models\EmergencyRadiologyRequest $emergencyRadiology
+    ) {
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['radiology_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes']);
+
+        return view('staff.requests.emergency-radiology-print', compact('emergencyRadiology'));
+    }
+
+    /**
+     * بدء العمل على طلب أشعة من الطوارئ
+     */
+    public function startEmergencyRadiology(\App\Models\EmergencyRadiologyRequest $emergencyRadiology)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['radiology_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $emergencyRadiology->update([
+            'status' => 'in_progress'
+        ]);
+
+        return redirect()->back()->with('success', 'تم بدء العمل على طلب الأشعة');
+    }
+
+    /**
+     * إكمال طلب أشعة من الطوارئ
+     */
+    public function completeEmergencyRadiology(HttpRequest $request, \App\Models\EmergencyRadiologyRequest $emergencyRadiology)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['radiology_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $request->validate([
+            'results' => 'nullable|array',
+            'results.*' => 'nullable|string',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($request->has('results')) {
+            foreach ($request->results as $typeId => $result) {
+                $updateData = ['result' => $result];
+
+                if ($request->hasFile("images.$typeId")) {
+                    $file = $request->file("images.$typeId");
+                    $fileName = time() . '_' . $typeId . '_' . $file->getClientOriginalName();
+                    $filePath = $file->storeAs('emergency_radiology_results', $fileName, 'public');
+                    $updateData['image_path'] = $filePath;
+                }
+
+                $emergencyRadiology->requestTypes()
+                    ->where('radiology_type_id', $typeId)
+                    ->update($updateData);
+            }
+        }
+
+        $emergencyRadiology->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'notes' => $request->notes
+        ]);
+
+        return redirect()->back()->with('success', 'تم إكمال طلب الأشعة بنجاح');
+    }
+
+    /**
+     * بدء العمل على طلب تحاليل من الطوارئ
+     */
+    public function startEmergencyLab(\App\Models\EmergencyLabRequest $emergencyLab)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['lab_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $emergencyLab->update([
+            'status' => 'in_progress'
+        ]);
+
+        return redirect()->back()->with('success', 'تم بدء العمل على طلب التحاليل');
+    }
+
+    /**
+     * إكمال طلب تحاليل من الطوارئ
+     */
+    public function completeEmergencyLab(HttpRequest $request, \App\Models\EmergencyLabRequest $emergencyLab)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['lab_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $request->validate([
+            'results' => 'nullable|array',
+            'results.*' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($request->has('results')) {
+            foreach ($request->results as $testId => $result) {
+                $emergencyLab->requestTests()
+                    ->where('lab_test_id', $testId)
+                    ->update(['result' => $result]);
+            }
+        }
+
+        $emergencyLab->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'notes' => $request->notes
+        ]);
+
+        return redirect()->back()->with('success', 'تم إكمال طلب التحاليل بنجاح');
+    }
 }
+

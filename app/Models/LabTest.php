@@ -17,32 +17,32 @@ class LabTest extends Model
         'unit',
         'description',
         'is_active',
-        'notes',
+        'price',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
 
-    // Accessor للحصول على نص الفئة
+    // Accessor للحصول على نص الفئة من كود الفئة الرئيسي
     public function getCategoryTextAttribute()
     {
-        $categories = [
-            'كيمياء سريرية' => 'كيمياء سريرية',
-            'أمراض الدم' => 'أمراض الدم',
-            'مصرف الدم' => 'مصرف الدم',
-            'الطفيليات' => 'الطفيليات',
-            'الأحياء المجهرية' => 'الأحياء المجهرية',
-            'مصل الأمصال والمناعة' => 'مصل الأمصال والمناعة',
-            'الفيروسات' => 'الفيروسات',
-            'هرمونات' => 'هرمونات',
-            'المناعة السريرية' => 'المناعة السريرية',
-            'الخلايا' => 'الخلايا',
-            'متفرقة' => 'متفرقة',
-            'اخرى' => 'اخرى',
+        $map = [
+            'biochemistry' => 'كيمياء سريرية',
+            'hematology' => 'أمراض الدم',
+            'blood_bank' => 'مصرف الدم',
+            'parasitology' => 'الطفيليات',
+            'microbiology' => 'الأحياء المجهرية',
+            'immunology' => 'المناعة والهرمونات',
+            'virology' => 'فــيروسات',
+            'hormones' => 'هرمــونات',
+            'clinical_immunology' => 'المناعة السريرية',
+            'cytology' => 'الخــلايا',
+            'miscellaneous' => 'متفـــرقة',
+            'other' => 'أخرى'
         ];
 
-        return $categories[$this->category] ?? $this->category;
+        return $map[$this->main_category] ?? $this->main_category;
     }
 
     // Accessor لنص الحالة

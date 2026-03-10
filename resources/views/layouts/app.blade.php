@@ -13,23 +13,30 @@
 
     if (Auth::check()) {
         try {
-            if (Auth::user()->isAdmin() || Auth::user()->isReceptionist() || Auth::user()->isDoctor()) {
+            // عدادات بناءً على الصلاحيات وليس الأدوار
+            if (Auth::user()->can('view surgeries')) {
                 $pendingSurgeries = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])->count();
-            }
-            if (Auth::user()->isAdmin() || Auth::user()->isReceptionist()) {
-                $pendingRequestsCount = \App\Models\Request::where('status', 'pending')->count();
-                $confirmedAppointments = \App\Models\Appointment::where('status', 'confirmed')->count();
-                $incompleteVisits = \App\Models\Visit::whereIn('status', ['pending', 'in_progress'])->count();
-                $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
-                $pendingLab = \App\Models\LabResult::where('status', 'pending')->count();
-            }
-            if (Auth::user()->hasRole(['lab_staff', 'admin', 'doctor'])) {
-                $pendingSurgeryLabTests = \App\Models\SurgeryLabTest::where('status', 'pending')->count();
-            }
-            if (Auth::user()->hasRole('surgery_staff')) {
                 $waitingSurgeries = \App\Models\Surgery::where('status', 'waiting')->count();
             }
-            if (Auth::user()->isDoctor()) {
+            if (Auth::user()->can('view inquiries')) {
+                $pendingRequestsCount = \App\Models\Request::where('status', 'pending')->count();
+            }
+            if (Auth::user()->can('view appointments')) {
+                $confirmedAppointments = \App\Models\Appointment::where('status', 'confirmed')->count();
+            }
+            if (Auth::user()->can('view visits')) {
+                $incompleteVisits = \App\Models\Visit::whereIn('status', ['pending', 'in_progress'])->count();
+            }
+            if (Auth::user()->can('view radiology')) {
+                $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
+            }
+            if (Auth::user()->can('view lab tests')) {
+                $pendingLab = \App\Models\LabResult::where('status', 'pending')->count();
+            }
+            if (Auth::user()->can('manage surgery lab tests')) {
+                $pendingSurgeryLabTests = \App\Models\SurgeryLabTest::where('status', 'pending')->count();
+            }
+            if (Auth::user()->can('manage own visits')) {
                 $doctorIncompleteVisits = \App\Models\Visit::where('doctor_id', Auth::id())
                     ->whereIn('status', ['pending', 'in_progress'])
                     ->count();
@@ -48,9 +55,12 @@
     <title>نظام المستشفى الأهلي</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- select2 bootstrap4 theme removed due to CDN MIME issues; using default styles -->
+    <!-- you can download and place a local copy in public/css/select2-bootstrap4-theme.min.css and uncomment below -->
+    <!-- <link href="{{ asset('css/select2-bootstrap4-theme.min.css') }}" rel="stylesheet" /> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .sidebar { background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%); min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: fixed; width: 250px; overflow-y: auto; }
@@ -88,26 +98,16 @@
                         <i class="fas fa-hospital-alt fa-2x text-white mb-2"></i>
                         <h5 class="text-white mb-0">المستشفى الأهلي</h5>
                     </div>
-                    
-                    <ul class="nav flex-column p-3">
-                        <!-- الرئيسية -->
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                                <i class="fas fa-tachometer-alt"></i><span> لوحة التحكم</span>
-                            </a>
-                        </li>
 
-                        <!-- قسم إدارة المرضى -->
-                        @role('admin|receptionist|patient')
+                    <!-- روابط ثابتة حسب الصلاحيات -->
+                        
+                        @canany(['view patients', 'view inquiries', 'view cashier'])
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#patientSection" aria-expanded="false">
-                            <span><i class="fas fa-users"></i> إدارة المرضى</span>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#patientMgmtSection" aria-expanded="false">
+                            <span><i class="fas fa-user-injured"></i> إدارة المرضى</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="patientSection">
-                        @endrole
-                        
-                        @role('admin|receptionist')
+                        <div class="collapse collapse-section" id="patientMgmtSection">
                         @can('view patients')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" href="{{ route('patients.index') }}">
@@ -123,11 +123,10 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|cashier')
+                        @can('view cashier')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('cashier.*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
+                            <a class="nav-link {{ request()->routeIs('cashier.index') || request()->routeIs('cashier.payment.*') || request()->routeIs('cashier.receipt*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
                                 <i class="fas fa-cash-register"></i><span> الكاشير</span>
                                 @php
                                     $pendingPayments = \App\Models\Appointment::where('payment_status', 'pending')
@@ -139,33 +138,84 @@
                                 @endif
                             </a>
                         </li>
-                        @endrole
-
-                        @role('admin|patient')
-                        @can('view own visits')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
-                                <i class="fas fa-file-medical"></i><span> زياراتي</span>
+                            <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
+                                <i class="fas fa-file-invoice-dollar"></i><span> سجل الفواتير</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('cashier.surgeries.*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.index') }}">
+                                <i class="fas fa-procedures text-danger"></i><span> كاشير العمليات</span>
+                                @php
+                                    $pendingSurgeryPayments = \App\Models\Surgery::whereIn('payment_status', ['pending', 'partial'])
+                                        ->whereIn('status', ['scheduled', 'waiting'])
+                                        ->count();
+                                @endphp
+                                @if($pendingSurgeryPayments > 0)
+                                    <span class="badge bg-danger ms-2">{{ $pendingSurgeryPayments }}</span>
+                                @endif
                             </a>
                         </li>
                         @endcan
-                        @endrole
+                    </div> <!-- end patientMgmtSection -->
+                    @endcanany
 
-                        @role('admin|receptionist|patient')
+                    @can('view own visits')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
+                            <i class="fas fa-file-medical"></i><span> زياراتي</span>
+                        </a>
+                    </li>
+                    @endcan
+                        <!-- قسم الطوارئ -->
+                        @canany(['view emergencies', 'create emergencies', 'edit emergencies', 'manage emergency vitals'])
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#emergencySection" aria-expanded="false">
+                            <span><i class="fas fa-ambulance"></i> الطوارئ</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        @endrole
+                        <div class="collapse collapse-section" id="emergencySection">
+                        @can('view emergencies')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('emergency.index') ? 'active' : '' }}" href="{{ route('emergency.index') }}">
+                                <i class="fas fa-list"></i><span> حالات الطوارئ</span>
+                                @php
+                                    $criticalEmergencies = \App\Models\Emergency::where('priority', 'critical')
+                                        ->whereNotIn('status', ['discharged', 'transferred'])
+                                        ->count();
+                                @endphp
+                                @if($criticalEmergencies > 0)
+                                    <span class="badge bg-danger ms-2">{{ $criticalEmergencies }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view emergencies')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('emergency.patients.*') ? 'active' : '' }}" href="{{ route('emergency.patients.index') }}">
+                                <i class="fas fa-user-injured"></i><span> مرضى الطوارئ</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create emergencies')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('emergency.create') ? 'active' : '' }}" href="{{ route('emergency.create') }}">
+                                <i class="fas fa-plus"></i><span> إضافة حالة طوارئ</span>
+                            </a>
+                        </li>
+                        @endcan
+                        </div>
+                        @endcanany
 
                         <!-- قسم الأطباء والعيادات -->
-                        @role('admin|receptionist|doctor|patient')
+                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="false">
                             <span><i class="fas fa-stethoscope"></i> الأطباء والعيادات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="doctorSection">
-                        @endrole
 
-                        @role('admin|receptionist')
                         @can('view doctors')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('doctors.*') ? 'active' : '' }}" href="{{ route('doctors.index') }}">
@@ -180,9 +230,15 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|patient')
+                        @can('manage consultant availability')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('consultant-availability.*') ? 'active' : '' }}" href="{{ route('consultant-availability.index') }}">
+                                <i class="fas fa-calendar-check"></i><span> توفر الأطباء الاستشاريين</span>
+                            </a>
+                        </li>
+                        @endcan
+
                         @can('view departments')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('departments.public') ? 'active' : '' }}" href="{{ route('departments.public') }}">
@@ -190,16 +246,7 @@
                             </a>
                         </li>
                         @endcan
-                        @can('view doctors')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('doctors.index') ? 'active' : '' }}" href="{{ route('doctors.index') }}">
-                                <i class="fas fa-user-md"></i><span> الأطباء</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @endrole
 
-                        @role('admin|doctor')
                         @can('manage own visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
@@ -208,23 +255,19 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|receptionist|doctor|patient')
                         </div>
-                        @endrole
+                        @endcanany
 
                         <!-- قسم المواعيد والزيارات -->
-                        @role('admin|receptionist|patient')
+                        @canany(['view appointments', 'view visits', 'create appointments'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#appointmentSection" aria-expanded="false">
                             <span><i class="fas fa-calendar-alt"></i> المواعيد والزيارات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="appointmentSection">
-                        @endrole
 
-                        @role('admin|receptionist')
                         @can('view appointments')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" href="{{ route('appointments.index') }}">
@@ -241,9 +284,7 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|patient')
                         @can('create appointments')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" href="{{ route('appointments.index') }}">
@@ -251,23 +292,19 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|receptionist|patient')
                         </div>
-                        @endrole
+                        @endcanany
 
                         <!-- قسم العمليات الجراحية -->
-                        @role('admin|receptionist|doctor|surgery_staff')
+                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
                             <span><i class="fas fa-procedures"></i> العمليات الجراحية</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="surgerySection">
-                        @endrole
 
-                        @role('admin|receptionist|doctor|surgery_staff')
                         @can('view surgeries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeries.*') ? 'active' : '' }}" href="{{ route('surgeries.index') }}">
@@ -276,44 +313,27 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|surgery_staff|receptionist')
-                        @can('manage surgery waiting list')
+                        @can('manage rooms')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
-                                <i class="fas fa-clock"></i><span> قائمة الانتظار</span>
-                                <span class="badge bg-secondary ms-2">{{ $waitingSurgeries }}</span>
+                            <a class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}" href="{{ route('rooms.index') }}">
+                                <i class="fas fa-bed text-danger"></i><span> إدارة الغرف</span>
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|surgery_staff')
-                        @can('control surgeries')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('surgeries.control') ? 'active' : '' }}" href="{{ route('surgeries.control') }}">
-                                <i class="fas fa-cogs"></i><span> لوحة التحكم</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @endrole
-
-                        @role('admin|receptionist|doctor|surgery_staff')
                         </div>
-                        @endrole
+                        @endcanany
 
                         <!-- قسم المختبر والأشعة -->
-                        @role('admin|receptionist|lab_staff|radiology_staff|doctor')
+                        @canany(['view radiology', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#labSection" aria-expanded="false">
                             <span><i class="fas fa-microscope"></i> المختبر والأشعة</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="labSection">
-                        @endrole
 
-                        @role('admin|receptionist')
                         @can('view radiology')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('radiology.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
@@ -329,23 +349,24 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
-
-                        @role('admin|pharmacy_staff')
-                        @php
-                            $staffType = null;
-                            if (Auth::user()->hasRole('pharmacy_staff')) $staffType = 'pharmacy';
-                        @endphp
-                        @if($staffType)
+                        @can('view surgeries')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
+                                <i class="fas fa-clock"></i><span> قائمة الانتظار</span>
+                                @if($waitingSurgeries > 0)
+                                <span class="badge bg-warning ms-2">{{ $waitingSurgeries }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
+                        @can('process pharmacy requests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.requests.*') ? 'active' : '' }}" href="{{ route('staff.requests.index') }}">
                                 <i class="fas fa-tasks"></i><span> الطلبات</span>
                             </a>
                         </li>
-                        @endif
-                        @endrole
+                        @endcan
 
-                        @role('lab_staff')
                         @can('view lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.requests.*') ? 'active' : '' }}" href="{{ route('staff.requests.index', ['type' => 'lab']) }}">
@@ -354,20 +375,7 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('radiology_staff')
-                        @can('view radiology')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('radiology.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
-                                <i class="fas fa-x-ray"></i><span> طلبات الأشعة</span>
-                                <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @endrole
-
-                        @role('admin|lab_staff|receptionist')
                         @can('manage surgery lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.surgery-lab-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-lab-tests.index') }}">
@@ -376,24 +384,12 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('radiology_staff|admin|doctor')
-                        @can('view radiology')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
-                                <i class="fas fa-x-ray"></i><span> أشعة العمليات</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @endrole
-
-                        @role('admin|receptionist|lab_staff|radiology_staff|doctor')
                         </div>
-                        @endrole
+                        @endcanany
 
                         <!-- قسم الإعدادات -->
-                        @role('admin|receptionist')
+                        @canany(['manage users', 'manage roles', 'manage permissions', 'manage radiology types', 'view lab tests'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#settingsSection" aria-expanded="false">
                             <span><i class="fas fa-cog"></i> الإعدادات</span>
@@ -401,23 +397,27 @@
                         </div>
                         <div class="collapse collapse-section" id="settingsSection">
 
-                        @role('admin')
+                        @can('manage users')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
                                 <i class="fas fa-users-cog"></i><span> إدارة المستخدمين</span>
                             </a>
                         </li>
+                        @endcan
+                        @can('manage roles')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}">
                                 <i class="fas fa-user-shield"></i><span> إدارة الأدوار</span>
                             </a>
                         </li>
+                        @endcan
+                        @can('manage permissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" href="{{ route('permissions.index') }}">
                                 <i class="fas fa-key"></i><span> إدارة الصلاحيات</span>
                             </a>
                         </li>
-                        @endrole
+                        @endcan
 
                         @can('manage radiology types')
                         <li class="nav-item">
@@ -433,12 +433,10 @@
                             </a>
                         </li>
                         @endcan
-                        @endrole
 
-                        @role('admin|receptionist')
                         </div>
-                        @endrole
-                    </ul>
+                        @endcanany
+                    <!-- نهاية القائمة القديمة -->
                 </div>
             </nav>
 
@@ -473,8 +471,30 @@
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // إعدادات toastr
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-left",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut",
+            "rtl": true
+        };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
     @yield('scripts')
     <script>
         // تحديث أيقونات القوائم المنسدلة
