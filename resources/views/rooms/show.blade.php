@@ -121,7 +121,13 @@
                                     </td>
                                     <td>
                                         <i class="fas fa-user-md me-1 text-muted"></i>
-                                        {{ $surgery->doctor->user->name ?? 'غير محدد' }}
+                                        @if($surgery->doctor && $surgery->doctor->user)
+                                            د. {{ $surgery->doctor->user->name }}
+                                        @elseif($surgery->surgeon_name)
+                                            {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                        @else
+                                            غير محدد
+                                        @endif
                                     </td>
                                     <td>{{ $surgery->surgery_type }}</td>
                                     <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>

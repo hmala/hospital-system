@@ -139,15 +139,15 @@
                                             </small>
                                         </td>
                                         <td>
-                                            <strong>{{ $visit->patient->user->name }}</strong>
+                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
                                         </td>
                                         <td>
-                                            <span class="badge bg-secondary">{{ $visit->patient->age }} سنة</span>
+                                            <span class="badge bg-secondary">{{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</span>
                                         </td>
                                         <td>
                                             <small class="text-muted">
                                                 <i class="fas fa-phone me-1"></i>
-                                                {{ $visit->patient->phone }}
+                                                {{ optional($visit->patient)->phone ?? 'غير محدد' }}
                                             </small>
                                         </td>
                                         <td>

@@ -11,8 +11,8 @@ class SurgicalOperationController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('role:admin')->except(['index']);
-        $this->middleware('role:admin|surgery_staff')->only(['index']);
+        $this->middleware('permission:manage surgical operations')->except(['index']);
+        $this->middleware('permission:view surgical operations')->only(['index']);
     }
 
     /**
@@ -24,89 +24,108 @@ class SurgicalOperationController extends Controller
             ->orderBy('name')
             ->get();
 
-        $canEdit = auth()->user()->hasRole('admin');
+        $canEdit = auth()->check() && auth()->user()->can('manage surgical operations');
 
         return view('surgical-operations.index', compact('operations', 'canEdit'));
     }
 
     /**
-     * تحديث أجر عملية واحدة
+     * عرض نموذج إضافة عملية جديدة
      */
-    public function updateFee(Request $request, SurgicalOperation $surgicalOperation)
+    public function create()
     {
-        $request->validate([
-            'fee' => 'required|numeric|min:0'
-        ]);
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
 
-        $surgicalOperation->update([
-            'fee' => $request->fee
-        ]);
+        $categories = SurgicalOperation::distinct()->pluck('category')->sort();
 
-        return redirect()->back()->with('success', 'تم تحديث أجر العملية بنجاح: ' . $surgicalOperation->name . ' - ' . number_format($request->fee, 0) . ' د.ع');
+        return view('surgical-operations.create', compact('categories'));
     }
 
     /**
-     * تحديث جماعي لأجور العمليات
+     * حفظ عملية جديدة
      */
-    public function bulkUpdate(Request $request)
+    public function store(Request $request)
     {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
         $request->validate([
-            'update_type' => 'required|in:set,increase,decrease',
-            'value' => 'required|numeric|min:0',
-            'category' => 'nullable|string'
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'new_category' => 'nullable|string|max:255',
+            'is_active' => 'boolean'
         ]);
 
-        $query = SurgicalOperation::query();
-
-        // تصفية حسب الصنف إذا تم تحديده
-        if ($request->category) {
-            $query->where('category', $request->category);
+        $category = $request->category;
+        if ($category === 'new') {
+            $category = $request->new_category;
+            if (empty($category)) {
+                return back()->withInput()->withErrors(['new_category' => 'يجب إدخال اسم الصنف الجديد']);
+            }
         }
 
-        $operations = $query->get();
-        $updatedCount = 0;
+        SurgicalOperation::create([
+            'name' => $request->name,
+            'category' => $category,
+            'fee' => 0, // السعر دائمًا 0
+            'is_active' => $request->has('is_active') ? $request->is_active : true
+        ]);
 
-        DB::beginTransaction();
-        try {
-            foreach ($operations as $operation) {
-                $newFee = 0;
+        return redirect()->route('surgical-operations.index')->with('success', 'تم إضافة العملية الجراحية بنجاح: ' . $request->name);
+    }
 
-                switch ($request->update_type) {
-                    case 'set':
-                        // تعيين قيمة ثابتة
-                        $newFee = $request->value;
-                        break;
-
-                    case 'increase':
-                        // زيادة بنسبة مئوية
-                        $currentFee = $operation->fee ?? 0;
-                        $newFee = $currentFee + ($currentFee * ($request->value / 100));
-                        break;
-
-                    case 'decrease':
-                        // تخفيض بنسبة مئوية
-                        $currentFee = $operation->fee ?? 0;
-                        $newFee = $currentFee - ($currentFee * ($request->value / 100));
-                        $newFee = max(0, $newFee); // لا يمكن أن يكون سالباً
-                        break;
-                }
-
-                $operation->update(['fee' => $newFee]);
-                $updatedCount++;
-            }
-
-            DB::commit();
-
-            $message = 'تم تحديث ' . $updatedCount . ' عملية بنجاح';
-            if ($request->category) {
-                $message .= ' في صنف: ' . $request->category;
-            }
-
-            return redirect()->back()->with('success', $message);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'حدث خطأ أثناء التحديث: ' . $e->getMessage());
+    /**
+     * حذف عملية جراحية (soft delete)
+     */
+    public function destroy(SurgicalOperation $surgicalOperation)
+    {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
+
+        // التحقق من عدم وجود عمليات مرتبطة
+        if ($surgicalOperation->surgeries()->count() > 0) {
+            return redirect()->back()->with('error', 'لا يمكن حذف هذه العملية لأنها مرتبطة بعمليات جراحية موجودة');
+        }
+
+        $name = $surgicalOperation->name;
+        $surgicalOperation->delete(); // Soft delete
+
+        return redirect()->back()->with('success', 'تم حذف العملية الجراحية بنجاح: ' . $name);
+    }
+
+    /**
+     * عرض العمليات المحذوفة
+     */
+    public function trashed()
+    {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $trashedOperations = SurgicalOperation::onlyTrashed()
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
+
+        return view('surgical-operations.trashed', compact('trashedOperations'));
+    }
+
+    /**
+     * استعادة عملية محذوفة
+     */
+    public function restore($id)
+    {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $surgicalOperation = SurgicalOperation::withTrashed()->findOrFail($id);
+        $surgicalOperation->restore();
+
+        return redirect()->back()->with('success', 'تم استعادة العملية الجراحية بنجاح: ' . $surgicalOperation->name);
     }
 }

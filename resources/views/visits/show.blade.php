@@ -54,7 +54,7 @@
                                     <th>المريض:</th>
                                     <td>
                                         <a href="{{ route('patients.show', $visit->patient) }}" class="text-decoration-none">
-                                            {{ $visit->patient->user->name }}
+                                            {{ optional($visit->patient)->user->name ?? 'غير محدد' }}
                                         </a>
                                     </td>
                                 </tr>
@@ -180,10 +180,10 @@
                     <div class="text-center mb-3">
                         <div class="avatar-sm bg-primary rounded-circle mx-auto d-flex align-items-center justify-content-center mb-2">
                             <span class="text-white fw-bold">
-                                {{ substr($visit->patient->user->name, 0, 1) }}
+                                {{ optional($visit->patient)->user ? substr($visit->patient->user->name, 0, 1) : '?' }}
                             </span>
                         </div>
-                        <h6>{{ $visit->patient->user->name }}</h6>
+                        <h6>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</h6>
                     </div>
                     <table class="table table-sm table-borderless">
                         <tr>

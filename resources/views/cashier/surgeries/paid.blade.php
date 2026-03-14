@@ -198,10 +198,10 @@
                                                 <i class="fas fa-user text-primary"></i>
                                             </div>
                                             <div>
-                                                <strong>{{ $payment->patient->user->name ?? 'غير محدد' }}</strong>
+                                                <strong>{{ optional($payment->patient)->user->name ?? 'غير محدد' }}</strong>
                                                 <br>
                                                 <small class="text-muted">
-                                                    {{ $payment->patient->national_id ?? '-' }}
+                                                    {{ optional($payment->patient)->national_id ?? '-' }}
                                                 </small>
                                             </div>
                                         </div>

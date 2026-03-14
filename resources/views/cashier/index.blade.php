@@ -113,12 +113,23 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <p class="text-muted mb-1">المعاملات المعلقة</p>
-                                            <h3 class="mb-0 text-warning">{{ $todayStats['pending_appointments_count'] + $todayStats['pending_requests_count'] }}</h3>
-                                            <small class="text-muted">
-                                                مواعيد: {{ $todayStats['pending_appointments_count'] }} | 
-                                                طلبات: {{ $todayStats['pending_requests_count'] }}
-                                            </small>
+                                            @if(auth()->user()->can('view cashier appointments'))
+                                <p class="text-muted mb-1">المواعيد المعلقة</p>
+                                                <h3 class="mb-0 text-warning">{{ $todayStats['pending_appointments_count'] }}</h3>
+                                                <small class="text-muted">
+                                                    مواعيد: {{ $todayStats['pending_appointments_count'] }}
+                                                    @can('view cashier medical requests')
+                                                    | طلبات: {{ $todayStats['pending_requests_count'] }}
+                                                    @endcan
+                                                </small>
+                                            @else
+                                                <p class="text-muted mb-1">المعاملات المعلقة</p>
+                                                <h3 class="mb-0 text-warning">{{ $todayStats['pending_appointments_count'] + $todayStats['pending_requests_count'] }}</h3>
+                                                <small class="text-muted">
+                                                    مواعيد: {{ $todayStats['pending_appointments_count'] }} | 
+                                                    طلبات: {{ $todayStats['pending_requests_count'] }}
+                                                </small>
+                                            @endif
                                         </div>
                                         <div class="bg-warning bg-opacity-10 p-3 rounded">
                                             <i class="fas fa-clock fa-2x text-warning"></i>
@@ -170,7 +181,7 @@
                                                             <td><strong>#{{ $appointment->id }}</strong></td>
                                                             <td>
                                                                 <div>{{ optional(optional($appointment->patient)->user)->name ?? '-' }}</div>
-                                                                <small class="text-muted">{{ $appointment->patient->national_id ?? 'غير محدد' }}</small>
+                                                                <small class="text-muted">{{ optional($appointment->patient)->national_id ?? 'غير محدد' }}</small>
                                                     </td>
                                                     <td>د. {{ optional(optional($appointment->doctor)->user)->name ?? '-' }}</td>
                                                     <td>
@@ -211,6 +222,7 @@
                     </div>
                 </div>
 
+                @can('view cashier medical requests')
                 <!-- الطلبات الطبية -->
                     
                     <!-- قائمة الطلبات المعلقة (تحاليل، أشعة، صيدلية) -->
@@ -367,6 +379,9 @@
                     </div>
                 </div>
 
+                @endcan
+
+                @can('view cashier emergency')
                 <!-- خدمات الطوارئ -->
                     
                     <!-- قائمة خدمات الطوارئ المعلقة -->
@@ -487,6 +502,7 @@
 
 
             </div> <!-- end sections container -->
+                @endcan
         </div> <!-- end col-12 -->
     </div> <!-- end row mb-4 -->
 

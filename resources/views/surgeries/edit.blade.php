@@ -61,17 +61,63 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="doctor_id" class="form-label">الطبيب الجراح <span class="text-danger">*</span></label>
-                                    <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" required>
-                                        <option value="">اختر الطبيب</option>
-                                        @foreach($doctors as $doctor)
-                                            <option value="{{ $doctor->id }}" {{ (old('doctor_id', $surgery->doctor_id) == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $doctor->user->name }}
-                                            </option>
-                                        @endforeach
+                                    <label for="surgeon_name_select" class="form-label">الطبيب الجراح <span class="text-danger">*</span></label>
+                                    
+                                    <!-- قائمة موحدة للجراحين الداخليين والخارجيين -->
+                                    <select name="surgeon_name_select" id="surgeon_name_select" class="form-select @error('doctor_id') @error('surgeon_name') is-invalid @enderror @enderror" style="width: 100%;" required>
+                                        <option value="">اختر الطبيب الجراح أو أدخل اسماً جديداً</option>
+                                        
+                                        <!-- الجراحين الداخليين -->
+                                        <optgroup label="جراحي المستشفى">
+                                            @foreach($doctors as $doctor)
+                                                <option value="internal_{{ $doctor->id }}" 
+                                                        data-type="internal" 
+                                                        data-doctor-id="{{ $doctor->id }}"
+                                                        {{ (old('doctor_id', $surgery->doctor_id) == $doctor->id) ? 'selected' : '' }}>
+                                                    د. {{ $doctor->user->name }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                        
+                                        <!-- الجراحين الخارجيين السابقين -->
+                                        @php
+                                            $externalSurgeons = \App\Models\Surgery::whereNotNull('surgeon_name')
+                                                ->distinct()
+                                                ->pluck('surgeon_name')
+                                                ->filter()
+                                                ->unique()
+                                                ->reject(function($name) use ($doctors) {
+                                                    return $doctors->pluck('user.name')->contains($name);
+                                                })
+                                                ->sort();
+                                        @endphp
+                                        @if($externalSurgeons->isNotEmpty())
+                                            <optgroup label="جراحين خارجيين سابقين">
+                                                @foreach($externalSurgeons as $externalSurgeon)
+                                                    <option value="external_{{ $externalSurgeon }}" 
+                                                            data-type="external"
+                                                            {{ (old('surgeon_name', $surgery->surgeon_name) == $externalSurgeon) ? 'selected' : '' }}>
+                                                        {{ $externalSurgeon }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
                                     </select>
+                                    
+                                    <!-- حقول مخفية لإرسال البيانات -->
+                                    <input type="hidden" name="doctor_id" id="doctor_id_hidden" value="{{ old('doctor_id', $surgery->doctor_id) }}">
+                                    <input type="hidden" name="surgeon_name" id="surgeon_name_hidden" value="{{ old('surgeon_name', $surgery->surgeon_name) }}">
+                                    
+                                    <small class="text-muted mt-2 d-block">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        يمكنك الاختيار من القائمة أو كتابة اسم جديد - سيُحفظ تلقائياً
+                                    </small>
+                                    
                                     @error('doctor_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    @error('surgeon_name')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
@@ -413,6 +459,99 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // التحقق عند التحميل
         toggleExternalFields();
+    }
+
+    // تهيئة Select2 للطبيب الجراح مع إمكانية إضافة أسماء جديدة
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('#surgeon_name_select').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            tags: true,
+            createTag: function (params) {
+                const term = $.trim(params.term);
+                if (term === '') {
+                    return null;
+                }
+                return {
+                    id: 'external_' + term,
+                    text: term,
+                    newTag: true
+                };
+            },
+            language: {
+                noResults: function() {
+                    return 'لا توجد نتائج - يمكنك كتابة اسم جديد';
+                },
+                searching: function() {
+                    return 'جاري البحث...';
+                }
+            },
+            placeholder: 'اختر الطبيب الجراح أو أدخل اسماً جديداً',
+            allowClear: true,
+            minimumResultsForSearch: 0
+        });
+
+        // تحديد القيمة الأولية
+        const doctorId = $('#doctor_id_hidden').val();
+        const surgeonName = $('#surgeon_name_hidden').val();
+        
+        if (doctorId) {
+            $('#surgeon_name_select').val('internal_' + doctorId).trigger('change');
+        } else if (surgeonName) {
+            $('#surgeon_name_select').val('external_' + surgeonName).trigger('change');
+        }
+
+        // معالجة اختيار الجراح وتحديث الحقول المخفية
+        $('#surgeon_name_select').on('select2:select', function(e) {
+            const selectedValue = e.params.data.id;
+            const selectedText = e.params.data.text;
+            
+            if (selectedValue.startsWith('internal_')) {
+                // طبيب داخلي
+                const doctorId = selectedValue.replace('internal_', '');
+                $('#doctor_id_hidden').val(doctorId);
+                $('#surgeon_name_hidden').val('');
+            } else if (selectedValue.startsWith('external_')) {
+                // طبيب خارجي
+                $('#doctor_id_hidden').val('');
+                if (e.params.data.newTag) {
+                    $('#surgeon_name_hidden').val(selectedText);
+                } else {
+                    $('#surgeon_name_hidden').val(selectedValue.replace('external_', ''));
+                }
+            }
+        });
+
+        // إعادة تهيئة الحقول بعد التحميل
+        const doctorId = $('#doctor_id_hidden').val();
+        const surgeonName = $('#surgeon_name_hidden').val();
+        
+        if (doctorId) {
+            $('#surgeon_name_select').val('internal_' + doctorId).trigger('change');
+        } else if (surgeonName) {
+            $('#surgeon_name_select').val('external_' + surgeonName).trigger('change');
+        }
+
+        // تفريغ hidden إذا أُفرغ الاختيار
+        $('#surgeon_name_select').on('change', function() {
+            if (!$(this).val()) {
+                $('#doctor_id_hidden').val('');
+                $('#surgeon_name_hidden').val('');
+            }
+        });
+
+        // مساعدة: أي اسم جديد يُدخل في حقل الطبيب المرسل يُضاف تلقائياً إلى قائمة الجراحين
+        $('#referring_doctor_name_select').on('select2:select', function(e) {
+            const data = e.params.data;
+            if (data.newTag) {
+                const name = data.text;
+                const val = 'external_' + name;
+                if ($('#surgeon_name_select option[value="' + val + '"]').length === 0) {
+                    const newOption = new Option(name, val, false, false);
+                    $('#surgeon_name_select').append(newOption).trigger('change');
+                }
+            }
+        });
     }
 });
 </script>

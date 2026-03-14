@@ -38,7 +38,7 @@
                                     @foreach($patients as $patient)
                                         <option value="{{ $patient->id }}" 
                                                 {{ $appointment->patient_id == $patient->id ? 'selected' : '' }}>
-                                            {{ $patient->user->name }} - {{ $patient->user->phone }}
+                                            {{ optional($patient->user)->name ?? 'مريض بدون بيانات' }} - {{ optional($patient->user)->phone ?? 'غير محدد' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -225,11 +225,11 @@
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">المريض:</small>
-                        <div class="fw-bold">{{ $appointment->patient->user->name }}</div>
+                        <div class="fw-bold">{{ optional($appointment->patient)->user->name ?? 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">الطبيب:</small>
-                        <div class="fw-bold">د. {{ $appointment->doctor->user->name }}</div>
+                        <div class="fw-bold">د. {{ optional($appointment->doctor)->user->name ?? 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">العيادة:</small>

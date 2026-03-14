@@ -11,6 +11,8 @@ use App\Models\Appointment;
 use App\Models\Visit;
 use App\Models\Surgery;
 use App\Models\Request as MedicalRequest;
+use App\Models\BedReservation;
+use App\Observers\BedReservationObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        // تسجيل Observer لمزامنة حالة الغرف مع الحجوزات
+        BedReservation::observe(BedReservationObserver::class);
 
         // تسجيل Blade directives لـ Spatie Permission
         Blade::if('role', function ($role) {

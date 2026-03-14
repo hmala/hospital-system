@@ -463,7 +463,15 @@
                             </div>
                             <div class="col-md-6 mb-2">
                                 <small class="text-muted">الجراح:</small>
-                                <div class="fw-bold">د. {{ $surgery->doctor->user->name ?? 'غير محدد' }}</div>
+                                <div class="fw-bold">
+                                    @if($surgery->doctor && $surgery->doctor->user)
+                                        د. {{ $surgery->doctor->user->name }}
+                                    @elseif($surgery->surgeon_name)
+                                        {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                    @else
+                                        غير محدد
+                                    @endif
+                                </div>
                             </div>
                             <div class="col-md-6 mb-2">
                                 <small class="text-muted">القسم:</small>

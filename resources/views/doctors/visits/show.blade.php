@@ -558,14 +558,14 @@ datalist option:hover {
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>الاسم:</strong> {{ $visit->patient->user->name }}</p>
-                            <p><strong>العمر:</strong> {{ $visit->patient->age }} سنة</p>
-                            <p><strong>الجنس:</strong> {{ $visit->patient->gender == 'male' ? 'ذكر' : 'أنثى' }}</p>
+                            <p><strong>الاسم:</strong> {{ optional($visit->patient)->user->name ?? 'غير محدد' }}</p>
+                            <p><strong>العمر:</strong> {{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</p>
+                            <p><strong>الجنس:</strong> {{ optional($visit->patient)->gender == 'male' ? 'ذكر' : 'أنثى' }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>رقم الهاتف:</strong> {{ $visit->patient->phone }}</p>
-                            <p><strong>العنوان:</strong> {{ $visit->patient->address }}</p>
-                            <p><strong>تاريخ الميلاد:</strong> {{ $visit->patient->date_of_birth ? $visit->patient->date_of_birth->format('Y-m-d') : 'غير محدد' }}</p>
+                            <p><strong>رقم الهاتف:</strong> {{ optional($visit->patient)->phone ?? 'غير محدد' }}</p>
+                            <p><strong>العنوان:</strong> {{ optional($visit->patient)->address ?? 'غير محدد' }}</p>
+                            <p><strong>تاريخ الميلاد:</strong> {{ optional($visit->patient)->date_of_birth ? optional($visit->patient)->date_of_birth->format('Y-m-d') : 'غير محدد' }}</p>
                         </div>
                     </div>
                 </div>
@@ -1660,7 +1660,7 @@ datalist option:hover {
                                                 </h6>
                                             </div>
                                             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                                @if($visit->patient->visits->count() > 1)
+                                                @if(optional($visit->patient)->visits->count() > 1)
                                                     <div class="list-group list-group-flush">
                                                         @foreach($visit->patient->visits->where('id', '!=', $visit->id)->sortByDesc('visit_date')->take(10) as $previousVisit)
                                                             <a href="{{ route('doctor.visits.show', $previousVisit) }}" class="list-group-item list-group-item-action">

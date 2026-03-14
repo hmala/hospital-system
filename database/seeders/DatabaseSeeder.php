@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             PatientSeeder::class,
             RadiologyTypeSeeder::class,
             DoctorSeeder::class,
+            SidebarLinkSeeder::class,
         ]);
 
         // إنشاء أطباء للمستخدمين ذوي الدور 'doctor' بدون سجل طبيب

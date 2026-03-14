@@ -556,7 +556,15 @@
             </div>
             <div class="info-row">
                 <span class="info-label">الجراح:</span>
-                <span class="info-value">د. {{ $surgery->doctor->user->name ?? 'غير محدد' }}</span>
+                <span class="info-value">
+                                            @if($surgery->doctor && $surgery->doctor->user)
+                                                د. {{ $surgery->doctor->user->name }}
+                                            @elseif($surgery->surgeon_name)
+                                                {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                            @else
+                                                غير محدد
+                                            @endif
+                                        </span>
             </div>
             <div class="info-row">
                 <span class="info-label">القسم:</span>

@@ -146,6 +146,12 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
+        // تحويل أي نص يحتوي على فواصل أو مسافات إلى عدد صحيح/عشري صالح
+        if ($request->filled('custom_surgery_fee')) {
+            $normalizedFee = str_replace([',', ' '], ['', ''], $request->custom_surgery_fee);
+            $request->merge(['custom_surgery_fee' => $normalizedFee]);
+        }
+
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
@@ -157,9 +163,8 @@ class SurgeryController extends Controller
             'description' => 'nullable|string',
             'scheduled_date' => 'required|date',
             'scheduled_time' => 'required|date_format:H:i',
-            'referring_doctor_type' => 'required|in:internal,external',
             'referring_doctor_name' => 'required|string|max:255',
-            'referral_letter' => 'required_if:referring_doctor_type,external|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'referral_letter' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
             'custom_surgery_fee' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',

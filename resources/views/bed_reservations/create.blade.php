@@ -270,7 +270,7 @@ body {
                                                 <option value="">اختر المريض</option>
                                                 @foreach($patients as $patient)
                                                     <option value="{{ $patient->id }}" {{ (old('patient_id') == $patient->id || (isset($selectedPatient) && $selectedPatient->id == $patient->id)) ? 'selected' : '' }}>
-                                                        {{ $patient->user->name }}
+                                                        {{ optional($patient->user)->name ?? 'غير معروف' }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -289,7 +289,7 @@ body {
                                                 <option value="">اختر الطبيب (اختياري)</option>
                                                 @foreach($doctors as $doctor)
                                                     <option value="{{ $doctor->id }}" {{ old('doctor_id') == $doctor->id ? 'selected' : '' }}>
-                                                        د. {{ $doctor->user->name }}
+                                                        د. {{ optional($doctor->user)->name ?? 'غير معروف' }}
                                                     </option>
                                                 @endforeach
                                             </select>

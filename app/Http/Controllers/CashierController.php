@@ -20,7 +20,7 @@ class CashierController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:admin|cashier|receptionist']);
+        $this->middleware(['auth', 'permission:view cashier']);
     }
 
     /**
@@ -31,7 +31,7 @@ class CashierController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('view cashier appointments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -39,6 +39,7 @@ class CashierController extends Controller
         $pendingAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
             ->where('payment_status', 'pending')
             ->whereIn('status', ['scheduled', 'confirmed'])
+            ->whereHas('patient') // التأكد من وجود مريض مرتبط
             ->orderBy('appointment_date')
             ->paginate(15);
 
@@ -52,6 +53,7 @@ class CashierController extends Controller
                             ->orWhereNull('visit_type');
                   });
             })
+            ->whereHas('visit.patient') // التأكد من وجود مريض مرتبط بالزيارة
             ->whereDoesntHave('visit.surgery')
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'requests_page');
@@ -61,6 +63,7 @@ class CashierController extends Controller
             ->where('payment_type', 'emergency')
             ->whereNull('appointment_id') // الاستشاري يُحسب كموعد مستقل
             ->whereNull('paid_at') // لم يتم الدفع بعد
+            ->whereHas('emergency') // التأكد من وجود حالة طوارئ مرتبطة
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'emergency_page');
 
@@ -132,7 +135,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('process consultation payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -154,7 +157,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('process consultation payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -212,7 +215,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist', 'patient'])) {
+        if (!$user->can('view cashier') && !$user->hasRole(['admin', 'patient'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -251,7 +254,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('process medical requests payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -262,6 +265,12 @@ class CashierController extends Controller
         }
 
         $request->load(['visit.patient.user', 'visit.doctor.user']);
+
+        if (!$request->visit) {
+            // shouldn't normally happen but guard anyway
+            return redirect()->route('cashier.index')
+                ->with('error', 'الطلب غير مرتبط بأي زيارة ولا يمكن عرضه.');
+        }
 
         return view('cashier.request-payment-form', compact('request'));
     }
@@ -277,7 +286,7 @@ class CashierController extends Controller
         
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('process medical requests payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -296,7 +305,15 @@ class CashierController extends Controller
         DB::beginTransaction();
         try {
             \Log::info('Starting payment process for request #' . $request->id);
-            \Log::info('Request data: patient_id=' . $request->visit->patient_id . ', cashier_id=' . $user->id);
+            // Ensure visit is loaded and exists; otherwise abort early to avoid null errors.
+        $request->load('visit');
+        if (!$request->visit) {
+            \Log::error('MedicalRequest #' . $request->id . ' has no associated visit');
+            DB::rollBack();
+            return redirect()->route('cashier.index')
+                        ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
+        }
+        \Log::info('Request data: patient_id=' . $request->visit->patient_id . ', cashier_id=' . $user->id);
             
             // إنشاء سجل الدفع
             \Log::info('Creating payment record...');
@@ -324,59 +341,62 @@ class CashierController extends Controller
             \Log::info('Request updated to paid');
 
             // تحديث حالة الزيارة من pending_payment إلى in_progress لتظهر في المختبر
-            $request->visit->update([
-                'status' => 'in_progress'
-            ]);
-
-            \Log::info('Visit status updated to in_progress');
+            if ($request->visit) {
+                $request->visit->update([
+                    'status' => 'in_progress'
+                ]);
+                \Log::info('Visit status updated to in_progress');
+            } else {
+                \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);
+            }
 
             // إذا كان الطلب أشعة، إنشاء سجل في radiology_requests إن لم يكن موجوداً
             if ($request->type === 'radiology') {
                 \Log::info('Processing radiology request payment, request_id: ' . $request->id);
-                
+
                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                 \Log::info('Request details: ' . json_encode($details));
-                
+
                 if (isset($details['radiology_type_ids']) && !empty($details['radiology_type_ids'])) {
-                    \Log::info('Found radiology_type_ids: ' . json_encode($details['radiology_type_ids']));
-                    
-                    // إنشاء سجل لكل نوع أشعة
-                    foreach ($details['radiology_type_ids'] as $radiologyTypeId) {
-                        // التحقق من عدم وجود سجل لنفس النوع في نفس الزيارة
-                        $exists = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
-                            ->where('radiology_type_id', $radiologyTypeId)
-                            ->exists();
-                        
-                        if (!$exists) {
-                            try {
-                                // الحصول على معلومات نوع الأشعة لحساب التكلفة
-                                $radiologyType = \App\Models\RadiologyType::find($radiologyTypeId);
-                                
-                                // تحديد الطبيب - إذا لم يكن موجوداً، نستخدم أي طبيب من القسم أو نتركه null
-                                $doctorId = $request->visit->doctor_id;
-                                if (!$doctorId && $request->visit->department_id) {
-                                    $doctor = \App\Models\Doctor::where('department_id', $request->visit->department_id)->first();
-                                    $doctorId = $doctor ? $doctor->id : null;
+                    if (!$request->visit) {
+                        \Log::warning('Skipping radiology request creation, visit missing for request #' . $request->id);
+                    } else {
+                        \Log::info('Found radiology_type_ids: ' . json_encode($details['radiology_type_ids']));
+
+                        foreach ($details['radiology_type_ids'] as $radiologyTypeId) {
+                            $exists = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
+                                ->where('radiology_type_id', $radiologyTypeId)
+                                ->exists();
+
+                            if (!$exists) {
+                                try {
+                                    $radiologyType = \App\Models\RadiologyType::find($radiologyTypeId);
+
+                                    $doctorId = $request->visit->doctor_id;
+                                    if (!$doctorId && $request->visit->department_id) {
+                                        $doctor = \App\Models\Doctor::where('department_id', $request->visit->department_id)->first();
+                                        $doctorId = $doctor ? $doctor->id : null;
+                                    }
+
+                                    $radiologyRequest = \App\Models\RadiologyRequest::create([
+                                        'visit_id' => $request->visit_id,
+                                        'patient_id' => $request->visit->patient_id,
+                                        'doctor_id' => $doctorId,
+                                        'radiology_type_id' => $radiologyTypeId,
+                                        'requested_date' => $request->created_at ?? now(),
+                                        'status' => 'pending',
+                                        'priority' => $details['priority'] ?? 'normal',
+                                        'clinical_indication' => $request->description ?? 'طلب من الاستعلامات',
+                                        'total_cost' => $radiologyType ? $radiologyType->base_price : null,
+                                    ]);
+
+                                    \Log::info('Created radiology_request #' . $radiologyRequest->id . ' for type_id: ' . $radiologyTypeId);
+                                } catch (\Exception $e) {
+                                    \Log::error('Failed to create radiology_request: ' . $e->getMessage());
                                 }
-                                
-                                $radiologyRequest = \App\Models\RadiologyRequest::create([
-                                    'visit_id' => $request->visit_id,
-                                    'patient_id' => $request->visit->patient_id,
-                                    'doctor_id' => $doctorId,
-                                    'radiology_type_id' => $radiologyTypeId,
-                                    'requested_date' => $request->created_at ?? now(),
-                                    'status' => 'pending',
-                                    'priority' => $details['priority'] ?? 'normal',
-                                    'clinical_indication' => $request->description ?? 'طلب من الاستعلامات',
-                                    'total_cost' => $radiologyType ? $radiologyType->base_price : null,
-                                ]);
-                                
-                                \Log::info('Created radiology_request #' . $radiologyRequest->id . ' for type_id: ' . $radiologyTypeId);
-                            } catch (\Exception $e) {
-                                \Log::error('Failed to create radiology_request: ' . $e->getMessage());
+                            } else {
+                                \Log::info('Radiology request already exists for visit_id: ' . $request->visit_id . ', type_id: ' . $radiologyTypeId);
                             }
-                        } else {
-                            \Log::info('Radiology request already exists for visit_id: ' . $request->visit_id . ', type_id: ' . $radiologyTypeId);
                         }
                     }
                 } else {
@@ -392,7 +412,11 @@ class CashierController extends Controller
                 \Log::info('Emergency request details: ' . json_encode($details));
                 
                 if (isset($details['emergency_priority']) && isset($details['emergency_type'])) {
-                    try {
+                    // double-check visit exists
+                    if (!$request->visit) {
+                        \Log::warning('Skipping emergency record creation, visit missing for request #' . $request->id);
+                    } else {
+                        try {
                         // إنشاء سجل طوارئ
                         $emergency = \App\Models\Emergency::create([
                             'patient_id' => $request->visit->patient_id,
@@ -410,9 +434,11 @@ class CashierController extends Controller
                     } catch (\Exception $e) {
                         \Log::error('Failed to create emergency record: ' . $e->getMessage());
                     }
-                } else {
-                    \Log::warning('Emergency request missing required details for request #' . $request->id);
-                }
+                } // end visit-exists else branch
+            } // end isset-emergency_priority check
+            else {
+                \Log::warning('Emergency request missing required details for request #' . $request->id);
+            }
             }
 
             DB::commit();
@@ -439,8 +465,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        // السماح للكاشير والاستقبال بالإضافة إلى المسؤول
-        if (!$user->hasRole(['admin','cashier','receptionist'])) {
+        // التحقق من صلاحية عرض التقارير
+        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -480,7 +506,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist', 'surgery_staff'])) {
+        if (!$user->can('view cashier surgeries') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -526,7 +552,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist', 'surgery_staff'])) {
+        if (!$user->can('view cashier surgeries') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -586,7 +612,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -629,7 +655,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

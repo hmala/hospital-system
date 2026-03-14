@@ -52,6 +52,9 @@ class DoctorController extends Controller
             'role' => 'doctor',
             // 'phone' => $request->phone, // إزالة حفظ رقم الهاتف من جدول users
         ]);
+        
+        // إضافة صلاحية الطبيب باستخدام Spatie Permission
+        $user->assignRole('doctor');
 
         // إنشاء سجل الطبيب
         Doctor::create([
@@ -156,5 +159,94 @@ class DoctorController extends Controller
 
         return redirect()->route('doctors.index')
             ->with('success', 'تم حذف الطبيب بنجاح');
+    }
+    
+    /**
+     * حفظ طبيب مرسل خارجي جديد
+     * يستخدم من صفحة إضافة العمليات الجراحية
+     */
+    public function storeReferringDoctor(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'specialization' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:15',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            // إنشاء بريد إلكتروني فريد من الاسم
+            $email = 'external_' . str_replace(' ', '_', strtolower($request->name)) . '@external.local';
+            
+            // التحقق من وجود طبيب بنفس الاسم
+            $existingDoctor = Doctor::whereHas('user', function($query) use ($request) {
+                $query->where('name', $request->name);
+            })->first();
+            
+            if ($existingDoctor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'يوجد طبيب بهذا الاسم بالفعل في النظام'
+                ], 422);
+            }
+
+            // إنشاء مستخدم للطبيب الخارجي
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $email,
+                'password' => Hash::make(uniqid()), // كلمة مرور عشوائية
+                'role' => 'doctor', // دور طبيب عادي (التمييز يتم عبر is_active في جدول doctors)
+            ]);
+            
+            // إضافة صلاحية الطبيب باستخدام Spatie Permission
+            $user->assignRole('doctor');
+
+            // البحث عن قسم "أطباء خارجيين" أو إنشاءه إن لم يكن موجوداً
+            $externalDept = \App\Models\Department::firstOrCreate(
+                ['name' => 'أطباء خارجيين'],
+                [
+                    'hospital_id' => 1, // افتراضي - يمكن تعديله حسب النظام
+                    'type' => 'other',
+                    'room_number' => 'N/A',
+                    'consultation_fee' => 0,
+                    'working_hours_start' => '00:00:00',
+                    'working_hours_end' => '00:00:00',
+                    'max_patients_per_day' => 0,
+                    'is_active' => false // غير نشط لأنه قسم وهمي
+                ]
+            );
+
+            // إنشاء سجل الطبيب مع علامة "خارجي"
+            $doctor = Doctor::create([
+                'user_id' => $user->id,
+                'department_id' => $externalDept->id, // قسم الأطباء الخارجيين
+                'type' => 'consultant', // افتراضي
+                'phone' => $request->phone ?? '',
+                'specialization' => $request->specialization,
+                'qualification' => 'طبيب خارجي - ' . $request->specialization, // جعلها أكثر تفصيلاً
+                'license_number' => 'EXT-' . time() . '-' . rand(100, 999), // رقم ترخيص مؤقت فريد
+                'experience_years' => 5, // قيمة افتراضية معقولة
+                'consultation_fee' => 0, // لا يتقاضى رسوم استشارة
+                'max_patients_per_day' => 0, // لا يستقبل مرضى مباشرة
+                'bio' => 'طبيب خارجي - ' . ($request->notes ?? 'لا توجد ملاحظات إضافية'),
+                'is_active' => true, // نشط ليتمكن من استخدام النظام كطبيب
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إضافة الطبيب بنجاح',
+                'doctor' => [
+                    'id' => $doctor->id,
+                    'name' => $user->name,
+                    'specialization' => $doctor->specialization,
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء حفظ الطبيب: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

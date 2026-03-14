@@ -15,7 +15,7 @@ class RoomController extends Controller
     {
         $user = Auth::user();
         
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff', 'inquiry_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
