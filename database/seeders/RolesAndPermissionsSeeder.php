@@ -41,8 +41,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit appointments',
             'delete appointments',
             'cancel appointments',
-            // صلاحيات الكاشير
+            // صلاحيات الكاشير - منفصلة لكل قسم
             'view cashier',
+            'view cashier appointments',      // عرض مواعيد الاستشارية
+            'process consultation payments',   // معالجة دفع الاستشارية
+            'view cashier medical requests',  // عرض الطلبات الطبية
+            'process medical requests payments', // معالجة دفع الطلبات الطبية
+            'view cashier emergency',         // عرض طوارئ الكاشير
+            'process emergency payments',     // معالجة دفع الطوارئ
+            'view cashier surgeries',         // عرض عمليات الكاشير
+            'process surgery payments',       // معالجة دفع العمليات
+            'view cashier reports',           // عرض تقارير المدفوعات
             
             // صلاحيات الزيارات
             'view visits',
@@ -99,6 +108,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit emergencies',
             'delete emergencies',
             'manage emergency vitals',
+
+            // صلاحيات عرض المرضى المقيمين
+            'view occupancy',
         ];
 
         foreach ($permissions as $permission) {
@@ -173,10 +185,27 @@ class RolesAndPermissionsSeeder extends Seeder
             'create inquiries',
             'manage inquiries',
             'view cashier',
+            'view occupancy',
             'view emergencies',
             'create emergencies',
             'edit emergencies',
             'manage emergency vitals',
+        ]);
+
+        // دور الكاشير (Cashier) - صلاحيات كاملة للكاشير
+        $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
+        $cashierRole->givePermissionTo([
+            'view cashier',
+            'view cashier appointments',
+            'process consultation payments',
+            'view cashier medical requests',
+            'process medical requests payments',
+            'view cashier emergency',
+            'process emergency payments',
+            'view cashier surgeries',
+            'process surgery payments',
+            'view cashier reports',
+            'view patients',
         ]);
 
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)
@@ -184,6 +213,10 @@ class RolesAndPermissionsSeeder extends Seeder
         $consultationReceptionistRole->givePermissionTo([
             'manage consultant availability',
             'view doctors',
+            'view occupancy',
+            'view cashier',
+            'view cashier appointments',
+            'process consultation payments',
         ]);
 
         // دور موظف المختبر (Lab Staff)
@@ -251,12 +284,40 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'view cashier',
+            'view cashier surgeries',
+            'process surgery payments',
         ]);
 
-        // دور الكاشير (Cashier)
-        $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
-        $cashierRole->givePermissionTo([
-            'view cashier',
+        // دور موظف الاستعلامات (Inquiry Staff)
+        $inquiryStaffRole = Role::firstOrCreate(['name' => 'inquiry_staff']);
+        $inquiryStaffRole->givePermissionTo([
+            'view patients',
+            'view inquiries',
+            'create inquiries',
+            'manage inquiries',
+            'view occupancy',
+            'view visits',
+            'view appointments',
+            'view departments',
+            'view doctors',
+        ]);
+
+        // دور موظف عام (Staff)
+        $staffRole = Role::firstOrCreate(['name' => 'staff']);
+        $staffRole->givePermissionTo([
+            'view patients',
+            'view inquiries',
+            'create inquiries',
+            'manage inquiries',
+            'view visits',
+            'view appointments',
+            'view departments',
+            'view doctors',
+            'view occupancy',
+            'view surgeries',
+            'view radiology',
+            'view lab tests',
         ]);
 
         // تعيين الأدوار للمستخدمين الحاليين بناءً على حقل role

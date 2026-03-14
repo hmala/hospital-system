@@ -283,7 +283,13 @@
                                                     </h6>
                                                     <small class="text-muted">
                                                         <i class="fas fa-user-md me-1"></i>
-                                                        د. {{ $surgery->doctor->user->name ?? 'غير محدد' }}
+                                                        @if($surgery->doctor && $surgery->doctor->user)
+                                                            د. {{ $surgery->doctor->user->name }}
+                                                        @elseif($surgery->surgeon_name)
+                                                            {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                                        @else
+                                                            <span class="text-muted">غير محدد</span>
+                                                        @endif
                                                         <span class="mx-2">|</span>
                                                         <i class="fas fa-hospital me-1"></i>
                                                         {{ $surgery->department->name ?? 'غير محدد' }}

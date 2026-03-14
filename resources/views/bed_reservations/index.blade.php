@@ -44,9 +44,9 @@
                 <tbody>
                     @foreach($reservations as $r)
                     <tr>
-                        <td>{{ $r->patient->user->name }}</td>
-                        <td>{{ $r->doctor->user->name ?? '-' }}</td>
-                        <td>{{ $r->department->name }}</td>
+                        <td>{{ optional($r->patient->user)->name ?? 'غير معروف' }}</td>
+                        <td>{{ optional($r->doctor->user)->name ?? '-' }}</td>
+                        <td>{{ optional($r->department)->name ?? '-' }}</td>
                         <td>@if($r->room){{ $r->room->room_number }}@else - @endif</td>
                         <td>{{ $r->scheduled_date->format('Y-m-d') }}</td>
                         <td>{{ $r->scheduled_time->format('H:i') }}</td>

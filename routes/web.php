@@ -137,6 +137,7 @@ Route::middleware(['auth'])->group(function () {
     // مسارات الاستعلامات - يجب أن تأتي قبل resource
     Route::get('/inquiry/search', [InquiryController::class, 'search'])->name('inquiry.search');
     Route::get('/inquiry/search/patients', [InquiryController::class, 'searchPatients'])->name('inquiry.search.patients');
+    Route::get('/inquiry/occupancy', [InquiryController::class, 'occupancy'])->name('inquiry.occupancy');
     Route::resource('inquiry', InquiryController::class);
     
     // مسارات الكاشير (Cashier Routes)
@@ -290,6 +291,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
+    
+    // إضافة طبيب مرسل جديد
+    Route::post('/doctors/store-referring', [\App\Http\Controllers\DoctorController::class, 'storeReferringDoctor'])->name('doctors.store-referring');
 
     // إدارة الغرف
     Route::resource('rooms', \App\Http\Controllers\RoomController::class);
@@ -299,8 +303,11 @@ Route::middleware(['auth'])->group(function () {
     // إدارة أجور العمليات الجراحية
     Route::prefix('surgical-operations')->name('surgical-operations.')->group(function () {
         Route::get('/', [\App\Http\Controllers\SurgicalOperationController::class, 'index'])->name('index');
-        Route::patch('/{surgicalOperation}/update-fee', [\App\Http\Controllers\SurgicalOperationController::class, 'updateFee'])->name('update-fee');
-        Route::post('/bulk-update', [\App\Http\Controllers\SurgicalOperationController::class, 'bulkUpdate'])->name('bulk-update');
+        Route::get('/create', [\App\Http\Controllers\SurgicalOperationController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\SurgicalOperationController::class, 'store'])->name('store');
+        Route::get('/trashed', [\App\Http\Controllers\SurgicalOperationController::class, 'trashed'])->name('trashed');
+        Route::patch('/{surgicalOperation}/restore', [\App\Http\Controllers\SurgicalOperationController::class, 'restore'])->name('restore');
+        Route::delete('/{surgicalOperation}', [\App\Http\Controllers\SurgicalOperationController::class, 'destroy'])->name('destroy');
     });
 
     // إدارة الطوارئ

@@ -49,13 +49,13 @@
                                     معلومات المريض
                                 </h6>
                                 <div class="mb-2">
-                                    <strong>الاسم:</strong> {{ $request->visit->patient->user->name }}
+                                    <strong>الاسم:</strong> {{ optional($request->visit->patient)->user->name ?? 'غير محدد' }}
                                 </div>
                                 <div class="mb-2">
-                                    <strong>رقم الهوية:</strong> {{ $request->visit->patient->national_id ?? 'غير محدد' }}
+                                    <strong>رقم الهوية:</strong> {{ optional($request->visit->patient)->national_id ?? 'غير محدد' }}
                                 </div>
                                 <div class="mb-2">
-                                    <strong>رقم الهاتف:</strong> {{ $request->visit->patient->user->phone ?? 'غير محدد' }}
+                                    <strong>رقم الهاتف:</strong> {{ optional($request->visit->patient)->user->phone ?? 'غير محدد' }}
                                 </div>
                             </div>
                         </div>

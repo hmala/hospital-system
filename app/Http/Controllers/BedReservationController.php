@@ -39,11 +39,11 @@ class BedReservationController extends Controller
         if (!$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
             abort(403);
         }
-        $patients = Patient::with('user')->get()->sortBy(fn($p) => $p->user->name);
+        $patients = Patient::with('user')->get()->sortBy(fn($p) => optional($p->user)->name);
         $doctors = Doctor::with('user')
                         ->where('is_active', true)
                         ->get()
-                        ->sortBy(fn($d) => $d->user->name);
+                        ->sortBy(fn($d) => optional($d->user)->name);
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         $rooms = Room::where('is_active', true)->orderBy('room_type')->orderBy('room_number')->get();
 

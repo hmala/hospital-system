@@ -42,7 +42,7 @@ class VisitCreatedNotification extends Notification
                     ->greeting('مرحباً د. ' . $notifiable->name)
                     ->line('تم جدولة زيارة طبية جديدة لك.')
                     ->line('تفاصيل الزيارة:')
-                    ->line('المريض: ' . $this->visit->patient->user->name)
+                    ->line('المريض: ' . optional($this->visit->patient)->user->name ?? 'غير محدد')
                     ->line('التاريخ: ' . $this->visit->visit_date->format('Y-m-d'))
                     ->line('الوقت: ' . $this->visit->visit_time)
                     ->line('الشكوى: ' . $this->visit->chief_complaint)
@@ -59,9 +59,9 @@ class VisitCreatedNotification extends Notification
     {
         return [
             'title' => 'زيارة طبية جديدة',
-            'message' => 'تم جدولة زيارة جديدة للمريض ' . $this->visit->patient->user->name . ' في ' . $this->visit->visit_date->format('Y-m-d') . ' الساعة ' . $this->visit->visit_time,
+            'message' => 'تم جدولة زيارة جديدة للمريض ' . optional($this->visit->patient)->user->name ?? 'غير محدد' . ' في ' . $this->visit->visit_date->format('Y-m-d') . ' الساعة ' . $this->visit->visit_time,
             'visit_id' => $this->visit->id,
-            'patient_name' => $this->visit->patient->user->name,
+            'patient_name' => optional($this->visit->patient)->user->name ?? 'غير محدد',
             'visit_date' => $this->visit->visit_date->format('Y-m-d'),
             'visit_time' => $this->visit->visit_time,
             'chief_complaint' => $this->visit->chief_complaint,

@@ -12,6 +12,7 @@ class Surgery extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
+        'surgeon_name',
         'department_id',
         'room_id',
         'expected_stay_days',
@@ -90,7 +91,7 @@ class Surgery extends Model
 
     public function surgicalOperation()
     {
-        return $this->belongsTo(SurgicalOperation::class);
+        return $this->belongsTo(SurgicalOperation::class)->withTrashed();
     }
 
     public function visit()

@@ -32,12 +32,12 @@
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-sm-6">
-                                            <p><strong>الاسم:</strong> {{ $visit->patient->user->name }}</p>
-                                            <p><strong>العمر:</strong> {{ $visit->patient->age ?? 'غير محدد' }} سنة</p>
+                                            <p><strong>الاسم:</strong> {{ optional($visit->patient)->user->name ?? 'غير محدد' }}</p>
+                                            <p><strong>العمر:</strong> {{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</p>
                                         </div>
                                         <div class="col-sm-6">
-                                            <p><strong>الهاتف:</strong> {{ $visit->patient->user->phone ?? 'غير محدد' }}</p>
-                                            <p><strong>العنوان:</strong> {{ $visit->patient->user->address ?? 'غير محدد' }}</p>
+                                            <p><strong>الهاتف:</strong> {{ optional($visit->patient)->user->phone ?? 'غير محدد' }}</p>
+                                            <p><strong>العنوان:</strong> {{ optional($visit->patient)->user->address ?? 'غير محدد' }}</p>
                                         </div>
                                     </div>
                                 </div>

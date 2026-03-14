@@ -124,6 +124,14 @@
                         </li>
                         @endcan
 
+                        @can('view occupancy')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('inquiry.occupancy') ? 'active' : '' }}" href="{{ route('inquiry.occupancy') }}">
+                                <i class="fas fa-bed"></i><span> المرضى المقيمين</span>
+                            </a>
+                        </li>
+                        @endcan
+
                         @can('view cashier')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.index') || request()->routeIs('cashier.payment.*') || request()->routeIs('cashier.receipt*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
@@ -138,11 +146,15 @@
                                 @endif
                             </a>
                         </li>
+                        @endcan
+                        @can('view cashier reports')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
                                 <i class="fas fa-file-invoice-dollar"></i><span> سجل الفواتير</span>
                             </a>
                         </li>
+                        @endcan
+                        @can('view cashier surgeries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.surgeries.*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.index') }}">
                                 <i class="fas fa-procedures text-danger"></i><span> كاشير العمليات</span>
@@ -310,6 +322,13 @@
                             <a class="nav-link {{ request()->routeIs('surgeries.*') ? 'active' : '' }}" href="{{ route('surgeries.index') }}">
                                 <i class="fas fa-procedures"></i><span> العمليات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeries }}</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view surgical operations')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgical-operations.*') ? 'active' : '' }}" href="{{ route('surgical-operations.index') }}">
+                                <i class="fas fa-cogs"></i><span> أنواع العمليات</span>
                             </a>
                         </li>
                         @endcan

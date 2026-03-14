@@ -32,70 +32,6 @@
         </div>
     @endif
 
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">إجمالي العمليات</p>
-                            <h3 class="mb-0 text-primary">{{ $operations->count() }}</h3>
-                        </div>
-                        <div class="bg-primary bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-procedures fa-2x text-primary"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">لها أجور محددة</p>
-                            <h3 class="mb-0 text-success">{{ $operations->where('fee', '>', 0)->count() }}</h3>
-                        </div>
-                        <div class="bg-success bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-check fa-2x text-success"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">بدون أجور</p>
-                            <h3 class="mb-0 text-warning">{{ $operations->where('fee', 0)->count() }}</h3>
-                        </div>
-                        <div class="bg-warning bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">عدد الأصناف</p>
-                            <h3 class="mb-0 text-info">{{ $operations->unique('category')->count() }}</h3>
-                        </div>
-                        <div class="bg-info bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-folder fa-2x text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- قائمة العمليات مجمعة حسب الصنف -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-light">
@@ -106,10 +42,14 @@
                 </h5>
                 <div>
                     @if($canEdit ?? false)
-                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
-                        <i class="fas fa-edit me-1"></i>
-                        تحديث جماعي
-                    </button>
+                    <a href="{{ route('surgical-operations.create') }}" class="btn btn-sm btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i>
+                        إضافة عملية جديدة
+                    </a>
+                    <a href="{{ route('surgical-operations.trashed') }}" class="btn btn-sm btn-warning me-2">
+                        <i class="fas fa-trash me-1"></i>
+                        المحذوفة
+                    </a>
                     @endif
                 </div>
             </div>
@@ -170,28 +110,9 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if($canEdit ?? false)
-                                                <form action="{{ route('surgical-operations.update-fee', $operation->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <div class="input-group input-group-sm">
-                                                        <input type="number" 
-                                                               name="fee" 
-                                                               class="form-control" 
-                                                               value="{{ $operation->fee }}" 
-                                                               min="0" 
-                                                               step="1000"
-                                                               required>
-                                                        <button type="submit" class="btn btn-primary">
-                                                            <i class="fas fa-save"></i>
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                                @else
                                                 <div class="fw-bold text-primary">
                                                     {{ number_format($operation->fee, 0) }} د.ع
                                                 </div>
-                                                @endif
                                             </td>
                                             <td class="text-center">
                                                 @if($operation->fee > 0)
@@ -207,11 +128,24 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary" 
-                                                        onclick="quickUpdate({{ $operation->id }}, '{{ $operation->name }}', {{ $operation->fee }})">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
+                                                @if($canEdit ?? false)
+                                                <div class="btn-group" role="group">
+                                                    <form action="{{ route('surgical-operations.destroy', $operation) }}" 
+                                                          method="POST" 
+                                                          class="d-inline"
+                                                          onsubmit="return confirm('هل أنت متأكد من حذف العملية: {{ $operation->name }}؟')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" 
+                                                                class="btn btn-sm btn-outline-danger" 
+                                                                title="حذف العملية">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                @else
+                                                <span class="text-muted">لا توجد إجراءات</span>
+                                                @endif
                                             </td>
                                         </tr>
                                         @endforeach
@@ -227,116 +161,4 @@
     </div>
 </div>
 
-<!-- Modal تحديث سريع -->
-<div class="modal fade" id="quickUpdateModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    تحديث أجر العملية
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="quickUpdateForm" method="POST">
-                @csrf
-                @method('PATCH')
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">اسم العملية</label>
-                        <input type="text" class="form-control" id="operationName" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">الأجر الجديد (دينار عراقي)</label>
-                        <input type="number" 
-                               name="fee" 
-                               id="operationFee" 
-                               class="form-control form-control-lg" 
-                               min="0" 
-                               step="1000" 
-                               required>
-                        <small class="text-muted">يمكن استخدام مضاعفات 1000 (مثال: 50000، 100000، 500000)</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>
-                        إلغاء
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-1"></i>
-                        حفظ التحديث
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal تحديث جماعي -->
-<div class="modal fade" id="bulkUpdateModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    تحديث جماعي للأجور
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    يمكنك تحديد نسبة أو قيمة ثابتة لتطبيقها على جميع العمليات أو صنف معين
-                </p>
-                <form action="{{ route('surgical-operations.bulk-update') }}" method="POST">
-                    @csrf
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">الصنف (اختياري)</label>
-                            <select name="category" class="form-select">
-                                <option value="">جميع الأصناف</option>
-                                @foreach($operationsByCategory as $category => $ops)
-                                    <option value="{{ $category }}">{{ $category }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">نوع التحديث</label>
-                            <select name="update_type" class="form-select" required>
-                                <option value="set">تعيين قيمة ثابتة</option>
-                                <option value="increase">زيادة بنسبة مئوية</option>
-                                <option value="decrease">تخفيض بنسبة مئوية</option>
-                            </select>
-                        </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label fw-bold">القيمة</label>
-                            <input type="number" name="value" class="form-control" min="0" required>
-                            <small class="text-muted">للقيمة الثابتة: أدخل المبلغ بالدينار، للنسبة المئوية: أدخل الرقم (مثال: 10 لـ 10%)</small>
-                        </div>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-check me-1"></i>
-                            تطبيق التحديث
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-@section('scripts')
-<script>
-    function quickUpdate(id, name, currentFee) {
-        document.getElementById('operationName').value = name;
-        document.getElementById('operationFee').value = currentFee;
-        document.getElementById('quickUpdateForm').action = '/surgical-operations/' + id + '/update-fee';
-        
-        var modal = new bootstrap.Modal(document.getElementById('quickUpdateModal'));
-        modal.show();
-    }
-</script>
 @endsection

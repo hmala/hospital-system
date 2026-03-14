@@ -15,7 +15,7 @@
         <div class="card-header bg-warning">
             <h5 class="mb-0">
                 <i class="fas fa-user-injured me-2"></i>
-                بيانات المريض: {{ $visit->patient->user->name }}
+                بيانات المريض: {{ optional($visit->patient)->user->name ?? 'غير محدد' }}
             </h5>
         </div>
         <div class="card-body">

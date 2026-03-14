@@ -477,12 +477,12 @@ class StaffRequestController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (!$user->hasAnyRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بالوصول إلى طلبات المختبر للعمليات');
         }
 
-        // منع الأطباء الاستشاريين من الوصول
-        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+        // منع الأطباء الاستشاريين من الوصول إلا إذا كانوا موظفي مختبر أيضاً
+        if (!$user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
         }
 

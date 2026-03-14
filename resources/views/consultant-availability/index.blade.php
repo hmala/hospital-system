@@ -122,9 +122,9 @@
                                     </td>
                                     <td>
                                         <div>
-                                            <strong>{{ $appointment->patient->user->name ?? 'غير محدد' }}</strong>
+                                            <strong>{{ optional($appointment->patient)->user->name ?? 'غير محدد' }}</strong>
                                             <br>
-                                            <small class="text-muted">{{ $appointment->patient->user->phone ?? '-' }}</small>
+                                            <small class="text-muted">{{ optional($appointment->patient)->user->phone ?? '-' }}</small>
                                         </div>
                                     </td>
                                     <td>

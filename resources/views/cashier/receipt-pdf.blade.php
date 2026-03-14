@@ -176,15 +176,15 @@
     <table class="info-table">
         <tr>
             <td>الاسم:</td>
-            <td><strong>{{ $payment->patient->user->name }}</strong></td>
+            <td><strong>{{ optional($payment->patient)->user->name ?? 'غير محدد' }}</strong></td>
         </tr>
         <tr>
             <td>الرقم الوطني:</td>
-            <td><strong>{{ $payment->patient->national_id ?? 'غير محدد' }}</strong></td>
+            <td><strong>{{ optional($payment->patient)->national_id ?? 'غير محدد' }}</strong></td>
         </tr>
         <tr>
             <td>رقم الهاتف:</td>
-            <td><strong>{{ $payment->patient->user->phone ?? 'غير محدد' }}</strong></td>
+            <td><strong>{{ optional($payment->patient)->user->phone ?? 'غير محدد' }}</strong></td>
         </tr>
     </table>
 

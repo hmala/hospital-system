@@ -215,6 +215,7 @@ input[type="radio"]:checked + .frequency-btn {
                                             <th>نوع العملية</th>
                                             <th>التاريخ</th>
                                             <th>الوقت</th>
+                                            <th>الغرفة</th>
                                             <th>الحالة</th>
                                             <th>الأشعة</th>
                                             <th>المختبر</th>
@@ -232,7 +233,13 @@ input[type="radio"]:checked + .frequency-btn {
                                                         </td>
                                                         <td>
                                                                 <i class="fas fa-user-md text-success me-1"></i>
-                                                                د. {{ $surgery->doctor->user->name }}
+                                                                @if($surgery->doctor && $surgery->doctor->user)
+                                                                    د. {{ $surgery->doctor->user->name }}
+                                                                @elseif($surgery->surgeon_name)
+                                                                    {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                                                @else
+                                                                    <span class="text-muted">غير محدد</span>
+                                                                @endif
                                                         </td>
                                                         <td>{{ $surgery->surgery_type }}</td>
                                                         <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
@@ -531,7 +538,13 @@ input[type="radio"]:checked + .frequency-btn {
                                             </td>
                                             <td>
                                                 <i class="fas fa-user-md text-success me-1"></i>
-                                                د. {{ $surgery->doctor->user->name }}
+                                                @if($surgery->doctor && $surgery->doctor->user)
+                                                    د. {{ $surgery->doctor->user->name }}
+                                                @elseif($surgery->surgeon_name)
+                                                    {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                                @else
+                                                    <span class="text-muted">غير محدد</span>
+                                                @endif
                                             </td>
                                             <td>{{ $surgery->surgery_type }}</td>
                                             <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>

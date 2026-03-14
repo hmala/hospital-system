@@ -44,7 +44,15 @@
                                 <tr>
                                     <td>
                                         <div class="fw-bold">{{ $surgery->patient->user->name }}</div>
-                                        <small class="text-muted">د. {{ $surgery->doctor->user->name }}</small>
+                                        <small class="text-muted">
+                                            @if($surgery->doctor && $surgery->doctor->user)
+                                                د. {{ $surgery->doctor->user->name }}
+                                            @elseif($surgery->surgeon_name)
+                                                {{ $surgery->surgeon_name }} (خارجي)
+                                            @else
+                                                غير محدد
+                                            @endif
+                                        </small>
                                     </td>
                                     <td>{{ $surgery->surgery_type }}</td>
                                     <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>

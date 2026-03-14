@@ -84,7 +84,15 @@
                         </tr>
                         <tr>
                             <th>الطبيب الجراح:</th>
-                            <td>د. {{ $surgery->doctor->user->name }}</td>
+                            <td>
+                                @if($surgery->doctor_id && $surgery->doctor)
+                                    د. {{ $surgery->doctor->user->name }}
+                                @elseif($surgery->surgeon_name)
+                                    {{ $surgery->surgeon_name }} <span class="badge bg-secondary">طبيب خارجي</span>
+                                @else
+                                    <span class="text-muted">غير محدد</span>
+                                @endif
+                            </td>
                         </tr>
                         @if($surgery->anesthesiologist)
                         <tr>
@@ -484,7 +492,15 @@
                                 </h6>
                                 <small class="text-muted">
                                     <i class="fas fa-user-md me-1"></i>
-                                    الطبيب: د. {{ $surgery->doctor->user->name }} |
+                                    الطبيب: 
+                                    @if($surgery->doctor_id && $surgery->doctor)
+                                        د. {{ $surgery->doctor->user->name }}
+                                    @elseif($surgery->surgeon_name)
+                                        {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                                    @else
+                                        غير محدد
+                                    @endif
+                                     |
                                     <i class="fas fa-procedures me-1"></i>
                                     العملية: {{ $surgery->surgery_type }} |
                                     <i class="fas fa-calendar me-1"></i>

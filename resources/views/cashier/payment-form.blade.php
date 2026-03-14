@@ -151,15 +151,15 @@
                     @endphp
                     <div class="mb-3">
                         <small class="text-muted">الاسم:</small>
-                        <div class="fw-bold">{{ $p ? ($p->user->name ?? 'غير محدد') : 'غير محدد' }}</div>
+                        <div class="fw-bold">{{ optional(optional($p)->user)->name ?? 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">الرقم الوطني:</small>
-                        <div class="fw-bold">{{ $p ? ($p->national_id ?? 'غير محدد') : 'غير محدد' }}</div>
+                        <div class="fw-bold">{{ optional($p)->national_id ?? 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">رقم الهاتف:</small>
-                        <div class="fw-bold">{{ $p ? ($p->user->phone ?? 'غير محدد') : 'غير محدد' }}</div>
+                        <div class="fw-bold">{{ optional(optional($p)->user)->phone ?? 'غير محدد' }}</div>
                     </div>
                 </div>
             </div>
@@ -178,11 +178,11 @@
                     @endphp
                     <div class="mb-3">
                         <small class="text-muted">الاسم:</small>
-                        <div class="fw-bold">د. {{ $d ? ($d->user->name ?? 'غير محدد') : 'غير محدد' }}</div>
+                        <div class="fw-bold">د. {{ optional(optional($d)->user)->name ?? 'غير محدد' }}</div>
                     </div>
                     <div class="mb-3">
                         <small class="text-muted">التخصص:</small>
-                        <div class="fw-bold">{{ $d ? $d->specialization : 'غير محدد' }}</div>
+                        <div class="fw-bold">{{ optional($d)->specialization ?? 'غير محدد' }}</div>
                     </div>
                 </div>
             </div>

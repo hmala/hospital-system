@@ -392,10 +392,10 @@
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="avatar-circle">
-                                                    {{ substr($visit->patient->user->name, 0, 1) }}
+                                                    {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
                                                 </div>
                                                 <div class="ms-2">
-                                                    <strong>{{ $visit->patient->user->name }}</strong>
+                                                    <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
                                                     @if($visit->appointment && $visit->appointment->emergency_id)
                                                         <span class="badge bg-danger ms-2">
                                                             <i class="fas fa-ambulance"></i>

@@ -132,6 +132,32 @@ body {
     cursor: pointer;
 }
 
+/* Style for Add Doctor Button in Select2 */
+.select2-new-tag {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6f9f0 100%);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 2px dashed #198754;
+    margin: 4px 0;
+}
+
+.select2-new-tag:hover {
+    background: linear-gradient(135deg, #e6f9f0 0%, #d4f4e3 100%);
+    border-color: #146c43;
+    transform: translateX(-2px);
+}
+
+.select2-results__option--highlighted .select2-new-tag {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    border-color: #fff;
+    color: white;
+}
+
+.select2-results__option--highlighted .select2-new-tag i,
+.select2-results__option--highlighted .select2-new-tag strong {
+    color: white !important;
+}
+
 </style>
 @endsection
 
@@ -267,6 +293,7 @@ body {
                                            value="{{ old('custom_surgery_fee') }}"
                                            placeholder="أدخل سعر العملية بالدينار العراقي (مثال: 1,000,000)"
                                            inputmode="numeric"
+                                           pattern="[0-9,]+"
                                            required>
                                     <div class="form-text">
                                         <i class="fas fa-info-circle me-1 text-info"></i>
@@ -286,66 +313,52 @@ body {
                                         <i class="fas fa-user-doctor me-1 text-info"></i>
                                         الطبيب المرسل <span class="text-danger">*</span>
                                     </label>
-                                    <div class="mb-3">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="referring_doctor_type" id="referring_internal" value="internal" {{ old('referring_doctor_type', 'internal') == 'internal' ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="referring_internal">
-                                                <i class="fas fa-hospital me-1 text-primary"></i>
-                                                من المستشفى
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="referring_doctor_type" id="referring_external" value="external" {{ old('referring_doctor_type') == 'external' ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="referring_external">
-                                                <i class="fas fa-user-plus me-1 text-warning"></i>
-                                                طبيب خارجي
-                                            </label>
-                                        </div>
-                                    </div>
                                     
-                                    <!-- قائمة الأطباء الداخليين (نحفظ الاسم مباشرة) -->
-                                    <div id="internal_doctor_select">
-                                        <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select form-select-lg @error('referring_doctor_name') is-invalid @enderror" style="width: 100%; max-width: 500px;" required>
-                                            <option value="">اختر الطبيب</option>
+                                    <!-- قائمة موحدة للأطباء الداخليين والخارجيين -->
+                                    <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select form-select-lg @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
+                                        <option value="">اختر الطبيب أو أدخل اسماً جديداً</option>
+                                        
+                                        <!-- الأطباء الداخليين -->
+                                        <optgroup label="أطباء المستشفى">
                                             @foreach($doctors as $doctor)
                                                 <option value="{{ $doctor->user->name }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $doctor->user->name) ? 'selected' : '' }}>
                                                     د. {{ $doctor->user->name }}
                                                 </option>
                                             @endforeach
-                                        </select>
-                                        @error('referring_doctor_name')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        </optgroup>
+                                        
+                                        <!-- الأطباء الخارجيين السابقين -->
+                                        @php
+                                            $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
+                                                ->distinct()
+                                                ->pluck('referring_doctor_name')
+                                                ->filter()
+                                                ->unique()
+                                                ->reject(function($name) use ($doctors) {
+                                                    // استبعاد الأطباء الداخليين من القائمة الخارجية
+                                                    return $doctors->pluck('user.name')->contains($name);
+                                                })
+                                                ->sort();
+                                        @endphp
+                                        @if($externalDoctors->isNotEmpty())
+                                            <optgroup label="أطباء خارجيين سابقين">
+                                                @foreach($externalDoctors as $externalDoctor)
+                                                    <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $externalDoctor) ? 'selected' : '' }}>
+                                                        {{ $externalDoctor }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
+                                    </select>
+                                    
+                                    <div class="alert alert-success alert-sm mt-2 mb-0 py-2" style="font-size: 0.9rem;">
+                                        <i class="fas fa-lightbulb me-2"></i>
+                                        <strong>للإضافة السريعة:</strong> اكتب اسم الطبيب الجديد واضغط Enter - سيُفتح نموذج لإدخال التفاصيل
                                     </div>
                                     
-                                    <!-- حقل إدخال الطبيب الخارجي -->
-                                    <div id="external_doctor_input" style="display: none;">
-                                        <input type="text" name="referring_doctor_name" id="external_referring_doctor_name" 
-                                               class="form-control form-control-lg @error('referring_doctor_name') is-invalid @enderror" 
-                                               value="{{ old('referring_doctor_name') }}"
-                                               placeholder="أدخل اسم الطبيب المرسل"
-                                               list="external_doctors_list" disabled required>
-                                        <datalist id="external_doctors_list">
-                                            @php
-                                                $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
-                                                    ->distinct()
-                                                    ->pluck('referring_doctor_name')
-                                                    ->filter()
-                                                    ->unique()
-                                                    ->sort();
-                                            @endphp
-                                            @foreach($externalDoctors as $externalDoctor)
-                                                <option value="{{ $externalDoctor }}">
-                                            @endforeach
-                                        </datalist>
-                                        <small class="text-muted">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            سيتم حفظ الاسم وعرضه كاقتراح في المرات القادمة
-                                        </small>
-                                        @error('referring_doctor_name')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
+                                    @error('referring_doctor_name')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
@@ -363,18 +376,16 @@ body {
                                         <!-- إرشادات النظام -->
                                         <div class="alert alert-primary mb-3" id="scan_instructions">
                                             <div class="d-flex align-items-start">
-                                                <i class="fas fa-scanner fa-2x me-3 text-primary"></i>
+                                                <i class="fas fa-print fa-2x me-3 text-primary"></i>
                                                 <div>
-                                                    <h6 class="alert-heading mb-2">🎯 نظام الأرشفة الذكي (مجاني 100%)</h6>
+                                                    <h6 class="alert-heading mb-2">🎯 نظام الأرشفة التلقائي (يعمل مع أي سكانر)</h6>
                                                     <p class="mb-2"><strong>خطوة واحدة فقط:</strong></p>
                                                     <ol class="mb-2 ps-3">
                                                         <li>ضع الورقة في السكانر</li>
                                                         <li>اضغط الزر الأزرق أدناه</li>
                                                         <li>سيتم المسح تلقائياً!</li>
                                                     </ol>
-                                                    <small class="text-muted">
-                                                        ⚙️ <strong>يتطلب تشغيل:</strong> برنامج الأرشفة المحلي (انظر دليل التثبيت)
-                                                    </small>
+                                                    <div id="scanner_status" class="mt-2"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -383,8 +394,7 @@ body {
                                         <div class="d-grid gap-2 mb-3">
                                             <button type="button" class="btn btn-lg btn-primary" id="scan_btn" onclick="scanFromDevice()">
                                                 <i class="fas fa-print me-2"></i>
-                                                <i class="fas fa-arrow-down me-2"></i>
-                                                مسح الورقة من السكانر الآن
+                                                <span id="scan_btn_text">مسح الورقة من السكانر الآن</span>
                                             </button>
                                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('referral_letter').click()">
                                                 <i class="fas fa-upload me-2"></i>
@@ -393,29 +403,31 @@ body {
                                         </div>
 
                                         <!-- رسالة تثبيت البرنامج -->
-                                        <div class="alert alert-danger border-2" id="install_prompt" style="display:none;">
+                                        <div class="alert alert-warning border-2" id="install_prompt" style="display:none;">
                                             <h6 class="mb-3">
-                                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                                لم يتم الاتصال ببرنامج الأرشفة!
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                برنامج السكانر غير مشغّل
                                             </h6>
                                             <div class="mb-3">
-                                                <p class="mb-2"><strong>يرجى التأكد من:</strong></p>
+                                                <p class="mb-2"><strong>لتشغيل المسح التلقائي:</strong></p>
                                                 <ol class="mb-0">
-                                                    <li>تشغيل ملف <code>تشغيل_برنامج_الارشفة.bat</code></li>
-                                                    <li>تثبيت NAPS2 على الكمبيوتر</li>
-                                                    <li>توصيل السكانر بالكمبيوتر</li>
+                                                    <li>شغّل ملف <code class="bg-light px-2 py-1 rounded">تشغيل_السكانر_التلقائي.bat</code></li>
+                                                    <li>تأكد من توصيل السكانر بالكمبيوتر</li>
+                                                    <li>انتظر حتى تظهر رسالة "جاهز"</li>
                                                 </ol>
                                             </div>
                                             <div class="d-flex gap-2 flex-wrap">
-                                                <a href="file:///C:/wamp64/www/hospital-system/دليل_التثبيت_الشامل.txt" 
-                                                   class="btn btn-sm btn-danger">
-                                                    <i class="fas fa-book me-1"></i>
-                                                    دليل التثبيت الكامل
-                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-warning" 
+                                                        onclick="checkScannerStatus()">
+                                                    <i class="fas fa-redo me-1"></i>
+                                                    إعادة الفحص
+                                                </button>
                                                 <button type="button" 
                                                         class="btn btn-sm btn-outline-secondary" 
-                                                        onclick="location.reload()">
-                                                    <i class="fas fa-redo me-1"></i>
+                                                        onclick="document.getElementById('referral_letter').click()">
+                                                    <i class="fas fa-upload me-1"></i>
+                                                    رفع ملف يدوياً
                                                     أعد المحاولة
                                                 </button>
                                                 <button type="button" 
@@ -811,6 +823,68 @@ body {
         </div>
     </div>
 </div>
+
+<!-- Modal إضافة طبيب جديد -->
+<div class="modal fade" id="addDoctorModal" tabindex="-1" aria-labelledby="addDoctorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addDoctorModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>
+                    إضافة طبيب مرسل جديد للنظام
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    سيتم إضافة هذا الطبيب إلى قاعدة البيانات ليكون متاحاً في المرات القادمة
+                </div>
+                <form id="addDoctorForm">
+                    <div class="mb-3">
+                        <label for="new_doctor_name" class="form-label fw-bold">
+                            <i class="fas fa-user me-1"></i>
+                            اسم الطبيب <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="new_doctor_name" required readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_doctor_specialization" class="form-label fw-bold">
+                            <i class="fas fa-stethoscope me-1"></i>
+                            التخصص <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="new_doctor_specialization" placeholder="مثال: جراحة عامة، باطنية، أطفال..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_doctor_phone" class="form-label fw-bold">
+                            <i class="fas fa-phone me-1"></i>
+                            رقم الهاتف
+                        </label>
+                        <input type="text" class="form-control" id="new_doctor_phone" placeholder="اختياري">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_doctor_notes" class="form-label fw-bold">
+                            <i class="fas fa-notes-medical me-1"></i>
+                            ملاحظات
+                        </label>
+                        <textarea class="form-control" id="new_doctor_notes" rows="2" placeholder="أي معلومات إضافية عن الطبيب (اختياري)"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="saveDoctorBtn">
+                    <i class="fas fa-save me-2"></i>
+                    <span id="saveDoctorBtnText">حفظ وإضافة للنظام</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -835,22 +909,169 @@ document.addEventListener('DOMContentLoaded', function() {
             allowClear: true
         });
 
-        // تهيئة منفصلة للأطباء الداخليين مع البحث دائماً
+        // تهيئة Select2 للطبيب المرسل مع إمكانية إضافة أسماء جديدة
+        let pendingDoctorName = '';
+        let isNewDoctor = false;
+        
         $('#referring_doctor_name_select').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
+            tags: true,
+            createTag: function (params) {
+                const term = $.trim(params.term);
+                if (term === '') {
+                    return null;
+                }
+                return {
+                    id: term,
+                    text: '➕ إضافة طبيب جديد: ' + term,
+                    newTag: true,
+                    originalName: term
+                };
+            },
+            templateResult: function(data) {
+                if (!data.id) {
+                    return data.text;
+                }
+                
+                // إذا كان tag جديد، أضف أيقونة وتنسيق خاص
+                if (data.newTag) {
+                    const $result = $(
+                        '<div class="select2-new-tag">' +
+                            '<i class="fas fa-user-plus text-success me-2"></i>' +
+                            '<strong style="color: #198754;">' + data.text + '</strong>' +
+                        '</div>'
+                    );
+                    return $result;
+                }
+                
+                return data.text;
+            },
+            templateSelection: function(data) {
+                // عند الاختيار، نعرض فقط الاسم بدون البادئة
+                if (data.newTag && data.originalName) {
+                    return data.originalName;
+                }
+                return data.text;
+            },
             language: {
                 noResults: function() {
-                    return 'لا توجد نتائج';
+                    return '🔍 لا توجد نتائج - اكتب اسماً جديداً للإضافة';
                 },
                 searching: function() {
                     return 'جاري البحث...';
                 }
             },
-            placeholder: 'اختر الطبيب أو ابدأ بالكتابة للبحث',
+            placeholder: 'اختر الطبيب أو أدخل اسماً جديداً',
             allowClear: true,
-            minimumResultsForSearch: 0,
-            minimumInputLength: 1
+            minimumResultsForSearch: 0
+        });
+        
+        // معالج حدث الاختيار - نفتح المودال للأسماء الجديدة
+        $('#referring_doctor_name_select').on('select2:select', function(e) {
+            const data = e.params.data;
+            
+            // إذا كان طبيب جديد
+            if (data.newTag && data.originalName) {
+                isNewDoctor = true;
+                pendingDoctorName = data.originalName;
+                
+                // ملء اسم الطبيب في المودال
+                $('#new_doctor_name').val(data.originalName);
+                $('#new_doctor_specialization').val('');
+                $('#new_doctor_phone').val('');
+                $('#new_doctor_notes').val('');
+                
+                // فتح المودال
+                const modal = new bootstrap.Modal(document.getElementById('addDoctorModal'));
+                modal.show();
+            }
+        });
+        
+        // عند إغلاق المودال بدون حفظ، نرجع للاختيار السابق
+        $('#addDoctorModal').on('hidden.bs.modal', function() {
+            if (isNewDoctor && pendingDoctorName) {
+                // مسح الاختيار إذا لم يتم الحفظ
+                const currentVal = $('#referring_doctor_name_select').val();
+                if (currentVal === pendingDoctorName) {
+                    $('#referring_doctor_name_select').val(null).trigger('change');
+                }
+                isNewDoctor = false;
+            }
+        });
+        
+        // معالج حفظ الطبيب الجديد
+        $('#saveDoctorBtn').on('click', function() {
+            const name = $('#new_doctor_name').val().trim();
+            const specialization = $('#new_doctor_specialization').val().trim();
+            const phone = $('#new_doctor_phone').val().trim();
+            const notes = $('#new_doctor_notes').val().trim();
+            
+            if (!name || !specialization) {
+                alert('الرجاء إدخال اسم الطبيب والتخصص');
+                return;
+            }
+            
+            // تعطيل الزر ووضع loading
+            const $btn = $(this);
+            const originalText = $('#saveDoctorBtnText').text();
+            $btn.prop('disabled', true);
+            $('#saveDoctorBtnText').html('<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...');
+            
+            // إرسال طلب AJAX
+            $.ajax({
+                url: '{{ route("doctors.store-referring") }}',
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    name: name,
+                    specialization: specialization,
+                    phone: phone,
+                    notes: notes
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // إزالة الخيار القديم (المؤقت)
+                        $('#referring_doctor_name_select option[value="' + name + '"]').remove();
+                        
+                        // إضافة الطبيب للقائمة كخيار دائم
+                        const newOption = new Option(name, name, true, true);
+                        $('#referring_doctor_name_select').append(newOption).trigger('change');
+                        
+                        isNewDoctor = false;
+                        
+                        // إغلاق المودال
+                        bootstrap.Modal.getInstance(document.getElementById('addDoctorModal')).hide();
+                        
+                        // رسالة نجاح
+                        const successAlert = $(
+                            '<div class="alert alert-success alert-dismissible fade show position-fixed" role="alert" style="top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 400px;">' +
+                                '<i class="fas fa-check-circle me-2"></i>' +
+                                '<strong>تم بنجاح!</strong> أُضيف الطبيب ' + response.doctor.name + ' للنظام' +
+                                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                            '</div>'
+                        );
+                        $('body').append(successAlert);
+                        
+                        // إزالة الرسالة بعد 5 ثواني
+                        setTimeout(function() {
+                            successAlert.fadeOut(function() { $(this).remove(); });
+                        }, 5000);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMsg = 'حدث خطأ أثناء حفظ الطبيب';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    alert(errorMsg);
+                },
+                complete: function() {
+                    // إعادة تفعيل الزر
+                    $btn.prop('disabled', false);
+                    $('#saveDoctorBtnText').text(originalText);
+                }
+            });
         });
 
         // تفعيل Select2 على قائمة العمليات مع الفلترة حسب الصنف
@@ -1082,13 +1303,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleExternalFields();
     }
 
-    // التحكم في حقول الطبيب المرسل
-    const referringInternalRadio = document.getElementById('referring_internal');
-    const referringExternalRadio = document.getElementById('referring_external');
-    const internalDoctorSelect = document.getElementById('internal_doctor_select');
-    const externalDoctorInput = document.getElementById('external_doctor_input');
-    const internalDoctorNameSelect = document.getElementById('referring_doctor_name_select');
-    const externalDoctorNameInput = document.getElementById('external_referring_doctor_name');
+    // تم إزالة كود التحكم في radio buttons - الآن لدينا قائمة موحدة فقط
     
     // التحكم في حقل السعر المخصص
     const customFeeContainer = document.getElementById('custom_fee_container');
@@ -1097,73 +1312,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const surgeryFeeInfo = document.getElementById('surgery_fee_info');
     const surgeryFeeDisplay = document.getElementById('surgery_fee_display');
 
-    function toggleReferringDoctorFields() {
-        const letterContainer = document.getElementById('referral_letter_container');
-        const referralLetterInput = document.getElementById('referral_letter');
-        
-        console.log('toggleReferringDoctorFields called');
-        console.log('External radio checked:', referringExternalRadio?.checked);
-        
-        if (referringExternalRadio && referringExternalRadio.checked) {
-            console.log('Switching to EXTERNAL doctor');
-            // طبيب خارجي - إظهار حقول الطبيب الخارجي وحقل الأرشفة
-            if (internalDoctorSelect) {
-                internalDoctorSelect.style.display = 'none';
-            }
-            if (externalDoctorInput) {
-                externalDoctorInput.style.display = 'block';
-            }
-            
-            // التحكم في حقول الإدخال
-            if (internalDoctorNameSelect) {
-                internalDoctorNameSelect.disabled = true;
-                internalDoctorNameSelect.required = false;
-            }
-            if (externalDoctorNameInput) {
-                externalDoctorNameInput.disabled = false;
-                externalDoctorNameInput.required = true;
-            }
-            
-            // لا نغير عرض حقل الأرشفة هنا (يُعرض دائماً)
-            console.log('External doctor selected - referral container remains visible');
-        } else {
-            console.log('Switching to INTERNAL doctor');
-            // طبيب داخلي - إظهار حقول الطبيب الداخلي وإخفاء حقل الأرشفة
-            if (internalDoctorSelect) {
-                internalDoctorSelect.style.display = 'block';
-            }
-            if (externalDoctorInput) {
-                externalDoctorInput.style.display = 'none';
-            }
-            
-            // التحكم في حقول الإدخال
-            if (internalDoctorNameSelect) {
-                internalDoctorNameSelect.disabled = false;
-                internalDoctorNameSelect.required = true;
-            }
-            if (externalDoctorNameInput) {
-                externalDoctorNameInput.disabled = true;
-                externalDoctorNameInput.required = false;
-            }
-            
-            // لا نقوم بإخفاء حقل الأرشفة عندما يكون الطبيب داخلي
-            console.log('Internal doctor selected - referral container remains visible');
-        }
+    // تنسيق الأرقام بفواصل آلاف أثناء الإدخال
+    function formatWithThousandSeparators(value) {
+        if (!value) return '';
+        const digits = value.toString().replace(/[^0-9]/g, '');
+        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    if (referringInternalRadio && referringExternalRadio) {
-        console.log('Setting up event listeners for referring doctor type');
-        referringInternalRadio.addEventListener('change', toggleReferringDoctorFields);
-        referringExternalRadio.addEventListener('change', toggleReferringDoctorFields);
-        
-        // تطبيق الحالة الأولية عند تحميل الصفحة - مع تأخير بسيط
-        setTimeout(function() {
-            toggleReferringDoctorFields();
-        }, 100);
-    } else {
-        console.error('Radio buttons not found!', {
-            internal: referringInternalRadio,
-            external: referringExternalRadio
+    if (customFeeInput) {
+        customFeeInput.addEventListener('input', function() {
+            const cursorPos = customFeeInput.selectionStart;
+            const originalLength = customFeeInput.value.length;
+
+            customFeeInput.value = formatWithThousandSeparators(customFeeInput.value);
+
+            // محاولة الاحتفاظ بموقع المؤشر بعد التنسيق
+            const newLength = customFeeInput.value.length;
+            const diff = newLength - originalLength;
+            customFeeInput.setSelectionRange(cursorPos + diff, cursorPos + diff);
         });
     }
 
@@ -1183,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     focusFirstError();
 
-    // ===== نظام الأرشفة المجاني - الاتصال بالسكانر مباشرة =====
+    // ===== نظام الأرشفة التلقائي - يعمل مع أي سكانر =====
     const referralInput = document.getElementById('referral_letter');
     const previewContainer = document.getElementById('referral_letter_preview');
     const previewImage = document.getElementById('preview_image');
@@ -1191,70 +1357,125 @@ document.addEventListener('DOMContentLoaded', function() {
     const scanStatus = document.getElementById('scan_status');
     const scanStatusText = document.getElementById('scan_status_text');
     const scanBtn = document.getElementById('scan_btn');
+    const scanBtnText = document.getElementById('scan_btn_text');
     const installPrompt = document.getElementById('install_prompt');
     const scanInstructions = document.getElementById('scan_instructions');
+    const scannerStatusDiv = document.getElementById('scanner_status');
 
-    // التحقق من وجود NAPS2 محلياً
-    let naps2Available = false;
+    // حالة السكانر
+    let scannerReady = false;
+    let availableScanners = [];
 
-    // محاولة الاتصال بـ NAPS2 Server المحلي
-    async function checkNaps2() {
+    // ═════════════════════════════════════════════════════════════════
+    //  فحص حالة السكانر
+    // ═════════════════════════════════════════════════════════════════
+    
+    async function checkScannerStatus() {
         try {
-            const response = await fetch('http://localhost:37426/scan', {
-                method: 'OPTIONS',
+            const response = await fetch('http://localhost:37426/status', {
+                method: 'GET',
                 mode: 'cors'
             });
-            naps2Available = true;
-            return true;
+            
+            if (response.ok) {
+                const data = await response.json();
+                scannerReady = true;
+                availableScanners = data.scanners || [];
+                
+                // إخفاء رسالة التثبيت وإظهار الإرشادات
+                installPrompt.style.display = 'none';
+                scanInstructions.style.display = 'block';
+                
+                // عرض حالة السكانر
+                if (availableScanners.length > 0) {
+                    scannerStatusDiv.innerHTML = `
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle me-1"></i>
+                            جاهز - ${availableScanners.length} سكانر متصل
+                        </span>
+                        <small class="d-block text-muted mt-1">
+                            ${availableScanners.map(s => s.name).join('، ')}
+                        </small>
+                    `;
+                    scanBtn.classList.remove('btn-secondary');
+                    scanBtn.classList.add('btn-primary');
+                } else {
+                    scannerStatusDiv.innerHTML = `
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            لا يوجد سكانر متصل
+                        </span>
+                        <small class="d-block text-muted mt-1">وصّل السكانر ثم أعد المحاولة</small>
+                    `;
+                }
+                
+                return true;
+            }
         } catch (e) {
-            // NAPS2 غير متوفر
-            naps2Available = false;
-            return false;
+            scannerReady = false;
+            installPrompt.style.display = 'block';
+            scannerStatusDiv.innerHTML = `
+                <span class="badge bg-secondary">
+                    <i class="fas fa-plug me-1"></i>
+                    برنامج السكانر غير مشغل
+                </span>
+            `;
         }
+        return false;
     }
 
-    // بدء المسح من السكانر
     // ═════════════════════════════════════════════════════════════════
-    //  نظام المسح التلقائي - يتصل مباشرة ببرنامج الأرشفة المجاني
+    //  المسح من السكانر
     // ═════════════════════════════════════════════════════════════════
     
     window.scanFromDevice = async function() {
         if (!scanBtn) return;
         
+        // التحقق من جاهزية السكانر أولاً
+        if (!scannerReady) {
+            const isReady = await checkScannerStatus();
+            if (!isReady) {
+                showScanStatus('warning', 'برنامج السكانر غير مشغل. شغّل الملف: <code>تشغيل_السكانر_التلقائي.bat</code>');
+                return;
+            }
+        }
+        
         scanBtn.disabled = true;
-        showScanStatus('info', 'جاري تشغيل السكانر...');
+        scanBtnText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري المسح...';
+        showScanStatus('info', '📄 ضع الورقة في السكانر... جاري المسح');
         
         try {
-            // المسح المباشر من السكانر (الطريقة الموصى بها)
             await scanViaLocalBridge();
-            
         } catch (error) {
             console.error('خطأ في المسح:', error);
             handleScanError(error);
+        } finally {
+            scanBtn.disabled = false;
+            scanBtnText.innerHTML = 'مسح الورقة من السكانر الآن';
         }
     };
 
-    // المسح باستخدام برنامج الأرشفة المحلي (Python Bridge)
+    // المسح باستخدام برنامج الأرشفة المحلي
     async function scanViaLocalBridge() {
         try {
-            showScanStatus('info', 'جاري المسح... ضع الورقة في السكانر');
-            
-            // الاتصال ببرنامج الأرشفة المحلي
             const response = await fetch('http://localhost:37426/scan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    color_mode: 'color',
+                    resolution: 200
+                })
             });
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 
-                // رسالة خطأ مخصصة حسب نوع المشكلة
                 if (response.status === 404) {
-                    throw new Error('برنامج الأرشفة غير مشغل. يرجى تشغيل البرنامج أولاً.');
+                    throw new Error('لم يتم العثور على سكانر متصل. تأكد من توصيل السكانر وتشغيله.');
                 } else if (response.status === 408) {
-                    throw new Error('انتهت مهلة المسح. تأكد من توصيل السكانر ووضع الورقة.');
+                    throw new Error('انتهت مهلة المسح. تأكد من وضع الورقة في السكانر.');
                 } else {
-                    throw new Error(errorData.message || 'فشل المسح من السكانر');
+                    throw new Error(errorData.error || 'فشل المسح من السكانر');
                 }
             }
             
@@ -1269,11 +1490,10 @@ document.addEventListener('DOMContentLoaded', function() {
             handleScannedImage(blob);
             
         } catch (e) {
-            // إذا كان خطأ الاتصال، نعرض رسالة تثبيت
             if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
+                scannerReady = false;
                 installPrompt.style.display = 'block';
-                scanInstructions.style.display = 'none';
-                throw new Error('لم يتم الاتصال ببرنامج الأرشفة. تأكد من تشغيله أولاً.');
+                throw new Error('لم يتم الاتصال ببرنامج السكانر. تأكد من تشغيله أولاً.');
             }
             throw e;
         }
@@ -1281,7 +1501,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // معالجة الصورة الممسوحة
     function handleScannedImage(blobOrFile) {
-        // تحويل إلى File إذا كان Blob
         const file = blobOrFile instanceof File ? blobOrFile : 
                      new File([blobOrFile], `scanned-${Date.now()}.jpg`, { type: 'image/jpeg' });
         
@@ -1299,54 +1518,27 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         previewContainer.style.display = 'block';
         
-        // إخفاء حالة المسح
-        showScanStatus('success', 'تم المسح بنجاح!');
+        showScanStatus('success', '✅ تم المسح بنجاح!');
         setTimeout(() => {
-            scanStatus.style.display = 'none';
-            scanBtn.disabled = false;
-        }, 2000);
+            if (scanStatus) scanStatus.style.display = 'none';
+        }, 3000);
     }
 
     // معالجة أخطاء المسح
     function handleScanError(error) {
         console.error(error);
-        
-        if (error.message.includes('NAPS2 غير مثبت')) {
-            installPrompt.style.display = 'block';
-            scanInstructions.style.display = 'none';
-            scanStatus.style.display = 'none';
-        } else {
-            showScanStatus('danger', `
-                فشل المسح: ${error.message}<br>
-                <small class="d-block mt-2">
-                    <strong>الحلول:</strong><br>
-                    • تأكد من تشغيل السكانر<br>
-                    • أو اضغط "رفع ملف" واختر الصورة يدوياً
-                </small>
-            `);
-        }
-        
-        scanBtn.disabled = false;
-    }
-
-    // إعداد مستمع اللصق
-    function setupPasteListener() {
-        const pasteHandler = async (e) => {
-            const items = e.clipboardData.items;
-            for (let item of items) {
-                if (item.type.indexOf('image') !== -1) {
-                    const blob = item.getAsFile();
-                    handleScannedImage(blob);
-                    document.removeEventListener('paste', pasteHandler);
-                    break;
-                }
-            }
-        };
-        document.addEventListener('paste', pasteHandler);
+        showScanStatus('danger', `
+            <i class="fas fa-times-circle me-2"></i>
+            ${error.message}<br>
+            <small class="d-block mt-2">
+                يمكنك <a href="javascript:void(0)" onclick="document.getElementById('referral_letter').click()" class="text-white text-decoration-underline">رفع الصورة يدوياً</a>
+            </small>
+        `);
     }
 
     // عرض حالة المسح
     function showScanStatus(type, message) {
+        if (!scanStatus || !scanStatusText) return;
         scanStatus.className = `alert alert-${type}`;
         scanStatusText.innerHTML = message;
         scanStatus.style.display = 'block';
@@ -1354,9 +1546,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // حذف الوثيقة
     window.clearScannedDoc = function() {
-        referralInput.value = '';
-        previewContainer.style.display = 'none';
-        scanStatus.style.display = 'none';
+        if (referralInput) referralInput.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (scanStatus) scanStatus.style.display = 'none';
     };
 
     // معالجة رفع الملف العادي
@@ -1378,12 +1570,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // فحص NAPS2 عند التحميل
-    checkNaps2().then(available => {
-        if (!available) {
-            console.log('NAPS2 Server غير متوفر - سيتم استخدام الطرق البديلة');
-        }
-    });
+    // فحص حالة السكانر عند تحميل الصفحة
+    checkScannerStatus();
 
     // اختيار الغرفة من اللوحة
     const roomTiles = document.querySelectorAll('.room-selectable');

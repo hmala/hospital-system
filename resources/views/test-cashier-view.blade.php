@@ -14,7 +14,7 @@
         
         <ul>
         @foreach($pendingRequests as $request)
-            <li>Request #{{ $request->id }} - {{ $request->visit->patient->user->name }}</li>
+            <li>Request #{{ $request->id }} - {{ optional($request->visit->patient)->user->name ?? 'غير محدد' }}</li>
         @endforeach
         </ul>
     @endif

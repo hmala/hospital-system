@@ -659,4 +659,79 @@ class InquiryController extends Controller
         return redirect()->route('inquiry.index')
             ->with('success', 'تم حذف الاستعلام بنجاح!');
     }
+
+    /**
+     * عرض المرضى المقيمين في المستشفى والغرف المحجوزة
+     */
+    public function occupancy()
+    {
+        $user = Auth::user();
+
+        // التحقق من الصلاحيات - يمكن للموظفين المختصين بالاستعلامات الوصول
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor', 'surgery_staff'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // جلب حجوزات الرقود (المؤكدة أو في الانتظار) مع المرضى والغرف
+        $bedReservations = \App\Models\BedReservation::with(['patient.user', 'room', 'doctor.user', 'department'])
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereNotNull('room_id')
+            ->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->get();
+
+        // جلب العمليات الجراحية التي لها غرف محجوزة
+        $surgeries = \App\Models\Surgery::with(['patient.user', 'room', 'doctor.user', 'department'])
+            ->whereNotNull('room_id')
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+            ->whereNull('discharged_at') // لم يخرج المريض بعد
+            ->orderBy('scheduled_date', 'desc')
+            ->get();
+
+        // تجميع البيانات حسب الغرفة
+        $roomsData = [];
+        $allOccupancies = [];
+        
+        // إضافة حجوزات الرقود المباشر
+        foreach ($bedReservations as $reservation) {
+            $roomId = $reservation->room_id;
+            if (!isset($roomsData[$roomId])) {
+                $roomsData[$roomId] = [
+                    'room' => $reservation->room,
+                    'patients' => []
+                ];
+            }
+            $occupancyData = [
+                'type' => 'رقود',
+                'type_en' => 'bed_reservation',
+                'data' => $reservation,
+                'badge_class' => 'bg-info',
+                'icon' => 'fa-bed'
+            ];
+            $roomsData[$roomId]['patients'][] = $occupancyData;
+            $allOccupancies[] = $occupancyData;
+        }
+        
+        // إضافة العمليات الجراحية
+        foreach ($surgeries as $surgery) {
+            $roomId = $surgery->room_id;
+            if (!isset($roomsData[$roomId])) {
+                $roomsData[$roomId] = [
+                    'room' => $surgery->room,
+                    'patients' => []
+                ];
+            }
+            $occupancyData = [
+                'type' => 'عملية جراحية',
+                'type_en' => 'surgery',
+                'data' => $surgery,
+                'badge_class' => 'bg-danger',
+                'icon' => 'fa-procedures'
+            ];
+            $roomsData[$roomId]['patients'][] = $occupancyData;
+            $allOccupancies[] = $occupancyData;
+        }
+
+        return view('inquiry.occupancy', compact('roomsData', 'allOccupancies'));
+    }
 }
