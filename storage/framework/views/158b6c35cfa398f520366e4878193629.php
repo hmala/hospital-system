@@ -1,0 +1,2061 @@
+
+
+<?php $__env->startSection('styles'); ?>
+<!-- نظام أرشفة مجاني 100% - يتصل بالسكانر مباشرة -->
+<style>
+.step-wizard {
+    margin-bottom: 40px;
+    padding: 25px 35px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.progress-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.progress-percent-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 15px;
+}
+.progress-bar-container {
+    width: 100%;
+    height: 30px;
+    background: #e9ecef;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+    display: block !important;
+}
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    transition: width 0.5s ease;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+    display: block !important;
+    min-width: 5%;
+}
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+    border-radius: 15px;
+}
+.progress-step-info {
+    margin-top: 15px;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+.tab-content {
+    padding: 30px 20px;
+    min-height: 400px;
+}
+.section-divider {
+    border-top: 2px solid #e9ecef;
+    margin: 30px 0;
+    position: relative;
+}
+.section-divider::before {
+    content: attr(data-title);
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: white;
+    padding: 0 10px;
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+/* Room Cards Styles */
+.room-card {
+    transition: all 0.3s ease;
+    border-width: 2px !important;
+}
+
+/* page and input-cell backgrounds */
+body {
+    background: #f5f6fa;
+}
+
+#surgeryForm .mb-4 {
+    background: #f0f4ff; /* light blue tone for contrast */
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+#surgeryForm .form-control,
+#surgeryForm .form-select {
+    border: 2px solid #4a8eff;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    background: #ffffff;
+}
+
+#surgeryForm .form-control:focus,
+#surgeryForm .form-select:focus {
+    border-color: #0056d6;
+    box-shadow: 0 0 0 0.3rem rgba(0,86,214,.25);
+    background: #ffffff;
+}
+
+/* force all surgery accordion panels to stay closed initially */
+#surgeryAccordion .accordion-collapse {
+    display: none !important;
+}
+
+.room-card[data-available="1"]:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+.room-card.border-4 {
+    border-width: 4px !important;
+}
+.room-card .card-header {
+    transition: all 0.3s ease;
+}
+.room-card[data-available="0"] {
+    cursor: not-allowed !important;
+}
+.room-card[data-available="1"] {
+    cursor: pointer;
+}
+
+/* Style for Add Doctor Button in Select2 */
+.select2-new-tag {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6f9f0 100%);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 2px dashed #198754;
+    margin: 4px 0;
+}
+
+.select2-new-tag:hover {
+    background: linear-gradient(135deg, #e6f9f0 0%, #d4f4e3 100%);
+    border-color: #146c43;
+    transform: translateX(-2px);
+}
+
+.select2-results__option--highlighted .select2-new-tag {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    border-color: #fff;
+    color: white;
+}
+
+.select2-results__option--highlighted .select2-new-tag i,
+.select2-results__option--highlighted .select2-new-tag strong {
+    color: white !important;
+}
+
+</style>
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startSection('content'); ?>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-procedures me-2 text-primary"></i>
+                حجز عملية جراحية جديدة
+            </h2>
+            
+            <!-- مؤشر الخطوات -->
+            <div class="step-wizard" style="background: #f8f9fa; border: 2px solid #dee2e6; padding: 30px;">
+                <div class="progress-header">
+                    <div class="progress-percent-text" id="progressPercentText" style="color: #667eea; font-size: 1.3rem; font-weight: bold; margin-bottom: 15px;">0% اكتمال</div>
+                    <div class="progress-bar-container" style="width: 100%; height: 35px; background: #dee2e6; border-radius: 20px; overflow: hidden; margin-bottom: 10px;">
+                        <div class="progress-bar-fill" id="progressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #667eea 0%, #1262da 100%); border-radius: 20px;"></div>
+                    </div>
+                    <div class="progress-step-info" style="color: #495057; font-size: 1rem;">
+                        الخطوة <strong id="currentStepNum">-</strong> من <strong>3</strong>: <span id="stepName">اضغط على خطوة للبدء</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <form action="<?php echo e(route('surgeries.store')); ?>" method="POST" id="surgeryForm" enctype="multipart/form-data">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="visit_id" value="<?php echo e(request('visit_id')); ?>">
+                
+                <!-- التبويبات (اصبحت اكوردين) -->
+                <div class="accordion" id="surgeryAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading1">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="false" aria-controls="collapse1">
+                                <span class="step-number bg-primary text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">1</span>
+                                بيانات المريض والعملية
+                            </button>
+                        </h2>
+                        <div id="collapse1" class="accordion-collapse collapse" aria-labelledby="heading1" data-bs-parent="#surgeryAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-4">
+                                            <label for="patient_id" class="form-label fw-bold">
+                                                <i class="fas fa-user me-1 text-primary"></i>
+                                                المريض <span class="text-danger">*</span>
+                                            </label>
+                                            <select name="patient_id" id="patient_id" class="form-select form-select-lg <?php $__errorArgs = ['patient_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" required autofocus>
+                                                <option value="">اختر المريض</option>
+                                                <?php $__currentLoopData = $patients; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $patient): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                    <option value="<?php echo e($patient->id); ?>" <?php echo e((old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : ''); ?>>
+                                                        <?php echo e($patient->user->name); ?>
+
+                                                    </option>
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                            </select>
+                                            <?php $__errorArgs = ['patient_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                                <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                        </div>
+                            </div>
+
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="surgery_category" class="form-label fw-bold">
+                                        <i class="fas fa-folder me-1 text-warning"></i>
+                                        صنف العملية <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="surgery_category" id="surgery_category" 
+                                            class="form-select form-select-lg <?php $__errorArgs = ['surgery_category'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
+                                            required>
+                                        <option value="">-- اختر صنف العملية --</option>
+                                        <?php $__currentLoopData = $surgicalOperations->unique('category')->pluck('category'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($category); ?>" <?php echo e(old('surgery_category') == $category ? 'selected' : ''); ?>>
+                                                <?php echo e($category); ?>
+
+                                            </option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </select>
+                                    <?php $__errorArgs = ['surgery_category'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="surgical_operation_id" class="form-label fw-bold">
+                                        <i class="fas fa-stethoscope me-1 text-info"></i>
+                                        نوع العملية <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="surgical_operation_id" id="surgical_operation_id" 
+                                            class="form-select form-select-lg <?php $__errorArgs = ['surgical_operation_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
+                                            required>
+                                        <option value="">-- اختر نوع العملية --</option>
+                                        <?php $__currentLoopData = $surgicalOperations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $operation): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($operation->id); ?>" 
+                                                    data-category="<?php echo e($operation->category); ?>"
+                                                    data-fee="<?php echo e($operation->fee); ?>"
+                                                    <?php echo e(old('surgical_operation_id') == $operation->id ? 'selected' : ''); ?>>
+                                                <?php echo e($operation->name); ?>
+
+                                               
+                                            </option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </select>
+                                    <?php $__errorArgs = ['surgical_operation_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    
+                                    <!-- تنبيه السعر حسب الجدول -->
+                                    <div id="surgery_fee_info" class="alert alert-info mt-3" style="display: none;">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <span>سعر العملية حسب الجدول: <strong id="surgery_fee_display">0</strong> د.ع</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- حقل السعر المخصص لجميع العمليات -->
+                            <div class="col-md-6" id="custom_fee_container">
+                                <div class="mb-4">
+                                    <label for="custom_surgery_fee" class="form-label fw-bold">
+                                        <i class="fas fa-coins me-1 text-warning"></i>
+                                        سعر العملية <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           name="custom_surgery_fee" 
+                                           id="custom_surgery_fee" 
+                                           class="form-control form-control-lg <?php $__errorArgs = ['custom_surgery_fee'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
+                                           value="<?php echo e(old('custom_surgery_fee')); ?>"
+                                           placeholder="أدخل سعر العملية بالدينار العراقي (مثال: 1,000,000)"
+                                           inputmode="numeric"
+                                           pattern="[0-9,]+"
+                                           required>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1 text-info"></i>
+                                        يجب إدخال سعر العملية يدوياً - سيتم تنسيق الأرقام تلقائياً
+                                    </div>
+                                    <?php $__errorArgs = ['custom_surgery_fee'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-user-doctor me-1 text-info"></i>
+                                        الطبيب المرسل <span class="text-danger">*</span>
+                                    </label>
+                                    
+                                    <!-- قائمة موحدة للأطباء الداخليين والخارجيين -->
+                                    <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select form-select-lg <?php $__errorArgs = ['referring_doctor_name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" style="width: 100%;" required>
+                                        <option value="">اختر الطبيب أو أدخل اسماً جديداً</option>
+                                        
+                                        <!-- الأطباء الداخليين -->
+                                        <optgroup label="أطباء المستشفى">
+                                            <?php $__currentLoopData = $doctors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $doctor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <option value="<?php echo e($doctor->user->name); ?>" <?php echo e((old('referring_doctor_name', request('referring_doctor_name')) == $doctor->user->name) ? 'selected' : ''); ?>>
+                                                    د. <?php echo e($doctor->user->name); ?>
+
+                                                </option>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </optgroup>
+                                        
+                                        <!-- الأطباء الخارجيين السابقين -->
+                                        <?php
+                                            $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
+                                                ->distinct()
+                                                ->pluck('referring_doctor_name')
+                                                ->filter()
+                                                ->unique()
+                                                ->reject(function($name) use ($doctors) {
+                                                    // استبعاد الأطباء الداخليين من القائمة الخارجية
+                                                    return $doctors->pluck('user.name')->contains($name);
+                                                })
+                                                ->sort();
+                                        ?>
+                                        <?php if($externalDoctors->isNotEmpty()): ?>
+                                            <optgroup label="أطباء خارجيين سابقين">
+                                                <?php $__currentLoopData = $externalDoctors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $externalDoctor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                    <option value="<?php echo e($externalDoctor); ?>" <?php echo e((old('referring_doctor_name', request('referring_doctor_name')) == $externalDoctor) ? 'selected' : ''); ?>>
+                                                        <?php echo e($externalDoctor); ?>
+
+                                                    </option>
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                            </optgroup>
+                                        <?php endif; ?>
+                                    </select>
+                                    
+                                    <div class="alert alert-success alert-sm mt-2 mb-0 py-2" style="font-size: 0.9rem;">
+                                        <i class="fas fa-lightbulb me-2"></i>
+                                        <strong>للإضافة السريعة:</strong> اكتب اسم الطبيب الجديد واضغط Enter - سيُفتح نموذج لإدخال التفاصيل
+                                    </div>
+                                    
+                                    <?php $__errorArgs = ['referring_doctor_name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback d-block"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- نظام الأرشفة المجاني - متاح دائماً -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-4">
+                                    <div class="mt-3" id="referral_letter_container">
+                                        <label class="form-label fw-bold">
+                                            <i class="fas fa-file-medical-alt me-1 text-info"></i>
+                                            ورقة التحويل
+                                        </label>
+                                        
+                                        <!-- إرشادات النظام -->
+                                        <div class="alert alert-primary mb-3" id="scan_instructions">
+                                            <div class="d-flex align-items-start">
+                                                <i class="fas fa-print fa-2x me-3 text-primary"></i>
+                                                <div>
+                                                    <h6 class="alert-heading mb-2">🎯 نظام الأرشفة التلقائي (يعمل مع أي سكانر)</h6>
+                                                    <p class="mb-2"><strong>خطوة واحدة فقط:</strong></p>
+                                                    <ol class="mb-2 ps-3">
+                                                        <li>ضع الورقة في السكانر</li>
+                                                        <li>اضغط الزر الأزرق أدناه</li>
+                                                        <li>سيتم المسح تلقائياً!</li>
+                                                    </ol>
+                                                    <div id="scanner_status" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- أزرار المسح -->
+                                        <div class="d-grid gap-2 mb-3">
+                                            <button type="button" class="btn btn-lg btn-primary" id="scan_btn" onclick="scanFromDevice()">
+                                                <i class="fas fa-print me-2"></i>
+                                                <span id="scan_btn_text">مسح الورقة من السكانر الآن</span>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('referral_letter').click()">
+                                                <i class="fas fa-upload me-2"></i>
+                                                أو رفع ملف إذا مسحته مسبقاً
+                                            </button>
+                                        </div>
+
+                                        <!-- رسالة تثبيت البرنامج -->
+                                        <div class="alert alert-warning border-2" id="install_prompt" style="display:none;">
+                                            <h6 class="mb-3">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                برنامج السكانر غير مشغّل
+                                            </h6>
+                                            <div class="mb-3">
+                                                <p class="mb-2"><strong>لتشغيل المسح التلقائي:</strong></p>
+                                                <ol class="mb-0">
+                                                    <li>شغّل ملف <code class="bg-light px-2 py-1 rounded">تشغيل_السكانر_التلقائي.bat</code></li>
+                                                    <li>تأكد من توصيل السكانر بالكمبيوتر</li>
+                                                    <li>انتظر حتى تظهر رسالة "جاهز"</li>
+                                                </ol>
+                                            </div>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-warning" 
+                                                        onclick="checkScannerStatus()">
+                                                    <i class="fas fa-redo me-1"></i>
+                                                    إعادة الفحص
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-secondary" 
+                                                        onclick="document.getElementById('referral_letter').click()">
+                                                    <i class="fas fa-upload me-1"></i>
+                                                    رفع ملف يدوياً
+                                                    أعد المحاولة
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-secondary" 
+                                                        onclick="document.getElementById('referral_letter').click()">
+                                                    <i class="fas fa-upload me-1"></i>
+                                                    رفع ملف بدلاً
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- حقل الملف المخفي -->
+                                        <input type="file" 
+                                               name="referral_letter" 
+                                               id="referral_letter" 
+                                               class="d-none <?php $__errorArgs = ['referral_letter'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
+                                               accept="image/*,application/pdf">
+                                        
+                                        <!-- textarea مخفي لاستقبال البيانات من NAPS2 -->
+                                        <textarea id="scan_data_receiver" style="display:none;"></textarea>
+                                        
+                                        <!-- حالة المسح -->
+                                        <div id="scan_status" class="alert" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <div class="spinner-border spinner-border-sm me-2" role="status">
+                                                    <span class="visually-hidden">جاري المسح...</span>
+                                                </div>
+                                                <span id="scan_status_text">جاري تشغيل السكانر...</span>
+                                            </div>
+                                        </div>
+
+                                        <?php $__errorArgs = ['referral_letter'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <div class="invalid-feedback d-block"><?php echo e($message); ?></div>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    </div>
+                                    
+                                    <!-- معاينة الوثيقة -->
+                                    <div id="referral_letter_preview" class="mt-3" style="display: none;">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                                <span>
+                                                    <i class="fas fa-check-circle me-2"></i>
+                                                    تم المسح بنجاح من السكانر
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-light" onclick="clearScannedDoc()">
+                                                    <i class="fas fa-redo me-1"></i>إعادة المسح
+                                                </button>
+                                            </div>
+                                            <div class="card-body text-center">
+                                                <img id="preview_image" src="" class="img-fluid rounded shadow" style="max-height:400px;">
+                                                <p id="preview_info" class="mt-2 text-muted small"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+            </div> <!-- /.accordion-collapse step1 -->
+        </div> <!-- /.accordion-item step1 -->
+
+                    <!-- الخطوة 2: التفاصيل الطبية والموعد -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading2">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2">
+                    <span class="step-number bg-success text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">2</span>
+                    التفاصيل الطبية والموعد
+                </button>
+            </h2>
+            <div id="collapse2" class="accordion-collapse collapse" aria-labelledby="heading2" data-bs-parent="#surgeryAccordion">
+                <div class="accordion-body">
+                        <h5 class="mb-4 text-success">
+                            <i class="fas fa-user-md me-2"></i>
+                            التفاصيل الطبية والموعد
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="doctor_id" class="form-label fw-bold">
+                                        <i class="fas fa-user-md me-1 text-primary"></i>
+                                        الطبيب الجراح <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="doctor_id" id="doctor_id" class="form-select form-select-lg <?php $__errorArgs = ['doctor_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" required>
+                                        <option value="">اختر الطبيب</option>
+                                        <?php $__currentLoopData = $doctors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $doctor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($doctor->id); ?>" <?php echo e((old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : ''); ?>>
+                                                د. <?php echo e($doctor->user->name); ?>
+
+                                            </option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </select>
+                                    <?php $__errorArgs = ['doctor_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="department_id" class="form-label fw-bold">
+                                        <i class="fas fa-hospital me-1 text-info"></i>
+                                        القسم <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="department_id" id="department_id" class="form-select form-select-lg <?php $__errorArgs = ['department_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" required>
+                                        <option value="">اختر القسم</option>
+                                        <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $department): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($department->id); ?>" <?php echo e((old('department_id', request('department_id')) == $department->id) ? 'selected' : ''); ?>>
+                                                <?php echo e($department->name); ?>
+
+                                            </option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </select>
+                                    <?php $__errorArgs = ['department_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="scheduled_date" class="form-label fw-bold">
+                                        <i class="fas fa-calendar me-1 text-warning"></i>
+                                        تاريخ العملية <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="scheduled_date" id="scheduled_date" 
+                                           class="form-control form-control-lg <?php $__errorArgs = ['scheduled_date'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
+                                           value="<?php echo e(old('scheduled_date')); ?>" required>
+                                    <?php $__errorArgs = ['scheduled_date'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="scheduled_time" class="form-label fw-bold">
+                                        <i class="fas fa-clock me-1 text-warning"></i>
+                                        وقت العملية <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" name="scheduled_time" id="scheduled_time" 
+                                           class="form-control form-control-lg <?php $__errorArgs = ['scheduled_time'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
+                                           value="<?php echo e(old('scheduled_time', '09:00')); ?>" required>
+                                    <?php $__errorArgs = ['scheduled_time'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <?php if(Auth::user()->hasRole(['admin', 'surgery_staff', 'doctor'])): ?>
+                        <div class="section-divider" data-title="أطباء التخدير (اختياري)"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="anesthesiologist_id" class="form-label fw-bold">
+                                        <i class="fas fa-syringe me-1 text-secondary"></i>
+                                        الطبيب المخدر الأول
+                                    </label>
+                                    <select name="anesthesiologist_id" id="anesthesiologist_id" class="form-select <?php $__errorArgs = ['anesthesiologist_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                                        <option value="">اختر الطبيب المخدر</option>
+                                        <?php $__currentLoopData = $doctors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $doctor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($doctor->id); ?>" <?php echo e((old('anesthesiologist_id') == $doctor->id) ? 'selected' : ''); ?>>
+                                                د. <?php echo e($doctor->user->name); ?>
+
+                                            </option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </select>
+                                    <?php $__errorArgs = ['anesthesiologist_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="anesthesiologist_2_id" class="form-label fw-bold">
+                                        <i class="fas fa-syringe me-1 text-secondary"></i>
+                                        الطبيب المخدر الثاني
+                                    </label>
+                                    <select name="anesthesiologist_2_id" id="anesthesiologist_2_id" class="form-select <?php $__errorArgs = ['anesthesiologist_2_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                                        <option value="">اختر الطبيب المخدر الثاني</option>
+                                        <?php $__currentLoopData = $doctors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $doctor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($doctor->id); ?>" <?php echo e((old('anesthesiologist_2_id') == $doctor->id) ? 'selected' : ''); ?>>
+                                                د. <?php echo e($doctor->user->name); ?>
+
+                                            </option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </select>
+                                    <?php $__errorArgs = ['anesthesiologist_2_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
+
+                </div> <!-- /.accordion-body step2 -->
+            </div> <!-- /.accordion-collapse step2 -->
+        </div> <!-- /.accordion-item step2 -->
+
+                <div class="accordion-item">
+            <h2 class="accordion-header" id="heading3">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3" aria-expanded="false" aria-controls="collapse3">
+                    <span class="step-number bg-warning text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">3</span>
+                    اختيار الغرفة
+                </button>
+            </h2>
+            <div id="collapse3" class="accordion-collapse collapse" aria-labelledby="heading3" data-bs-parent="#surgeryAccordion">
+                <div class="accordion-body">
+                        <h5 class="mb-4 text-danger">
+                            <i class="fas fa-bed me-2"></i>
+                            اختيار الغرفة (اختياري)
+                        </h5>
+                        
+                        <!-- مدة الإقامة -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <label for="expected_stay_days" class="form-label fw-bold">
+                                            <i class="fas fa-calendar-day me-1 text-info"></i>
+                                            مدة الإقامة المتوقعة (أيام)
+                                        </label>
+                                        <input type="number" name="expected_stay_days" id="expected_stay_days" 
+                                               class="form-control form-control-lg <?php $__errorArgs = ['expected_stay_days'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
+                                               value="<?php echo e(old('expected_stay_days', 1)); ?>" min="1" max="365">
+                                        <?php $__errorArgs = ['expected_stay_days'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <div class="invalid-feedback"><?php echo e($message); ?></div>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card border-success h-100">
+                                    <div class="card-body d-flex align-items-center">
+                                        <div class="w-100">
+                                            <h6 class="text-success mb-2">
+                                                <i class="fas fa-money-bill-wave me-2"></i>
+                                                ملخص التكلفة
+                                            </h6>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">الغرفة المختارة:</span>
+                                                <span id="selected_room_name" class="fw-bold">لم يتم الاختيار</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                                <span class="text-muted">حالة الغرفة:</span>
+                                                <span id="selected_room_status" class="fw-bold text-success">-</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <span class="text-muted">إجمالي أجرة الغرفة:</span>
+                                                <span id="room_total_fee" class="fs-4 fw-bold text-success">0 د.ع</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- دليل الألوان -->
+                        <div class="alert alert-light border mb-4">
+                            <div class="row text-center">
+                                <div class="col">
+                                    <span class="badge bg-success me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
+                                    <small>متاحة</small>
+                                </div>
+                                <div class="col">
+                                    <span class="badge bg-danger me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
+                                    <small>محجوزة</small>
+                                </div>
+                                <div class="col">
+                                    <span class="badge bg-warning me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
+                                    <small>صيانة</small>
+                                </div>
+                                <div class="col">
+                                    <span class="badge bg-secondary me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
+                                    <small>عادية</small>
+                                </div>
+                                <div class="col">
+                                    <span class="badge bg-warning me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
+                                    <small>VIP</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- حقل الغرفة المخفي -->
+                        <input type="hidden" name="room_id" id="room_id" value="<?php echo e(old('room_id', '')); ?>">
+
+                        <!-- لوحة الغرف -->
+                        <?php
+                            $roomsByFloor = $rooms->groupBy('floor');
+                        ?>
+
+                        <?php $__empty_1 = true; $__currentLoopData = $roomsByFloor; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $floor => $floorRooms): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-header py-2 bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-layer-group me-1 text-primary"></i>
+                                        <?php echo e($floor ?: 'بدون طابق'); ?>
+
+                                    </h6>
+                                    <span class="badge bg-primary"><?php echo e($floorRooms->count()); ?> غرفة</span>
+                                </div>
+                            </div>
+                            <div class="card-body py-2">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <?php $__currentLoopData = $floorRooms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $room): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <?php
+                                        // flip colors: red = available, green = occupied
+                                        $borderHex = match($room->status) {
+                                            'available'   => '#198754',
+                                            'occupied'    => '#dc3545',
+                                            'maintenance' => '#ffc107',
+                                            default       => '#6c757d'
+                                        };
+                                        $typeBg = $room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '';
+                                        $isAvailable = $room->status === 'available';
+                                    ?>
+                                    <div class="room-tile room-selectable <?php echo e($typeBg); ?> <?php echo e(!$room->is_active ? 'opacity-50' : ''); ?>"
+                                         data-room-id="<?php echo e($room->id); ?>"
+                                         data-room-fee="<?php echo e($room->daily_fee); ?>"
+                                         data-room-type="<?php echo e($room->room_type); ?>"
+                                         data-room-number="<?php echo e($room->room_number); ?>"
+                                         data-available="<?php echo e($isAvailable ? '1' : '0'); ?>"
+                                         data-status-color="<?php echo e($borderHex); ?>"
+                                         data-bs-toggle="tooltip"
+                                         data-bs-html="true"
+                                         title="<b><?php echo e($room->room_number); ?></b><br><?php echo e($room->room_type_name); ?><br><?php echo e(number_format($room->daily_fee)); ?> د.ع/يوم<br><?php echo e($room->status_name); ?>"
+                                         style="border-color: <?php echo e($borderHex); ?>; border-width: 3px; <?php echo e(!$isAvailable ? 'pointer-events:none; opacity:0.6;' : 'cursor:pointer;'); ?>">
+
+                                        <div class="room-number" style="color: <?php echo e($borderHex); ?>;"><?php echo e($room->room_number); ?></div>
+
+                                        <div class="room-badges">
+                                            <?php if($room->room_type === 'vip'): ?>
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">VIP</span>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="room-status">
+                                            <span class="status-dot" style="background-color: <?php echo e($borderHex); ?>;"></span>
+                                        </div>
+
+                                        <?php if($isAvailable): ?>
+                                        <div class="room-actions" style="display: none;">
+                                            <i class="fas fa-check-circle text-success" style="font-size: 0.8rem;"></i>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
+                            <h5>لا توجد غرف متاحة</h5>
+                            <p class="mb-0">لم يتم العثور على غرف متاحة للحجز</p>
+                        </div>
+                        <?php endif; ?>
+
+                        <!-- زر إلغاء اختيار الغرفة -->
+                        <div class="text-center mt-4" id="clear_room_section" style="display: none;">
+                            <button type="button" class="btn btn-outline-secondary" id="clear_room_btn">
+                                <i class="fas fa-times me-2"></i>
+                                إلغاء اختيار الغرفة
+                            </button>
+                        </div>
+
+                </div> <!-- /.accordion-body step3 -->
+            </div> <!-- /.accordion-collapse step3 -->
+        </div> <!-- /.accordion-item step3 -->
+    </div> <!-- /#surgeryAccordion -->
+
+                <!-- أزرار التنقل -->
+                <div class="d-flex justify-content-between mt-4 pt-4 border-top">
+                    <button type="button" class="btn btn-outline-secondary btn-lg" id="prevBtn" style="display: none;">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        السابق
+                    </button>
+                    <div></div>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo e(route('surgeries.index')); ?>" class="btn btn-outline-danger btn-lg">
+                            <i class="fas fa-times me-2"></i>
+                            إلغاء
+                        </a>
+                        <button type="button" class="btn btn-primary btn-lg" id="nextBtn">
+                            التالي
+                            <i class="fas fa-arrow-left ms-2"></i>
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn" style="display: none;">
+                            <i class="fas fa-save me-2"></i>
+                            حجز العملية
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إضافة طبيب جديد -->
+<div class="modal fade" id="addDoctorModal" tabindex="-1" aria-labelledby="addDoctorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addDoctorModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>
+                    إضافة طبيب مرسل جديد للنظام
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    سيتم إضافة هذا الطبيب إلى قاعدة البيانات ليكون متاحاً في المرات القادمة
+                </div>
+                <form id="addDoctorForm">
+                    <div class="mb-3">
+                        <label for="new_doctor_name" class="form-label fw-bold">
+                            <i class="fas fa-user me-1"></i>
+                            اسم الطبيب <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="new_doctor_name" required readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_doctor_specialization" class="form-label fw-bold">
+                            <i class="fas fa-stethoscope me-1"></i>
+                            التخصص <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="new_doctor_specialization" placeholder="مثال: جراحة عامة، باطنية، أطفال..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_doctor_phone" class="form-label fw-bold">
+                            <i class="fas fa-phone me-1"></i>
+                            رقم الهاتف
+                        </label>
+                        <input type="text" class="form-control" id="new_doctor_phone" placeholder="اختياري">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_doctor_notes" class="form-label fw-bold">
+                            <i class="fas fa-notes-medical me-1"></i>
+                            ملاحظات
+                        </label>
+                        <textarea class="form-control" id="new_doctor_notes" rows="2" placeholder="أي معلومات إضافية عن الطبيب (اختياري)"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="saveDoctorBtn">
+                    <i class="fas fa-save me-2"></i>
+                    <span id="saveDoctorBtnText">حفظ وإضافة للنظام</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startSection('scripts'); ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تفعيل Select2 على جميع القوائم المنسدلة (ما عدا surgical_operation_id)
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('#doctor_id, #department_id, #patient_id, #anesthesiologist_id, #anesthesiologist_2_id, #surgery_category').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            language: {
+                noResults: function() {
+                    return 'لا توجد نتائج';
+                },
+                searching: function() {
+                    return 'جاري البحث...';
+                }
+            },
+            placeholder: function() {
+                return $(this).data('placeholder') || 'اختر...';
+            },
+            allowClear: true
+        });
+
+        // تهيئة Select2 للطبيب المرسل مع إمكانية إضافة أسماء جديدة
+        let pendingDoctorName = '';
+        let isNewDoctor = false;
+        
+        $('#referring_doctor_name_select').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            tags: true,
+            createTag: function (params) {
+                const term = $.trim(params.term);
+                if (term === '') {
+                    return null;
+                }
+                return {
+                    id: term,
+                    text: '➕ إضافة طبيب جديد: ' + term,
+                    newTag: true,
+                    originalName: term
+                };
+            },
+            templateResult: function(data) {
+                if (!data.id) {
+                    return data.text;
+                }
+                
+                // إذا كان tag جديد، أضف أيقونة وتنسيق خاص
+                if (data.newTag) {
+                    const $result = $(
+                        '<div class="select2-new-tag">' +
+                            '<i class="fas fa-user-plus text-success me-2"></i>' +
+                            '<strong style="color: #198754;">' + data.text + '</strong>' +
+                        '</div>'
+                    );
+                    return $result;
+                }
+                
+                return data.text;
+            },
+            templateSelection: function(data) {
+                // عند الاختيار، نعرض فقط الاسم بدون البادئة
+                if (data.newTag && data.originalName) {
+                    return data.originalName;
+                }
+                return data.text;
+            },
+            language: {
+                noResults: function() {
+                    return '🔍 لا توجد نتائج - اكتب اسماً جديداً للإضافة';
+                },
+                searching: function() {
+                    return 'جاري البحث...';
+                }
+            },
+            placeholder: 'اختر الطبيب أو أدخل اسماً جديداً',
+            allowClear: true,
+            minimumResultsForSearch: 0
+        });
+        
+        // معالج حدث الاختيار - نفتح المودال للأسماء الجديدة
+        $('#referring_doctor_name_select').on('select2:select', function(e) {
+            const data = e.params.data;
+            
+            // إذا كان طبيب جديد
+            if (data.newTag && data.originalName) {
+                isNewDoctor = true;
+                pendingDoctorName = data.originalName;
+                
+                // ملء اسم الطبيب في المودال
+                $('#new_doctor_name').val(data.originalName);
+                $('#new_doctor_specialization').val('');
+                $('#new_doctor_phone').val('');
+                $('#new_doctor_notes').val('');
+                
+                // فتح المودال
+                const modal = new bootstrap.Modal(document.getElementById('addDoctorModal'));
+                modal.show();
+            }
+        });
+        
+        // عند إغلاق المودال بدون حفظ، نرجع للاختيار السابق
+        $('#addDoctorModal').on('hidden.bs.modal', function() {
+            if (isNewDoctor && pendingDoctorName) {
+                // مسح الاختيار إذا لم يتم الحفظ
+                const currentVal = $('#referring_doctor_name_select').val();
+                if (currentVal === pendingDoctorName) {
+                    $('#referring_doctor_name_select').val(null).trigger('change');
+                }
+                isNewDoctor = false;
+            }
+        });
+        
+        // معالج حفظ الطبيب الجديد
+        $('#saveDoctorBtn').on('click', function() {
+            const name = $('#new_doctor_name').val().trim();
+            const specialization = $('#new_doctor_specialization').val().trim();
+            const phone = $('#new_doctor_phone').val().trim();
+            const notes = $('#new_doctor_notes').val().trim();
+            
+            if (!name || !specialization) {
+                alert('الرجاء إدخال اسم الطبيب والتخصص');
+                return;
+            }
+            
+            // تعطيل الزر ووضع loading
+            const $btn = $(this);
+            const originalText = $('#saveDoctorBtnText').text();
+            $btn.prop('disabled', true);
+            $('#saveDoctorBtnText').html('<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...');
+            
+            // إرسال طلب AJAX
+            $.ajax({
+                url: '<?php echo e(route("doctors.store-referring")); ?>',
+                method: 'POST',
+                data: {
+                    _token: '<?php echo e(csrf_token()); ?>',
+                    name: name,
+                    specialization: specialization,
+                    phone: phone,
+                    notes: notes
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // إزالة الخيار القديم (المؤقت)
+                        $('#referring_doctor_name_select option[value="' + name + '"]').remove();
+                        
+                        // إضافة الطبيب للقائمة كخيار دائم
+                        const newOption = new Option(name, name, true, true);
+                        $('#referring_doctor_name_select').append(newOption).trigger('change');
+                        
+                        isNewDoctor = false;
+                        
+                        // إغلاق المودال
+                        bootstrap.Modal.getInstance(document.getElementById('addDoctorModal')).hide();
+                        
+                        // رسالة نجاح
+                        const successAlert = $(
+                            '<div class="alert alert-success alert-dismissible fade show position-fixed" role="alert" style="top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 400px;">' +
+                                '<i class="fas fa-check-circle me-2"></i>' +
+                                '<strong>تم بنجاح!</strong> أُضيف الطبيب ' + response.doctor.name + ' للنظام' +
+                                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                            '</div>'
+                        );
+                        $('body').append(successAlert);
+                        
+                        // إزالة الرسالة بعد 5 ثواني
+                        setTimeout(function() {
+                            successAlert.fadeOut(function() { $(this).remove(); });
+                        }, 5000);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMsg = 'حدث خطأ أثناء حفظ الطبيب';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    alert(errorMsg);
+                },
+                complete: function() {
+                    // إعادة تفعيل الزر
+                    $btn.prop('disabled', false);
+                    $('#saveDoctorBtnText').text(originalText);
+                }
+            });
+        });
+
+        // تفعيل Select2 على قائمة العمليات مع الفلترة حسب الصنف
+        let allOperations = [];
+        
+        // حفظ جميع العمليات عند التحميل الأول
+        $('#surgical_operation_id option').each(function() {
+            const $option = $(this);
+            allOperations.push({
+                id: $option.val(),
+                text: $option.text(),
+                category: $option.data('category'),
+                fee: $option.data('fee'),
+                element: this
+            });
+        });
+        
+        function initOperationSelect2() {
+            const selectedCategory = $('#surgery_category').val();
+            
+            // مسح جميع الخيارات الحالية ما عدا الأول
+            $('#surgical_operation_id option:not(:first)').remove();
+            
+            // إضافة الخيارات المفلترة
+            if (selectedCategory) {
+                allOperations.forEach(function(op) {
+                    if (op.id && op.category === selectedCategory) {
+                        const $option = $('<option></option>')
+                            .val(op.id)
+                            .text(op.text)
+                            .attr('data-category', op.category)
+                            .attr('data-fee', op.fee);
+                        $('#surgical_operation_id').append($option);
+                    }
+                });
+            } else {
+                // إضافة جميع العمليات
+                allOperations.forEach(function(op) {
+                    if (op.id) {
+                        const $option = $('<option></option>')
+                            .val(op.id)
+                            .text(op.text)
+                            .attr('data-category', op.category)
+                            .attr('data-fee', op.fee);
+                        $('#surgical_operation_id').append($option);
+                    }
+                });
+            }
+            
+            // تفعيل Select2
+            $('#surgical_operation_id').select2({
+                theme: 'bootstrap-5',
+                dir: 'rtl',
+                language: {
+                    noResults: function() {
+                        return selectedCategory ? 'لا توجد عمليات في هذا الصنف' : 'لا توجد نتائج';
+                    },
+                    searching: function() {
+                        return 'جاري البحث...';
+                    }
+                },
+                placeholder: 'اختر نوع العملية',
+                allowClear: true
+            });
+        }
+        
+        initOperationSelect2();
+        
+        // عند تغيير صنف العملية
+        $('#surgery_category').on('change', function() {
+            // إعادة تعيين قيمة العملية المختارة
+            $('#surgical_operation_id').val(null);
+            
+            // إعادة تهيئة Select2 مع الفلترة الجديدة
+            $('#surgical_operation_id').select2('destroy');
+            initOperationSelect2();
+        });
+    }
+
+    // تفعيل Tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // accordion controls replace tabs
+    const accordionButtons = document.querySelectorAll('#surgeryAccordion .accordion-button');
+    const collapseItems = document.querySelectorAll('#surgeryAccordion .accordion-collapse');
+    const stepItems = document.querySelectorAll('.step-item');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('surgeryForm'); // main form element
+    let currentStep = -1;
+
+    const stepNames = ['المريض والعملية', 'الطبيب والموعد', 'الغرفة'];
+    const progressPercentText = document.getElementById('progressPercentText');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const currentStepNum = document.getElementById('currentStepNum');
+    const stepName = document.getElementById('stepName');
+
+    function updateUI() {
+        // حساب النسبة المئوية
+        const percent = currentStep >= 0 ? Math.round(((currentStep + 1) / accordionButtons.length) * 100) : 0;
+        
+        progressPercentText.textContent = percent + '% اكتمال';
+        progressBarFill.style.width = percent + '%';
+        currentStepNum.textContent = currentStep >= 0 ? currentStep + 1 : '-';
+        stepName.textContent = currentStep >= 0 ? stepNames[currentStep] : 'اضغط على خطوة للبدء';
+
+        // تحديث الأزرار
+        prevBtn.style.display = currentStep <= 0 ? 'none' : 'inline-block';
+        nextBtn.style.display = (currentStep === accordionButtons.length - 1) ? 'none' : 'inline-block';
+        submitBtn.style.display = currentStep === accordionButtons.length - 1 ? 'inline-block' : 'none';
+
+        // تحديث أزرار الاكورديون
+        accordionButtons.forEach((btn, index) => {
+            if (index === currentStep) {
+                btn.classList.remove('collapsed');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                btn.classList.add('collapsed');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        collapseItems.forEach((collapse, index) => {
+            if (index === currentStep) {
+                collapse.classList.add('show');
+            } else {
+                collapse.classList.remove('show');
+            }
+        });
+
+        // التمرير
+        if (currentStep === accordionButtons.length - 1) {
+            // final step: show submit button by scrolling down
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        } else {
+            // other steps: scroll to top for clarity
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    // استخدام Bootstrap events للأكورديون
+    collapseItems.forEach((collapse, idx) => {
+        collapse.addEventListener('shown.bs.collapse', function() {
+            currentStep = idx;
+            updateUI();
+        });
+        
+        collapse.addEventListener('hidden.bs.collapse', function() {
+            if (currentStep === idx) {
+                currentStep = -1;
+                updateUI();
+            }
+        });
+    });
+
+    // previous button
+    prevBtn.addEventListener('click', function() {
+        if (currentStep > 0) {
+            currentStep--;
+            updateUI();
+        }
+    });
+
+    // next button when no step is open yet
+    nextBtn.addEventListener('click', function handleFirstClick() {
+        if (currentStep < 0) {
+            currentStep = 0;
+            updateUI();
+        }
+    }, { capture: true });
+
+    // next button simply advances the step
+    nextBtn.addEventListener('click', function() {
+        if (currentStep < accordionButtons.length - 1) {
+            currentStep++;
+            updateUI();
+        }
+    });
+
+    // form submission validation
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // إزالة الفواصل من حقل السعر قبل الإرسال
+            const feeInput = document.getElementById('custom_surgery_fee');
+            if (feeInput && feeInput.value) {
+                feeInput.value = feeInput.value.replace(/,/g, '');
+            }
+            
+            console.log('form submit triggered, validity=', form.checkValidity());
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                form.reportValidity();
+                // find first invalid input
+                const invalid = form.querySelector(':invalid');
+                if (invalid) {
+                    // determine step of this input
+                    let stepIndex = 0;
+                    if (invalid.closest('#collapse1')) stepIndex = 0;
+                    else if (invalid.closest('#collapse2')) stepIndex = 1;
+                    else if (invalid.closest('#collapse3')) stepIndex = 2;
+                    currentStep = stepIndex;
+                    updateUI();
+                    invalid.focus();
+                }
+            }
+        });
+    }
+
+    // التحكم في حقول التحويل الخارجي
+    const internalRadio = document.getElementById('referral_internal');
+    const externalRadio = document.getElementById('referral_external');
+    const externalFields = document.getElementById('external_fields');
+
+    function toggleExternalFields() {
+        if (externalRadio && externalRadio.checked) {
+            externalFields.style.display = 'block';
+        } else {
+            externalFields.style.display = 'none';
+        }
+    }
+
+    if (internalRadio && externalRadio) {
+        internalRadio.addEventListener('change', toggleExternalFields);
+        externalRadio.addEventListener('change', toggleExternalFields);
+        toggleExternalFields();
+    }
+
+    // تم إزالة كود التحكم في radio buttons - الآن لدينا قائمة موحدة فقط
+    
+    // التحكم في حقل السعر المخصص
+    const customFeeContainer = document.getElementById('custom_fee_container');
+    const customFeeInput = document.getElementById('custom_surgery_fee');
+    const surgicalOperationSelect = document.getElementById('surgical_operation_id');
+    const surgeryFeeInfo = document.getElementById('surgery_fee_info');
+    const surgeryFeeDisplay = document.getElementById('surgery_fee_display');
+
+    // تنسيق الأرقام بفواصل آلاف أثناء الإدخال
+    function formatWithThousandSeparators(value) {
+        if (!value) return '';
+        const digits = value.toString().replace(/[^0-9]/g, '');
+        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    if (customFeeInput) {
+        customFeeInput.addEventListener('input', function() {
+            const cursorPos = customFeeInput.selectionStart;
+            const originalLength = customFeeInput.value.length;
+
+            customFeeInput.value = formatWithThousandSeparators(customFeeInput.value);
+
+            // محاولة الاحتفاظ بموقع المؤشر بعد التنسيق
+            const newLength = customFeeInput.value.length;
+            const diff = newLength - originalLength;
+            customFeeInput.setSelectionRange(cursorPos + diff, cursorPos + diff);
+        });
+    }
+
+    // if server returned validation errors, jump to the appropriate step
+    function focusFirstError() {
+        if (!form) return;
+        const invalid = form.querySelector(':invalid');
+        if (invalid) {
+            let stepIndex = 0;
+            if (invalid.closest('#collapse2')) stepIndex = 1;
+            else if (invalid.closest('#collapse3')) stepIndex = 2;
+            currentStep = stepIndex;
+            updateUI();
+            invalid.focus();
+        }
+    }
+
+    focusFirstError();
+
+    // ===== نظام الأرشفة التلقائي - يعمل مع أي سكانر =====
+    const referralInput = document.getElementById('referral_letter');
+    const previewContainer = document.getElementById('referral_letter_preview');
+    const previewImage = document.getElementById('preview_image');
+    const previewInfo = document.getElementById('preview_info');
+    const scanStatus = document.getElementById('scan_status');
+    const scanStatusText = document.getElementById('scan_status_text');
+    const scanBtn = document.getElementById('scan_btn');
+    const scanBtnText = document.getElementById('scan_btn_text');
+    const installPrompt = document.getElementById('install_prompt');
+    const scanInstructions = document.getElementById('scan_instructions');
+    const scannerStatusDiv = document.getElementById('scanner_status');
+
+    // حالة السكانر
+    let scannerReady = false;
+    let availableScanners = [];
+
+    // ═════════════════════════════════════════════════════════════════
+    //  فحص حالة السكانر
+    // ═════════════════════════════════════════════════════════════════
+    
+    async function checkScannerStatus() {
+        try {
+            const response = await fetch('http://localhost:37426/status', {
+                method: 'GET',
+                mode: 'cors'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                scannerReady = true;
+                availableScanners = data.scanners || [];
+                
+                // إخفاء رسالة التثبيت وإظهار الإرشادات
+                installPrompt.style.display = 'none';
+                scanInstructions.style.display = 'block';
+                
+                // عرض حالة السكانر
+                if (availableScanners.length > 0) {
+                    scannerStatusDiv.innerHTML = `
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle me-1"></i>
+                            جاهز - ${availableScanners.length} سكانر متصل
+                        </span>
+                        <small class="d-block text-muted mt-1">
+                            ${availableScanners.map(s => s.name).join('، ')}
+                        </small>
+                    `;
+                    scanBtn.classList.remove('btn-secondary');
+                    scanBtn.classList.add('btn-primary');
+                } else {
+                    scannerStatusDiv.innerHTML = `
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            لا يوجد سكانر متصل
+                        </span>
+                        <small class="d-block text-muted mt-1">وصّل السكانر ثم أعد المحاولة</small>
+                    `;
+                }
+                
+                return true;
+            }
+        } catch (e) {
+            scannerReady = false;
+            installPrompt.style.display = 'block';
+            scannerStatusDiv.innerHTML = `
+                <span class="badge bg-secondary">
+                    <i class="fas fa-plug me-1"></i>
+                    برنامج السكانر غير مشغل
+                </span>
+            `;
+        }
+        return false;
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    //  المسح من السكانر
+    // ═════════════════════════════════════════════════════════════════
+    
+    window.scanFromDevice = async function() {
+        if (!scanBtn) return;
+        
+        // التحقق من جاهزية السكانر أولاً
+        if (!scannerReady) {
+            const isReady = await checkScannerStatus();
+            if (!isReady) {
+                showScanStatus('warning', 'برنامج السكانر غير مشغل. شغّل الملف: <code>تشغيل_السكانر_التلقائي.bat</code>');
+                return;
+            }
+        }
+        
+        scanBtn.disabled = true;
+        scanBtnText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري المسح...';
+        showScanStatus('info', '📄 ضع الورقة في السكانر... جاري المسح');
+        
+        try {
+            await scanViaLocalBridge();
+        } catch (error) {
+            console.error('خطأ في المسح:', error);
+            handleScanError(error);
+        } finally {
+            scanBtn.disabled = false;
+            scanBtnText.innerHTML = 'مسح الورقة من السكانر الآن';
+        }
+    };
+
+    // المسح باستخدام برنامج الأرشفة المحلي
+    async function scanViaLocalBridge() {
+        try {
+            const response = await fetch('http://localhost:37426/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    color_mode: 'color',
+                    resolution: 200
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                
+                if (response.status === 404) {
+                    throw new Error('لم يتم العثور على سكانر متصل. تأكد من توصيل السكانر وتشغيله.');
+                } else if (response.status === 408) {
+                    throw new Error('انتهت مهلة المسح. تأكد من وضع الورقة في السكانر.');
+                } else {
+                    throw new Error(errorData.error || 'فشل المسح من السكانر');
+                }
+            }
+            
+            // استلام الصورة الممسوحة
+            const blob = await response.blob();
+            
+            if (blob.size === 0) {
+                throw new Error('الصورة الممسوحة فارغة');
+            }
+            
+            // معالجة وعرض الصورة
+            handleScannedImage(blob);
+            
+        } catch (e) {
+            if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
+                scannerReady = false;
+                installPrompt.style.display = 'block';
+                throw new Error('لم يتم الاتصال ببرنامج السكانر. تأكد من تشغيله أولاً.');
+            }
+            throw e;
+        }
+    }
+
+    // معالجة الصورة الممسوحة
+    function handleScannedImage(blobOrFile) {
+        const file = blobOrFile instanceof File ? blobOrFile : 
+                     new File([blobOrFile], `scanned-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        // تعيين الملف في input
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        referralInput.files = dataTransfer.files;
+        
+        // عرض المعاينة
+        const url = URL.createObjectURL(file);
+        previewImage.src = url;
+        previewInfo.innerHTML = `
+            <i class="fas fa-check-circle text-success me-1"></i>
+            تم المسح بنجاح - ${(file.size / 1024).toFixed(0)} KB
+        `;
+        previewContainer.style.display = 'block';
+        
+        showScanStatus('success', '✅ تم المسح بنجاح!');
+        setTimeout(() => {
+            if (scanStatus) scanStatus.style.display = 'none';
+        }, 3000);
+    }
+
+    // معالجة أخطاء المسح
+    function handleScanError(error) {
+        console.error(error);
+        showScanStatus('danger', `
+            <i class="fas fa-times-circle me-2"></i>
+            ${error.message}<br>
+            <small class="d-block mt-2">
+                يمكنك <a href="javascript:void(0)" onclick="document.getElementById('referral_letter').click()" class="text-white text-decoration-underline">رفع الصورة يدوياً</a>
+            </small>
+        `);
+    }
+
+    // عرض حالة المسح
+    function showScanStatus(type, message) {
+        if (!scanStatus || !scanStatusText) return;
+        scanStatus.className = `alert alert-${type}`;
+        scanStatusText.innerHTML = message;
+        scanStatus.style.display = 'block';
+    }
+
+    // حذف الوثيقة
+    window.clearScannedDoc = function() {
+        if (referralInput) referralInput.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (scanStatus) scanStatus.style.display = 'none';
+    };
+
+    // معالجة رفع الملف العادي
+    if (referralInput) {
+        referralInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) {
+                previewContainer.style.display = 'none';
+                return;
+            }
+            
+            const url = URL.createObjectURL(file);
+            previewImage.src = url;
+            previewInfo.innerHTML = `
+                <i class="fas fa-file-image me-1"></i>
+                ${file.name} (${(file.size / 1024).toFixed(0)} KB)
+            `;
+            previewContainer.style.display = 'block';
+        });
+    }
+
+    // فحص حالة السكانر عند تحميل الصفحة
+    checkScannerStatus();
+
+    // اختيار الغرفة من اللوحة
+    const roomTiles = document.querySelectorAll('.room-selectable');
+    const roomIdInput = document.getElementById('room_id');
+    const stayDaysInput = document.getElementById('expected_stay_days');
+    const roomTotalFee = document.getElementById('room_total_fee');
+    const selectedRoomName = document.getElementById('selected_room_name');
+    const clearRoomSection = document.getElementById('clear_room_section');
+    const clearRoomBtn = document.getElementById('clear_room_btn');
+    let selectedRoomFee = 0;
+
+    function selectRoom(tile) {
+        // تجاهل الغرف غير المتاحة
+        if (tile.dataset.available === '0') {
+            return;
+        }
+
+        // إزالة التحديد من جميع البطاقات
+        document.querySelectorAll('.room-tile').forEach(t => {
+            t.classList.remove('border-4', 'border-primary', 'shadow-lg');
+            // إخفاء جميع أيقونات التحديد
+            const checkIcon = t.querySelector('.room-actions');
+            if (checkIcon) {
+                checkIcon.style.display = 'none';
+            }
+        });
+
+        // تحديد البطاقة الحالية
+        tile.classList.add('border-4', 'border-primary', 'shadow-lg');
+        
+        // إظهار أيقونة التحديد
+        const checkIcon = tile.querySelector('.room-actions');
+        if (checkIcon) {
+            checkIcon.style.display = 'block';
+        }
+
+        // تحديث القيم
+        const roomId = tile.dataset.roomId;
+        const roomNumber = tile.dataset.roomNumber;
+        const roomType = tile.dataset.roomType;
+        selectedRoomFee = parseFloat(tile.dataset.roomFee);
+
+        roomIdInput.value = roomId;
+        selectedRoomName.textContent = roomNumber + (roomType === 'vip' ? ' (VIP)' : ' (عادية)');
+        // show availability text
+        const statusSpan = document.getElementById('selected_room_status');
+        if (statusSpan) {
+            if(tile.dataset.available === '1') {
+                statusSpan.textContent = 'متاحة';
+                statusSpan.classList.remove('text-success');
+                statusSpan.classList.add('text-danger');
+            } else {
+                statusSpan.textContent = 'غير متاحة';
+                statusSpan.classList.remove('text-danger');
+                statusSpan.classList.add('text-success');
+            }
+        }
+        clearRoomSection.style.display = 'block';
+
+        calculateRoomFee();
+
+        // move to last step so submit button appears immediately
+        currentStep = accordionButtons.length - 1;
+        updateUI();
+
+        // if form is now valid we can auto-submit (user already filled prior steps)
+        if (form.checkValidity()) {
+            console.log('form valid after room select, auto-submitting');
+            form.submit();
+        } else {
+            // focus submit button so user can click it if validation still fails
+            submitBtn.focus();
+        }
+    }
+
+    function clearRoomSelection() {
+        // إزالة التحديد من جميع البطاقات
+        document.querySelectorAll('.room-tile').forEach(t => {
+            t.classList.remove('border-4', 'border-primary', 'shadow-lg');
+            // إخفاء جميع أيقونات التحديد
+            const checkIcon = t.querySelector('.room-actions');
+            if (checkIcon) {
+                checkIcon.style.display = 'none';
+            }
+        });
+
+        roomIdInput.value = '';
+        selectedRoomName.textContent = 'لم يتم الاختيار';
+        selectedRoomFee = 0;
+        clearRoomSection.style.display = 'none';
+
+        calculateRoomFee();
+    }
+
+    function calculateRoomFee() {
+        if (!stayDaysInput || !roomTotalFee) return;
+
+        const days = parseInt(stayDaysInput.value) || 0;
+        const total = selectedRoomFee * days;
+
+        roomTotalFee.textContent = new Intl.NumberFormat('ar-IQ').format(total) + ' د.ع';
+    }
+
+    // إضافة أحداث النقر على بطاقات الغرف
+    roomTiles.forEach(tile => {
+        tile.addEventListener('click', function() {
+            selectRoom(this);
+        });
+    });
+
+    // زر إلغاء اختيار الغرفة
+    if (clearRoomBtn) {
+        clearRoomBtn.addEventListener('click', clearRoomSelection);
+    }
+
+    // حساب الأجرة عند تغيير عدد الأيام
+    if (stayDaysInput) {
+        stayDaysInput.addEventListener('input', calculateRoomFee);
+    }
+
+    // استعادة الاختيار المحفوظ
+    if (roomIdInput && roomIdInput.value) {
+        const savedTile = document.querySelector('.room-tile[data-room-id="' + roomIdInput.value + '"]');
+        if (savedTile) {
+            selectRoom(savedTile);
+        }
+    }
+
+    calculateRoomFee();
+
+    // تنسيق حقل السعر المخصص بالفواصل
+    if (customFeeInput) {
+        // دالة لتنسيق الرقم بالفواصل
+        function formatNumberWithCommas(value) {
+            // إزالة كل الفواصل الموجودة
+            let numValue = value.toString().replace(/,/g, '');
+            // التحقق من أنه رقم صحيح
+            if (!/^\d*$/.test(numValue)) {
+                return value;
+            }
+            // إضافة الفواصل للآلاف
+            return numValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        // دالة لإزالة الفواصل وإرجاع الرقم الصحيح
+        function removeCommas(value) {
+            return value.replace(/,/g, '');
+        }
+
+        // عند الكتابة في الحقل
+        customFeeInput.addEventListener('input', function(e) {
+            let cursorPosition = this.selectionStart;
+            let oldValue = this.value;
+            let oldLength = oldValue.length;
+            
+            // إزالة الفواصل أولاً
+            let cleanValue = removeCommas(this.value);
+            
+            // السماح بالأرقام فقط
+            cleanValue = cleanValue.replace(/\D/g, '');
+            
+            // تنسيق القيمة بالفواصل
+            let formattedValue = formatNumberWithCommas(cleanValue);
+            
+            // تحديث القيمة
+            this.value = formattedValue;
+            
+            // حساب الموقع الجديد للمؤشر
+            let newLength = formattedValue.length;
+            let diff = newLength - oldLength;
+            
+            // ضبط موقع المؤشر
+            this.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+        });
+
+        // تنسيق القيمة الأولية إذا كانت موجودة
+        if (customFeeInput.value) {
+            customFeeInput.value = formatNumberWithCommas(removeCommas(customFeeInput.value));
+        }
+    }
+
+    updateUI();
+});
+</script>
+<?php $__env->stopSection(); ?>
+
+<style>
+/* Room tiles styles */
+.room-tile {
+    width: 80px;
+    height: 70px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: #dee2e6;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: white;
+    transition: all 0.3s ease;
+    margin: 2px;
+}
+
+.room-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+
+.room-tile[data-available="0"] {
+    background: #f8f9fa;
+    opacity: 0.6;
+}
+
+.room-number {
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.room-badges {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+}
+
+.room-status {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.room-actions {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+}
+
+.room-selectable {
+    cursor: pointer;
+}
+
+.room-selectable[data-available="0"] {
+    cursor: not-allowed;
+}
+</style>
+<!--
+====================================
+إعداد نظام الأرشفة بالسكانر
+====================================
+
+هذا النموذج يدعم المسح المباشر من أجهزة السكانر المتصلة بالحاسوب.
+
+الخيارات المتاحة:
+
+1. Dynamsoft Dynamic Web TWAIN (موصى به)
+   - يدعم معظم أجهزة السكانر TWAIN/WIA/SANE
+   - يعمل على Windows, Mac, Linux
+   - يتطلب تثبيت Service على الحاسوب
+   - التحميل: https://www.dynamsoft.com/web-twain/downloads
+   - مجاني للتطوير (يحتاج ترخيص للإنتاج)
+
+2. Asprise Scanning (بديل مجاني)
+   - أخف وزناً
+   - يدعم Windows, Mac, Linux
+   - التحميل: https://asprise.com/document-scan-upload-image-browser/direct-to-web-browser-scan-upload.html
+
+3. البديل اليدوي (متوفر دائماً)
+   - يمكن للمستخدم المسح يدوياً ثم رفع الملف
+   - لا يتطلب أي إعدادات إضافية
+
+التثبيت:
+1. اختر إحدى المكتبتين أعلاه
+2. حمّل وثبت البرنامج المساعد على أجهزة المستخدمين
+3. تأكد من تشغيل خدمة المسح (Service)
+4. تأكد من توصيل السكانر وتثبيت تعريفاته
+
+ملاحظات:
+- النظام يحتوي على fallback تلقائي لرفع الملفات إذا لم يتوفر السكانر
+- يمكن تخصيص إعدادات الدقة (Resolution) والألوان
+- يدعم المسح متعدد الصفحات
+- يحفظ الملفات بصيغة JPG أو PDF حسب الإعدادات
+-->
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /home/hinpabye/public_html/hospital-system/resources/views/surgeries/create.blade.php ENDPATH**/ ?>
