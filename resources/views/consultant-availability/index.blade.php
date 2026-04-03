@@ -1,4 +1,4 @@
-<!-- resources/views/consultant-availability/index.blade.php -->
+﻿<!-- resources/views/consultant-availability/index.blade.php -->
 @extends('layouts.app')
 
 @section('content')
@@ -41,6 +41,21 @@
                     <h5 class="text-muted mb-0">غير متاح</h5>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Day Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <ul class="nav nav-pills justify-content-center" role="tablist">
+                @foreach($weekDays as $day)
+                    <li class="nav-item me-2" role="presentation">
+                        <a href="?day={{ urlencode($day) }}" class="nav-link {{ $day === $selectedDay ? 'active' : '' }}">
+                            {{ $day }}
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
         </div>
     </div>
 
@@ -221,11 +236,15 @@
                                         <span class="availability-text fw-semibold {{ $doctor->is_available_today ? 'text-success' : 'text-danger' }}">
                                             {{ $doctor->is_available_today ? 'متاح' : 'غير متاح' }}
                                         </span>
+                                        <div class="small text-muted mt-1">
+                                            أيام العمل: {{ is_array($doctor->working_days) && count($doctor->working_days) ? implode('، ', $doctor->working_days) : 'لم يتم التحديد' }}
+                                        </div>
                                     </td>
                                     <td>
                                         <form method="POST" action="{{ route('consultant-availability.update', $doctor->id) }}" style="display: inline;">
                                             @csrf
                                             @method('PATCH')
+                                            <input type="hidden" name="day" value="{{ $selectedDay }}">
                                             <input type="hidden" name="is_available_today" value="{{ $doctor->is_available_today ? '0' : '1' }}">
                                             <button type="submit" class="btn btn-sm {{ $doctor->is_available_today ? 'btn-outline-danger' : 'btn-outline-success' }}" title="{{ $doctor->is_available_today ? 'اجعل غير متاح' : 'اجعل متاح' }}">
                                                 <i class="fas {{ $doctor->is_available_today ? 'fa-toggle-off' : 'fa-toggle-on' }}"></i>

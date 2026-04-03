@@ -120,11 +120,11 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2" style="width: 32px; height: 32px; background: linear-gradient(135deg, #007bff, #6610f2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                        {{ substr($test->surgery->patient->user->name, 0, 1) }}
+                                        {{ optional($test->surgery->patient->user)->name ? substr($test->surgery->patient->user->name, 0, 1) : '?' }}
                                     </div>
                                     <div>
                                         <a href="{{ route('patients.show', $test->surgery->patient) }}" class="text-decoration-none fw-bold">
-                                            {{ $test->surgery->patient->user->name }}
+                                            {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}
                                         </a>
                                         <br>
                                         <small class="text-muted">ID: {{ $test->surgery->patient->id }}</small>

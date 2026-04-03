@@ -587,7 +587,7 @@
                                                         <option value="">اختر طبيب التخدير</option>
                                                         @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
                                                         <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_id == $doctor->id ? 'selected' : '' }}>
-                                                            د. {{ $doctor->user->name }}
+                                                            د. {{ optional($doctor->user)->name ?? 'غير معروف' }}
                                                         </option>
                                                         @endforeach
                                                     </select>
@@ -603,7 +603,7 @@
                                                         <option value="">اختر طبيب التخدير المساعد</option>
                                                         @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
                                                         <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_2_id == $doctor->id ? 'selected' : '' }}>
-                                                            د. {{ $doctor->user->name }}
+                                                            د. {{ optional($doctor->user)->name ?? 'غير معروف' }}
                                                         </option>
                                                         @endforeach
                                                     </select>

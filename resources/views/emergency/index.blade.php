@@ -11,6 +11,12 @@
                     إدارة الطوارئ
                 </h2>
                 <div>
+                    <span class="badge bg-success" id="emergency-live-indicator">
+                        <i class="fas fa-circle fa-xs"></i> مباشر
+                    </span>
+                    <small class="text-muted ms-2" id="emergency-last-update">آخر تحديث: الآن</small>
+                </div>
+                <div>
                     <a href="{{ route('emergency.dashboard') }}" class="btn btn-info me-2">
                         <i class="fas fa-chart-line me-2"></i>لوحة التحكم
                     </a>
@@ -71,6 +77,17 @@
         </div>
     </div>
 
+    @if($emergencies->where('payment_status', 'pending')->count() > 0)
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    يوجد {{ $emergencies->where('payment_status', 'pending')->count() }} حالة طوارئ لم تُدفع بعد في الكاشير. .
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">
@@ -84,6 +101,7 @@
                                     <th>نوع الطوارئ</th>
                                     <th>الأولوية</th>
                                     <th>الحالة</th>
+                                    <th>الدفع</th>
                                     <th>نتائج التحاليل</th>
                                     <th>نتائج الأشعة</th>
                                     <th>الاستشارة</th>
@@ -95,7 +113,7 @@
                             </thead>
                             <tbody>
                                 @forelse($emergencies as $emergency)
-                                <tr class="{{ $emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : '') }}">
+                                <tr class="{{ $emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : ''))) }}">
                                     <td>{{ $loop->iteration }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -135,6 +153,15 @@
                                     </td>
                                     <td>
                                         <span class="badge {{ $emergency->status_badge_class }}">{{ $emergency->status_text }}</span>
+                                    </td>
+                                    <td>
+                                        @if($emergency->payment_status == 'paid')
+                                            <span class="badge bg-success">مدفوع</span>
+                                        @elseif($emergency->payment_status == 'pending')
+                                            <span class="badge bg-danger">غير مدفوع</span>
+                                        @else
+                                            <span class="badge bg-secondary">غير معروف</span>
+                                        @endif
                                     </td>
                                     <td>
                                         @php
@@ -284,6 +311,71 @@
         </div>
     </div>
 </div>
+
+<script>
+    function updateEmergencyPaymentStatus() {
+        axios.get('{{ route('cashier.emergency.payment.status') }}')
+            .then(function(response) {
+                var pending = response.data.pending || 0;
+                var alertHolder = document.getElementById('emergency-payment-alert-holder');
+                if (!alertHolder) {
+                    var container = document.querySelector('.container-fluid');
+                    var div = document.createElement('div');
+                    div.id = 'emergency-payment-alert-holder';
+                    div.className = 'row mb-3';
+                    container.insertBefore(div, container.firstChild.nextSibling.nextSibling);
+                    alertHolder = div;
+                }
+
+                if (pending > 0) {
+                    alertHolder.innerHTML = '<div class="col-12"><div class="alert alert-danger">' +
+                        '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                        'هناك ' + pending + ' حالة طوارئ غير مدفوعة في الكاشير. <strong>الطباعة مغلقة حتى السداد</strong>.' +
+                        '</div></div>';
+                } else {
+                    alertHolder.innerHTML = '<div class="col-12"><div class="alert alert-success">' +
+                        '<i class="fas fa-check-circle me-2"></i>' +
+                        'جميع حالات الطوارئ المدعومة حتى الآن تم دفعها في الكاشير.' +
+                        '</div></div>';
+                }
+
+                var indicator = document.getElementById('emergency-live-indicator');
+                if (indicator) {
+                    if (pending > 0) {
+                        indicator.className = 'badge bg-danger';
+                        indicator.innerHTML = '<i class="fas fa-circle fa-xs"></i> غير مدفوع';
+                    } else {
+                        indicator.className = 'badge bg-success';
+                        indicator.innerHTML = '<i class="fas fa-circle fa-xs"></i> مباشر';
+                    }
+                }
+
+                var lastUpdate = document.getElementById('emergency-last-update');
+                if (lastUpdate) {
+                    lastUpdate.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ');
+                }
+            })
+            .catch(function(error) {
+                console.error('خطأ في تحديث حالة الدفع:', error);
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateEmergencyPaymentStatus();
+        setInterval(updateEmergencyPaymentStatus, 5000);
+    });
+</script>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    #emergency-live-indicator {
+        animation: pulse 2s ease-in-out infinite;
+    }
+</style>
 @endsection
 
 @foreach($emergencies as $emergency)
@@ -433,15 +525,26 @@
                             <select name="doctor_id" class="form-select" required>
                                 <option value="">اختر الطبيب</option>
                                 @php
+                                    $daysMap = [
+                                        'Saturday' => 'السبت',
+                                        'Sunday' => 'الأحد',
+                                        'Monday' => 'الإثنين',
+                                        'Tuesday' => 'الثلاثاء',
+                                        'Wednesday' => 'الأربعاء',
+                                        'Thursday' => 'الخميس',
+                                        'Friday' => 'الجمعة',
+                                    ];
+                                    $todayArabic = $daysMap[date('l')] ?? 'السبت';
                                     $consultantDoctors = \App\Models\Doctor::where('type', 'consultant')
                                         ->where('is_active', true)
                                         ->where('is_available_today', true)
+                                        ->whereJsonContains('working_days', [$todayArabic])
                                         ->with('user', 'department')
                                         ->get();
                                 @endphp
                                 @foreach($consultantDoctors as $doctor)
                                     <option value="{{ $doctor->id }}">
-                                        د. {{ $doctor->user->name }} - {{ $doctor->department->name ?? 'غير محدد' }}
+                                        د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->department->name ?? 'غير محدد' }}
                                     </option>
                                 @endforeach
                                 @if($consultantDoctors->isEmpty())

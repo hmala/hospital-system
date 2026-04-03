@@ -71,6 +71,21 @@
                             @php
                                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                                 $totalAmount = 0;
+                                $packageTotal = null;
+                                $package = null;
+
+                                if ($request->type === 'lab' && empty($details['lab_test_ids']) && !empty($details['package_id'])) {
+                                    $package = \App\Models\Package::find($details['package_id']);
+                                    if ($package) {
+                                        $details['lab_test_ids'] = $package->labTests()->pluck('lab_tests.id')->toArray();
+                                        $packageTotal = $package->price;
+                                    }
+                                }
+
+                                // إذا السعر المحسوب من التحاليل صفر وما في packageTotal، استخدم سعر الباقة (احتمال الباقة تحتوي تحليل بلا أحكام سعرية).
+                                if (($totalAmount === 0 || $totalAmount === null) && $packageTotal !== null) {
+                                    $totalAmount = $packageTotal;
+                                }
                             @endphp
 
                             @if($request->type === 'lab' && isset($details['lab_test_ids']))
@@ -116,7 +131,71 @@
                                                         {{ number_format($totalAmount, 2) }} IQD
                                                     </h5>
                                                 </th>
+                                            </tr>                                            @if($packageTotal !== null)
+                                                <tr>
+                                                    <th colspan="3" class="text-end">سعر الباقة (في حال وجود باقة):</th>
+                                                    <th class="text-end">
+                                                        <h6 class="mb-0 text-primary">
+                                                            {{ number_format($packageTotal, 2) }} IQD
+                                                        </h6>
+                                                    </th>
+                                                </tr>
+                                            @endif                                        </tfoot>
+                                    </table>
+                                </div>
+                            @elseif($request->type === 'lab' && isset($details['tests']))
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead class="table-primary">
+                                            <tr>
+                                                <th width="60">#</th>
+                                                <th>اسم التحليل</th>
+                                                <th>الرمز</th>
+                                                <th width="150" class="text-end">السعر (IQD)</th>
                                             </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($details['tests'] as $index => $testName)
+                                                @php
+                                                    $test = \App\Models\LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                                                    $price = 0;
+                                                    if($test) {
+                                                        $price = $test->price ?? 0;
+                                                        $totalAmount += $price;
+                                                    }
+                                                @endphp
+                                                <tr>
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>
+                                                        <i class="fas fa-vial text-primary me-2"></i>
+                                                        {{ $test ? $test->name : $testName }}
+                                                    </td>
+                                                    <td><code>{{ $test ? $test->code : '-' }}</code></td>
+                                                    <td class="text-end">
+                                                        <strong>{{ number_format($price, 2) }}</strong>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-success">
+                                            <tr>
+                                                <th colspan="3" class="text-end">المجموع الكلي:</th>
+                                                <th class="text-end">
+                                                    <h5 class="mb-0 text-success">
+                                                        {{ number_format($totalAmount, 2) }} IQD
+                                                    </h5>
+                                                </th>
+                                            </tr>
+                                            @if($packageTotal !== null)
+                                                <tr>
+                                                    <th colspan="3" class="text-end">سعر الباقة (في حال وجود باقة):</th>
+                                                    <th class="text-end">
+                                                        <h6 class="mb-0 text-primary">
+                                                            {{ number_format($packageTotal, 2) }} IQD
+                                                        </h6>
+                                                    </th>
+                                                </tr>
+                                            @endif
                                         </tfoot>
                                     </table>
                                 </div>

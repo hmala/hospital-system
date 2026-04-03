@@ -28,6 +28,62 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
+    <div class="row mb-3">
+        <div class="col-12">
+            <form method="GET" action="{{ route('doctors.index') }}" class="card card-body shadow-sm">
+                <div class="row gy-2 gx-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">بحث عام</label>
+                        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="اسم الطبيب أو البريد أو التخصص">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">القسم</label>
+                        <select name="department_id" class="form-select">
+                            <option value="">كل الأقسام</option>
+                            @foreach($departments as $department)
+                                <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">النوع</label>
+                        <select name="type" class="form-select">
+                            <option value="">كل الأنواع</option>
+                            <option value="consultant" @selected(request('type') == 'consultant')>استشاري</option>
+                            <option value="anesthesiologist" @selected(request('type') == 'anesthesiologist')>تخدير</option>
+                            <option value="surgeon" @selected(request('type') == 'surgeon')>جراح</option>
+                            <option value="emergency" @selected(request('type') == 'emergency')>طوارئ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">أيام العمل</label>
+                        <select name="workdays" class="form-select">
+                            <option value="">كل الأيام</option>
+                            <option value="السبت" @selected(request('workdays') == 'السبت')>السبت</option>
+                            <option value="الأحد" @selected(request('workdays') == 'الأحد')>الأحد</option>
+                            <option value="الإثنين" @selected(request('workdays') == 'الإثنين')>الإثنين</option>
+                            <option value="الثلاثاء" @selected(request('workdays') == 'الثلاثاء')>الثلاثاء</option>
+                            <option value="الأربعاء" @selected(request('workdays') == 'الأربعاء')>الأربعاء</option>
+                            <option value="الخميس" @selected(request('workdays') == 'الخميس')>الخميس</option>
+                            <option value="الجمعة" @selected(request('workdays') == 'الجمعة')>الجمعة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">الحالة</label>
+                        <select name="is_active" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="1" @selected(request('is_active') === '1')>نشط</option>
+                            <option value="0" @selected(request('is_active') === '0')>غير نشط</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="submit" class="btn btn-primary w-100">بحث</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">

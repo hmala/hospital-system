@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('visit_id')->constrained()->onDelete('cascade');
-            $table->enum('type', ['lab', 'radiology', 'pharmacy']);
+            $table->enum('type', ['lab', 'radiology', 'pharmacy', 'blood_bank']);
             $table->text('description');
             $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('pending');
             $table->json('details')->nullable(); // لتخزين تفاصيل إضافية

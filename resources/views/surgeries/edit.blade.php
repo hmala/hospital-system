@@ -49,8 +49,9 @@
                                     <select name="patient_id" id="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required>
                                         <option value="">اختر المريض</option>
                                         @foreach($patients as $patient)
+                                            @php $patientName = optional($patient->user)->name ?? 'غير معروف'; @endphp
                                             <option value="{{ $patient->id }}" {{ (old('patient_id', $surgery->patient_id) == $patient->id) ? 'selected' : '' }}>
-                                                {{ $patient->user->name }}
+                                                {{ $patientName }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -70,11 +71,12 @@
                                         <!-- الجراحين الداخليين -->
                                         <optgroup label="جراحي المستشفى">
                                             @foreach($doctors as $doctor)
+                                                @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
                                                 <option value="internal_{{ $doctor->id }}" 
                                                         data-type="internal" 
                                                         data-doctor-id="{{ $doctor->id }}"
                                                         {{ (old('doctor_id', $surgery->doctor_id) == $doctor->id) ? 'selected' : '' }}>
-                                                    د. {{ $doctor->user->name }}
+                                                    د. {{ $doctorName }}
                                                 </option>
                                             @endforeach
                                         </optgroup>

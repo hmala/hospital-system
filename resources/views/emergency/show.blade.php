@@ -19,9 +19,15 @@
                     @endif
                 </h2>
                 <div class="no-print">
-                    <button onclick="window.print()" class="btn btn-primary me-2">
-                        <i class="fas fa-print me-2"></i>طباعة
-                    </button>
+                    @if($emergency->payment && $emergency->payment->paid_at)
+                        <button onclick="window.print()" class="btn btn-primary me-2">
+                            <i class="fas fa-print me-2"></i>طباعة
+                        </button>
+                    @else
+                        <button class="btn btn-outline-secondary me-2" disabled>
+                            <i class="fas fa-print me-2"></i>الطباعة بعد السداد
+                        </button>
+                    @endif
                     <a href="{{ route('emergency.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-right me-2"></i>العودة للقائمة
                     </a>

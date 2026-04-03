@@ -40,13 +40,13 @@
                                 <label for="doctor_id" class="form-label">الطبيب المطلب <span class="text-danger">*</span></label>
                                 @if(isset($doctor))
                                     <input type="hidden" name="doctor_id" value="{{ $doctor->id }}">
-                                    <input type="text" class="form-control" value="د. {{ $doctor->user->name }}" readonly>
+                                    <input type="text" class="form-control" value="د. {{ optional($doctor->user)->name ?? 'غير معروف' }}" readonly>
                                 @else
                                     <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" required>
                                         <option value="">اختر الطبيب</option>
                                         @foreach($doctors as $d)
                                         <option value="{{ $d->id }}" {{ old('doctor_id') == $d->id ? 'selected' : '' }}>
-                                            د. {{ $d->user->name }} - {{ $d->specialization ?? 'غير محدد' }}
+                                            د. {{ optional($d->user)->name ?? 'غير معروف' }} - {{ $d->specialization ?? 'غير محدد' }}
                                         </option>
                                         @endforeach
                                     </select>

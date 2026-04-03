@@ -107,7 +107,19 @@ function getTestUnit($testName, $labTests) {
                     تفاصيل الطلب الطبي
                 </h2>
                 <div class="d-flex gap-2">
-                    @if($request->status == 'completed' && $request->type == 'lab')
+                    @php
+                        $requestDetails = $request->details;
+                        if (is_string($requestDetails)) {
+                            $decoded = json_decode($requestDetails, true);
+                            $requestDetails = is_array($decoded) ? $decoded : [];
+                        }
+                        if (!is_array($requestDetails)) {
+                            $requestDetails = [];
+                        }
+                        $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
+                    @endphp
+
+                    @if($request->payment_status == 'paid' && ($request->type == 'lab' || $isBloodBankRequest))
                         <a href="{{ route('staff.requests.print', $request) }}" 
                            class="btn btn-success" 
                            target="_blank">
@@ -142,6 +154,17 @@ function getTestUnit($testName, $labTests) {
     @endif
 
     <!-- معلومات الطلب -->
+    @php
+        $requestDetails = $request->details;
+        if (is_string($requestDetails)) {
+            $decoded = json_decode($requestDetails, true);
+            $requestDetails = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($requestDetails)) {
+            $requestDetails = [];
+        }
+        $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
+    @endphp
     <div class="row mb-4">
         <div class="col-md-8">
             <div class="card shadow-sm">
@@ -169,8 +192,8 @@ function getTestUnit($testName, $labTests) {
                                 </span>
                             </p>
                             <p><strong>الأولوية:</strong>
-                                <span class="badge bg-{{ ($request->details['priority'] ?? 'normal') == 'urgent' ? 'danger' : (($request->details['priority'] ?? 'normal') == 'emergency' ? 'dark' : 'secondary') }}">
-                                    {{ ($request->details['priority'] ?? 'normal') == 'urgent' ? 'عاجل' : (($request->details['priority'] ?? 'normal') == 'emergency' ? 'طوارئ' : 'عادي') }}
+                                <span class="badge bg-{{ ($requestDetails['priority'] ?? 'normal') == 'urgent' ? 'danger' : (($requestDetails['priority'] ?? 'normal') == 'emergency' ? 'dark' : 'secondary') }}">
+                                    {{ ($requestDetails['priority'] ?? 'normal') == 'urgent' ? 'عاجل' : (($requestDetails['priority'] ?? 'normal') == 'emergency' ? 'طوارئ' : 'عادي') }}
                                 </span>
                             </p>
                         </div>
@@ -179,10 +202,115 @@ function getTestUnit($testName, $labTests) {
                     <div class="row">
                         <div class="col-12">
                             <p><strong>وصف الطلب:</strong></p>
-                            <p class="text-muted">{{ $request->details['description'] ?? $request->description ?? 'لا يوجد وصف' }}</p>
+                            <p class="text-muted">{{ $requestDetails['description'] ?? $request->description ?? 'لا يوجد وصف' }}</p>
                         </div>
                     </div>
-                    @if($request->type === 'lab')
+                    @if($isBloodBankRequest)
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card border-danger shadow-sm">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="mb-0"><i class="fas fa-tint me-2"></i>تفاصيل طلب مصرف الدم</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ route('staff.requests.update', $request) }}">
+                                        @csrf
+                                        @method('PUT')
+
+                                        @php
+                                            $bb = $bloodBankRequest ?? (object) [
+                                                'room_no' => $requestDetails['room_no'] ?? null,
+                                                'donor_group' => $requestDetails['donor_group'] ?? null,
+                                                'patient_group' => $requestDetails['patient_group'] ?? null,
+                                                'at_room_temp' => $requestDetails['at_room_temp'] ?? null,
+                                                'bovine_albumin' => $requestDetails['bovine_albumin'] ?? null,
+                                                'anti_human_globulin' => $requestDetails['anti_human_globulin'] ?? null,
+                                                'compatibility' => $requestDetails['compatibility'] ?? null,
+                                                'bottle_no' => $requestDetails['bottle_no'] ?? null,
+                                                'operative_date' => $requestDetails['operative_date'] ?? null,
+                                                'exp_date' => $requestDetails['exp_date'] ?? null,
+                                                'doctor_in_charge' => $requestDetails['doctor_in_charge'] ?? null,
+                                                'total_amount' => $requestDetails['total_amount'] ?? 0,
+                                                'notes' => $requestDetails['summary'] ?? null,
+                                            ];
+                                        @endphp
+
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label">رقم الغرفة / السرير</label>
+                                                <input type="text" name="room_no" class="form-control" value="{{ old('room_no', $bb->room_no) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">فصيلة المتبرع</label>
+                                                <input type="text" name="donor_group" class="form-control" value="{{ old('donor_group', $bb->donor_group) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">فصيلة المريض</label>
+                                                <input type="text" name="patient_group" class="form-control" value="{{ old('patient_group', $bb->patient_group) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">وزن المتبرع (كجم)</label>
+                                                <input type="number" step="0.01" name="donor_weight" class="form-control" value="{{ old('donor_weight', $bb->donor_weight) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">وزن المريض (كجم)</label>
+                                                <input type="number" step="0.01" name="recipient_weight" class="form-control" value="{{ old('recipient_weight', $bb->recipient_weight) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">التوافق</label>
+                                                <input type="text" name="compatibility" class="form-control" value="{{ old('compatibility', $bb->compatibility) }}">
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">رقم العبوة</label>
+                                                <input type="text" name="bottle_no" class="form-control" value="{{ old('bottle_no', $bb->bottle_no) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">الدرجة في الغرفة</label>
+                                                <input type="text" name="at_room_temp" class="form-control" value="{{ old('at_room_temp', $bb->at_room_temp) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">ألبومين بقرى</label>
+                                                <input type="text" name="bovine_albumin" class="form-control" value="{{ old('bovine_albumin', $bb->bovine_albumin) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Anti-Human Globulin</label>
+                                                <input type="text" name="anti_human_globulin" class="form-control" value="{{ old('anti_human_globulin', $bb->anti_human_globulin) }}">
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">تاريخ العملية</label>
+                                                <input type="date" name="operative_date" class="form-control" value="{{ old('operative_date', optional($bb->operative_date)->format('Y-m-d')) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">تاريخ الانتهاء</label>
+                                                <input type="date" name="exp_date" class="form-control" value="{{ old('exp_date', optional($bb->exp_date)->format('Y-m-d')) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">طبيب المسؤول</label>
+                                                <input type="text" name="doctor_in_charge" class="form-control" value="{{ old('doctor_in_charge', $bb->doctor_in_charge) }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">السعر الكلي</label>
+                                                <input type="number" step="0.01" name="total_amount" class="form-control" value="{{ old('total_amount', $bb->total_amount ?? 0) }}">
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label">ملاحظات إضافية</label>
+                                                <textarea name="notes" class="form-control" rows="2">{{ old('notes', $bb->notes) }}</textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3 text-end">
+                                            <button type="submit" class="btn btn-danger">حفظ بيانات مصرف الدم</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @elseif($request->type === 'lab')
                     <hr>
                     <!-- قسم اختيار الخدمات للطلبات pending_service_selection -->
                     @if($request->status === 'pending_service_selection')
@@ -195,61 +323,91 @@ function getTestUnit($testName, $labTests) {
                             <form action="{{ route('staff.requests.update', $request) }}" method="POST">
                                 @csrf
                                 @method('PUT')
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        <i class="fas fa-flask me-1"></i>
-                                        <strong>اختر التحاليل المطلوبة:</strong>
-                                    </label>
-                                    
-                                    <!-- حقل البحث -->
-                                    <div class="input-group mb-2">
-                                        <span class="input-group-text bg-light">
-                                            <i class="fas fa-search"></i>
-                                        </span>
-                                        <input type="text" 
-                                               class="form-control" 
-                                               id="labSearchInput" 
-                                               placeholder="ابحث عن تحليل بالاسم أو الرمز...">
-                                        <button class="btn btn-outline-secondary" type="button" id="clearLabSearch">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                    
-                                    <div class="border rounded p-3" id="labTestsContainer" style="max-height: 400px; overflow-y: auto;">
-                                        @php
-                                            $labTests = \App\Models\LabTest::where('is_active', true)
-                                                ->orderBy('main_category')
-                                                ->orderBy('name')
-                                                ->get()
-                                                ->groupBy('main_category');
-                                        @endphp
-                                        
-                                        @foreach($labTests as $category => $tests)
-                                            <div class="mb-3">
-                                                <h6 class="text-primary border-bottom pb-2">
-                                                    <i class="fas fa-folder-open me-1"></i>{{ $category }}
-                                                </h6>
-                                                @foreach($tests as $test)
-                                                    <div class="form-check">
-                                                        <input class="form-check-input lab-test-checkbox" 
-                                                               type="checkbox" 
-                                                               name="lab_test_ids[]" 
-                                                               value="{{ $test->id }}" 
-                                                               id="lab_{{ $test->id }}">
-                                                        <label class="form-check-label" for="lab_{{ $test->id }}">
-                                                            {{ $test->name }} 
-                                                            <small class="text-muted">({{ $test->code }})</small>
-                                                        </label>
-                                                    </div>
-                                                @endforeach
+
+                                @php
+                                    // افتراضيًا: إذا تم حفظ package_id نعرض قسم الباقة، وإلا نعرض قسم التحاليل العامة
+                                    $serviceSelectionType = $requestDetails['service_selection_type'] ?? (!empty($requestDetails['package_id']) ? 'package' : 'general');
+                                @endphp
+
+                                <input type="hidden" name="service_selection_type" id="serviceSelectionType" value="{{ $serviceSelectionType }}">
+
+                               
+
+                                @php
+                                    $packages = \App\Models\Package::where('is_active', true)->orderBy('name')->get();
+                                @endphp
+
+                                <div class="accordion" id="mainSelectionAccordion">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="headingPackage"> 
+                                            <button class="accordion-button {{ $serviceSelectionType == 'package' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#packageSection" aria-expanded="{{ $serviceSelectionType == 'package' ? 'true' : 'false' }}" aria-controls="packageSection">
+                                                <strong>الباقات</strong>
+                                            </button>
+                                        </h2>
+                                        <div id="packageSection" class="accordion-collapse collapse {{ $serviceSelectionType == 'package' ? 'show' : '' }}" aria-labelledby="headingPackage" data-bs-parent="#mainSelectionAccordion">
+                                            <div class="accordion-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>اختر باقة تحاليل:</strong></label>
+                                                    <select class="form-select" id="packageSelect" name="package_id">
+                                                        <option value="">-- لا توجد باقة مختارة --</option>
+                                                        @foreach($packages as $pkg)
+                                                            @php
+                                                                $pkgTests = $pkg->labTests->pluck('id')->toArray();
+                                                                $pkgTestNames = $pkg->labTests->pluck('name')->toArray();
+                                                            @endphp
+                                                            <option value="{{ $pkg->id }}" data-tests='@json($pkgTests)' data-test-names='@json($pkgTestNames)' {{ (isset($requestDetails['package_id']) && $requestDetails['package_id'] == $pkg->id) ? 'selected' : '' }}>{{ $pkg->name }} @if($pkg->price) - {{ number_format($pkg->price, 2) }} @endif</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <div class="form-text">اختيار باقة سيحدد التحاليل تلقائياً في الطلب.</div>
+                                                    <div class="mt-2" id="packageTestsPreview"></div>
+                                                </div>
                                             </div>
-                                        @endforeach
+                                        </div>
                                     </div>
-                                    
-                                    <div id="labSelectedCount" class="mt-2 text-muted small"></div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="headingGeneral"> 
+                                            <button class="accordion-button {{ $serviceSelectionType == 'general' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#generalTestsSection" aria-expanded="{{ $serviceSelectionType == 'general' ? 'true' : 'false' }}" aria-controls="generalTestsSection">
+                                                <strong>تحاليل عامة</strong>
+                                            </button>
+                                        </h2>
+                                        <div id="generalTestsSection" class="accordion-collapse collapse {{ $serviceSelectionType == 'general' ? 'show' : '' }}" aria-labelledby="headingGeneral" data-bs-parent="#mainSelectionAccordion">
+                                            <div class="accordion-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-flask me-1"></i>
+                                            <strong>اختر التحاليل المطلوبة:</strong>
+                                        </label>
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="labSearchInput" placeholder="ابحث عن تحليل بالاسم أو الرمز...">
+                                            <button class="btn btn-outline-secondary" type="button" id="clearLabSearch"><i class="fas fa-times"></i></button>
+                                        </div>
+
+                                        <div class="border rounded p-3" id="labTestsContainer" style="max-height: 400px; overflow-y: auto;">
+                                            @php
+                                                $labTests = \App\Models\LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get()->groupBy('main_category');
+                                            @endphp
+                                            @foreach($labTests as $category => $tests)
+                                                <div class="mb-3">
+                                                    <h6 class="text-primary border-bottom pb-2"><i class="fas fa-folder-open me-1"></i>{{ $category }}</h6>
+                                                    @foreach($tests as $test)
+                                                        <div class="form-check">
+                                                            <input class="form-check-input lab-test-checkbox" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="lab_{{ $test->id }}" {{ in_array($test->id, $requestDetails['lab_test_ids'] ?? []) ? 'checked' : '' }}>
+                                                            <label class="form-check-label" for="lab_{{ $test->id }}">{{ $test->name }} <small class="text-muted">({{ $test->code }})</small></label>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                        <div id="labSelectedCount" class="mt-2 text-muted small"></div>
+                                    </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                
+                                </div>
+
                                 <button type="submit" class="btn btn-success w-100">
                                     <i class="fas fa-check-circle me-2"></i>
                                     تأكيد التحاليل وإرسال للكاشير
@@ -258,169 +416,252 @@ function getTestUnit($testName, $labTests) {
                         </div>
                     </div>
                     @else
-                    <!-- عرض الفحوصات المحددة مسبقاً -->
-                    <div class="row">
+                    <!-- عرض الفحوصات المحددة مسبقاً وإدخال نتائجها -->
+                    @php
+                        // بناء قائمة التحاليل من details: package_id، lab_test_ids، tests
+                        $testsList = [];
+                        $packageName = null;
+
+                        if (!empty($requestDetails['package_id'])) {
+                            $pkg = \App\Models\Package::find($requestDetails['package_id']);
+                            if ($pkg) {
+                                $packageName = $pkg->name;
+                                $testsList = $pkg->labTests->pluck('name')->toArray();
+                            }
+                        }
+
+                        if (empty($testsList) && !empty($requestDetails['lab_test_ids'])) {
+                            $ids = $requestDetails['lab_test_ids'];
+                            if (is_string($ids)) {
+                                $decodedIds = json_decode($ids, true);
+                                if (is_array($decodedIds)) {
+                                    $ids = $decodedIds;
+                                } else {
+                                    $ids = explode(',', $ids);
+                                }
+                            }
+                            if (is_array($ids)) {
+                                foreach ($ids as $testId) {
+                                    $labTest = \App\Models\LabTest::find($testId);
+                                    if ($labTest) {
+                                        $testsList[] = $labTest->name;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (empty($testsList) && isset($requestDetails['tests'])) {
+                            $tests = $requestDetails['tests'];
+                            if (is_string($tests)) {
+                                $decodedTests = json_decode($tests, true);
+                                if (is_array($decodedTests)) {
+                                    $tests = $decodedTests;
+                                } else {
+                                    $tests = explode(',', $tests);
+                                }
+                            }
+                            if (is_array($tests)) {
+                                $testsList = $tests;
+                            }
+                        }
+
+                        if (!is_array($testsList)) {
+                            $testsList = [];
+                        }
+
+                        $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string)$item) !== '');
+
+                        if (!isset($savedTestResults) || !is_array($savedTestResults)) {
+                            $savedTestResults = [];
+                        }
+                    @endphp
+                    <div class="row mb-4">
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <div>
                                     <p class="mb-0"><strong>الفحوصات المطلوبة:</strong></p>
-                                    <small class="text-muted">اختر التحاليل المطلوبة من القائمة</small>
+                                    <small class="text-muted">يمكنك تعديل القيم وإدخال النتائج هنا</small>
                                 </div>
                                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#selectTestsModal">
                                     <i class="fas fa-plus-circle me-1"></i>
                                     إضافة فحوصات
                                 </button>
                             </div>
-                            <div class="row">
-                                @php
-                                    // دعم كل من tests و lab_test_ids
-                                    $testsList = [];
-                                    if (isset($request->details['tests']) && is_array($request->details['tests'])) {
-                                        $testsList = $request->details['tests'];
-                                    } elseif (isset($request->details['lab_test_ids']) && is_array($request->details['lab_test_ids'])) {
-                                        // تحويل IDs إلى أسماء
-                                        foreach ($request->details['lab_test_ids'] as $testId) {
-                                            $labTest = \App\Models\LabTest::find($testId);
-                                            if ($labTest) {
-                                                $testsList[] = $labTest->name;
-                                            }
-                                        }
-                                    }
-                                @endphp
-                                @foreach($testsList as $test)
-                                <div class="col-md-4 mb-2">
-                                    <div class="d-flex align-items-center border rounded p-2">
-                                        <i class="{{ getTestIcon($test) }} me-2"></i>
-                                        <span>{{ $test }}</span>
-                                    </div>
+
+                            @if(count((array) $testsList) > 0)
+                                <form action="{{ route('staff.requests.update', $request) }}" method="POST">
+                                    @csrf
+                                    @method('PUT')
+
+                                    <div class="table-responsive mb-3">
+                            @elseif(!empty($packageName))
+                                <div class="alert alert-info">
+                                    باقة "<strong>{{ $packageName }}</strong>" محددة ولكنها لا تحتوي على فحوصات مرفقة.
+                                    يرجى التحقق من إعداد الباقة في صفحة الباقات.
                                 </div>
-                                @endforeach
-                            </div>
+                            @else
+                                <div class="alert alert-info">لا توجد فحوصات مختارة حالياً، الرجاء إضافة فحوصات.</div>
+                            @endif
+                                        <table class="table table-hover table-bordered align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-center" style="width: 50px;">#</th>
+                                                    <th>التحليل</th>
+                                                    <th>القيمة</th>
+                                                    <th>الوحدة</th>
+                                                    <th>الحالة</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($testsList as $index => $test)
+                                                    @php
+                                                        $existingValue = (is_array($savedTestResults) && isset($savedTestResults[$test]) && is_array($savedTestResults[$test])) ? $savedTestResults[$test]['value'] : '';
+                                                        $existingStatus = (is_array($savedTestResults) && isset($savedTestResults[$test]) && is_array($savedTestResults[$test])) ? ($savedTestResults[$test]['status'] ?? '') : '';
+                                                    @endphp
+                                                    <tr>
+                                                        <td class="text-center">{{ $index + 1 }}</td>
+                                                        <td>{{ $test }}</td>
+                                                        <td>
+                                                            <input type="text" class="form-control form-control-sm" name="test_results[{{ $test }}][value]" value="{{ old('test_results.' . $test . '.value', $existingValue) }}" placeholder="أدخل القيمة">
+                                                        </td>
+                                                        <td>{{ getTestUnit($test, $labTests) }}</td>
+                                                        <td>
+                                                            <select class="form-select form-select-sm" name="test_results[{{ $test }}][status]">
+                                                                <option value="" {{ $existingStatus === '' ? 'selected' : '' }}>اختيار</option>
+                                                                <option value="normal" {{ $existingStatus === 'normal' ? 'selected' : '' }}>طبيعي</option>
+                                                                <option value="high" {{ $existingStatus === 'high' ? 'selected' : '' }}>مرتفع</option>
+                                                                <option value="low" {{ $existingStatus === 'low' ? 'selected' : '' }}>منخفض</option>
+                                                            </select>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="result"><strong>ملاحظات إضافية</strong></label>
+                                        <textarea class="form-control" id="result" name="result" rows="3" placeholder="اكتب ملاحظات مهمة">{{ old('result', $savedNotes ?? '') }}</textarea>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-success">
+                                            حفظ نتائج الفحوصات
+                                        </button>
+                                    </div>
+                                </form>
                         </div>
                     </div>
                     @endif
                     @endif
 
                     @if($request->type === 'radiology')
-                    <hr>
-                    <!-- قسم اختيار الخدمات للطلبات pending_service_selection -->
-                    @if($request->status === 'pending_service_selection')
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>تنبيه:</strong> هذا الطلب بانتظار تحديد أنواع الأشعة المطلوبة. الرجاء اختيار الأشعة أدناه.
-                            </div>
-                            <form action="{{ route('staff.requests.update', $request) }}" method="POST">
-                                @csrf
-                                @method('PUT')
-
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        <i class="fas fa-x-ray me-1"></i>
-                                        <strong>اختر أنواع الأشعة المطلوبة:</strong>
-                                    </label>
-
-                                    <!-- حقل البحث -->
-                                    <div class="input-group mb-2">
-                                        <span class="input-group-text bg-light">
-                                            <i class="fas fa-search"></i>
-                                        </span>
-                                        <input type="text"
-                                               class="form-control"
-                                               id="radiologySearchInput"
-                                               placeholder="ابحث عن نوع إشعة بالاسم...">
-                                        <button class="btn btn-outline-secondary" type="button" id="clearRadiologySearch">
-                                            <i class="fas fa-times"></i>
-                                        </button>
+                        <hr>
+                        <!-- قسم اختيار الخدمات للطلبات pending_service_selection -->
+                        @if($request->status === 'pending_service_selection')
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>تنبيه:</strong> هذا الطلب بانتظار تحديد أنواع الأشعة المطلوبة. الرجاء اختيار الأشعة أدناه.
                                     </div>
-
-                                    <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 400px; overflow-y: auto;">
-                                        @php
-                                            $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)
-                                                ->orderBy('main_category')
-                                                ->orderBy('name')
-                                                ->get()
-                                                ->groupBy('main_category');
-                                        @endphp
-
-                                        @foreach($radiologyTypes as $category => $types)
-                                            <div class="mb-3">
-                                                <h6 class="text-info border-bottom pb-2">
-                                                    <i class="fas fa-folder-open me-1"></i>{{ $category }}
-                                                </h6>
-                                                @foreach($types as $type)
-                                                    <div class="form-check">
-                                                        <input class="form-check-input radiology-type-checkbox"
-                                                               type="checkbox"
-                                                               name="radiology_type_ids[]"
-                                                               value="{{ $type->id }}"
-                                                               id="radiology_{{ $type->id }}">
-                                                        <label class="form-check-label" for="radiology_{{ $type->id }}">
-                                                            {{ $type->name }}
-                                                            <small class="text-muted">({{ $type->code }})</small>
-                                                        </label>
+                                    <form action="{{ route('staff.requests.update', $request) }}" method="POST">
+                                        @csrf
+                                        @method('PUT')
+                                        <div class="mb-3">
+                                            <label class="form-label">
+                                                <i class="fas fa-x-ray me-1"></i>
+                                                <strong>اختر أنواع الأشعة المطلوبة:</strong>
+                                            </label>
+                                            <!-- حقل البحث -->
+                                            <div class="input-group mb-2">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-search"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="radiologySearchInput" placeholder="ابحث عن نوع إشعة بالاسم...">
+                                                <button class="btn btn-outline-secondary" type="button" id="clearRadiologySearch">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 400px; overflow-y: auto;">
+                                                @php
+                                                    $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)
+                                                        ->orderBy('main_category')
+                                                        ->orderBy('name')
+                                                        ->get()
+                                                        ->groupBy('main_category');
+                                                @endphp
+                                                @foreach($radiologyTypes as $category => $types)
+                                                    <div class="mb-3">
+                                                        <h6 class="text-info border-bottom pb-2">
+                                                            <i class="fas fa-folder-open me-1"></i>{{ $category }}
+                                                        </h6>
+                                                        @foreach($types as $type)
+                                                            <div class="form-check">
+                                                                <input class="form-check-input radiology-type-checkbox" type="checkbox" name="radiology_type_ids[]" value="{{ $type->id }}" id="radiology_{{ $type->id }}">
+                                                                <label class="form-check-label" for="radiology_{{ $type->id }}">
+                                                                    {{ $type->name }}
+                                                                    <small class="text-muted">({{ $type->code }})</small>
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
                                                     </div>
                                                 @endforeach
                                             </div>
-                                        @endforeach
-                                    </div>
-
-                                    <div id="radiologySelectedCount" class="mt-2 text-muted small"></div>
-                                </div>
-
-                                <button type="submit" class="btn btn-success w-100">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    تأكيد الأشعة وإرسال للكاشير
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    @else
-                    <!-- عرض أنواع الأشعة المحددة مسبقاً -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div>
-                                    <p class="mb-0"><strong>أنواع الأشعة المطلوبة:</strong></p>
-                                    <small class="text-muted">اختر أنواع الأشعة المطلوبة من القائمة</small>
+                                            <div id="radiologySelectedCount" class="mt-2 text-muted small"></div>
+                                        </div>
+                                        <button type="submit" class="btn btn-success w-100">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            تأكيد الأشعة وإرسال للكاشير
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
+                        @else
+                            <!-- عرض أنواع الأشعة المحددة مسبقاً -->
                             <div class="row">
-                                @php
-                                    // دعم radiology_type_ids
-                                    $radiologyList = [];
-                                    if (isset($request->details['radiology_type_ids']) && is_array($request->details['radiology_type_ids'])) {
-                                        // تحويل IDs إلى أسماء
-                                        foreach ($request->details['radiology_type_ids'] as $typeId) {
-                                            $radiologyType = \App\Models\RadiologyType::find($typeId);
-                                            if ($radiologyType) {
-                                                $radiologyList[] = $radiologyType->name;
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <p class="mb-0"><strong>أنواع الأشعة المطلوبة:</strong></p>
+                                            <small class="text-muted">اختر أنواع الأشعة المطلوبة من القائمة</small>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        @php
+                                            // دعم radiology_type_ids
+                                            $radiologyList = [];
+                                            if (isset($requestDetails['radiology_type_ids']) && is_array($requestDetails['radiology_type_ids'])) {
+                                                // تحويل IDs إلى أسماء
+                                                foreach ($requestDetails['radiology_type_ids'] as $typeId) {
+                                                    $radiologyType = \App\Models\RadiologyType::find($typeId);
+                                                    if ($radiologyType) {
+                                                        $radiologyList[] = $radiologyType->name;
+                                                    }
+                                                }
                                             }
-                                        }
-                                    }
-                                @endphp
-                                @if(count($radiologyList) > 0)
-                                    @foreach($radiologyList as $type)
-                                    <div class="col-md-4 mb-2">
-                                        <div class="d-flex align-items-center border rounded p-2">
-                                            <i class="fas fa-x-ray me-2 text-info"></i>
-                                            <span>{{ $type }}</span>
-                                        </div>
+                                        @endphp
+                                        @if(count($radiologyList) > 0)
+                                            @foreach($radiologyList as $type)
+                                                <div class="col-md-4 mb-2">
+                                                    <div class="d-flex align-items-center border rounded p-2">
+                                                        <i class="fas fa-x-ray me-2 text-info"></i>
+                                                        <span>{{ $type }}</span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <div class="col-12">
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    لم يتم تحديد أنواع الأشعة بعد
+                                                </div>
+                                            </div>
+                                        @endif
                                     </div>
-                                    @endforeach
-                                @else
-                                    <div class="col-12">
-                                        <div class="alert alert-info">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            لم يتم تحديد أنواع الأشعة بعد
-                                        </div>
-                                    </div>
-                                @endif
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    @endif
+                        @endif
                     @endif
                 </div>
             </div>
@@ -483,8 +724,54 @@ function getTestUnit($testName, $labTests) {
                             اختر التحاليل المطلوبة من القائمة أدناه
                         </div>
 
-                        <!-- Search Box -->
-                        <div class="mb-4">
+                        @php
+                            // باقات متاحة لاستخدام المودال
+                            $modalPackages = \App\Models\Package::where('is_active', true)->orderBy('name')->get();
+                        @endphp
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6 class="mb-2">الباقات</h6>
+                                <div class="accordion" id="modalPackagesAccordion">
+                                    @foreach($modalPackages as $mpkg)
+                                        @php $mpkgTests = $mpkg->labTests->pluck('name')->toArray(); @endphp
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="pkgHeading{{ $mpkg->id }}">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#pkgCollapse{{ $mpkg->id }}" aria-expanded="false" aria-controls="pkgCollapse{{ $mpkg->id }}">
+                                                    {{ $mpkg->name }} @if($mpkg->price) - {{ number_format($mpkg->price,2) }} @endif
+                                                    <span class="badge bg-secondary ms-auto">{{ count($mpkgTests) }} فحص</span>
+                                                </button>
+                                            </h2>
+                                            <div id="pkgCollapse{{ $mpkg->id }}" class="accordion-collapse collapse" aria-labelledby="pkgHeading{{ $mpkg->id }}" data-bs-parent="#modalPackagesAccordion">
+                                                <div class="accordion-body">
+                                                    <div class="small text-muted mb-2">{{ implode('، ', $mpkgTests) }}</div>
+                                                    <button type="button" class="btn btn-sm btn-success select-package-btn" data-id="{{ $mpkg->id }}" data-tests='@json($mpkgTests)'>اختيار هذه الباقة</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="mt-3">
+                                    <label class="form-label"><strong>باقة مختارة الآن:</strong></label>
+                                    <div id="selectedPackageName" class="text-secondary">لا توجد</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label"><strong>اختيار باقة (اختياري)</strong></label>
+                                    <select class="form-select" id="modalPackageSelect">
+                                        <option value="">-- لا توجد باقة مختارة --</option>
+                                        @foreach($modalPackages as $mpkg)
+                                            @php $mpkgTests = $mpkg->labTests->pluck('name')->toArray(); @endphp
+                                            <option value="{{ $mpkg->id }}" data-tests='@json($mpkgTests)'>{{ $mpkg->name }} @if($mpkg->price) - {{ number_format($mpkg->price,2) }} @endif</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="form-text">اختيار باقة سيحدد التحاليل في المودال تلقائياً.</div>
+                                </div>
+
+                                <!-- Search Box -->
+                                <div class="mb-4">
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text bg-white">
                                     <i class="fas fa-search text-primary"></i>
@@ -568,12 +855,13 @@ function getTestUnit($testName, $labTests) {
                             ];
                         @endphp
 
+                        <div class="accordion" id="testsAccordion">
                         @php $groupIndex = 0; @endphp
                         @foreach($mainGroups as $mainGroupName => $mainGroupData)
                             @php $groupId = 'group_' . $groupIndex; $groupIndex++; @endphp
-                            <div class="main-group-section mb-3">
-                                <div class="main-group-header bg-{{ $mainGroupData['color'] }} text-white p-3 rounded-top d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#{{ $groupId }}" style="cursor: pointer;">
-                                    <h5 class="mb-0 d-flex align-items-center">
+                            <div class="accordion-item mb-2">
+                                <h2 class="accordion-header" id="heading_{{ $groupId }}">
+                                    <button class="accordion-button collapsed bg-{{ $mainGroupData['color'] }} text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{ $groupId }}" aria-expanded="false" aria-controls="collapse_{{ $groupId }}">
                                         <i class="{{ $mainGroupData['icon'] }} me-2"></i>
                                         {{ $mainGroupName }}
                                         <span class="badge bg-white text-{{ $mainGroupData['color'] }} ms-2">
@@ -587,11 +875,11 @@ function getTestUnit($testName, $labTests) {
                                                 echo $totalCount;
                                             @endphp
                                         </span>
-                                    </h5>
-                                    <i class="fas fa-chevron-down toggle-icon"></i>
-                                </div>
-                                <div id="{{ $groupId }}" class="collapse show main-group-body p-3 border border-top-0 rounded-bottom">
-                                    <div class="row g-3">
+                                    </button>
+                                </h2>
+                                <div id="collapse_{{ $groupId }}" class="accordion-collapse collapse" aria-labelledby="heading_{{ $groupId }}" data-bs-parent="#testsAccordion">
+                                    <div class="accordion-body p-3 bg-light rounded-bottom">
+                                        <div class="row g-3">
                                         @foreach($mainGroupData['categories'] as $category)
                                             @if(isset($grouped[$category]) && $grouped[$category]->count() > 0)
                                                 <div class="col-12">
@@ -609,13 +897,13 @@ function getTestUnit($testName, $labTests) {
                                                                         name="tests[]" 
                                                                         value="{{ $test->name }}" 
                                                                         id="test_{{ $test->id }}"
-                                                                        {{ in_array($test->name, $request->details['tests'] ?? []) ? 'checked' : '' }}>
+                                                                        {{ in_array($test->name, $requestDetails['tests'] ?? []) ? 'checked' : '' }}>
                                                                     <label class="form-check-label w-100" for="test_{{ $test->id }}">
                                                                         <div class="d-flex justify-content-between align-items-start">
                                                                             <div>
                                                                                 <strong>{{ $test->name }}</strong>
                                                                                 @if($test->description)
-                                                                                    <br><small class="text-muted">{{ Str::limit($test->description, 50) }}</small>
+                                                                                    <br><small class="text-muted">{{ \Illuminate\Support\Str::limit($test->description, 50) }}</small>
                                                                                 @endif
                                                                             </div>
                                                                             <i class="fas fa-check-circle text-success opacity-0 check-icon"></i>
@@ -667,7 +955,7 @@ function getTestUnit($testName, $labTests) {
                             $notes = is_array($resultData) ? ($resultData['notes'] ?? $request->result) : $request->result;
                         @endphp
 
-                        @if(count($testResults) > 0)
+                        @if(count((array) $testResults) > 0)
                             <div class="table-responsive mb-3">
                                 <table class="table table-striped">
                                     <thead>
@@ -704,6 +992,18 @@ function getTestUnit($testName, $labTests) {
         </div>
     @endif
 
+    @php
+        $reqDetails = $request->details;
+        if (is_string($reqDetails)) {
+            $decoded = json_decode($reqDetails, true);
+            $reqDetails = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($reqDetails)) {
+            $reqDetails = [];
+        }
+        $hasSelectedServices = !empty($reqDetails['lab_test_ids']) || !empty($reqDetails['package_id']) || !empty($reqDetails['radiology_type_ids']) || !empty($reqDetails['services_selected']);
+    @endphp
+    @if($request->status !== 'pending_service_selection' || $hasSelectedServices)
     <!-- نموذج تحديث حالة الطلب -->
     <div class="row mb-4">
         <div class="col-12">
@@ -846,7 +1146,7 @@ function getTestUnit($testName, $labTests) {
                                                 </span>
                                                 <span class="stat-item">
                                                     <i class="fas fa-question-circle text-muted"></i>
-                                                    <span id="pending-count">{{ count($testsList) }}</span> غير مكتمل
+                                                    <span id="pending-count">{{ is_countable($testsList) ? count($testsList) : 0 }}</span> غير مكتمل
                                                 </span>
                                             </div>
                                         </div>
@@ -920,7 +1220,9 @@ function getTestUnit($testName, $labTests) {
             </div>
         </div>
     </div>
+    @endif
 
+    @if($request->status !== 'pending_service_selection')
     <!-- تاريخ الزيارة -->
     <div class="row">
         <div class="col-12">
@@ -940,7 +1242,7 @@ function getTestUnit($testName, $labTests) {
                         </div>
                         <div class="col-md-6">
                             <p><strong>الشكوى الرئيسية:</strong></p>
-                            <p class="text-muted">{{ $request->visit->chief_complaint ? Str::limit($request->visit->chief_complaint, 100) : 'غير محدد' }}</p>
+                            <p class="text-muted">{{ $request->visit->chief_complaint ? \Illuminate\Support\Str::limit($request->visit->chief_complaint, 100) : 'غير محدد' }}</p>
                         </div>
                     </div>
                     @if($request->visit->diagnosis)
@@ -961,6 +1263,7 @@ function getTestUnit($testName, $labTests) {
             @endif
         </div>
     </div>
+    @endif
 </div>
 
 <script>
@@ -989,123 +1292,133 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.transform = 'scale(1)';
         });
     });
+
+    // تحديث عداد التحاليل عند تغيير checkboxes
+    const labCheckboxes = document.querySelectorAll('.lab-test-checkbox');
+    labCheckboxes.forEach(cb => cb.addEventListener('change', updateLabSelectedCount));
+    updateLabSelectedCount();
+
+    // اختيار صيغة العرض بين الباقة والتحاليل العامة
+    const serviceTypeRadios = document.querySelectorAll('input[name="service_selection_type"]');
+    const packageSection = document.getElementById('packageSection');
+    const generalTestsSection = document.getElementById('generalTestsSection');
+    const hiddenServiceType = document.getElementById('serviceSelectionType');
+
+    function toggleServiceSelection(type) {
+        if (!packageSection || !generalTestsSection) return;
+
+        const packageCollapse = new bootstrap.Collapse(packageSection, { toggle: false });
+        const generalCollapse = new bootstrap.Collapse(generalTestsSection, { toggle: false });
+
+        if (type === 'package') {
+            packageCollapse.show();
+            generalCollapse.hide();
+        } else {
+            packageCollapse.hide();
+            generalCollapse.show();
+        }
+
+        document.querySelectorAll('.lab-test-checkbox').forEach(cb => cb.checked = false);
+        updateLabSelectedCount();
+    }
+
+    const activeRadio = document.querySelector('input[name="service_selection_type"]:checked');
+    if (activeRadio) {
+        toggleServiceSelection(activeRadio.value);
+    }
+
+    // Package -> auto-check handlers
+    const packageSelect = document.getElementById('packageSelect');
+    if (packageSelect) {
+        packageSelect.addEventListener('change', function() {
+            const raw = this.selectedOptions[0]?.dataset?.tests || '[]';
+            const rawNames = this.selectedOptions[0]?.dataset?.testNames || '[]';
+            let ids = [];
+            let names = [];
+            try { ids = JSON.parse(raw); } catch(e) { ids = []; }
+            try { names = JSON.parse(rawNames); } catch(e) { names = []; }
+
+            applyPackageByIds(ids);
+            showSelectedPackageTests(names);
+
+            // إذا تم اختيار باقة، اجعل خدمة الاختيار باقة واظهر قسم الباقات
+            const pkgRadio = document.getElementById('selectPackage');
+            if (pkgRadio) {
+                pkgRadio.checked = true;
+                toggleServiceSelection('package');
+            }
+            updateLabSelectedCount();
+        });
+
+        // عرض باقة محددة عند التحميل إذا كانت موجودة
+        const selectedOption = packageSelect.selectedOptions[0];
+        if (selectedOption && selectedOption.value) {
+            const rawNames = selectedOption.dataset.testNames || '[]';
+            let names = [];
+            try { names = JSON.parse(rawNames); } catch(e) { names = []; }
+            showSelectedPackageTests(names);
+        }
+    }
+
+    function showSelectedPackageTests(names) {
+        const preview = document.getElementById('packageTestsPreview');
+        if (!preview) return;
+
+        if (!Array.isArray(names) || names.length === 0) {
+            preview.innerHTML = '<small class="text-muted">لم يتم اختيار باقة أو لا توجد تحاليل في الباقة.</small>';
+            return;
+        }
+
+        const listItems = names.map(name => `<span class="badge bg-info text-dark me-1 mb-1">${name}</span>`).join('');
+        preview.innerHTML = `<div><strong>تحاليل الباقة:</strong><br>${listItems}</div>`;
+    }
+
+    const modalPackageSelect = document.getElementById('modalPackageSelect');
+    const selectedPackageName = document.getElementById('selectedPackageName');
+
+    function setSelectedPackage(name) {
+        if (selectedPackageName) {
+            selectedPackageName.textContent = name || 'لا توجد';
+        }
+    }
+
+    if (modalPackageSelect) {
+        modalPackageSelect.addEventListener('change', function() {
+            const selectedOpt = this.selectedOptions[0];
+            const raw = selectedOpt?.dataset?.tests || '[]';
+            let names = [];
+            try { names = JSON.parse(raw); } catch(e) { names = []; }
+            applyPackageInModal(names);
+            setSelectedPackage(selectedOpt?.textContent || 'لا توجد');
+        });
+    }
+
+    document.querySelectorAll('.select-package-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const names = this.dataset.tests ? JSON.parse(this.dataset.tests) : [];
+            const pkgName = this.closest('.accordion-item')?.querySelector('.accordion-button')?.textContent || 'لا توجد';
+
+            applyPackageInModal(names);
+            setSelectedPackage(pkgName.trim());
+
+            if (modalPackageSelect) {
+                modalPackageSelect.value = this.dataset.id;
+            }
+
+            // افتح قسم التحاليل لسهولة المتابعة
+            document.getElementById('testSearchInput')?.focus();
+        });
+    });
 });
 
-// دالة للحصول على الوحدة التلقائية للفحص
-function getTestUnit(testName) {
-    // البحث في بيانات قاعدة البيانات المرسلة من PHP
-    const labTestsData = @json($labTests->toArray());
-
-    if (labTestsData[testName] && labTestsData[testName].unit) {
-        return labTestsData[testName].unit;
-    }
-
-    // الاحتياطي للفحوصات غير الموجودة في قاعدة البيانات
-    const name = testName.toLowerCase();
-
-    if (name.includes('سكر') || name.includes('glucose')) {
-        return 'mg/dL';
-    } else if (name.includes('ضغط') || name.includes('pressure')) {
-        return 'mmHg';
-    } else if (name.includes('كوليسترول') || name.includes('cholesterol')) {
-        return 'mg/dL';
-    } else if (name.includes('بيليروبين') || name.includes('bilirubin')) {
-        return 'mg/dL';
-    } else if (name.includes('كرياتينين') || name.includes('creatinine')) {
-        return 'mg/dL';
-    } else if (name.includes('يوريا') || name.includes('urea')) {
-        return 'mg/dL';
-    } else if (name.includes('sgot') || name.includes('ast')) {
-        return 'U/L';
-    } else if (name.includes('sgpt') || name.includes('alt')) {
-        return 'U/L';
-    } else if (name.includes('الصفائح') || name.includes('platelets')) {
-        return '/µL';
-    } else if (name.includes('الهيموغلوبين') || name.includes('hemoglobin')) {
-        return 'g/dL';
-    } else if (name.includes('الكرات البيضاء') || name.includes('wbc')) {
-        return '/µL';
-    } else if (name.includes('الكرات الحمراء') || name.includes('rbc')) {
-        return 'million/µL';
-    } else if (name.includes('الهيماتوكريت') || name.includes('hematocrit')) {
-        return '%';
-    } else if (name.includes('هرمون') || name.includes('hormone')) {
-        return 'mIU/mL';
-    } else if (name.includes('فيتامين') || name.includes('vitamin')) {
-        return 'ng/mL';
-    } else if (name.includes('حديد') || name.includes('iron')) {
-        return 'µg/dL';
-    } else if (name.includes('كالسيوم') || name.includes('calcium')) {
-        return 'mg/dL';
-    } else if (name.includes('صوديوم') || name.includes('sodium')) {
-        return 'mEq/L';
-    } else if (name.includes('بوتاسيوم') || name.includes('potassium')) {
-        return 'mEq/L';
-    } else {
-        return '';
-    }
-}
-
-function initializeLabResults() {
-    const testInputs = document.querySelectorAll('.test-value');
-    const unitInputs = document.querySelectorAll('.test-unit');
-
-    // تحديث الوحدات التلقائية عند التحميل
-    unitInputs.forEach((unitInput) => {
-        const testName = unitInput.dataset.test;
-        const defaultUnit = unitInput.dataset.defaultUnit || getTestUnit(testName);
-        // تحديث الوحدة إذا كانت فارغة
-        if (defaultUnit && !unitInput.value.trim()) {
-            unitInput.value = defaultUnit;
-        }
-    });
-
-    testInputs.forEach((input, index) => {
-        // تحليل فوري عند الإدخال
-        input.addEventListener('keyup', function() {
-            analyzeResult(this, index);
-        });
-
-        // تحليل عند الإدخال
-        input.addEventListener('input', function() {
-            analyzeResult(this, index);
-        });
-
-        // تحليل عند فقدان التركيز
-        input.addEventListener('blur', function() {
-            analyzeResult(this, index);
-        });
-
-        // تحليل القيمة الموجودة عند التحميل
-        analyzeResult(input, index);
-    });
-
-    updateSummary();
-}
-
-function analyzeResult(input, index) {
-    const value = parseFloat(input.value);
-    const testRow = input.closest('.test-row');
-    const indicator = testRow.querySelector('.status-indicator i');
-    const statusText = testRow.querySelector('.status-text');
-    const testName = input.dataset.test ? input.dataset.test.toLowerCase() : '';
-
-    // console.log('تحليل النتيجة:', { testName, value, inputValue: input.value });
-
-    if (isNaN(value) || input.value.trim() === '' || value === 0) {
-        // قيمة غير صحيحة أو فارغة أو صفر
-        indicator.className = 'fas fa-circle text-muted';
-        statusText.innerHTML = '<i class="fas fa-info-circle"></i> أدخل قيمة صحيحة';
-        testRow.classList.remove('result-normal', 'result-high', 'result-low');
-        return;
-    }
-
-    // ملاحظة مهمة: هذه قيم مرجعية تقريبية عامة فقط
-    // القيم الحقيقية تختلف حسب المختبر، عمر المريض، جنسه، والوحدات المستخدمة
-    // يجب دائمًا مراجعة الطبيب أو المختبر للقيم المرجعية الصحيحة
-    let resultType = 'normal';
-    let statusMessage = '<i class="fas fa-info-circle text-info"></i> تم إدخال القيمة - راجع المرجع الطبي';
-    let indicatorClass = 'fas fa-circle text-info';
+    // دالة لحساب حالة النتيجة بناءً على اسم التحليل والقيمة
+    function evaluateTestResult(testName, value, testRow, indicator, statusText) {
+        // ملاحظة مهمة: هذه قيم مرجعية تقريبية عامة فقط
+        // القيم الحقيقية تختلف حسب المختبر، عمر المريض، جنسه، والوحدات المستخدمة
+        // يجب دائمًا مراجعة الطبيب أو المختبر للقيم المرجعية الصحيحة
+        let resultType = 'normal';
+        let statusMessage = '<i class="fas fa-info-circle text-info"></i> تم إدخال القيمة - راجع المرجع الطبي';
+        let indicatorClass = 'fas fa-circle text-info';
 
     // تحليلات أساسية لأنواع شائعة من الفحوصات (قيم تقريبية عامة)
     if (testName.includes('سكر') || testName.includes('glucose')) {

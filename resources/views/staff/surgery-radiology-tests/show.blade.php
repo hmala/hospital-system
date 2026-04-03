@@ -99,8 +99,8 @@ function getRadiologyCategory($radiologyName) {
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>المريض:</strong> {{ $test->surgery->patient->user->name }}</p>
-                            <p><strong>الطبيب:</strong> د. {{ $test->surgery->doctor->user->name }}</p>
+                            <p><strong>المريض:</strong> {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}</p>
+                            <p><strong>الطبيب:</strong> د. {{ optional($test->surgery->doctor->user)->name ?? 'غير محدد' }}</p>
                             <p><strong>نوع العملية:</strong> {{ $test->surgery->surgery_type }}</p>
                         </div>
                         <div class="col-md-6">

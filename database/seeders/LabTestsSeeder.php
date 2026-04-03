@@ -1,8 +1,11 @@
+نحن ننتناقش قبل ماتنفذ اي شي
 <?php
 
 namespace Database\Seeders;
 
 use App\Models\LabTest;
+use App\Models\Package;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Seeder;
 
 class LabTestsSeeder extends Seeder
@@ -10,7 +13,10 @@ class LabTestsSeeder extends Seeder
     public function run(): void
     {
         LabTest::truncate();
-        
+        // تفريغ باقات التحاليل إن وُجدت
+        Package::truncate();
+        DB::table('package_lab_test')->truncate();
+
         $this->insertLabTestsData();
     }
     
@@ -29,16 +35,28 @@ class LabTestsSeeder extends Seeder
                 $counter++;
             }
             
-            LabTest::create([
-                'main_category' => $item[0],
-                'subcategory' => $item[1],
-                'name' => $item[2],
-                'code' => $code,
-                'description' => $item[3] ?: $item[2],
-                'unit' => '',
-                'is_active' => true,
-                'notes' => $item[4] ?: null,
-            ]);
+            // إذا كانت البند عبارة عن باقة (الحقل الفرعي = 'حزم')، ننشئ سجل باقة بدلاً من اختبار مفرد
+            if (trim($item[1]) === 'حزم') {
+                Package::create([
+                    'name' => $item[2],
+                    'code' => $code,
+                    'description' => $item[3] ?: $item[2],
+                    'price' => is_numeric($item[4]) ? $item[4] : 0,
+                    'is_active' => true,
+                    'notes' => $item[4] ?: null,
+                ]);
+            } else {
+                LabTest::create([
+                    'main_category' => $item[0],
+                    'subcategory' => $item[1],
+                    'name' => $item[2],
+                    'code' => $code,
+                    'description' => $item[3] ?: $item[2],
+                    'unit' => '',
+                    'is_active' => true,
+                    'notes' => $item[4] ?: null,
+                ]);
+            }
         }
     }
     

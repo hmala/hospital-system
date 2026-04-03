@@ -90,8 +90,8 @@ class AppServiceProvider extends ServiceProvider
                 // إحصائيات الاستعلامات (جميع الطلبات المعلقة)
                 $pendingRequests = MedicalRequest::where('status', 'pending')->count();
                 
-                // إحصائيات المختبر والأشعة
-                $pendingLab = MedicalRequest::where('type', 'lab')
+                // إحصائيات المختبر والأشعة (تشمل مصرف الدم كجزء من المختبر)
+                $pendingLab = MedicalRequest::whereIn('type', ['lab', 'blood_bank'])
                     ->where('status', 'pending')
                     ->count();
                 $pendingRadiology = MedicalRequest::where('type', 'radiology')

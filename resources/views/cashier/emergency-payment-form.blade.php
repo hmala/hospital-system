@@ -112,11 +112,12 @@
                             @endif
 
                             @if($payment->emergency->services->count() > 0)
-                            <div class="table-responsive">
+                            <div class="table-responsive mb-3">
+                                <h6>خدمات الطوارئ</h6>
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
-                                            <th>خدمات الطوارئ</th>
+                                            <th>خدمة</th>
                                             <th>السعر</th>
                                         </tr>
                                     </thead>
@@ -132,10 +133,180 @@
                             </div>
                             @endif
 
+                            @if($payment->emergency->labRequests->count() > 0)
+                            <div class="table-responsive mb-3">
+                                <h6>طلبات التحاليل</h6>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>طلب #</th>
+                                            <th>تحاليل</th>
+                                            <th>الحالة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($payment->emergency->labRequests as $labReq)
+                                        <tr>
+                                            <td>#{{ $labReq->id }}</td>
+                                            <td>
+                                                @foreach($labReq->labTests as $test)
+                                                    <span class="badge bg-primary me-1">{{ $test->name }}</span>
+                                                @endforeach
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ $labReq->status == 'completed' ? 'success' : ($labReq->status == 'in_progress' ? 'info' : 'warning') }}">
+                                                    {{ $labReq->status_text }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            @endif
+
+                            @if($payment->emergency->radiologyRequests->count() > 0)
+                            <div class="table-responsive mb-3">
+                                <h6>طلبات الأشعة</h6>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>طلب #</th>
+                                            <th>أشعة</th>
+                                            <th>الحالة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($payment->emergency->radiologyRequests as $radReq)
+                                        <tr>
+                                            <td>#{{ $radReq->id }}</td>
+                                            <td>
+                                                @foreach($radReq->radiologyTypes as $type)
+                                                    <span class="badge bg-info me-1">{{ $type->name }}</span>
+                                                @endforeach
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ $radReq->status == 'completed' ? 'success' : ($radReq->status == 'in_progress' ? 'info' : 'warning') }}">
+                                                    {{ $radReq->status_text }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            @endif
+
+                            @php
+                                $invoiceItems = [];
+                                $invoiceLines = [];
+
+                                foreach($payment->emergency->services as $service) {
+                                    $invoiceItems[] = [
+                                        'name' => $service->name,
+                                        'qty' => 1,
+                                        'price' => $service->price,
+                                        'total' => $service->price
+                                    ];
+                                }
+
+                                foreach($payment->emergency->labRequests as $labReq) {
+                                    foreach($labReq->labTests as $test) {
+                                        $invoiceItems[] = [
+                                            'name' => '[تحاليل] ' . $test->name,
+                                            'qty' => 1,
+                                            'price' => $test->price,
+                                            'total' => $test->price
+                                        ];
+                                    }
+                                }
+
+                                foreach($payment->emergency->radiologyRequests as $radReq) {
+                                    foreach($radReq->radiologyTypes as $type) {
+                                        $invoiceItems[] = [
+                                            'name' => '[أشعة] ' . $type->name,
+                                            'qty' => 1,
+                                            'price' => $type->price ?? 0,
+                                            'total' => $type->price ?? 0
+                                        ];
+                                    }
+                                }
+
+                                foreach($payment->emergency->appointments as $ap) {
+                                    if($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
+                                        $invoiceItems[] = [
+                                            'name' => '[استشارة] ' . ($ap->reason ?: 'استشارة طوارئ'),
+                                            'qty' => 1,
+                                            'price' => $ap->consultation_fee ?? 0,
+                                            'total' => $ap->consultation_fee ?? 0
+                                        ];
+                                    }
+                                }
+
+                                $subtotal = array_sum(array_column($invoiceItems, 'total'));
+                                $paidAmount = $payment->paid_at ? $payment->amount : 0;
+                                $dueAmount = max(0, $subtotal - $paidAmount);
+                                $totalInvoiceAmount = $subtotal; // نعرض المجموع من العناصر الفعلية
+                            @endphp
+
+                            <div class="card mt-4 border-dark">
+                                <div class="card-header bg-dark text-white">
+                                    <h5 class="mb-0">فاتورة طلبات الطوارئ (نمطي)</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>المنتج</th>
+                                                    <th style="width:90px;">الكمية</th>
+                                                    <th style="width:120px;">السعر</th>
+                                                    <th style="width:120px;">الإجمالي</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($invoiceItems as $item)
+                                                <tr>
+                                                    <td>{{ $item['name'] }}</td>
+                                                    <td class="text-center">{{ $item['qty'] }}</td>
+                                                    <td class="text-end">{{ number_format($item['price'], 2) }} IQD</td>
+                                                    <td class="text-end">{{ number_format($item['total'], 2) }} IQD</td>
+                                                </tr>
+                                                @endforeach
+                                                @if(empty($invoiceItems))
+                                                <tr>
+                                                    <td colspan="4" class="text-center">لا توجد بنود الفاتورة حالياً</td>
+                                                </tr>
+                                                @endif
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th colspan="3" class="text-end">المجموع الفرعي</th>
+                                                    <th class="text-end">{{ number_format($subtotal, 2) }} IQD</th>
+                                                </tr>
+                                                <tr>
+                                                    <th colspan="3" class="text-end">المدفوع</th>
+                                                    <th class="text-end">{{ number_format($paidAmount, 2) }} IQD</th>
+                                                </tr>
+                                                <tr>
+                                                    <th colspan="3" class="text-end">المتبقي</th>
+                                                    <th class="text-end">{{ number_format($dueAmount, 2) }} IQD</th>
+                                                </tr>
+                                                <tr class="table-success">
+                                                    <th colspan="3" class="text-end">الإجمالي</th>
+                                                    <th class="text-end">{{ number_format($totalInvoiceAmount, 2) }} IQD</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+
                             <div class="mt-3 p-3 bg-light rounded">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">المجموع الكلي:</h5>
-                                    <h4 class="mb-0 text-success">{{ number_format($payment->amount, 2) }} IQD</h4>
+                                    <h4 class="mb-0 text-success">{{ number_format($totalInvoiceAmount, 2) }} IQD</h4>
                                 </div>
                             </div>
                         </div>

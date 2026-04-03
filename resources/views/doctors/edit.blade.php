@@ -104,46 +104,6 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label for="qualification" class="col-md-3 col-form-label text-md-end">المؤهل العلمي</label>
-                            <div class="col-md-8">
-                                <input id="qualification" type="text" class="form-control @error('qualification') is-invalid @enderror"
-                                       name="qualification" value="{{ old('qualification', $doctor->qualification) }}" required
-                                       placeholder="مثال: بكالوريوس الطب والجراحة">
-                                @error('qualification')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <label for="license_number" class="col-md-3 col-form-label text-md-end">رقم الترخيص الطبي</label>
-                            <div class="col-md-8">
-                                <input id="license_number" type="text" class="form-control @error('license_number') is-invalid @enderror"
-                                       name="license_number" value="{{ old('license_number', $doctor->license_number) }}" required>
-                                @error('license_number')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <label for="experience_years" class="col-md-3 col-form-label text-md-end">سنوات الخبرة</label>
-                            <div class="col-md-8">
-                                <input id="experience_years" type="number" class="form-control @error('experience_years') is-invalid @enderror"
-                                       name="experience_years" value="{{ old('experience_years', $doctor->experience_years) }}" required min="0">
-                                @error('experience_years')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
                             <label for="consultation_fee" class="col-md-3 col-form-label text-md-end">رسوم الكشف (دينار)</label>
                             <div class="col-md-8">
                                 <input id="consultation_fee" type="number" step="0.01" class="form-control @error('consultation_fee') is-invalid @enderror"
@@ -156,13 +116,90 @@
                             </div>
                         </div>
 
+                        <!-- قسم أوقات العمل -->
+                        <hr class="my-4">
+                        <h5 class="mb-3 text-primary">
+                            <i class="fas fa-clock me-2"></i>أوقات العمل
+                        </h5>
+
                         <div class="row mb-3">
-                            <label for="max_patients_per_day" class="col-md-3 col-form-label text-md-end">الحد الأقصى للمرضى يومياً</label>
+                            <label for="start_time" class="col-md-3 col-form-label text-md-end">وقت الدخول</label>
                             <div class="col-md-8">
-                                <input id="max_patients_per_day" type="number" class="form-control @error('max_patients_per_day') is-invalid @enderror"
-                                       name="max_patients_per_day" value="{{ old('max_patients_per_day', $doctor->max_patients_per_day) }}" required min="1">
-                                @error('max_patients_per_day')
+                                <input id="start_time" type="time" class="form-control @error('start_time') is-invalid @enderror"
+                                       name="start_time" value="{{ old('start_time', $doctor->start_time ? date('H:i', strtotime($doctor->start_time)) : '08:00') }}" required>
+                                @error('start_time')
                                     <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="end_time" class="col-md-3 col-form-label text-md-end">وقت الخروج</label>
+                            <div class="col-md-8">
+                                <input id="end_time" type="time" class="form-control @error('end_time') is-invalid @enderror"
+                                       name="end_time" value="{{ old('end_time', $doctor->end_time ? date('H:i', strtotime($doctor->end_time)) : '16:00') }}" required>
+                                @error('end_time')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-md-3 col-form-label text-md-end">أيام العمل</label>
+                            <div class="col-md-8">
+                                <div class="row">
+                                    @php
+                                        $workingDays = old('working_days', $doctor->working_days ?? []);
+                                    @endphp
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="السبت" id="day_saturday" {{ in_array('السبت', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_saturday">السبت</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="الأحد" id="day_sunday" {{ in_array('الأحد', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_sunday">الأحد</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="الإثنين" id="day_monday" {{ in_array('الإثنين', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_monday">الإثنين</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="الثلاثاء" id="day_tuesday" {{ in_array('الثلاثاء', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_tuesday">الثلاثاء</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="الأربعاء" id="day_wednesday" {{ in_array('الأربعاء', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_wednesday">الأربعاء</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="الخميس" id="day_thursday" {{ in_array('الخميس', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_thursday">الخميس</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="working_days[]" value="الجمعة" id="day_friday" {{ in_array('الجمعة', $workingDays) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="day_friday">الجمعة</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                @error('working_days')
+                                    <span class="invalid-feedback d-block" role="alert">
                                         <strong>{{ $message }}</strong>
                                     </span>
                                 @enderror
@@ -178,19 +215,6 @@
                                         الطبيب نشط
                                     </label>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <label for="bio" class="col-md-3 col-form-label text-md-end">نبذة تعريفية</label>
-                            <div class="col-md-8">
-                                <textarea id="bio" class="form-control @error('bio') is-invalid @enderror" name="bio" rows="3"
-                                          placeholder="معلومات إضافية عن الطبيب...">{{ old('bio', $doctor->bio) }}</textarea>
-                                @error('bio')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
                             </div>
                         </div>
 

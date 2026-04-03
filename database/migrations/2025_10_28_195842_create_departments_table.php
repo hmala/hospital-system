@@ -24,6 +24,7 @@ return new class extends Migration
                 'dermatology',   // جلدية
                 'emergency',     // طوارئ
                 'laboratory',    // مختبر
+                'blood_bank',    // مصرف الدم
                 'other'          // أخرى
             ]);
             $table->string('room_number');

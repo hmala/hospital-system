@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 
 use App\Events\SurgeryLabTestUpdated;
 use App\Models\Request as MedicalRequest;
-use App\Models\LabTestResult;
 use App\Models\LabResult;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Log;
@@ -46,6 +45,7 @@ class StaffRequestController extends Controller
         $allowedTypes = [];
         if ($user->hasRole('lab_staff')) {
             $allowedTypes[] = 'lab';
+            $allowedTypes[] = 'blood_bank';
         }
         if ($user->hasRole('radiology_staff')) {
             $allowedTypes[] = 'radiology';
@@ -54,27 +54,46 @@ class StaffRequestController extends Controller
             $allowedTypes[] = 'pharmacy';
         }
 
-        // السماح للموظفين الآخرين برؤية جميع الأنواع
+        // السماح للموظفين الآخرين برؤية جميع الأنواع بما في ذلك مصرف الدم
         if ($user->hasRole(['receptionist', 'admin', 'doctor'])) {
-            $allowedTypes = ['lab', 'radiology', 'pharmacy'];
+            $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank'];
         }
 
         if (empty($allowedTypes)) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // فلترة الطلبات حسب النوع المسموح
+        // فلترة الطلبات حسب النوع المسموح (تشمل مصرف الدم القديم في حالة lab.details.blood_bank)
         $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
-            ->whereIn('type', $allowedTypes)
-            ->where(function($q) {
-                // عرض الطلبات المدفوعة أو التي بانتظار تحديد الخدمات
-                $q->where('payment_status', 'paid')
-                  ->orWhere('status', 'pending_service_selection');
-            });
+            ->where(function($q) use ($allowedTypes) {
+                $q->whereIn('type', $allowedTypes);
+
+                if (in_array('lab', $allowedTypes)) {
+                    $q->orWhere(function($inner) {
+                        $inner->where('type', 'lab')
+                            ->whereJsonContains('details->blood_bank', true);
+                    });
+                }
+            })
+            ->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
 
         // فلترة حسب النوع المحدد في URL
         if ($type && in_array($type, $allowedTypes)) {
-            $query->where('type', $type);
+            if ($type === 'lab') {
+                // لعرض تحاليل + طلبات مصرف الدم ضمن نفس تبويب المختبر عند اختيار lab
+                $query->where(function($q) {
+                    $q->whereIn('type', ['lab', 'blood_bank'])
+                      ->orWhere(function($inner) {
+                          $inner->where('type', 'lab')
+                                ->whereJsonContains('details->blood_bank', true);
+                      });
+                });
+            } elseif ($type === 'blood_bank') {
+                // عرض طلبات مصرف الدم المخصصة
+                $query->where('type', 'blood_bank');
+            } else {
+                $query->where('type', $type);
+            }
         }
 
         $requests = $query->orderBy('created_at', 'desc')->paginate(15);
@@ -124,6 +143,7 @@ class StaffRequestController extends Controller
         $allowedTypes = [];
         if ($user->hasRole('lab_staff')) {
             $allowedTypes[] = 'lab';
+            $allowedTypes[] = 'blood_bank';
         }
         if ($user->hasRole('radiology_staff')) {
             $allowedTypes[] = 'radiology';
@@ -134,7 +154,7 @@ class StaffRequestController extends Controller
         
         // admin يستطيع رؤية كل شيء
         if ($user->hasRole(['admin', 'receptionist', 'doctor'])) {
-            $allowedTypes = ['lab', 'radiology', 'pharmacy'];
+            $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank'];
         }
 
         if (!in_array($request->type, $allowedTypes)) {
@@ -142,6 +162,14 @@ class StaffRequestController extends Controller
         }
 
         $request->load(['visit.patient.user', 'visit.doctor.user']);
+
+        $bloodBankRequest = null;
+        // شرط واضح: فقط عندما type= blood_bank نعتبر الطلب مصارف دم
+        $isBloodBankRequest = $request->type === 'blood_bank';
+
+        if ($isBloodBankRequest) {
+            $bloodBankRequest = \App\Models\BloodBankRequest::where('request_id', $request->id)->first();
+        }
 
         // استخراج النتائج المحفوظة سابقاً
         $savedTestResults = [];
@@ -154,7 +182,7 @@ class StaffRequestController extends Controller
             }
         }
 
-        return view('staff.requests.show', compact('request', 'savedTestResults', 'savedNotes'));
+        return view('staff.requests.show', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
     }
 
     public function update(HttpRequest $httpRequest, MedicalRequest $request)
@@ -171,7 +199,7 @@ class StaffRequestController extends Controller
         $request->load(['visit']);
 
         // 1. حفظ اختيار الخدمات (للطلبات pending_service_selection)
-        if ($request->status === 'pending_service_selection' && $httpRequest->has('lab_test_ids')) {
+        if ($request->status === 'pending_service_selection' && ($httpRequest->has('lab_test_ids') || $httpRequest->has('package_id'))) {
             $details = $request->details ?? [];
             if (is_string($details)) {
                 $details = json_decode($details, true) ?? [];
@@ -179,11 +207,24 @@ class StaffRequestController extends Controller
             if (!is_array($details)) {
                 $details = [];
             }
-            
-            $details['lab_test_ids'] = $httpRequest->lab_test_ids;
+            // دعم اختيار باقة: إذا استلمنا package_id نترجمها إلى lab_test_ids
+            if ($httpRequest->has('package_id') && $httpRequest->package_id) {
+                $packageId = $httpRequest->package_id;
+                $details['package_id'] = $packageId;
+                try {
+                    $packageTests = \App\Models\Package::find($packageId)->labTests()->pluck('lab_tests.id')->toArray();
+                } catch (\Exception $e) {
+                    $packageTests = [];
+                }
+                $details['lab_test_ids'] = $packageTests;
+                $details['package_expanded_at'] = now()->toDateTimeString();
+            } else {
+                $details['lab_test_ids'] = $httpRequest->lab_test_ids;
+            }
             $details['services_selected'] = true;
             $details['services_selected_at'] = now()->toDateTimeString();
             $details['services_selected_by'] = auth()->id();
+            $details['service_selection_type'] = $httpRequest->service_selection_type ?? ($httpRequest->package_id ? 'package' : 'general');
             
             $request->details = $details;
             $request->status = 'pending';
@@ -203,6 +244,77 @@ class StaffRequestController extends Controller
             return redirect()
                 ->route('staff.requests.index', ['type' => $request->type])
                 ->with('success', 'تم تحديد التحاليل المطلوبة بنجاح. الطلب الآن بانتظار الدفع عند الكاشير.');
+        }
+
+        // حفظ بيانات مصرف الدم
+        $isBloodBankRequest = $request->type === 'blood_bank';
+        if (!$isBloodBankRequest) {
+            $details = $request->details;
+            if (is_string($details)) {
+                $details = json_decode($details, true) ?: [];
+            }
+            $isBloodBankRequest = data_get($details, 'blood_bank', false) === true;
+        }
+
+        if ($isBloodBankRequest) {
+            $httpRequest->validate([
+                'room_no' => 'nullable|string|max:100',
+                'donor_group' => 'nullable|string|max:50',
+                'patient_group' => 'nullable|string|max:50',
+                'donor_weight' => 'nullable|numeric|min:0',
+                'recipient_weight' => 'nullable|numeric|min:0',
+                'at_room_temp' => 'nullable|string|max:50',
+                'bovine_albumin' => 'nullable|string|max:50',
+                'anti_human_globulin' => 'nullable|string|max:50',
+                'compatibility' => 'nullable|string|max:50',
+                'bottle_no' => 'nullable|string|max:50',
+                'operative_date' => 'nullable|date',
+                'exp_date' => 'nullable|date',
+                'doctor_in_charge' => 'nullable|string|max:100',
+                'total_amount' => 'nullable|numeric|min:0',
+            ]);
+
+            $bloodBankDetails = [
+                'room_no' => $httpRequest->room_no,
+                'donor_group' => $httpRequest->donor_group,
+                'patient_group' => $httpRequest->patient_group,
+                'donor_weight' => $httpRequest->donor_weight,
+                'recipient_weight' => $httpRequest->recipient_weight,
+                'at_room_temp' => $httpRequest->at_room_temp,
+                'bovine_albumin' => $httpRequest->bovine_albumin,
+                'anti_human_globulin' => $httpRequest->anti_human_globulin,
+                'compatibility' => $httpRequest->compatibility,
+                'bottle_no' => $httpRequest->bottle_no,
+                'operative_date' => $httpRequest->operative_date,
+                'exp_date' => $httpRequest->exp_date,
+                'doctor_in_charge' => $httpRequest->doctor_in_charge,
+                'total_amount' => $httpRequest->total_amount ?? 0,
+                'notes' => $httpRequest->notes ?? null,
+            ];
+
+            $visit = $request->visit;
+            $bloodBankRequest = \App\Models\BloodBankRequest::updateOrCreate(
+                ['request_id' => $request->id],
+                array_merge($bloodBankDetails, [
+                    'visit_id' => $request->visit_id ?? ($visit?->id),
+                    'patient_id' => $request->patient_id ?? ($visit?->patient_id),
+                    'department_id' => $request->department_id ?? ($visit?->department_id),
+                    'doctor_id' => $request->doctor_id ?? ($visit?->doctor_id),
+                    'status' => $httpRequest->status ?? ($request->status === 'pending' ? 'in_progress' : $request->status),
+                ])
+            );
+
+            if ($request->status === 'pending' || $request->status === 'pending_service_selection') {
+                $request->status = 'in_progress';
+            } else {
+                $request->status = $httpRequest->status ?? $request->status;
+            }
+
+            $request->payment_status = 'pending';
+            $request->save();
+
+            return redirect()->route('staff.requests.show', $request)
+                        ->with('success', 'تم حفظ بيانات مصرف الدم بنجاح');
         }
 
         // حفظ اختيار خدمات الأشعة (للطلبات pending_service_selection)
@@ -281,9 +393,32 @@ class StaffRequestController extends Controller
             // حذف النتائج السابقة لهذا الطلب
             LabResult::where('request_id', $request->id)->delete();
 
+            $details = $request->details ?? [];
+            if (is_string($details)) {
+                $details = json_decode($details, true) ?? [];
+            }
+            if (!is_array($details)) {
+                $details = [];
+            }
+
+            $sourceType = 'general';
+            $packageId = null;
+            if (!empty($details['package_id'])) {
+                $sourceType = 'package';
+                $packageId = $details['package_id'];
+            }
+
             foreach ($httpRequest->test_results as $testName => $data) {
                 if (!empty($data['value'])) {
                     try {
+                        $labTestId = null;
+                        if (isset($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
+                            // ربما لريب، إذا كانت values بإندكس رقمية، لا يوجد رابط مباشر بالاسم؛ يمكن تحسين لاحقاً
+                            if (isset($details['lab_test_ids'][$testName])) {
+                                $labTestId = $details['lab_test_ids'][$testName];
+                            }
+                        }
+
                         $labResult = LabResult::create([
                             'visit_id' => $request->visit_id,
                             'request_id' => $request->id,
@@ -293,6 +428,9 @@ class StaffRequestController extends Controller
                             'status' => (new LabResult)->determineStatus($data['value'], $testName),
                             'reference_range' => (new LabResult)->getReferenceRange($testName),
                             'notes' => $data['notes'] ?? null,
+                            'source_type' => $sourceType,
+                            'package_id' => $packageId,
+                            'lab_test_id' => $labTestId,
                         ]);
 
                         Log::info("تم حفظ نتيجة التحليل: {$testName}", [
@@ -466,7 +604,23 @@ class StaffRequestController extends Controller
         // تحميل العلاقات
         $request->load(['visit.patient.user', 'visit.doctor.user']);
 
-        return view('staff.requests.print', compact('request'));
+        $requestDetails = $request->details;
+        if (is_string($requestDetails)) {
+            $decoded = json_decode($requestDetails, true);
+            $requestDetails = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($requestDetails)) {
+            $requestDetails = [];
+        }
+
+        $isBloodBankRequest = $request->type === 'blood_bank' || data_get($requestDetails, 'blood_bank', false) === true;
+        $bloodBankRequest = null;
+
+        if ($isBloodBankRequest) {
+            $bloodBankRequest = \App\Models\BloodBankRequest::where('request_id', $request->id)->first();
+        }
+
+        return view('staff.requests.print', compact('request', 'isBloodBankRequest', 'bloodBankRequest'));
     }
 
     /**

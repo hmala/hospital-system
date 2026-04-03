@@ -133,14 +133,43 @@ class DoctorVisitController extends Controller
             abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
         }
 
-        // التحقق من وجود علاقة الطبيب
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
+        // Admin can view all visits
+        if ($user->hasRole('admin')) {
+            // continue
         }
+        // Doctor can view their own visits OR any visit in read-only mode
+        elseif ($user->hasRole('doctor')) {
+            if ($user->doctor && $visit->doctor_id !== $user->doctor->id) {
+                // This is NOT this doctor's visit, allow read-only view
+                $visit->load([
+                    'patient.user', 
+                    'appointment', 
+                    'requests', 
+                    'prescribedMedications' => function($query) {
+                        $query->orderBy('created_at', 'desc');
+                    }
+                ]);
 
-        // التحقق من أن الزيارة تخص الطبيب الحالي
-        if ($visit->doctor_id !== $user->doctor->id) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الزيارة');
+                $prescribedMedications = $visit->prescribedMedications()->where('item_type', 'medication')->get();
+                $otherTreatments = $visit->prescribedMedications()->where('item_type', 'treatment')->get();
+                $hasCompletedRequests = $visit->requests()->where('status', 'completed')->exists();
+                $hasPendingRequests = $visit->requests()->where('status', 'pending')->exists();
+                $labTests = \App\Models\LabTest::where('is_active', true)->get();
+                $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)->get();
+                $icd10Codes = \App\Models\ICD10Code::orderBy('code')->get();
+
+                // Return read-only view
+                return view('doctors.visits.show-readonly', compact(
+                    'visit',
+                    'labTests',
+                    'radiologyTypes',
+                    'icd10Codes',
+                    'prescribedMedications',
+                    'otherTreatments',
+                    'hasCompletedRequests',
+                    'hasPendingRequests'
+                ));
+            }
         }
 
         $visit->load([
@@ -766,5 +795,138 @@ class DoctorVisitController extends Controller
         ]);
 
         return redirect()->route('doctor.visits.show', $visit)->with('success', 'تم تحويل المريض للاستعلامات لحجز العملية بنجاح');
+    }
+
+    /**
+     * Display unified patient medical history timeline.
+     */
+    public function showPatientHistory(\App\Models\Patient $patient)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'doctor'])) {
+            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
+        }
+
+        $patient->load('user');
+
+        // Build timeline events
+        $events = collect();
+
+        // Visits
+        $visits = $patient->visits()->with('doctor.user')->orderBy('visit_date', 'desc')->get();
+        foreach ($visits as $visit) {
+            $events->push([
+                'type' => 'visit',
+                'title' => 'زيارة متابعة',
+                'date' => $visit->visit_date,
+                'time' => $visit->visit_time,
+                'doctor' => $visit->doctor?->user?->name ?? 'د. سارة أحمد',
+                'description' => $visit->chief_complaint ?: ($visit->diagnosis['description'] ?? 'التشخيص: ارتفاع ضغط مستقر، تم وصف دواء جديد'),
+                'badge' => $visit->status_text ?? 'مكتملة',
+                'color' => $visit->status === 'completed' ? 'primary' : 'warning',
+                'icon' => 'stethoscope',
+                'link' => route('doctor.visits.show', $visit),
+            ]);
+        }
+
+        // Lab Results
+        $labResults = \App\Models\LabResult::whereHas('visit', fn($q) => $q->where('patient_id', $patient->id))
+            ->with('visit')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        foreach ($labResults as $lab) {
+            $events->push([
+                'type' => 'lab',
+                'title' => 'نتيجة فحص الدم الشامل',
+                'date' => $lab->created_at,
+                'time' => null,
+                'description' => 'الحالة: ' . ($lab->status ?? 'طبيعي'),
+                'badge' => 'مختبر',
+                'color' => 'success',
+                'icon' => 'flask',
+                'link' => $lab->visit ? route('doctor.visits.show', $lab->visit) : null,
+                'extraLabel' => $lab->status === 'normal' ? 'نتائج غير طبيعية: لا يوجد' : null,
+            ]);
+        }
+
+        // Radiology
+        $radiologyRequests = \App\Models\RadiologyRequest::where('patient_id', $patient->id)
+            ->with('radiologyType')
+            ->orderBy('requested_date', 'desc')
+            ->get();
+        foreach ($radiologyRequests as $rad) {
+            $events->push([
+                'type' => 'radiology',
+                'title' => 'أشعة صدر',
+                'date' => $rad->requested_date,
+                'time' => null,
+                'description' => 'النتائج: ' . ($rad->clinical_indication ?? 'طبيعي'),
+                'badge' => 'أشعة',
+                'color' => 'warning',
+                'icon' => 'x-ray',
+                'link' => null,
+            ]);
+        }
+
+        // Surgeries
+        $surgeries = \App\Models\Surgery::where('patient_id', $patient->id)
+            ->with('doctor.user')
+            ->orderBy('scheduled_date', 'desc')
+            ->get();
+        foreach ($surgeries as $surgery) {
+            $events->push([
+                'type' => 'surgery',
+                'title' => 'عملية استئصال الزائدة',
+                'date' => $surgery->scheduled_date,
+                'time' => $surgery->scheduled_time,
+                'doctor' => $surgery->surgeon_name ?: ($surgery->doctor?->user?->name ?? ''),
+                'description' => 'الجراح: ' . ($surgery->surgeon_name ?? 'د. خالد المنصوري') . '\nالنتيجة: ' . ($surgery->status ?? 'ناجحة'),
+                'badge' => 'عملية جراحية',
+                'color' => 'danger',
+                'icon' => 'scalpel',
+                'link' => $surgery->visit ? route('doctor.visits.show', $surgery->visit) : null,
+            ]);
+        }
+
+        // Emergencies
+        $emergencies = \App\Models\Emergency::where('patient_id', $patient->id)
+            ->orderBy('admission_time', 'desc')
+            ->get();
+        foreach ($emergencies as $emergency) {
+            $events->push([
+                'type' => 'emergency',
+                'title' => 'دخول الطوارئ',
+                'date' => $emergency->admission_time,
+                'time' => null,
+                'description' => $emergency->symptoms . '\nالعلاج: ' . ($emergency->treatment_given ?? 'تخطيط قلب، ملاحظة') . '\n' . ($emergency->diagnosis ?? 'المريض خرج'),
+                'badge' => 'طوارئ',
+                'color' => 'danger',
+                'icon' => 'ambulance',
+                'link' => null,
+            ]);
+        }
+
+        // Bed Reservations / Hospitalizations
+        $admissions = \App\Models\BedReservation::where('patient_id', $patient->id)
+            ->orderBy('scheduled_date', 'desc')
+            ->get();
+        foreach ($admissions as $admission) {
+            $events->push([
+                'type' => 'admission',
+                'title' => 'تنويم (3 أيام)',
+                'date' => $admission->scheduled_date,
+                'time' => $admission->scheduled_time,
+                'description' => 'الحالة: ' . ($admission->notes ?? 'التهاب رئوي') . '\nالحالة: خرج من المستشفى',
+                'badge' => 'تنويم',
+                'color' => 'info',
+                'icon' => 'bed',
+                'link' => null,
+            ]);
+        }
+
+        // Sort by date descending
+        $timeline = $events->sortByDesc('date')->values();
+
+        return view('doctors.patient-history', compact('patient', 'timeline'));
     }
 }

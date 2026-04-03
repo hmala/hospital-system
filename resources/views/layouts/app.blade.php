@@ -95,8 +95,7 @@
             <nav class="col-md-3 col-lg-2 d-md-block sidebar">
                 <div class="position-sticky pt-0">
                     <div class="sidebar-header text-center p-3 border-bottom border-secondary">
-                        <i class="fas fa-hospital-alt fa-2x text-white mb-2"></i>
-                        <h5 class="text-white mb-0">المستشفى الأهلي</h5>
+                        <img src="{{ asset('images/لوغو.png') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                     </div>
 
                     <!-- روابط ثابتة حسب الصلاحيات -->
@@ -455,6 +454,23 @@
 
                         </div>
                         @endcanany
+
+                        {{-- قسم إدارة باقات المختبر (مرئي لحاملي صلاحية المختبر) --}}
+                        @can('view lab tests')
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#adminSection" aria-expanded="false">
+                            <span><i class="fas fa-tools"></i> الإدارة</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section" id="adminSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
+                                    <i class="fas fa-layer-group"></i><span> باقات المختبر</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcan
+
                     <!-- نهاية القائمة القديمة -->
                 </div>
             </nav>

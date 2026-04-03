@@ -84,6 +84,11 @@ class Emergency extends Model
         return $this->hasMany(EmergencyRadiologyRequest::class);
     }
 
+    public function appointments()
+    {
+        return $this->hasMany(\App\Models\Appointment::class);
+    }
+
     // مساعدات
     public function getPriorityColorAttribute()
     {

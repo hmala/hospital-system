@@ -16,13 +16,11 @@ class Doctor extends Model
         'phone',
         'specialization',
         'type',
-        'qualification',
-        'license_number',
-        'experience_years',
-        'bio',
         'schedule',
         'consultation_fee',
-        'max_patients_per_day',
+        'start_time',
+        'end_time',
+        'working_days',
         'is_active',
         'is_available_today',
         'available_date'
@@ -30,6 +28,9 @@ class Doctor extends Model
 
     protected $casts = [
         'schedule' => 'array',
+        'working_days' => 'array',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'is_active' => 'boolean',
         'is_available_today' => 'boolean',
         'available_date' => 'date'
@@ -70,16 +71,30 @@ class Doctor extends Model
 
     public function isAvailable($date)
     {
-        $appointmentCount = $this->appointments()
-            ->whereDate('appointment_date', $date)
-            ->count();
-
-        // إذا كان هناك حد أقصى للمرضى يومياً، تحقق منه
-        if ($this->max_patients_per_day) {
-            return $appointmentCount < $this->max_patients_per_day;
+        // التحقق من أن الطبيب نشط
+        if (!$this->is_active) {
+            return false;
         }
 
-        // خلاف ذلك، افترض أن الطبيب متاح دائماً
+        // التحقق من أيام العمل
+        if ($this->working_days) {
+            $dayOfWeek = strtolower(date('l', strtotime($date)));
+            $daysMap = [
+                'saturday' => 'السبت',
+                'sunday' => 'الأحد',
+                'monday' => 'الإثنين',
+                'tuesday' => 'الثلاثاء',
+                'wednesday' => 'الأربعاء',
+                'thursday' => 'الخميس',
+                'friday' => 'الجمعة'
+            ];
+            
+            $dayInArabic = $daysMap[$dayOfWeek] ?? null;
+            if (!in_array($dayInArabic, $this->working_days)) {
+                return false;
+            }
+        }
+
         return true;
     }
 

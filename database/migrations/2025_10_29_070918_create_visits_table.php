@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('department_id')->constrained()->onDelete('cascade');
             
             $table->date('visit_date');
-            $table->enum('visit_type', ['checkup', 'followup', 'emergency', 'surgery', 'lab', 'radiology']);
+            $table->enum('visit_type', ['checkup', 'followup', 'emergency', 'surgery', 'lab', 'radiology', 'blood_bank']);
             $table->text('chief_complaint'); // الشكوى الرئيسية
             $table->text('diagnosis')->nullable(); // التشخيص
             $table->text('treatment')->nullable(); // العلاج الموصوف

@@ -53,6 +53,14 @@ class Room extends Model
     }
 
     /**
+     * الحاضنات المرتبطة بهذه الغرفة
+     */
+    public function incubators()
+    {
+        return $this->hasMany(Incubator::class);
+    }
+
+    /**
      * الحصول على اسم نوع الغرفة بالعربية
      */
     public function getRoomTypeNameAttribute()

@@ -212,8 +212,9 @@ body {
                                             <select name="patient_id" id="patient_id" class="form-select form-select-lg @error('patient_id') is-invalid @enderror" required autofocus>
                                                 <option value="">اختر المريض</option>
                                                 @foreach($patients as $patient)
+                                                    @php $patientName = optional($patient->user)->name ?? 'غير معروف'; @endphp
                                                     <option value="{{ $patient->id }}" {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
-                                                        {{ $patient->user->name }}
+                                                        {{ $patientName }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -321,8 +322,9 @@ body {
                                         <!-- الأطباء الداخليين -->
                                         <optgroup label="أطباء المستشفى">
                                             @foreach($doctors as $doctor)
-                                                <option value="{{ $doctor->user->name }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $doctor->user->name) ? 'selected' : '' }}>
-                                                    د. {{ $doctor->user->name }}
+                                                @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
+                                                <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $referringDoctorName) ? 'selected' : '' }}>
+                                                    د. {{ $referringDoctorName ?: 'غير معروف' }}
                                                 </option>
                                             @endforeach
                                         </optgroup>
@@ -513,8 +515,9 @@ body {
                                     <select name="doctor_id" id="doctor_id" class="form-select form-select-lg @error('doctor_id') is-invalid @enderror" required>
                                         <option value="">اختر الطبيب</option>
                                         @foreach($doctors as $doctor)
+                                            @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
                                             <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $doctor->user->name }}
+                                                د. {{ $doctorName }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -588,8 +591,9 @@ body {
                                     <select name="anesthesiologist_id" id="anesthesiologist_id" class="form-select @error('anesthesiologist_id') is-invalid @enderror">
                                         <option value="">اختر الطبيب المخدر</option>
                                         @foreach($doctors as $doctor)
+                                            @php $anesthesiologistName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
                                             <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_id') == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $doctor->user->name }}
+                                                د. {{ $anesthesiologistName }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -607,8 +611,9 @@ body {
                                     <select name="anesthesiologist_2_id" id="anesthesiologist_2_id" class="form-select @error('anesthesiologist_2_id') is-invalid @enderror">
                                         <option value="">اختر الطبيب المخدر الثاني</option>
                                         @foreach($doctors as $doctor)
+                                            @php $anesthesiologist2Name = optional($doctor->user)->name ?? 'غير معروف'; @endphp
                                             <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_2_id') == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $doctor->user->name }}
+                                                د. {{ $anesthesiologist2Name }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -1366,13 +1371,24 @@ document.addEventListener('DOMContentLoaded', function() {
     let scannerReady = false;
     let availableScanners = [];
 
+    // عنوان جسر السكانر
+    const scannerBridgeHosts = [
+        'http://localhost:37426',
+        'http://127.0.0.1:37426'
+    ];
+    let scannerBridgeHostIndex = 0;
+
+    function getScannerBridgeUrl(path) {
+        return `${scannerBridgeHosts[scannerBridgeHostIndex]}${path}`;
+    }
+
     // ═════════════════════════════════════════════════════════════════
     //  فحص حالة السكانر
     // ═════════════════════════════════════════════════════════════════
     
     async function checkScannerStatus() {
         try {
-            const response = await fetch('http://localhost:37426/status', {
+            const response = await fetch(getScannerBridgeUrl('/status'), {
                 method: 'GET',
                 mode: 'cors'
             });
@@ -1412,13 +1428,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 return true;
             }
         } catch (e) {
+            // محاولة التبديل إلى عنوان بديل (127.0.0.1) إذا فشلت localhost
+            if (scannerBridgeHostIndex === 0) {
+                scannerBridgeHostIndex = 1;
+                return await checkScannerStatus();
+            }
+
             scannerReady = false;
             installPrompt.style.display = 'block';
+            const errorMsg = e?.message || 'حدث خطأ غير متوقع';
             scannerStatusDiv.innerHTML = `
-                <span class="badge bg-secondary">
-                    <i class="fas fa-plug me-1"></i>
-                    برنامج السكانر غير مشغل
+                <span class="badge bg-danger">
+                    <i class="fas fa-times-circle me-1"></i>
+                    خطأ في الاتصال ببرنامج السكانر: ${errorMsg}
                 </span>
+                <small class="d-block text-muted mt-1">تأكد من تشغيل الملف: <code>تشغيل_السكانر_التلقائي.bat</code> أو <code>python scanner_bridge_auto.py</code> ثم أعد تحميل الصفحة.</small>
             `;
         }
         return false;
@@ -1458,7 +1482,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // المسح باستخدام برنامج الأرشفة المحلي
     async function scanViaLocalBridge() {
         try {
-            const response = await fetch('http://localhost:37426/scan', {
+            const response = await fetch(getScannerBridgeUrl('/scan'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

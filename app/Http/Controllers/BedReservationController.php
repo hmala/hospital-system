@@ -45,7 +45,11 @@ class BedReservationController extends Controller
                         ->get()
                         ->sortBy(fn($d) => optional($d->user)->name);
         $departments = Department::where('is_active', true)->orderBy('name')->get();
-        $rooms = Room::where('is_active', true)->orderBy('room_type')->orderBy('room_number')->get();
+        $rooms = Room::where('is_active', true)
+                     ->where('room_purpose', 'beds')
+                     ->orderBy('room_type')
+                     ->orderBy('room_number')
+                     ->get();
 
         $selectedPatient = null;
         if (request('patient_id')) {

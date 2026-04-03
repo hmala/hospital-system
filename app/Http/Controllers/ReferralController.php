@@ -87,7 +87,7 @@ class ReferralController extends Controller
         $httpRequest->validate([
             'request_id' => 'required|exists:requests,id',
             'department_id' => 'required|exists:departments,id',
-            'visit_type' => 'required|in:checkup,followup,emergency,surgery,lab,radiology',
+            'visit_type' => 'required|in:checkup,followup,emergency,surgery,lab,radiology,blood_bank',
             'visit_date' => 'required|date|after:today',
             'notes' => 'nullable|string|max:1000'
         ]);

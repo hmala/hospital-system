@@ -45,8 +45,8 @@
                         <div class="col-md-4 mb-2">
                             <a href="{{ route('staff.requests.index', $allowedType) }}"
                                class="btn btn-outline-{{ $type == $allowedType ? 'primary' : 'secondary' }} w-100">
-                                <i class="fas fa-{{ $allowedType == 'lab' ? 'flask' : ($allowedType == 'radiology' ? 'x-ray' : 'pills') }} me-2"></i>
-                                {{ $allowedType == 'lab' ? 'المختبر' : ($allowedType == 'radiology' ? 'الأشعة' : 'الصيدلية') }}
+                                <i class="fas fa-{{ $allowedType == 'lab' ? 'flask' : ($allowedType == 'radiology' ? 'x-ray' : ($allowedType == 'pharmacy' ? 'pills' : 'tint')) }} me-2"></i>
+                                {{ $allowedType == 'lab' ? 'المختبر' : ($allowedType == 'radiology' ? 'الأشعة' : ($allowedType == 'pharmacy' ? 'الصيدلية' : 'مصرف الدم')) }}
                                 @if($type == $allowedType)
                                     <span class="badge bg-primary ms-2">{{ $requests->total() }}</span>
                                 @endif
@@ -100,18 +100,20 @@
                                         <th style="width:120px;">طبيب</th>
                                         <th style="width:80px;">نوع</th>
                                         <th>تفاصيل</th>
+                                        <th style="width:90px;">وقت</th>
+                                        <th style="width:90px;">الدفع</th>
                                         <th style="width:70px;">حالة</th>
                                         <th style="width:100px;">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($requests as $request)
-                                    <tr>
+                                    <tr class="{{ $request->payment_status == 'pending' ? 'table-danger' : ($request->payment_status == 'paid' ? 'table-success' : '') }}">
                                         <td>#{{ $request->id }}</td>
                                         <td>{{ $request->visit?->patient?->user?->name ?? 'غير محدد' }}</td>
                                         <td>د. {{ $request->visit?->doctor?->user?->name ?? 'غير محدد' }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $request->type == 'lab' ? 'primary' : ($request->type == 'radiology' ? 'info' : 'success') }}">
+                                            <span class="badge bg-{{ $request->type == 'lab' ? 'primary' : ($request->type == 'radiology' ? 'info' : ($request->type == 'pharmacy' ? 'success' : 'danger')) }}">
                                                 {{ $request->type_text }}
                                             </span>
                                         </td>
@@ -119,19 +121,15 @@
                                             @php
                                                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                                             @endphp
-                                            @if($request->type == 'lab' && isset($details['lab_test_ids']))
+                                            @if(($request->type == 'lab' && isset($details['lab_test_ids'])) || (isset($details['blood_bank']) && $details['blood_bank']))
                                                 <small class="text-muted">
                                                     @php
-                                                        $testNames = [];
-                                                        foreach($details['lab_test_ids'] as $testId) {
-                                                            $test = \App\Models\LabTest::find($testId);
-                                                            if ($test) {
-                                                                $testNames[] = $test->name;
-                                                            }
-                                                        }
+                                                        $requestTypeLabel = (isset($details['blood_bank']) && $details['blood_bank']) ? 'مصرف الدم' : 'تحاليل';
                                                     @endphp
-                                                    {{ implode('، ', $testNames) }}
+                                                    {{ $requestTypeLabel }}
                                                 </small>
+                                            @elseif($request->type == 'blood_bank')
+                                                <small class="text-muted">مصرف الدم</small>
                                             @elseif($request->type == 'radiology' && isset($details['radiology_type_ids']))
                                                 <small class="text-muted">
                                                     @php
@@ -151,6 +149,15 @@
                                         </td>
                                         <td>
                                             <small>{{ $request->created_at->format('H:i') }}</small>
+                                        </td>
+                                        <td>
+                                            @if($request->payment_status == 'paid')
+                                                <span class="badge bg-success">مدفوع</span>
+                                            @elseif($request->payment_status == 'pending')
+                                                <span class="badge bg-danger">غير مدفوع</span>
+                                            @else
+                                                <span class="badge bg-secondary">-</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <span class="badge badge-sm bg-{{ $request->status == 'completed' ? 'success' : ($request->status == 'pending' ? 'warning' : 'info') }}">
@@ -204,13 +211,26 @@
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                 @endif
-                                                @if($request->status == 'completed' && $request->type == 'lab')
-                                                    <a href="{{ route('staff.requests.print', $request) }}"
-                                                       class="btn btn-outline-success"
-                                                       target="_blank"
-                                                       title="طباعة النتائج">
-                                                        <i class="fas fa-print"></i>
-                                                    </a>
+                                                @php
+                                                    $isBloodBankRequest = $request->type === 'blood_bank' || (is_array($request->details ?? []) && data_get($request->details, 'blood_bank', false));
+                                                @endphp
+
+                                                @if(($request->status == 'completed' || $request->status == 'in_progress') && ($request->type == 'lab' || $isBloodBankRequest || $request->type == 'blood_bank'))
+                                                    @if($request->payment_status == 'paid')
+                                                        <a href="{{ route('staff.requests.print', $request) }}"
+                                                           class="btn btn-outline-success"
+                                                           target="_blank"
+                                                           title="طباعة النتائج">
+                                                            <i class="fas fa-print"></i>
+                                                        </a>
+                                                    @else
+                                                        <button class="btn btn-outline-secondary" disabled title="لا يمكن الطباعة حتى يتم الدفع في الكاشير">
+                                                            <i class="fas fa-print"></i>
+                                                        </button>
+                                                        <span class="badge bg-danger ms-2" title="يجب سداد الفاتورة في الكاشير قبل الطباعة">
+                                                            مطلوب دفع الكاشير
+                                                        </span>
+                                                    @endif
                                                 @endif
                                                 @if($request->status == 'completed' && $request->type == 'radiology' && $radiologyRequest && $radiologyRequest->result)
                                                     <a href="{{ route('radiology.print', $radiologyRequest->id) }}"
@@ -224,6 +244,57 @@
                                         </td>
                                     </tr>
                                     @endforeach
+
+                                    @if((is_null($type) || $type == 'lab') && isset($emergencyLabRequests) && $emergencyLabRequests->count() > 0)
+                                        @foreach($emergencyLabRequests as $emergencyRequest)
+                                        <tr class="{{ $emergencyRequest->status == 'pending' ? 'table-warning' : ($emergencyRequest->status == 'in_progress' ? 'table-info' : ($emergencyRequest->status == 'completed' ? 'table-success' : '')) }}">
+                                            <td>#E{{ $emergencyRequest->id }}</td>
+                                            <td>{{ optional(optional($emergencyRequest->patient)->user)->name ?? 'غير محدد' }}</td>
+                                            <td>-</td>
+                                            <td><span class="badge bg-primary">تحاليل طوارئ</span></td>
+                                            <td>
+                                                @foreach($emergencyRequest->labTests as $test)
+                                                    <span class="badge bg-primary me-1">{{ $test->name }}</span>
+                                                @endforeach
+                                            </td>
+                                            <td><small>{{ optional($emergencyRequest->requested_at)->format('H:i') }}</small></td>
+                                            <td>
+                                                @if($emergencyRequest->emergency && $emergencyRequest->emergency->payment_status == 'paid')
+                                                    <span class="badge bg-success">مدفوع</span>
+                                                @else
+                                                    <span class="badge bg-danger">غير مدفوع</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <span class="badge {{ $emergencyRequest->status_badge_class }}">{{ $emergencyRequest->status_text }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    @if($emergencyRequest->status == 'pending')
+                                                        <form action="{{ route('staff.emergency-lab.start', $emergencyRequest) }}" method="POST" class="d-inline">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-primary" title="بدء العمل">
+                                                                <i class="fas fa-play"></i>
+                                                            </button>
+                                                        </form>
+                                                    @elseif($emergencyRequest->status == 'in_progress')
+                                                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#completeEmergencyLabModal{{ $emergencyRequest->id }}" title="إكمال التحليل">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    @else
+                                                        <span class="badge bg-success">تم</span>
+                                                    @endif
+
+                                                    @if($emergencyRequest->status == 'completed')
+                                                        <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" class="btn btn-outline-secondary" target="_blank" title="طباعة النتائج">
+                                                            <i class="fas fa-print"></i>
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    @endif
                                 </tbody>
                             </table>
                         </div>

@@ -9,13 +9,14 @@ use App\Models\Department;
 use App\Models\Appointment;
 use App\Models\Visit;
 use App\Models\Room;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         // إحصائيات خاصة بموظف الأشعة
         if ($user->hasRole('radiology_staff')) {
@@ -34,15 +35,23 @@ class DashboardController extends Controller
                 'total' => \App\Models\RadiologyRequest::count(),
             ];
 
-            return view('dashboard', compact('radiologyStats'));
+            $userStats = [
+                'name' => $user->name,
+                'role' => 'Radiology Staff',
+                'your_todo' => $pendingRadiology,
+                'processed_today' => $completedTodayRadiology,
+                'total_tasks' => $radiologyStats['total'],
+            ];
+
+            return view('dashboard', compact('radiologyStats', 'userStats'));
         }
 
         // إحصائيات خاصة بموظف المختبر
         if ($user->hasRole('lab_staff')) {
-            $pendingLab = \App\Models\Request::where('type', 'lab')
+            $pendingLab = \App\Models\Request::whereIn('type', ['lab', 'blood_bank'])
                 ->where('status', 'pending')
                 ->count();
-            $completedTodayLab = \App\Models\Request::where('type', 'lab')
+            $completedTodayLab = \App\Models\Request::whereIn('type', ['lab', 'blood_bank'])
                 ->where('status', 'completed')
                 ->whereDate('updated_at', today())
                 ->count();
@@ -52,7 +61,14 @@ class DashboardController extends Controller
                 'completed_today' => $completedTodayLab,
             ];
 
-            return view('dashboard', compact('labStats'));
+            $userStats = [
+                'name' => $user->name,
+                'role' => 'Lab Staff',
+                'your_todo' => $pendingLab,
+                'processed_today' => $completedTodayLab,
+            ];
+
+            return view('dashboard', compact('labStats', 'userStats'));
         }
 
         // إحصائيات عامة للمستخدمين الآخرين
@@ -68,9 +84,31 @@ class DashboardController extends Controller
             'todayVisits' => Visit::whereDate('visit_date', today())->count(),
         ];
 
+        $userStats = ['name' => $user->name, 'role' => $user->roles->pluck('name')->join(', ')];
+
+        if ($user->hasRole('doctor') && $user->doctor) {
+            $userStats['your_appointments'] = Appointment::where('doctor_id', $user->doctor->id)->count();
+            $userStats['your_visits'] = Visit::where('doctor_id', $user->doctor->id)->count();
+        }
+
+        if ($user->hasRole('consultation_receptionist')) {
+            $userStats['requests_created'] = \App\Models\Request::where('requested_by', $user->id)->count();
+        }
+
+        if ($user->hasRole('receptionist')) {
+            $userStats['today_checkin'] = Visit::whereDate('visit_date', today())->count();
+        }
+
+        if ($user->hasRole('cashier')) {
+            // لا توجد عمود status في payments، نعتبر غير المدفوعة إذا كان paid_at فارغ
+            $userStats['pending_payments'] = \App\Models\Payment::whereNull('paid_at')->count();
+        }
+
+
         // إحصائيات الغرف
         $roomStats = [
-            'total' => Room::where('is_active', true)->count(),
+            'total' => Room::count(),
+            'active' => Room::where('is_active', true)->count(),
             'available' => Room::where('status', 'available')->where('is_active', true)->count(),
             'occupied' => Room::where('status', 'occupied')->where('is_active', true)->count(),
             'maintenance' => Room::where('status', 'maintenance')->where('is_active', true)->count(),
@@ -134,7 +172,8 @@ class DashboardController extends Controller
             'appointmentsByStatus',
             'patientsByDepartment',
             'topDoctors',
-            'monthlyAppointments'
+            'monthlyAppointments',
+            'userStats'
         ));
     }
 }

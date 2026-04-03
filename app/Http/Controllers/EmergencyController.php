@@ -98,14 +98,40 @@ class EmergencyController extends Controller
         }
 
         $patients = Patient::with('user')->get();
+
+        $daysMap = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الإثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+        $todayArabic = $daysMap[date('l')] ?? 'السبت';
+
         $doctors = Doctor::with('user')
             ->where('is_active', true)
+            ->where('is_available_today', true)
+            ->whereJsonContains('working_days', [$todayArabic])
             ->where(function($query) {
                 $query->where('specialization', 'LIKE', '%طوارئ%')
                       ->orWhere('specialization', 'LIKE', '%emergency%')
                       ->orWhere('type', 'emergency');
             })
             ->get();
+
+        // إذا القائمة فارغة، عرض جميع أطباء الطوارئ (ليتم اختيار الطبيب المسؤول بدون تعطيل الحالة)
+        if ($doctors->isEmpty()) {
+            $doctors = Doctor::with('user')
+                ->where('is_active', true)
+                ->where(function($query) {
+                    $query->where('specialization', 'LIKE', '%طوارئ%')
+                          ->orWhere('specialization', 'LIKE', '%emergency%')
+                          ->orWhere('type', 'emergency');
+                })
+                ->get();
+        }
 
         $nurses = User::role('nurse')->where('is_active', true)->get();
 
@@ -577,15 +603,23 @@ class EmergencyController extends Controller
             'notes' => $request->notes,
             'consultation_fee' => $emergencyConsultationFee,
             'duration' => 30,
-            'status' => 'scheduled'
+            'status' => 'scheduled',
+            'payment_status' => 'pending'
         ]);
 
-        // لا ننشئ Payment طوارئ هنا: أجرة الاستشاري تُدفع كموعد مستقل في الكاشير
+        // دمج الاستشارة في فاتورة طوارئ موحدة
+        $unifiedPayment = $this->upsertUnifiedEmergencyPayment($emergency);
+
+        // ربط الموعد بفاتورة الطوارئ الموحدة (لمساعدتنا لاحقاً في التقارير)
+        $appointment->update([
+            'payment_id' => $unifiedPayment->id,
+            'payment_status' => 'pending',
+        ]);
 
         // تحديث حالة الطوارئ إلى محولة
         $emergency->update(['status' => 'transferred']);
 
-        return redirect()->back()->with('success', 'تم إنشاء موعد استشاري بنجاح، وسيظهر كدفعة مستقلة في الكاشير');
+        return redirect()->back()->with('success', 'تم إنشاء موعد استشاري بنجاح وإضافته إلى فاتورة الطوارئ الموحدة');
     }
 
     /**
@@ -728,12 +762,13 @@ class EmergencyController extends Controller
      * إنشاء/تحديث فاتورة موحدة لحالة الطوارئ (خدمات + تحاليل + أشعة)
      * ملاحظة: رسوم الاستشاري تبقى منفصلة لأنها مرتبطة بموعد (appointment_id)
      */
-    private function upsertUnifiedEmergencyPayment(Emergency $emergency): void
+    private function upsertUnifiedEmergencyPayment(Emergency $emergency): \App\Models\Payment
     {
         $emergency->loadMissing([
             'services',
             'labRequests.labTests',
             'radiologyRequests.radiologyTypes',
+            'appointments',
         ]);
 
         $servicesAmount = $emergency->services->sum('price');
@@ -746,7 +781,12 @@ class EmergencyController extends Controller
             return $request->radiologyTypes->sum('price');
         });
 
-        $totalAmount = $servicesAmount + $labAmount + $radiologyAmount;
+        $consultationAmount = $emergency->appointments
+            ->where('payment_status', 'pending')
+            ->where('status', '<>', 'cancelled')
+            ->sum('consultation_fee');
+
+        $totalAmount = $servicesAmount + $labAmount + $radiologyAmount + $consultationAmount;
 
         $serviceNames = $emergency->services->pluck('name')->filter()->values();
         $labNames = $emergency->labRequests
@@ -775,6 +815,18 @@ class EmergencyController extends Controller
             $descriptionParts[] = 'أشعة: ' . $radiologyNames->implode('، ');
         }
 
+        if ($consultationAmount > 0) {
+            $consultationNames = $emergency->appointments
+                ->where('payment_status', 'pending')
+                ->where('status', '<>', 'cancelled')
+                ->pluck('reason')
+                ->filter()
+                ->unique()
+                ->values();
+
+            $descriptionParts[] = 'استشارة: ' . ($consultationNames->isNotEmpty() ? $consultationNames->implode('، ') : 'استشارة طوارئ');
+        }
+
         $description = $descriptionParts
             ? implode(' | ', $descriptionParts)
             : 'رسوم طوارئ';
@@ -798,7 +850,7 @@ class EmergencyController extends Controller
                 'payment_id' => $existingPayment->id,
             ]);
 
-            return;
+            return $existingPayment;
         }
 
         $payment = Payment::create([
@@ -815,6 +867,37 @@ class EmergencyController extends Controller
         $emergency->update([
             'payment_status' => 'pending',
             'payment_id' => $payment->id,
+        ]);
+
+        return $payment;
+    }
+
+    /**
+     * حالة الدفع النهائية لحالات الطوارئ (for cashier live updates polling)
+     */
+    public function paymentStatus()
+    {
+        $pendingCount = Emergency::where('payment_status', 'pending')
+            ->where('is_active', true)
+            ->count();
+
+        $paidCount = Emergency::where('payment_status', 'paid')
+            ->where('is_active', true)
+            ->count();
+
+        $pendingAmount = Payment::where('payment_type', 'emergency')
+            ->whereNull('paid_at')
+            ->sum('amount');
+
+        $paidAmount = Payment::where('payment_type', 'emergency')
+            ->whereNotNull('paid_at')
+            ->sum('amount');
+
+        return response()->json([
+            'pending' => $pendingCount,
+            'paid' => $paidCount,
+            'pending_amount' => $pendingAmount,
+            'paid_amount' => $paidAmount,
         ]);
     }
 }

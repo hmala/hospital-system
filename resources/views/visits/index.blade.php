@@ -52,12 +52,12 @@
                                     <td><strong>{{ $visit->visit_date->format('Y-m-d') }}</strong></td>
                                     <td>
                                         <a href="{{ route('patients.show', $visit->patient) }}" class="text-decoration-none">
-                                            {{ $visit->patient->user->name }}
+                                            {{ optional($visit->patient->user)->name ?? 'غير معروف' }}
                                         </a>
                                         <br>
-                                        <small class="text-muted">{{ $visit->patient->user->phone }}</small>
+                                        <small class="text-muted">{{ optional($visit->patient->user)->phone ?? 'غير متوفر' }}</small>
                                     </td>
-                                    <td>د. {{ $visit->doctor->user->name }}</td>
+                                    <td>د. {{ optional($visit->doctor->user)->name ?? 'غير محدد' }}</td>
                                     <td>
                                         <small class="text-muted">{{ Str::limit($visit->surgery_notes, 100) }}</small>
                                     </td>
@@ -129,10 +129,10 @@
                                     <td><strong>{{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : 'غير محدد' }}</strong></td>
                                     <td>
                                         <a href="{{ route('patients.show', $visit->patient) }}" class="text-decoration-none">
-                                            {{ $visit->patient->user->name }}
+                                            {{ optional($visit->patient->user)->name ?? 'غير معروف' }}
                                         </a>
                                         <br>
-                                        <small class="text-muted">{{ $visit->patient->user->phone }}</small>
+                                        <small class="text-muted">{{ optional($visit->patient->user)->phone ?? 'غير متوفر' }}</small>
                                     </td>
                                     <td>د. {{ $visit->doctor?->user?->name ?? 'غير محدد' }}</td>
                                     <td><span class="badge bg-info">{{ $visit->visit_type_text }}</span></td>

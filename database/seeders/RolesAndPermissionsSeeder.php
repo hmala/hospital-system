@@ -84,6 +84,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete lab tests',
             'process lab requests',
             'manage surgery lab tests',
+            // صلاحيات الباقات (Packages)
+            'view packages',
+            'create packages',
+            'edit packages',
+            'delete packages',
             
             // صلاحيات الصيدلية
             'view pharmacy',
@@ -226,6 +231,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'view lab tests',
             'process lab requests',
             'manage surgery lab tests',
+            // أضفنا صلاحيات إدارة الباقات لموظفي المختبر
+            'view packages',
+            'create packages',
+            'edit packages',
+            'delete packages',
         ]);
 
         // دور موظف الإشعة (Radiology Staff)
@@ -259,6 +269,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'create lab tests',
             'view radiology',
             'create radiology',
+            // السماح للممرضين برؤية الباقات
+            'view packages',
         ]);
 
         // دور موظف الطوارئ (Emergency Staff)
@@ -273,6 +285,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'create lab tests',
             'view radiology',
             'create radiology',
+            // السماح بعرض الباقات لطواقم الطوارئ
+            'view packages',
         ]);
 
         // دور موظف العمليات (Surgery Staff)
@@ -318,6 +332,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view surgeries',
             'view radiology',
             'view lab tests',
+            // السماح للطاقم بعرض الباقات
+            'view packages',
         ]);
 
         // تعيين الأدوار للمستخدمين الحاليين بناءً على حقل role

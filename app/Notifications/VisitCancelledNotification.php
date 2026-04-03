@@ -42,7 +42,7 @@ class VisitCancelledNotification extends Notification
                     ->greeting('مرحباً ' . $notifiable->name)
                     ->line('تم إلغاء زيارتك الطبية المجدولة.')
                     ->line('تفاصيل الزيارة:')
-                    ->line('الطبيب: ' . $this->visit->doctor->user->name)
+                    ->line('الطبيب: ' . optional($this->visit->doctor)->user->name ?? 'غير محدد')
                     ->line('التاريخ: ' . $this->visit->visit_date->format('Y-m-d'))
                     ->line('الوقت: ' . $this->visit->visit_time)
                     ->action('عرض التفاصيل', url('/patient/visits/' . $this->visit->id))
@@ -58,9 +58,9 @@ class VisitCancelledNotification extends Notification
     {
         return [
             'title' => 'إلغاء زيارة طبية',
-            'message' => 'تم إلغاء زيارتك الطبية مع الطبيب ' . $this->visit->doctor->user->name . ' في ' . $this->visit->visit_date->format('Y-m-d'),
+            'message' => 'تم إلغاء زيارتك الطبية مع الطبيب ' . optional($this->visit->doctor)->user->name ?? 'غير محدد' . ' في ' . $this->visit->visit_date->format('Y-m-d'),
             'visit_id' => $this->visit->id,
-            'doctor_name' => $this->visit->doctor->user->name,
+            'doctor_name' => optional($this->visit->doctor)->user->name ?? 'غير محدد',
             'visit_date' => $this->visit->visit_date->format('Y-m-d'),
             'visit_time' => $this->visit->visit_time,
             'type' => 'visit_cancelled',

@@ -120,14 +120,14 @@ class SurgeryController extends Controller
 
         // احضر البيانات مع الترتيب الأبجدي للأسماء
         $patients = Patient::with('user')->get()->sortBy(function($p) {
-            return $p->user->name;
+            return optional($p->user)->name ?? '';
         });
         $doctors = Doctor::with('user')
                         ->where('is_active', true)
                         ->where('specialization', 'جراحة')
                         ->get()
                         ->sortBy(function($d) {
-                            return $d->user->name;
+                            return optional($d->user)->name ?? '';
                         });
         $departments = Department::where('is_active', true)
                                   ->orderBy('name')
@@ -135,7 +135,7 @@ class SurgeryController extends Controller
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        $rooms = Room::where('is_active', true)->orderBy('room_type')->orderBy('room_number')->get();
+        $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->orderBy('room_type')->orderBy('room_number')->get();
         return view('surgeries.create', compact('patients', 'doctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms'));
     }
 

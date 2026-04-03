@@ -38,7 +38,7 @@
                                     @foreach($patients as $patient)
                                         <option value="{{ $patient->id }}"
                                                 {{ old('patient_id', $visit->patient_id) == $patient->id ? 'selected' : '' }}>
-                                            {{ $patient->user->name }} - {{ $patient->user->phone }}
+                                            {{ optional($patient->user)->name ?? 'غير معروف' }} - {{ optional($patient->user)->phone ?? 'غير متوفر' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -56,7 +56,7 @@
                                     @foreach($doctors as $doctor)
                                         <option value="{{ $doctor->id }}"
                                                 {{ old('doctor_id', $visit->doctor_id) == $doctor->id ? 'selected' : '' }}>
-                                            د. {{ $doctor->user->name }} - {{ $doctor->specialization }}
+                                            د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->specialization }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -243,7 +243,7 @@
                 <div class="card-body">
                     <div class="alert alert-info">
                         <h6>تفاصيل الزيارة الحالية:</h6>
-                        <p class="mb-1"><strong>المريض:</strong> {{ $visit->patient->user->name }}</p>
+                        <p class="mb-1"><strong>المريض:</strong> {{ optional($visit->patient->user)->name ?? 'غير معروف' }}</p>
                         <p class="mb-1"><strong>الطبيب:</strong> د. {{ $visit->doctor?->user?->name ?? 'غير محدد' }}</p>
                         <p class="mb-1"><strong>العيادة:</strong> {{ $visit->department->name }}</p>
                         <p class="mb-1"><strong>التاريخ:</strong> {{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : 'غير محدد' }}</p>

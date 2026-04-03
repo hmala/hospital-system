@@ -443,19 +443,26 @@
         </div>
 
         <!-- الترويسة -->
-        <div class="header">
+@php
+                $isBloodBankRequest = $isBloodBankRequest ?? ($request->type === 'blood_bank' || data_get($request->details, 'blood_bank', false));
+                $documentTitle = $isBloodBankRequest ? 'نموذج مصرف الدم' : 'نتائج التحاليل المخبرية';
+                $badgeText = $isBloodBankRequest ? 'مصرف الدم' : 'المختبر';
+                $badgeIcon = $isBloodBankRequest ? 'blood-bank-icon.svg' : 'lab-icon.svg';
+            @endphp
+
+            <div class="header">
             <div class="logo-row">
                 <div class="logo">
                     <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" style="width: 200px; height: 120px;">
                 </div>
                 <div class="lab-badge">
-                    <img src="{{ asset('images/lab-icon.svg') }}" alt="Lab Icon">
-                    <span>المختبر</span>
+                    <img src="{{ asset('images/' . $badgeIcon) }}" alt="Lab Icon">
+                    <span>{{ $badgeText }}</span>
                 </div>
             </div>
             <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
             <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
-            <div class="document-title">نتائج التحاليل المخبرية</div>
+            <div class="document-title">{{ $documentTitle }}</div>
         </div>
 
         <!-- معلومات الوثيقة -->
@@ -501,43 +508,79 @@
             </div>
         </div>
 
-        <!-- نتائج التحاليل -->
-        @php
-            $labResults = \App\Models\LabResult::where('request_id', $request->id)->get();
-        @endphp
+        @if($isBloodBankRequest)
+            <div class="results-section">
+                <h3>بيانات طلب مصرف الدم</h3>
+                @if($bloodBankRequest)
+                    <table class="results-table">
+                        <tbody>
+                            <tr><td><strong>رقم الطلب</strong></td><td>{{ $request->id }}</td></tr>
+                            <tr><td><strong>حالة الطلب</strong></td><td>{{ $bloodBankRequest->status }}</td></tr>
+                            <tr><td><strong>الغرفة</strong></td><td>{{ $bloodBankRequest->room_no ?? '-' }}</td></tr>
+                            <tr><td><strong>فصيلة المتبرع</strong></td><td>{{ $bloodBankRequest->donor_group ?? '-' }}</td></tr>
+                            <tr><td><strong>فصيلة المريض</strong></td><td>{{ $bloodBankRequest->patient_group ?? '-' }}</td></tr>
+                            <tr><td><strong>وزن المتبرع</strong></td><td>{{ $bloodBankRequest->donor_weight ?? '-' }}</td></tr>
+                            <tr><td><strong>وزن المريض</strong></td><td>{{ $bloodBankRequest->recipient_weight ?? '-' }}</td></tr>
+                            <tr><td><strong>درجة الحرارة</strong></td><td>{{ $bloodBankRequest->at_room_temp ?? '-' }}</td></tr>
+                            <tr><td><strong>بند</strong></td><td>{{ $bloodBankRequest->bovine_albumin ?? '-' }}</td></tr>
+                            <tr><td><strong>مضاد الغلوبولين البشري</strong></td><td>{{ $bloodBankRequest->anti_human_globulin ?? '-' }}</td></tr>
+                            <tr><td><strong>توافقية</strong></td><td>{{ $bloodBankRequest->compatibility ?? '-' }}</td></tr>
+                            <tr><td><strong>رقم القارورة</strong></td><td>{{ $bloodBankRequest->bottle_no ?? '-' }}</td></tr>
+                            <tr><td><strong>تاريخ العملية</strong></td><td>{{ $bloodBankRequest->operative_date?->format('Y-m-d') ?? '-' }}</td></tr>
+                            <tr><td><strong>تاريخ الانتهاء</strong></td><td>{{ $bloodBankRequest->exp_date?->format('Y-m-d') ?? '-' }}</td></tr>
+                            <tr><td><strong>الطبيب المسؤول</strong></td><td>{{ $bloodBankRequest->doctor_in_charge ?? '-' }}</td></tr>
+                            <tr><td><strong>المبلغ الإجمالي</strong></td><td>{{ $bloodBankRequest->total_amount ?? 0 }}</td></tr>
+                        </tbody>
+                    </table>
+                    @if($bloodBankRequest->notes)
+                        <div class="notes-section">
+                            <h4>📝 ملاحظات مصرف الدم:</h4>
+                            <div class="notes-content">{{ $bloodBankRequest->notes }}</div>
+                        </div>
+                    @endif
+                @else
+                    <div class="alert alert-warning">لم يتم العثور على بيانات مصرف الدم المتخصصة لهذا الطلب.</div>
+                @endif
+            </div>
+        @else
+            <!-- نتائج التحاليل -->
+            @php
+                $labResults = \App\Models\LabResult::where('request_id', $request->id)->get();
+            @endphp
 
-        @if($labResults->count() > 0)
-        <div class="results-section">
-            <h3>نتائج الفحوصات المختبرية</h3>
-            <table class="results-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>اسم الفحص</th>
-                        <th>النتيجة</th>
-                        <th>الوحدة</th>
-                        <th>المدى الطبيعي</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($labResults as $index => $result)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td><strong>{{ $result->test_name }}</strong></td>
-                        <td>{{ $result->value }}</td>
-                        <td>{{ $result->unit }}</td>
-                        <td>{{ $result->reference_range }}</td>
-                        <td>
-                            <span class="status-{{ $result->status }}">
-                                {{ $result->status == 'normal' ? '✓ طبيعي' : ($result->status == 'high' ? '↑ مرتفع' : '↓ منخفض') }}
-                            </span>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+            @if($labResults->count() > 0)
+            <div class="results-section">
+                <h3>نتائج الفحوصات المختبرية</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>اسم الفحص</th>
+                            <th>النتيجة</th>
+                            <th>الوحدة</th>
+                            <th>المدى الطبيعي</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($labResults as $index => $result)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td><strong>{{ $result->test_name }}</strong></td>
+                            <td>{{ $result->value }}</td>
+                            <td>{{ $result->unit }}</td>
+                            <td>{{ $result->reference_range }}</td>
+                            <td>
+                                <span class="status-{{ $result->status }}">
+                                    {{ $result->status == 'normal' ? '✓ طبيعي' : ($result->status == 'high' ? '↑ مرتفع' : '↓ منخفض') }}
+                                </span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
         @endif
 
         <!-- الملاحظات -->

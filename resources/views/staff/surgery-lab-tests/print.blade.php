@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نتائج تحاليل العملية - {{ $test->surgery->patient->user->name }}</title>
+    <title>نتائج تحاليل العملية - {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}</title>
     <style>
         * {
             margin: 0;

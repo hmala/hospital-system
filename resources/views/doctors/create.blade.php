@@ -71,28 +71,10 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-12 mb-3">
                                 <label for="specialization" class="form-label">التخصص *</label>
                                 <input type="text" class="form-control @error('specialization') is-invalid @enderror" id="specialization" name="specialization" value="{{ old('specialization') }}" required>
                                 @error('specialization')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="qualification" class="form-label">المؤهلات *</label>
-                                <input type="text" class="form-control @error('qualification') is-invalid @enderror" id="qualification" name="qualification" value="{{ old('qualification') }}" required>
-                                @error('qualification')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="license_number" class="form-label">رقم الرخصة الطبية *</label>
-                                <input type="text" class="form-control @error('license_number') is-invalid @enderror" id="license_number" name="license_number" value="{{ old('license_number') }}" required>
-                                @error('license_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="experience_years" class="form-label">سنوات الخبرة *</label>
-                                <input type="number" class="form-control @error('experience_years') is-invalid @enderror" id="experience_years" name="experience_years" value="{{ old('experience_years', 0) }}" min="0" required>
-                                @error('experience_years')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
@@ -102,17 +84,75 @@
                                 <input type="number" class="form-control @error('consultation_fee') is-invalid @enderror" id="consultation_fee" name="consultation_fee" value="{{ old('consultation_fee', 50000) }}" min="0" step="1000" required>
                                 @error('consultation_fee')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="max_patients_per_day" class="form-label">الحد الأقصى للمرضى يومياً</label>
-                                <input type="number" class="form-control @error('max_patients_per_day') is-invalid @enderror" id="max_patients_per_day" name="max_patients_per_day" value="{{ old('max_patients_per_day', 20) }}" min="1">
-                                @error('max_patients_per_day')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="bio" class="form-label">السيرة الذاتية</label>
-                            <textarea class="form-control @error('bio') is-invalid @enderror" id="bio" name="bio" rows="3">{{ old('bio') }}</textarea>
-                            @error('bio')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="card mb-3 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-clock me-2"></i>أوقات العمل</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="start_time" class="form-label">وقت الدخول *</label>
+                                        <input type="time" class="form-control @error('start_time') is-invalid @enderror" id="start_time" name="start_time" value="{{ old('start_time', '08:00') }}" required>
+                                        @error('start_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="end_time" class="form-label">وقت الخروج *</label>
+                                        <input type="time" class="form-control @error('end_time') is-invalid @enderror" id="end_time" name="end_time" value="{{ old('end_time', '16:00') }}" required>
+                                        @error('end_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label d-block">أيام العمل *</label>
+                                    <div class="row">
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="السبت" id="day_saturday" {{ in_array('السبت', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_saturday">السبت</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="الأحد" id="day_sunday" {{ in_array('الأحد', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_sunday">الأحد</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="الإثنين" id="day_monday" {{ in_array('الإثنين', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_monday">الإثنين</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="الثلاثاء" id="day_tuesday" {{ in_array('الثلاثاء', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_tuesday">الثلاثاء</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="الأربعاء" id="day_wednesday" {{ in_array('الأربعاء', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_wednesday">الأربعاء</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="الخميس" id="day_thursday" {{ in_array('الخميس', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_thursday">الخميس</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="working_days[]" value="الجمعة" id="day_friday" {{ in_array('الجمعة', old('working_days', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_friday">الجمعة</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @error('working_days')<div class="text-danger small">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-check mb-3">

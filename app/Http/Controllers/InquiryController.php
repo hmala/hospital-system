@@ -31,17 +31,17 @@ class InquiryController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // جلب آخر الزيارات في الاستعلامات (اليوم)
-        $todayInquiries = Visit::where('department_id', function($query) {
+        // جلب آخر الزيارات في الاستعلامات ومصرف الدم (اليوم)
+        $todayInquiries = Visit::whereIn('department_id', function($query) {
             $query->select('id')
                   ->from('departments')
                   ->where('name', 'LIKE', '%استعلامات%')
                   ->orWhere('name', 'LIKE', '%استقبال%')
-                  ->limit(1);
+                  ->orWhere('name', 'LIKE', '%مصرف دم%');
         })
         ->whereDate('visit_date', Carbon::today())
         ->with(['patient.user', 'doctor.user'])
@@ -58,7 +58,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -100,8 +100,30 @@ class InquiryController extends Controller
                 'icon' => 'stethoscope',
                 'color' => 'warning',
                 'departments' => Department::whereNotIn('name', ['مختبر', 'أشعة', 'صيدلية'])->where('is_active', true)->orderBy('name')->get()
+            ],
+            'blood_bank' => [
+                'label' => 'مصرف الدم',
+                'icon' => 'tint',
+                'color' => 'danger',
+                'departments' => Department::where('name', 'LIKE', '%مصرف دم%')
+                    ->orWhere('name', 'LIKE', '%دم%')
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get()
             ]
         ];
+
+        $daysMap = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الإثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+
+        $todayArabic = $daysMap[date('l')] ?? 'السبت';
 
         $doctors = Doctor::with(['user', 'department'])
             ->whereHas('user', function($query) {
@@ -109,7 +131,10 @@ class InquiryController extends Controller
             })
             ->where('is_active', true)
             ->where('type', 'consultant')
+            ->whereJsonContains('working_days', [$todayArabic])
             ->where('is_available_today', true)
+            ->orderBy('specialization')
+            ->orderBy('user_id')
             ->get();
 
         // جلب أطباء الطوارئ المتاحين
@@ -133,7 +158,15 @@ class InquiryController extends Controller
         $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
 
-        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors'));
+        // قيود خاصة بدور موظف الاستعلامات الاستشارية: يمكنه فقط إنشاء طلب كشف طبي
+        $isConsultationReceptionist = $user->hasRole('consultation_receptionist');
+        if ($isConsultationReceptionist) {
+            $requestTypes = [
+                'checkup' => $requestTypes['checkup']
+            ];
+        }
+
+        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist'));
     }
 
     /**
@@ -143,15 +176,28 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $httpRequest->validate([
             'patient_id' => 'required|exists:patients,id',
             'request_type' => 'required|array|min:1',
-            'request_type.*' => 'required|in:lab,radiology,pharmacy,checkup,emergency',
+            'request_type.*' => 'required|in:lab,radiology,pharmacy,checkup,emergency,blood_bank',
             'description' => 'nullable|string|max:1000',
+            'blood_bank_room_no' => 'nullable|string|max:50',
+            'blood_bank_donor_group' => 'nullable|string|max:20',
+            'blood_bank_patient_group' => 'nullable|string|max:20',
+            'blood_bank_donor_weight' => 'nullable|numeric|min:0',
+            'blood_bank_recipient_weight' => 'nullable|numeric|min:0',
+            'blood_bank_at_room_temp' => 'nullable|string|max:50',
+            'blood_bank_bovine_albumin' => 'nullable|string|max:50',
+            'blood_bank_anti_human_globulin' => 'nullable|string|max:50',
+            'blood_bank_compatibility' => 'nullable|string|max:50',
+            'blood_bank_bottle_no' => 'nullable|string|max:50',
+            'blood_bank_operative_date' => 'nullable|date',
+            'blood_bank_exp_date' => 'nullable|date',
+            'blood_bank_doctor_in_charge' => 'nullable|string|max:100',
             'doctor_id' => 'nullable|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',
             'appointment_date' => 'nullable|date',
@@ -170,6 +216,15 @@ class InquiryController extends Controller
 
         $patient = Patient::find($httpRequest->patient_id);
         $requestTypes = $httpRequest->request_type;
+
+        // إذا كان المستخدم من موظفي الاستعلامات الاستشارية، فتقيّد الطلبات لتكون كشف طبي فقط
+        if ($user->hasRole('consultation_receptionist')) {
+            $selectedTypes = collect($requestTypes)->unique()->values();
+            if ($selectedTypes->count() !== 1 || $selectedTypes->first() !== 'checkup') {
+                abort(403, 'ليس لديك صلاحية إنشاء هذا النوع من الطلبات.');
+            }
+            $requestTypes = ['checkup'];
+        }
 
         $messages = [];
         $totalRequests = 0;
@@ -321,6 +376,96 @@ class InquiryController extends Controller
         }
 
         // ========================================
+        // طلب مصرف الدم
+        // ========================================
+        if ($requestType === 'blood_bank') {
+            $inquiryDept = Department::where('name', 'LIKE', '%مصرف دم%')
+                ->orWhere('name', 'LIKE', '%دم%')
+                ->first();
+
+            if (!$inquiryDept) {
+                $hospital = \App\Models\Hospital::first();
+                if (!$hospital) {
+                    $hospital = \App\Models\Hospital::create([
+                        'name' => 'مستشفى افتراضي',
+                        'address' => 'غير محدد',
+                        'phone' => 'غير محدد',
+                        'email' => 'admin@example.com'
+                    ]);
+                }
+                $inquiryDept = Department::create([
+                    'name' => 'مصرف الدم',
+                    'hospital_id' => $hospital->id ?? 1,
+                    'type' => 'laboratory', // لتجنب enum error وقبول النوع الموجود في الجدول
+                    'room_number' => 'BB-001',
+                    'consultation_fee' => 0.00,
+                    'working_hours_start' => '00:00:00',
+                    'working_hours_end' => '23:59:59',
+                    'is_active' => true,
+                ]);
+            }
+
+            $visit = Visit::create([
+                'patient_id' => $patient->id,
+                'department_id' => $inquiryDept->id,
+                'doctor_id' => $httpRequest->doctor_id,
+                'visit_date' => Carbon::now(),
+                'visit_time' => Carbon::now(),
+                'visit_type' => 'lab', // استخدم lab لتجنب التحذير في حال enum القديم
+                'chief_complaint' => 'طلب مصرف الدم',
+                'status' => 'pending_payment',
+                'notes' => 'طلب مصرف الدم من الاستعلامات',
+            ]);
+
+            $details = [
+                'created_by' => $user->id,
+                'created_at_inquiry' => true,
+                'blood_bank' => true,
+                'summary' => 'تم إنشاء طلب مصرف الدم عبر الاستعلامات. التفاصيل ستتم في المختبر.',
+                'requested_at' => Carbon::now()->toDateTimeString(),
+            ];
+
+            $medicalRequest = Request::create([
+                'visit_id' => $visit->id,
+                'patient_id' => $patient->id,
+                'type' => 'blood_bank',
+                'description' => 'طلب مصرف الدم',
+                'status' => 'pending',
+                'payment_status' => 'pending',
+                'details' => json_encode($details),
+                'requested_by' => $user->id,
+            ]);
+
+            // إنشاء جدول منفصل لتفاصيل مصارف الدم (سعر وبيانات عملية)
+            \App\Models\BloodBankRequest::create([
+                'request_id' => $medicalRequest->id,
+                'visit_id' => $visit->id,
+                'patient_id' => $patient->id,
+                'department_id' => $inquiryDept->id,
+                'doctor_id' => $httpRequest->doctor_id,
+                'room_no' => $httpRequest->blood_bank_room_no,
+                'donor_group' => $httpRequest->blood_bank_donor_group,
+                'patient_group' => $httpRequest->blood_bank_patient_group,
+                'donor_weight' => $httpRequest->blood_bank_donor_weight,
+                'recipient_weight' => $httpRequest->blood_bank_recipient_weight,
+                'at_room_temp' => $httpRequest->blood_bank_at_room_temp,
+                'bovine_albumin' => $httpRequest->blood_bank_bovine_albumin,
+                'anti_human_globulin' => $httpRequest->blood_bank_anti_human_globulin,
+                'compatibility' => $httpRequest->blood_bank_compatibility,
+                'bottle_no' => $httpRequest->blood_bank_bottle_no,
+                'operative_date' => $httpRequest->blood_bank_operative_date,
+                'exp_date' => $httpRequest->blood_bank_exp_date,
+                'doctor_in_charge' => $httpRequest->blood_bank_doctor_in_charge,
+                'total_amount' => $httpRequest->blood_bank_total_amount ?? 0,
+                'status' => 'pending',
+                'notes' => $details['summary'] ?? 'طلب مصرف الدم من الاستعلامات',
+            ]);
+
+            $messages[] = "✅ تم إنشاء طلب مصرف الدم بنجاح! رقم الطلب: #{$medicalRequest->id} في قسم المختبر";
+            continue;
+        }
+
+        // ========================================
         // باقي الأنواع (تحاليل، أشعة، صيدلية) → طلب مباشر
         // ========================================
         
@@ -413,7 +558,7 @@ class InquiryController extends Controller
         
         $message = '✅ تم إنشاء طلب ' . ($typeArabic[$requestType] ?? $requestType) . ' بنجاح!<br>';
         $message .= '📋 رقم الطلب: <strong>#' . $medicalRequest->id . '</strong><br>';
-        $message .= '👤 المريض: <strong>' . $patient->user->name . '</strong><br>';
+        $message .= '👤 المريض: <strong>' . (optional($patient->user)->name ?? 'غير معروف') . '</strong><br>';
         
         if ($requestType === 'lab' && isset($details['lab_test_ids'])) {
             $labCount = count($details['lab_test_ids']);
@@ -445,7 +590,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -481,7 +626,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -513,7 +658,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -580,7 +725,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -627,7 +772,7 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

@@ -45,10 +45,10 @@
                                                     <div class="flex-grow-1">
                                                         <div class="d-flex align-items-center">
                                                             <div class="avatar-sm bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center">
-                                                                <span class="text-white fw-bold">{{ substr($doctor->user->name, 0, 1) }}</span>
+                                                                <span class="text-white fw-bold">{{ optional($doctor->user)->name ? substr($doctor->user->name, 0, 1) : '?' }}</span>
                                                             </div>
                                                             <div>
-                                                                <strong>د. {{ $doctor->user->name }}</strong>
+                                                                <strong>د. {{ optional($doctor->user)->name ?? 'غير معروف' }}</strong>
                                                                 <br>
                                                                 <small class="text-muted">{{ $doctor->department->name ?? 'غير محدد' }}</small>
                                                             </div>

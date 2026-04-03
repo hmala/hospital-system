@@ -28,12 +28,32 @@ class ConsultantAvailabilityController extends Controller
     /**
      * عرض قائمة الأطباء الاستشاريين وتوفرهم اليومي
      */
-    public function index()
+    public function index(Request $request)
     {
+        $weekDays = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+        $daysMap = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الإثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+
+        $defaultDay = $daysMap[date('l')] ?? 'السبت';
+
+        $selectedDay = $request->query('day', $defaultDay);
+        if (!in_array($selectedDay, $weekDays)) {
+            $selectedDay = $defaultDay;
+        }
+
         $consultantDoctors = Doctor::with(['user', 'department'])
             ->join('users', 'doctors.user_id', '=', 'users.id')
             ->where('doctors.type', 'consultant')
             ->where('doctors.is_active', true)
+            ->whereJsonContains('doctors.working_days', [$selectedDay])
             ->orderBy('doctors.specialization')
             ->orderBy('users.name')
             ->select('doctors.*')
@@ -52,7 +72,9 @@ class ConsultantAvailabilityController extends Controller
             ->orderBy('appointment_date')
             ->get();
 
-        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments'));
+        $groupedDoctors = $consultantDoctors->groupBy('specialization');
+
+        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'weekDays', 'selectedDay'));
     }
 
     /**
@@ -104,14 +126,32 @@ class ConsultantAvailabilityController extends Controller
 
         $request->validate([
             'is_available_today' => 'required|in:0,1,true,false',
+            'day' => 'nullable|in:السبت,الأحد,الإثنين,الثلاثاء,الأربعاء,الخميس,الجمعة',
         ]);
 
         $isAvailable = filter_var($request->is_available_today, FILTER_VALIDATE_BOOLEAN);
 
-        $doctor->update([
+        $updates = [
             'is_available_today' => $isAvailable,
             'available_date' => today(),
-        ]);
+        ];
+
+        if ($request->filled('day')) {
+            $workingDays = is_array($doctor->working_days) ? $doctor->working_days : [];
+            $day = $request->input('day');
+
+            if ($isAvailable) {
+                if (!in_array($day, $workingDays)) {
+                    $workingDays[] = $day;
+                }
+            } else {
+                $workingDays = array_values(array_diff($workingDays, [$day]));
+            }
+
+            $updates['working_days'] = $workingDays;
+        }
+
+        $doctor->update($updates);
 
         $statusText = $isAvailable ? 'متوفر' : 'غير متوفر';
 

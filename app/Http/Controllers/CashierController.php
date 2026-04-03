@@ -39,6 +39,7 @@ class CashierController extends Controller
         $pendingAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
             ->where('payment_status', 'pending')
             ->whereIn('status', ['scheduled', 'confirmed'])
+            ->whereNull('emergency_id')
             ->whereHas('patient') // التأكد من وجود مريض مرتبط
             ->orderBy('appointment_date')
             ->paginate(15);
@@ -863,7 +864,13 @@ class CashierController extends Controller
                 ->with('warning', 'هذه الدفعة غير متاحة للدفع');
         }
 
-        $payment->load(['emergency.patient.user', 'emergency.services', 'appointment.doctor.user']);
+        $payment->load([
+            'emergency.patient.user',
+            'emergency.services',
+            'emergency.labRequests.labTests',
+            'emergency.radiologyRequests.radiologyTypes',
+            'appointment.doctor.user'
+        ]);
 
         return view('cashier.emergency-payment-form', compact('payment'));
     }
@@ -908,6 +915,14 @@ class CashierController extends Controller
             $payment->emergency->update([
                 'payment_status' => 'paid',
             ]);
+
+            // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة
+            $payment->emergency->appointments()
+                ->where('payment_status', 'pending')
+                ->update([
+                    'payment_status' => 'paid',
+                    'payment_id' => $payment->id,
+                ]);
 
             DB::commit();
 

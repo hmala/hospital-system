@@ -26,6 +26,11 @@ class Request extends Model
         return $this->belongsTo(Visit::class);
     }
 
+    public function bloodBankRequest()
+    {
+        return $this->hasOne(\App\Models\BloodBankRequest::class);
+    }
+
     // Helper methods
     public function isPending()
     {
@@ -39,11 +44,16 @@ class Request extends Model
 
     public function getTypeTextAttribute()
     {
+        if ($this->type === 'lab' && isset($this->details['blood_bank']) && $this->details['blood_bank']) {
+            return 'مصرف الدم';
+        }
+
         return match($this->type) {
             'lab' => 'مختبر',
             'radiology' => 'أشعة',
             'pharmacy' => 'صيدلية',
             'emergency' => 'طوارئ',
+            'blood_bank' => 'مصرف الدم',
             default => $this->type
         };
     }

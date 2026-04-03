@@ -28,31 +28,15 @@
     <!-- إحصائيات سريعة -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4e73df 0%, #1cc88a 100%); color:#fff;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="text-white-50">زيارات اليوم</h6>
-                            <h2 class="mb-0">{{ $todayInquiries->total() }}</h2>
+                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">زيارات اليوم</h6>
+                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->total() }}</h1>
                         </div>
-                        <div>
-                            <i class="fas fa-users fa-3x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card bg-success text-white shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50">قيد المعالجة</h6>
-                            <h2 class="mb-0">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h2>
-                        </div>
-                        <div>
-                            <i class="fas fa-spinner fa-3x opacity-50"></i>
+                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
+                            <i class="fas fa-users fa-2x" style="color:#fff;"></i>
                         </div>
                     </div>
                 </div>
@@ -60,15 +44,15 @@
         </div>
 
         <div class="col-md-3">
-            <div class="card bg-info text-white shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%); color:#fff;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="text-white-50">مكتملة</h6>
-                            <h2 class="mb-0">{{ $todayInquiries->where('status', 'completed')->count() }}</h2>
+                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">قيد المعالجة</h6>
+                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h1>
                         </div>
-                        <div>
-                            <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
+                            <i class="fas fa-spinner fa-2x" style="color:#fff;"></i>
                         </div>
                     </div>
                 </div>
@@ -76,15 +60,31 @@
         </div>
 
         <div class="col-md-3">
-            <div class="card bg-warning text-white shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color:#fff;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="text-white-50">في الانتظار</h6>
-                            <h2 class="mb-0">{{ $todayInquiries->where('status', 'pending')->count() }}</h2>
+                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">مكتملة</h6>
+                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->where('status', 'completed')->count() }}</h1>
                         </div>
+                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
+                            <i class="fas fa-check-circle fa-2x" style="color:#fff;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); color:#fff;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <i class="fas fa-clock fa-3x opacity-50"></i>
+                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">في الانتظار</h6>
+                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->where('status', 'pending')->count() }}</h1>
+                        </div>
+                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
+                            <i class="fas fa-clock fa-2x" style="color:#fff;"></i>
                         </div>
                     </div>
                 </div>

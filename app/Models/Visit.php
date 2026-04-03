@@ -118,7 +118,8 @@ class Visit extends Model
             'emergency' => 'طوارئ',
             'surgery' => 'عملية جراحية',
             'lab' => 'مختبر',
-            'radiology' => 'أشعة'
+            'radiology' => 'أشعة',
+            'blood_bank' => 'مصرف الدم'
         ];
 
         return $types[$this->visit_type] ?? $this->visit_type;

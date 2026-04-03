@@ -499,7 +499,6 @@ datalist option:hover {
                                 $diagnosisComplete = $visit->diagnosis && isset($visit->diagnosis['code']) && !empty($visit->diagnosis['code']);
                                 $treatmentComplete = $visit->prescribedMedications->count() > 0 || !empty($visit->treatment_plan);
                                 $requestsComplete = $visit->requests->count() > 0;
-                                $historyComplete = true; // التاريخ الطبي دائماً متاح
 
                                 // حساب نسبة الإكمال بناءً على العناصر الأساسية فقط
                                 $totalItems = 3; // العلامات الحيوية، التشخيص، العلاج
@@ -534,10 +533,6 @@ datalist option:hover {
                         <small class="text-primary">
                             <i class="fas fa-check-circle me-1"></i>
                             خطة العلاج: {{ $treatmentComplete ? 'مكتمل' : 'غير مكتمل' }}
-                        </small>
-                        <small class="text-secondary">
-                            <i class="fas fa-check-circle me-1"></i>
-                            التاريخ الطبي: مكتمل دائماً
                         </small>
                     </div>
                 </div>
@@ -1634,106 +1629,65 @@ datalist option:hover {
                         <h2 class="accordion-header" id="historyHeading">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#historyCollapse" aria-expanded="false" aria-controls="historyCollapse">
                                 <i class="fas fa-history section-icon text-primary"></i>
-                                <span class="ms-3">التاريخ الطبي</span>
-                                @if($historyComplete)
-                                    <span class="badge bg-success completion-badge">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        مكتمل
-                                    </span>
-                                @else
-                                    <span class="badge bg-warning completion-badge">
-                                        <i class="fas fa-clock me-1"></i>
-                                        غير مكتمل
-                                    </span>
-                                @endif
+                                <span class="ms-3">التاريخ الطبي الكامل</span>
+                                <span class="badge bg-info completion-badge">
+                                    <i class="fas fa-stream me-1"></i>
+                                    Timeline
+                                </span>
                             </button>
                         </h2>
                         <div id="historyCollapse" class="accordion-collapse collapse" aria-labelledby="historyHeading" data-bs-parent="#visitAccordion">
-                            <div class="accordion-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="card border-info">
-                                            <div class="card-header bg-info text-white">
-                                                <h6 class="mb-0">
-                                                    <i class="fas fa-history me-2"></i>
-                                                    الزيارات السابقة
-                                                </h6>
-                                            </div>
-                                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                                @if(optional($visit->patient)->visits->count() > 1)
-                                                    <div class="list-group list-group-flush">
-                                                        @foreach($visit->patient->visits->where('id', '!=', $visit->id)->sortByDesc('visit_date')->take(10) as $previousVisit)
-                                                            <a href="{{ route('doctor.visits.show', $previousVisit) }}" class="list-group-item list-group-item-action">
-                                                                <div class="d-flex justify-content-between align-items-start">
-                                                                    <div class="flex-grow-1">
-                                                                        <h6 class="mb-1">
-                                                                            <i class="fas fa-calendar-day text-primary me-2"></i>
-                                                                            {{ $previousVisit->visit_date ? $previousVisit->visit_date->format('Y-m-d') : 'غير محدد' }}
-                                                                        </h6>
-                                                                        <small class="text-muted">
-                                                                            <i class="fas fa-stethoscope me-1"></i>
-                                                                            {{ Str::limit($previousVisit->chief_complaint, 50) }}
-                                                                        </small>
-                                                                        @if($previousVisit->diagnosis)
-                                                                            <br>
-                                                                            <small class="text-success">
-                                                                                <i class="fas fa-notes-medical me-1"></i>
-                                                                                {{ Str::limit($previousVisit->diagnosis['description'] ?? '', 40) }}
-                                                                            </small>
-                                                                        @endif
-                                                                    </div>
-                                                                    <span class="badge bg-{{ $previousVisit->status_color }}">
-                                                                        {{ $previousVisit->status_text }}
-                                                                    </span>
-                                                                </div>
-                                                            </a>
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <div class="text-center py-4">
-                                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                                        <p class="text-muted mb-0">لا توجد زيارات سابقة لهذا المريض</p>
-                                                    </div>
-                                                @endif
+                            <div class="accordion-body text-center py-5">
+                                <div class="mb-4">
+                                    <i class="fas fa-stream fa-4x text-primary mb-3"></i>
+                                    <h5>عرض الرحلة الطبية الكاملة للمريض</h5>
+                                    <p class="text-muted mb-4">
+                                        اطلع على جميع الزيارات، نتائج المختبر، الأشعة، العمليات الجراحية، دخول الطوارئ، والتنويم
+                                    </p>
+                                </div>
+                                @if($visit->patient)
+                                    <a href="{{ route('doctor.patient.history', $visit->patient) }}" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-external-link-alt me-2"></i>
+                                        فتح السجل الطبي الكامل
+                                    </a>
+                                @else
+                                    <p class="text-danger">لا يوجد مريض مرتبط بهذه الزيارة</p>
+                                @endif
+                                
+                                <div class="row mt-5">
+                                    <div class="col-md-3">
+                                        <div class="card border-primary">
+                                            <div class="card-body">
+                                                <i class="fas fa-stethoscope fa-2x text-primary mb-2"></i>
+                                                <h6>الزيارات</h6>
+                                                <small class="text-muted">جميع الزيارات السابقة</small>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="card border-warning">
-                                            <div class="card-header bg-warning text-dark">
-                                                <h6 class="mb-0">
-                                                    <i class="fas fa-allergies me-2"></i>
-                                                    الحساسية والأدوية المزمنة
-                                                </h6>
-                                            </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-success">
                                             <div class="card-body">
-                                                @if($visit->patient->allergies || $visit->patient->chronic_medications)
-                                                    @if($visit->patient->allergies)
-                                                        <div class="alert alert-danger mb-3">
-                                                            <h6 class="alert-heading">
-                                                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                                                الحساسية:
-                                                            </h6>
-                                                            <p class="mb-0">{{ $visit->patient->allergies }}</p>
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    @if($visit->patient->chronic_medications)
-                                                        <div class="alert alert-info">
-                                                            <h6 class="alert-heading">
-                                                                <i class="fas fa-pills me-2"></i>
-                                                                الأدوية المزمنة:
-                                                            </h6>
-                                                            <p class="mb-0">{{ $visit->patient->chronic_medications }}</p>
-                                                        </div>
-                                                    @endif
-                                                @else
-                                                    <div class="text-center py-4">
-                                                        <i class="fas fa-shield-alt fa-3x text-success mb-3"></i>
-                                                        <p class="text-muted mb-0">لا توجد حساسية أو أدوية مزمنة مسجلة</p>
-                                                        <small class="text-muted">هذا المريض ليس لديه أي حساسية معروفة</small>
-                                                    </div>
-                                                @endif
+                                                <i class="fas fa-flask fa-2x text-success mb-2"></i>
+                                                <h6>المختبر</h6>
+                                                <small class="text-muted">نتائج الفحوصات</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-warning">
+                                            <div class="card-body">
+                                                <i class="fas fa-x-ray fa-2x text-warning mb-2"></i>
+                                                <h6>الأشعة</h6>
+                                                <small class="text-muted">طلبات الأشعة</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-danger">
+                                            <div class="card-body">
+                                                <i class="fas fa-procedures fa-2x text-danger mb-2"></i>
+                                                <h6>العمليات</h6>
+                                                <small class="text-muted">العمليات الجراحية</small>
                                             </div>
                                         </div>
                                     </div>

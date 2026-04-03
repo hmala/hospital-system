@@ -533,8 +533,8 @@
     <div class="login-container">
         <!-- قسم الترحيب -->
         <div class="welcome-section">
-            <div class="welcome-icon">
-                <i class="fas fa-hospital"></i>
+            <div class="text-center mb-4">
+                <img src="{{ asset('images/لوغو.png') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 140px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
             </div>
             <h1 class="welcome-title">نظام إدارة المستشفى</h1>
             <p class="welcome-subtitle">

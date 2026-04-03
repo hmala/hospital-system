@@ -15,7 +15,10 @@ class LabResult extends Model
         'unit',
         'status',
         'reference_range',
-        'notes'
+        'notes',
+        'source_type',
+        'package_id',
+        'lab_test_id'
     ];
 
     /**

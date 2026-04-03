@@ -49,7 +49,7 @@
                                 <label for="patient_id" class="form-label">المريض *</label>
                                 @if($appointment)
                                     <input type="hidden" name="patient_id" value="{{ $appointment->patient_id }}">
-                                    <input type="text" class="form-control" value="{{ $appointment->patient->user->name }} - {{ $appointment->patient->user->phone }}" readonly style="background-color: #1f7bd8;">
+                                    <input type="text" class="form-control" value="{{ optional($appointment->patient->user)->name ?? 'غير معروف' }} - {{ optional($appointment->patient->user)->phone ?? 'غير متوفر' }}" readonly style="background-color: #1f7bd8;">
                                     <small class="text-muted">مأخوذ من الموعد المحدد مسبقاً</small>
                                 @else
                                     <select class="form-select @error('patient_id') is-invalid @enderror" 
@@ -58,7 +58,7 @@
                                         @foreach($patients as $patient)
                                             <option value="{{ $patient->id }}" 
                                                     {{ ($selectedPatient && $selectedPatient->id == $patient->id) ? 'selected' : (old('patient_id') == $patient->id ? 'selected' : '') }}>
-                                                {{ $patient->user->name }} - {{ $patient->user->phone }}
+                                                {{ optional($patient->user)->name ?? 'غير معروف' }} - {{ optional($patient->user)->phone ?? 'غير متوفر' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -81,7 +81,7 @@
                                         @foreach($doctors as $doctor)
                                             <option value="{{ $doctor->id }}" 
                                                     {{ old('doctor_id', $defaultDoctor) == $doctor->id ? 'selected' : '' }}>
-                                                د. {{ $doctor->user->name }} - {{ $doctor->specialization }}
+                                                د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->specialization }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -216,7 +216,7 @@
                     @if($appointment)
                     <div class="alert alert-success">
                         <h6>تفاصيل الموعد:</h6>
-                        <p class="mb-1"><strong>المريض:</strong> {{ $appointment->patient->user->name }}</p>
+                        <p class="mb-1"><strong>المريض:</strong> {{ optional($appointment->patient->user)->name ?? 'غير معروف' }}</p>
                         <p class="mb-1"><strong>الطبيب:</strong> د. {{ $appointment->doctor?->user?->name ?? 'غير محدد' }}</p>
                         <p class="mb-0"><strong>التاريخ:</strong> {{ $appointment->appointment_date ? $appointment->appointment_date->format('Y-m-d') : 'غير محدد' }}</p>
                     </div>
@@ -225,7 +225,7 @@
                     @if($selectedPatient && !$appointment)
                     <div class="alert alert-warning">
                         <h6>معلومات المريض المحدد:</h6>
-                        <p class="mb-1"><strong>الاسم:</strong> {{ $selectedPatient->user->name }}</p>
+                        <p class="mb-1"><strong>الاسم:</strong> {{ optional($selectedPatient->user)->name ?? 'غير معروف' }}</p>
                         <p class="mb-1"><strong>العمر:</strong> {{ $selectedPatient->age }} سنة</p>
                         <p class="mb-1"><strong>فصيلة الدم:</strong> {{ $selectedPatient->blood_type ?? '---' }}</p>
                         <p class="mb-0"><strong>الحساسيات:</strong> {{ $selectedPatient->allergies ? Str::limit($selectedPatient->allergies, 50) : '---' }}</p>

@@ -57,7 +57,7 @@
                                         <option value="{{ $doctor->id }}" 
                                                 data-fee="{{ $doctor->consultation_fee }}"
                                                 {{ $appointment->doctor_id == $doctor->id ? 'selected' : '' }}>
-                                            {{ $doctor->user->name }} - {{ $doctor->specialization }}
+                                            {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->specialization }}
                                         </option>
                                     @endforeach
                                 </select>

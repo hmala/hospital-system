@@ -133,7 +133,7 @@
                                                         <option value="">اختر الطبيب (اختياري)</option>
                                                         @foreach($doctors as $doctor)
                                                         <option value="{{ $doctor->id }}" {{ old('doctor_id', $visit->doctor_id) == $doctor->id ? 'selected' : '' }}>
-                                                            {{ $doctor->user->name }} - {{ $doctor->department->name ?? 'غير محدد' }}
+                                                            {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->department->name ?? 'غير محدد' }}
                                                         </option>
                                                         @endforeach
                                                     </select>

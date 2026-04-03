@@ -11,16 +11,43 @@ use Illuminate\Support\Facades\Hash;
 
 class DoctorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $doctors = Doctor::with(['user', 'department'])
+        $query = Doctor::with(['user', 'department'])
             ->withCount(['appointments as today_appointments_count' => function($query) {
                 $query->whereDate('appointment_date', today());
-            }])
-            ->latest()
-            ->paginate(10);
+            }]);
 
-        return view('doctors.index', compact('doctors'));
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            })->orWhere('specialization', 'like', "%{$search}%");
+        }
+
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('workdays')) {
+            $day = $request->workdays;
+            $query->whereJsonContains('working_days', $day);
+        }
+
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->is_active);
+        }
+
+        $doctors = $query->latest()->paginate(10)->appends($request->query());
+
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
+
+        return view('doctors.index', compact('doctors', 'departments'));
     }
 
     public function create()
@@ -38,10 +65,11 @@ class DoctorController extends Controller
             'department_id' => 'required|exists:departments,id',
             'type' => 'required|in:consultant,anesthesiologist,surgeon,emergency',
             'specialization' => 'required|string|max:255',
-            'qualification' => 'required|string|max:255',
-            'license_number' => 'required|string|unique:doctors,license_number',
-            'experience_years' => 'required|integer|min:0',
             'consultation_fee' => 'required|numeric|min:0',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'working_days' => 'required|array|min:1',
+            'working_days.*' => 'string',
         ]);
 
         // إنشاء مستخدم للطبيب
@@ -50,7 +78,6 @@ class DoctorController extends Controller
             'email' => $request->email,
             'password' => Hash::make('password'), // كلمة مرور افتراضية
             'role' => 'doctor',
-            // 'phone' => $request->phone, // إزالة حفظ رقم الهاتف من جدول users
         ]);
         
         // إضافة صلاحية الطبيب باستخدام Spatie Permission
@@ -61,14 +88,12 @@ class DoctorController extends Controller
             'user_id' => $user->id,
             'department_id' => $request->department_id,
             'type' => $request->type,
-            'phone' => $request->phone, // حفظ رقم الهاتف في جدول doctors
+            'phone' => $request->phone,
             'specialization' => $request->specialization,
-            'qualification' => $request->qualification,
-            'license_number' => $request->license_number,
-            'experience_years' => $request->experience_years,
             'consultation_fee' => $request->consultation_fee,
-            'max_patients_per_day' => $request->max_patients_per_day ?? 20,
-            'bio' => $request->bio,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'working_days' => $request->working_days,
         ]);
 
         return redirect()->route('doctors.index')
@@ -101,10 +126,11 @@ class DoctorController extends Controller
             'department_id' => 'required|exists:departments,id',
             'type' => 'required|in:consultant,anesthesiologist,surgeon,emergency',
             'specialization' => 'required|string|max:255',
-            'qualification' => 'required|string|max:255',
-            'license_number' => 'required|string|unique:doctors,license_number,' . $doctor->id,
-            'experience_years' => 'required|integer|min:0',
             'consultation_fee' => 'required|numeric|min:0',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'working_days' => 'required|array|min:1',
+            'working_days.*' => 'string',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
 
@@ -122,11 +148,17 @@ class DoctorController extends Controller
         $doctor->user->update($userData);
 
         // تحديث بيانات الطبيب
-        $doctor->update($request->only([
-            'department_id', 'type', 'phone', 'specialization', 'qualification', 
-            'license_number', 'experience_years', 'consultation_fee',
-            'max_patients_per_day', 'bio', 'is_active'
-        ]));
+        $doctor->update([
+            'department_id' => $request->department_id,
+            'type' => $request->type,
+            'phone' => $request->phone,
+            'specialization' => $request->specialization,
+            'consultation_fee' => $request->consultation_fee,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'working_days' => $request->working_days,
+            'is_active' => $request->has('is_active'),
+        ]);
 
         return redirect()->route('doctors.index')
             ->with('success', 'تم تحديث بيانات الطبيب بنجاح');
@@ -175,9 +207,21 @@ class DoctorController extends Controller
         ]);
 
         try {
-            // إنشاء بريد إلكتروني فريد من الاسم
-            $email = 'external_' . str_replace(' ', '_', strtolower($request->name)) . '@external.local';
-            
+            // إنشاء بريد إلكتروني فريد وصالح من الاسم
+            $slugName = strtolower(trim($request->name));
+            $slugName = preg_replace('/[^a-z0-9]+/i', '_', $slugName); // يلتقط أحرف إنجليزية وأرقام فقط
+            $slugName = trim($slugName, '_');
+            if (empty($slugName)) {
+                $slugName = 'doctor';
+            }
+
+            $email = 'external_' . $slugName . '_' . uniqid() . '@external.local';
+
+            // ضمان عدم تكرار البريد
+            while (User::where('email', $email)->exists()) {
+                $email = 'external_' . $slugName . '_' . uniqid() . '@external.local';
+            }
+
             // التحقق من وجود طبيب بنفس الاسم
             $existingDoctor = Doctor::whereHas('user', function($query) use ($request) {
                 $query->where('name', $request->name);
