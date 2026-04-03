@@ -90,6 +90,14 @@ class SidebarLinkSeeder extends Seeder
                 'order' => 10,
                 'enabled' => true,
             ],
+            [
+                'title' => 'مشتريات المخزن',
+                'route' => 'purchases.create',
+                'icon' => 'fas fa-boxes',
+                'roles' => ['admin', 'inventory_manager', 'cashier'],
+                'order' => 11,
+                'enabled' => true,
+            ],
         ];
 
         foreach ($links as $linkData) {

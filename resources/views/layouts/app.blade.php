@@ -171,6 +171,37 @@
                     </div> <!-- end patientMgmtSection -->
                     @endcanany
 
+                    @canany(['manage inventory', 'view products', 'view suppliers'])
+                    <div class="sidebar-divider"></div>
+                    <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
+                        <span><i class="fas fa-warehouse"></i> إدارة المخزون</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="collapse collapse-section" id="inventorySection">
+                        @canany(['manage inventory', 'view products'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
+                                <i class="fas fa-box"></i><span> المواد</span>
+                            </a>
+                        </li>
+                        @endcanany
+                        @canany(['manage inventory', 'view suppliers'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
+                                <i class="fas fa-truck"></i><span> الموردون</span>
+                            </a>
+                        </li>
+                        @endcanany
+                        @canany(['manage inventory', 'create purchases', 'view cashier'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('purchases.create') ? 'active' : '' }}" href="{{ route('purchases.create') }}">
+                                <i class="fas fa-boxes"></i><span> مشتريات المخزن</span>
+                            </a>
+                        </li>
+                        @endcanany
+                    </div>
+                    @endcanany
+
                     @can('view own visits')
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">

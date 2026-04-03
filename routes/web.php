@@ -144,6 +144,24 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inquiry/occupancy', [InquiryController::class, 'occupancy'])->name('inquiry.occupancy');
     Route::resource('inquiry', InquiryController::class);
     
+    // إدارة المشتريات والمستودع
+    Route::prefix('suppliers')->name('suppliers.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SupplierController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\SupplierController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\SupplierController::class, 'store'])->name('store');
+    });
+
+    Route::prefix('products')->name('products.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ProductController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\ProductController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\ProductController::class, 'store'])->name('store');
+    });
+
+    Route::prefix('purchases')->name('purchases.')->group(function () {
+        Route::get('/create', [\App\Http\Controllers\PurchaseController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\PurchaseController::class, 'store'])->name('store');
+    });
+
     // مسارات الكاشير (Cashier Routes)
     Route::prefix('cashier')->name('cashier.')->group(function () {
         Route::get('/', [\App\Http\Controllers\CashierController::class, 'index'])->name('index');

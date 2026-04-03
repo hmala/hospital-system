@@ -89,10 +89,38 @@ class RolesAndPermissionsSeeder extends Seeder
             'create packages',
             'edit packages',
             'delete packages',
-            
+
+            // صلاحيات المخزن والمشتريات
+            'view suppliers',
+            'create suppliers',
+            'edit suppliers',
+            'delete suppliers',
+            'view purchases',
+            'create purchases',
+            'edit purchases',
+            'delete purchases',
+            'manage inventory',
+            'view products',
+            'create products',
+            'edit products',
+            'delete products',
+            'view stock_batches',
+            'view stock_movements',
+
             // صلاحيات الصيدلية
             'view pharmacy',
             'process pharmacy requests',
+
+            // صلاحيات المخزن والمشتريات
+            'view suppliers',
+            'create suppliers',
+            'edit suppliers',
+            'delete suppliers',
+            'view purchases',
+            'create purchases',
+            'edit purchases',
+            'delete purchases',
+            'manage inventory',
             
             // صلاحيات الاستعلامات
             'view inquiries',
@@ -252,6 +280,26 @@ class RolesAndPermissionsSeeder extends Seeder
             'view patients',
             'view pharmacy',
             'process pharmacy requests',
+        ]);
+
+        // دور موظف المخزن (Inventory Manager)
+        $inventoryManagerRole = Role::firstOrCreate(['name' => 'inventory_manager']);
+        $inventoryManagerRole->givePermissionTo([
+            'view suppliers',
+            'create suppliers',
+            'edit suppliers',
+            'delete suppliers',
+            'view purchases',
+            'create purchases',
+            'edit purchases',
+            'delete purchases',
+            'manage inventory',
+            'view products',
+            'create products',
+            'edit products',
+            'delete products',
+            'view stock_batches',
+            'view stock_movements',
         ]);
 
         // دور الممرض (Nurse)
