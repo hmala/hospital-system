@@ -171,36 +171,7 @@
                     </div> <!-- end patientMgmtSection -->
                     @endcanany
 
-                    @canany(['manage inventory', 'view products', 'view suppliers'])
-                    <div class="sidebar-divider"></div>
-                    <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
-                        <span><i class="fas fa-warehouse"></i> إدارة المخزون</span>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </div>
-                    <div class="collapse collapse-section" id="inventorySection">
-                        @canany(['manage inventory', 'view products'])
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
-                                <i class="fas fa-box"></i><span> المواد</span>
-                            </a>
-                        </li>
-                        @endcanany
-                        @canany(['manage inventory', 'view suppliers'])
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
-                                <i class="fas fa-truck"></i><span> الموردون</span>
-                            </a>
-                        </li>
-                        @endcanany
-                        @canany(['manage inventory', 'create purchases', 'view cashier'])
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('purchases.create') ? 'active' : '' }}" href="{{ route('purchases.create') }}">
-                                <i class="fas fa-boxes"></i><span> مشتريات المخزن</span>
-                            </a>
-                        </li>
-                        @endcanany
-                    </div>
-                    @endcanany
+                
 
                     @can('view own visits')
                     <li class="nav-item">
@@ -437,14 +408,14 @@
                         </div>
                         @endcanany
 
-                        <!-- قسم الإعدادات -->
+                        <!-- قسم الإدارة والإعدادات -->
                         @canany(['manage users', 'manage roles', 'manage permissions', 'manage radiology types', 'view lab tests'])
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#settingsSection" aria-expanded="false">
-                            <span><i class="fas fa-cog"></i> الإعدادات</span>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#adminSettingsSection" aria-expanded="false">
+                            <span><i class="fas fa-tools"></i> الإدارة والإعدادات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="settingsSection">
+                        <div class="collapse collapse-section" id="adminSettingsSection">
 
                         @can('manage users')
                         <li class="nav-item">
@@ -482,26 +453,68 @@
                             </a>
                         </li>
                         @endcan
+                        @can('view lab tests')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
+                                <i class="fas fa-layer-group"></i><span> باقات المختبر</span>
+                            </a>
+                        </li>
+                        @endcan
 
                         </div>
                         @endcanany
-
-                        {{-- قسم إدارة باقات المختبر (مرئي لحاملي صلاحية المختبر) --}}
-                        @can('view lab tests')
-                        <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#adminSection" aria-expanded="false">
-                            <span><i class="fas fa-tools"></i> الإدارة</span>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                        </div>
-                        <div class="collapse collapse-section" id="adminSection">
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
-                                    <i class="fas fa-layer-group"></i><span> باقات المختبر</span>
-                                </a>
-                            </li>
-                        </div>
-                        @endcan
-
+                   @canany(['manage inventory', 'view products', 'view suppliers'])
+                    <div class="sidebar-divider"></div>
+                    <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
+                        <span><i class="fas fa-warehouse"></i> إدارة المخزون</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="collapse collapse-section" id="inventorySection">
+                        @canany(['manage inventory', 'view products'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
+                                <i class="fas fa-box"></i><span> المواد</span>
+                            </a>
+                        </li>
+                        @endcanany
+                        @canany(['manage inventory', 'view suppliers'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
+                                <i class="fas fa-truck"></i><span> الموردون</span>
+                            </a>
+                        </li>
+                        @endcanany
+                        @canany(['manage inventory', 'view inventory', 'create purchases', 'view cashier'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('inventory.index') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
+                                <i class="fas fa-warehouse"></i><span> المخزون</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('stock-transfers.*') ? 'active' : '' }}" href="{{ route('stock-transfers.create') }}">
+                                <i class="fas fa-exchange-alt"></i><span> نقل المخزون</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('stock-transfers.returns.*') ? 'active' : '' }}" href="{{ route('stock-transfers.returns.create') }}">
+                                <i class="fas fa-undo"></i><span> إرجاع المخزون</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('locations.*') ? 'active' : '' }}" href="{{ route('locations.index') }}">
+                                <i class="fas fa-building"></i><span> مخازن الأقسام</span>
+                            </a>
+                        </li>
+                        @endcanany
+                        @canany(['manage inventory', 'create purchases', 'view cashier'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('purchases.index') ? 'active' : '' }}" href="{{ route('purchases.index') }}">
+                                <i class="fas fa-list-alt"></i><span> قائمة المشتريات</span>
+                            </a>
+                        </li>
+                        @endcanany
+                    </div>
+                    @endcanany
                     <!-- نهاية القائمة القديمة -->
                 </div>
             </nav>

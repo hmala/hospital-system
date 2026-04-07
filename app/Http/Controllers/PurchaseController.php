@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
@@ -17,6 +18,15 @@ class PurchaseController extends Controller
     /**
      * استمارة إنشاء فاتورة مشتريات
      */
+    public function index()
+    {
+        $purchases = Purchase::with('supplier', 'user')
+            ->orderBy('received_at', 'desc')
+            ->paginate(20);
+
+        return view('purchases.index', compact('purchases'));
+    }
+
     public function create()
     {
         $products = Product::orderBy('name')->get();
@@ -24,6 +34,14 @@ class PurchaseController extends Controller
 
         return view('purchases.create', compact('products', 'suppliers'));
     }
+
+    public function show(Purchase $purchase)
+    {
+        $purchase->load('supplier', 'user', 'items.product');
+
+        return view('purchases.show', compact('purchase'));
+    }
+
     /**
      * حفظ فاتورة المشتريات وتوليد الوجبات (Batches)
      */
@@ -50,26 +68,42 @@ class PurchaseController extends Controller
                 'user_id'        => Auth::id(),
             ]);
 
-            $generatedBarcodes = [];
-
             foreach ($request->items as $itemData) {
                 $product = Product::findOrFail($itemData['product_id']);
 
-                // تحقق من expiry_date حسب is_perishable
                 if ($product->is_perishable && empty($itemData['expiry_date'])) {
                     throw new \InvalidArgumentException("المادة {$product->name} قابلة للتلف ويجب تحديد تاريخ انتهاء.");
                 }
 
+                $subtotal = $itemData['qty'] * $itemData['cost_price'];
+
+                $purchaseItem = $purchase->items()->create([
+                    'product_id'  => $product->id,
+                    'qty'         => $itemData['qty'],
+                    'unit_cost'   => $itemData['cost_price'],
+                    'subtotal'    => $subtotal,
+                    'expiry_date' => $itemData['expiry_date'] ?? null,
+                ]);
+
                 $internalBarcode = $this->generateBatchBarcode($product->id);
+
+                $mainLocation = Location::firstOrCreate([
+                    'name' => 'المخزن الرئيسي',
+                    'type' => 'main',
+                ]);
 
                 $batch = StockBatch::create([
                     'product_id'       => $product->id,
+                    'purchase_item_id' => $purchaseItem->id,
+                    'location_id'      => $mainLocation->id,
                     'internal_barcode' => $internalBarcode,
+                    'original_barcode' => $internalBarcode,
                     'cost_price'       => $itemData['cost_price'],
                     'initial_qty'      => $itemData['qty'],
                     'current_qty'      => $itemData['qty'],
-                    'expiry_date'      => $itemData['expiry_date'] ?? '2099-12-31',
+                    'expiry_date'      => $itemData['expiry_date'] ?? null,
                     'received_at'      => now(),
+                    'original_received_at' => now(),
                 ]);
 
                 StockMovement::create([
@@ -80,28 +114,16 @@ class PurchaseController extends Controller
                     'type'             => 'purchase',
                     'user_id'          => Auth::id(),
                 ]);
-
-                $generatedBarcodes[] = [
-                    'product_name' => $product->name,
-                    'barcode'      => $internalBarcode,
-                    'qty'          => $itemData['qty'],
-                ];
             }
 
             DB::commit();
 
-            return response()->json([
-                'message'  => 'تم استلام القائمة وتوليد الباركودات بنجاح',
-                'data'     => $generatedBarcodes,
-                'purchase' => $purchase,
-            ], 201);
+            return redirect()->route('purchases.show', $purchase)->with('success', 'تم حفظ الفاتورة بنجاح');
 
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json([
-                'error' => 'حدث خطأ أثناء المعالجة: ' . $e->getMessage(),
-            ], 500);
+            return back()->withInput()->withErrors(['purchase' => 'حدث خطأ أثناء المعالجة: ' . $e->getMessage()]);
         }
     }
 

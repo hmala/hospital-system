@@ -155,11 +155,47 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\ProductController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\ProductController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\ProductController::class, 'store'])->name('store');
+        Route::get('/print-all', [\App\Http\Controllers\ProductController::class, 'printAllBarcodes'])->name('print-all');
+        Route::get('/{product}/edit', [\App\Http\Controllers\ProductController::class, 'edit'])->name('edit');
+        Route::put('/{product}', [\App\Http\Controllers\ProductController::class, 'update'])->name('update');
+        Route::delete('/{product}', [\App\Http\Controllers\ProductController::class, 'destroy'])->name('destroy');
+        Route::get('/{product}/barcode', [\App\Http\Controllers\ProductController::class, 'showBarcode'])->name('barcode');
     });
 
     Route::prefix('purchases')->name('purchases.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\PurchaseController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\PurchaseController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\PurchaseController::class, 'store'])->name('store');
+        Route::get('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('barcodes')->name('barcodes.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\BarcodeController::class, 'index'])->name('index');
+        Route::get('/batch/{batch}', [\App\Http\Controllers\BarcodeController::class, 'show'])->name('show');
+        Route::get('/purchase/{purchase}', [\App\Http\Controllers\BarcodeController::class, 'showPurchaseBarcodes'])->name('purchase');
+        Route::post('/print-multiple', [\App\Http\Controllers\BarcodeController::class, 'printMultiple'])->name('print_multiple');
+    });
+
+    Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'index'])
+        ->middleware(['auth'])
+        ->name('inventory.index');
+
+    Route::get('/inventory/low-stock', [\App\Http\Controllers\InventoryController::class, 'lowStock'])
+        ->middleware(['auth'])
+        ->name('inventory.low_stock');
+
+    Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
+        Route::get('/create', [\App\Http\Controllers\StockTransferController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
+        Route::get('/returns/create', [\App\Http\Controllers\StockTransferController::class, 'createReturn'])->name('returns.create');
+        Route::post('/returns', [\App\Http\Controllers\StockTransferController::class, 'storeReturn'])->name('returns.store');
+    });
+
+    Route::prefix('locations')->name('locations.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\LocationController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\LocationController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\LocationController::class, 'store'])->name('store');
+        Route::get('/{location}', [\App\Http\Controllers\LocationController::class, 'show'])->name('show');
     });
 
     // مسارات الكاشير (Cashier Routes)

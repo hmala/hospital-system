@@ -23,4 +23,14 @@ class Location extends Model
     {
         return $this->hasMany(StockMovement::class, 'to_location_id');
     }
+
+    public function stockBatches()
+    {
+        return $this->hasMany(StockBatch::class);
+    }
+
+    public function productThresholds()
+    {
+        return $this->hasMany(LocationProductThreshold::class);
+    }
 }
