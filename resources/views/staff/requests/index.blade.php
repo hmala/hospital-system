@@ -45,8 +45,8 @@
                         <div class="col-md-4 mb-2">
                             <a href="{{ route('staff.requests.index', $allowedType) }}"
                                class="btn btn-outline-{{ $type == $allowedType ? 'primary' : 'secondary' }} w-100">
-                                <i class="fas fa-{{ $allowedType == 'lab' ? 'flask' : ($allowedType == 'radiology' ? 'x-ray' : ($allowedType == 'pharmacy' ? 'pills' : 'tint')) }} me-2"></i>
-                                {{ $allowedType == 'lab' ? 'المختبر' : ($allowedType == 'radiology' ? 'الأشعة' : ($allowedType == 'pharmacy' ? 'الصيدلية' : 'مصرف الدم')) }}
+                                <i class="fas fa-{{ $allowedType == 'lab' ? 'flask' : ($allowedType == 'radiology' ? 'x-ray' : ($allowedType == 'pharmacy' ? 'pills' : ($allowedType == 'nursing' ? 'stethoscope' : 'tint'))) }} me-2"></i>
+                                {{ $allowedType == 'lab' ? 'المختبر' : ($allowedType == 'radiology' ? 'الأشعة' : ($allowedType == 'pharmacy' ? 'الصيدلية' : ($allowedType == 'nursing' ? 'الخدمات التمريضية' : 'مصرف الدم'))) }}
                                 @if($type == $allowedType)
                                     <span class="badge bg-primary ms-2">{{ $requests->total() }}</span>
                                 @endif
@@ -96,10 +96,9 @@
                                 <thead>
                                     <tr>
                                         <th style="width:70px;">رقم</th>
-                                        <th style="width:140px;">مريض</th>
-                                        <th style="width:120px;">طبيب</th>
-                                        <th style="width:80px;">نوع</th>
-                                        <th>تفاصيل</th>
+                                        <th>مريض</th>
+                                        <th>طبيب</th>
+                                        <th>نوع</th>
                                         <th style="width:90px;">وقت</th>
                                         <th style="width:90px;">الدفع</th>
                                         <th style="width:70px;">حالة</th>
@@ -116,36 +115,6 @@
                                             <span class="badge bg-{{ $request->type == 'lab' ? 'primary' : ($request->type == 'radiology' ? 'info' : ($request->type == 'pharmacy' ? 'success' : 'danger')) }}">
                                                 {{ $request->type_text }}
                                             </span>
-                                        </td>
-                                        <td>
-                                            @php
-                                                $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                            @endphp
-                                            @if(($request->type == 'lab' && isset($details['lab_test_ids'])) || (isset($details['blood_bank']) && $details['blood_bank']))
-                                                <small class="text-muted">
-                                                    @php
-                                                        $requestTypeLabel = (isset($details['blood_bank']) && $details['blood_bank']) ? 'مصرف الدم' : 'تحاليل';
-                                                    @endphp
-                                                    {{ $requestTypeLabel }}
-                                                </small>
-                                            @elseif($request->type == 'blood_bank')
-                                                <small class="text-muted">مصرف الدم</small>
-                                            @elseif($request->type == 'radiology' && isset($details['radiology_type_ids']))
-                                                <small class="text-muted">
-                                                    @php
-                                                        $typeNames = [];
-                                                        foreach($details['radiology_type_ids'] as $typeId) {
-                                                            $type = \App\Models\RadiologyType::find($typeId);
-                                                            if ($type) {
-                                                                $typeNames[] = $type->name;
-                                                            }
-                                                        }
-                                                    @endphp
-                                                    {{ implode('، ', $typeNames) }}
-                                                </small>
-                                            @else
-                                                <small class="text-muted">{{ $request->description ?? '-' }}</small>
-                                            @endif
                                         </td>
                                         <td>
                                             <small>{{ $request->created_at->format('H:i') }}</small>
@@ -166,53 +135,19 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                @if($request->type == 'radiology')
-                                                    @php
-                                                        // البحث عن طلب الأشعة المرتبط بنفس الزيارة
+                                                <a href="{{ route('staff.requests.show', ['request' => $request->id]) }}"
+                                                   class="btn btn-outline-primary"
+                                                   title="عرض الطلب">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                @php
+                                                    $isBloodBankRequest = $request->type === 'blood_bank' || (is_array($request->details ?? []) && data_get($request->details, 'blood_bank', false));
+                                                    $radiologyRequest = null;
+                                                    if ($request->type === 'radiology') {
                                                         $radiologyRequest = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
                                                             ->latest('created_at')
                                                             ->first();
-                                                        
-                                                        // إذا لم نجد سجل في radiology_requests، نحاول إنشاءه من بيانات الطلب
-                                                        if (!$radiologyRequest && $request->details && isset($request->details['radiology_type_id'])) {
-                                                            try {
-                                                                $radiologyRequest = \App\Models\RadiologyRequest::create([
-                                                                    'visit_id' => $request->visit_id,
-                                                                    'patient_id' => $request->visit->patient_id ?? null,
-                                                                    'doctor_id' => $request->visit->doctor_id ?? null,
-                                                                    'radiology_type_id' => $request->details['radiology_type_id'],
-                                                                    'requested_date' => $request->created_at,
-                                                                    'status' => $request->status,
-                                                                    'priority' => $request->details['priority'] ?? 'normal',
-                                                                    'clinical_indication' => $request->description ?? null,
-                                                                ]);
-                                                            } catch (\Exception $e) {
-                                                                // في حالة فشل الإنشاء، نستمر بدون إنشاء
-                                                            }
-                                                        }
-                                                    @endphp
-                                                    @if($radiologyRequest)
-                                                        <a href="{{ route('radiology.show', $radiologyRequest->id) }}"
-                                                           class="btn btn-outline-primary"
-                                                           title="عرض تفاصيل الأشعة">
-                                                            <i class="fas fa-x-ray"></i>
-                                                        </a>
-                                                    @else
-                                                        <a href="{{ route('staff.requests.show', $request) }}"
-                                                           class="btn btn-outline-primary"
-                                                           title="عرض الطلب">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                    @endif
-                                                @else
-                                                    <a href="{{ route('staff.requests.show', $request) }}"
-                                                       class="btn btn-outline-primary"
-                                                       title="عرض">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                @endif
-                                                @php
-                                                    $isBloodBankRequest = $request->type === 'blood_bank' || (is_array($request->details ?? []) && data_get($request->details, 'blood_bank', false));
+                                                    }
                                                 @endphp
 
                                                 @if(($request->status == 'completed' || $request->status == 'in_progress') && ($request->type == 'lab' || $isBloodBankRequest || $request->type == 'blood_bank'))
@@ -338,7 +273,7 @@
                             <thead>
                                 <tr>
                                     <th style="width:80px;">رقم طوارئ</th>
-                                    <th style="width:140px;">مريض</th>
+                                    <th>مريض</th>
                                     <th>أشعة</th>
                                     <th style="width:80px;">أولوية</th>
                                     <th style="width:70px;">وقت</th>
@@ -427,7 +362,7 @@
                             <thead>
                                 <tr>
                                     <th style="width:80px;">رقم طوارئ</th>
-                                    <th style="width:140px;">مريض</th>
+                                    <th>مريض</th>
                                     <th>تحاليل</th>
                                     <th style="width:80px;">أولوية</th>
                                     <th style="width:70px;">حالة</th>
@@ -615,11 +550,22 @@ $(document).ready(function() {
 }
 
 /* تنسيقات خاصة بالجداول الصغيرة */
-.table-sm td, .table-sm th {
+.table-sm td {
     padding: 0.4rem;
     font-size: 0.875rem;
-    white-space: normal !important;
+    white-space: normal;
     word-break: break-word;
+}
+
+.table-sm th {
+    padding: 0.4rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    word-break: normal;
+}
+
+.table-responsive table {
+    min-width: max-content;
 }
 
 .badge-sm {

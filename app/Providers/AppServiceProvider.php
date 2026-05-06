@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\View;
 use App\Models\Appointment;
 use App\Models\Visit;
 use App\Models\Surgery;
+use App\Models\SurgeryRadiologyTest;
 use App\Models\Request as MedicalRequest;
 use App\Models\BedReservation;
 use App\Observers\BedReservationObserver;
@@ -100,6 +101,7 @@ class AppServiceProvider extends ServiceProvider
                 $pendingSurgeryLabTests = MedicalRequest::where('type', 'surgery_lab')
                     ->where('status', 'pending')
                     ->count();
+                $pendingSurgeryRadiology = SurgeryRadiologyTest::where('status', 'pending')->count();
                 
                 $view->with(compact(
                     'confirmedAppointments',
@@ -110,7 +112,8 @@ class AppServiceProvider extends ServiceProvider
                     'pendingRequests',
                     'pendingLab',
                     'pendingRadiology',
-                    'pendingSurgeryLabTests'
+                    'pendingSurgeryLabTests',
+                    'pendingSurgeryRadiology'
                 ));
             }
         });

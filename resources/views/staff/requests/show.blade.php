@@ -136,6 +136,50 @@ function getTestUnit($testName, $labTests) {
         </div>
     </div>
 
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3">
+                    <div class="row text-center gy-2">
+                        <div class="col-sm-6 col-md-3">
+                            <div class="text-start">
+                                <div class="small text-muted">اسم المريض</div>
+                                <div class="fw-bold">{{ $request->visit->patient?->user?->name ?? 'غير محدد' }}</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <div class="text-start">
+                                <div class="small text-muted">الجنس</div>
+                                <div class="fw-bold">{{ $request->visit->patient?->gender == 'male' ? 'ذكر' : ($request->visit->patient?->gender == 'female' ? 'أنثى' : 'غير محدد') }}</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-2">
+                            <div class="text-start">
+                                <div class="small text-muted">العمر</div>
+                                <div class="fw-bold">{{ $request->visit->patient?->age ?? 'غير محدد' }} سنة</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="text-start">
+                                <div class="small text-muted">الطبيب المرسل</div>
+                                <div class="fw-bold">{{ $request->visit->doctor?->user?->name ? 'د. ' . $request->visit->doctor->user->name : 'غير محدد' }}</div>
+                                <div class="small text-muted">{{ $request->visit->doctor?->specialization ?? '' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="text-start">
+                                <div class="small text-muted">وصف الطلب</div>
+                                <div class="fw-bold text-dark">{{ $requestDetails['description'] ?? $request->description ?? 'غير محدد' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
@@ -166,7 +210,7 @@ function getTestUnit($testName, $labTests) {
         $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
     @endphp
     <div class="row mb-4">
-        <div class="col-md-8">
+        <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
@@ -666,42 +710,6 @@ function getTestUnit($testName, $labTests) {
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            @if($request->visit)
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-user me-2"></i>
-                        معلومات المريض
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p><strong>الاسم:</strong> {{ $request->visit->patient?->user?->name ?? 'غير محدد' }}</p>
-                    <p><strong>العمر:</strong> {{ $request->visit->patient?->age ?? 'غير محدد' }} سنة</p>
-                    <p><strong>الجنس:</strong> {{ $request->visit->patient?->gender == 'male' ? 'ذكر' : ($request->visit->patient?->gender == 'female' ? 'أنثى' : 'غير محدد') }}</p>
-                    <p><strong>رقم الهاتف:</strong> {{ $request->visit->patient?->phone ?? 'غير محدد' }}</p>
-                </div>
-            </div>
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-user-md me-2"></i>
-                        معلومات الطبيب
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p><strong>الاسم:</strong> د. {{ $request->visit->doctor?->user?->name ?? 'غير محدد' }}</p>
-                    <p><strong>التخصص:</strong> {{ $request->visit->doctor?->specialization ?? 'غير محدد' }}</p>
-                    <p><strong>القسم:</strong> {{ $request->visit->doctor?->department?->name ?? 'غير محدد' }}</p>
-                </div>
-            </div>
-            @else
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                لا توجد معلومات زيارة مرتبطة بهذا الطلب
-            </div>
-            @endif
-        </div>
     </div>
 
     <!-- Modal اختيار التحاليل -->
@@ -992,6 +1000,77 @@ function getTestUnit($testName, $labTests) {
         </div>
     @endif
 
+    @if($request->type === 'nursing')
+        <hr>
+        <!-- قسم الخدمات التمريضية -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-heartbeat me-2"></i>
+                            تفاصيل طلب الخدمات التمريضية
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @php
+                            $nursingDetails = $request->details;
+                            if (is_string($nursingDetails)) {
+                                $decoded = json_decode($nursingDetails, true);
+                                $nursingDetails = is_array($decoded) ? $decoded : [];
+                            }
+                            if (!is_array($nursingDetails)) {
+                                $nursingDetails = [];
+                            }
+                            
+                            $nursingServices = $nursingDetails['nursing_services'] ?? [];
+                            $nursingServiceNames = $nursingDetails['nursing_service_names'] ?? [];
+                        @endphp
+
+                        @if(!empty($nursingServiceNames) || !empty($nursingServices))
+                        <div class="mb-4">
+                            <h6 class="mb-3">
+                                <i class="fas fa-list me-2"></i>
+                                الخدمات التمريضية المطلوبة
+                            </h6>
+                            <div class="list-group">
+                                @forelse($nursingServiceNames as $serviceName)
+                                    <div class="list-group-item d-flex align-items-center">
+                                        <i class="fas fa-check-circle text-success me-3"></i>
+                                        <span>{{ $serviceName }}</span>
+                                    </div>
+                                @empty
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        لم يتم تحديد خدمات تمريضية
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- معلومات التنفيذ -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>ملاحظات عن الخدمة التمريضية</strong></label>
+                            <textarea class="form-control" name="nursing_notes" rows="3" placeholder="اكتب ملاحظات عن تنفيذ الخدمة التمريضية">{{ old('nursing_notes', $nursingDetails['notes'] ?? '') }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>وقت البدء</strong></label>
+                                <input type="datetime-local" class="form-control" name="nursing_start_time" value="{{ old('nursing_start_time', $nursingDetails['start_time'] ?? '') }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>وقت الانتهاء</strong></label>
+                                <input type="datetime-local" class="form-control" name="nursing_end_time" value="{{ old('nursing_end_time', $nursingDetails['end_time'] ?? '') }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @php
         $reqDetails = $request->details;
         if (is_string($reqDetails)) {
@@ -1001,7 +1080,7 @@ function getTestUnit($testName, $labTests) {
         if (!is_array($reqDetails)) {
             $reqDetails = [];
         }
-        $hasSelectedServices = !empty($reqDetails['lab_test_ids']) || !empty($reqDetails['package_id']) || !empty($reqDetails['radiology_type_ids']) || !empty($reqDetails['services_selected']);
+        $hasSelectedServices = !empty($reqDetails['lab_test_ids']) || !empty($reqDetails['package_id']) || !empty($reqDetails['radiology_type_ids']) || !empty($reqDetails['services_selected']) || !empty($reqDetails['nursing_services']);
     @endphp
     @if($request->status !== 'pending_service_selection' || $hasSelectedServices)
     <!-- نموذج تحديث حالة الطلب -->

@@ -63,6 +63,7 @@
                                         @case('lab_staff') موظف مختبر @break
                                         @case('radiology_staff') موظف أشعة @break
                                         @case('pharmacy_staff') موظف صيدلية @break
+                                        @case('inventory_manager') موظف مخزن @break
                                         @case('consultation_receptionist') موظف استعلامات استشارية @break
                                         @case('surgery_staff') موظف عمليات @break
                                         @default {{ $role->name }}

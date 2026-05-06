@@ -34,7 +34,7 @@
     @if(isset($radiologyStats))
     <!-- إحصائيات موظف الأشعة -->
     <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-4 mb-3">
             <div class="card stat-card bg-warning text-white">
                 <div class="card-body">
                     <div class="row">
@@ -51,7 +51,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-4 mb-3">
             <div class="card stat-card bg-info text-white">
                 <div class="card-body">
                     <div class="row">
@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-4 mb-3">
             <div class="card stat-card bg-primary text-white">
                 <div class="card-body">
                     <div class="row">
@@ -85,7 +85,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-4 mb-3">
             <div class="card stat-card bg-success text-white">
                 <div class="card-body">
                     <div class="row">
@@ -123,7 +123,7 @@
     @elseif(isset($labStats))
     <!-- إحصائيات موظف المختبر -->
     <div class="row">
-        <div class="col-xl-6 col-md-6 mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
             <div class="card stat-card bg-warning text-white">
                 <div class="card-body">
                     <div class="row">
@@ -140,7 +140,7 @@
             </div>
         </div>
 
-        <div class="col-xl-6 col-md-6 mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
             <div class="card stat-card bg-success text-white">
                 <div class="card-body">
                     <div class="row">
@@ -166,7 +166,7 @@
                     <i class="fas fa-flask fa-4x text-primary mb-3"></i>
                     <h4>طلبات المختبر</h4>
                     <p class="text-muted mb-4">عرض وإدارة جميع طلبات المختبر</p>
-                    <a href="{{ route('staff.requests.index', ['type' => 'lab']) }}" class="btn btn-primary btn-lg">
+                    <a href="{{ route('lab.index') }}" class="btn btn-primary btn-lg">
                         <i class="fas fa-arrow-left me-2"></i>
                         الانتقال إلى طلبات المختبر
                     </a>
@@ -176,298 +176,385 @@
     </div>
 
     @else
-    <!-- الإحصائيات العامة -->
+    <!-- الإحصائيات العامة - تصميم جديد -->
     <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card bg-patient text-white">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-8">
-                            <h5 class="card-title">المرضى</h5>
-                            <h2 class="mb-0">{{ $stats['totalPatients'] }}</h2>
-                            <small>مسجلين في النظام</small>
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card stat-card bg-patient text-white h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-2">المرضى</h5>
+                        <h2 class="mb-1">{{ $stats['totalPatients'] }}</h2>
+                        <small>مسجلين في النظام</small>
+                        <div class="mt-3">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-white" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
                         </div>
-                        <div class="col-4 text-end">
-                            <i class="fas fa-user-injured fa-3x opacity-50"></i>
-                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-user-injured fa-4x opacity-75"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card bg-doctor text-white">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-8">
-                            <h5 class="card-title">الأطباء</h5>
-                            <h2 class="mb-0">{{ $stats['totalDoctors'] }}</h2>
-                            <small>يعملون في المستشفى</small>
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card stat-card bg-doctor text-white h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-2">الأطباء</h5>
+                        <h2 class="mb-1">{{ $stats['totalDoctors'] }}</h2>
+                        <small>يعملون في المستشفى</small>
+                        <div class="mt-3">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-white" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
                         </div>
-                        <div class="col-4 text-end">
-                            <i class="fas fa-user-md fa-3x opacity-50"></i>
-                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-user-md fa-4x opacity-75"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card bg-department text-white">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-8">
-                            <h5 class="card-title">العيادات</h5>
-                            <h2 class="mb-0">{{ $stats['totalDepartments'] }}</h2>
-                            <small>عيادات نشطة</small>
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card stat-card bg-department text-white h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-2">العيادات</h5>
+                        <h2 class="mb-1">{{ $stats['totalDepartments'] }}</h2>
+                        <small>عيادات نشطة</small>
+                        <div class="mt-3">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-white" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
                         </div>
-                        <div class="col-4 text-end">
-                            <i class="fas fa-clinic-medical fa-3x opacity-50"></i>
-                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-clinic-medical fa-4x opacity-75"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card bg-appointment text-white">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-8">
-                            <h5 class="card-title">مواعيد اليوم</h5>
-                            <h2 class="mb-0">{{ $stats['todayAppointments'] }}</h2>
-                            <small>مجدولة لهذا اليوم</small>
+        <div class="col-xl-6 col-md-6 mb-4">
+            <div class="card stat-card bg-appointment text-white h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-2">مواعيد اليوم</h5>
+                        <h2 class="mb-1">{{ $stats['todayAppointments'] }}</h2>
+                        <small>مجدولة لهذا اليوم</small>
+                        <div class="mt-3">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-white" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
                         </div>
-                        <div class="col-4 text-end">
-                            <i class="fas fa-calendar-day fa-3x opacity-50"></i>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-calendar-day fa-4x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6 col-md-6 mb-4">
+            <div class="card stat-card bg-success text-white h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-2">الزيارات اليوم</h5>
+                        <h2 class="mb-1">{{ $stats['todayVisits'] }}</h2>
+                        <small>تم تسجيلها اليوم</small>
+                        <div class="mt-3">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-white" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
                         </div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-stethoscope fa-4x opacity-75"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- مخططات بيانية عامة -->
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm">
+    <!-- مخططات بيانية عامة مع عمود حالة الغرف -->
+    <div class="row mb-4 gx-3 align-items-stretch">
+        <div id="dashboardChartsColumn" class="col d-flex flex-column">
+            <div class="row gx-3 gy-4 flex-fill">
+                <div class="col-md-6 d-flex">
+                    <div class="card shadow-sm flex-fill">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>زيارات آخر 7 أيام</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="visitsByDayChart" height="135"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex">
+                    <div class="card shadow-sm flex-fill">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>المواعيد حسب الحالة</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="appointmentsStatusChart" height="135"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex">
+                    <div class="card shadow-sm flex-fill">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>عدد المرضى حسب العيادات</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="patientsByDepartmentChart" height="135"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex">
+                    <div class="card shadow-sm flex-fill">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>المواعيد خلال 6 أشهر</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlyAppointmentsChart" height="135"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="roomStatusColumn" class="col-auto d-flex" style="max-width: 280px;">
+            @if(isset($roomStats) && $roomStats['total'] > 0)
+            <div class="card shadow-sm flex-fill">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>زيارات آخر 7 أيام</h5>
+                    <h5 class="mb-0"><i class="fas fa-bed me-2 text-danger"></i>حالة الغرف</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="visitsByDayChart" height="135"></canvas>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-2">
+                                <div class="card-body d-flex align-items-center py-2 px-2">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2">
+                                        <i class="fas fa-bed fa-lg text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ $roomStats['total'] }}</h6>
+                                        <small class="text-muted">إجمالي الغرف</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-2 bg-info bg-opacity-10">
+                                <div class="card-body d-flex align-items-center py-1 px-2">
+                                    <div class="rounded-circle bg-info bg-opacity-25 p-2 me-2">
+                                        <i class="fas fa-check fa-lg text-info"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-info">{{ $roomStats['active'] }}</h6>
+                                        <small class="text-muted">الغرف النشطة</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-2 bg-success bg-opacity-10">
+                                <div class="card-body d-flex align-items-center py-1 px-2">
+                                    <div class="rounded-circle bg-success bg-opacity-25 p-2 me-2">
+                                        <i class="fas fa-check-circle fa-lg text-success"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-success">{{ $roomStats['available'] }}</h6>
+                                        <small class="text-muted">متاحة</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-2 bg-danger bg-opacity-10">
+                                <div class="card-body d-flex align-items-center py-1 px-2">
+                                    <div class="rounded-circle bg-danger bg-opacity-25 p-2 me-2">
+                                        <i class="fas fa-user fa-lg text-danger"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-danger">{{ $roomStats['occupied'] }}</h6>
+                                        <small class="text-muted">محجوزة</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-0 bg-warning bg-opacity-10">
+                                <div class="card-body d-flex align-items-center py-1 px-2">
+                                    <div class="rounded-circle bg-warning bg-opacity-25 p-2 me-2">
+                                        <i class="fas fa-tools fa-lg text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-warning">{{ $roomStats['maintenance'] }}</h6>
+                                        <small class="text-muted">صيانة</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>المواعيد حسب الحالة</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="appointmentsStatusChart" height="135"></canvas>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
-
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>عدد المرضى حسب العيادات</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="patientsByDepartmentChart" height="135"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>المواعيد خلال 6 أشهر</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="monthlyAppointmentsChart" height="135"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- إحصائيات الغرف -->
-    @if(isset($roomStats) && $roomStats['total'] > 0)
-    <div class="row mb-4">
-        <div class="col-12">
-            <h5 class="mb-3"><i class="fas fa-bed me-2 text-danger"></i>حالة الغرف</h5>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
-                        <i class="fas fa-bed fa-2x text-primary"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0">{{ $roomStats['total'] }}</h3>
-                        <small class="text-muted">إجمالي الغرف</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm bg-info bg-opacity-10">
-                <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-info bg-opacity-25 p-3 me-3">
-                        <i class="fas fa-check fa-2x text-info"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 text-info">{{ $roomStats['active'] }}</h3>
-                        <small class="text-muted">الغرف النشطة</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm bg-success bg-opacity-10">
-                <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-success bg-opacity-25 p-3 me-3">
-                        <i class="fas fa-check-circle fa-2x text-success"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 text-success">{{ $roomStats['available'] }}</h3>
-                        <small class="text-muted">متاحة</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
-                <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-danger bg-opacity-25 p-3 me-3">
-                        <i class="fas fa-user fa-2x text-danger"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 text-danger">{{ $roomStats['occupied'] }}</h3>
-                        <small class="text-muted">محجوزة</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
-                <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-warning bg-opacity-25 p-3 me-3">
-                        <i class="fas fa-tools fa-2x text-warning"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 text-warning">{{ $roomStats['maintenance'] }}</h3>
-                        <small class="text-muted">صيانة</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
     @endif
 
 </div>
 
-@if(isset($visitsByDay) || isset($appointmentsByStatus) || isset($patientsByDepartment) || isset($monthlyAppointments))
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            @if(isset($visitsByDay))
-            new Chart(document.getElementById('visitsByDayChart').getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: @json(array_keys($visitsByDay)),
-                    datasets: [{
-                        label: 'الزيارات',
-                        data: @json(array_values($visitsByDay)),
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                        fill: true,
-                        tension: 0.3
-                    }]
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function getChartOptions(isDark) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: isDark ? '#ffffff' : '#333333'
+                        }
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
+                scales: {
+                    x: {
+                        ticks: {
+                            color: isDark ? '#ffffff' : '#666666'
+                        },
+                        grid: {
+                            color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: isDark ? '#ffffff' : '#666666'
+                        },
+                        grid: {
+                            color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                        }
                     }
                 }
-            });
-            @endif
+            };
+        }
 
-            @if(isset($appointmentsByStatus))
-            new Chart(document.getElementById('appointmentsStatusChart').getContext('2d'), {
-                type: 'pie',
-                data: {
-                    labels: @json(array_keys($appointmentsByStatus)),
-                    datasets: [{
-                        data: @json(array_values($appointmentsByStatus)),
-                        backgroundColor: [
-                            '#ffc107',
-                            '#28a745',
-                            '#dc3545'
-                        ]
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-            @endif
+        const charts = [];
 
-            @if(isset($patientsByDepartment))
-            new Chart(document.getElementById('patientsByDepartmentChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: @json($patientsByDepartment instanceof Illuminate\Support\Collection ? $patientsByDepartment->pluck('name')->toArray() : array_column($patientsByDepartment, 'name')),
-                    datasets: [{
-                        label: 'عدد المرضى',
-                        data: @json($patientsByDepartment instanceof Illuminate\Support\Collection ? $patientsByDepartment->pluck('count')->toArray() : array_column($patientsByDepartment, 'count')),
-                        backgroundColor: 'rgba(40, 167, 69, 0.5)',
-                        borderColor: '#28a745',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
+        @if(isset($visitsByDay))
+        charts.push(new Chart(document.getElementById('visitsByDayChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: @json(array_keys($visitsByDay)),
+                datasets: [{
+                    label: 'الزيارات',
+                    data: @json(array_values($visitsByDay)),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: getChartOptions(document.body.classList.contains('dark-mode'))
+        }));
+        @endif
+
+        @if(isset($appointmentsByStatus))
+        charts.push(new Chart(document.getElementById('appointmentsStatusChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: @json(array_keys($appointmentsByStatus)),
+                datasets: [{
+                    data: @json(array_values($appointmentsByStatus)),
+                    backgroundColor: ['#ffc107', '#28a745', '#dc3545']
+                }]
+            },
+            options: getChartOptions(document.body.classList.contains('dark-mode'))
+        }));
+        @endif
+
+        @if(isset($patientsByDepartment))
+        charts.push(new Chart(document.getElementById('patientsByDepartmentChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: @json($patientsByDepartment instanceof Illuminate\Support\Collection ? $patientsByDepartment->pluck('name')->toArray() : array_column($patientsByDepartment, 'name')),
+                datasets: [{
+                    label: 'عدد المرضى',
+                    data: @json($patientsByDepartment instanceof Illuminate\Support\Collection ? $patientsByDepartment->pluck('count')->toArray() : array_column($patientsByDepartment, 'count')),
+                    backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                    borderColor: '#28a745',
+                    borderWidth: 1
+                }]
+            },
+            options: getChartOptions(document.body.classList.contains('dark-mode'))
+        }));
+        @endif
+
+        @if(isset($monthlyAppointments))
+        charts.push(new Chart(document.getElementById('monthlyAppointmentsChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: @json($monthlyAppointments->pluck('month')->toArray()),
+                datasets: [{
+                    label: 'المواعيد',
+                    data: @json($monthlyAppointments->pluck('count')->toArray()),
+                    borderColor: '#6610f2',
+                    backgroundColor: 'rgba(102, 16, 242, 0.2)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: getChartOptions(document.body.classList.contains('dark-mode'))
+        }));
+        @endif
+
+        function updateCharts() {
+            const isDark = document.body.classList.contains('dark-mode');
+            charts.forEach(chart => {
+                chart.options = { ...chart.options, ...getChartOptions(isDark) };
+                chart.update();
+            });
+        }
+
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        if (darkModeToggle) {
+            darkModeToggle.addEventListener('click', function() {
+                setTimeout(updateCharts, 100);
+            });
+        }
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    updateCharts();
                 }
             });
-            @endif
-
-            @if(isset($monthlyAppointments))
-            new Chart(document.getElementById('monthlyAppointmentsChart').getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: @json($monthlyAppointments->pluck('month')->toArray()),
-                    datasets: [{
-                        label: 'المواعيد',
-                        data: @json($monthlyAppointments->pluck('count')->toArray()),
-                        borderColor: '#6610f2',
-                        backgroundColor: 'rgba(102, 16, 242, 0.2)',
-                        fill: true,
-                        tension: 0.2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-            @endif
-
         });
-    </script>
-@endif
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        function syncRoomStatusHeight() {
+            const leftCol = document.getElementById('dashboardChartsColumn');
+            const rightCol = document.getElementById('roomStatusColumn');
+            if (leftCol && rightCol) {
+                rightCol.style.minHeight = leftCol.offsetHeight + 'px';
+            }
+        }
+
+        window.addEventListener('load', function() {
+            setTimeout(syncRoomStatusHeight, 100);
+        });
+        window.addEventListener('resize', function() {
+            setTimeout(syncRoomStatusHeight, 50);
+        });
+    });
+</script>
 
 @endsection

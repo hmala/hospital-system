@@ -205,4 +205,21 @@ class LabTestController extends Controller
 
         return redirect()->back()->with('success', "تم {$status} الفحص المختبري بنجاح");
     }
+
+    public function toggleFavorite(LabTest $labTest)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'غير مصرح'], 403);
+        }
+
+        $isFavorite = \App\Models\UserLabTestStat::toggleFavorite($user->id, $labTest->id);
+
+        return response()->json([
+            'success' => true,
+            'is_favorite' => $isFavorite,
+            'message' => $isFavorite ? 'تمت الإضافة للمفضلة' : 'تمت الإزالة من المفضلة'
+        ]);
+    }
 }

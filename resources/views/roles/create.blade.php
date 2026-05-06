@@ -71,6 +71,7 @@
                                             @case('tests') التحاليل @break
                                             @case('inquiries') الاستعلامات @break
                                             @case('rooms') الغرف @break
+                                            @case('inventory') المخزون @break
                                             @case('cashier') الكاشير @break
                                             @case('emergencies') الطوارئ @break
                                             @case('pharmacy') الصيدلية @break

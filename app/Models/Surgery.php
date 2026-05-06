@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Payment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -55,6 +56,7 @@ class Surgery extends Model
         'follow_up_date',
         'discharged_at',
         'discharge_notes',
+        'cancellation_reason',
         'referral_letter_path',
     ];
 
@@ -109,6 +111,11 @@ class Surgery extends Model
         return $this->hasMany(SurgeryRadiologyTest::class);
     }
 
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
     public function surgeryTreatments()
     {
         return $this->hasMany(SurgeryTreatment::class)->orderBy('sort_order');
@@ -122,6 +129,62 @@ class Surgery extends Model
     public function anesthesiologist2()
     {
         return $this->belongsTo(Doctor::class, 'anesthesiologist_2_id');
+    }
+
+    // علاقات المحطات
+    public function surgeonStation()
+    {
+        return $this->hasOne(SurgeonStation::class);
+    }
+
+    public function anesthesiaStation()
+    {
+        return $this->hasOne(AnesthesiaStation::class);
+    }
+
+    public function residentStation()
+    {
+        return $this->hasOne(ResidentStation::class);
+    }
+
+    public function nursingStation()
+    {
+        return $this->hasOne(NursingStation::class);
+    }
+
+    // Helper methods
+    public function getCurrentStation()
+    {
+        if (!$this->surgeonStation || $this->surgeonStation->status !== 'completed') {
+            return 'surgeon';
+        }
+        if (!$this->anesthesiaStation || $this->anesthesiaStation->status !== 'completed') {
+            return 'anesthesia';
+        }
+        if (!$this->residentStation || $this->residentStation->status !== 'completed') {
+            return 'resident';
+        }
+        if (!$this->nursingStation || $this->nursingStation->status !== 'completed') {
+            return 'nursing';
+        }
+        return 'completed';
+    }
+
+    public function canProceedToNextStation()
+    {
+        $currentStation = $this->getCurrentStation();
+        
+        if ($currentStation === 'surgeon') {
+            return $this->surgeonStation && $this->surgeonStation->status === 'completed';
+        }
+        if ($currentStation === 'anesthesia') {
+            return $this->anesthesiaStation && $this->anesthesiaStation->status === 'completed';
+        }
+        if ($currentStation === 'resident') {
+            return $this->residentStation && $this->residentStation->status === 'completed';
+        }
+        
+        return false;
     }
 
     public function getStatusTextAttribute()

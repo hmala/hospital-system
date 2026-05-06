@@ -226,8 +226,8 @@
                                         $invoiceItems[] = [
                                             'name' => '[أشعة] ' . $type->name,
                                             'qty' => 1,
-                                            'price' => $type->price ?? 0,
-                                            'total' => $type->price ?? 0
+                                            'price' => $type->base_price ?? 0,
+                                            'total' => $type->base_price ?? 0
                                         ];
                                     }
                                 }

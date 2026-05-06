@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +26,8 @@ class UserManagementController extends Controller
     public function create()
     {
         $roles = Role::all();
-        return view('users.create', compact('roles'));
+        $locations = Location::orderBy('name')->get();
+        return view('users.create', compact('roles', 'locations'));
     }
 
     public function store(Request $request)
@@ -35,6 +37,7 @@ class UserManagementController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
+            'location_id' => 'nullable|exists:locations,id',
         ], [
             'name.required' => 'الاسم مطلوب',
             'email.required' => 'البريد الإلكتروني مطلوب',
@@ -50,6 +53,8 @@ class UserManagementController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'location_id' => $request->location_id,
+            'role' => $request->roles[0] ?? null,
         ]);
 
         $user->syncRoles($request->roles);
@@ -61,7 +66,8 @@ class UserManagementController extends Controller
     public function edit(User $user)
     {
         $roles = Role::all();
-        return view('users.edit', compact('user', 'roles'));
+        $locations = Location::orderBy('name')->get();
+        return view('users.edit', compact('user', 'roles', 'locations'));
     }
 
     public function update(Request $request, User $user)
@@ -71,6 +77,7 @@ class UserManagementController extends Controller
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
+            'location_id' => 'nullable|exists:locations,id',
         ], [
             'name.required' => 'الاسم مطلوب',
             'email.required' => 'البريد الإلكتروني مطلوب',
@@ -84,6 +91,8 @@ class UserManagementController extends Controller
         $user->update([
             'name' => $request->name,
             'email' => $request->email,
+            'location_id' => $request->location_id,
+            'role' => $request->roles[0] ?? $user->role,
         ]);
 
         if ($request->filled('password')) {

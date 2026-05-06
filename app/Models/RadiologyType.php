@@ -53,4 +53,9 @@ class RadiologyType extends Model
     {
         return $this->requires_preparation;
     }
+
+    public function getPriceAttribute()
+    {
+        return $this->base_price;
+    }
 }

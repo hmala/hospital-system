@@ -310,6 +310,151 @@
             </div>
         </div>
     </div>
+
+    <!-- قسم طلبات الخدمات التمريضية -->
+    @if($nursingRequests && $nursingRequests->count() > 0)
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-heartbeat me-2"></i>
+                        طلبات الخدمات التمريضية
+                        <span class="badge bg-light text-success ms-2">{{ $nursingRequests->count() }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 60px;">رقم</th>
+                                    <th>المريض</th>
+                                    <th>الطبيب</th>
+                                    <th style="width: 200px;">الخدمات</th>
+                                    <th style="width: 100px;">الحالة</th>
+                                    <th style="width: 100px;">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($nursingRequests as $request)
+                                <tr>
+                                    <td>#{{ $request->id }}</td>
+                                    <td>
+                                        <strong>{{ $request->visit->patient->user->name ?? 'غير محدد' }}</strong><br>
+                                        <small class="text-muted">{{ $request->visit->patient->phone ?? '' }}</small>
+                                    </td>
+                                    <td>د. {{ $request->visit->doctor->user->name ?? 'غير محدد' }}</td>
+                                    <td>
+                                        @php
+                                            $nursingDetails = $request->details;
+                                            if (is_string($nursingDetails)) {
+                                                $nursingDetails = json_decode($nursingDetails, true);
+                                            }
+                                            $serviceNames = $nursingDetails['nursing_service_names'] ?? [];
+                                        @endphp
+                                        <div class="d-flex flex-column gap-1">
+                                            @foreach($serviceNames as $serviceName)
+                                                <span class="badge bg-info">{{ $serviceName }}</span>
+                                            @endforeach
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if($request->status === 'pending')
+                                            <span class="badge bg-warning text-dark">معلق</span>
+                                        @elseif($request->status === 'in_progress')
+                                            <span class="badge bg-info">قيد التنفيذ</span>
+                                        @elseif($request->status === 'completed')
+                                            <span class="badge bg-success">مكتمل</span>
+                                        @else
+                                            <span class="badge bg-secondary">{{ $request->status }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" 
+                                                    class="btn btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#nursingDetailsModal{{ $request->id }}"
+                                                    title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- modal for nursing request details -->
+                                <div class="modal fade" id="nursingDetailsModal{{ $request->id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-success text-white">
+                                                <h5 class="modal-title">تفاصيل طلب الخدمة التمريضية</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>رقم الطلب</strong></label>
+                                                    <p class="form-control-plaintext">#{{ $request->id }}</p>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>الخدمات المطلوبة</strong></label>
+                                                    <div class="d-flex flex-column gap-2">
+                                                        @foreach($serviceNames as $serviceName)
+                                                            <span class="badge bg-info" style="width: fit-content;">{{ $serviceName }}</span>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>الحالة الحالية</strong></label>
+                                                    <p class="form-control-plaintext">
+                                                        @if($request->status === 'pending')
+                                                            <span class="badge bg-warning text-dark">معلق</span>
+                                                        @elseif($request->status === 'in_progress')
+                                                            <span class="badge bg-info">قيد التنفيذ</span>
+                                                        @elseif($request->status === 'completed')
+                                                            <span class="badge bg-success">مكتمل</span>
+                                                        @endif
+                                                    </p>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>تاريخ الطلب</strong></label>
+                                                    <p class="form-control-plaintext">{{ $request->created_at->format('d/m/Y H:i') }}</p>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                @if($request->status === 'pending')
+                                                    <form method="POST" action="{{ route('emergency.nursing-request.update', $request) }}" style="display: inline;">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="status" value="in_progress">
+                                                        <button type="submit" class="btn btn-primary" onclick="return confirm('تأكيد بدء تنفيذ الخدمة؟')">
+                                                            <i class="fas fa-play me-1"></i>بدء التنفيذ
+                                                        </button>
+                                                    </form>
+                                                @elseif($request->status === 'in_progress')
+                                                    <form method="POST" action="{{ route('emergency.nursing-request.update', $request) }}" style="display: inline;">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="status" value="completed">
+                                                        <button type="submit" class="btn btn-success" onclick="return confirm('تأكيد إنهاء الخدمة؟')">
+                                                            <i class="fas fa-check me-1"></i>إنهاء الخدمة
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <script>

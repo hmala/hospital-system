@@ -98,6 +98,126 @@
 🎯 خطوات العمل الحالية:
 1. ✅ تنفيذ `php artisan migrate`.
 2. تنفيذ `php artisan db:seed --class=RolesAndPermissionsSeeder` و `php artisan db:seed --class=SidebarLinkSeeder`.
+
+---
+
+## 🔄 التحديثات الأخيرة - 3 مايو 2026
+
+### 9. نظام محطات العمليات الجراحية (Surgery Stations System)
+تم إنشاء نظام محطات منفصل لإدارة سير العمليات الجراحية عبر أربع محطات رئيسية:
+
+#### قاعدة البيانات:
+- ✅ إنشاء جدول `surgeon_stations` - محطة الطبيب الجراح
+- ✅ إنشاء جدول `anesthesia_stations` - محطة التخدير
+- ✅ إنشاء جدول `resident_stations` - محطة الطبيب المقيم
+- ✅ إنشاء جدول `nursing_stations` - محطة التمريض
+- ✅ Migration: `2026_05_03_130000_create_surgery_stations_tables.php`
+
+#### النماذج (Models):
+- ✅ `app/Models/SurgeonStation.php` - إدارة محطة الجراح
+- ✅ `app/Models/AnesthesiaStation.php` - إدارة محطة التخدير
+- ✅ `app/Models/ResidentStation.php` - إدارة محطة المقيم
+- ✅ `app/Models/NursingStation.php` - إدارة محطة التمريض
+- ✅ تحديث `app/Models/Surgery.php` بإضافة علاقات المحطات ودوال مساعدة
+
+#### المتحكمات (Controllers):
+- ✅ `app/Http/Controllers/SurgeonStationController.php` - CRUD لمحطة الجراح
+- ✅ `app/Http/Controllers/AnesthesiaStationController.php` - CRUD لمحطة التخدير
+- ✅ `app/Http/Controllers/ResidentStationController.php` - CRUD لمحطة المقيم
+- ✅ `app/Http/Controllers/NursingStationController.php` - CRUD لمحطة التمريض
+
+#### الواجهات (Views):
+محطة الجراح:
+- ✅ `resources/views/surgery-stations/surgeon/index.blade.php` - قائمة العمليات
+- ✅ `resources/views/surgery-stations/surgeon/show.blade.php` - تفاصيل المحطة
+
+محطة التخدير:
+- ✅ `resources/views/surgery-stations/anesthesia/index.blade.php` - قائمة العمليات
+- ✅ `resources/views/surgery-stations/anesthesia/show.blade.php` - تفاصيل المحطة
+
+محطة المقيم:
+- ✅ `resources/views/surgery-stations/resident/index.blade.php` - قائمة العمليات
+- ✅ `resources/views/surgery-stations/resident/show.blade.php` - تفاصيل المحطة
+
+محطة التمريض:
+- ✅ `resources/views/surgery-stations/nursing/index.blade.php` - قائمة العمليات
+- ✅ `resources/views/surgery-stations/nursing/show.blade.php` - تفاصيل المحطة
+
+#### المسارات (Routes):
+تم إضافة 16 مساراً جديداً في `routes/web.php` ضمن مجموعة `surgery-stations`:
+- ✅ محطة الجراح: index, show, update, complete
+- ✅ محطة التخدير: index, show, update, complete
+- ✅ محطة المقيم: index, show, update, complete
+- ✅ محطة التمريض: index, show, update, complete
+
+#### القائمة الجانبية:
+- ✅ إضافة 4 روابط للمحطات في قسم "العمليات الجراحية"
+- ✅ إضافة عدادات ملونة لكل محطة (info, warning, primary, success)
+- ✅ أيقونات مميزة: 🩺 الجراح، 💉 التخدير، 👨‍⚕️ المقيم، 👩‍⚕️ التمريض
+
+#### سير العمل (Workflow):
+```
+محطة الجراح → محطة التخدير → محطة المقيم → محطة التمريض → اكتمال العملية
+```
+
+#### ميزات النظام:
+- ✅ كل محطة لها جدول منفصل في قاعدة البيانات
+- ✅ تتبع حالة كل محطة (pending, in_progress, completed)
+- ✅ تسجيل أوقات البدء والإتمام لكل محطة
+- ✅ إنشاء تلقائي للمحطة التالية عند إتمام المحطة الحالية
+- ✅ عدادات مباشرة تعرض عدد العمليات المعلقة في كل محطة
+- ✅ صلاحيات منفصلة لكل محطة
+- ✅ واجهات عربية سهلة الاستخدام
+
+#### الوثائق:
+- ✅ `docs/SURGERY_STATIONS_GUIDE.md` - دليل شامل للنظام
+
+### 10. تحديثات واجهة العمليات
+- ✅ إزالة عمود "الإجراءات" من جدول العمليات النشطة
+- ✅ تبسيط عرض العمليات للتركيز على المعلومات الأساسية
+- ✅ تحديث colspan في صفوف التفاصيل من 8 إلى 7
+
+### 📋 الملفات المنشأة/المحدثة في هذه الجلسة:
+
+**Models:**
+- `app/Models/SurgeonStation.php`
+- `app/Models/AnesthesiaStation.php`
+- `app/Models/ResidentStation.php`
+- `app/Models/NursingStation.php`
+- `app/Models/Surgery.php` (محدث)
+
+**Controllers:**
+- `app/Http/Controllers/SurgeonStationController.php`
+- `app/Http/Controllers/AnesthesiaStationController.php`
+- `app/Http/Controllers/ResidentStationController.php`
+- `app/Http/Controllers/NursingStationController.php`
+
+**Views:**
+- 8 ملفات blade جديدة للمحطات
+- `resources/views/surgeries/index.blade.php` (محدث)
+
+**Migrations:**
+- `database/migrations/2026_05_03_130000_create_surgery_stations_tables.php`
+
+**Routes:**
+- `routes/web.php` (محدث - إضافة 16 مساراً)
+
+**Layouts:**
+- `resources/views/layouts/app.blade.php` (محدث - إضافة روابط المحطات والعدادات)
+
+**Documentation:**
+- `docs/SURGERY_STATIONS_GUIDE.md`
+
+### ⚡ الأوامر المنفذة:
+```bash
+php artisan migrate --path=database/migrations/2026_05_03_130000_create_surgery_stations_tables.php
+```
+
+### 📝 ملاحظات مهمة:
+1. نظام المحطات يعمل بشكل تسلسلي - لا يمكن الانتقال لمحطة إلا بعد إتمام السابقة
+2. كل محطة تُنشأ تلقائياً عند إتمام المحطة السابقة
+3. العدادات في القائمة الجانبية تحدث تلقائياً
+4. النظام جاهز للاستخدام الفوري
 3. تنظيف الكاش لو أردت: `php artisan view:clear && php artisan config:clear`.
 4. تجربة الواجهات الجديدة:
    - `/products`
@@ -118,6 +238,114 @@
 
 🔜 مقترح العمل القادم:
 1. اختبار كامل للـ workflow من إنشاء المشتريات إلى طباعة الباركود واسترجاع المخزون.
+
+📁 قائمة الملفات المضافة/المعدّلة التي تحتوي الكود الفعلي:
+
+- Controllers:
+  - app/Http/Controllers/BarcodeController.php
+  - app/Http/Controllers/DoctorVisitController.php
+  - app/Http/Controllers/InquiryController.php
+  - app/Http/Controllers/InventoryController.php
+  - app/Http/Controllers/LabStaffController.php
+  - app/Http/Controllers/LabTestController.php
+  - app/Http/Controllers/LabTestReferenceController.php
+  - app/Http/Controllers/PurchaseController.php
+  - app/Http/Controllers/RadiologyController.php
+  - app/Http/Controllers/RadiologyStaffController.php
+  - app/Http/Controllers/RoleManagementController.php
+  - app/Http/Controllers/StaffRequestController.php
+  - app/Http/Controllers/StockTransferController.php
+  - app/Http/Controllers/SurgeryController.php
+  - app/Http/Controllers/UserLabTestGroupController.php
+
+- Models:
+  - app/Models/LabTest.php
+  - app/Models/LabTestReference.php
+  - app/Models/Request.php
+  - app/Models/ServiceType.php
+  - app/Models/StockTransferRequest.php
+  - app/Models/User.php
+  - app/Models/UserLabTestGroup.php
+  - app/Models/UserLabTestStat.php
+
+- Migrations:
+  - database/migrations/2026_04_10_000000_create_stock_transfer_requests_table.php
+  - database/migrations/2026_04_10_000001_add_location_id_to_users_table.php
+  - database/migrations/2026_04_10_110334_add_location_id_to_users_table.php
+  - database/migrations/2026_04_12_155449_create_lab_test_references_table.php
+  - database/migrations/2026_04_13_060419_create_user_lab_test_stats_table.php
+  - database/migrations/2026_04_13_061929_simplify_user_lab_test_stats_table.php
+  - database/migrations/2026_04_14_110000_create_user_lab_test_groups_table.php
+  - database/migrations/2026_04_17_000001_make_test_ids_nullable_in_surgery_tests.php
+  - database/migrations/2026_04_22_073158_create_service_types_table.php
+
+- Seeders:
+  - database/seeders/RadiologyTypesSeeder.php
+  - database/seeders/RolesAndPermissionsSeeder.php
+  - database/seeders/ServiceTypesSeeder.php
+
+- Views:
+  - resources/views/barcodes/print-all.blade.php
+  - resources/views/barcodes/show.blade.php
+  - resources/views/cashier/index.blade.php
+  - resources/views/cashier/request-payment-form.blade.php
+  - resources/views/dashboard.blade.php
+  - resources/views/doctors/visits/show.blade.php
+  - resources/views/inquiry/create.blade.php
+  - resources/views/inquiry/index.blade.php
+  - resources/views/inventory/index.blade.php
+  - resources/views/lab-tests/edit.blade.php
+  - resources/views/lab-tests/index.blade.php
+  - resources/views/lab-tests/groups/
+  - resources/views/lab-tests/references.blade.php
+  - resources/views/layouts/app.blade.php
+  - resources/views/permissions/index.blade.php
+  - resources/views/products/barcode.blade.php
+  - resources/views/products/print-all.blade.php
+  - resources/views/purchases/show.blade.php
+  - resources/views/radiology/print.blade.php
+  - resources/views/radiology/show.blade.php
+  - resources/views/radiology/show-inquiry.blade.php
+  - resources/views/roles/create.blade.php
+  - resources/views/roles/edit.blade.php
+  - resources/views/roles/index.blade.php
+  - resources/views/staff/lab-visits/create.blade.php
+  - resources/views/staff/requests/index.blade.php
+  - resources/views/staff/requests/show.blade.php
+  - resources/views/staff/requests/show-lab.blade.php
+  - resources/views/staff/requests/show-radiology.blade.php
+  - resources/views/staff/surgery-lab-tests/index.blade.php
+  - resources/views/staff/surgery-lab-tests/show.blade.php
+  - resources/views/staff/surgery-radiology-tests/index.blade.php
+  - resources/views/staff/surgery-radiology-tests/show.blade.php
+  - resources/views/staff/surgery-radiology-tests/print.blade.php
+  - resources/views/stock-transfers/create.blade.php
+  - resources/views/stock-transfers/return.blade.php
+  - resources/views/stock-transfers/requests/index.blade.php
+  - resources/views/stock-transfers/requests/show.blade.php
+  - resources/views/surgeries/create.blade.php
+  - resources/views/surgeries/index.blade.php
+  - resources/views/surgeries/print.blade.php
+  - resources/views/visits/edit.blade.php
+
+- Routes:
+  - routes/web.php
+
+- Frontend assets / JS:
+  - resources/js/dashboard.js
+
+- Providers:
+  - app/Providers/AppServiceProvider.php
+
+- أدوات/فحص إضافية:
+  - check_current_session.php
+  - check_group_permissions.php
+  - check_names.php
+  - check_radiology_data.php
+  - check_radiology_types.php
+  - check_user_roles.php
+
+> ملاحظة: هذا الملف الآن يتضمن قائمة الملفات التي تحتوي على الكود الكامل المضاف/المعدل. لعرض الكود الفعلي، افتح كل ملف من القائمة داخل المشروع.
 2. بناء صفحة أو وظيفة لإرجاع الكمية من المخزن الرئيسي إلى المورد.
 3. إضافة صلاحيات عرض/تنفيذ `stock-transfers.returns` حسب الدور.
 4. تطوير API / مسح ضوئي للباركود في الخطوة التالية.

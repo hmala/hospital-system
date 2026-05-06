@@ -14,10 +14,10 @@ use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\RadiologyController;
 use App\Http\Controllers\RadiologyTypeController;
 use App\Http\Controllers\SurgeryController;
+use App\Http\Controllers\UserLabTestGroupController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
 // Ensure numeric IDs for {radiology} so '/radiology/types' isn't captured
@@ -72,6 +72,8 @@ Route::middleware(['auth'])->group(function () {
     // إدارة توفر الأطباء الاستشاريين (لموظف الاستقبال)
     Route::get('/consultant-availability', [ConsultantAvailabilityController::class, 'index'])
         ->name('consultant-availability.index');
+    Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
+        ->name('consultant-availability.financial-movements');
     Route::get('/debug-user', function () {
         return \App\Models\User::with(['roles','permissions'])->limit(10)->get();
     });
@@ -172,6 +174,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('barcodes')->name('barcodes.')->group(function () {
         Route::get('/', [\App\Http\Controllers\BarcodeController::class, 'index'])->name('index');
         Route::get('/batch/{batch}', [\App\Http\Controllers\BarcodeController::class, 'show'])->name('show');
+        Route::get('/all', [\App\Http\Controllers\BarcodeController::class, 'printAll'])->name('all');
         Route::get('/purchase/{purchase}', [\App\Http\Controllers\BarcodeController::class, 'showPurchaseBarcodes'])->name('purchase');
         Route::post('/print-multiple', [\App\Http\Controllers\BarcodeController::class, 'printMultiple'])->name('print_multiple');
     });
@@ -187,6 +190,11 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
         Route::get('/create', [\App\Http\Controllers\StockTransferController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
+        Route::post('/requests', [\App\Http\Controllers\StockTransferController::class, 'storeRequest'])->name('requests.store');
+        Route::get('/requests', [\App\Http\Controllers\StockTransferController::class, 'indexRequests'])->name('requests.index');
+        Route::get('/requests/{stockTransferRequest}', [\App\Http\Controllers\StockTransferController::class, 'showRequest'])->name('requests.show');
+        Route::post('/requests/{stockTransferRequest}/approve', [\App\Http\Controllers\StockTransferController::class, 'approveRequest'])->name('requests.approve');
+        Route::post('/requests/{stockTransferRequest}/reject', [\App\Http\Controllers\StockTransferController::class, 'rejectRequest'])->name('requests.reject');
         Route::get('/returns/create', [\App\Http\Controllers\StockTransferController::class, 'createReturn'])->name('returns.create');
         Route::post('/returns', [\App\Http\Controllers\StockTransferController::class, 'storeReturn'])->name('returns.store');
     });
@@ -247,8 +255,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/visits/{visit}', [DoctorVisitController::class, 'update'])->name('visits.update');
         Route::put('/visits/{visit}/mark-needs-surgery', [DoctorVisitController::class, 'markNeedsSurgery'])->name('visits.mark-needs-surgery');
         Route::delete('/visits/{visit}', [DoctorVisitController::class, 'cancel'])->name('visits.cancel');
+        Route::put('/visits/{visit}/refer', [DoctorVisitController::class, 'referToDoctor'])->name('visits.refer');
         Route::post('/requests', [DoctorVisitController::class, 'storeRequest'])->name('requests.store');
-        Route::put('/requests/{request}', [DoctorVisitController::class, 'updateRequestStatus'])->name('requests.update');
+        Route::match(['post', 'put'], '/requests/{request}', [DoctorVisitController::class, 'updateRequestStatus'])->name('requests.update');
         Route::put('/requests/{request}/status', [DoctorVisitController::class, 'updateRequestStatus'])->name('requests.update_status');
         Route::put('/appointments/{appointment}/convert', [DoctorVisitController::class, 'convertAppointmentToVisit'])->name('appointments.convert');
         
@@ -264,7 +273,7 @@ Route::middleware(['auth'])->group(function () {
     
     // مسارات الموظفين الطبيين
     Route::prefix('staff')->name('staff.')->group(function () {
-        // الطلبات
+        // الطلبات (مشتركة - للروابط القديمة وللأدمن)
         Route::get('/requests/{type?}', [StaffRequestController::class, 'index'])->name('requests.index');
         Route::get('/requests/{request}/show', [StaffRequestController::class, 'show'])->name('requests.show');
         Route::put('/requests/{request}', [StaffRequestController::class, 'update'])->name('requests.update');
@@ -273,16 +282,21 @@ Route::middleware(['auth'])->group(function () {
         // زيارات المختبر
         Route::get('/lab-visits/create', [StaffRequestController::class, 'createLabVisit'])->name('lab-visits.create');
         Route::post('/lab-visits', [StaffRequestController::class, 'storeLabVisit'])->name('lab-visits.store');
+        Route::post('/lab-requests/{request}/append-tests', [StaffRequestController::class, 'appendLabTests'])->name('lab-requests.append-tests');
+        Route::delete('/lab-requests/{request}/tests/{labTest}', [StaffRequestController::class, 'removeLabTest'])->name('lab-requests.remove-test');
         
         // طلبات المختبر للعمليات
         Route::get('/surgery-lab-tests', [StaffRequestController::class, 'surgeryLabTests'])->name('surgery-lab-tests.index');
         Route::get('/surgery-lab-tests/{test}', [StaffRequestController::class, 'showSurgeryLabTest'])->name('surgery-lab-tests.show');
         Route::put('/surgery-lab-tests/{test}', [StaffRequestController::class, 'updateSurgeryLabTest'])->name('surgery-lab-tests.update');
+        Route::put('/surgery-lab-tests/{test}/select-tests', [StaffRequestController::class, 'selectTestsForSurgeryLabTest'])->name('surgery-lab-tests.select-tests');
+        Route::put('/surgery/{surgery}/lab-tests/update-all', [StaffRequestController::class, 'updateAllSurgeryLabTests'])->name('surgery-lab-tests.update-all');
         Route::get('/surgery-lab-tests/{test}/print', [StaffRequestController::class, 'printSurgeryLabTest'])->name('surgery-lab-tests.print');
         
         // طلبات الأشعة للعمليات
         Route::get('/surgery-radiology-tests', [StaffRequestController::class, 'surgeryRadiologyTests'])->name('surgery-radiology-tests.index');
         Route::get('/surgery-radiology-tests/{test}', [StaffRequestController::class, 'showSurgeryRadiologyTest'])->name('surgery-radiology-tests.show');
+        Route::get('/surgery-radiology-tests/{test}/print', [StaffRequestController::class, 'printSurgeryRadiologyTest'])->name('surgery-radiology-tests.print');
         Route::put('/surgery-radiology-tests/{test}', [StaffRequestController::class, 'updateSurgeryRadiologyTest'])->name('surgery-radiology-tests.update');
         
         // طلبات الطوارئ - الأشعة
@@ -296,6 +310,22 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/emergency-lab/{emergencyLab}/complete', [StaffRequestController::class, 'completeEmergencyLab'])->name('emergency-lab.complete');
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
+
+    // ======= مسارات قسم المختبر =======
+    Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
+        Route::get('/requests', [\App\Http\Controllers\LabStaffController::class, 'index'])->name('index');
+        Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
+        Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
+        Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
+    });
+
+    // ======= مسارات قسم الأشعة =======
+    Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
+        Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
+        Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
+        Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
+    });
+
 
     // إدارة رموز ICD10
     Route::resource('icd10', \App\Http\Controllers\ICD10Controller::class);
@@ -336,11 +366,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\LabTestController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\LabTestController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\LabTestController::class, 'store'])->name('store');
+        // إدارة مجموعات المفضلات الشخصية
+        Route::middleware('can:view lab test groups')->group(function () {
+            Route::get('/groups', [UserLabTestGroupController::class, 'index'])->name('groups.index');
+            Route::post('/groups', [UserLabTestGroupController::class, 'store'])->name('groups.store')->middleware('can:create lab test groups');
+            Route::get('/groups/{group}/edit', [UserLabTestGroupController::class, 'edit'])->name('groups.edit')->middleware('can:edit lab test groups');
+            Route::put('/groups/{group}', [UserLabTestGroupController::class, 'update'])->name('groups.update')->middleware('can:edit lab test groups');
+            Route::delete('/groups/{group}', [UserLabTestGroupController::class, 'destroy'])->name('groups.destroy')->middleware('can:delete lab test groups');
+        });
+
         Route::get('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'show'])->name('show');
         Route::get('/{labTest}/edit', [\App\Http\Controllers\LabTestController::class, 'edit'])->name('edit');
         Route::put('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'update'])->name('update');
         Route::delete('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'destroy'])->name('destroy');
         Route::post('/{labTest}/toggle-status', [\App\Http\Controllers\LabTestController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{labTest}/toggle-favorite', [\App\Http\Controllers\LabTestController::class, 'toggleFavorite'])->name('toggle-favorite');
+
+        // إدارة القيم المرجعية
+        Route::get('/{labTest}/references', [\App\Http\Controllers\LabTestReferenceController::class, 'index'])->name('references.index');
+        Route::post('/{labTest}/references', [\App\Http\Controllers\LabTestReferenceController::class, 'store'])->name('references.store');
+        Route::put('/{labTest}/references/{reference}', [\App\Http\Controllers\LabTestReferenceController::class, 'update'])->name('references.update');
+        Route::delete('/{labTest}/references/{reference}', [\App\Http\Controllers\LabTestReferenceController::class, 'destroy'])->name('references.destroy');
     });
 
     // إدارة باقات المختبر (Admin)
@@ -351,6 +397,7 @@ Route::middleware(['auth'])->group(function () {
     // إدارة العمليات
     Route::get('/surgeries/waiting', [SurgeryController::class, 'waitingList'])->name('surgeries.waiting');
     Route::post('/surgeries/{surgery}/check-in', [SurgeryController::class, 'checkIn'])->name('surgeries.check-in');
+    Route::get('/surgeries/{surgery}/print', [SurgeryController::class, 'print'])->name('surgeries.print');
     Route::resource('surgeries', SurgeryController::class);
     Route::patch('/surgeries/{surgery}/update-details', [SurgeryController::class, 'updateDetails'])->name('surgeries.updateDetails');
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
@@ -358,6 +405,33 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
+    
+    // محطات العمليات
+    Route::prefix('surgery-stations')->group(function () {
+        // محطة الجراح
+        Route::get('/surgeon', [\App\Http\Controllers\SurgeonStationController::class, 'index'])->name('surgeon-station.index');
+        Route::get('/surgeon/{surgery}', [\App\Http\Controllers\SurgeonStationController::class, 'show'])->name('surgeon-station.show');
+        Route::patch('/surgeon/{surgery}', [\App\Http\Controllers\SurgeonStationController::class, 'update'])->name('surgeon-station.update');
+        Route::post('/surgeon/{surgery}/complete', [\App\Http\Controllers\SurgeonStationController::class, 'complete'])->name('surgeon-station.complete');
+        
+        // محطة التخدير
+        Route::get('/anesthesia', [\App\Http\Controllers\AnesthesiaStationController::class, 'index'])->name('anesthesia-station.index');
+        Route::get('/anesthesia/{surgery}', [\App\Http\Controllers\AnesthesiaStationController::class, 'show'])->name('anesthesia-station.show');
+        Route::patch('/anesthesia/{surgery}', [\App\Http\Controllers\AnesthesiaStationController::class, 'update'])->name('anesthesia-station.update');
+        Route::post('/anesthesia/{surgery}/complete', [\App\Http\Controllers\AnesthesiaStationController::class, 'complete'])->name('anesthesia-station.complete');
+        
+        // محطة المقيم
+        Route::get('/resident', [\App\Http\Controllers\ResidentStationController::class, 'index'])->name('resident-station.index');
+        Route::get('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'show'])->name('resident-station.show');
+        Route::patch('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'update'])->name('resident-station.update');
+        Route::post('/resident/{surgery}/complete', [\App\Http\Controllers\ResidentStationController::class, 'complete'])->name('resident-station.complete');
+        
+        // محطة التمريض
+        Route::get('/nursing', [\App\Http\Controllers\NursingStationController::class, 'index'])->name('nursing-station.index');
+        Route::get('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'show'])->name('nursing-station.show');
+        Route::patch('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'update'])->name('nursing-station.update');
+        Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
+    });
     
     // إضافة طبيب مرسل جديد
     Route::post('/doctors/store-referring', [\App\Http\Controllers\DoctorController::class, 'storeReferringDoctor'])->name('doctors.store-referring');
@@ -412,6 +486,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/create-consultation', [\App\Http\Controllers\EmergencyController::class, 'createConsultation'])->name('create-consultation');
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');
+        
+        // تحديث حالة طلبات الخدمات التمريضية
+        Route::put('/nursing-request/{request}', [\App\Http\Controllers\EmergencyController::class, 'updateNursingRequest'])->name('nursing-request.update');
 
         // emergency patient records
         Route::get('/patients', [\App\Http\Controllers\EmergencyPatientController::class, 'index'])->name('patients.index');

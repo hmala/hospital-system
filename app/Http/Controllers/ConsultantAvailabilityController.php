@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Doctor;
+use App\Models\Payment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class ConsultantAvailabilityController extends Controller
 {
@@ -75,6 +75,43 @@ class ConsultantAvailabilityController extends Controller
         $groupedDoctors = $consultantDoctors->groupBy('specialization');
 
         return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'weekDays', 'selectedDay'));
+    }
+
+    public function financialMovements(Request $request)
+    {
+        $query = Payment::with(['appointment.patient.user', 'appointment.doctor.user', 'appointment.department', 'cashier'])
+            ->where('payment_type', 'appointment')
+            ->whereHas('appointment.doctor', function ($q) {
+                $q->where('type', 'consultant');
+            });
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+
+        if ($fromDate) {
+            $query->whereDate('paid_at', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('paid_at', '<=', $toDate);
+        }
+
+        $totalsQuery = clone $query;
+
+        $totalReceived = (clone $totalsQuery)->where('amount', '>=', 0)->sum('amount');
+        $totalRefunded = abs((clone $totalsQuery)->where('amount', '<', 0)->sum('amount'));
+        $netTotal = (clone $totalsQuery)->sum('amount');
+
+        $payments = $query->orderBy('paid_at', 'desc')->paginate(25);
+
+        return view('consultant-availability.financial-movements', compact(
+            'payments',
+            'totalReceived',
+            'totalRefunded',
+            'netTotal',
+            'fromDate',
+            'toDate'
+        ));
     }
 
     /**

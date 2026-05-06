@@ -47,6 +47,7 @@ class CashierController extends Controller
         // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات
         $pendingRequests = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where('payment_status', 'pending')
+            ->where('status', '!=', 'cancelled')
             ->whereHas('visit', function($q) {
                 $q->where('status', '!=', 'cancelled')
                   ->where(function($query) {
@@ -358,13 +359,20 @@ class CashierController extends Controller
                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                 \Log::info('Request details: ' . json_encode($details));
 
+                $radiologyTypeIds = [];
                 if (isset($details['radiology_type_ids']) && !empty($details['radiology_type_ids'])) {
+                    $radiologyTypeIds = $details['radiology_type_ids'];
+                } elseif (isset($details['radiology_types']) && !empty($details['radiology_types'])) {
+                    $radiologyTypeIds = $details['radiology_types'];
+                }
+
+                if (!empty($radiologyTypeIds)) {
                     if (!$request->visit) {
                         \Log::warning('Skipping radiology request creation, visit missing for request #' . $request->id);
                     } else {
-                        \Log::info('Found radiology_type_ids: ' . json_encode($details['radiology_type_ids']));
+                        \Log::info('Found radiology type ids: ' . json_encode($radiologyTypeIds));
 
-                        foreach ($details['radiology_type_ids'] as $radiologyTypeId) {
+                        foreach ($radiologyTypeIds as $radiologyTypeId) {
                             $exists = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
                                 ->where('radiology_type_id', $radiologyTypeId)
                                 ->exists();
@@ -403,6 +411,12 @@ class CashierController extends Controller
                 } else {
                     \Log::warning('No radiology_type_ids found in request details for request #' . $request->id);
                 }
+            }
+
+            // إذا كان الطلب تمريض (nursing)، يتم إرساله لموظفي الطوارئ
+            if ($request->type === 'nursing') {
+                \Log::info('Processing nursing request payment, request_id: ' . $request->id);
+                // يتم عرضه في StaffRequestController للموظفين في قسم الطوارئ
             }
 
             // إذا كان الطلب طوارئ، إنشاء سجل طوارئ
@@ -617,6 +631,11 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
+        if ($surgery->status === 'cancelled') {
+            return redirect()->route('cashier.surgeries.index')
+                ->with('warning', 'لا يمكن دفع عملية ملغاة');
+        }
+
         // التحقق من أن العملية لم يتم دفعها
         if ($surgery->payment_status === 'paid') {
             return redirect()->route('cashier.surgeries.index')
@@ -658,6 +677,11 @@ class CashierController extends Controller
 
         if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        if ($surgery->status === 'cancelled') {
+            return redirect()->route('cashier.surgeries.index')
+                ->with('warning', 'لا يمكن تسجيل دفع على عملية ملغاة');
         }
 
         $request->validate([
@@ -822,6 +846,7 @@ class CashierController extends Controller
             if ($allPaid && $surgery->visit_id) {
                 MedicalRequest::where('visit_id', $surgery->visit_id)
                     ->where('payment_status', 'pending')
+                    ->where('status', '!=', 'cancelled')
                     ->update(['payment_status' => 'paid']);
                 
                 // تحديث حالة الزيارة

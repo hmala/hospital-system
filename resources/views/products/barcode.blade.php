@@ -36,10 +36,10 @@
 
             <!-- منطقة الطباعة -->
             <div class="print-area">
-                <div class="barcode-label border d-flex align-items-center justify-content-between p-2">
-                    <div class="product-name flex-grow-1 me-3">{{ $product->name }}</div>
+                <div class="barcode-card border d-flex align-items-center justify-content-between p-2 mb-2">
+                    <div class="product-name flex-grow-1 text-truncate me-3" title="{{ $product->name }}">{{ $product->name }}</div>
                     <div class="barcode-wrapper">
-                        <svg id="barcode"></svg>
+                        <svg class="product-barcode" data-code="{{ $product->code ?? $product->id }}"></svg>
                     </div>
                 </div>
             </div>
@@ -52,20 +52,30 @@
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        JsBarcode("#barcode", "{{ $product->code ?? $product->id }}", {
-            format: 'CODE128',
-            width: 1.2,
-            height: 32,
-            displayValue: false,
-            margin: 4,
+        document.querySelectorAll('.product-barcode').forEach(function(svg) {
+            const code = svg.dataset.code;
+            if (!code) {
+                return;
+            }
+
+            JsBarcode(svg, code, {
+                format: 'CODE128',
+                width: 1.1,
+                height: 30,
+                displayValue: false,
+                margin: 2,
+            });
         });
     });
 </script>
 
 <style>
-    .barcode-label {
-        max-width: 550px;
+    .barcode-card {
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         max-height: 48px;
+        max-width: 600px;
         margin: 20px auto;
     }
     
@@ -76,6 +86,13 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+    
+    .barcode-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
     
     .btn-print,

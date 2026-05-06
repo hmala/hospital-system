@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'location_id',
         'phone',
         'specialization',
         'address',
@@ -68,6 +69,11 @@ class User extends Authenticatable
     public function visits()
     {
         return $this->hasMany(\App\Models\Visit::class, 'doctor_id');
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(\App\Models\Location::class);
     }
 
     // مساعدات الأدوار - متوافقة مع Spatie Permission

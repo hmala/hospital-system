@@ -32,7 +32,7 @@
                         <i class="fas fa-info text-white"></i>
                     </div>
                     <div>
-                        <strong>ملاحظة:</strong> هذا النموذج مخصص لإرجاع الكميات من المخزن الفرعي إلى المخزن الرئيسي. بعد عودة البضاعة إلى الرئيسي يمكنك تنفيذ إرجاع المورد من خلال سجل المرتجعات لاحقًا.
+                        <strong>ملاحظة:</strong> هذا النموذج مخصص لإرسال طلب إرجاع من المخزن الفرعي إلى المخزن الرئيسي. لا يتم تنفيذ النقل الفعلي إلا بعد موافقة المخزن الرئيسي على الاستلام.
                     </div>
                 </div>
             </div>
@@ -148,7 +148,7 @@
                                 <i class="fas fa-arrow-left me-2"></i>رجوع
                             </a>
                             <button type="submit" class="btn btn-primary rounded-pill px-5 py-2 fw-bold">
-                                <i class="fas fa-undo-alt me-2"></i>إرجاع إلى الرئيسي
+                                <i class="fas fa-undo-alt me-2"></i>طلب إرجاع للمخزن الرئيسي
                             </button>
                         </div>
                     </form>

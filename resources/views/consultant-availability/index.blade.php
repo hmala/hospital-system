@@ -85,6 +85,13 @@
                         </div>
                     </button>
                 </form>
+                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-outline-primary btn-lg px-4 py-3">
+                    <i class="fas fa-chart-line fa-2x me-2"></i>
+                    <div>
+                        <div class="fw-bold">حركات مالية</div>
+                        <small>عرض سجل الحركات المالية</small>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
@@ -125,6 +132,7 @@
                                     <th>الطبيب</th>
                                     <th>المصدر</th>
                                     <th>السبب</th>
+                                    <th>حالة الدفع</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
@@ -173,14 +181,42 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <form method="POST" action="{{ route('appointments.convert', $appointment) }}" class="d-inline">
-                                            @csrf
-                                            @method('PUT')
-                                            <button type="submit" class="btn btn-sm btn-success" title="إدخال المريض للطبيب">
-                                                <i class="fas fa-sign-in-alt me-1"></i>
-                                                إدخال
-                                            </button>
-                                        </form>
+                                        @if($appointment->payment_status === 'paid')
+                                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
+                                        @elseif($appointment->payment_status === 'refunded')
+                                            <span class="badge bg-secondary"><i class="fas fa-undo me-1"></i> مسترجع</span>
+                                        @else
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            @if($appointment->payment_status === 'paid')
+                                                <form method="POST" action="{{ route('appointments.convert', $appointment) }}" class="d-inline">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <button type="submit" class="btn btn-sm btn-success" title="إدخال المريض للطبيب">
+                                                        <i class="fas fa-sign-in-alt me-1"></i>
+                                                        إدخال
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <button type="button" class="btn btn-sm btn-secondary" disabled title="يجب دفع الرسوم أولاً">
+                                                    <i class="fas fa-sign-in-alt me-1"></i>
+                                                    غير مدفوع
+                                                </button>
+                                            @endif
+
+                                            @if($appointment->canBeCancelled())
+                                                <form method="POST" action="{{ route('appointments.cancel', $appointment) }}" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')" title="إلغاء الحجز">
+                                                        <i class="fas fa-times me-1"></i>
+                                                        إلغاء
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach

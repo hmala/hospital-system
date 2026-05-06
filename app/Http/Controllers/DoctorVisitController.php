@@ -5,7 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Visit;
 use App\Models\Request as MedicalRequest;
 use App\Models\Appointment;
+use App\Models\Doctor;
+use App\Models\Notification as AppNotification;
 use App\Models\PrescribedMedication;
+use App\Models\User;
+use App\Models\UserLabTestGroup;
+use App\Models\UserLabTestStat;
+use App\Notifications\VisitCancelledByDoctorNotification;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -106,6 +112,11 @@ class DoctorVisitController extends Controller
             return redirect()->back()->with('error', 'هذا الموعد تم تحويله إلى زيارة بالفعل');
         }
 
+        // التحقق من دفع رسوم الكشف قبل إدخال المريض للطبيب
+        if ($appointment->payment_status !== 'paid') {
+            return redirect()->back()->with('error', 'لا يمكن إدخال المريض للطبيب قبل اكتمال الدفع');
+        }
+
         // إنشاء زيارة من الموعد
         $visit = Visit::create([
             'patient_id' => $appointment->patient_id,
@@ -199,6 +210,8 @@ class DoctorVisitController extends Controller
         $hasPendingRequests = $visit->requests()->where('status', 'pending')->exists();
 
         $labTests = \App\Models\LabTest::where('is_active', true)->get();
+        $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->get();
+        $favoriteLabTests = UserLabTestStat::getFavoritesForUser($user->id);
 
         // Log lab tests count
         \Illuminate\Support\Facades\Log::info('Lab Tests Count: ' . $labTests->count());
@@ -366,16 +379,48 @@ class DoctorVisitController extends Controller
         
         // Get radiology types for the radiology request modal
         $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)->get();
+        
+        // Get emergency services
+        $emergencyServices = \App\Models\EmergencyService::where('is_active', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('category');
+
+        // Get current day in Arabic
+        $daysMap = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الإثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+        $currentDay = $daysMap[date('l')] ?? 'السبت';
+
+        $availableDoctors = Doctor::with('user')
+            ->where('type', 'consultant')
+            ->where('is_active', true)
+            ->whereJsonContains('working_days', [$currentDay])
+            ->where('id', '<>', $visit->doctor_id)
+            ->orderBy('specialization')
+            ->orderBy('id')
+            ->get();
 
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
+            'labTestGroups',
+            'favoriteLabTests',
             'radiologyTypes',
             'icd10Codes',
             'prescribedMedications',
             'otherTreatments',
             'hasCompletedRequests',
-            'hasPendingRequests'
+            'hasPendingRequests',
+            'availableDoctors',
+            'emergencyServices'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -561,10 +606,103 @@ class DoctorVisitController extends Controller
             return redirect()->back()->with('error', 'لا يمكن إلغاء زيارة مكتملة');
         }
 
+        // إذا كانت الزيارة مرتبطة بحجز تم تحويله إلى زيارة، ألغِ الحجز وأرسل إشعاراً
+        if ($visit->appointment) {
+            $visit->update(['status' => 'cancelled']);
+
+            $visit->appointment->cancel('تم إلغاء الحجز بعد التحويل من قبل الطبيب ' . optional(Auth::user())->name);
+
+            $notificationRecipients = User::role('consultation_receptionist')->get()
+                ->concat(User::role('cashier')->get())
+                ->unique('id');
+
+            foreach ($notificationRecipients as $recipient) {
+                $recipient->notify(new VisitCancelledByDoctorNotification($visit));
+            }
+
+            AppNotification::createForRole(
+                'consultation_receptionist',
+                'visit_cancelled_by_doctor',
+                'تم إلغاء الحجز بعد التحويل للطبيب',
+                'قام الطبيب ' . optional($visit->doctor)->user->name . ' بإلغاء الحجز المحول للمريض ' . optional($visit->patient)->user->name . '.',
+                [
+                    'visit_id' => $visit->id,
+                    'appointment_id' => optional($visit->appointment)->id,
+                    'doctor_name' => optional($visit->doctor)->user->name,
+                    'patient_name' => optional($visit->patient)->user->name,
+                    'visit_date' => optional($visit->visit_date)->format('Y-m-d'),
+                    'visit_time' => optional($visit->visit_time),
+                ]
+            );
+
+            AppNotification::createForRole(
+                'cashier',
+                'visit_cancelled_by_doctor',
+                'تم إلغاء الحجز بعد التحويل للطبيب',
+                'قام الطبيب ' . optional($visit->doctor)->user->name . ' بإلغاء الحجز المحول للمريض ' . optional($visit->patient)->user->name . '.',
+                [
+                    'visit_id' => $visit->id,
+                    'appointment_id' => optional($visit->appointment)->id,
+                    'doctor_name' => optional($visit->doctor)->user->name,
+                    'patient_name' => optional($visit->patient)->user->name,
+                    'visit_date' => optional($visit->visit_date)->format('Y-m-d'),
+                    'visit_time' => optional($visit->visit_time),
+                ]
+            );
+
+            return redirect()->back()->with('success', 'تم إلغاء الحجز وإرسال إشعار لموظف الاستعلامات والكاشير');
+        }
+
         // حذف الزيارة نهائياً بدلاً من إلغائها
         $visit->delete();
 
         return redirect()->back()->with('success', 'تم حذف الزيارة بنجاح');
+    }
+
+    public function referToDoctor(HttpRequest $request, Visit $visit)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'doctor'])) {
+            abort(403, 'غير مصرح لك بإحالة المريض إلى طبيب آخر');
+        }
+
+        if ($user->hasRole('doctor') && (!$user->doctor || $visit->doctor_id !== $user->doctor->id)) {
+            abort(403, 'غير مصرح لك بإحالة هذا المريض');
+        }
+
+        $request->validate([
+            'doctor_id' => 'required|exists:doctors,id',
+        ]);
+
+        $newDoctor = Doctor::find($request->doctor_id);
+        if (!$newDoctor || !$newDoctor->is_active || $newDoctor->type !== 'consultant') {
+            return redirect()->back()->with('error', 'الطبيب المختار غير صالح');
+        }
+
+        if ($newDoctor->id === $visit->doctor_id) {
+            return redirect()->back()->with('error', 'الطبيب الجديد هو نفس الطبيب الحالي');
+        }
+
+        $visit->doctor_id = $newDoctor->id;
+        $visit->department_id = $newDoctor->department_id;
+        $visit->save();
+
+        if ($visit->appointment) {
+            $appointment = $visit->appointment;
+            $appointment->doctor_id = $newDoctor->id;
+            $appointment->department_id = $newDoctor->department_id;
+
+            if ($appointment->payment_status === 'paid' && $appointment->payment) {
+                $note = 'تم تحويل المريض لطبيب آخر دون دفع إضافي';
+                $appointment->payment->description = trim($appointment->payment->description . ' | ' . $note);
+                $appointment->payment->notes = trim(($appointment->payment->notes ?? '') . ' | ' . $note, ' | ');
+                $appointment->payment->save();
+            }
+
+            $appointment->save();
+        }
+
+        return redirect()->back()->with('success', 'تم تحويل المريض للطبيب الجديد بنجاح. سيتم احتساب الأتعاب للطبيب الجديد في السجل المالي.');
     }
 
     public function storeRequest(HttpRequest $request)
@@ -581,13 +719,15 @@ class DoctorVisitController extends Controller
 
         $request->validate([
             'visit_id' => 'required|exists:visits,id',
-            'type' => 'required|in:lab,radiology,pharmacy',
+            'type' => 'required|in:lab,radiology,pharmacy,nursing',
             'description' => 'nullable|string|max:1000',
             'priority' => 'nullable|in:normal,urgent,emergency',
             'tests' => 'nullable|array',
             'tests.*' => 'string',
             'radiology_types' => 'nullable|array',
-            'radiology_types.*' => 'integer|exists:radiology_types,id'
+            'radiology_types.*' => 'integer|exists:radiology_types,id',
+            'nursing_services' => 'nullable|array',
+            'nursing_services.*' => 'integer|exists:emergency_services,id'
         ]);
 
         $visit = Visit::findOrFail($request->visit_id);
@@ -598,7 +738,7 @@ class DoctorVisitController extends Controller
         }
 
         $details = [
-            'description' => $request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : 'صيدلية')),
+            'description' => $request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : ($request->type === 'nursing' ? 'خدمات تمريضية' : 'صيدلية'))),
             'priority' => $request->priority ?: 'normal'
         ];
 
@@ -606,8 +746,23 @@ class DoctorVisitController extends Controller
             $details['tests'] = $request->tests;
         }
         
+        if ($request->type === 'nursing' && $request->nursing_services) {
+            $details['nursing_services'] = $request->nursing_services;
+            
+            // الحصول على أسماء الخدمات التمريضية
+            $nursingServiceNames = [];
+            foreach ($request->nursing_services as $serviceId) {
+                $service = \App\Models\EmergencyService::find($serviceId);
+                if ($service) {
+                    $nursingServiceNames[] = $service->name;
+                }
+            }
+            $details['nursing_service_names'] = $nursingServiceNames;
+        }
+        
         if ($request->type === 'radiology' && $request->radiology_types) {
             $details['radiology_types'] = $request->radiology_types;
+            $details['radiology_type_ids'] = $request->radiology_types;
             
             // إنشاء وصف يتضمن أسماء الأشعة
             $radiologyTypeNames = [];
@@ -625,12 +780,21 @@ class DoctorVisitController extends Controller
             $radiologyDescription = null;
         }
 
+        // إنشاء وصف خاص بالتمريض إن لزم الأمر
+        $nursingDescription = null;
+        if ($request->type === 'nursing' && isset($details['nursing_service_names'])) {
+            $nursingDescription = 'طلب خدمات تمريضية: ' . implode(', ', $details['nursing_service_names']);
+        }
+
         $medicalRequest = MedicalRequest::create([
             'visit_id' => $visit->id,
             'type' => $request->type,
-            'description' => $request->type === 'radiology' && isset($radiologyDescription) 
+            'description' => ($request->type === 'radiology' && isset($radiologyDescription)) 
                 ? $radiologyDescription 
-                : ($request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : 'صيدلية'))),
+                : (($request->type === 'nursing' && isset($nursingDescription)) 
+                    ? $nursingDescription 
+                    : ($request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : ($request->type === 'nursing' ? 'خدمات تمريضية' : 'صيدلية'))))),
+
             'details' => $details,
             'status' => 'pending',
             'payment_status' => 'pending' // يجب الدفع عند الكاشير قبل الإرسال للقسم المختص
@@ -650,7 +814,7 @@ class DoctorVisitController extends Controller
 
         return redirect()->back()->with('success', 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع');
     }
-    public function updateRequestStatus(HttpRequest $request, MedicalRequest $requestModel)
+    public function updateRequestStatus(MedicalRequest $request, HttpRequest $httpRequest)
     {
         $user = Auth::user();
         if (!$user->hasRole(['admin', 'doctor'])) {
@@ -664,21 +828,21 @@ class DoctorVisitController extends Controller
 
         // تسجيل معلومات الطلب للتشخيص قبل أي فحص
         \Illuminate\Support\Facades\Log::info('updateRequestStatus called - START', [
-            'route_param_request' => $request->route('request'),
-            'request_model_id' => $requestModel ? $requestModel->id : 'NULL',
-            'request_model_exists' => $requestModel ? $requestModel->exists : 'NULL',
+            'route_param_request' => $httpRequest->route('request'),
+            'request_model_id' => $request ? $request->id : 'NULL',
+            'request_model_exists' => $request ? $request->exists : 'NULL',
             'user_id' => $user->id,
             'doctor_id' => $user->doctor->id,
-            'request_data' => $request->all(),
-            'full_url' => $request->fullUrl(),
-            'method' => $request->method()
+            'request_data' => $httpRequest->all(),
+            'full_url' => $httpRequest->fullUrl(),
+            'method' => $httpRequest->method()
         ]);
 
         // التحقق من وجود الطلب نفسه
-        if (!$requestModel || !$requestModel->exists) {
+        if (!$request || !$request->exists) {
             \Illuminate\Support\Facades\Log::error('Request model not found or does not exist', [
-                'route_param' => $request->route('request') ?? 'not found',
-                'request_model' => $requestModel,
+                'route_param' => $httpRequest->route('request') ?? 'not found',
+                'request_model' => $request,
                 'user_id' => $user->id
             ]);
             abort(404, 'الطلب المطلوب غير موجود');
@@ -686,56 +850,56 @@ class DoctorVisitController extends Controller
 
         // تسجيل معلومات الطلب للتشخيص
         \Illuminate\Support\Facades\Log::info('updateRequestStatus - Request model found', [
-            'request_id' => $requestModel->id,
-            'visit_id' => $requestModel->visit_id,
-            'status' => $requestModel->status,
-            'type' => $requestModel->type
+            'request_id' => $request->id,
+            'visit_id' => $request->visit_id,
+            'status' => $request->status,
+            'type' => $request->type
         ]);
 
         // تحميل علاقة الزيارة مع التحقق من وجود visit_id
-        if (!$requestModel->visit_id) {
-            \Illuminate\Support\Facades\Log::error('Request has no visit_id', ['request_id' => $requestModel->id]);
+        if (!$request->visit_id) {
+            \Illuminate\Support\Facades\Log::error('Request has no visit_id', ['request_id' => $request->id]);
             abort(404, 'الطلب المطلوب غير مرتبط بزيارة (visit_id فارغ)');
         }
 
-        $requestModel->load('visit');
+        $request->load('visit');
 
         // التحقق من وجود الزيارة بعد التحميل
-        if (!$requestModel->visit) {
+        if (!$request->visit) {
             \Illuminate\Support\Facades\Log::error('Request visit not found in database', [
-                'request_id' => $requestModel->id,
-                'visit_id' => $requestModel->visit_id
+                'request_id' => $request->id,
+                'visit_id' => $request->visit_id
             ]);
             abort(404, 'الطلب المطلوب غير مرتبط بزيارة صحيحة (الزيارة غير موجودة في قاعدة البيانات)');
         }
 
         // التحقق من أن الطلب يخص زيارة للطبيب الحالي
-        if ($requestModel->visit->doctor_id != $user->doctor->id) {
+        if ($request->visit->doctor_id != $user->doctor->id) {
             \Illuminate\Support\Facades\Log::warning('Doctor trying to access another doctor\'s request', [
-                'request_id' => $requestModel->id,
-                'request_doctor_id' => $requestModel->visit->doctor_id,
+                'request_id' => $request->id,
+                'request_doctor_id' => $request->visit->doctor_id,
                 'current_doctor_id' => $user->doctor->id
             ]);
             abort(403, 'غير مصرح لك بتعديل هذا الطلب - الطلب يخص طبيب آخر');
         }
 
-        $request->validate([
+        $httpRequest->validate([
             'status' => 'required|in:pending,in_progress,completed,cancelled',
             'result' => 'nullable|string|max:1000'
         ]);
 
-        $requestModel->update([
-            'status' => $request->status,
-            'result' => $request->result
+        $request->update([
+            'status' => $httpRequest->status,
+            'result' => $httpRequest->result
         ]);
 
         \Illuminate\Support\Facades\Log::info('updateRequestStatus - SUCCESS', [
-            'request_id' => $requestModel->id,
-            'new_status' => $request->status
+            'request_id' => $request->id,
+            'new_status' => $httpRequest->status
         ]);
 
         // التحقق من نوع الطلب (AJAX أو عادي)
-        if ($request->expectsJson()) {
+        if ($httpRequest->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'تم تحديث حالة الطلب بنجاح',

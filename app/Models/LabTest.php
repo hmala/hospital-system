@@ -75,4 +75,19 @@ class LabTest extends Model
         return $query->where('name', 'like', "%{$term}%")
                      ->orWhere('code', 'like', "%{$term}%");
     }
+
+    // ────────────── العلاقات ──────────────
+
+    public function references()
+    {
+        return $this->hasMany(LabTestReference::class);
+    }
+
+    /**
+     * جلب المرجع المناسب لمريض
+     */
+    public function referenceForPatient(string $gender, int $age): ?LabTestReference
+    {
+        return LabTestReference::forPatient($this->id, $gender, $age);
+    }
 }

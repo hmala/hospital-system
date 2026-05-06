@@ -92,9 +92,19 @@
                             <a href="{{ route('inventory.low_stock') }}" class="btn btn-outline-warning px-4 py-2 rounded-pill">
                                 <i class="fas fa-chart-line me-2"></i>تقرير المنخفض
                             </a>
+                            @if(!$selectedLocation || $selectedLocation->type !== 'sub')
+                            <a href="{{ route('barcodes.all', ['location_id' => $locationId]) }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="fas fa-print me-2"></i>
+                                @if($selectedLocation)
+                                    طباعة الكل في {{ $selectedLocation->name }}
+                                @else
+                                    طباعة الكل في جميع المخازن
+                                @endif
+                            </a>
                             <a href="{{ route('purchases.create') }}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold">
                                 <i class="fas fa-plus me-2"></i>توريد جديد
                             </a>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -160,6 +170,9 @@
                                         <i class="fas fa-hashtag me-2 text-primary"></i>الرصيد الحالي
                                     </th>
                                     <th class="border-0 fw-bold text-center">
+                                        <i class="fas fa-barcode me-2 text-primary"></i>الباركود
+                                    </th>
+                                    <th class="border-0 fw-bold text-center">
                                         <i class="fas fa-layer-group me-2 text-primary"></i>عدد الدفعات
                                     </th>
                                     <th class="border-0 fw-bold text-center">
@@ -175,29 +188,24 @@
                                     @php
                                         $totalQty = $product->stockBatches->sum('current_qty');
                                         $batchesCount = $product->stockBatches->count();
-                                        $rowClass = '';
                                         $statusBadge = '';
 
                                         if ($selectedLocation && $selectedLocation->type === 'sub') {
-                                            $rowClass = 'table-light';
                                             $statusBadge = '<span class="badge bg-secondary rounded-pill px-3 py-2">بدون تنبيه</span>';
                                         } else {
                                             $alertQty = $product->getAlertQuantityForLocation($locationId) ?: 0;
                                             $reorderLevel = $product->getReorderLevelForLocation($locationId) ?: 0;
 
                                             if ($totalQty <= $reorderLevel) {
-                                                $rowClass = 'table-danger';
                                                 $statusBadge = '<span class="badge bg-danger rounded-pill px-3 py-2"><i class="fas fa-times-circle me-1"></i>نقص</span>';
                                             } elseif ($totalQty <= $alertQty) {
-                                                $rowClass = 'table-warning';
-                                                $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-2"><i class="fas fa-exclamation-triangle me-1"></i>على الحافة</span>';
+                                                $statusBadge = '<span class="badge rounded-pill px-3 py-2" style="background-color: #ffc107; color: #212529;"><i class="fas fa-exclamation-triangle me-1"></i>على الحافة</span>';
                                             } else {
-                                                $rowClass = 'table-success';
                                                 $statusBadge = '<span class="badge bg-success rounded-pill px-3 py-2"><i class="fas fa-check-circle me-1"></i>مستقر</span>';
                                             }
                                         }
                                     @endphp
-                                    <tr class="inventory-row {{ $rowClass }}" style="transition: all 0.2s ease;">
+                                    <tr class="inventory-row" style="transition: all 0.2s ease;">
                                         <td class="fw-semibold">{{ $product->name }}</td>
                                         <td>
                                             <span class="badge bg-light text-dark px-3 py-1 rounded-pill">{{ $product->category }}</span>
@@ -205,6 +213,20 @@
                                         <td>{{ $product->unit }}</td>
                                         <td class="text-center">
                                             <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill">{{ $totalQty }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($batch = $product->stockBatches->first())
+                                                <div class="mb-2">
+                                                    <span class="badge bg-secondary px-3 py-2 rounded-pill">
+                                                        {{ $batch->internal_barcode }}
+                                                    </span>
+                                                </div>
+                                                <a href="{{ route('barcodes.show', $batch) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                    <i class="fas fa-print me-1"></i>طباعة
+                                                </a>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="text-center">
                                             <span class="badge bg-info px-3 py-2 rounded-pill">{{ $batchesCount }}</span>

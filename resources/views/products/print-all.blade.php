@@ -25,11 +25,12 @@
                 <div class="row g-3">
                     @foreach($products as $product)
                     <div class="col-12">
-                        <div class="barcode-card border d-flex align-items-center justify-content-between p-2 mb-2">
-                            <div class="product-name flex-grow-1 text-truncate me-3" title="{{ $product->name }}">{{ $product->name }}</div>
-                            <div class="barcode-wrapper">
+                        <div class="barcode-card border p-3 mb-2 text-center">
+                            <div class="product-name mb-2" title="{{ $product->name }}">{{ $product->name }}</div>
+                            <div class="barcode-wrapper mb-2">
                                 <svg class="product-barcode" data-code="{{ $product->code ?? $product->id }}"></svg>
                             </div>
+                            <div class="barcode-code text-muted small">{{ $product->code ?? $product->id }}</div>
                         </div>
                     </div>
                     @endforeach
@@ -66,8 +67,8 @@
         background: white;
         border-radius: 4px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-        max-height: 48px;
         max-width: 600px;
+        margin: 0 auto;
     }
     
     .product-name {
@@ -84,6 +85,11 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+    }
+    
+    .barcode-code {
+        font-size: 0.85rem;
+        color: #6c757d;
     }
     
     .btn-print,
@@ -117,18 +123,12 @@
             padding: 4px 8px !important;
             margin-bottom: 4px !important;
             page-break-inside: avoid;
-            max-height: 38px;
         }
         .product-name {
             font-size: 0.85rem;
         }
         @page {
             margin: 0.5cm;
-        }
-    }
-</style>
-        @page {
-            margin: 1cm;
         }
     }
 </style>

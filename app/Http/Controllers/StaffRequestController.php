@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Events\SurgeryLabTestUpdated;
 use App\Models\Request as MedicalRequest;
 use App\Models\LabResult;
+use App\Models\LabTest;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -41,6 +42,14 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
+        // إعادة التوجيه للصفحات الجديدة المخصصة
+        if ($user->hasRole('lab_staff') && !$user->hasRole('admin')) {
+            return redirect()->route('lab.index');
+        }
+        if ($user->hasRole('radiology_staff') && !$user->hasRole('admin')) {
+            return redirect()->route('radiology-staff.index');
+        }
+
         // تحديد نوع الطلبات حسب دور المستخدم
         $allowedTypes = [];
         if ($user->hasRole('lab_staff')) {
@@ -53,10 +62,13 @@ class StaffRequestController extends Controller
         if ($user->hasRole('pharmacy_staff')) {
             $allowedTypes[] = 'pharmacy';
         }
+        if ($user->hasRole('emergency_staff')) {
+            $allowedTypes[] = 'nursing';
+        }
 
-        // السماح للموظفين الآخرين برؤية جميع الأنواع بما في ذلك مصرف الدم
+        // السماح للموظفين الآخرين برؤية جميع الأنواع بما في ذلك مصرف الدم والتمريض
         if ($user->hasRole(['receptionist', 'admin', 'doctor'])) {
-            $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank'];
+            $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank', 'nursing'];
         }
 
         if (empty($allowedTypes)) {
@@ -151,10 +163,13 @@ class StaffRequestController extends Controller
         if ($user->hasRole('pharmacy_staff')) {
             $allowedTypes[] = 'pharmacy';
         }
+        if ($user->hasRole('emergency_staff')) {
+            $allowedTypes[] = 'nursing';
+        }
         
         // admin يستطيع رؤية كل شيء
         if ($user->hasRole(['admin', 'receptionist', 'doctor'])) {
-            $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank'];
+            $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank', 'nursing'];
         }
 
         if (!in_array($request->type, $allowedTypes)) {
@@ -180,6 +195,14 @@ class StaffRequestController extends Controller
                 $savedTestResults = $resultData['test_results'] ?? [];
                 $savedNotes = $resultData['notes'] ?? '';
             }
+        }
+
+        if (in_array($request->type, ['lab', 'blood_bank'])) {
+            return view('staff.requests.show-lab', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
+        }
+
+        if ($request->type === 'radiology') {
+            return view('staff.requests.show-radiology', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
         }
 
         return view('staff.requests.show', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
@@ -234,6 +257,13 @@ class StaffRequestController extends Controller
             // تحديث حالة الزيارة
             $request->visit->status = 'pending_payment';
             $request->visit->save();
+
+            // تسجيل استخدام التحاليل المختارة
+            if (!empty($details['lab_test_ids'])) {
+                foreach ($details['lab_test_ids'] as $labTestId) {
+                    \App\Models\UserLabTestStat::recordUsage(auth()->id(), (int) $labTestId);
+                }
+            }
 
             Log::info('تم تحديد الخدمات المطلوبة (مختبر)', [
                 'request_id' => $request->id,
@@ -544,7 +574,7 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بإنشاء زيارات مختبرية');
         }
 
-        $patients = \App\Models\Patient::with('user')->get();
+        $patients = \App\Models\Patient::with('user')->whereHas('user')->get();
         $departments = \App\Models\Department::orderBy('name')->get();
 
         return view('staff.lab-visits.create', compact('patients', 'departments'));
@@ -594,6 +624,164 @@ class StaffRequestController extends Controller
 
         return redirect()->route('doctor.visits.index')
             ->with('success', 'تم إنشاء الزيارة المخبرية بنجاح. سيتم تحديد التحاليل في المختبر.');
+    }
+
+    /**
+     * إضافة تحاليل إضافية — ينشئ طلب مختبر جديد على نفس الزيارة
+     */
+    public function appendLabTests(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بإضافة تحاليل');
+        }
+
+        $httpRequest->validate([
+            'extra_lab_test_ids'   => 'required|array|min:1',
+            'extra_lab_test_ids.*' => 'integer|exists:lab_tests,id',
+        ]);
+
+        $extraTestIds = array_map('intval', $httpRequest->extra_lab_test_ids);
+
+        $details = $request->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?? [];
+        }
+        if (!is_array($details)) {
+            $details = [];
+        }
+
+        // إذا الطلب الحالي لم يدفع بعد، أضف التحاليل داخل نفس الطلب
+        if ($request->payment_status !== 'paid') {
+            $existingIds = array_map('intval', $details['lab_test_ids'] ?? []);
+            $details['lab_test_ids'] = array_values(array_unique(array_merge($existingIds, $extraTestIds)));
+            $details['services_selected'] = true;
+            $details['services_selected_at'] = now()->toDateTimeString();
+            $details['services_selected_by'] = $user->id;
+
+            $request->details = $details;
+            $request->status = 'pending';
+            $request->payment_status = 'pending';
+            $request->save();
+
+            if ($request->visit) {
+                $request->visit->status = 'pending_payment';
+                $request->visit->save();
+            }
+
+            Log::info('تم إضافة تحاليل إضافية إلى الطلب الحالي', [
+                'request_id' => $request->id,
+                'added_tests' => $extraTestIds,
+                'by_user' => $user->id,
+            ]);
+
+            return redirect()->route('lab.show', $request)
+                ->with('success', 'تمت إضافة التحاليل إلى الطلب الحالي بنجاح.');
+        }
+
+        $newRequest = \App\Models\Request::create([
+            'visit_id'       => $request->visit_id,
+            'type'           => 'lab',
+            'description'    => 'تحاليل إضافية - مضافة من طلب #' . $request->id,
+            'status'         => 'pending',
+            'payment_status' => 'pending',
+            'details'        => [
+                'lab_test_ids'      => $extraTestIds,
+                'services_selected' => true,
+                'added_from_request'=> $request->id,
+                'added_by'          => $user->id,
+                'added_at'          => now()->toDateTimeString(),
+            ],
+        ]);
+
+        if ($request->visit) {
+            $request->visit->status = 'pending_payment';
+            $request->visit->save();
+        }
+
+        Log::info('تم إنشاء طلب تحاليل إضافية', [
+            'original_request_id' => $request->id,
+            'new_request_id'      => $newRequest->id,
+            'added_tests'         => $extraTestIds,
+            'by_user'             => $user->id,
+        ]);
+
+        return redirect()->route('lab.show', $newRequest)
+            ->with('success', 'تم إنشاء طلب تحاليل جديد بنجاح. يجب الدفع عند الكاشير أولاً.');
+    }
+
+    /**
+     * حذف تحليل من الطلب (قبل الدفع فقط)
+     */
+    public function removeLabTest(MedicalRequest $request, LabTest $labTest)
+    {
+        $user = Auth::user();
+
+        // التحقق من الصلاحيات
+        if (!$user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بحذف التحاليل');
+        }
+
+        // التحقق من أن الطلب لم يتم الدفع بعد
+        if ($request->payment_status == 'paid') {
+            return redirect()->back()->with('error', 'لا يمكن حذف تحليل من طلب مدفوع');
+        }
+
+        // التحقق من أن الطلب من نوع lab
+        if ($request->type != 'lab') {
+            return redirect()->back()->with('error', 'هذا الطلب ليس طلب تحاليل');
+        }
+
+        // الحصول على التفاصيل
+        $details = $request->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?? [];
+        }
+        if (!is_array($details)) {
+            $details = [];
+        }
+
+        // حذف التحليل من القائمة
+        if (isset($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
+            $details['lab_test_ids'] = array_values(
+                array_filter($details['lab_test_ids'], fn($id) => $id != $labTest->id)
+            );
+
+            if (empty($details['lab_test_ids'])) {
+                $request->details = $details;
+                $request->status = 'pending_service_selection';
+                $request->payment_status = 'pending';
+                if ($request->visit) {
+                    $request->visit->status = 'scheduled';
+                    $request->visit->save();
+                }
+                $request->save();
+
+                Log::info('تم حذف آخر تحليل من الطلب وأعيد إلى اختيار التحاليل', [
+                    'request_id' => $request->id,
+                    'lab_test_id' => $labTest->id,
+                    'lab_test_name' => $labTest->name,
+                    'by_user' => $user->id,
+                ]);
+
+                return redirect()->back()->with('success', "تم حذف التحليل الأخير ({$labTest->name})، الطلب الآن بانتظار اختيار التحاليل.");
+            }
+
+            $request->details = $details;
+            $request->save();
+
+            Log::info('تم حذف تحليل من الطلب', [
+                'request_id' => $request->id,
+                'lab_test_id' => $labTest->id,
+                'lab_test_name' => $labTest->name,
+                'by_user' => $user->id,
+            ]);
+
+            return redirect()->back()->with('success', "تم حذف التحليل ({$labTest->name}) بنجاح");
+        }
+
+        return redirect()->back()->with('error', 'لم يتم العثور على التحليل في الطلب');
     }
 
     /**
@@ -750,6 +938,94 @@ class StaffRequestController extends Controller
     }
 
     /**
+     * تحديد التحاليل للطلب العام
+     */
+    public function selectTestsForSurgeryLabTest(HttpRequest $request, \App\Models\SurgeryLabTest $test)
+    {
+        $user = Auth::user();
+        
+        // التحقق من الصلاحية
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بتحديث هذا الطلب');
+        }
+
+        // التحقق من أن هذا طلب عام (lab_test_id = null)
+        if ($test->lab_test_id !== null) {
+            return redirect()->back()->with('error', 'هذا الطلب محدد مسبقاً ولا يمكن تغيير تحاليله');
+        }
+
+        $validated = $request->validate([
+            'lab_test_ids' => 'required|array|min:1',
+            'lab_test_ids.*' => 'exists:lab_tests,id',
+        ]);
+
+        $labTestIds = $validated['lab_test_ids'];
+        
+        // حذف الطلب العام
+        $surgery = $test->surgery;
+        $test->delete();
+
+        // إنشاء طلبات جديدة لكل تحليل
+        foreach ($labTestIds as $labTestId) {
+            $surgery->labTests()->create([
+                'lab_test_id' => $labTestId,
+                'status' => 'pending',
+                'payment_status' => 'pending'
+            ]);
+        }
+
+        return redirect()->route('staff.surgery-lab-tests.index')
+            ->with('success', 'تم اختيار التحاليل بنجاح. عدد التحاليل: ' . count($labTestIds));
+    }
+
+    /**
+     * تحديث جميع نتائج تحاليل العملية
+     */
+    public function updateAllSurgeryLabTests(HttpRequest $request, \App\Models\Surgery $surgery)
+    {
+        $user = Auth::user();
+        
+        // التحقق من الصلاحية
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بتحديث هذه التحاليل');
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:pending,in_progress,completed',
+            'test_results' => 'nullable|array',
+            'test_results.*.value' => 'nullable|string',
+            'test_results.*.unit' => 'nullable|string',
+            'test_results.*.test_id' => 'required|exists:surgery_lab_tests,id',
+            'notes' => 'nullable|string',
+        ]);
+
+        $testResults = $validated['test_results'] ?? [];
+        $status = $validated['status'];
+        $completedCount = 0;
+
+        // تحديث كل تحليل
+        foreach ($testResults as $testId => $resultData) {
+            $surgeryTest = \App\Models\SurgeryLabTest::find($resultData['test_id']);
+            if ($surgeryTest && $surgeryTest->surgery_id === $surgery->id) {
+                $surgeryTest->update([
+                    'result' => $resultData['value'] ?? null,
+                    'status' => !empty($resultData['value']) ? 'completed' : 'pending',
+                    'completed_at' => !empty($resultData['value']) ? now() : null,
+                ]);
+                
+                if (!empty($resultData['value'])) {
+                    $completedCount++;
+                }
+            }
+        }
+
+        // حفظ الملاحظات على مستوى العملية (إذا كان هناك حقل في جدول surgeries)
+        // يمكنك إضافة حقل lab_notes في جدول surgeries إذا أردت
+        
+        return redirect()->back()->with('success', "تم حفظ النتائج بنجاح. عدد التحاليل المكتملة: {$completedCount} من {$surgery->labTests()->count()}");
+    }
+
+    /**
      * طباعة نتائج تحاليل العملية
      */
     public function printSurgeryLabTest(\App\Models\SurgeryLabTest $test)
@@ -858,6 +1134,30 @@ class StaffRequestController extends Controller
     }
 
     /**
+     * طباعة طلب أشعة لعملية
+     */
+    public function printSurgeryRadiologyTest(\Illuminate\Http\Request $request, \App\Models\SurgeryRadiologyTest $test)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بطباعة هذا الطلب');
+        }
+
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بطباعة أشعة العمليات الجراحية');
+        }
+
+        if ($test->status !== 'completed') {
+            abort(403, 'لا يمكن طباعة طلب غير مكتمل');
+        }
+
+        $test->load(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType']);
+
+        return view('staff.surgery-radiology-tests.print', compact('test'));
+    }
+
+    /**
      * تحديث طلب أشعة لعملية
      */
     public function updateSurgeryRadiologyTest(HttpRequest $request, \App\Models\SurgeryRadiologyTest $test)
@@ -874,16 +1174,12 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتحديث أشعة العمليات الجراحية');
         }
 
-        // التحقق من دفع رسوم العملية أولاً
-        $test->load('surgery');
-        if ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') {
-            return redirect()->back()->with('error', 'لا يمكن إجراء الأشعة قبل دفع رسوم العملية الجراحية');
-        }
-
+        // التحقق من البيانات
         $validated = $request->validate([
             'status' => 'required|in:pending,completed,cancelled',
+            'radiology_type_id' => 'nullable|exists:radiology_types,id',
             'result' => 'nullable|string',
-            'result_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'result_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,dcm,dicom|max:10240',
         ]);
 
         // حفظ الملف إذا تم رفعه
@@ -900,7 +1196,15 @@ class StaffRequestController extends Controller
 
         $test->update($validated);
 
-        return redirect()->back()->with('success', 'تم تحديث الطلب بنجاح');
+        // رسالة نجاح مخصصة بناءً على نوع العملية
+        $successMessage = 'تم تحديث الطلب بنجاح';
+        if ($request->filled('radiology_type_id') && !$test->wasChanged('result')) {
+            $successMessage = 'تم اختيار نوع الأشعة بنجاح';
+        } elseif ($request->filled('result') || $request->hasFile('result_file')) {
+            $successMessage = 'تم حفظ نتائج التصوير بنجاح';
+        }
+
+        return redirect()->back()->with('success', $successMessage);
     }
 
     /**

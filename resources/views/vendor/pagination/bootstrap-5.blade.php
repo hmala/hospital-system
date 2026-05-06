@@ -103,10 +103,14 @@
     <style>
         .pagination {
             direction: ltr;
+            justify-content: center;
+            flex-wrap: wrap;
         }
         .pagination .page-link {
-            padding: 0.5rem 0.85rem;
-            font-size: 0.9rem;
+            padding: 0.4rem 0.65rem;
+            min-width: auto;
+            min-height: auto;
+            font-size: 0.85rem;
             border-color: #dee2e6;
             color: #6c757d;
         }
@@ -118,12 +122,17 @@
         .pagination .page-item.active .page-link {
             background-color: #0d6efd;
             border-color: #0d6efd;
+            box-shadow: none;
         }
         .pagination .page-item.disabled .page-link {
             color: #adb5bd;
         }
         .pagination .page-link i {
             font-size: 0.8rem;
+        }
+        .pagination-container {
+            width: 100%;
+            text-align: center;
         }
     </style>
 @endif

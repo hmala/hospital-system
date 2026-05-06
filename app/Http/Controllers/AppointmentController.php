@@ -7,7 +7,9 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Doctor;
 use App\Models\Department;
+use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class AppointmentController extends Controller

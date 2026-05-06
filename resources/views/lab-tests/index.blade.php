@@ -163,6 +163,10 @@
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if(Auth::user()->hasRole(['admin', 'lab_staff']))
+                                                    <a href="{{ route('lab-tests.references.index', $labTest) }}"
+                                                       class="btn btn-sm btn-outline-primary" title="القيم المرجعية">
+                                                        <i class="fas fa-ruler-combined"></i>
+                                                    </a>
                                                     <a href="{{ route('lab-tests.edit', $labTest) }}"
                                                        class="btn btn-sm btn-outline-warning" title="تعديل">
                                                         <i class="fas fa-edit"></i>

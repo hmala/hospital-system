@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\LabTest;
+use App\Models\Package;
+use App\Models\RadiologyType;
 use Illuminate\Database\Eloquent\Model;
 
 class Request extends Model
@@ -20,6 +23,98 @@ class Request extends Model
     protected $casts = [
         'details' => 'array',
     ];
+
+    public function getTotalAmountAttribute()
+    {
+        $details = $this->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?: [];
+        }
+
+        if (!is_array($details)) {
+            return null;
+        }
+
+        if (isset($details['total_amount'])) {
+            return (float) $details['total_amount'];
+        }
+
+        if (isset($details['amount'])) {
+            return (float) $details['amount'];
+        }
+
+        switch ($this->type) {
+            case 'lab':
+                if (!empty($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
+                    return LabTest::whereIn('id', $details['lab_test_ids'])->sum('price');
+                }
+
+                if (!empty($details['tests']) && is_array($details['tests'])) {
+                    $total = 0;
+                    foreach ($details['tests'] as $testName) {
+                        $test = LabTest::where('name', $testName)
+                            ->orWhere('code', $testName)
+                            ->first();
+                        if ($test) {
+                            $total += $test->price ?? 0;
+                        }
+                    }
+                    return $total;
+                }
+
+                if (!empty($details['package_id'])) {
+                    $package = Package::find($details['package_id']);
+                    if ($package) {
+                        return (float) $package->price;
+                    }
+                }
+
+                return null;
+
+            case 'radiology':
+                if (!empty($details['radiology_type_ids']) && is_array($details['radiology_type_ids'])) {
+                    return RadiologyType::whereIn('id', $details['radiology_type_ids'])->sum('base_price');
+                }
+
+                if (!empty($details['radiology_types']) && is_array($details['radiology_types'])) {
+                    return RadiologyType::whereIn('id', $details['radiology_types'])->sum('base_price');
+                }
+
+                return null;
+
+            case 'blood_bank':
+                return $this->bloodBankRequest ? (float) $this->bloodBankRequest->total_amount : null;
+
+            case 'emergency':
+                if (!empty($details['emergency_priority'])) {
+                    $fees = [
+                        'critical' => 50000,
+                        'urgent' => 35000,
+                        'semi_urgent' => 25000,
+                        'non_urgent' => 15000,
+                    ];
+                    return $fees[$details['emergency_priority']] ?? 25000;
+                }
+                return null;
+
+            case 'pharmacy':
+                if (!empty($details['tests']) && is_array($details['tests'])) {
+                    $total = 0;
+                    foreach ($details['tests'] as $itemName) {
+                        $test = LabTest::where('name', $itemName)
+                            ->orWhere('code', $itemName)
+                            ->first();
+                        if ($test) {
+                            $total += $test->price ?? 0;
+                        }
+                    }
+                    return $total;
+                }
+                return null;
+        }
+
+        return null;
+    }
 
     public function visit()
     {
@@ -52,6 +147,7 @@ class Request extends Model
             'lab' => 'مختبر',
             'radiology' => 'أشعة',
             'pharmacy' => 'صيدلية',
+            'nursing' => 'خدمات تمريضية',
             'emergency' => 'طوارئ',
             'blood_bank' => 'مصرف الدم',
             default => $this->type

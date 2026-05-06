@@ -110,10 +110,61 @@ body {
     background: #ffffff;
 }
 
-/* force all surgery accordion panels to stay closed initially */
-#surgeryAccordion .accordion-collapse {
-    display: none !important;
+/* Accordion step styling */
+#surgeryAccordion {
+    gap: 12px;
 }
+#surgeryAccordion .accordion-item {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
+    background: transparent;
+}
+#surgeryAccordion .accordion-header {
+    border-radius: 16px;
+    overflow: hidden;
+}
+#surgeryAccordion .accordion-button {
+    padding: 1.1rem 1.25rem;
+    border-radius: 16px;
+    background: #f8faff;
+    border: 1px solid #e6ecf7;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 1rem;
+    gap: 0.8rem;
+}
+#surgeryAccordion .accordion-button:not(.collapsed) {
+    background: #eaf2ff;
+    box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.18);
+}
+#surgeryAccordion .accordion-button:after {
+    filter: brightness(0.4);
+}
+#surgeryAccordion .step-number {
+    min-width: 32px;
+    min-height: 32px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+#surgeryAccordion .accordion-body {
+    padding: 1.75rem 1.5rem 1.5rem;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-top: none;
+    border-radius: 0 0 16px 16px;
+}
+#surgeryForm .accordion-body h5 {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #ebedf2;
+    margin-bottom: 1.5rem;
+}
+
+/* Let Bootstrap handle accordion collapse with proper CSS classes */
+/* Removed: display: none !important; - this was blocking Bootstrap's accordion functionality */
 
 .room-card[data-available="1"]:hover {
     transform: translateY(-5px);
@@ -158,6 +209,20 @@ body {
     color: white !important;
 }
 
+/* ضمان أن Dropdown الخاص بـ Select2 لا يغطي مودالات Bootstrap */
+.select2-container--open .select2-dropdown {
+    z-index: 1030 !important;
+}
+
+/* تأكيد أن مودال إضافة الطبيب فوق أي طبقات أخرى */
+#addDoctorModal {
+    z-index: 1060;
+}
+
+.modal-backdrop {
+    z-index: 1050;
+}
+
 </style>
 @endsection
 
@@ -197,11 +262,39 @@ body {
                         <h2 class="accordion-header" id="heading1">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="false" aria-controls="collapse1">
                                 <span class="step-number bg-primary text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">1</span>
-                                بيانات المريض والعملية
+                                <i class="fas fa-user me-2"></i>اختيار المريض والعملية
                             </button>
                         </h2>
                         <div id="collapse1" class="accordion-collapse collapse" aria-labelledby="heading1" data-bs-parent="#surgeryAccordion">
                             <div class="accordion-body">
+                                <!-- عرض معلومات المريض المختار -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div id="selectedPatientInfo" style="display: none;">
+                                            <div class="alert alert-info border-start border-4 border-info">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <small class="text-muted">الاسم</small>
+                                                        <p class="fw-bold mb-0" id="patientName">-</p>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <small class="text-muted">العمر</small>
+                                                        <p class="fw-bold mb-0" id="patientAge">-</p>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <small class="text-muted">الجنس</small>
+                                                        <p class="fw-bold mb-0" id="patientGender">-</p>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <small class="text-muted">الهاتف</small>
+                                                        <p class="fw-bold mb-0" id="patientPhone">-</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-4">
@@ -212,9 +305,23 @@ body {
                                             <select name="patient_id" id="patient_id" class="form-select form-select-lg @error('patient_id') is-invalid @enderror" required autofocus>
                                                 <option value="">اختر المريض</option>
                                                 @foreach($patients as $patient)
-                                                    @php $patientName = optional($patient->user)->name ?? 'غير معروف'; @endphp
-                                                    <option value="{{ $patient->id }}" {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
-                                                        {{ $patientName }}
+                                                    @php 
+                                                        $patientName = optional($patient->user)->name ?? 'غير معروف';
+                                                        $patientAge = optional($patient)->age ?? '-';
+                                                        $patientGender = optional($patient)->gender ?? '-';
+                                                        $patientPhone = optional($patient->user)->phone ?? '-';
+                                                        $patientData = [
+                                                            'id' => $patient->id,
+                                                            'name' => $patientName,
+                                                            'age' => $patientAge,
+                                                            'gender' => $patientGender,
+                                                            'phone' => $patientPhone
+                                                        ];
+                                                    @endphp
+                                                    <option value="{{ $patient->id }}" 
+                                                            data-patient='@json($patientData)'
+                                                            {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
+                                                        {{ $patientName }} ({{ $patientAge }} سنة)
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -223,10 +330,6 @@ body {
                                             @enderror
                                         </div>
                             </div>
-
-                        </div>
-                        
-                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
                                     <label for="surgery_category" class="form-label fw-bold">
@@ -248,6 +351,9 @@ body {
                                     @enderror
                                 </div>
                             </div>
+                        </div>
+                        
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
                                     <label for="surgical_operation_id" class="form-label fw-bold">
@@ -264,23 +370,18 @@ body {
                                                     data-fee="{{ $operation->fee }}"
                                                     {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
                                                 {{ $operation->name }}
-                                               
                                             </option>
                                         @endforeach
                                     </select>
                                     @error('surgical_operation_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    
-                                    <!-- تنبيه السعر حسب الجدول -->
                                     <div id="surgery_fee_info" class="alert alert-info mt-3" style="display: none;">
                                         <i class="fas fa-info-circle me-2"></i>
                                         <span>سعر العملية حسب الجدول: <strong id="surgery_fee_display">0</strong> د.ع</span>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- حقل السعر المخصص لجميع العمليات -->
                             <div class="col-md-6" id="custom_fee_container">
                                 <div class="mb-4">
                                     <label for="custom_surgery_fee" class="form-label fw-bold">
@@ -361,6 +462,14 @@ body {
                                     @error('referring_doctor_name')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">&nbsp;</label>
+                                    <div class="alert alert-secondary py-3" style="height:100%;">
+                                        <p class="mb-1"><strong>ملاحظة:</strong> يمكنك مسح أو رفع ورقة التحويل من القسم التالي.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -495,24 +604,24 @@ body {
             <h2 class="accordion-header" id="heading2">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2">
                     <span class="step-number bg-success text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">2</span>
-                    التفاصيل الطبية والموعد
+                    <i class="fas fa-calendar-check me-2"></i>اختيار الطبيب والموعد
                 </button>
             </h2>
             <div id="collapse2" class="accordion-collapse collapse" aria-labelledby="heading2" data-bs-parent="#surgeryAccordion">
                 <div class="accordion-body">
                         <h5 class="mb-4 text-success">
-                            <i class="fas fa-user-md me-2"></i>
-                            التفاصيل الطبية والموعد
+                            <i class="fas fa-calendar-check me-2"></i>
+                            اختيار الطبيب والموعد
                         </h5>
                         
-                        <div class="row">
+                        <div class="row align-items-end">
                             <div class="col-md-6">
                                 <div class="mb-4">
                                     <label for="doctor_id" class="form-label fw-bold">
                                         <i class="fas fa-user-md me-1 text-primary"></i>
                                         الطبيب الجراح <span class="text-danger">*</span>
                                     </label>
-                                    <select name="doctor_id" id="doctor_id" class="form-select form-select-lg @error('doctor_id') is-invalid @enderror" required>
+                                    <select name="doctor_id" id="doctor_id" class="form-select form-select-lg @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
                                         <option value="">اختر الطبيب</option>
                                         @foreach($doctors as $doctor)
                                             @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
@@ -527,22 +636,12 @@ body {
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="department_id" class="form-label fw-bold">
-                                        <i class="fas fa-hospital me-1 text-info"></i>
-                                        القسم <span class="text-danger">*</span>
-                                    </label>
-                                    <select name="department_id" id="department_id" class="form-select form-select-lg @error('department_id') is-invalid @enderror" required>
-                                        <option value="">اختر القسم</option>
-                                        @foreach($departments as $department)
-                                            <option value="{{ $department->id }}" {{ (old('department_id', request('department_id')) == $department->id) ? 'selected' : '' }}>
-                                                {{ $department->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('department_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                <div class="mb-4 h-100">
+                                    <label class="form-label fw-bold text-transparent">&nbsp;</label>
+                                    <div class="alert alert-secondary h-100">
+                                        <p class="mb-1"><strong>ملاحظة:</strong> اختر الطبيب الجراح المناسب لنوع العملية.</p>
+                                        <p class="mb-0 text-muted">سيقترح النظام الطبيب الأفضل عند الاختيار.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -634,14 +733,14 @@ body {
             <h2 class="accordion-header" id="heading3">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3" aria-expanded="false" aria-controls="collapse3">
                     <span class="step-number bg-warning text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">3</span>
-                    اختيار الغرفة
+                    <i class="fas fa-door-open me-2"></i>اختيار الغرفة والإقامة
                 </button>
             </h2>
             <div id="collapse3" class="accordion-collapse collapse" aria-labelledby="heading3" data-bs-parent="#surgeryAccordion">
                 <div class="accordion-body">
                         <h5 class="mb-4 text-danger">
-                            <i class="fas fa-bed me-2"></i>
-                            اختيار الغرفة (اختياري)
+                            <i class="fas fa-door-open me-2"></i>
+                            اختيار الغرفة والإقامة
                         </h5>
                         
                         <!-- مدة الإقامة -->
@@ -851,7 +950,7 @@ body {
                             <i class="fas fa-user me-1"></i>
                             اسم الطبيب <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg" id="new_doctor_name" required readonly>
+                        <input type="text" class="form-control form-control-lg" id="new_doctor_name" required>
                     </div>
                     <div class="mb-3">
                         <label for="new_doctor_specialization" class="form-label fw-bold">
@@ -921,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#referring_doctor_name_select').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
+            dropdownParent: $('body'),
             tags: true,
             createTag: function (params) {
                 const term = $.trim(params.term);
@@ -959,6 +1059,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return data.text;
             },
+            escapeMarkup: function(markup) {
+                return markup;
+            },
             language: {
                 noResults: function() {
                     return '🔍 لا توجد نتائج - اكتب اسماً جديداً للإضافة';
@@ -973,6 +1076,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // معالج حدث الاختيار - نفتح المودال للأسماء الجديدة
+        const addDoctorModalElement = document.getElementById('addDoctorModal');
+        if (addDoctorModalElement && addDoctorModalElement.parentElement !== document.body) {
+            document.body.appendChild(addDoctorModalElement);
+        }
+        const addDoctorModalInstance = new bootstrap.Modal(addDoctorModalElement);
+
         $('#referring_doctor_name_select').on('select2:select', function(e) {
             const data = e.params.data;
             
@@ -981,20 +1090,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 isNewDoctor = true;
                 pendingDoctorName = data.originalName;
                 
+                // إغلاق قائمة Select2 قبل عرض المودال
+                $(this).select2('close');
+                $('.select2-container--open').removeClass('select2-container--open');
+                $('.select2-container--open .select2-dropdown').hide();
+                $('.select2-dropdown').remove();
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
+                
                 // ملء اسم الطبيب في المودال
                 $('#new_doctor_name').val(data.originalName);
                 $('#new_doctor_specialization').val('');
                 $('#new_doctor_phone').val('');
                 $('#new_doctor_notes').val('');
                 
-                // فتح المودال
-                const modal = new bootstrap.Modal(document.getElementById('addDoctorModal'));
-                modal.show();
+                // فتح المودال بعد إغلاق Select2 بالكامل
+                setTimeout(function() {
+                    addDoctorModalInstance.show();
+                }, 50);
             }
         });
-        
-        // عند إغلاق المودال بدون حفظ، نرجع للاختيار السابق
-        $('#addDoctorModal').on('hidden.bs.modal', function() {
+
+        addDoctorModalElement.addEventListener('shown.bs.modal', function() {
+            $('#new_doctor_name').trigger('focus');
+        });
+
+        addDoctorModalElement.addEventListener('hidden.bs.modal', function() {
             if (isNewDoctor && pendingDoctorName) {
                 // مسح الاختيار إذا لم يتم الحفظ
                 const currentVal = $('#referring_doctor_name_select').val();
@@ -1172,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('surgeryForm'); // main form element
     let currentStep = -1;
 
-    const stepNames = ['المريض والعملية', 'الطبيب والموعد', 'الغرفة'];
+    const stepNames = ['اختيار المريض والعملية', 'اختيار الطبيب والموعد', 'اختيار الغرفة والإقامة'];
     const progressPercentText = document.getElementById('progressPercentText');
     const progressBarFill = document.getElementById('progressBarFill');
     const currentStepNum = document.getElementById('currentStepNum');
@@ -1223,9 +1345,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // استخدام Bootstrap events للأكورديون
     collapseItems.forEach((collapse, idx) => {
+        collapse.addEventListener('show.bs.collapse', function() {
+            currentStep = idx;
+        });
+        
         collapse.addEventListener('shown.bs.collapse', function() {
             currentStep = idx;
             updateUI();
+        });
+        
+        collapse.addEventListener('hide.bs.collapse', function() {
+            if (currentStep === idx) {
+                currentStep = -1;
+            }
         });
         
         collapse.addEventListener('hidden.bs.collapse', function() {
@@ -1240,22 +1372,26 @@ document.addEventListener('DOMContentLoaded', function() {
     prevBtn.addEventListener('click', function() {
         if (currentStep > 0) {
             currentStep--;
+            // Trigger the collapse programmatically
+            const collapseInstance = new bootstrap.Collapse(collapseItems[currentStep], { toggle: true });
+            collapseInstance.show();
             updateUI();
         }
     });
 
-    // next button when no step is open yet
-    nextBtn.addEventListener('click', function handleFirstClick() {
-        if (currentStep < 0) {
-            currentStep = 0;
-            updateUI();
-        }
-    }, { capture: true });
-
-    // next button simply advances the step
+    // next button - handle both initial step and advancing steps
     nextBtn.addEventListener('click', function() {
-        if (currentStep < accordionButtons.length - 1) {
+        if (currentStep < 0) {
+            // First click - open first accordion
+            currentStep = 0;
+            const collapseInstance = new bootstrap.Collapse(collapseItems[currentStep], { toggle: true });
+            collapseInstance.show();
+            updateUI();
+        } else if (currentStep < accordionButtons.length - 1) {
+            // Advance to next step
             currentStep++;
+            const collapseInstance = new bootstrap.Collapse(collapseItems[currentStep], { toggle: true });
+            collapseInstance.show();
             updateUI();
         }
     });
@@ -1774,6 +1910,39 @@ document.addEventListener('DOMContentLoaded', function() {
         // تنسيق القيمة الأولية إذا كانت موجودة
         if (customFeeInput.value) {
             customFeeInput.value = formatNumberWithCommas(removeCommas(customFeeInput.value));
+        }
+    }
+
+    // عرض معلومات المريض عند الاختيار
+    const patientSelect = document.getElementById('patient_id');
+    if (patientSelect) {
+        function updatePatientInfo() {
+            const selectedOption = patientSelect.options[patientSelect.selectedIndex];
+            const patientData = selectedOption.getAttribute('data-patient');
+            const infoDiv = document.getElementById('selectedPatientInfo');
+            
+            if (patientData && selectedOption.value !== '') {
+                try {
+                    const patient = JSON.parse(patientData);
+                    document.getElementById('patientName').textContent = patient.name || '-';
+                    document.getElementById('patientAge').textContent = patient.age || '-';
+                    document.getElementById('patientGender').textContent = patient.gender || '-';
+                    document.getElementById('patientPhone').textContent = patient.phone || '-';
+                    infoDiv.style.display = 'block';
+                } catch (e) {
+                    console.error('Error parsing patient data:', e);
+                    infoDiv.style.display = 'none';
+                }
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        }
+        
+        patientSelect.addEventListener('change', updatePatientInfo);
+        
+        // عرض البيانات عند تحميل الصفحة إذا تم اختيار مريض مسبقاً
+        if (patientSelect.value !== '') {
+            updatePatientInfo();
         }
     }
 

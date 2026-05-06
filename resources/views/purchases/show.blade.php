@@ -65,6 +65,7 @@
                             <th>الكمية</th>
                             <th>سعر التكلفة للوحدة</th>
                             <th>الاجمالي</th>
+                            <th>باركود داخلي</th>
                             <th>تاريخ الانتهاء</th>
                         </tr>
                     </thead>
@@ -75,6 +76,7 @@
                                 <td>{{ $item->qty }}</td>
                                 <td>{{ number_format($item->unit_cost, 2) }}</td>
                                 <td>{{ number_format($item->subtotal, 2) }}</td>
+                                <td>{{ $item->stockBatch->internal_barcode ?? '-' }}</td>
                                 <td>{{ $item->expiry_date?->format('Y-m-d') ?? '-' }}</td>
                             </tr>
                         @endforeach

@@ -83,7 +83,15 @@ class EmergencyController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes'));
+        // جلب طلبات الخدمات التمريضية من جدول requests بعد الدفع
+        $nursingRequests = \App\Models\Request::where('type', 'nursing')
+            ->where('payment_status', 'paid')
+            ->with(['visit.patient.user', 'visit.doctor.user'])
+            ->whereIn('status', ['pending', 'in_progress', 'completed'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests'));
     }
 
     /**
@@ -899,5 +907,33 @@ class EmergencyController extends Controller
             'pending_amount' => $pendingAmount,
             'paid_amount' => $paidAmount,
         ]);
+    }
+
+    /**
+     * تحديث حالة طلب الخدمة التمريضية
+     */
+    public function updateNursingRequest(\App\Models\Request $request)
+    {
+        // التحقق من الصلاحيات
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'nurse', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        // التحقق من أن الطلب من نوع التمريض
+        if ($request->type !== 'nursing') {
+            abort(404, 'طلب غير صحيح');
+        }
+
+        // تحديث الحالة
+        $request->validate([
+            'status' => 'required|in:pending,in_progress,completed,cancelled'
+        ]);
+
+        $request->update([
+            'status' => request('status')
+        ]);
+
+        return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
     }
 }

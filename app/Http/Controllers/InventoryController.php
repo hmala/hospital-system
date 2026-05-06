@@ -15,6 +15,13 @@ class InventoryController extends Controller
         $locationId = $request->get('location_id');
         $selectedLocation = $locationId ? Location::find($locationId) : null;
 
+        // إذا كان المستخدم مرتبط بمخزن معين، استخدمه كافتراضي
+        $userLocationId = auth()->user()->location_id;
+        if (!$locationId && $userLocationId) {
+            $locationId = $userLocationId;
+            $selectedLocation = Location::find($userLocationId);
+        }
+
         $query = Product::orderBy('name');
 
         if ($locationId) {
@@ -42,6 +49,13 @@ class InventoryController extends Controller
         $locations = Location::orderBy('name')->get();
         $locationId = $request->get('location_id');
         $selectedLocation = $locationId ? Location::find($locationId) : null;
+
+        // إذا كان المستخدم مرتبط بمخزن معين، استخدمه كافتراضي
+        $userLocationId = auth()->user()->location_id;
+        if (!$locationId && $userLocationId) {
+            $locationId = $userLocationId;
+            $selectedLocation = Location::find($userLocationId);
+        }
 
         $products = Product::with([
             'stockBatches' => function ($q) use ($locationId) {

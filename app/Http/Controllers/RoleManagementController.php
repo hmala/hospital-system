@@ -25,8 +25,7 @@ class RoleManagementController extends Controller
     public function rolesCreate()
     {
         $permissions = Permission::all()->groupBy(function($permission) {
-            $parts = explode(' ', $permission->name);
-            return end($parts);
+            return $this->permissionGroup($permission->name);
         });
         return view('roles.create', compact('permissions'));
     }
@@ -59,8 +58,7 @@ class RoleManagementController extends Controller
     public function rolesEdit(Role $role)
     {
         $permissions = Permission::all()->groupBy(function($permission) {
-            $parts = explode(' ', $permission->name);
-            return end($parts);
+            return $this->permissionGroup($permission->name);
         });
         $rolePermissions = $role->permissions->pluck('name')->toArray();
         return view('roles.edit', compact('role', 'permissions', 'rolePermissions'));
@@ -93,13 +91,54 @@ class RoleManagementController extends Controller
             ->with('success', 'تم حذف الدور بنجاح');
     }
 
+    private function permissionGroup(string $permissionName): string
+    {
+        $specialGroups = [
+            'cashier appointments' => 'cashier',
+            'cashier medical requests' => 'cashier',
+            'cashier emergency' => 'cashier',
+            'cashier surgeries' => 'cashier',
+            'cashier reports' => 'cashier',
+            'process consultation payments' => 'cashier',
+            'process medical requests payments' => 'cashier',
+            'process emergency payments' => 'cashier',
+            'process surgery payments' => 'cashier',
+            'view cashier' => 'cashier',
+            'view cashier appointments' => 'cashier',
+            'view cashier medical requests' => 'cashier',
+            'manage consultant availability' => 'consultant',
+            'manage surgery waiting list' => 'surgeries',
+            'process pharmacy requests' => 'pharmacy',
+            'manage surgery lab tests' => 'tests',
+            'process lab requests' => 'tests',
+            'view stock_batches' => 'inventory',
+            'view stock_movements' => 'inventory',
+            'view stock transfers' => 'inventory',
+            'view stock transfer requests' => 'inventory',
+            'view products' => 'products',
+            'create products' => 'products',
+            'edit products' => 'products',
+            'delete products' => 'products',
+        ];
+
+        if (isset($specialGroups[$permissionName])) {
+            return $specialGroups[$permissionName];
+        }
+
+        $parts = explode(' ', $permissionName);
+        if (count($parts) >= 3 && $parts[1] === 'cashier') {
+            return 'cashier';
+        }
+
+        return end($parts);
+    }
+
     // ============ إدارة الصلاحيات ============
     
     public function permissionsIndex()
     {
         $permissions = Permission::withCount('roles')->get()->groupBy(function($permission) {
-            $parts = explode(' ', $permission->name);
-            return end($parts);
+            return $this->permissionGroup($permission->name);
         });
         return view('permissions.index', compact('permissions'));
     }

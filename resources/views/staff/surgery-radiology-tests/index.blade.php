@@ -151,9 +151,14 @@
                                 <div class="d-flex align-items-center">
                                     <i class="fas fa-x-ray text-warning me-2"></i>
                                     <div>
-                                        <strong>{{ $test->radiologyType->name }}</strong>
-                                        @if($test->radiologyType->code)
-                                        <br><small class="text-muted">{{ $test->radiologyType->code }}</small>
+                                        @if($test->radiologyType)
+                                            <strong>{{ $test->radiologyType->name }}</strong>
+                                            @if($test->radiologyType->code)
+                                            <br><small class="text-muted">{{ $test->radiologyType->code }}</small>
+                                            @endif
+                                        @else
+                                            <strong class="text-warning">طلب أشعة عام</strong>
+                                            <br><small class="text-muted">لم يتم تحديد نوع الأشعة بعد</small>
                                         @endif
                                     </div>
                                 </div>
@@ -175,6 +180,11 @@
                                     <a href="{{ route('staff.surgery-radiology-tests.show', $test) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    @if($test->status == 'completed')
+                                    <a href="{{ route('staff.surgery-radiology-tests.print', $test) }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="طباعة الطلب">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                    @endif
                                     @if($test->status == 'pending')
                                     <button class="btn btn-sm btn-outline-success" 
                                             title="{{ $test->surgery->surgery_fee_paid !== 'paid' ? 'يجب دفع رسوم العملية أولاً' : 'تحديث النتائج' }}" 

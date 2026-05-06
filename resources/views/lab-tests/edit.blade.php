@@ -10,6 +10,10 @@
                     تعديل الفحص المختبري
                 </h2>
                 <div>
+                    <a href="{{ route('lab-tests.references.index', $labTest) }}" class="btn btn-primary me-2">
+                        <i class="fas fa-ruler-combined me-1"></i>
+                        القيم المرجعية
+                    </a>
                     <a href="{{ route('lab-tests.show', $labTest) }}" class="btn btn-info me-2">
                         <i class="fas fa-eye me-1"></i>
                         عرض

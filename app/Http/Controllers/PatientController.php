@@ -11,12 +11,50 @@ use Carbon\Carbon;
 
 class PatientController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $patients = Patient::with(['user', 'appointments'])
-            ->withCount(['appointments as total_appointments'])
-            ->latest()
-            ->paginate(15);
+        $search = trim($request->get('search', ''));
+
+        $query = Patient::with('user')
+            ->withCount(['appointments as total_appointments']);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($uq) use ($search) {
+                    $uq->where('name', 'like', "%{$search}%")
+                       ->orWhere('email', 'like', "%{$search}%")
+                       ->orWhere('phone', 'like', "%{$search}%");
+                })->orWhere('national_id', 'like', "%{$search}%");
+            });
+        }
+
+        $patients = $query->latest()->paginate(15)->appends($request->query());
+
+        // AJAX → أرجع JSON
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'patients' => $patients->getCollection()->map(fn($p) => [
+                    'id'                 => $p->id,
+                    'user'               => $p->user ? [
+                        'name'   => $p->user->name,
+                        'phone'  => $p->user->phone,
+                        'email'  => $p->user->email,
+                        'gender' => $p->user->gender,
+                    ] : null,
+                    'age'                => $p->age,
+                    'blood_type'         => $p->blood_type,
+                    'emergency_contact'  => $p->emergency_contact,
+                    'national_id'        => $p->national_id,
+                    'total_appointments' => $p->total_appointments,
+                    'last_visit_date'    => $p->getLastVisitDate()
+                        ? $p->getLastVisitDate()->format('Y-m-d') : null,
+                ])->values(),
+                'pagination'   => $patients->links('vendor.pagination.bootstrap-5')->toHtml(),
+                'current_page' => $patients->currentPage(),
+                'last_page'    => $patients->lastPage(),
+                'total'        => $patients->total(),
+            ]);
+        }
 
         return view('patients.index', compact('patients'));
     }
@@ -213,20 +251,52 @@ $email = $request->email;
             ->with('success', 'تم حذف المريض بنجاح');
     }
 
-    // بحث المرضى
+    // بحث المرضى (يُرجع JSON دائماً - مخصص لطلبات AJAX)
     public function search(Request $request)
     {
-        $search = $request->get('search');
-        
-        $patients = Patient::with('user')
-            ->whereHas('user', function($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
-            })
-            ->orWhere('national_id', 'like', "%{$search}%")
-            ->paginate(15);
+        $search = trim($request->get('search', ''));
 
-        return view('patients.index', compact('patients'));
+        $query = Patient::with('user')->withCount(['appointments as total_appointments']);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                              ->orWhere('email', 'like', "%{$search}%")
+                              ->orWhere('phone', 'like', "%{$search}%");
+                })
+                ->orWhere('national_id', 'like', "%{$search}%");
+            });
+        }
+
+        $patients = $query->latest()->paginate(15)->appends($request->query());
+
+        $patientsData = $patients->getCollection()->map(function ($patient) {
+            return [
+                'id'                  => $patient->id,
+                'user'                => $patient->user ? [
+                    'name'   => $patient->user->name,
+                    'phone'  => $patient->user->phone,
+                    'email'  => $patient->user->email,
+                    'gender' => $patient->user->gender,
+                ] : null,
+                'age'                 => $patient->age,
+                'blood_type'          => $patient->blood_type,
+                'emergency_contact'   => $patient->emergency_contact,
+                'national_id'         => $patient->national_id,
+                'total_appointments'  => $patient->total_appointments,
+                'last_visit_date'     => $patient->getLastVisitDate()
+                    ? $patient->getLastVisitDate()->format('Y-m-d')
+                    : null,
+            ];
+        });
+
+        return response()->json([
+            'patients'     => $patientsData->values(),
+            'pagination'   => $patients->links()->toHtml(),
+            'current_page' => $patients->currentPage(),
+            'last_page'    => $patients->lastPage(),
+            'total'        => $patients->total(),
+        ]);
     }
 }

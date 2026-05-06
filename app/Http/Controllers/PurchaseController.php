@@ -37,7 +37,7 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase)
     {
-        $purchase->load('supplier', 'user', 'items.product');
+        $purchase->load('supplier', 'user', 'items.product', 'items.stockBatch');
 
         return view('purchases.show', compact('purchase'));
     }
@@ -68,6 +68,7 @@ class PurchaseController extends Controller
                 'user_id'        => Auth::id(),
             ]);
 
+            $lineIndex = 1;
             foreach ($request->items as $itemData) {
                 $product = Product::findOrFail($itemData['product_id']);
 
@@ -85,7 +86,7 @@ class PurchaseController extends Controller
                     'expiry_date' => $itemData['expiry_date'] ?? null,
                 ]);
 
-                $internalBarcode = $this->generateBatchBarcode($product->id);
+                $internalBarcode = $this->generateBatchBarcode($product, $purchase->id, $lineIndex);
 
                 $mainLocation = Location::firstOrCreate([
                     'name' => 'المخزن الرئيسي',
@@ -114,6 +115,8 @@ class PurchaseController extends Controller
                     'type'             => 'purchase',
                     'user_id'          => Auth::id(),
                 ]);
+
+                $lineIndex++;
             }
 
             DB::commit();
@@ -127,16 +130,14 @@ class PurchaseController extends Controller
         }
     }
 
-    private function generateBatchBarcode($productId)
+    private function generateBatchBarcode(Product $product, int $purchaseId, int $lineIndex)
     {
-        $prefix = "B{$productId}";
-        $date   = now()->format('ymd');
-        $random = strtoupper(Str::random(4));
-
-        $barcode = "{$prefix}-{$date}-{$random}";
+        $productCode = $product->code ?: "PRD-{$product->id}";
+        $lineCode = str_pad($lineIndex, 2, '0', STR_PAD_LEFT);
+        $barcode = "{$productCode}-P{$purchaseId}-L{$lineCode}";
 
         if (StockBatch::where('internal_barcode', $barcode)->exists()) {
-            return $this->generateBatchBarcode($productId);
+            return $this->generateBatchBarcode($product, $purchaseId, $lineIndex + 1);
         }
 
         return $barcode;

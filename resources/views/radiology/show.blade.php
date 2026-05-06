@@ -1,5 +1,41 @@
 @extends('layouts.app')
 
+@section('styles')
+<style>
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: #f8f9fa !important;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #e3f2fd;
+        cursor: pointer;
+    }
+    .radiology-type-item:hover {
+        background-color: #e8f4f8;
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+    }
+    .card {
+        border: none;
+        border-radius: 10px;
+    }
+    .info-item {
+        background: #f8fafc;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 0.95rem;
+    }
+    .info-item small {
+        color: #6b7280;
+    }
+    .info-item strong {
+        font-size: 1rem;
+    }
+</style>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row mb-4">
@@ -48,87 +84,6 @@
     @endif
 
     <div class="row">
-        <!-- معلومات الطلب -->
-        <div class="col-md-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات الطلب
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <!-- نوع الأشعة - في الأعلى -->
-                    <div class="alert alert-primary mb-3">
-                        <h6 class="mb-2"><i class="fas fa-x-ray me-2"></i><strong>نوع الإشعة المطلوبة:</strong></h6>
-                        @if($radiology->radiologyType)
-                            <h4 class="mb-1">{{ $radiology->radiologyType->name }}</h4>
-                            <p class="mb-0"><small><strong>الرمز:</strong> {{ $radiology->radiologyType->code }}</small></p>
-                            @if(isset($radiology->radiologyType->description) && $radiology->radiologyType->description)
-                                <p class="mb-0 mt-2"><small>{{ $radiology->radiologyType->description }}</small></p>
-                            @endif
-                        @else
-                            <p class="text-danger mb-0">⚠️ لم يتم تحديد نوع الأشعة</p>
-                        @endif
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>رقم الطلب:</strong></p>
-                            <p class="text-muted fs-5">#{{ $radiology->id }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>الحالة:</strong></p>
-                            <span class="badge bg-{{ $radiology->status_color }} fs-5">
-                                {{ $radiology->status_text }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>الأولوية:</strong></p>
-                            <span class="badge bg-{{ $radiology->priority_color }} fs-6">
-                                {{ $radiology->priority_text }}
-                            </span>
-                        </div>
-                        <div class="col-md-6">
-                            @if($radiology->total_cost)
-                            <p class="mb-2"><strong>التكلفة:</strong></p>
-                            <p class="text-success fs-5 mb-0">{{ number_format($radiology->total_cost, 2) }} ج.م</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>تاريخ الطلب:</strong></p>
-                            <p class="text-muted">{{ $radiology->requested_date->format('Y-m-d H:i') }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>الموعد المجدول:</strong></p>
-                            <p class="text-muted">
-                                {{ $radiology->scheduled_date ? $radiology->scheduled_date->format('Y-m-d H:i') : 'لم يحدد بعد' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    @if($radiology->performed_at)
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>تاريخ التنفيذ:</strong></p>
-                            <p class="text-muted">{{ $radiology->performed_at->format('Y-m-d H:i') }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>المنفذ:</strong></p>
-                            <p class="text-muted">{{ $radiology->performer ? $radiology->performer->name : '-' }}</p>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-
         <!-- معلومات المريض والطبيب -->
         <div class="col-md-6">
             <div class="card shadow-sm mb-4">
@@ -139,41 +94,17 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <p class="mb-2"><strong>الاسم:</strong></p>
-                    <p class="text-muted fs-5">{{ $radiology->patient->user->name }}</p>
-
-                    <p class="mb-2 mt-3"><strong>رقم الهاتف:</strong></p>
-                    <p class="text-muted">{{ $radiology->patient->user->phone ?? 'لا يوجد' }}</p>
-
-                    <p class="mb-2 mt-3"><strong>البريد الإلكتروني:</strong></p>
-                    <p class="text-muted">{{ $radiology->patient->user->email ?? 'لا يوجد' }}</p>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="info-item p-3 rounded-3 bg-light">
+                                <small class="text-secondary d-block mb-1">الاسم</small>
+                                <strong>{{ $radiology->patient->user->name }}</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user-md me-2"></i>
-                        الطبيب المطلب
-                    </h5>
-                </div>
-                <div class="card-body">
-                    @if($radiology->doctor)
-                        <p class="mb-2"><strong>الاسم:</strong></p>
-                        <p class="text-muted fs-5">د. {{ $radiology->doctor->user->name }}</p>
-
-                        @if($radiology->doctor->department)
-                        <p class="mb-2 mt-3"><strong>القسم:</strong></p>
-                        <p class="text-muted">{{ $radiology->doctor->department->name }}</p>
-                        @endif
-                    @else
-                        <div class="alert alert-info mb-0">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>طلب من الاستعلامات</strong>
-                            <p class="mb-0 mt-2">هذا الطلب تم إنشاؤه من خدمة الاستعلامات ولا يرتبط بطبيب محدد.</p>
-                        </div>
-                    @endif
-                </div>
             </div>
         </div>
     </div>
@@ -218,63 +149,97 @@
         </div>
     </div>
 
-    <!-- النتائج -->
-    @if($radiology->result)
+    <!-- عرض النتائج المكتملة -->
+    @if($radiology->status === 'completed' && $radiology->result)
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-file-medical me-2"></i>
-                        نتيجة الإشعة
+                        <i class="fas fa-check-circle me-2"></i>
+                        نتائج التصوير الإشعاعي
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>التشخيص:</strong></p>
-                            <p class="text-muted">{{ $radiology->result->diagnosis ?? 'لا يوجد' }}</p>
+                    <div class="row">
+                        <!-- النتائج الطبية -->
+                        <div class="col-lg-6">
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-file-medical text-primary me-2"></i>النتائج:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0">{{ $radiology->result->findings }}</p>
+                                </div>
+                            </div>
+
+                            @if($radiology->result->impression)
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-brain text-primary me-2"></i>الانطباع:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0">{{ $radiology->result->impression }}</p>
+                                </div>
+                            </div>
+                            @endif
+
+                            @if($radiology->result->recommendations)
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-lightbulb text-primary me-2"></i>التوصيات:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0">{{ $radiology->result->recommendations }}</p>
+                                </div>
+                            </div>
+                            @endif
+
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-user-md text-primary me-2"></i>الطبيب الإشعاعي:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0">{{ $radiology->result->radiologist->name ?? 'غير محدد' }}</p>
+                                    <small class="text-muted">تاريخ التقرير: {{ $radiology->result->reported_at ? $radiology->result->reported_at->format('Y-m-d H:i') : 'غير محدد' }}</small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <p class="mb-2"><strong>الطبيب المختص:</strong></p>
-                            <p class="text-muted">{{ $radiology->result->radiologist ? $radiology->result->radiologist->name : '-' }}</p>
+
+                        <!-- الصور المرفقة -->
+                        <div class="col-lg-6">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-images text-primary me-2"></i>الصور المرفقة:</h6>
+                            @if($radiology->result->images && count($radiology->result->images) > 0)
+                                <div class="row g-3">
+                                    @foreach($radiology->result->images as $image)
+                                        @php
+                                            $imageUrl = asset('storage/' . $image);
+                                            $imageExt = strtolower(pathinfo($image, PATHINFO_EXTENSION));
+                                            $isImage = in_array($imageExt, ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'bmp', 'webp']);
+                                        @endphp
+                                        <div class="col-md-6 col-sm-12">
+                                            <div class="card h-100">
+                                                <div class="card-body p-2">
+                                                    @if($isImage)
+                                                        <img src="{{ $imageUrl }}" alt="صورة تصوير إشعاعي" class="img-fluid rounded" style="width: 100%; height: 200px; object-fit: cover;">
+                                                    @else
+                                                        <div class="text-center py-4">
+                                                            <i class="fas fa-file-alt fa-3x text-secondary mb-2"></i>
+                                                            <p class="mb-0 small">{{ basename($image) }}</p>
+                                                        </div>
+                                                    @endif
+                                                    <div class="mt-2 text-center">
+                                                        <a href="{{ $imageUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye me-1"></i>عرض
+                                                        </a>
+                                                        <a href="{{ $imageUrl }}" download class="btn btn-sm btn-outline-secondary ms-1">
+                                                            <i class="fas fa-download me-1"></i>تحميل
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-center py-5 bg-light rounded">
+                                    <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted mb-0">لا توجد صور مرفقة</p>
+                                </div>
+                            @endif
                         </div>
-                    </div>
-
-                    @if($radiology->result->findings)
-                    <div class="mb-3">
-                        <p class="mb-2"><strong>النتائج:</strong></p>
-                        <p class="text-muted">{{ $radiology->result->findings }}</p>
-                    </div>
-                    @endif
-
-                    @if($radiology->result->impression)
-                    <div class="mb-3">
-                        <p class="mb-2"><strong>الانطباع:</strong></p>
-                        <p class="text-muted">{{ $radiology->result->impression }}</p>
-                    </div>
-                    @endif
-
-                    @if($radiology->result->recommendations)
-                    <div class="mb-3">
-                        <p class="mb-2"><strong>التوصيات:</strong></p>
-                        <p class="text-muted">{{ $radiology->result->recommendations }}</p>
-                    </div>
-                    @endif
-
-                    @if($radiology->result->result_file)
-                    <div class="mb-3">
-                        <p class="mb-2"><strong>ملف النتيجة:</strong></p>
-                        <a href="{{ asset('storage/' . $radiology->result->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-download me-1"></i>
-                            تحميل الملف
-                        </a>
-                    </div>
-                    @endif
-
-                    <div class="mt-3">
-                        <p class="mb-2"><strong>تاريخ النتيجة:</strong></p>
-                        <p class="text-muted">{{ $radiology->result->created_at->format('Y-m-d H:i') }}</p>
                     </div>
                 </div>
             </div>
@@ -282,179 +247,191 @@
     </div>
     @endif
 
-    <!-- الإجراءات -->
+    <!-- تحديث/إدخال النتائج -->
+    @if(Auth::user()->hasRole('radiology_staff') && in_array($radiology->status, ['scheduled', 'in_progress', 'completed']))
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-cogs me-2"></i>
-                        الإجراءات
-                    </h5>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>تحديث نتائج التصوير</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        @if(Auth::user()->hasRole('radiology_staff') && $radiology->canBePerformed())
-                        <div class="col-md-3 mb-2">
-                            <form action="{{ route('radiology.start', $radiology) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-success w-100">
-                                    <i class="fas fa-play me-1"></i>
-                                    بدء الإجراء
-                                </button>
-                            </form>
-                        </div>
-                        @endif
-
-                        @if(Auth::user()->hasRole('radiology_staff') && in_array($radiology->status, ['scheduled', 'in_progress', 'completed']))
-                        <div class="col-md-3 mb-2">
-                            <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#resultsModal">
-                                <i class="fas fa-file-medical me-1"></i>
-                                {{ $radiology->result ? 'تعديل النتائج' : 'إضافة النتائج' }}
-                            </button>
-                        </div>
-                        @endif
-
-                        @if($radiology->status === 'in_progress' && Auth::user()->hasRole('radiology_staff') && !$radiology->result)
-                        <div class="col-md-3 mb-2">
-                            <form action="{{ route('radiology.complete', $radiology) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-info w-100">
-                                    <i class="fas fa-check me-1"></i>
-                                    إكمال بدون نتائج
-                                </button>
-                            </form>
-                        </div>
-                        @endif
-
-                        @if($radiology->status === 'pending' && (Auth::user()->isAdmin() || Auth::user()->isReceptionist()))
-                        <div class="col-md-3 mb-2">
-                            <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#scheduleModal">
-                                <i class="fas fa-calendar-alt me-1"></i>
-                                جدولة الموعد
-                            </button>
-                        </div>
-                        @endif
-
-                        @if($radiology->status === 'pending' && (Auth::user()->isAdmin() || Auth::user()->isReceptionist()))
-                        <div class="col-md-3 mb-2">
-                            <form action="{{ route('radiology.destroy', $radiology) }}" method="POST"
-                                  onsubmit="return confirm('هل أنت متأكد من حذف هذا الطلب؟')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger w-100">
-                                    <i class="fas fa-trash me-1"></i>
-                                    حذف الطلب
-                                </button>
-                            </form>
-                        </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal لجدولة الموعد -->
-<div class="modal fade" id="scheduleModal" tabindex="-1" aria-labelledby="scheduleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="scheduleModalLabel">جدولة موعد الإشعة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('radiology.schedule', $radiology) }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="scheduled_date" class="form-label">تاريخ ووقت الموعد</label>
-                        <input type="datetime-local" class="form-control" id="scheduled_date" name="scheduled_date" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">حفظ الموعد</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal لإضافة/تعديل النتائج -->
-<div class="modal fade" id="resultsModal" tabindex="-1" aria-labelledby="resultsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="resultsModalLabel">
-                    <i class="fas fa-file-medical me-2"></i>
-                    {{ $radiology->result ? 'تعديل نتائج الأشعة' : 'إضافة نتائج الأشعة' }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('radiology.saveResults', $radiology) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="findings" class="form-label"><strong>النتائج (Findings):</strong></label>
-                        <textarea class="form-control" id="findings" name="findings" rows="4" required>{{ $radiology->result->findings ?? '' }}</textarea>
-                        <small class="text-muted">وصف تفصيلي للنتائج المرئية في الأشعة</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="impression" class="form-label"><strong>الانطباع (Impression):</strong></label>
-                        <textarea class="form-control" id="impression" name="impression" rows="3" required>{{ $radiology->result->impression ?? '' }}</textarea>
-                        <small class="text-muted">التشخيص أو الانطباع الطبي</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="recommendations" class="form-label">التوصيات (Recommendations):</label>
-                        <textarea class="form-control" id="recommendations" name="recommendations" rows="3">{{ $radiology->result->recommendations ?? '' }}</textarea>
-                        <small class="text-muted">التوصيات للمتابعة أو الفحوصات الإضافية</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="images" class="form-label"><strong>صور الأشعة:</strong></label>
-                        <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*,.pdf,.dcm">
-                        <small class="text-muted">يمكنك رفع صور متعددة (JPEG, PNG, PDF, DICOM)</small>
-                        
-                        @if($radiology->result && $radiology->result->images)
-                        <div class="mt-2">
-                            <p class="mb-1"><strong>الصور المرفوعة:</strong></p>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach($radiology->result->images as $index => $image)
-                                <div class="position-relative">
-                                    <img src="{{ asset('storage/' . $image) }}" alt="صورة {{ $index + 1 }}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                                    <a href="{{ asset('storage/' . $image) }}" target="_blank" class="btn btn-sm btn-primary position-absolute top-0 end-0">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
+                    <form action="{{ route('radiology.saveResults', $radiology) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="row g-4">
+                            <div class="col-lg-4 col-12">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-body">
+                                        <h6 class="card-title fw-bold mb-3"><i class="fas fa-file-medical text-primary me-2"></i>معلومات التصوير</h6>
+                                        <div class="table-responsive mb-3">
+                                            <table class="table table-hover table-bordered align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="text-center" style="width: 50px;">#</th>
+                                                        <th>نوع التصوير</th>
+                                                        <th style="width: 150px;" class="text-center">الحالة</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="text-center">1</td>
+                                                        <td>
+                                                            <strong>{{ $radiology->radiologyType->name ?? 'غير محدد' }}</strong>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <select name="status" id="status" class="form-select form-select-sm @error('status') is-invalid @enderror" required>
+                                                                <option value="pending" {{ $radiology->status == 'pending' ? 'selected' : '' }}>في الانتظار</option>
+                                                                <option value="scheduled" {{ $radiology->status == 'scheduled' ? 'selected' : '' }}>مجدولة</option>
+                                                                <option value="in_progress" {{ $radiology->status == 'in_progress' ? 'selected' : '' }}>قيد التنفيذ</option>
+                                                                <option value="completed" {{ $radiology->status == 'completed' ? 'selected' : '' }}>مكتملة</option>
+                                                            </select>
+                                                            @error('status')
+                                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                @endforeach
+                            </div>
+
+                            <div class="col-lg-4 col-12">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-body d-flex flex-column">
+                                        <h6 class="card-title fw-bold mb-3"><i class="fas fa-upload text-primary me-2"></i>ملف التصوير</h6>
+
+                                        <div class="mb-3">
+                                            <input type="file" name="images[]" id="result_file" class="form-control @error('result_file') is-invalid @enderror" accept=".dcm,.dicom,.pdf,.jpg,.jpeg,.png,.tiff">
+                                            <small class="form-text text-muted">الصيغ المدعومة: DICOM (.dcm), PDF (.pdf), صور (.jpg, .jpeg, .png, .tiff)</small>
+                                            @error('result_file')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <div id="resultFilePreview" class="mb-3" style="display: none;">
+                                            <div class="text-center mb-3">
+                                                <img id="resultFilePreviewImage" src="#" alt="معاينة الملف" class="img-fluid rounded border" style="max-height: 320px; width: auto; display: none;" />
+                                                <div id="resultFilePreviewMessage" class="alert alert-secondary mb-0" style="display: none;"></div>
+                                            </div>
+                                        </div>
+
+                                        @php
+                                            $resultFileUrl = optional($radiology->result)->result_file ? asset('storage/' . $radiology->result->result_file) : null;
+                                            $resultFileExt = optional($radiology->result)->result_file ? strtolower(pathinfo($radiology->result->result_file, PATHINFO_EXTENSION)) : null;
+                                            $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'bmp', 'webp'];
+                                            $hasImagePreview = $resultFileUrl && in_array($resultFileExt, $imageExtensions);
+                                        @endphp
+
+                                        @if($resultFileUrl)
+                                            <div class="mt-2">
+                                                <div class="alert alert-info py-2 mb-0">
+                                                    <i class="fas fa-file-alt me-1"></i>
+                                                    <small>الملف الحالي: <a href="{{ $resultFileUrl }}" target="_blank" class="alert-link">{{ basename(optional($radiology->result)->result_file) }}</a></small>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 col-12">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-body d-flex flex-column">
+                                        <h6 class="card-title fw-bold mb-3"><i class="fas fa-notes-medical text-primary me-2"></i>تقرير الطبيب الإشعاعي</h6>
+
+                                        <div class="mb-3 flex-grow-1">
+                                            <label for="findings" class="form-label"><strong>النتائج:</strong></label>
+                                            <textarea name="findings" id="findings" class="form-control @error('findings') is-invalid @enderror" rows="8" placeholder="أدخل النتائج...">{{ old('findings', optional($radiology->result)->findings) }}</textarea>
+                                            @error('findings')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <div class="mt-auto">
+                                            <small class="text-muted d-block mb-2"><i class="fas fa-bolt me-1"></i>نتائج سريعة:</small>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button type="button" class="btn btn-outline-success btn-sm quick-result" data-result="طبيعي - لا توجد تغييرات مرضية">
+                                                    <i class="fas fa-check"></i> طبيعي
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning btn-sm quick-result" data-result="غير طبيعي - يتطلب مراجعة طبية">
+                                                    <i class="fas fa-exclamation-triangle"></i> غير طبيعي
+                                                </button>
+                                                <button type="button" class="btn btn-outline-info btn-sm quick-result" data-result="طبيعي مع ملاحظات طفيفة">
+                                                    <i class="fas fa-info-circle"></i> طبيعي مع ملاحظات
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm quick-result" data-result="يحتاج لفحص إضافي - غير حاسم">
+                                                    <i class="fas fa-redo"></i> يحتاج لفحص إضافي
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        @endif
-                    </div>
 
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_preliminary" name="is_preliminary" value="1" {{ ($radiology->result && $radiology->result->is_preliminary) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="is_preliminary">
-                                تقرير أولي (Preliminary Report)
-                            </label>
-                            <br>
-                            <small class="text-muted">إذا كان هذا تقريراً أولياً، يمكن تعديله لاحقاً</small>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-save me-2"></i>حفظ نتائج التصوير
+                            </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-1"></i>
-                        حفظ النتائج
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
-</div>
+    @endif
+
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const resultTextarea = document.getElementById('findings');
+    const quickResultButtons = document.querySelectorAll('.quick-result');
+    const resultFileInput = document.getElementById('result_file');
+    const resultFilePreview = document.getElementById('resultFilePreview');
+    const resultFilePreviewImage = document.getElementById('resultFilePreviewImage');
+    const resultFilePreviewMessage = document.getElementById('resultFilePreviewMessage');
+
+    if (quickResultButtons.length > 0 && resultTextarea) {
+        quickResultButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                resultTextarea.value = this.dataset.result;
+            });
+        });
+    }
+
+    if (resultFileInput) {
+        resultFileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) {
+                resultFilePreview.style.display = 'none';
+                resultFilePreviewImage.style.display = 'none';
+                resultFilePreviewMessage.style.display = 'none';
+                return;
+            }
+
+            const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/tiff', 'image/bmp', 'image/webp'];
+            const isImage = imageTypes.includes(file.type.toLowerCase());
+
+            resultFilePreview.style.display = '';
+            resultFilePreviewImage.style.display = 'none';
+            resultFilePreviewMessage.style.display = 'none';
+
+            if (isImage) {
+                const reader = new window.FileReader();
+                reader.onload = function(event) {
+                    resultFilePreviewImage.src = event.target.result;
+                    resultFilePreviewImage.style.display = '';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                resultFilePreviewMessage.textContent = 'تم اختيار ملف غير صورة، سيتم عرضه كملف عند الحفظ.';
+                resultFilePreviewMessage.style.display = '';
+            }
+        });
+    }
+});
+</script>
 @endsection

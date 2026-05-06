@@ -19,12 +19,22 @@
                         <i class="fas fa-arrow-right me-2"></i>العودة للقائمة
                     </a>
                     @if(auth()->user()->role === 'receptionist' )
-                    <form action="{{ route('appointments.convert', $appointment) }}" method="POST" class="d-inline">
-                        @csrf @method('PUT')
-                        <button type="submit" class="btn btn-success" onclick="return confirm('هل أنت متأكد من تحويل هذا الموعد إلى زيارة؟')">
-                            <i class="fas fa-user-md me-2"></i>تحويل إلى زيارة
-                        </button>
-                    </form>
+                        @if($appointment->payment_status === 'paid')
+                            <form action="{{ route('appointments.convert', $appointment) }}" method="POST" class="d-inline">
+                                @csrf @method('PUT')
+                                <button type="submit" class="btn btn-success" onclick="return confirm('هل أنت متأكد من تحويل هذا الموعد إلى زيارة؟')">
+                                    <i class="fas fa-user-md me-2"></i>تحويل إلى زيارة
+                                </button>
+                            </form>
+                        @elseif($appointment->payment_status === 'refunded')
+                            <button type="button" class="btn btn-secondary" disabled title="الموعد مسترجع ولا يمكن تحويله إلى زيارة">
+                                <i class="fas fa-user-md me-2"></i>تحويل إلى زيارة
+                            </button>
+                        @else
+                            <button type="button" class="btn btn-secondary" disabled title="الرسوم غير مدفوعة">
+                                <i class="fas fa-user-md me-2"></i>تحويل إلى زيارة
+                            </button>
+                        @endif
                     @endif
                 </div>
             </div>

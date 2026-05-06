@@ -264,7 +264,7 @@ class DoctorController extends Controller
             $doctor = Doctor::create([
                 'user_id' => $user->id,
                 'department_id' => $externalDept->id, // قسم الأطباء الخارجيين
-                'type' => 'consultant', // افتراضي
+                'type' => 'surgeon', // ليظهر ضمن قائمة الأطباء الجراحين
                 'phone' => $request->phone ?? '',
                 'specialization' => $request->specialization,
                 'qualification' => 'طبيب خارجي - ' . $request->specialization, // جعلها أكثر تفصيلاً

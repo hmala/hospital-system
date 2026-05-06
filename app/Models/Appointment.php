@@ -5,6 +5,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use App\Models\Payment;
 use Carbon\Carbon;
 
 class Appointment extends Model
@@ -25,6 +27,7 @@ class Appointment extends Model
         'consultation_fee',
         'duration',
         'cancellation_reason',
+        'cancelled_by',
         'confirmed_at',
         'completed_at',
         'cancelled_at'
@@ -152,6 +155,31 @@ class Appointment extends Model
         return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed']) && !$this->visit;
     }
 
+    protected function cancellationSourceLabel($user)
+    {
+        if (! $user) {
+            return 'النظام';
+        }
+
+        if ($user->hasRole('doctor')) {
+            return 'الطبيب ' . $user->name;
+        }
+
+        if ($user->hasRole('receptionist')) {
+            return 'موظف الاستقبال ' . $user->name;
+        }
+
+        if ($user->hasRole('consultation_receptionist')) {
+            return 'موظف استعلامات الاستشارية ' . $user->name;
+        }
+
+        if ($user->hasRole('cashier')) {
+            return 'الكاشير ' . $user->name;
+        }
+
+        return $user->name;
+    }
+
     // تغيير حالة الموعد
     public function confirm()
     {
@@ -171,9 +199,33 @@ class Appointment extends Model
 
     public function cancel($reason = null)
     {
+        // معالجة استرجاع المبلغ إذا تم الدفع مسبقاً
+        if ($this->payment_status === 'paid') {
+            $refundAmount = $this->payment ? -abs($this->payment->amount) : -abs($this->consultation_fee);
+            $paymentMethod = $this->payment ? $this->payment->payment_method : 'cash';
+
+            DB::transaction(function () use ($refundAmount, $paymentMethod) {
+                Payment::create([
+                    'appointment_id' => $this->id,
+                    'patient_id' => $this->patient_id,
+                    'cashier_id' => auth()->id(),
+                    'receipt_number' => Payment::generateReceiptNumber(),
+                    'amount' => $refundAmount,
+                    'payment_method' => $paymentMethod,
+                    'payment_type' => 'appointment',
+                    'description' => 'استرجاع دفعة موعد #' . $this->id,
+                    'notes' => 'تم استرجاع الدفع بعد إلغاء الموعد',
+                    'paid_at' => now()
+                ]);
+
+                $this->update(['payment_status' => 'refunded']);
+            });
+        }
+
         $this->update([
             'status' => 'cancelled',
             'cancellation_reason' => $reason,
+            'cancelled_by' => $this->cancellationSourceLabel(auth()->user()),
             'cancelled_at' => now()
         ]);
     }

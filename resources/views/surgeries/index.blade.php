@@ -217,22 +217,19 @@ input[type="radio"]:checked + .frequency-btn {
                                             <th>الوقت</th>
                                             <th>الغرفة</th>
                                             <th>الحالة</th>
-                                            <th>الأشعة</th>
-                                            <th>المختبر</th>
-                                            <th>العلاج</th>
-                                            <th>الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($activeSurgeries as $surgery)
                                         <tr>
                                             <td>
-                                                <i class="fas fa-user-injured text-primary me-1"></i>
-                                                {{ $surgery->patient->user->name }}
-                                                                {{ $surgery->patient->user->name }}
-                                                        </td>
-                                                        <td>
-                                                                <i class="fas fa-user-md text-success me-1"></i>
+                                                <button type="button" class="btn btn-link text-start p-0 m-0 w-100" data-bs-toggle="collapse" data-bs-target="#detailsRow{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRow{{ $surgery->id }}">
+                                                    <i class="fas fa-user-injured text-primary me-1"></i>
+                                                    {{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-user-md text-success me-1"></i>
                                                                 @if($surgery->doctor && $surgery->doctor->user)
                                                                     د. {{ $surgery->doctor->user->name }}
                                                                 @elseif($surgery->surgeon_name)
@@ -269,29 +266,44 @@ input[type="radio"]:checked + .frequency-btn {
                                                                         <span class="badge bg-danger">ملغاة</span>
                                                                 @endif
                                                         </td>
-                                                        <td>
-                                                                @if($surgery->radiologyTests->count())
-                                                                    @php
-                                                                        $radiologyCompleted = $surgery->radiologyTests->count() > 0 && $surgery->radiologyTests->every(fn($test) => $test->status == 'completed');
-                                                                    @endphp
-                                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#radiologyModalActive{{ $surgery->id }}">
-                                                                        <span class="badge {{ $radiologyCompleted ? 'bg-success' : 'bg-danger' }}">{{ $surgery->radiologyTests->count() }}</span>
-                                                                    </a>
-                                                                        <!-- Modal -->
-                                                                        <div class="modal fade" id="radiologyModalActive{{ $surgery->id }}" tabindex="-1" aria-labelledby="radiologyModalActiveLabel{{ $surgery->id }}" aria-hidden="true">
-                                                                            <div class="modal-dialog">
-                                                                                <div class="modal-content">
-                                                                                    <div class="modal-header">
-                                                                                        <h5 class="modal-title" id="radiologyModalActiveLabel{{ $surgery->id }}">تفاصيل الأشعة المطلوبة</h5>
-                                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                                                                                    </div>
-                                                                                    <div class="modal-body">
-                                                                                        <table class="table table-bordered">
-                                                                                            <thead>
-                                                                                                <tr>
+                                                </tr>
+                                                <tr class="bg-light">
+                                                    <td colspan="7">
+                                                        <div class="collapse" id="detailsRow{{ $surgery->id }}">
+                                                            <div class="p-3 border border-secondary rounded">
+                                                                @php
+                                                                    $canManageSurgery = auth()->check() && (auth()->user()->hasRole(['surgery_staff', 'admin']) || 
+                                                                                       (auth()->user()->isDoctor() && auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id));
+                                                                @endphp
+                                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                    <h6 class="mb-0">تفاصيل النتائج</h6>
+                                                                    <div class="d-flex gap-2">
+                                                                        @if($canManageSurgery && $surgery->status != 'cancelled' && $surgery->status != 'completed')
+                                                                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmCancelSurgery(event, '{{ route('surgeries.cancel', $surgery) }}', '{{ addslashes($surgery->surgery_type) }}')">
+                                                                                <i class="fas fa-times me-1"></i>إلغاء العملية
+                                                                            </button>
+                                                                        @endif
+                                                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#detailsRow{{ $surgery->id }}" aria-expanded="true" aria-controls="detailsRow{{ $surgery->id }}">
+                                                                            إخفاء التفاصيل
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="row row-cols-1 row-cols-md-3 g-3">
+                                                                    <div class="col">
+                                                                        <div class="card h-100 shadow-sm">
+                                                                            <div class="card-header bg-primary text-white py-2">
+                                                                                <span>الأشعة</span>
+                                                                                <span class="badge bg-light text-dark ms-2">{{ $surgery->radiologyTests->count() }}</span>
+                                                                            </div>
+                                                                            <div class="card-body p-2">
+                                                                                @if($surgery->radiologyTests->count())
+                                                                                    <div class="table-responsive">
+                                                                                        <table class="table table-sm table-bordered mb-0">
+                                                                                            <thead>؟
+                                                                       العمليات المكتملة هناك 3 ازرار                         <tr>
                                                                                                     <th>نوع الأشعة</th>
                                                                                                     <th>الحالة</th>
-                                                                                                    <th>النتيجة</th>
+                                                                                                    <th class="text-break" style="min-width:180px;">النتيجة</th>
                                                                                                 </tr>
                                                                                             </thead>
                                                                                             <tbody>
@@ -303,7 +315,6 @@ input[type="radio"]:checked + .frequency-btn {
                                                                                                             @if($test->result)
                                                                                                                 <p class="mb-1">{{ $test->result }}</p>
                                                                                                             @endif
-                                                                                                            
                                                                                                             @if($test->result_file)
                                                                                                                 <div class="mt-1">
                                                                                                                     <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -311,100 +322,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                                                                         مرفق
                                                                                                                     </a>
                                                                                                                 </div>
-                                                                                                            @else
-                                                                                                                @if(!$test->result)
-                                                                                                                    -
-                                                                                                                @endif
-                                                                                                            @endif
-                                                                                                        </td>
-                                                                                                    </tr>
-                                                                                                @endforeach
-                                                                                            </tbody>
-                                                                                        </table>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                @else
-                                                                        <span class="text-muted">لا يوجد</span>
-                                                                @endif
-                                                        </td>
-                                                        <td>
-                                                                @if($surgery->labTests->count())
-                                                                    @php
-                                                                        $labCompleted = $surgery->labTests->count() > 0 && $surgery->labTests->every(fn($test) => $test->status == 'completed');
-                                                                    @endphp
-                                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#labModalActive{{ $surgery->id }}">
-                                                                        <span class="badge {{ $labCompleted ? 'bg-success' : 'bg-danger' }}">{{ $surgery->labTests->count() }}</span>
-                                                                    </a>
-                                                                        <!-- Modal -->
-                                                                        <div class="modal fade" id="labModalActive{{ $surgery->id }}" tabindex="-1" aria-labelledby="labModalActiveLabel{{ $surgery->id }}" aria-hidden="true">
-                                                                            <div class="modal-dialog">
-                                                                                <div class="modal-content">
-                                                                                    <div class="modal-header">
-                                                                                        <h5 class="modal-title" id="labModalActiveLabel{{ $surgery->id }}">تفاصيل التحاليل المخبرية المطلوبة</h5>
-                                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                                                                                    </div>
-                                                                                    <div class="modal-body">
-                                                                                        <table class="table table-bordered">
-                                                                                            <thead>
-                                                                                                <tr>
-                                                                                                    <th>اسم التحليل</th>
-                                                                                                    <th>الحالة</th>
-                                                                                                    <th>النتيجة</th>
-                                                                                                </tr>
-                                                                                            </thead>
-                                                                                            <tbody>
-                                                                                                @foreach($surgery->labTests as $test)
-                                                                                                    <tr>
-                                                                                                        <td>{{ $test->labTest->name ?? '-' }}</td>
-                                                                                                        <td>{{ $test->statusText ?? '-' }}</td>
-                                                                                                        <td>{{ $test->result ?? '-' }}</td>
-                                                                                                    </tr>
-                                                                                                @endforeach
-                                                                                            </tbody>
-                                                                                        </table>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                @else
-                                                                        <span class="text-muted">لا يوجد</span>
-                                                                @endif
-                                                        </td>
-                                                        <td>
-                                                                @if($surgery->surgeryTreatments->count())
-                                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#treatmentModalActive{{ $surgery->id }}">
-                                                                        <span class="badge bg-info">{{ $surgery->surgeryTreatments->count() }}</span>
-                                                                    </a>
-                                                                        <!-- Modal -->
-                                                                        <div class="modal fade" id="treatmentModalActive{{ $surgery->id }}" tabindex="-1" aria-labelledby="treatmentModalActiveLabel{{ $surgery->id }}" aria-hidden="true">
-                                                                            <div class="modal-dialog">
-                                                                                <div class="modal-content">
-                                                                                    <div class="modal-header">
-                                                                                        <h5 class="modal-title" id="treatmentModalActiveLabel{{ $surgery->id }}">تفاصيل العلاج المطلوب</h5>
-                                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                                                                                    </div>
-                                                                                    <div class="modal-body">
-                                                                                        <table class="table table-bordered">
-                                                                                            <thead>
-                                                                                                <tr>
-                                                                                                    <th>وصف العلاج</th>
-                                                                                                    <th>الجرعة</th>
-                                                                                                    <th>التوقيت</th>
-                                                                                                    <th>المدة</th>
-                                                                                                </tr>
-                                                                                            </thead>
-                                                                                            <tbody>
-                                                                                                @foreach($surgery->surgeryTreatments as $treatment)
-                                                                                                    <tr>
-                                                                                                        <td>{{ $treatment->description }}</td>
-                                                                                                        <td>{{ $treatment->dosage ?? '-' }}</td>
-                                                                                                        <td>{{ $treatment->timing ?? '-' }}</td>
-                                                                                                        <td>
-                                                                                                            @if($treatment->duration_value && $treatment->duration_unit)
-                                                                                                                {{ $treatment->duration_value }} {{ $treatment->duration_unit == 'days' ? 'يوم' : ($treatment->duration_unit == 'weeks' ? 'أسبوع' : ($treatment->duration_unit == 'months' ? 'شهر' : $treatment->duration_unit)) }}
-                                                                                                            @else
+                                                                                                            @elseif(!$test->result)
                                                                                                                 -
                                                                                                             @endif
                                                                                                         </td>
@@ -413,74 +331,96 @@ input[type="radio"]:checked + .frequency-btn {
                                                                                             </tbody>
                                                                                         </table>
                                                                                     </div>
-                                                                                </div>
+                                                                                @else
+                                                                                    <p class="mb-0 text-muted">لا يوجد أي نتائج أشعة</p>
+                                                                                @endif
                                                                             </div>
                                                                         </div>
-                                                                @else
-                                                                        <span class="text-muted">لا يوجد</span>
-                                                                @endif
-                                                        </td>
-                                                        <td>
-                                                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-info me-1">
-                                                                        <i class="fas fa-eye"></i>
-                                                                </a>
-                                                                
-                                                                @php
-                                                                    $canManageSurgery = auth()->user()->hasRole(['surgery_staff', 'admin']) || 
-                                                                                       (auth()->user()->isDoctor() && auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id);
-                                                                    $canCheckInPatient = auth()->user()->hasRole(['surgery_staff', 'admin']);
-                                                                @endphp
-                                                                
-                                                                @if($canManageSurgery)
-                                                                    <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning me-1">
-                                                                            <i class="fas fa-edit"></i>
-                                                                    </a>
-                                                                    @if($surgery->status == 'completed')
-                                                                    <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#detailsModal{{ $surgery->id }}">
-                                                                            <i class="fas fa-clipboard-check"></i>
-                                                                    </button>
-                                                                    @endif
-                                                                @endif
-
-                                                                @if($canCheckInPatient && $surgery->status == 'scheduled')
-                                                                    <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline me-1">
-                                                                            @csrf
-                                                                            <button type="submit" class="btn btn-sm btn-primary" title="دخول المريض">
-                                                                                    <i class="fas fa-check"></i>
-                                                                            </button>
-                                                                    </form>
-                                                                @endif
-
-                                                                @if($canManageSurgery)
-                                                                    @if($surgery->status == 'waiting')
-                                                                    <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline me-1">
-                                                                            @csrf
-                                                                            <button type="submit" class="btn btn-sm btn-success" title="بدء العملية">
-                                                                                    <i class="fas fa-play"></i>
-                                                                            </button>
-                                                                    </form>
-                                                                    @elseif($surgery->status == 'in_progress')
-                                                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline me-1">
-                                                                            @csrf
-                                                                            <button type="submit" class="btn btn-sm btn-success" title="إكمال العملية">
-                                                                                    <i class="fas fa-check-circle"></i>
-                                                                            </button>
-                                                                    </form>
-                                                                    <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="d-inline me-1">
-                                                                            @csrf
-                                                                            <button type="submit" class="btn btn-sm btn-warning" title="إعادة للانتظار" onclick="return confirm('هل أنت متأكد من إعادة العملية إلى قائمة الانتظار؟')">
-                                                                                    <i class="fas fa-undo"></i>
-                                                                            </button>
-                                                                    </form>
-                                                                    <form action="{{ route('surgeries.cancel', $surgery) }}" method="POST" class="d-inline me-1">
-                                                                            @csrf
-                                                                            <button type="submit" class="btn btn-sm btn-danger" title="إلغاء العملية" onclick="return confirm('هل أنت متأكد من إلغاء العملية؟')">
-                                                                                    <i class="fas fa-times-circle"></i>
-                                                                            </button>
-                                                                    </form>
-                                                                    @endif
-                                                                @endif
-                                                        </td>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <div class="card h-100 shadow-sm">
+                                                                            <div class="card-header bg-secondary text-white py-2">
+                                                                                <span>التحاليل</span>
+                                                                                <span class="badge bg-light text-dark ms-2">{{ $surgery->labTests->count() }}</span>
+                                                                            </div>
+                                                                            <div class="card-body p-2">
+                                                                                @if($surgery->labTests->count())
+                                                                                    <div class="table-responsive">
+                                                                                        <table class="table table-sm table-bordered mb-0">
+                                                                                            <thead>
+                                                                                                <tr>
+                                                                                                    <th>الاسم</th>
+                                                                                                    <th>الحالة</th>
+                                                                                                    <th class="text-break" style="min-width:180px;">النتيجة</th>
+                                                                                                </tr>
+                                                                                            </thead>
+                                                                                            <tbody>
+                                                                                                @foreach($surgery->labTests as $test)
+                                                                                                    <tr>
+                                                                                                        <td>{{ $test->labTest->name ?? '-' }}</td>
+                                                                                                        <td>{{ $test->statusText ?? '-' }}</td>
+                                                                                                        <td>
+                                                                                                            @if($test->result)
+                                                                                                                <p class="mb-1">{{ $test->result }}</p>
+                                                                                                            @endif
+                                                                                                            @if($test->result_file)
+                                                                                                                <div class="mt-1">
+                                                                                                                    <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                                                                                        <i class="fas fa-paperclip me-1"></i>
+                                                                                                                        مرفق
+                                                                                                                    </a>
+                                                                                                                </div>
+                                                                                                            @elseif(!$test->result)
+                                                                                                                -
+                                                                                                            @endif
+                                                                                                        </td>
+                                                                                                    </tr>
+                                                                                                @endforeach
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
+                                                                                @else
+                                                                                    <p class="mb-0 text-muted">لا يوجد أي نتائج مختبر</p>
+                                                                                @endif
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <div class="card h-100 shadow-sm">
+                                                                            <div class="card-header bg-info text-white py-2">
+                                                                                <span>العلاج</span>
+                                                                                <span class="badge bg-light text-dark ms-2">{{ $surgery->surgeryTreatments->count() }}</span>
+                                                                            </div>
+                                                                            <div class="card-body p-2">
+                                                                                @if($surgery->surgeryTreatments->count())
+                                                                                    <div class="table-responsive">
+                                                                                        <table class="table table-sm table-bordered mb-0">
+                                                                                            <thead>
+                                                                                                <tr>
+                                                                                                    <th>الوصف</th>
+                                                                                                    <th>الجرعة</th>
+                                                                                                </tr>
+                                                                                            </thead>
+                                                                                            <tbody>
+                                                                                                @foreach($surgery->surgeryTreatments as $treatment)
+                                                                                                    <tr>
+                                                                                                        <td>{{ $treatment->description }}</td>
+                                                                                                        <td>{{ $treatment->dosage ?? '-' }}</td>
+                                                                                                    </tr>
+                                                                                                @endforeach
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
+                                                                                @else
+                                                                                    <p class="mb-0 text-muted">لا يوجد أي علاج مسجل</p>
+                                                                                @endif
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                         @endforeach
                                     </tbody>
@@ -503,6 +443,147 @@ input[type="radio"]:checked + .frequency-btn {
                     </div>
                 </div>
 
+                <!-- Hidden form used for surgery cancellation via native confirm dialog -->
+                <form id="cancelSurgeryConfirmForm" action="" method="POST" style="display: none;">
+                    @csrf
+                    <input type="hidden" name="cancellation_reason" id="cancel_reason_input" value="">
+                </form>
+                @foreach($activeSurgeries as $surgery)
+                    @if($surgery->radiologyTests->count())
+                        <div class="modal fade" id="radiologyModalActive{{ $surgery->id }}" tabindex="-1" aria-labelledby="radiologyModalActiveLabel{{ $surgery->id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="radiologyModalActiveLabel{{ $surgery->id }}">تفاصيل الأشعة المطلوبة</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>نوع الأشعة</th>
+                                                        <th>الحالة</th>
+                                                        <th class="text-break" style="min-width:220px;">النتيجة</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                @foreach($surgery->radiologyTests as $test)
+                                                    <tr>
+                                                        <td>{{ $test->radiologyType->name ?? '-' }}</td>
+                                                        <td>{{ $test->statusText ?? '-' }}</td>
+                                                        <td>
+                                                            @if($test->result)
+                                                                <p class="mb-1">{{ $test->result }}</p>
+                                                            @endif
+                                                            @if($test->result_file)
+                                                                <div class="mt-1">
+                                                                    <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                                        <i class="fas fa-paperclip me-1"></i>
+                                                                        مرفق
+                                                                    </a>
+                                                                </div>
+                                                            @else
+                                                                @if(!$test->result)
+                                                                    -
+                                                                @endif
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    @if($surgery->labTests->count())
+                        <div class="modal fade" id="labModalActive{{ $surgery->id }}" tabindex="-1" aria-labelledby="labModalActiveLabel{{ $surgery->id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="labModalActiveLabel{{ $surgery->id }}">تفاصيل التحاليل المخبرية المطلوبة</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>اسم التحليل</th>
+                                                        <th>الحالة</th>
+                                                        <th class="text-break" style="min-width:220px;">النتيجة</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                @foreach($surgery->labTests as $test)
+                                                    <tr>
+                                                        <td>{{ $test->labTest->name ?? '-' }}</td>
+                                                        <td>{{ $test->statusText ?? '-' }}</td>
+                                                        <td>{{ $test->result ?? '-' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    @if($surgery->surgeryTreatments->count())
+                        <div class="modal fade" id="treatmentModalActive{{ $surgery->id }}" tabindex="-1" aria-labelledby="treatmentModalActiveLabel{{ $surgery->id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="treatmentModalActiveLabel{{ $surgery->id }}">تفاصيل العلاج المطلوب</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <table class="table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>وصف العلاج</th>
+                                                    <th>الجرعة</th>
+                                                    <th>التوقيت</th>
+                                                    <th>المدة</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($surgery->surgeryTreatments as $treatment)
+                                                    <tr>
+                                                        <td>{{ $treatment->description }}</td>
+                                                        <td>{{ $treatment->dosage ?? '-' }}</td>
+                                                        <td>{{ $treatment->timing ?? '-' }}</td>
+                                                        <td>
+                                                            @if($treatment->duration_value && $treatment->duration_unit)
+                                                                {{ $treatment->duration_value }} {{ $treatment->duration_unit == 'days' ? 'يوم' : ($treatment->duration_unit == 'weeks' ? 'أسبوع' : ($treatment->duration_unit == 'months' ? 'شهر' : $treatment->duration_unit)) }}
+                                                            @else
+                                                                -
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+
                 <!-- تبويب العمليات المكتملة والملغاة -->
                 <div class="tab-pane fade" id="completed" role="tabpanel">
                     <div class="card shadow-sm">
@@ -523,9 +604,6 @@ input[type="radio"]:checked + .frequency-btn {
                                             <th>الغرفة</th>
                                             <th>الحالة</th>
                                             <th>تاريخ الخروج</th>
-                                            <th>الأشعة</th>
-                                            <th>المختبر</th>
-                                            <th>العلاج</th>
                                             <th>الإجراءات</th>
                                         </tr>
                                     </thead>
@@ -533,8 +611,10 @@ input[type="radio"]:checked + .frequency-btn {
                                         @foreach($completedSurgeries as $surgery)
                                         <tr>
                                             <td>
-                                                <i class="fas fa-user-injured text-primary me-1"></i>
-                                                {{ $surgery->patient->user->name }}
+                                                <button type="button" class="btn btn-link text-start p-0 m-0 w-100" data-bs-toggle="collapse" data-bs-target="#detailsRowCompleted{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRowCompleted{{ $surgery->id }}">
+                                                    <i class="fas fa-user-injured text-primary me-1"></i>
+                                                    {{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}
+                                                </button>
                                             </td>
                                             <td>
                                                 <i class="fas fa-user-md text-success me-1"></i>
@@ -594,53 +674,17 @@ input[type="radio"]:checked + .frequency-btn {
                                                 @endif
                                             </td>
                                             <td>
-                                                @if($surgery->radiologyTests->count())
-                                                    @php
-                                                        $radiologyCompleted = $surgery->radiologyTests->count() > 0 && $surgery->radiologyTests->every(fn($test) => $test->status == 'completed');
-                                                    @endphp
-                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#radiologyModalCompleted{{ $surgery->id }}">
-                                                        <span class="badge {{ $radiologyCompleted ? 'bg-success' : 'bg-danger' }}">{{ $surgery->radiologyTests->count() }}</span>
-                                                    </a>
-                                                @else
-                                                    <span class="text-muted">لا يوجد</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($surgery->labTests->count())
-                                                    @php
-                                                        $labCompleted = $surgery->labTests->count() > 0 && $surgery->labTests->every(fn($test) => $test->status == 'completed');
-                                                    @endphp
-                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#labModalCompleted{{ $surgery->id }}">
-                                                        <span class="badge {{ $labCompleted ? 'bg-success' : 'bg-danger' }}">{{ $surgery->labTests->count() }}</span>
-                                                    </a>
-                                                @else
-                                                    <span class="text-muted">لا يوجد</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($surgery->surgeryTreatments->count())
-                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#treatmentModalCompleted{{ $surgery->id }}">
-                                                        <span class="badge bg-info">{{ $surgery->surgeryTreatments->count() }}</span>
-                                                    </a>
-                                                @else
-                                                    <span class="text-muted">لا يوجد</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-info me-1">
+                                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-info me-1" title="عرض الصفحة">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                <button type="button" class="btn btn-sm btn-secondary me-1" data-bs-toggle="modal" data-bs-target="#detailsModal{{ $surgery->id }}" title="تفاصيل العملية">
+                                                    <i class="fas fa-list"></i>
+                                                </button>
                                                 
                                                 @php
-                                                    $canManageSurgery = auth()->user()->hasRole(['surgery_staff', 'admin']) || 
-                                                                       (auth()->user()->isDoctor() && auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id);
+                                                    $canManageSurgery = auth()->check() && (auth()->user()->hasRole(['surgery_staff', 'admin']) || 
+                                                                       (auth()->user()->isDoctor() && auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id));
                                                 @endphp
-                                                
-                                                @if($canManageSurgery && $surgery->status == 'completed')
-                                                <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#detailsModalCompleted{{ $surgery->id }}">
-                                                    <i class="fas fa-clipboard-check"></i>
-                                                </button>
-                                                @endif
 
                                                 @if($canManageSurgery && $surgery->status == 'completed' && !$surgery->discharged_at)
                                                 <button class="btn btn-sm btn-primary me-1" data-bs-toggle="modal" data-bs-target="#dischargeModal{{ $surgery->id }}" title="إخراج المريض">
@@ -672,1260 +716,6 @@ input[type="radio"]:checked + .frequency-btn {
             </div>
         </div>
     </div>
-
-    <!-- Modals for Active Surgeries -->
-    @foreach($activeSurgeries as $surgery)
-    @if($surgery->status == 'completed')
-    <div class="modal fade" id="detailsModal{{ $surgery->id }}" tabindex="-1" aria-labelledby="detailsModalLabel{{ $surgery->id }}" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="detailsModalLabel{{ $surgery->id }}">
-                        <i class="fas fa-clipboard-check me-2"></i>
-                        تفاصيل العملية الجراحية
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                </div>
-                <form action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
-                    @csrf
-                    @method('PATCH')
-                    <div class="modal-body p-0">
-                        <!-- Patient Info Header -->
-                        <div class="bg-light p-3 border-bottom">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <h6 class="mb-1">
-                                        <i class="fas fa-user-injured text-primary me-2"></i>
-                                        المريض: <strong>{{ $surgery->patient->user->name }}</strong>
-                                    </h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-md me-1"></i>
-                                        الطبيب: د. {{ $surgery->doctor->user->name }} |
-                                        <i class="fas fa-procedures me-1"></i>
-                                        العملية: {{ $surgery->surgery_type }} |
-                                        <i class="fas fa-calendar me-1"></i>
-                                        التاريخ: {{ $surgery->scheduled_date->format('Y-m-d') }}
-                                    </small>
-                                </div>
-                                <div class="col-md-4 text-end">
-                                    <span class="badge bg-success fs-6 px-3 py-2">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        العملية مكتملة
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-4">
-                            <!-- Surgery Details Accordion -->
-                            <div class="accordion" id="surgeryDetailsAccordion{{ $surgery->id }}">
-                                <!-- Diagnosis Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="diagnosisHeading{{ $surgery->id }}">
-                                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#diagnosisCollapse{{ $surgery->id }}" aria-expanded="true"
-                                                aria-controls="diagnosisCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-stethoscope me-2 text-primary"></i>
-                                            التشخيص والتخدير
-                                        </button>
-                                    </h2>
-                                    <div id="diagnosisCollapse{{ $surgery->id }}" class="accordion-collapse collapse show"
-                                         aria-labelledby="diagnosisHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="diagnosis{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-diagnoses text-primary me-1"></i>
-                                                            التشخيص
-                                                        </label>
-                                                        <textarea class="form-control" id="diagnosis{{ $surgery->id }}" name="diagnosis" rows="3"
-                                                                  placeholder="أدخل التشخيص الطبي...">{{ $surgery->diagnosis }}</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesia_type{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-syringe text-success me-1"></i>
-                                                            نوع التخدير
-                                                        </label>
-                                                        <select class="form-select" id="anesthesia_type{{ $surgery->id }}" name="anesthesia_type">
-                                                            <option value="">اختر نوع التخدير</option>
-                                                            <option value="local" {{ $surgery->anesthesia_type == 'local' ? 'selected' : '' }}>تخدير موضعي</option>
-                                                            <option value="regional" {{ $surgery->anesthesia_type == 'regional' ? 'selected' : '' }}>تخدير إقليمي</option>
-                                                            <option value="general" {{ $surgery->anesthesia_type == 'general' ? 'selected' : '' }}>تخدير عام</option>
-                                                            <option value="sedation" {{ $surgery->anesthesia_type == 'sedation' ? 'selected' : '' }}>تخدير إيحائي</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Medical Team Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="teamHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#teamCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="teamCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-users me-2 text-info"></i>
-                                            الفريق الطبي
-                                        </button>
-                                    </h2>
-                                    <div id="teamCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="teamHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesiologist_id{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-user-nurse text-info me-1"></i>
-                                                            طبيب التخدير
-                                                        </label>
-                                                        <select class="form-select" id="anesthesiologist_id{{ $surgery->id }}" name="anesthesiologist_id">
-                                                            <option value="">اختر طبيب التخدير</option>
-                                                            @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
-                                                            <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_id == $doctor->id ? 'selected' : '' }}>
-                                                                د. {{ $doctor->user->name }}
-                                                            </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesiologist_2_id{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-user-nurse text-info me-1"></i>
-                                                            طبيب تخدير مساعد
-                                                        </label>
-                                                        <select class="form-select" id="anesthesiologist_2_id{{ $surgery->id }}" name="anesthesiologist_2_id">
-                                                            <option value="">اختر طبيب التخدير المساعد</option>
-                                                            @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
-                                                            <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_2_id == $doctor->id ? 'selected' : '' }}>
-                                                                د. {{ $doctor->user->name }}
-                                                            </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="surgical_assistant_name{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-user-friends text-warning me-1"></i>
-                                                            اسم المساعد الجراحي
-                                                        </label>
-                                                        <input type="text" class="form-control" id="surgical_assistant_name{{ $surgery->id }}" name="surgical_assistant_name"
-                                                               value="{{ $surgery->surgical_assistant_name }}" placeholder="أدخل اسم المساعد الجراحي">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="supplies{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-tools text-secondary me-1"></i>
-                                                            اللوازم المستخدمة
-                                                        </label>
-                                                        <textarea class="form-control" id="supplies{{ $surgery->id }}" name="supplies" rows="2"
-                                                                  placeholder="أدخل اللوازم والأدوات المستخدمة...">{{ $surgery->supplies }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Timing Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="timingHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#timingCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="timingCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-clock me-2 text-warning"></i>
-                                            التوقيت والمدة
-                                        </button>
-                                    </h2>
-                                    <div id="timingCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="timingHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="start_time{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-play-circle text-success me-1"></i>
-                                                            وقت البدء
-                                                        </label>
-                                                        <input type="time" class="form-control" id="start_time{{ $surgery->id }}" name="start_time"
-                                                               value="{{ $surgery->start_time ? (is_string($surgery->start_time) ? \Carbon\Carbon::parse($surgery->start_time)->format('H:i') : $surgery->start_time->format('H:i')) : ($surgery->started_at ? $surgery->started_at->format('H:i') : '') }}">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="end_time{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-stop-circle text-danger me-1"></i>
-                                                            وقت الانتهاء
-                                                        </label>
-                                                        <input type="time" class="form-control" id="end_time{{ $surgery->id }}" name="end_time"
-                                                               value="{{ $surgery->end_time ? (is_string($surgery->end_time) ? \Carbon\Carbon::parse($surgery->end_time)->format('H:i') : $surgery->end_time->format('H:i')) : '' }}">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="estimated_duration{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-hourglass-half text-primary me-1"></i>
-                                                            المدة المقدرة
-                                                        </label>
-                                                        <input type="text" class="form-control bg-light" id="estimated_duration{{ $surgery->id }}" name="estimated_duration"
-                                                               value="{{ $surgery->estimated_duration ? \Carbon\CarbonInterval::minutes($surgery->estimated_duration)->cascade()->format('%H:%I') : '' }}"
-                                                               placeholder="س:د (مثال: 02:30)" readonly>
-                                                        <small class="form-text text-muted">يتم حسابها تلقائياً من وقت البدء والانتهاء</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Treatment Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="treatmentHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#treatmentCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="treatmentCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-pills me-2 text-info"></i>
-                                            خطة العلاج
-                                        </button>
-                                    </h2>
-                                    <div id="treatmentCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="treatmentHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <!-- جدول علاج العمليات -->
-                                            <div class="mb-4">
-                                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                                    <label class="form-label">
-                                                        <i class="fas fa-table text-primary me-2"></i>
-                                                        جدول علاج العمليات
-                                                    </label>
-                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSurgeryTreatment({{ $surgery->id }})">
-                                                        <i class="fas fa-plus me-1"></i>
-                                                        إضافة علاج
-                                                    </button>
-                                                </div>
-
-                                                <div class="table-responsive">
-                                                    <table class="table table-bordered" id="surgeryTreatmentsTable{{ $surgery->id }}">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th width="5%">الرقم</th>
-                                                                <th width="30%">وصف العلاج</th>
-                                                                <th width="20%">الجرعة/الكمية</th>
-                                                                <th width="20%">التوقيت/التكرار</th>
-                                                                <th width="15%">المدة</th>
-                                                                <th width="10%">الإجراءات</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody id="surgeryTreatmentsContainer{{ $surgery->id }}">
-                                                            @php
-                                                                $savedSurgeryTreatments = $surgery->surgeryTreatments ?? collect();
-                                                            @endphp
-                                                            @foreach($savedSurgeryTreatments as $index => $treatment)
-                                                            <tr class="surgery-treatment-row">
-                                                                <td class="text-center">{{ $index + 1 }}</td>
-                                                                <td>
-                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][description]"
-                                                                           value="{{ $treatment->description ?? '' }}"
-                                                                           placeholder="اسم الدواء أو وصف العلاج">
-                                                                </td>
-                                                                <td>
-                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][dosage]"
-                                                                           value="{{ $treatment->dosage ?? '' }}"
-                                                                           placeholder="مثال: 500mg, 2ml">
-                                                                </td>
-                                                                <td>
-                                                                    <textarea class="form-control form-control-sm timing-textarea" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][timing]" rows="2"
-                                                                              placeholder="مثال: كل 6 ساعات، صباحاً ومساءً، قبل العملية بساعة">{{ $treatment->timing ?? '' }}</textarea>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="duration-input-group">
-                                                                        <input type="number" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][duration_value]"
-                                                                               value="{{ $treatment->duration_value ?? '' }}"
-                                                                               placeholder="العدد" min="1">
-                                                                        <select class="form-select form-select-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][duration_unit]">
-                                                                            <option value="days" {{ ($treatment->duration_unit ?? '') == 'days' ? 'selected' : '' }}>يوم</option>
-                                                                            <option value="weeks" {{ ($treatment->duration_unit ?? '') == 'weeks' ? 'selected' : '' }}>أسبوع</option>
-                                                                            <option value="months" {{ ($treatment->duration_unit ?? '') == 'months' ? 'selected' : '' }}>شهر</option>
-                                                                            <option value="hours" {{ ($treatment->duration_unit ?? '') == 'hours' ? 'selected' : '' }}>ساعة</option>
-                                                                            <option value="doses" {{ ($treatment->duration_unit ?? '') == 'doses' ? 'selected' : '' }}>جرعة</option>
-                                                                        </select>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSurgeryTreatment(this)">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                            @endforeach
-                                                            @if($savedSurgeryTreatments->isEmpty())
-                                                            <tr id="emptySurgeryTreatmentsRow{{ $surgery->id }}">
-                                                                <td colspan="6" class="text-center py-4 text-muted">
-                                                                    <i class="fas fa-table fa-2x mb-2"></i>
-                                                                    <p>لا توجد علاجات محددة للعملية</p>
-                                                                    <small>اضغط على "إضافة علاج" لبدء إضافة علاجات العملية</small>
-                                                                </td>
-                                                            </tr>
-                                                            @endif
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Surgery Classification Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="classificationHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#classificationCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="classificationCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-tags me-2 text-primary"></i>
-                                            تصنيف العملية ونوعها
-                                        </button>
-                                    </h2>
-                                    <div id="classificationCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="classificationHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="surgery_category{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-layer-group text-primary me-1"></i>
-                                                            تصنيف العملية
-                                                        </label>
-                                                        <select class="form-select" id="surgery_category{{ $surgery->id }}" name="surgery_category">
-                                                            <option value="">اختر التصنيف</option>
-                                                            <option value="elective" {{ $surgery->surgery_category == 'elective' ? 'selected' : '' }}>اختيارية</option>
-                                                            <option value="emergency" {{ $surgery->surgery_category == 'emergency' ? 'selected' : '' }}>طارئة</option>
-                                                            <option value="urgent" {{ $surgery->surgery_category == 'urgent' ? 'selected' : '' }}>عاجلة</option>
-                                                            <option value="semi_urgent" {{ $surgery->surgery_category == 'semi_urgent' ? 'selected' : '' }}>شبه عاجلة</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="surgery_type_detail{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-procedures text-info me-1"></i>
-                                                            نوع العملية
-                                                        </label>
-                                                        <select class="form-select" id="surgery_type_detail{{ $surgery->id }}" name="surgery_type_detail">
-                                                            <option value="">اختر نوع العملية</option>
-                                                            <option value="diagnostic" {{ $surgery->surgery_type_detail == 'diagnostic' ? 'selected' : '' }}>تشخيصية</option>
-                                                            <option value="therapeutic" {{ $surgery->surgery_category == 'therapeutic' ? 'selected' : '' }}>علاجية</option>
-                                                            <option value="preventive" {{ $surgery->surgery_type_detail == 'preventive' ? 'selected' : '' }}>وقائية</option>
-                                                            <option value="cosmetic" {{ $surgery->surgery_type_detail == 'cosmetic' ? 'selected' : '' }}>تجميلية</option>
-                                                            <option value="reconstructive" {{ $surgery->surgery_type_detail == 'reconstructive' ? 'selected' : '' }}>ترميمية</option>
-                                                            <option value="palliative" {{ $surgery->surgery_type_detail == 'palliative' ? 'selected' : '' }}>تخفيفية</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesia_position{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-bed text-warning me-1"></i>
-                                                            وضعية التخدير
-                                                        </label>
-                                                        <select class="form-select" id="anesthesia_position{{ $surgery->id }}" name="anesthesia_position">
-                                                            <option value="">اختر وضعية التخدير</option>
-                                                            <option value="supine" {{ $surgery->anesthesia_position == 'supine' ? 'selected' : '' }}>استلقاء على الظهر</option>
-                                                            <option value="prone" {{ $surgery->anesthesia_position == 'prone' ? 'selected' : '' }}>استلقاء على البطن</option>
-                                                            <option value="lateral" {{ $surgery->anesthesia_position == 'lateral' ? 'selected' : '' }}>الوضع الجانبي</option>
-                                                            <option value="lithotomy" {{ $surgery->anesthesia_position == 'lithotomy' ? 'selected' : '' }}>وضع الولادة</option>
-                                                            <option value="fowler" {{ $surgery->anesthesia_position == 'fowler' ? 'selected' : '' }}>وضع فولر</option>
-                                                            <option value="trendelenburg" {{ $surgery->anesthesia_position == 'trendelenburg' ? 'selected' : '' }}>وضع تريندلنبرغ</option>
-                                                            <option value="sitting" {{ $surgery->anesthesia_position == 'sitting' ? 'selected' : '' }}>الجلوس</option>
-                                                            <option value="other" {{ $surgery->anesthesia_position == 'other' ? 'selected' : '' }}>أخرى</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="asa_classification{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-heartbeat text-danger me-1"></i>
-                                                            تصنيف ASA
-                                                        </label>
-                                                        <select class="form-select" id="asa_classification{{ $surgery->id }}" name="asa_classification">
-                                                            <option value="">اختر تصنيف ASA</option>
-                                                            <option value="asa1" {{ $surgery->asa_classification == 'asa1' ? 'selected' : '' }}>ASA I - مريض سليم</option>
-                                                            <option value="asa2" {{ $surgery->asa_classification == 'asa2' ? 'selected' : '' }}>ASA II - مرض خفيف</option>
-                                                            <option value="asa3" {{ $surgery->asa_classification == 'asa3' ? 'selected' : '' }}>ASA III - مرض شديد</option>
-                                                            <option value="asa4" {{ $surgery->asa_classification == 'asa4' ? 'selected' : '' }}>ASA IV - مرض شديد يهدد الحياة</option>
-                                                            <option value="asa5" {{ $surgery->asa_classification == 'asa5' ? 'selected' : '' }}>ASA V - مريض ميت الآن</option>
-                                                            <option value="asa6" {{ $surgery->asa_classification == 'asa6' ? 'selected' : '' }}>ASA VI - عضو متبرع</option>
-                                                        </select>
-                                                        <small class="form-text text-muted">تصنيف الجمعية الأمريكية للتخدير</small>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="surgical_complexity{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-chart-line text-success me-1"></i>
-                                                            درجة تعقيد العملية
-                                                        </label>
-                                                        <select class="form-select" id="surgical_complexity{{ $surgery->id }}" name="surgical_complexity">
-                                                            <option value="">اختر درجة التعقيد</option>
-                                                            <option value="minor" {{ $surgery->surgical_complexity == 'minor' ? 'selected' : '' }}>بسيطة</option>
-                                                            <option value="intermediate" {{ $surgery->surgical_complexity == 'intermediate' ? 'selected' : '' }}>متوسطة</option>
-                                                            <option value="major" {{ $surgery->surgical_complexity == 'major' ? 'selected' : '' }}>كبرى</option>
-                                                            <option value="complex" {{ $surgery->surgical_complexity == 'complex' ? 'selected' : '' }}>معقدة</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row">
-                                                <div class="col-12">
-                                                    <div class="mb-3">
-                                                        <label for="surgical_notes{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-file-medical text-secondary me-1"></i>
-                                                            ملاحظات تصنيف العملية
-                                                        </label>
-                                                        <textarea class="form-control" id="surgical_notes{{ $surgery->id }}" name="surgical_notes" rows="3"
-                                                                  placeholder="أدخل أي ملاحظات إضافية حول تصنيف العملية ونوعها...">{{ $surgery->surgical_notes }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Notes Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="notesHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#notesCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="notesCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-sticky-note me-2 text-secondary"></i>
-                                            الملاحظات
-                                        </button>
-                                    </h2>
-                                    <div id="notesCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="notesHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="post_op_notes{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-notes-medical text-danger me-1"></i>
-                                                            ملاحظات ما بعد العملية
-                                                        </label>
-                                                        <textarea class="form-control" id="post_op_notes{{ $surgery->id }}" name="post_op_notes" rows="4"
-                                                                  placeholder="أدخل ملاحظات ما بعد العملية والتعليمات...">{{ $surgery->post_op_notes }}</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="notes{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-comment-alt text-info me-1"></i>
-                                                            ملاحظات إضافية
-                                                        </label>
-                                                        <textarea class="form-control" id="notes{{ $surgery->id }}" name="notes" rows="4"
-                                                                  placeholder="أدخل أي ملاحظات إضافية...">{{ $surgery->notes }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Treatment Plan Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="treatmentHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#treatmentCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="treatmentCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-clipboard-list me-2 text-primary"></i>
-                                            خطة العلاج والمتابعة
-                                        </button>
-                                    </h2>
-                                    <div id="treatmentCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="treatmentHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-8">
-                                                    <div class="mb-3">
-                                                        <label for="treatment_plan{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-list-check text-primary me-1"></i>
-                                                            خطة العلاج
-                                                        </label>
-                                                        <textarea class="form-control" id="treatment_plan{{ $surgery->id }}" name="treatment_plan" rows="4"
-                                                                  placeholder="أدخل خطة العلاج والإرشادات بعد العملية...">{{ $surgery->treatment_plan }}</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="mb-3">
-                                                        <label for="follow_up_date{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-calendar-check text-success me-1"></i>
-                                                            تاريخ المتابعة
-                                                        </label>
-                                                        <input type="date" class="form-control" id="follow_up_date{{ $surgery->id }}" name="follow_up_date"
-                                                               value="{{ $surgery->follow_up_date ? (is_string($surgery->follow_up_date) ? $surgery->follow_up_date : $surgery->follow_up_date->format('Y-m-d')) : '' }}"
-                                                               min="{{ date('Y-m-d') }}">
-                                                        <small class="form-text text-muted">تاريخ الزيارة التالية</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>إلغاء
-                        </button>
-                        <button type="submit" class="btn btn-success btn-lg" onclick="return prepareSurgeryData(this)">
-                            <i class="fas fa-save me-2"></i>حفظ التفاصيل
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    @endif
-    @endforeach
-
-    <!-- Modals for Completed Surgeries -->
-    @foreach($completedSurgeries as $surgery)
-    @if($surgery->status == 'completed')
-    <div class="modal fade" id="detailsModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="detailsModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="detailsModalCompletedLabel{{ $surgery->id }}">
-                        <i class="fas fa-clipboard-check me-2"></i>
-                        تفاصيل العملية الجراحية
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                </div>
-                <form action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
-                    @csrf
-                    @method('PATCH')
-                    <div class="modal-body p-0">
-                        <!-- Patient Info Header -->
-                        <div class="bg-light p-3 border-bottom">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <h6 class="mb-1">
-                                        <i class="fas fa-user-injured text-primary me-2"></i>
-                                        المريض: <strong>{{ $surgery->patient->user->name }}</strong>
-                                    </h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-md me-1"></i>
-                                        الطبيب: د. {{ $surgery->doctor->user->name }} |
-                                        <i class="fas fa-procedures me-1"></i>
-                                        العملية: {{ $surgery->surgery_type }} |
-                                        <i class="fas fa-calendar me-1"></i>
-                                        التاريخ: {{ $surgery->scheduled_date->format('Y-m-d') }}
-                                    </small>
-                                </div>
-                                <div class="col-md-4 text-end">
-                                    <span class="badge bg-success fs-6 px-3 py-2">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        العملية مكتملة
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-4">
-                            <!-- Surgery Details Accordion -->
-                            <div class="accordion" id="surgeryDetailsAccordion{{ $surgery->id }}">
-                                <!-- Diagnosis Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="diagnosisHeading{{ $surgery->id }}">
-                                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#diagnosisCollapse{{ $surgery->id }}" aria-expanded="true"
-                                                aria-controls="diagnosisCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-stethoscope me-2 text-primary"></i>
-                                            التشخيص والتخدير
-                                        </button>
-                                    </h2>
-                                    <div id="diagnosisCollapse{{ $surgery->id }}" class="accordion-collapse collapse show"
-                                         aria-labelledby="diagnosisHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="diagnosis{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-diagnoses text-primary me-1"></i>
-                                                            التشخيص
-                                                        </label>
-                                                        <textarea class="form-control" id="diagnosis{{ $surgery->id }}" name="diagnosis" rows="3"
-                                                                  placeholder="أدخل التشخيص الطبي...">{{ $surgery->diagnosis }}</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesia_type{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-syringe text-success me-1"></i>
-                                                            نوع التخدير
-                                                        </label>
-                                                        <select class="form-select" id="anesthesia_type{{ $surgery->id }}" name="anesthesia_type">
-                                                            <option value="">اختر نوع التخدير</option>
-                                                            <option value="local" {{ $surgery->anesthesia_type == 'local' ? 'selected' : '' }}>تخدير موضعي</option>
-                                                            <option value="regional" {{ $surgery->anesthesia_type == 'regional' ? 'selected' : '' }}>تخدير إقليمي</option>
-                                                            <option value="general" {{ $surgery->anesthesia_type == 'general' ? 'selected' : '' }}>تخدير عام</option>
-                                                            <option value="sedation" {{ $surgery->anesthesia_type == 'sedation' ? 'selected' : '' }}>تخدير إيحائي</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Medical Team Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="teamHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#teamCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="teamCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-users me-2 text-info"></i>
-                                            الفريق الطبي
-                                        </button>
-                                    </h2>
-                                    <div id="teamCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="teamHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesiologist_id{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-user-nurse text-info me-1"></i>
-                                                            طبيب التخدير
-                                                        </label>
-                                                        <select class="form-select" id="anesthesiologist_id{{ $surgery->id }}" name="anesthesiologist_id">
-                                                            <option value="">اختر طبيب التخدير</option>
-                                                            @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
-                                                            <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_id == $doctor->id ? 'selected' : '' }}>
-                                                                د. {{ $doctor->user->name }}
-                                                            </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesiologist_2_id{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-user-nurse text-info me-1"></i>
-                                                            طبيب تخدير مساعد
-                                                        </label>
-                                                        <select class="form-select" id="anesthesiologist_2_id{{ $surgery->id }}" name="anesthesiologist_2_id">
-                                                            <option value="">اختر طبيب التخدير المساعد</option>
-                                                            @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
-                                                            <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_2_id == $doctor->id ? 'selected' : '' }}>
-                                                                د. {{ $doctor->user->name }}
-                                                            </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="surgical_assistant_name{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-user-friends text-warning me-1"></i>
-                                                            مساعد جراح
-                                                        </label>
-                                                        <input type="text" class="form-control" id="surgical_assistant_name{{ $surgery->id }}" name="surgical_assistant_name"
-                                                               value="{{ $surgery->surgical_assistant_name }}" placeholder="اسم المساعد الجراح">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="supplies{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-tools text-secondary me-1"></i>
-                                                            المستلزمات المستخدمة
-                                                        </label>
-                                                        <textarea class="form-control" id="supplies{{ $surgery->id }}" name="supplies" rows="2"
-                                                                  placeholder="المستلزمات والأدوات المستخدمة...">{{ $surgery->supplies }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Surgery Details Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="surgeryHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#surgeryCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="surgeryCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-procedures me-2 text-danger"></i>
-                                            تفاصيل العملية
-                                        </button>
-                                    </h2>
-                                    <div id="surgeryCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="surgeryHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="start_time{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-clock text-success me-1"></i>
-                                                            وقت البدء
-                                                        </label>
-                                                        <input type="time" class="form-control" id="start_time{{ $surgery->id }}" name="start_time"
-                                                               value="{{ $surgery->start_time ? $surgery->start_time->format('H:i') : ($surgery->started_at ? $surgery->started_at->format('H:i') : '') }}">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="end_time{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-clock text-danger me-1"></i>
-                                                            وقت الانتهاء
-                                                        </label>
-                                                        <input type="time" class="form-control" id="end_time{{ $surgery->id }}" name="end_time"
-                                                               value="{{ $surgery->end_time ? $surgery->end_time->format('H:i') : '' }}">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="estimated_duration{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-hourglass-half text-warning me-1"></i>
-                                                            المدة المقدرة
-                                                        </label>
-                                                        <input type="text" class="form-control" id="estimated_duration{{ $surgery->id }}" name="estimated_duration"
-                                                               value="{{ $surgery->estimated_duration }}" placeholder="مثال: 2:30 (ساعات:دقائق)">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="surgery_category{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-exclamation-triangle text-warning me-1"></i>
-                                                            تصنيف العملية
-                                                        </label>
-                                                        <select class="form-select" id="surgery_category{{ $surgery->id }}" name="surgery_category">
-                                                            <option value="">اختر التصنيف</option>
-                                                            <option value="elective" {{ $surgery->surgery_category == 'elective' ? 'selected' : '' }}>اختيارية</option>
-                                                            <option value="emergency" {{ $surgery->surgery_category == 'emergency' ? 'selected' : '' }}>طارئة</option>
-                                                            <option value="urgent" {{ $surgery->surgery_category == 'urgent' ? 'selected' : '' }}>عاجلة</option>
-                                                            <option value="semi_urgent" {{ $surgery->surgery_category == 'semi_urgent' ? 'selected' : '' }}>شبه عاجلة</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="surgery_type_detail{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-info-circle text-info me-1"></i>
-                                                            نوع العملية التفصيلي
-                                                        </label>
-                                                        <select class="form-select" id="surgery_type_detail{{ $surgery->id }}" name="surgery_type_detail">
-                                                            <option value="">اختر النوع</option>
-                                                            <option value="diagnostic" {{ $surgery->surgery_type_detail == 'diagnostic' ? 'selected' : '' }}>تشخيصية</option>
-                                                            <option value="therapeutic" {{ $surgery->surgery_type_detail == 'therapeutic' ? 'selected' : '' }}>علاجية</option>
-                                                            <option value="preventive" {{ $surgery->surgery_type_detail == 'preventive' ? 'selected' : '' }}>وقائية</option>
-                                                            <option value="cosmetic" {{ $surgery->surgery_type_detail == 'cosmetic' ? 'selected' : '' }}>تجميلية</option>
-                                                            <option value="reconstructive" {{ $surgery->surgery_type_detail == 'reconstructive' ? 'selected' : '' }}>ترميمية</option>
-                                                            <option value="palliative" {{ $surgery->surgery_type_detail == 'palliative' ? 'selected' : '' }}>تلطيفية</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="anesthesia_position{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-bed text-secondary me-1"></i>
-                                                            وضعية التخدير
-                                                        </label>
-                                                        <select class="form-select" id="anesthesia_position{{ $surgery->id }}" name="anesthesia_position">
-                                                            <option value="">اختر الوضعية</option>
-                                                            <option value="supine" {{ $surgery->anesthesia_position == 'supine' ? 'selected' : '' }}>استلقاء على الظهر</option>
-                                                            <option value="prone" {{ $surgery->anesthesia_position == 'prone' ? 'selected' : '' }}>استلقاء على البطن</option>
-                                                            <option value="lateral" {{ $surgery->anesthesia_position == 'lateral' ? 'selected' : '' }}>جانبية</option>
-                                                            <option value="lithotomy" {{ $surgery->anesthesia_position == 'lithotomy' ? 'selected' : '' }}>ليثوتومي</option>
-                                                            <option value="fowler" {{ $surgery->anesthesia_position == 'fowler' ? 'selected' : '' }}>فاولر</option>
-                                                            <option value="trendelenburg" {{ $surgery->anesthesia_position == 'trendelenburg' ? 'selected' : '' }}>تريندلنبرغ</option>
-                                                            <option value="sitting" {{ $surgery->anesthesia_position == 'sitting' ? 'selected' : '' }}>جلوس</option>
-                                                            <option value="other" {{ $surgery->anesthesia_position == 'other' ? 'selected' : '' }}>أخرى</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="asa_classification{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-heartbeat text-danger me-1"></i>
-                                                            تصنيف ASA
-                                                        </label>
-                                                        <select class="form-select" id="asa_classification{{ $surgery->id }}" name="asa_classification">
-                                                            <option value="">اختر التصنيف</option>
-                                                            <option value="asa1" {{ $surgery->asa_classification == 'asa1' ? 'selected' : '' }}>ASA 1 - مريض سليم</option>
-                                                            <option value="asa2" {{ $surgery->asa_classification == 'asa2' ? 'selected' : '' }}>ASA 2 - مرض خفيف</option>
-                                                            <option value="asa3" {{ $surgery->asa_classification == 'asa3' ? 'selected' : '' }}>ASA 3 - مرض شديد</option>
-                                                            <option value="asa4" {{ $surgery->asa_classification == 'asa4' ? 'selected' : '' }}>ASA 4 - مرض شديد يهدد الحياة</option>
-                                                            <option value="asa5" {{ $surgery->asa_classification == 'asa5' ? 'selected' : '' }}>ASA 5 - مريض ميت لا يُتوقع البقاء</option>
-                                                            <option value="asa6" {{ $surgery->asa_classification == 'asa6' ? 'selected' : '' }}>ASA 6 - مريض تم إيقاف قلبه</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="surgical_complexity{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-cogs text-primary me-1"></i>
-                                                            تعقيد العملية
-                                                        </label>
-                                                        <select class="form-select" id="surgical_complexity{{ $surgery->id }}" name="surgical_complexity">
-                                                            <option value="">اختر التعقيد</option>
-                                                            <option value="minor" {{ $surgery->surgical_complexity == 'minor' ? 'selected' : '' }}>بسيطة</option>
-                                                            <option value="intermediate" {{ $surgery->surgical_complexity == 'intermediate' ? 'selected' : '' }}>متوسطة</option>
-                                                            <option value="major" {{ $surgery->surgical_complexity == 'major' ? 'selected' : '' }}>كبرى</option>
-                                                            <option value="complex" {{ $surgery->surgical_complexity == 'complex' ? 'selected' : '' }}>معقدة</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="surgical_notes{{ $surgery->id }}" class="form-label fw-bold">
-                                                    <i class="fas fa-notes-medical text-primary me-1"></i>
-                                                    ملاحظات جراحية
-                                                </label>
-                                                <textarea class="form-control" id="surgical_notes{{ $surgery->id }}" name="surgical_notes" rows="3"
-                                                          placeholder="ملاحظات حول العملية الجراحية...">{{ $surgery->surgical_notes }}</textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Post-Op Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="postOpHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#postOpCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="postOpCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-heart me-2 text-danger"></i>
-                                            ما بعد العملية
-                                        </button>
-                                    </h2>
-                                    <div id="postOpCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="postOpHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="mb-3">
-                                                <label for="treatment_plan{{ $surgery->id }}" class="form-label fw-bold">
-                                                    <i class="fas fa-clipboard-list text-primary me-1"></i>
-                                                    خطة العلاج
-                                                </label>
-                                                <textarea class="form-control" id="treatment_plan{{ $surgery->id }}" name="treatment_plan" rows="3"
-                                                          placeholder="خطة العلاج والإرشادات بعد العملية...">{{ $surgery->treatment_plan }}</textarea>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="post_op_notes{{ $surgery->id }}" class="form-label fw-bold">
-                                                    <i class="fas fa-file-medical text-danger me-1"></i>
-                                                    ملاحظات ما بعد العملية
-                                                </label>
-                                                <textarea class="form-control" id="post_op_notes{{ $surgery->id }}" name="post_op_notes" rows="4"
-                                                          placeholder="ملاحظات حول فترة ما بعد العملية...">{{ $surgery->post_op_notes }}</textarea>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="follow_up_date{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-calendar-check text-success me-1"></i>
-                                                            موعد المتابعة
-                                                        </label>
-                                                        <input type="date" class="form-control" id="follow_up_date{{ $surgery->id }}" name="follow_up_date"
-                                                               value="{{ $surgery->follow_up_date ? (is_string($surgery->follow_up_date) ? $surgery->follow_up_date : $surgery->follow_up_date->format('Y-m-d')) : '' }}" min="{{ date('Y-m-d') }}">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="notes{{ $surgery->id }}" class="form-label fw-bold">
-                                                            <i class="fas fa-sticky-note text-warning me-1"></i>
-                                                            ملاحظات إضافية
-                                                        </label>
-                                                        <textarea class="form-control" id="notes{{ $surgery->id }}" name="notes" rows="2"
-                                                                  placeholder="ملاحظات إضافية...">{{ $surgery->notes }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Treatment Plan Section -->
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="treatmentHeading{{ $surgery->id }}">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#treatmentCollapse{{ $surgery->id }}" aria-expanded="false"
-                                                aria-controls="treatmentCollapse{{ $surgery->id }}">
-                                            <i class="fas fa-pills me-2 text-success"></i>
-                                            خطة العلاج والأدوية
-                                        </button>
-                                    </h2>
-                                    <div id="treatmentCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
-                                         aria-labelledby="treatmentHeading{{ $surgery->id }}"
-                                         data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
-                                        <div class="accordion-body">
-                                            <div class="mb-3">
-                                                <label for="treatment_plan{{ $surgery->id }}" class="form-label fw-bold">
-                                                    <i class="fas fa-clipboard-list text-success me-1"></i>
-                                                    خطة العلاج
-                                                </label>
-                                                <textarea class="form-control" id="treatment_plan{{ $surgery->id }}" name="treatment_plan" rows="4"
-                                                          placeholder="خطة العلاج والرعاية المطلوبة...">{{ $surgery->treatment_plan }}</textarea>
-                                            </div>
-
-                                            <!-- Medications Section -->
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">
-                                                    <i class="fas fa-pills text-primary me-1"></i>
-                                                    الأدوية الموصوفة
-                                                </label>
-                                                <div id="medicationsContainer{{ $surgery->id }}">
-                                                    @if($surgery->prescribed_medications && is_array($surgery->prescribed_medications) && isset($surgery->prescribed_medications['medications']))
-                                                        @foreach($surgery->prescribed_medications['medications'] as $index => $medication)
-                                                        <div class="medication-item card mb-3 border-success">
-                                                            <div class="card-body">
-                                                                <div class="row">
-                                                                    <div class="col-md-3">
-                                                                        <label class="form-label">اسم الدواء</label>
-                                                                        <input type="text" class="form-control" name="prescribed_medications[medications][{{ $index }}][name]"
-                                                                               value="{{ $medication['name'] ?? '' }}" placeholder="اسم الدواء أو اختر من القائمة" list="commonMedications{{ $surgery->id }}">
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <label class="form-label">الجرعة</label>
-                                                                        <input type="text" class="form-control" name="prescribed_medications[medications][{{ $index }}][dosage]"
-                                                                               value="{{ $medication['dosage'] ?? '' }}" placeholder="مثال: 500mg">
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <label class="form-label">التوقيت</label>
-                                                                        <input type="text" class="form-control" name="prescribed_medications[medications][{{ $index }}][timing]"
-                                                                               value="{{ $medication['timing'] ?? '' }}" placeholder="مثال: مرتين يومياً">
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <label class="form-label">المدة</label>
-                                                                        <input type="number" class="form-control" name="prescribed_medications[medications][{{ $index }}][duration]"
-                                                                               value="{{ $medication['duration'] ?? '' }}" placeholder="عدد الأيام" min="1">
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <label class="form-label">الملاحظات</label>
-                                                                        <input type="text" class="form-control" name="prescribed_medications[medications][{{ $index }}][notes]"
-                                                                               value="{{ $medication['notes'] ?? '' }}" placeholder="ملاحظات إضافية">
-                                                                    </div>
-                                                                    <div class="col-md-1 d-flex align-items-end">
-                                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeMedication(this)">
-                                                                            <i class="fas fa-trash"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        @endforeach
-                                                    @endif
-                                                </div>
-                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="addMedication({{ $surgery->id }})">
-                                                    <i class="fas fa-plus me-1"></i>إضافة دواء
-                                                </button>
-                                            </div>
-
-                                            <!-- Surgery Treatments Section -->
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">
-                                                    <i class="fas fa-procedures text-warning me-1"></i>
-                                                    علاجات العملية
-                                                </label>
-                                                <div class="table-responsive">
-                                                    <table class="table table-bordered" id="surgeryTreatmentsTable{{ $surgery->id }}">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th>اسم العلاج</th>
-                                                                <th>الجرعة</th>
-                                                                <th>التوقيت</th>
-                                                                <th>المدة</th>
-                                                                <th>الوحدة</th>
-                                                                <th>الإجراءات</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody id="surgeryTreatmentsContainer{{ $surgery->id }}">
-                                                            @php
-                                                                $savedSurgeryTreatments = $surgery->surgeryTreatments ?? collect();
-                                                            @endphp
-                                                            @foreach($savedSurgeryTreatments as $index => $treatment)
-                                                            <tr class="surgery-treatment-row">
-                                                                <td>
-                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][description]"
-                                                                           value="{{ $treatment->description ?? '' }}"
-                                                                           placeholder="اسم الدواء أو وصف العلاج">
-                                                                </td>
-                                                                <td>
-                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][dosage]"
-                                                                           value="{{ $treatment->dosage ?? '' }}"
-                                                                           placeholder="مثال: 500mg, 2ml">
-                                                                </td>
-                                                                <td>
-                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][timing]"
-                                                                           value="{{ $treatment->timing ?? '' }}"
-                                                                           placeholder="مثال: كل 6 ساعات">
-                                                                </td>
-                                                                <td>
-                                                                    <input type="number" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][duration_value]"
-                                                                           value="{{ $treatment->duration_value ?? '' }}"
-                                                                           placeholder="العدد" min="1">
-                                                                </td>
-                                                                <td>
-                                                                    <select class="form-select form-select-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][duration_unit]">
-                                                                        <option value="days" {{ ($treatment->duration_unit ?? '') == 'days' ? 'selected' : '' }}>يوم</option>
-                                                                        <option value="weeks" {{ ($treatment->duration_unit ?? '') == 'weeks' ? 'selected' : '' }}>أسبوع</option>
-                                                                        <option value="months" {{ ($treatment->duration_unit ?? '') == 'months' ? 'selected' : '' }}>شهر</option>
-                                                                        <option value="hours" {{ ($treatment->duration_unit ?? '') == 'hours' ? 'selected' : '' }}>ساعة</option>
-                                                                        <option value="doses" {{ ($treatment->duration_unit ?? '') == 'doses' ? 'selected' : '' }}>جرعة</option>
-                                                                    </select>
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSurgeryTreatment(this)">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                            @endforeach
-                                                            @if($savedSurgeryTreatments->isEmpty())
-                                                            <tr id="emptySurgeryTreatmentsRow{{ $surgery->id }}">
-                                                                <td colspan="6" class="text-center py-4 text-muted">
-                                                                    <i class="fas fa-table fa-2x mb-2"></i>
-                                                                    <p>لا توجد علاجات محددة للعملية</p>
-                                                                    <small>اضغط على "إضافة علاج" لبدء إضافة علاجات العملية</small>
-                                                                </td>
-                                                            </tr>
-                                                            @endif
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="addSurgeryTreatment({{ $surgery->id }})">
-                                                    <i class="fas fa-plus me-1"></i>إضافة علاج
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-1"></i>إلغاء
-                        </button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save me-1"></i>حفظ التفاصيل
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    @endif
-    @endforeach
-
-    <!-- Radiology, Lab, and Treatment Modals for Completed Surgeries -->
-    @foreach($completedSurgeries as $surgery)
-        <!-- Radiology Modal -->
-        <div class="modal fade" id="radiologyModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="radiologyModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="radiologyModalCompletedLabel{{ $surgery->id }}">تفاصيل الأشعة المطلوبة</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                    </div>
-                    <div class="modal-body">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>نوع الأشعة</th>
-                                    <th>الحالة</th>
-                                    <th>النتيجة</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($surgery->radiologyTests as $test)
-                                    <tr>
-                                        <td>{{ $test->radiologyType->name ?? '-' }}</td>
-                                        <td>{{ $test->statusText ?? '-' }}</td>
-                                        <td>
-                                            @if($test->result)
-                                                <p class="mb-1">{{ $test->result }}</p>
-                                            @endif
-                                            
-                                            @if($test->result_file)
-                                                <div class="mt-1">
-                                                    <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-paperclip me-1"></i>
-                                                        مرفق
-                                                    </a>
-                                                </div>
-                                            @else
-                                                @if(!$test->result)
-                                                    -
-                                                @endif
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Lab Modal -->
-        <div class="modal fade" id="labModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="labModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="labModalCompletedLabel{{ $surgery->id }}">تفاصيل التحاليل المخبرية المطلوبة</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                    </div>
-                    <div class="modal-body">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>اسم التحليل</th>
-                                    <th>الحالة</th>
-                                    <th>النتيجة</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($surgery->labTests as $test)
-                                    <tr>
-                                        <td>{{ $test->labTest->name ?? '-' }}</td>
-                                        <td>{{ $test->statusText ?? '-' }}</td>
-                                        <td>{{ $test->result ?? '-' }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Treatment Modal -->
-        <div class="modal fade" id="treatmentModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="treatmentModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="treatmentModalCompletedLabel{{ $surgery->id }}">تفاصيل العلاج المطلوب</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                    </div>
-                    <div class="modal-body">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>وصف العلاج</th>
-                                    <th>الجرعة</th>
-                                    <th>التوقيت</th>
-                                    <th>المدة</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($surgery->surgeryTreatments as $treatment)
-                                    <tr>
-                                        <td>{{ $treatment->description }}</td>
-                                        <td>{{ $treatment->dosage ?? '-' }}</td>
-                                        <td>{{ $treatment->timing ?? '-' }}</td>
-                                        <td>
-                                            @if($treatment->duration_value && $treatment->duration_unit)
-                                                {{ $treatment->duration_value }} {{ $treatment->duration_unit == 'days' ? 'يوم' : ($treatment->duration_unit == 'weeks' ? 'أسبوع' : ($treatment->duration_unit == 'months' ? 'شهر' : $treatment->duration_unit)) }}
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Discharge Modal -->
-        <div class="modal fade" id="dischargeModal{{ $surgery->id }}" tabindex="-1" aria-labelledby="dischargeModalLabel{{ $surgery->id }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="dischargeModalLabel{{ $surgery->id }}">
-                            <i class="fas fa-sign-out-alt me-2"></i>
-                            إخراج المريض
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                    </div>
-                    <form action="{{ route('surgeries.discharge', $surgery) }}" method="POST">
-                        @csrf
-                        <div class="modal-body">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                سيتم إخراج المريض <strong>{{ $surgery->patient->user->name }}</strong> من الخدمة وتحرير الغرفة رقم 
-                                @if($surgery->room)
-                                    <strong>{{ $surgery->room->room_number }}</strong>
-                                @else
-                                    <strong>غير محدد</strong>
-                                @endif
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="discharge_notes{{ $surgery->id }}" class="form-label">
-                                    <i class="fas fa-sticky-note me-1"></i>
-                                    ملاحظات الخروج (اختياري)
-                                </label>
-                                <textarea class="form-control" id="discharge_notes{{ $surgery->id }}" name="discharge_notes" rows="3"
-                                          placeholder="أدخل أي ملاحظات متعلقة بخروج المريض..."></textarea>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="confirmDischarge{{ $surgery->id }}" required>
-                                <label class="form-check-label" for="confirmDischarge{{ $surgery->id }}">
-                                    أؤكد إخراج المريض وإتمام العملية بنجاح
-                                </label>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i>
-                                إلغاء
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check me-1"></i>
-                                تأكيد الخروج
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endforeach
 </div>
 @endsection
 
@@ -2267,14 +1057,34 @@ window.removeMedication = function(button) {
 window.removeTreatment = function(button) {
     button.closest('.treatment-item').remove();
 };
-</script>
 
-<!-- Common Medications DataList for Active Surgeries -->
-@foreach($activeSurgeries as $surgery)
-@if($surgery->status == 'completed')
+    document.addEventListener('DOMContentLoaded', function() {
+        window.confirmCancelSurgery = function(event, route, title) {
+            event.preventDefault();
+            const message = 'هل أنت متأكد من إلغاء العملية: ' + title + '؟';
+            if (!window.confirm(message)) {
+                return false;
+            }
+
+            const reason = window.prompt('أدخل سبب الإلغاء (اختياري):', '');
+            if (reason === null) {
+                return false;
+            }
+
+            const form = document.getElementById('cancelSurgeryConfirmForm');
+            const reasonInput = document.getElementById('cancel_reason_input');
+            if (form && route) {
+                form.action = route;
+                if (reasonInput) {
+                    reasonInput.value = reason.trim();
+                }
+                form.submit();
+            }
+            return true;
+        };
+    });
+</script>
 <datalist id="commonMedications{{ $surgery->id }}">
-    <option value="أموكسيسيلين (Amoxicillin)">
-    <option value="أزيثروميسين (Azithromycin)">
     <option value="أموكسيكلاف (Amoxicillin-Clavulanate)">
     <option value="سيفالكسين (Cephalexin)">
     <option value="سيفازولين (Cefazolin)">
@@ -2330,8 +1140,6 @@ window.removeTreatment = function(button) {
     <option value="كلوريد">
     <option value="بيكربونات">
 </datalist>
-@endif
-@endforeach
 
 <!-- Common Medications DataList for Completed Surgeries -->
 @foreach($completedSurgeries as $surgery)
@@ -2398,3 +1206,713 @@ window.removeTreatment = function(button) {
 @endforeach
 
 @endsection
+
+@push('modals')
+    <!-- Details Modal for Completed Surgeries -->
+    @foreach($completedSurgeries as $surgery)
+        @if($surgery->status == 'completed')
+        <div class="modal fade" id="detailsModal{{ $surgery->id }}" tabindex="-1" aria-labelledby="detailsModalLabel{{ $surgery->id }}" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="detailsModalLabel{{ $surgery->id }}">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            تفاصيل العملية الجراحية
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
+                    <form action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
+                        @csrf
+                        @method('PATCH')
+                        <div class="modal-body p-0">
+                            <div class="bg-light p-3 border-bottom">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-user-injured text-primary me-2"></i>
+                                            المريض: <strong>{{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}</strong>
+                                        </h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user-md me-1"></i>
+                                            الطبيب: 
+                                            @if($surgery->doctor_id && $surgery->doctor)
+                                                د. {{ $surgery->doctor->user->name }}
+                                            @elseif($surgery->surgeon_name)
+                                                {{ $surgery->surgeon_name }} <span class="badge bg-secondary">طبيب خارجي</span>
+                                            @else
+                                                غير محدد
+                                            @endif
+                                             |
+                                            <i class="fas fa-procedures me-1"></i>
+                                            العملية: {{ $surgery->surgery_type }} |
+                                            <i class="fas fa-calendar me-1"></i>
+                                            التاريخ: {{ $surgery->scheduled_date->format('Y-m-d') }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <span class="badge bg-success fs-6 px-3 py-2">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            العملية مكتملة
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4">
+                                <div class="accordion" id="surgeryDetailsAccordion{{ $surgery->id }}">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="diagnosisHeading{{ $surgery->id }}">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#diagnosisCollapse{{ $surgery->id }}" aria-expanded="true"
+                                                    aria-controls="diagnosisCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-stethoscope me-2 text-primary"></i>
+                                                التشخيص والتخدير
+                                            </button>
+                                        </h2>
+                                        <div id="diagnosisCollapse{{ $surgery->id }}" class="accordion-collapse collapse show"
+                                             aria-labelledby="diagnosisHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="diagnosis{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-diagnoses text-primary me-1"></i>
+                                                                التشخيص
+                                                            </label>
+                                                            <textarea class="form-control" id="diagnosis{{ $surgery->id }}" name="diagnosis" rows="3"
+                                                                      placeholder="أدخل التشخيص الطبي...">{{ $surgery->diagnosis }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="anesthesia_type{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-syringe text-success me-1"></i>
+                                                                نوع التخدير
+                                                            </label>
+                                                            <select class="form-select" id="anesthesia_type{{ $surgery->id }}" name="anesthesia_type">
+                                                                <option value="">اختر نوع التخدير</option>
+                                                                <option value="local" {{ $surgery->anesthesia_type == 'local' ? 'selected' : '' }}>تخدير موضعي</option>
+                                                                <option value="regional" {{ $surgery->anesthesia_type == 'regional' ? 'selected' : '' }}>تخدير إقليمي</option>
+                                                                <option value="general" {{ $surgery->anesthesia_type == 'general' ? 'selected' : '' }}>تخدير عام</option>
+                                                                <option value="sedation" {{ $surgery->anesthesia_type == 'sedation' ? 'selected' : '' }}>تخدير إيحائي</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="teamHeading{{ $surgery->id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#teamCollapse{{ $surgery->id }}" aria-expanded="false"
+                                                    aria-controls="teamCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-users me-2 text-info"></i>
+                                                الفريق الطبي
+                                            </button>
+                                        </h2>
+                                        <div id="teamCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
+                                             aria-labelledby="teamHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="anesthesiologist_id{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-user-nurse text-info me-1"></i>
+                                                                طبيب التخدير
+                                                            </label>
+                                                            <select class="form-select" id="anesthesiologist_id{{ $surgery->id }}" name="anesthesiologist_id">
+                                                                <option value="">اختر طبيب التخدير</option>
+                                                                @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
+                                                                <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_id == $doctor->id ? 'selected' : '' }}>
+                                                                    د. {{ $doctor->user->name }}
+                                                                </option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="anesthesiologist_2_id{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-user-nurse text-info me-1"></i>
+                                                                طبيب تخدير مساعد
+                                                            </label>
+                                                            <select class="form-select" id="anesthesiologist_2_id{{ $surgery->id }}" name="anesthesiologist_2_id">
+                                                                <option value="">اختر طبيب التخدير المساعد</option>
+                                                                @foreach(\App\Models\Doctor::where('specialization', 'like', '%تخدير%')->orWhere('specialization', 'like', '%anesthesia%')->get() as $doctor)
+                                                                <option value="{{ $doctor->id }}" {{ $surgery->anesthesiologist_2_id == $doctor->id ? 'selected' : '' }}>
+                                                                    د. {{ $doctor->user->name }}
+                                                                </option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="surgical_assistant_name{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-user-friends text-warning me-1"></i>
+                                                                اسم المساعد الجراحي
+                                                            </label>
+                                                            <input type="text" class="form-control" id="surgical_assistant_name{{ $surgery->id }}" name="surgical_assistant_name"
+                                                                   value="{{ $surgery->surgical_assistant_name }}" placeholder="أدخل اسم المساعد الجراحي">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="supplies{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-tools text-secondary me-1"></i>
+                                                                اللوازم المستخدمة
+                                                            </label>
+                                                            <textarea class="form-control" id="supplies{{ $surgery->id }}" name="supplies" rows="2"
+                                                                      placeholder="أدخل اللوازم والأدوات المستخدمة...">{{ $surgery->supplies }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="timingHeading{{ $surgery->id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#timingCollapse{{ $surgery->id }}" aria-expanded="false"
+                                                    aria-controls="timingCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-clock me-2 text-warning"></i>
+                                                التوقيت والمدة
+                                            </button>
+                                        </h2>
+                                        <div id="timingCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
+                                             aria-labelledby="timingHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="start_time{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-play-circle text-success me-1"></i>
+                                                                وقت البدء
+                                                            </label>
+                                                            <input type="time" class="form-control" id="start_time{{ $surgery->id }}" name="start_time"
+                                                                   value="{{ $surgery->start_time ? (is_string($surgery->start_time) ? \Carbon\Carbon::parse($surgery->start_time)->format('H:i') : $surgery->start_time->format('H:i')) : ($surgery->started_at ? $surgery->started_at->format('H:i') : '') }}">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="end_time{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-stop-circle text-danger me-1"></i>
+                                                                وقت الانتهاء
+                                                            </label>
+                                                            <input type="time" class="form-control" id="end_time{{ $surgery->id }}" name="end_time"
+                                                                   value="{{ $surgery->end_time ? (is_string($surgery->end_time) ? \Carbon\Carbon::parse($surgery->end_time)->format('H:i') : $surgery->end_time->format('H:i')) : '' }}">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="estimated_duration{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-hourglass-half text-primary me-1"></i>
+                                                                المدة المقدرة
+                                                            </label>
+                                                            <input type="text" class="form-control bg-light" id="estimated_duration{{ $surgery->id }}" name="estimated_duration"
+                                                                   value="{{ $surgery->estimated_duration ? \Carbon\CarbonInterval::minutes($surgery->estimated_duration)->cascade()->format('%H:%I') : '' }}"
+                                                                   placeholder="س:د (مثال: 02:30)" readonly>
+                                                            <small class="form-text text-muted">يتم حسابها تلقائياً من وقت البدء والانتهاء</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="treatmentHeading{{ $surgery->id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#treatmentCollapse{{ $surgery->id }}" aria-expanded="false"
+                                                    aria-controls="treatmentCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-pills me-2 text-info"></i>
+                                                خطة العلاج
+                                            </button>
+                                        </h2>
+                                        <div id="treatmentCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
+                                             aria-labelledby="treatmentHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="mb-4">
+                                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                                        <label class="form-label">
+                                                            <i class="fas fa-table text-primary me-2"></i>
+                                                            جدول علاج العمليات
+                                                        </label>
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSurgeryTreatment({{ $surgery->id }})">
+                                                            <i class="fas fa-plus me-1"></i>
+                                                            إضافة علاج
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="table-responsive">
+                                                        <table class="table table-bordered" id="surgeryTreatmentsTable{{ $surgery->id }}">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th width="5%">الرقم</th>
+                                                                    <th width="30%">وصف العلاج</th>
+                                                                    <th width="20%">الجرعة/الكمية</th>
+                                                                    <th width="20%">التوقيت/التكرار</th>
+                                                                    <th width="15%">المدة</th>
+                                                                    <th width="10%">الإجراءات</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="surgeryTreatmentsContainer{{ $surgery->id }}">
+                                                                @php
+                                                                    $savedSurgeryTreatments = $surgery->surgeryTreatments ?? collect();
+                                                                @endphp
+                                                                @foreach($savedSurgeryTreatments as $index => $treatment)
+                                                                <tr class="surgery-treatment-row">
+                                                                    <td class="text-center">{{ $index + 1 }}</td>
+                                                                    <td>
+                                                                        <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][description]"
+                                                                               value="{{ $treatment->description ?? '' }}"
+                                                                               placeholder="اسم الدواء أو وصف العلاج">
+                                                                    </td>
+                                                                    <td>
+                                                                        <input type="text" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][dosage]"
+                                                                               value="{{ $treatment->dosage ?? '' }}"
+                                                                               placeholder="مثال: 500mg, 2ml">
+                                                                    </td>
+                                                                    <td>
+                                                                        <textarea class="form-control form-control-sm timing-textarea" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][timing]" rows="2"
+                                                                                  placeholder="مثال: كل 6 ساعات، صباحاً ومساءً، قبل العملية بساعة">{{ $treatment->timing ?? '' }}</textarea>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="duration-input-group">
+                                                                            <input type="number" class="form-control form-control-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][duration_value]"
+                                                                                   value="{{ $treatment->duration_value ?? '' }}"
+                                                                                   placeholder="العدد" min="1">
+                                                                            <select class="form-select form-select-sm" name="prescribed_medications[surgery_treatments][{{ $surgery->id }}][{{ $index }}][duration_unit]">
+                                                                                <option value="days" {{ ($treatment->duration_unit ?? '') == 'days' ? 'selected' : '' }}>يوم</option>
+                                                                                <option value="weeks" {{ ($treatment->duration_unit ?? '') == 'weeks' ? 'selected' : '' }}>أسبوع</option>
+                                                                                <option value="months" {{ ($treatment->duration_unit ?? '') == 'months' ? 'selected' : '' }}>شهر</option>
+                                                                                <option value="hours" {{ ($treatment->duration_unit ?? '') == 'hours' ? 'selected' : '' }}>ساعة</option>
+                                                                                <option value="doses" {{ ($treatment->duration_unit ?? '') == 'doses' ? 'selected' : '' }}>جرعة</option>
+                                                                            </select>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSurgeryTreatment(this)">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                                @endforeach
+                                                                @if($savedSurgeryTreatments->isEmpty())
+                                                                <tr id="emptySurgeryTreatmentsRow{{ $surgery->id }}">
+                                                                    <td colspan="6" class="text-center py-4 text-muted">
+                                                                        <i class="fas fa-table fa-2x mb-2"></i>
+                                                                        <p>لا توجد علاجات محددة للعملية</p>
+                                                                        <small>اضغط على "إضافة علاج" لبدء إضافة علاجات العملية</small>
+                                                                    </td>
+                                                                </tr>
+                                                                @endif
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="classificationHeading{{ $surgery->id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#classificationCollapse{{ $surgery->id }}" aria-expanded="false"
+                                                    aria-controls="classificationCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-tags me-2 text-primary"></i>
+                                                تصنيف العملية ونوعها
+                                            </button>
+                                        </h2>
+                                        <div id="classificationCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
+                                             aria-labelledby="classificationHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="surgery_category{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-layer-group text-primary me-1"></i>
+                                                                تصنيف العملية
+                                                            </label>
+                                                            <select class="form-select" id="surgery_category{{ $surgery->id }}" name="surgery_category">
+                                                                <option value="">اختر التصنيف</option>
+                                                                <option value="elective" {{ $surgery->surgery_category == 'elective' ? 'selected' : '' }}>اختيارية</option>
+                                                                <option value="emergency" {{ $surgery->surgery_category == 'emergency' ? 'selected' : '' }}>طارئة</option>
+                                                                <option value="urgent" {{ $surgery->surgery_category == 'urgent' ? 'selected' : '' }}>عاجلة</option>
+                                                                <option value="semi_urgent" {{ $surgery->surgery_category == 'semi_urgent' ? 'selected' : '' }}>شبه عاجلة</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="surgery_type_detail{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-procedures text-info me-1"></i>
+                                                                نوع العملية
+                                                            </label>
+                                                            <select class="form-select" id="surgery_type_detail{{ $surgery->id }}" name="surgery_type_detail">
+                                                                <option value="">اختر نوع العملية</option>
+                                                                <option value="diagnostic" {{ $surgery->surgery_type_detail == 'diagnostic' ? 'selected' : '' }}>تشخيصية</option>
+                                                                <option value="therapeutic" {{ $surgery->surgery_category == 'therapeutic' ? 'selected' : '' }}>علاجية</option>
+                                                                <option value="preventive" {{ $surgery->surgery_type_detail == 'preventive' ? 'selected' : '' }}>وقائية</option>
+                                                                <option value="cosmetic" {{ $surgery->surgery_type_detail == 'cosmetic' ? 'selected' : '' }}>تجميلية</option>
+                                                                <option value="reconstructive" {{ $surgery->surgery_type_detail == 'reconstructive' ? 'selected' : '' }}>ترميمية</option>
+                                                                <option value="palliative" {{ $surgery->surgery_type_detail == 'palliative' ? 'selected' : '' }}>تخفيفية</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="anesthesia_position{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-bed text-warning me-1"></i>
+                                                                وضعية التخدير
+                                                            </label>
+                                                            <select class="form-select" id="anesthesia_position{{ $surgery->id }}" name="anesthesia_position">
+                                                                <option value="">اختر وضعية التخدير</option>
+                                                                <option value="supine" {{ $surgery->anesthesia_position == 'supine' ? 'selected' : '' }}>استلقاء على الظهر</option>
+                                                                <option value="prone" {{ $surgery->anesthesia_position == 'prone' ? 'selected' : '' }}>استلقاء على البطن</option>
+                                                                <option value="lateral" {{ $surgery->anesthesia_position == 'lateral' ? 'selected' : '' }}>الوضع الجانبي</option>
+                                                                <option value="lithotomy" {{ $surgery->anesthesia_position == 'lithotomy' ? 'selected' : '' }}>وضع الولادة</option>
+                                                                <option value="fowler" {{ $surgery->anesthesia_position == 'fowler' ? 'selected' : '' }}>وضع فولر</option>
+                                                                <option value="trendelenburg" {{ $surgery->anesthesia_position == 'trendelenburg' ? 'selected' : '' }}>وضع تريندلنبرغ</option>
+                                                                <option value="sitting" {{ $surgery->anesthesia_position == 'sitting' ? 'selected' : '' }}>الجلوس</option>
+                                                                <option value="other" {{ $surgery->anesthesia_position == 'other' ? 'selected' : '' }}>أخرى</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="asa_classification{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-heartbeat text-danger me-1"></i>
+                                                                تصنيف ASA
+                                                            </label>
+                                                            <select class="form-select" id="asa_classification{{ $surgery->id }}" name="asa_classification">
+                                                                <option value="">اختر تصنيف ASA</option>
+                                                                <option value="asa1" {{ $surgery->asa_classification == 'asa1' ? 'selected' : '' }}>ASA I - مريض سليم</option>
+                                                                <option value="asa2" {{ $surgery->asa_classification == 'asa2' ? 'selected' : '' }}>ASA II - مرض خفيف</option>
+                                                                <option value="asa3" {{ $surgery->asa_classification == 'asa3' ? 'selected' : '' }}>ASA III - مرض شديد</option>
+                                                                <option value="asa4" {{ $surgery->asa_classification == 'asa4' ? 'selected' : '' }}>ASA IV - مرض شديد يهدد الحياة</option>
+                                                                <option value="asa5" {{ $surgery->asa_classification == 'asa5' ? 'selected' : '' }}>ASA V - مريض ميت الآن</option>
+                                                                <option value="asa6" {{ $surgery->asa_classification == 'asa6' ? 'selected' : '' }}>ASA VI - عضو متبرع</option>
+                                                            </select>
+                                                            <small class="form-text text-muted">تصنيف الجمعية الأمريكية للتخدير</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="surgical_complexity{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-chart-line text-success me-1"></i>
+                                                                درجة تعقيد العملية
+                                                            </label>
+                                                            <select class="form-select" id="surgical_complexity{{ $surgery->id }}" name="surgical_complexity">
+                                                                <option value="">اختر درجة التعقيد</option>
+                                                                <option value="minor" {{ $surgery->surgical_complexity == 'minor' ? 'selected' : '' }}>بسيطة</option>
+                                                                <option value="intermediate" {{ $surgery->surgical_complexity == 'intermediate' ? 'selected' : '' }}>متوسطة</option>
+                                                                <option value="major" {{ $surgery->surgical_complexity == 'major' ? 'selected' : '' }}>كبرى</option>
+                                                                <option value="complex" {{ $surgery->surgical_complexity == 'complex' ? 'selected' : '' }}>معقدة</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <div class="mb-3">
+                                                            <label for="surgical_notes{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-file-medical text-secondary me-1"></i>
+                                                                ملاحظات تصنيف العملية
+                                                            </label>
+                                                            <textarea class="form-control" id="surgical_notes{{ $surgery->id }}" name="surgical_notes" rows="3"
+                                                                      placeholder="أدخل أي ملاحظات إضافية حول تصنيف العملية ونوعها...">{{ $surgery->surgical_notes }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="notesHeading{{ $surgery->id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#notesCollapse{{ $surgery->id }}" aria-expanded="false"
+                                                    aria-controls="notesCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-sticky-note me-2 text-secondary"></i>
+                                                الملاحظات
+                                            </button>
+                                        </h2>
+                                        <div id="notesCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
+                                             aria-labelledby="notesHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="post_op_notes{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-notes-medical text-danger me-1"></i>
+                                                                ملاحظات ما بعد العملية
+                                                            </label>
+                                                            <textarea class="form-control" id="post_op_notes{{ $surgery->id }}" name="post_op_notes" rows="4"
+                                                                      placeholder="أدخل ملاحظات ما بعد العملية والتعليمات...">{{ $surgery->post_op_notes }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="notes{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-comment-alt text-info me-1"></i>
+                                                                ملاحظات إضافية
+                                                            </label>
+                                                            <textarea class="form-control" id="notes{{ $surgery->id }}" name="notes" rows="4"
+                                                                      placeholder="أدخل أي ملاحظات إضافية...">{{ $surgery->notes }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="planHeading{{ $surgery->id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#planCollapse{{ $surgery->id }}" aria-expanded="false"
+                                                    aria-controls="planCollapse{{ $surgery->id }}">
+                                                <i class="fas fa-clipboard-list me-2 text-primary"></i>
+                                                خطة العلاج والمتابعة
+                                            </button>
+                                        </h2>
+                                        <div id="planCollapse{{ $surgery->id }}" class="accordion-collapse collapse"
+                                             aria-labelledby="planHeading{{ $surgery->id }}"
+                                             data-bs-parent="#surgeryDetailsAccordion{{ $surgery->id }}">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <div class="mb-3">
+                                                            <label for="treatment_plan{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-list-check text-primary me-1"></i>
+                                                                خطة العلاج
+                                                            </label>
+                                                            <textarea class="form-control" id="treatment_plan{{ $surgery->id }}" name="treatment_plan" rows="4"
+                                                                      placeholder="أدخل خطة العلاج والإرشادات بعد العملية...">{{ $surgery->treatment_plan }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="mb-3">
+                                                            <label for="follow_up_date{{ $surgery->id }}" class="form-label fw-bold">
+                                                                <i class="fas fa-calendar-check text-success me-1"></i>
+                                                                تاريخ المتابعة
+                                                            </label>
+                                                            <input type="date" class="form-control" id="follow_up_date{{ $surgery->id }}" name="follow_up_date"
+                                                                   value="{{ $surgery->follow_up_date ? (is_string($surgery->follow_up_date) ? $surgery->follow_up_date : $surgery->follow_up_date->format('Y-m-d')) : '' }}"
+                                                                   min="{{ date('Y-m-d') }}">
+                                                            <small class="form-text text-muted">تاريخ الزيارة التالية</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>إلغاء
+                            </button>
+                            <button type="submit" class="btn btn-success btn-lg" onclick="return prepareSurgeryData(this)">
+                                <i class="fas fa-save me-2"></i>حفظ التفاصيل
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Radiology Modal -->
+        <div class="modal fade" id="radiologyModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="radiologyModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="radiologyModalCompletedLabel{{ $surgery->id }}">تفاصيل الأشعة المطلوبة</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>نوع الأشعة</th>
+                                    <th>الحالة</th>
+                                    <th>النتيجة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($surgery->radiologyTests as $test)
+                                    <tr>
+                                        <td>{{ $test->radiologyType->name ?? '-' }}</td>
+                                        <td>{{ $test->statusText ?? '-' }}</td>
+                                        <td>
+                                            @if($test->result)
+                                                <p class="mb-1">{{ $test->result }}</p>
+                                            @endif
+                                            
+                                            @if($test->result_file)
+                                                <div class="mt-1">
+                                                    <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-paperclip me-1"></i>
+                                                        مرفق
+                                                    </a>
+                                                </div>
+                                            @else
+                                                @if(!$test->result)
+                                                    -
+                                                @endif
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lab Modal -->
+        <div class="modal fade" id="labModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="labModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="labModalCompletedLabel{{ $surgery->id }}">تفاصيل التحاليل المخبرية المطلوبة</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>اسم التحليل</th>
+                                    <th>الحالة</th>
+                                    <th>النتيجة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($surgery->labTests as $test)
+                                    <tr>
+                                        <td>{{ $test->labTest->name ?? '-' }}</td>
+                                        <td>{{ $test->statusText ?? '-' }}</td>
+                                        <td>{{ $test->result ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Treatment Modal -->
+        <div class="modal fade" id="treatmentModalCompleted{{ $surgery->id }}" tabindex="-1" aria-labelledby="treatmentModalCompletedLabel{{ $surgery->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="treatmentModalCompletedLabel{{ $surgery->id }}">تفاصيل العلاج المطلوب</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>وصف العلاج</th>
+                                    <th>الجرعة</th>
+                                    <th>التوقيت</th>
+                                    <th>المدة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($surgery->surgeryTreatments as $treatment)
+                                    <tr>
+                                        <td>{{ $treatment->description }}</td>
+                                        <td>{{ $treatment->dosage ?? '-' }}</td>
+                                        <td>{{ $treatment->timing ?? '-' }}</td>
+                                        <td>
+                                            @if($treatment->duration_value && $treatment->duration_unit)
+                                                {{ $treatment->duration_value }} {{ $treatment->duration_unit == 'days' ? 'يوم' : ($treatment->duration_unit == 'weeks' ? 'أسبوع' : ($treatment->duration_unit == 'months' ? 'شهر' : $treatment->duration_unit)) }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discharge Modal -->
+        <div class="modal fade" id="dischargeModal{{ $surgery->id }}" tabindex="-1" aria-labelledby="dischargeModalLabel{{ $surgery->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="dischargeModalLabel{{ $surgery->id }}">
+                            <i class="fas fa-sign-out-alt me-2"></i>
+                            إخراج المريض
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                    </div>
+                    <form action="{{ route('surgeries.discharge', $surgery) }}" method="POST">
+                        @csrf
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                سيتم إخراج المريض <strong>{{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}</strong> من الخدمة وتحرير الغرفة رقم 
+                                @if($surgery->room)
+                                    <strong>{{ $surgery->room->room_number }}</strong>
+                                @else
+                                    <strong>غير محدد</strong>
+                                @endif
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="discharge_notes{{ $surgery->id }}" class="form-label">
+                                    <i class="fas fa-sticky-note me-1"></i>
+                                    ملاحظات الخروج (اختياري)
+                                </label>
+                                <textarea class="form-control" id="discharge_notes{{ $surgery->id }}" name="discharge_notes" rows="3"
+                                          placeholder="أدخل أي ملاحظات متعلقة بخروج المريض..."></textarea>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDischarge{{ $surgery->id }}" required>
+                                <label class="form-check-label" for="confirmDischarge{{ $surgery->id }}">
+                                    أؤكد إخراج المريض وإتمام العملية بنجاح
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>
+                                إلغاء
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>
+                                تأكيد الخروج
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endpush

@@ -34,6 +34,7 @@
                     @case('cashier') الكاشير @break
                     @case('types') أنواع التحاليل @break
                     @case('rooms') الغرف @break
+                    @case('inventory') المخزون @break
                     @default {{ $module }}
                 @endswitch
                 <span class="badge bg-light text-dark ms-2">{{ $perms->count() }}</span>

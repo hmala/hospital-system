@@ -11,6 +11,7 @@ use App\Models\Appointment;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Emergency;
+use App\Models\ServiceType;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -75,43 +76,26 @@ class InquiryController extends Controller
             return redirect()->route('inquiry.search')->with('error', 'المريض غير موجود أو بياناته غير مكتملة');
         }
 
-        // أنواع الطلبات مع الأقسام المناسبة
-        $requestTypes = [
-            'lab' => [
-                'label' => 'تحاليل طبية',
-                'icon' => 'flask',
-                'color' => 'primary',
-                'departments' => Department::where('name', 'LIKE', '%مختبر%')->where('is_active', true)->orderBy('name')->get()
-            ],
-            'radiology' => [
-                'label' => 'أشعة',
-                'icon' => 'x-ray',
-                'color' => 'info',
-                'departments' => Department::where('name', 'LIKE', '%أشعة%')->orWhere('name', 'LIKE', '%راديولوجي%')->where('is_active', true)->orderBy('name')->get()
-            ],
-            'pharmacy' => [
-                'label' => 'صيدلية',
-                'icon' => 'pills',
-                'color' => 'success',
-                'departments' => Department::where('name', 'LIKE', '%صيدلية%')->where('is_active', true)->orderBy('name')->get()
-            ],
-            'checkup' => [
-                'label' => 'كشف طبي',
-                'icon' => 'stethoscope',
-                'color' => 'warning',
-                'departments' => Department::whereNotIn('name', ['مختبر', 'أشعة', 'صيدلية'])->where('is_active', true)->orderBy('name')->get()
-            ],
-            'blood_bank' => [
-                'label' => 'مصرف الدم',
-                'icon' => 'tint',
-                'color' => 'danger',
-                'departments' => Department::where('name', 'LIKE', '%مصرف دم%')
-                    ->orWhere('name', 'LIKE', '%دم%')
-                    ->where('is_active', true)
-                    ->orderBy('name')
-                    ->get()
-            ]
-        ];
+        // جلب أنواع الخدمات النشطة مع التحقق من الصلاحيات
+        $serviceTypes = ServiceType::active()->ordered()->get();
+
+        $requestTypes = [];
+        foreach ($serviceTypes as $serviceType) {
+            // التحقق من الصلاحية إذا كانت محددة
+            if ($serviceType->required_permission && !$user->can($serviceType->required_permission)) {
+                continue;
+            }
+
+            // تحديد الأقسام بناءً على نوع الخدمة
+            $departments = $this->getDepartmentsForServiceType($serviceType->name);
+
+            $requestTypes[$serviceType->name] = [
+                'label' => $serviceType->label,
+                'icon' => $serviceType->icon,
+                'color' => $serviceType->color,
+                'departments' => $departments
+            ];
+        }
 
         $daysMap = [
             'Saturday' => 'السبت',
@@ -180,10 +164,13 @@ class InquiryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
+        // جلب أنواع الخدمات المتاحة للمستخدم للتحقق من الصلاحيات
+        $availableServiceTypes = ServiceType::active()->get()->pluck('name')->toArray();
+
         $httpRequest->validate([
             'patient_id' => 'required|exists:patients,id',
             'request_type' => 'required|array|min:1',
-            'request_type.*' => 'required|in:lab,radiology,pharmacy,checkup,emergency,blood_bank',
+            'request_type.*' => 'required|in:' . implode(',', $availableServiceTypes),
             'description' => 'nullable|string|max:1000',
             'blood_bank_room_no' => 'nullable|string|max:50',
             'blood_bank_donor_group' => 'nullable|string|max:20',
@@ -217,6 +204,17 @@ class InquiryController extends Controller
         $patient = Patient::find($httpRequest->patient_id);
         $requestTypes = $httpRequest->request_type;
 
+        // التحقق من الصلاحيات لكل نوع طلب
+        foreach ($requestTypes as $requestType) {
+            $serviceType = ServiceType::where('name', $requestType)->first();
+            if (!$serviceType || !$serviceType->is_active) {
+                abort(403, 'نوع الخدمة غير متاح: ' . $requestType);
+            }
+            if ($serviceType->required_permission && !$user->can($serviceType->required_permission)) {
+                abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
+            }
+        }
+
         // إذا كان المستخدم من موظفي الاستعلامات الاستشارية، فتقيّد الطلبات لتكون كشف طبي فقط
         if ($user->hasRole('consultation_receptionist')) {
             $selectedTypes = collect($requestTypes)->unique()->values();
@@ -238,23 +236,39 @@ class InquiryController extends Controller
             // ========================================
             if ($requestType === 'checkup') {
                 // التحقق من البيانات المطلوبة للموعد
-                if (!$httpRequest->doctor_id || !$httpRequest->department_id) {
-                    $messages[] = "❌ فشل في إنشاء موعد الكشف الطبي: يجب تحديد الطبيب والعيادة";
+                if (!$httpRequest->doctor_id) {
+                    $messages[] = "❌ فشل في إنشاء موعد الكشف الطبي: يجب تحديد الطبيب";
                     continue;
                 }
 
                 $doctor = Doctor::find($httpRequest->doctor_id);
-                $department = Department::find($httpRequest->department_id);
+                if (!$doctor) {
+                    $messages[] = "❌ فشل في إنشاء موعد الكشف الطبي: الطبيب المحدد غير موجود";
+                    continue;
+                }
+
+                $department = null;
+                if ($httpRequest->department_id) {
+                    $department = Department::find($httpRequest->department_id);
+                }
+                if (!$department && $doctor->department_id) {
+                    $department = Department::find($doctor->department_id);
+                }
+
+                if (!$department) {
+                    $messages[] = "❌ فشل في إنشاء موعد الكشف الطبي: لم يتم العثور على العيادة المرتبطة بالطبيب";
+                    continue;
+                }
 
                 // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
-                $appointmentDate = $httpRequest->appointment_date ?? Carbon::today();
+                $appointmentDate = $httpRequest->appointment_date ? Carbon::parse($httpRequest->appointment_date) : Carbon::today();
 
                 // إنشاء موعد
                 $appointment = Appointment::create([
                     'patient_id' => $patient->id,
                     'doctor_id' => $doctor->id,
                     'department_id' => $department->id,
-                    'appointment_date' => Carbon::now(),
+                    'appointment_date' => $appointmentDate,
                     'reason' => $httpRequest->description ?? 'كشف طبي عام',
                     'notes' => 'تم الحجز من الاستعلامات - بانتظار الدفع',
                     'consultation_fee' => $doctor->consultation_fee ?? $department->consultation_fee ?? 0,
@@ -878,5 +892,30 @@ class InquiryController extends Controller
         }
 
         return view('inquiry.occupancy', compact('roomsData', 'allOccupancies'));
+    }
+
+    /**
+     * الحصول على الأقسام المناسبة لنوع الخدمة
+     */
+    private function getDepartmentsForServiceType($serviceTypeName)
+    {
+        switch ($serviceTypeName) {
+            case 'lab':
+                return Department::where('name', 'LIKE', '%مختبر%')->where('is_active', true)->orderBy('name')->get();
+            case 'radiology':
+                return Department::where('name', 'LIKE', '%أشعة%')->orWhere('name', 'LIKE', '%راديولوجي%')->where('is_active', true)->orderBy('name')->get();
+            case 'pharmacy':
+                return Department::where('name', 'LIKE', '%صيدلية%')->where('is_active', true)->orderBy('name')->get();
+            case 'checkup':
+                return Department::whereNotIn('name', ['مختبر', 'أشعة', 'صيدلية'])->where('is_active', true)->orderBy('name')->get();
+            case 'blood_bank':
+                return Department::where('name', 'LIKE', '%مصرف دم%')
+                    ->orWhere('name', 'LIKE', '%دم%')
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get();
+            default:
+                return collect(); // مجموعة فارغة إذا لم يكن نوع معروف
+        }
     }
 }

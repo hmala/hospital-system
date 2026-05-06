@@ -10,9 +10,9 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h2 class="mb-1 fw-bold">
-                                <i class="fas fa-exchange-alt me-3"></i>نقل المخزون
+                                <i class="fas fa-truck-loading me-3"></i>طلب مخزون فرعي
                             </h2>
-                            <p class="mb-0 opacity-75">تحويل المواد بين المخازن باستخدام مبدأ الطابور FIFO</p>
+                            <p class="mb-0 opacity-75">اطلب مواد من المخزن الرئيسي إلى المخزن الفرعي مع الحفاظ على FIFO.</p>
                         </div>
                         <div class="text-end">
                             <a href="{{ route('inventory.index') }}" class="btn btn-light px-4 py-2 rounded-pill">
@@ -58,7 +58,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('stock-transfers.store') }}" id="transferForm">
+                    <form method="POST" action="{{ route('stock-transfers.requests.store') }}" id="transferForm">
                         @csrf
 
                         <!-- Transfer Path Visualization -->
@@ -71,7 +71,7 @@
                                                 <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
                                                     <i class="fas fa-warehouse text-white fs-4"></i>
                                                 </div>
-                                                <h6 class="text-primary fw-bold">من مخزن</h6>
+                                                <h6 class="text-primary fw-bold">من المخزن الرئيسي</h6>
                                                 <small class="text-muted">المخزن المرسل</small>
                                             </div>
                                             <div class="transfer-arrow mx-4">
@@ -91,7 +91,7 @@
                                                 <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
                                                     <i class="fas fa-hospital text-white fs-4"></i>
                                                 </div>
-                                                <h6 class="text-info fw-bold">إلى مخزن</h6>
+                                                <h6 class="text-info fw-bold">إلى المخزن الفرعي</h6>
                                                 <small class="text-muted">المخزن المستلم</small>
                                             </div>
                                         </div>
@@ -102,28 +102,25 @@
 
                         <!-- Form Fields -->
                         <div class="row g-4">
-                            <!-- From Location -->
+                            <!-- From Location (automatic main warehouse) -->
                             <div class="col-md-6">
                                 <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
                                     <div class="card-header bg-primary text-white border-0" style="border-radius: 15px 15px 0 0;">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-warehouse me-2"></i>
-                                            <span class="fw-bold">من مخزن</span>
+                                            <span class="fw-bold">من المخزن الرئيسي</span>
                                         </div>
                                     </div>
                                     <div class="card-body">
-                                        <div class="form-floating">
-                                            <select name="from_location_id" id="fromLocationSelect" class="form-select" required>
-                                                <option value="">اختر المخزن المرسل</option>
-                                                @foreach($locations as $location)
-                                                    <option value="{{ $location->id }}" {{ old('from_location_id') == $location->id ? 'selected' : '' }}>
-                                                        {{ $location->name }} ({{ $location->type === 'main' ? 'رئيسي' : 'قسم' }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <label for="fromLocationSelect">المخزن المرسل <span class="text-danger">*</span></label>
-                                            @error('from_location_id') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror
-                                        </div>
+                                        @if($mainLocations->isNotEmpty())
+                                            <input type="hidden" name="from_location_id" value="{{ $mainLocations->first()->id }}">
+                                            <div class="mb-2 text-muted">ستُرسل المواد تلقائياً من:</div>
+                                            <div class="badge bg-white text-dark px-3 py-2 rounded-pill shadow-sm">
+                                                {{ $mainLocations->first()->name }}
+                                            </div>
+                                        @else
+                                            <div class="alert alert-warning mb-0">لم يتم العثور على مخزن رئيسي. الرجاء إنشاء مخزن رئيسي أولاً.</div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -140,64 +137,54 @@
                                     <div class="card-body">
                                         <div class="form-floating">
                                             <select name="to_location_id" id="toLocationSelect" class="form-select" required>
-                                                <option value="">اختر المخزن المستلم</option>
-                                                @foreach($locations as $location)
+                                                <option value="">اختر المخزن الفرعي</option>
+                                                @foreach($subLocations as $location)
                                                     <option value="{{ $location->id }}" {{ old('to_location_id') == $location->id ? 'selected' : '' }}>
-                                                        {{ $location->name }} ({{ $location->type === 'main' ? 'رئيسي' : 'قسم' }})
+                                                        {{ $location->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
-                                            <label for="toLocationSelect">المخزن المستلم <span class="text-danger">*</span></label>
+                                            <label for="toLocationSelect">المخزن الفرعي <span class="text-danger">*</span></label>
                                             @error('to_location_id') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Product Selection -->
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+                            <!-- Items List -->
+                            <div class="col-12">
+                                <div class="card border-0 shadow-sm" style="border-radius: 15px;">
                                     <div class="card-header bg-success text-white border-0" style="border-radius: 15px 15px 0 0;">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-box me-2"></i>
-                                            <span class="fw-bold">المادة</span>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-box me-2"></i>
+                                                <span class="fw-bold">المواد المطلوبة</span>
+                                            </div>
+                                            <button type="button" class="btn btn-light btn-sm" id="addItemRow">
+                                                <i class="fas fa-plus me-1"></i>إضافة مادة
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="card-body">
-                                        <div class="form-floating">
-                                            <select name="product_id" id="productSelect" class="form-select" required>
-                                                <option value="">اختر المادة</option>
-                                                @foreach($products as $product)
-                                                    <option value="{{ $product->id }}" {{ old('product_id') == $product->id ? 'selected' : '' }}>
-                                                        {{ $product->name }} ({{ $product->unit }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <label for="productSelect">المادة المراد نقلها <span class="text-danger">*</span></label>
-                                            @error('product_id') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror
+                                    <div class="card-body p-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered align-middle mb-0" id="itemsTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>المادة</th>
+                                                        <th>الكمية</th>
+                                                        <th class="text-center">حذف</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                </tbody>
+                                            </table>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Quantity -->
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
-                                    <div class="card-header bg-warning text-dark border-0" style="border-radius: 15px 15px 0 0;">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-hashtag me-2"></i>
-                                            <span class="fw-bold">الكمية</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-floating">
-                                            <input type="number" name="qty" id="quantityInput" class="form-control" min="1" value="{{ old('qty', 1) }}" required>
-                                            <label for="quantityInput">الكمية المطلوب نقلها <span class="text-danger">*</span></label>
-                                            @error('qty') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror
-                                        </div>
-                                        <div class="form-text">
+                                        @error('items') <div class="text-danger mt-2 small">{{ $message }}</div> @enderror
+                                        @error('items.*.product_id') <div class="text-danger mt-2 small">{{ $message }}</div> @enderror
+                                        @error('items.*.qty') <div class="text-danger mt-2 small">{{ $message }}</div> @enderror
+                                        <div class="form-text mt-3">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            سيتم تطبيق مبدأ الطابور FIFO (الأقدم أولاً)
+                                            أضف كل مادة في صف منفصل وسيتم طلبها من المخزن الرئيسي إلى المخزن الفرعي.
                                         </div>
                                     </div>
                                 </div>
@@ -212,7 +199,7 @@
                                         <i class="fas fa-arrow-left me-2"></i>رجوع
                                     </a>
                                     <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold">
-                                        <i class="fas fa-exchange-alt me-2"></i>نفّذ النقل
+                                        <i class="fas fa-paper-plane me-2"></i>أرسل الطلب
                                     </button>
                                 </div>
                             </div>
@@ -229,11 +216,56 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('transferForm');
+        const addItemRowBtn = document.getElementById('addItemRow');
+        const itemsTableBody = document.querySelector('#itemsTable tbody');
+        let itemIndex = 0;
+
+        function createItemRow(index) {
+            return `
+                <tr id="row${index}">
+                    <td>
+                        <select name="items[${index}][product_id]" class="form-select" required>
+                            <option value="">اختر المادة</option>
+                            @foreach($products as $product)
+                                <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->unit }})</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" name="items[${index}][qty]" class="form-control" min="1" value="1" required>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-danger btn-sm remove-item-row">حذف</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        addItemRowBtn.addEventListener('click', function () {
+            itemsTableBody.insertAdjacentHTML('beforeend', createItemRow(itemIndex));
+            itemIndex++;
+        });
+
+        document.addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-item-row')) {
+                const row = e.target.closest('tr');
+                if (row) {
+                    row.remove();
+                }
+            }
+        });
+
+        // Add one initial row automatically
+        if (itemsTableBody.children.length === 0) {
+            itemsTableBody.insertAdjacentHTML('beforeend', createItemRow(itemIndex));
+            itemIndex++;
+        }
 
         // Form validation enhancement
         form.addEventListener('submit', function(e) {
             const requiredFields = form.querySelectorAll('[required]');
             let isValid = true;
+            let hasRow = itemsTableBody.querySelectorAll('tr').length > 0;
 
             requiredFields.forEach(field => {
                 if (!field.value.trim()) {
@@ -246,15 +278,9 @@
                 }
             });
 
-            // Check if from and to locations are different
-            const fromLocation = document.getElementById('fromLocationSelect');
-            const toLocation = document.getElementById('toLocationSelect');
-            if (fromLocation.value && toLocation.value && fromLocation.value === toLocation.value) {
-                e.preventDefault();
-                alert('لا يمكن نقل المخزون من مخزن إلى نفسه!');
-                fromLocation.style.borderColor = '#dc3545';
-                toLocation.style.borderColor = '#dc3545';
-                return;
+            if (!hasRow) {
+                isValid = false;
+                alert('يجب إضافة مادة واحدة على الأقل.');
             }
 
             if (!isValid) {

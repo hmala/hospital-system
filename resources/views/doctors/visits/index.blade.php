@@ -317,11 +317,7 @@
                         <table class="table unified-table">
                             <thead>
                                 <tr>
-                                    <th><i class="fas fa-hashtag me-2"></i>#</th>
-                                    <th><i class="fas fa-calendar me-2"></i>التاريخ</th>
-                                    <th><i class="fas fa-clock me-2"></i>الوقت</th>
                                     <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                                    <th><i class="fas fa-notes-medical me-2"></i>الشكوى</th>
                                     <th><i class="fas fa-tasks me-2"></i>الحالة</th>
                                     <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
                                 </tr>
@@ -364,32 +360,6 @@
                                     @endphp
                                     <tr class="{{ $rowClass }}" style="{{ $rowStyle }}">
                                         <td>
-                                            <strong class="text-muted">#{{ $visit->id }}</strong>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-calendar {{ $isIncomplete && $isPast ? 'text-danger' : ($isToday ? 'text-primary' : 'text-muted') }} me-2"></i>
-                                                <div>
-                                                    <span class="{{ $isIncomplete && $isPast ? 'fw-bold text-danger' : '' }}">
-                                                        {{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : 'غير محدد' }}
-                                                    </span>
-                                                    @if($isToday)
-                                                        <span class="badge bg-primary ms-2">اليوم</span>
-                                                    @elseif($isPast && $isIncomplete && $visit->visit_date)
-                                                        <span class="badge bg-danger ms-2">منذ {{ $visit->visit_date->diffInDays(today()) }} يوم</span>
-                                                    @elseif($visit->visit_date && $visit->visit_date->isFuture())
-                                                        <span class="badge bg-info ms-2">قادمة</span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-clock text-info me-2"></i>
-                                                <span>{{ $visit->visit_time ?: 'غير محدد' }}</span>
-                                            </div>
-                                        </td>
-                                        <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="avatar-circle">
                                                     {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
@@ -405,11 +375,6 @@
                                                     <br>
                                                     <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="text-truncate" style="max-width: 250px;" title="{{ $visit->chief_complaint }}">
-                                                <small class="text-muted">{{ Str::limit($visit->chief_complaint, 50) }}</small>
                                             </div>
                                         </td>
                                         <td>
@@ -469,7 +434,7 @@
                                     @endforeach
                                 @else
                                 <tr>
-                                    <td colspan="7" class="text-center py-5">
+                                    <td colspan="3" class="text-center py-5">
                                         <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
                                         <h5 class="text-muted">لا توجد زيارات</h5>
                                     </td>

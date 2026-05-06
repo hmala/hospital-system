@@ -10,6 +10,10 @@
     $pendingLab = 0;
     $pendingSurgeryLabTests = 0;
     $waitingSurgeries = 0;
+    $surgeonStationCount = 0;
+    $anesthesiaStationCount = 0;
+    $residentStationCount = 0;
+    $nursingStationCount = 0;
 
     if (Auth::check()) {
         try {
@@ -17,6 +21,44 @@
             if (Auth::user()->can('view surgeries')) {
                 $pendingSurgeries = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])->count();
                 $waitingSurgeries = \App\Models\Surgery::where('status', 'waiting')->count();
+                
+                // عداد محطة الجراح
+                $surgeonStationCount = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])
+                    ->where(function($q) {
+                        $q->whereHas('surgeonStation', function($sq) {
+                            $sq->where('status', '!=', 'completed');
+                        })->orWhereDoesntHave('surgeonStation');
+                    })->count();
+                
+                // عداد محطة التخدير
+                $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
+                        $q->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereHas('anesthesiaStation', function($sq) {
+                            $sq->where('status', '!=', 'completed');
+                        })->orWhereDoesntHave('anesthesiaStation');
+                    })->count();
+                
+                // عداد محطة المقيم
+                $residentStationCount = \App\Models\Surgery::whereHas('anesthesiaStation', function($q) {
+                        $q->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereHas('residentStation', function($sq) {
+                            $sq->where('status', '!=', 'completed');
+                        })->orWhereDoesntHave('residentStation');
+                    })->count();
+                
+                // عداد محطة التمريض
+                $nursingStationCount = \App\Models\Surgery::whereHas('residentStation', function($q) {
+                        $q->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereHas('nursingStation', function($sq) {
+                            $sq->where('status', '!=', 'completed');
+                        })->orWhereDoesntHave('nursingStation');
+                    })->count();
             }
             if (Auth::user()->can('view inquiries')) {
                 $pendingRequestsCount = \App\Models\Request::where('status', 'pending')->count();
@@ -26,6 +68,9 @@
             }
             if (Auth::user()->can('view visits')) {
                 $incompleteVisits = \App\Models\Visit::whereIn('status', ['pending', 'in_progress'])->count();
+            }
+            if (Auth::user()->hasRole('radiology_staff') || Auth::user()->hasRole('admin')) {
+                $pendingSurgeryRadiology = \App\Models\SurgeryRadiologyTest::where('status', 'pending')->count();
             }
             if (Auth::user()->can('view radiology')) {
                 $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
@@ -62,24 +107,369 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .sidebar { background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%); min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: fixed; width: 250px; overflow-y: auto; }
-        .sidebar .nav-link { color: #ecf0f1; padding: 12px 20px; margin: 2px 0; border-radius: 8px; transition: all 0.3s; font-size: 0.9rem; }
-        .sidebar .nav-link:hover { background-color: rgba(52, 152, 219, 0.2); color: #3498db; transform: translateX(-5px); }
-        .sidebar .nav-link.active { background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3); }
-        .sidebar-section-title { color: #bdc3c7; font-size: 0.85rem; font-weight: 600; padding: 12px 20px; margin-top: 10px; cursor: pointer; background: rgba(52, 152, 219, 0.1); border-radius: 8px; transition: all 0.3s; display: flex; justify-content: space-between; align-items: center; }
-        .sidebar-section-title:hover { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        html, body {
+            height: 100%;
+        }
+        body {
+            background: linear-gradient(180deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+            height: 100vh;
+            max-height: 100vh;
+            box-shadow: 0 0 24px rgba(15, 23, 42, 0.14);
+            position: fixed;
+            width: 250px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding-bottom: 1.5rem;
+            overscroll-behavior: contain;
+            scrollbar-width: auto;
+            scrollbar-color: rgba(148, 163, 184, 1) rgba(30, 41, 59, 0.4);
+        }
+        .sidebar::-webkit-scrollbar {
+            width: 14px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.12);
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 1);
+            border-radius: 12px;
+            border: 3px solid rgba(255,255,255,0.08);
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 1);
+        }
+        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; }
+        .sidebar-user { color: #e5e7eb; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
+        .sidebar-user i { font-size: 1rem; }
+        .sidebar-user span { display: block; }
+        .sidebar-user .logout-link { color: #d1d5db; font-size: 0.85rem; text-decoration: none; border: 1px solid rgba(226, 232, 240, 0.16); padding: 0.35rem 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.04); transition: background 0.2s ease, color 0.2s ease; }
+        .sidebar-user .logout-link:hover { background: rgba(255,255,255,0.16); color: #ffffff; }
+        .dark-mode-toggle { background: rgba(255,255,255,0.12); border: 1px solid rgba(248, 250, 252, 0.24); color: #f8fafc; width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.25s ease; cursor: pointer; margin-top: 0.5rem; }
+        .dark-mode-toggle:hover { background: rgba(255,255,255,0.18); }
+        .dark-mode-toggle.active { background: #8b8f96; color: #ffffff; border-color: rgba(255,255,255,0.35); }
+        .home-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.12);
+            text-decoration: none;
+            transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+        }
+        body.dark-mode { background-color: #1e242c; color: #e7e9ef; }
+        body.dark-mode .sidebar { background: linear-gradient(180deg, #2a3038 0%, #20252c 100%); }
+        body.dark-mode .sidebar .nav-link { color: #d7dde7; }
+        body.dark-mode .sidebar .nav-link:hover { background-color: rgba(255,255,255,0.08); color: #ffffff; }
+        body.dark-mode .sidebar .nav-link.active { background: rgba(255,255,255,0.12); box-shadow: 0 4px 6px rgba(0,0,0,0.24); }
+        body.dark-mode .main-content { background: rgba(28, 33, 41, 0.95); color: #e7e9ef; }
+        body.dark-mode .main-content .card,
+        body.dark-mode .card,
+        body.dark-mode .bg-white,
+        body.dark-mode .bg-light,
+        body.dark-mode .table-responsive,
+        body.dark-mode .table,
+        body.dark-mode .form-control,
+        body.dark-mode .form-select,
+        body.dark-mode .list-group-item {
+            background-color: rgba(255,255,255,0.06) !important;
+            color: #e7e9ef !important;
+            border-color: rgba(255,255,255,0.12) !important;
+            box-shadow: none !important;
+        }
+        body.dark-mode .table th,
+        body.dark-mode .table td,
+        body.dark-mode .table thead th {
+            color: #e7e9ef !important;
+        }
+        body.dark-mode .table,
+        body.dark-mode .table-bordered,
+        body.dark-mode .table-striped,
+        body.dark-mode .table-responsive,
+        body.dark-mode .table thead th,
+        body.dark-mode .table tbody td {
+            background-color: rgba(255,255,255,0.05) !important;
+        }
+        body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: rgba(255,255,255,0.06) !important;
+        }
+        body.dark-mode .table-hover > tbody > tr:hover {
+            background-color: rgba(255,255,255,0.12) !important;
+        }
+        body.dark-mode .table thead th {
+            background-color: rgba(255,255,255,0.08) !important;
+        }
+        body.dark-mode .table-bordered th,
+        body.dark-mode .table-bordered td {
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+        body.dark-mode .main-content,
+        body.dark-mode .main-content h1,
+        body.dark-mode .main-content h2,
+        body.dark-mode .main-content h3,
+        body.dark-mode .main-content h4,
+        body.dark-mode .main-content h5,
+        body.dark-mode .main-content h6,
+        body.dark-mode .main-content p,
+        body.dark-mode .main-content span,
+        body.dark-mode .main-content label,
+        body.dark-mode .main-content a,
+        body.dark-mode .main-content small,
+        body.dark-mode .main-content strong,
+        body.dark-mode .main-content td,
+        body.dark-mode .main-content th,
+        body.dark-mode .main-content .card-header,
+        body.dark-mode .main-content .card-body,
+        body.dark-mode .main-content .card-footer,
+        body.dark-mode .main-content .dropdown-item,
+        body.dark-mode .main-content .btn,
+        body.dark-mode .main-content .form-label,
+        body.dark-mode .main-content .form-text {
+            color: #e5e7eb !important;
+        }
+        body.dark-mode .text-dark,
+        body.dark-mode .table-dark {
+            color: #e5e7eb !important;
+        }
+        .sidebar .nav-link { color: #e5e7eb; padding: 12px 20px; margin: 2px 0; border-radius: 8px; transition: all 0.3s; font-size: 0.9rem; width: 100%; display: inline-flex; align-items: center; justify-content: flex-start; }
+        .sidebar .nav-link:hover { background-color: rgba(255,255,255,0.08); color: #f8fafc; transform: translateX(-5px); }
+        .sidebar .nav-link.active { background: rgba(255,255,255,0.16); color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.14); }
+        .sidebar-section-title { color: #d1d5db; font-size: 0.85rem; font-weight: 600; padding: 12px 20px; margin-top: 10px; cursor: pointer; background: rgba(255,255,255,0.05); border-radius: 8px; transition: all 0.3s; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-section-title:hover { background: rgba(255,255,255,0.08); color: #f8fafc; }
         .sidebar-section-title i.toggle-icon { transition: transform 0.3s; font-size: 0.8rem; }
         .sidebar-section-title.collapsed i.toggle-icon { transform: rotate(-90deg); }
         .sidebar-divider { border-top: 1px solid rgba(255,255,255,0.1); margin: 10px 15px; }
         .collapse-section { padding-right: 0; }
-        .main-content { margin-right: 250px; padding: 20px; transition: all 0.3s; }
-        .stat-card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s; }
-        .stat-card:hover { transform: translateY(-5px); }
-        .bg-patient { background: linear-gradient(45deg, #3498db, #2980b9); }
-        .bg-doctor { background: linear-gradient(45deg, #27ae60, #2ecc71); }
-        .bg-department { background: linear-gradient(45deg, #e74c3c, #c0392b); }
-        .bg-appointment { background: linear-gradient(45deg, #f39c12, #e67e22); }
+        .main-content {
+            margin-right: 250px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            width: calc(100% - 250px);
+            min-height: 100vh;
+            background: rgba(219, 234, 254, 0.92);
+            border: 1px solid rgba(96, 165, 250, 0.28);
+            box-shadow: 0 30px 70px rgba(59, 130, 246, 0.12);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+        }
+        .main-content .card:not(.stat-card) {
+            background: rgba(219, 234, 254, 0.48) !important;
+            border: 1px solid rgba(96, 165, 250, 0.22) !important;
+            box-shadow: 0 18px 40px rgba(59, 130, 246, 0.08) !important;
+            border-radius: 18px !important;
+        }
+        .main-content .card:not(.stat-card) .card-body {
+            padding: 1rem 1rem !important;
+        }
+        .main-content .table {
+            background: rgba(219, 234, 254, 0.7);
+            border-collapse: collapse;
+            width: 100%;
+            color: #1e3a8a;
+        }
+        .main-content .table th,
+        .main-content .table td {
+            border: 1px solid rgba(147, 197, 253, 0.32);
+            vertical-align: middle;
+            padding: 0.85rem 1rem;
+        }
+        .main-content .table thead th {
+            background: rgba(147, 197, 253, 0.5);
+            color: #1d4ed8;
+            font-weight: 700;
+            border-bottom-width: 2px;
+        }
+        .main-content .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: rgba(191, 219, 254, 0.72);
+        }
+        .main-content .table-hover > tbody > tr:hover {
+            background-color: rgba(147, 197, 253, 0.24);
+        }
+        .main-content .table-responsive {
+            background: rgba(191, 219, 254, 0.55);
+            border: 1px solid rgba(147, 197, 253, 0.32);
+            border-radius: 14px;
+            padding: 0.6rem;
+        }
+        .main-content .card-header {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255,255,255,0.12) !important;
+        }
+        .main-content .bg-warning:not(.stat-card):not(.card.border-0.shadow-sm),
+        .main-content .bg-info:not(.stat-card):not(.card.border-0.shadow-sm),
+        .main-content .bg-primary:not(.stat-card):not(.card.border-0.shadow-sm),
+        .main-content .bg-success:not(.stat-card):not(.card.border-0.shadow-sm) {
+            background: rgba(203, 213, 225, 0.24) !important;
+            color: #0f172a !important;
+        }
+        .main-content .text-white:not(.stat-card .text-white) {
+            color: #0f172a !important;
+        }
+        .stat-card {
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(229, 231, 235, 0.45);
+            color: #0f172a;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .small-stat-card {
+            min-height: 130px;
+            max-height: 150px;
+        }
+        .small-stat-card .card-body {
+            padding: 0.4rem 0.6rem !important;
+        }
+        .small-stat-card h5.card-title {
+            font-size: 0.62rem;
+            margin-bottom: 0.15rem;
+        }
+        .small-stat-card h2.mb-1 {
+            font-size: 0.92rem;
+        }
+        .small-stat-card small {
+            font-size: 0.62rem;
+        }
+        .small-stat-card .fa-2x {
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            top: -16px;
+            right: -16px;
+            background: rgba(15, 23, 42, 0.04);
+            border-radius: 50%;
+            filter: blur(10px);
+        }
+        .stat-card .card-body {
+            padding: 0.35rem 0.55rem !important;
+            position: relative;
+            z-index: 1;
+        }
+        .stat-card .progress {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        .stat-card .progress-bar {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        .stat-card .row {
+            margin: 0;
+        }
+        .stat-card .row > [class*='col-'] {
+            padding-left: 0;
+            padding-right: 0;
+        }
+        /* كارتات الغرف الصغيرة */
+        .card.border-0.shadow-sm .card-body {
+            padding: 0.3rem 0.5rem !important;
+        }
+        .card.border-0.shadow-sm .rounded-circle {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card.border-0.shadow-sm h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 22px 46px rgba(15, 23, 42, 0.16);
+        }
+        .stat-card h5.card-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            opacity: 1;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+        }
+        .stat-card h2.mb-0,
+        .stat-card h2.mb-1 {
+            font-size: 2rem;
+            font-weight: 900;
+            line-height: 1.02;
+            color: #ffffff;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+        }
+        .stat-card small {
+            display: block;
+            margin-top: 0.45rem;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+        .stat-card .fa-3x,
+        .stat-card .fa-4x {
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            font-size: 0.75rem;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.06);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            color: #0f172a !important;
+        }
+        .stat-card .fa {
+            opacity: 0.82;
+        }
+        .stat-card.bg-warning { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #ffffff; border-color: #f59e0b; }
+        .stat-card.bg-info { background: linear-gradient(135deg, #38bdf8, #0ea5e9); color: #ffffff; border-color: #0ea5e9; }
+        .stat-card.bg-primary { background: linear-gradient(135deg, #60a5fa, #2563eb); color: #ffffff; border-color: #2563eb; }
+        .stat-card.bg-success { background: linear-gradient(135deg, #34d399, #059669); color: #ffffff; border-color: #059669; }
+        .stat-card.bg-patient { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #ffffff; border-color: #8b5cf6; }
+        .stat-card.bg-doctor { background: linear-gradient(135deg, #0ea5e9, #0f766e); color: #ffffff; border-color: #0f766e; }
+        .stat-card.bg-department { background: linear-gradient(135deg, #818cf8, #4338ca); color: #ffffff; border-color: #4338ca; }
+        .stat-card.bg-appointment { background: linear-gradient(135deg, #fb923c, #f97316); color: #ffffff; border-color: #f97316; }
+        body.dark-mode .stat-card.bg-warning { background: linear-gradient(135deg, #fbbf24, #f59e0b) !important; color: #ffffff !important; border-color: #f59e0b !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-info { background: linear-gradient(135deg, #38bdf8, #0ea5e9) !important; color: #ffffff !important; border-color: #0ea5e9 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-primary { background: linear-gradient(135deg, #60a5fa, #2563eb) !important; color: #ffffff !important; border-color: #2563eb !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-success { background: linear-gradient(135deg, #34d399, #059669) !important; color: #ffffff !important; border-color: #059669 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-patient { background: linear-gradient(135deg, #ec4899, #8b5cf6) !important; color: #ffffff !important; border-color: #8b5cf6 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-doctor { background: linear-gradient(135deg, #0ea5e9, #0f766e) !important; color: #ffffff !important; border-color: #0f766e !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-department { background: linear-gradient(135deg, #818cf8, #4338ca) !important; color: #ffffff !important; border-color: #4338ca !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card.bg-appointment { background: linear-gradient(135deg, #fb923c, #f97316) !important; color: #ffffff !important; border-color: #f97316 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
+        body.dark-mode .stat-card::before {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        body.dark-mode .stat-card .fa-3x,
+        body.dark-mode .stat-card .fa-4x {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff !important;
+        }
+        body.dark-mode .card.border-0.shadow-sm {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #e7e9ef !important;
+        }
+        body.dark-mode .card.border-0.shadow-sm .text-muted {
+            color: #a1a1aa !important;
+        }
         @media (max-width: 768px) {
             .sidebar { width: 70px; }
             .sidebar .nav-link span { display: none; }
@@ -87,6 +477,7 @@
             .main-content { margin-right: 70px; }
         }
     </style>
+    @yield('styles')
 </head>
 <body>
     <div class="container-fluid">
@@ -96,6 +487,23 @@
                 <div class="position-sticky pt-0">
                     <div class="sidebar-header text-center p-3 border-bottom border-secondary">
                         <img src="{{ asset('images/لوغو.png') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                        <div class="sidebar-user">
+                            <div><i class="fas fa-user-circle"></i> <span>{{ Auth::user()->name }}</span></div>
+                            <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                تسجيل الخروج
+                            </a>
+                        </div>
+                        <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                            @csrf
+                        </form>
+                        <button id="darkModeToggle" class="dark-mode-toggle" type="button" title="تبديل الوضع الداكن" aria-label="تبديل الوضع الداكن">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-item mt-3">
+                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                            <i class="fas fa-home me-2"></i>الرئيسية
+                        </a>
                     </div>
 
                     <!-- روابط ثابتة حسب الصلاحيات -->
@@ -173,13 +581,6 @@
 
                 
 
-                    @can('view own visits')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
-                            <i class="fas fa-file-medical"></i><span> زياراتي</span>
-                        </a>
-                    </li>
-                    @endcan
                         <!-- قسم الطوارئ -->
                         @canany(['view emergencies', 'create emergencies', 'edit emergencies', 'manage emergency vitals'])
                         <div class="sidebar-divider"></div>
@@ -203,13 +604,7 @@
                             </a>
                         </li>
                         @endcan
-                        @can('view emergencies')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('emergency.patients.*') ? 'active' : '' }}" href="{{ route('emergency.patients.index') }}">
-                                <i class="fas fa-user-injured"></i><span> مرضى الطوارئ</span>
-                            </a>
-                        </li>
-                        @endcan
+                      
                         @can('create emergencies')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency.create') ? 'active' : '' }}" href="{{ route('emergency.create') }}">
@@ -273,7 +668,7 @@
                         @endcanany
 
                         <!-- قسم المواعيد والزيارات -->
-                        @canany(['view appointments', 'view visits', 'create appointments'])
+                        @canany(['view appointments', 'view visits', 'view own visits', 'create appointments'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#appointmentSection" aria-expanded="false">
                             <span><i class="fas fa-calendar-alt"></i> المواعيد والزيارات</span>
@@ -294,6 +689,14 @@
                             <a class="nav-link {{ request()->routeIs('visits.*') ? 'active' : '' }}" href="{{ route('visits.index') }}">
                                 <i class="fas fa-file-medical"></i><span> الزيارات</span>
                                 <span class="badge bg-secondary ms-2">{{ $incompleteVisits }}</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        @can('view own visits')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
+                                <i class="fas fa-file-medical"></i><span> زياراتي</span>
                             </a>
                         </li>
                         @endcan
@@ -334,6 +737,44 @@
                         </li>
                         @endcan
 
+                        @can('view surgeries')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
+                                <i class="fas fa-user-md"></i><span> محطة الجراح</span>
+                                @if($surgeonStationCount > 0)
+                                    <span class="badge bg-info ms-2">{{ $surgeonStationCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('anesthesia-station.*') ? 'active' : '' }}" href="{{ route('anesthesia-station.index') }}">
+                                <i class="fas fa-syringe"></i><span> محطة التخدير</span>
+                                @if($anesthesiaStationCount > 0)
+                                    <span class="badge bg-warning ms-2">{{ $anesthesiaStationCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('resident-station.*') ? 'active' : '' }}" href="{{ route('resident-station.index') }}">
+                                <i class="fas fa-user-graduate"></i><span> محطة المقيم</span>
+                                @if($residentStationCount > 0)
+                                    <span class="badge bg-primary ms-2">{{ $residentStationCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
+
+                        @canany(['view surgeries', 'manage nursing station'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('nursing-station.*') ? 'active' : '' }}" href="{{ route('nursing-station.index') }}">
+                                <i class="fas fa-user-nurse"></i><span> محطة التمريض</span>
+                                @if($nursingStationCount > 0)
+                                    <span class="badge bg-success ms-2">{{ $nursingStationCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcanany
+
                         @can('manage rooms')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}" href="{{ route('rooms.index') }}">
@@ -346,7 +787,7 @@
                         @endcanany
 
                         <!-- قسم المختبر والأشعة -->
-                        @canany(['view radiology', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests'])
+                        @canany(['view radiology', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests', 'view lab test groups'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#labSection" aria-expanded="false">
                             <span><i class="fas fa-microscope"></i> المختبر والأشعة</span>
@@ -359,6 +800,17 @@
                             <a class="nav-link {{ request()->routeIs('radiology.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
                                 <i class="fas fa-x-ray"></i><span> الإشعة</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('radiology-staff.*') ? 'active' : '' }}" href="{{ route('radiology-staff.index') }}">
+                                <i class="fas fa-user-md"></i><span> طلبات الأشعة</span>
+                                <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.types.index') }}">
+                                <i class="fas fa-file-medical-alt"></i><span> أنواع الأشعة</span>
                             </a>
                         </li>
                         @endcan
@@ -389,9 +841,17 @@
 
                         @can('view lab tests')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.requests.*') ? 'active' : '' }}" href="{{ route('staff.requests.index', ['type' => 'lab']) }}">
+                            <a class="nav-link {{ request()->routeIs('lab.*') ? 'active' : '' }}" href="{{ route('lab.index') }}">
                                 <i class="fas fa-flask"></i><span> طلبات المختبر</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingLab }}</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        @can('view packages')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
+                                <i class="fas fa-boxes"></i><span> الباقات</span>
                             </a>
                         </li>
                         @endcan
@@ -401,6 +861,31 @@
                             <a class="nav-link {{ request()->routeIs('staff.surgery-lab-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-lab-tests.index') }}">
                                 <i class="fas fa-flask"></i><span> تحاليل العمليات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeryLabTests }}</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        @if(auth()->user()->hasRole('radiology_staff') || auth()->user()->hasRole('admin'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
+                                <i class="fas fa-x-ray"></i><span> أشعة العمليات</span>
+                                <span class="badge bg-secondary ms-2">{{ $pendingSurgeryRadiology }}</span>
+                            </a>
+                        </li>
+                        @endif
+
+                        @can('view lab test groups')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
+                                <i class="fas fa-layer-group"></i> مجموعات المفضلات
+                            </a>
+                        </li>
+                        @endcan
+
+                        @can('view lab tests')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.*') ? 'active' : '' }}" href="{{ route('lab-tests.index') }}">
+                                <i class="fas fa-flask"></i><span> أنواع التحاليل</span>
                             </a>
                         </li>
                         @endcan
@@ -439,31 +924,9 @@
                         </li>
                         @endcan
 
-                        @can('manage radiology types')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.types.index') }}">
-                                <i class="fas fa-cogs"></i><span> أنواع الإشعة</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @can('view lab tests')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('lab-tests.*') ? 'active' : '' }}" href="{{ route('lab-tests.index') }}">
-                                <i class="fas fa-flask"></i><span> أنواع التحاليل</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @can('view lab tests')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
-                                <i class="fas fa-layer-group"></i><span> باقات المختبر</span>
-                            </a>
-                        </li>
-                        @endcan
-
                         </div>
                         @endcanany
-                   @canany(['manage inventory', 'view products', 'view suppliers'])
+                   @canany(['manage inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests'])
                     <div class="sidebar-divider"></div>
                     <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
                         <span><i class="fas fa-warehouse"></i> إدارة المخزون</span>
@@ -484,15 +947,29 @@
                             </a>
                         </li>
                         @endcanany
-                        @canany(['manage inventory', 'view inventory', 'create purchases', 'view cashier'])
+                        @canany(['manage inventory', 'view inventory', 'create purchases', 'view cashier', 'view purchases'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inventory.index') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
                                 <i class="fas fa-warehouse"></i><span> المخزون</span>
                             </a>
                         </li>
+                        @endcanany
+                        @can('manage locations')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('stock-transfers.*') ? 'active' : '' }}" href="{{ route('stock-transfers.create') }}">
+                            <a class="nav-link {{ request()->routeIs('locations.*') ? 'active' : '' }}" href="{{ route('locations.index') }}">
+                                <i class="fas fa-map-marker-alt"></i><span> الأقسام</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @canany(['view stock transfers', 'view stock transfer requests'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('stock-transfers.create') ? 'active' : '' }}" href="{{ route('stock-transfers.create') }}">
                                 <i class="fas fa-exchange-alt"></i><span> نقل المخزون</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('stock-transfers.requests.*') ? 'active' : '' }}" href="{{ route('stock-transfers.requests.index') }}">
+                                <i class="fas fa-clipboard-list"></i><span> طلبات النقل</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -500,13 +977,8 @@
                                 <i class="fas fa-undo"></i><span> إرجاع المخزون</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('locations.*') ? 'active' : '' }}" href="{{ route('locations.index') }}">
-                                <i class="fas fa-building"></i><span> مخازن الأقسام</span>
-                            </a>
-                        </li>
                         @endcanany
-                        @canany(['manage inventory', 'create purchases', 'view cashier'])
+                        @canany(['manage inventory', 'create purchases', 'view cashier', 'view purchases'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('purchases.index') ? 'active' : '' }}" href="{{ route('purchases.index') }}">
                                 <i class="fas fa-list-alt"></i><span> قائمة المشتريات</span>
@@ -520,29 +992,7 @@
             </nav>
 
             <!-- المحتوى الرئيسي -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <!-- شريط التنقل العلوي -->
-                <nav class="navbar navbar-expand-lg navbar-light bg-white rounded shadow-sm mb-4">
-                    <div class="container-fluid">
-                        <div class="navbar-nav ms-auto">
-                            <!-- قائمة المستخدم -->
-                            <div class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user-circle me-2"></i>{{ Auth::user()->name }}
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a class="dropdown-item text-danger" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                            <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
-                                        </a>
-                                        <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </nav>
-
+            <main class="main-content">
                 <!-- محتوى الصفحة -->
                 @yield('content')
             </main>
@@ -571,6 +1021,25 @@
             "hideMethod": "fadeOut",
             "rtl": true
         };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.getElementById('darkModeToggle');
+            const isDark = localStorage.getItem('darkMode') === 'true';
+
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                toggle.classList.add('active');
+                toggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+
+            toggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                const enabled = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', enabled ? 'true' : 'false');
+                toggle.classList.toggle('active', enabled);
+                toggle.innerHTML = enabled ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            });
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
@@ -612,5 +1081,7 @@
         }
         setInterval(reloadRealtimeSections, 5000); // كل 5 ثواني
     </script>
+
+    @stack('modals')
 </body>
 </html>

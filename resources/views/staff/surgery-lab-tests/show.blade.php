@@ -6,6 +6,10 @@ use App\Models\LabTest;
 // الحصول على جميع التحاليل النشطة للاستخدام في JavaScript
 $labTests = LabTest::active()->get()->keyBy('name');
 
+// معلومات المريض للقيم المرجعية
+$patientGender = $test->surgery->patient->gender ?? 'male';
+$patientAge = $test->surgery->patient->age ?? 30;
+
 function getTestIcon($testName) {
     $name = strtolower($testName);
 
@@ -111,6 +115,17 @@ function getTestUnit($testName, $labTests) {
         </div>
     @endif
 
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-lg-8">
             <!-- معلومات العملية -->
@@ -150,6 +165,7 @@ function getTestUnit($testName, $labTests) {
                     <h5 class="mb-0"><i class="fas fa-vial me-2"></i>معلومات التحليل المطلوب</h5>
                 </div>
                 <div class="card-body">
+                    @if($test->labTest)
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>اسم التحليل:</strong> {{ $test->labTest->name }}</p>
@@ -174,14 +190,151 @@ function getTestUnit($testName, $labTests) {
                     <h6>وصف التحليل:</h6>
                     <p>{{ $test->labTest->description }}</p>
                     @endif
+                    @else
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>طلب مختبر عام</strong>
+                        <p class="mb-0 mt-2">يرجى اختيار التحاليل المطلوبة أدناه.</p>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>الحالة:</strong>
+                                <span class="badge bg-{{ $test->status_color }}">
+                                    {{ $test->status_text }}
+                                </span>
+                            </p>
+                            <p><strong>تاريخ الطلب:</strong> {{ $test->created_at->format('Y-m-d H:i') }}</p>
+                        </div>
+                    </div>
+
+                    <!-- قسم اختيار التحاليل -->
+                    <div class="card mt-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-flask me-2"></i>اختر التحاليل المطلوبة</h6>
+                        </div>
+                        <div class="card-body">
+                            <form action="{{ route('staff.surgery-lab-tests.select-tests', $test) }}" method="POST" id="selectTestsForm">
+                                @csrf
+                                @method('PUT')
+
+                                {{-- قسم المفضلات --}}
+                                @php
+                                    $favorites = \App\Models\UserLabTestStat::getFavoritesForUser(auth()->id());
+                                @endphp
+
+                                @if($favorites->isNotEmpty())
+                                <div class="alert alert-dismissible fade show p-0 mb-3" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%); border: 2px solid #FFD700; border-radius: 12px;">
+                                    <div class="d-flex align-items-center px-3 py-2" style="background: linear-gradient(90deg, #FFD700 0%, #FFC107 100%); border-radius: 10px 10px 0 0;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-star text-white"></i>
+                                            <strong class="text-dark">الاختصارات السريعة</strong>
+                                            <small class="text-dark" style="opacity: 0.8;">{{ $favorites->count() }} تحليل</small>
+                                        </div>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach($favorites as $stat)
+                                                @php
+                                                    $favTest = $stat->labTest;
+                                                    if (!$favTest || !$favTest->is_active) continue;
+                                                @endphp
+                                                <label class="favorite-pill">
+                                                    <input class="form-check-input lab-test-checkbox d-none" type="checkbox" name="lab_test_ids[]" value="{{ $favTest->id }}">
+                                                    <div class="pill-content px-3 py-2 rounded-pill border bg-white">
+                                                        <i class="fas fa-flask text-warning"></i>
+                                                        <span>{{ $favTest->name }}</span>
+                                                        <span class="badge bg-warning text-dark">{{ $favTest->code }}</span>
+                                                    </div>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <style>
+                                .favorite-pill {
+                                    cursor: pointer;
+                                    display: inline-block;
+                                }
+                                .favorite-pill input:checked + .pill-content {
+                                    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+                                    color: white !important;
+                                    border-color: #28a745 !important;
+                                }
+                                .favorite-pill input:checked + .pill-content span {
+                                    color: white !important;
+                                }
+                                .favorite-pill input:checked + .pill-content i {
+                                    color: white !important;
+                                }
+                                .favorite-pill input:checked + .pill-content .badge {
+                                    background: white !important;
+                                    color: #28a745 !important;
+                                }
+                                </style>
+                                @endif
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-search me-1"></i>
+                                        <strong>ابحث عن تحليل:</strong>
+                                    </label>
+                                    <input type="text" class="form-control" id="surgeryLabSearchInput" placeholder="ابحث بالاسم أو الرمز...">
+                                </div>
+
+                                <div class="border rounded p-3" id="surgeryLabTestsContainer" style="max-height: 400px; overflow-y: auto;">
+                                    @php
+                                        $allLabTests = \App\Models\LabTest::where('is_active', true)
+                                            ->orderBy('main_category')
+                                            ->orderBy('name')
+                                            ->get()
+                                            ->groupBy('main_category');
+                                    @endphp
+                                    @foreach($allLabTests as $category => $tests)
+                                        <div class="lab-category mb-3">
+                                            <h6 class="text-primary border-bottom pb-2">
+                                                <i class="fas fa-folder-open me-1"></i>{{ $category }}
+                                            </h6>
+                                            @foreach($tests as $labTestItem)
+                                                <div class="form-check test-item">
+                                                    <input class="form-check-input lab-test-checkbox" 
+                                                           type="checkbox" 
+                                                           name="lab_test_ids[]" 
+                                                           value="{{ $labTestItem->id }}" 
+                                                           id="surgery_lab_{{ $labTestItem->id }}"
+                                                           data-name="{{ $labTestItem->name }}"
+                                                           data-code="{{ $labTestItem->code }}">
+                                                    <label class="form-check-label" for="surgery_lab_{{ $labTestItem->id }}">
+                                                        {{ $labTestItem->name }} 
+                                                        <small class="text-muted">({{ $labTestItem->code }})</small>
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    تم اختيار <strong><span id="selectedCount">0</span></strong> تحليل
+                                </div>
+
+                                <button type="submit" class="btn btn-success w-100 mt-3" id="confirmTestsBtn">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    تأكيد التحاليل المختارة
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
 
-            <!-- النتائج -->
+            <!-- النتائج المحفوظة -->
             @if($test->result || $test->result_file)
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>نتائج التحليل</h5>
+                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>نتائج التحليل المحفوظة</h5>
                 </div>
                 <div class="card-body">
                     @if($test->result)
@@ -204,101 +357,88 @@ function getTestUnit($testName, $labTests) {
                 </div>
             </div>
             @endif
-        </div>
 
-        <div class="col-lg-4">
-            <!-- تحديث النتائج -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-warning text-dark">
-                    <h6 class="mb-0"><i class="fas fa-edit me-2"></i>تحديث النتائج</h6>
+                    <h6 class="mb-0"><i class="fas fa-edit me-2"></i>تحديث حالة التحليل</h6>
                 </div>
                 <div class="card-body">
-                    @if($test->surgery && $test->surgery->surgery_fee_paid !== 'paid')
-                    <div class="alert alert-danger" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>تنبيه:</strong> لا يمكن إجراء التحليل قبل دفع رسوم العملية الجراحية!
-                        <hr>
-                        <small>يرجى التوجه إلى كاشير العمليات لدفع رسوم العملية أولاً.</small>
-                    </div>
-                    @endif
-                    
-                    <form action="{{ route('staff.surgery-lab-tests.update', $test) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('staff.surgery-lab-tests.update-all', $test->surgery) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
 
-                        <div class="mb-3">
-                            <label for="status" class="form-label">الحالة <span class="text-danger">*</span></label>
-                            <select name="status" id="status" class="form-select @error('status') is-invalid @enderror" required>
-                                <option value="pending" {{ $test->status == 'pending' ? 'selected' : '' }}>في الانتظار</option>
-                                <option value="completed" {{ $test->status == 'completed' ? 'selected' : '' }}>مكتمل</option>
-                                <option value="cancelled" {{ $test->status == 'cancelled' ? 'selected' : '' }}>ملغي</option>
-                            </select>
-                            @error('status')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                        @php
+                            // جلب جميع تحاليل العملية
+                            $allSurgeryTests = $test->surgery->labTests()->whereNotNull('lab_test_id')->with('labTest')->get();
+                            $testCount = $allSurgeryTests->count();
+                        @endphp
 
-                        <!-- جدول إدخال نتائج التحليل -->
+                        @if($testCount > 0)
                         <div class="lab-results-section">
+                            <h6 class="mb-3"><i class="fas fa-clipboard-list me-2"></i>إدخال نتائج التحاليل</h6>
                             <div class="table-responsive">
-                                <table class="table table-hover table-bordered align-middle">
+                                <table class="table table-hover table-bordered align-middle" id="resultsTable">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="text-center" style="width: 50px;">#</th>
+                                            <th class="text-center" style="width:40px;">#</th>
                                             <th>التحليل</th>
-                                            <th style="width: 200px;">القيمة</th>
-                                            <th style="width: 120px;">الوحدة</th>
-                                            <th style="width: 100px;">الحالة</th>
+                                            <th style="width:180px;">القيمة</th>
+                                            <th style="width:90px;">الوحدة</th>
+                                            <th style="width:130px;">المرجع</th>
+                                            <th style="width:90px;" class="text-center">الحالة</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr class="test-row" data-test="{{ $test->labTest->name }}">
-                                            <td class="text-center">1</td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="test-icon me-2">
-                                                        <i class="{{ getTestIcon($test->labTest->name) }}"></i>
+                                        @foreach($allSurgeryTests as $index => $surgeryTest)
+                                            @php
+                                                $testIcon = getTestIcon($surgeryTest->labTest->name);
+                                                $labTestObj = $surgeryTest->labTest;
+                                                
+                                                // جلب المرجع الطبيعي بناءً على جنس وعمر المريض
+                                                $refObj = \App\Models\LabTestReference::forPatient($labTestObj->id, $patientGender, $patientAge);
+                                                $refDisplay = $refObj ? $refObj->range_display : '—';
+                                                $refMin = $refObj?->ref_min;
+                                                $refMax = $refObj?->ref_max;
+                                                $unitDisplay = $refObj?->unit ?? getTestUnit($surgeryTest->labTest->name, $labTests);
+                                            @endphp
+                                            
+                                            <tr class="test-row" data-test="{{ $surgeryTest->labTest->name }}"
+                                                data-ref-min="{{ $refMin }}"
+                                                data-ref-max="{{ $refMax }}"
+                                                data-ref-text="{{ $refObj?->ref_text }}">
+                                                <td class="text-center text-muted small">{{ $index + 1 }}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="{{ $testIcon }}"></i>
+                                                        <strong>{{ $surgeryTest->labTest->name }}</strong>
                                                     </div>
-                                                    <div>
-                                                        <strong>{{ $test->labTest->name }}</strong>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="input-group">
-                                                    <span class="input-group-text">
-                                                        <i class="fas fa-tachometer-alt text-success"></i>
-                                                    </span>
+                                                </td>
+                                                <td>
                                                     <input type="text"
-                                                           class="form-control test-value"
-                                                           name="result"
-                                                           value="{{ old('result', $test->result) }}"
+                                                           class="form-control form-control-sm test-value"
+                                                           name="test_results[{{ $surgeryTest->id }}][value]"
+                                                           value="{{ old('test_results.' . $surgeryTest->id . '.value', $surgeryTest->result) }}"
                                                            placeholder="أدخل القيمة"
-                                                           data-test="{{ $test->labTest->name }}">
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="d-flex align-items-center unit-display" data-test="{{ $test->labTest->name }}">
-                                                    <i class="fas fa-balance-scale text-info me-2"></i>
-                                                    <span class="unit-value">{{ getTestUnit($test->labTest->name, $labTests) }}</span>
-                                                    <span class="unit-tooltip ms-1" data-bs-toggle="tooltip" 
-                                                          data-bs-placement="top" 
-                                                          title="وحدة القياس المعيارية للتحليل">
-                                                        <i class="fas fa-info-circle text-info"></i>
+                                                           tabindex="{{ $index + 1 }}"
+                                                           data-test="{{ $surgeryTest->labTest->name }}">
+                                                    <input type="hidden" name="test_results[{{ $surgeryTest->id }}][unit]" value="{{ $unitDisplay }}">
+                                                    <input type="hidden" name="test_results[{{ $surgeryTest->id }}][test_id]" value="{{ $surgeryTest->id }}">
+                                                </td>
+                                                <td class="text-muted small">{{ $unitDisplay }}</td>
+                                                <td>
+                                                    @if($refObj)
+                                                        <span class="badge bg-light text-dark border">{{ $refDisplay }}</span>
+                                                    @else
+                                                        <span class="text-muted small">غير محدد</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="result-flag" id="flag-{{ $index }}">
+                                                        <i class="fas fa-circle text-muted small"></i>
                                                     </span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="text-center">
-                                                    <span class="status-indicator" id="indicator-0">
-                                                        <i class="fas fa-circle text-muted"></i>
-                                                    </span>
-                                                    <small class="status-text d-block mt-1" id="status-0">
-                                                        قيد الإدخال
-                                                    </small>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                </td>
+                                            </tr>
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>
@@ -324,22 +464,26 @@ function getTestUnit($testName, $labTests) {
                                     </span>
                                     <span class="stat-item">
                                         <i class="fas fa-question-circle text-muted"></i>
-                                        <span id="pending-count">1</span> غير مكتمل
+                                        <span id="pending-count">{{ $testCount }}</span> غير مكتمل
                                     </span>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="result_file" class="form-label">ملف النتيجة (PDF أو صورة)</label>
-                                <input type="file" name="result_file" id="result_file" class="form-control @error('result_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png">
-                                @error('result_file')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                @if($test->result_file)
-                                <div class="mt-2">
-                                    <small class="text-muted">الملف الحالي: <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank">{{ basename($test->result_file) }}</a></small>
-                                </div>
-                                @endif
+                            <!-- ملاحظات إضافية -->
+                            <div class="mt-3">
+                                <label for="notes" class="form-label">
+                                    <i class="fas fa-comment-medical text-secondary me-2"></i>
+                                    ملاحظات إضافية
+                                </label>
+                                <textarea class="form-control"
+                                          id="notes"
+                                          name="notes"
+                                          rows="3"
+                                          placeholder="ملاحظات إضافية حول النتائج أو تفسيرها">{{ old('notes', $test->surgery->lab_notes ?? '') }}</textarea>
+                                <small class="text-muted">
+                                    <i class="fas fa-lightbulb text-warning me-1"></i>
+                                    اكتب أي ملاحظات مهمة أو تفسيرات للنتائج
+                                </small>
                             </div>
 
                             <!-- قسم المراجع المرجعية -->
@@ -371,13 +515,35 @@ function getTestUnit($testName, $labTests) {
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100" {{ $test->surgery && $test->surgery->surgery_fee_paid !== 'paid' ? 'disabled' : '' }}>
-                            <i class="fas fa-save me-2"></i>حفظ التحديثات
-                        </button>
+                        <hr>
+                        <div class="row align-items-center g-2 mt-3">
+                            <div class="col-md-3">
+                                <label for="status" class="form-label mb-1 fw-bold">حالة التحاليل</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="pending">في الانتظار</option>
+                                    <option value="in_progress">قيد التنفيذ</option>
+                                    <option value="completed">مكتملة</option>
+                                </select>
+                            </div>
+                            <div class="col-md-9 d-flex justify-content-end align-items-end gap-2 pt-3">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>
+                                    حفظ جميع النتائج
+                                </button>
+                            </div>
+                        </div>
+                        @else
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            لا توجد تحاليل محددة لهذه العملية
+                        </div>
+                        @endif
                     </form>
                 </div>
             </div>
+        </div>
 
+        <div class="col-lg-4">
             <!-- معلومات إضافية -->
             <div class="card shadow-sm">
                 <div class="card-header bg-secondary text-white">
@@ -393,190 +559,8 @@ function getTestUnit($testName, $labTests) {
     </div>
 </div>
 
-<script>
-function analyzeResult(input, index) {
-    const value = parseFloat(input.value);
-    const testRow = input.closest('.test-row');
-    const indicator = testRow.querySelector('.status-indicator i');
-    const statusText = testRow.querySelector('.status-text');
-    const testName = input.dataset.test ? input.dataset.test.toLowerCase() : '';
-
-    if (isNaN(value) || input.value.trim() === '' || value === 0) {
-        indicator.className = 'fas fa-circle text-muted';
-        statusText.innerHTML = '<i class="fas fa-info-circle"></i> أدخل قيمة صحيحة';
-        testRow.classList.remove('result-normal', 'result-high', 'result-low');
-        return;
-    }
-
-    let resultType = 'normal';
-    let statusMessage = '<i class="fas fa-info-circle text-info"></i> تم إدخال القيمة - راجع المرجع الطبي';
-    let indicatorClass = 'fas fa-circle text-info';
-
-    if (testName.includes('سكر') || testName.includes('glucose')) {
-        if (value < 70) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else if (value > 140) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (70-140 mg/dL)';
-        }
-    } else if (testName.includes('ضغط') || testName.includes('pressure')) {
-        if (value > 140) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<140 mmHg)';
-        }
-    } else if (testName.includes('كوليسترول') || testName.includes('cholesterol')) {
-        if (value > 200) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<200 mg/dL)';
-        }
-    } else if (testName.includes('بيليروبين') || testName.includes('bilirubin')) {
-        if (value > 1.2) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<1.2 mg/dL)';
-        }
-    } else if (testName.includes('كرياتينين') || testName.includes('creatinine')) {
-        if (value > 1.2) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<1.2 mg/dL)';
-        }
-    } else if (testName.includes('يوريا') || testName.includes('urea')) {
-        if (value > 50) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<50 mg/dL)';
-        }
-    } else if (testName.includes('sgot') || testName.includes('ast')) {
-        if (value > 40) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<40 U/L)';
-        }
-    } else if (testName.includes('sgpt') || testName.includes('alt')) {
-        if (value > 41) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<41 U/L)';
-        }
-    } else if (testName.includes('الصفائح') || testName.includes('platelets')) {
-        if (value < 150000) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else if (value > 450000) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (150k-450k /µL)';
-        }
-    } else if (testName.includes('الهيموغلوبين') || testName.includes('hemoglobin')) {
-        if (value < 12) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (>12 g/dL)';
-        }
-    } else if (testName.includes('الكرات البيضاء') || testName.includes('wbc')) {
-        if (value < 4000) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else if (value > 11000) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (4k-11k /µL)';
-        }
-    } else {
-        statusMessage = '<i class="fas fa-info-circle text-info"></i> تم إدخال القيمة - راجع المرجع الطبي';
-    }
-
-    indicator.className = indicatorClass;
-    statusText.innerHTML = statusMessage;
-    testRow.classList.remove('result-normal', 'result-high', 'result-low');
-    testRow.classList.add('result-' + resultType);
-
-    updateSummary();
-}
-
-function updateSummary() {
-    const testRows = document.querySelectorAll('.test-row');
-    let normal = 0, high = 0, low = 0, pending = 0;
-
-    testRows.forEach(row => {
-        const input = row.querySelector('.test-value');
-        const value = parseFloat(input.value);
-
-        if (isNaN(value) || value === 0) {
-            pending++;
-        } else if (row.classList.contains('result-high')) {
-            high++;
-        } else if (row.classList.contains('result-low')) {
-            low++;
-        } else {
-            normal++;
-        }
-    });
-
-    document.getElementById('normal-count').textContent = normal;
-    document.getElementById('high-count').textContent = high;
-    document.getElementById('low-count').textContent = low;
-    document.getElementById('pending-count').textContent = pending;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const testInputs = document.querySelectorAll('.test-value');
-
-    testInputs.forEach((input, index) => {
-        input.addEventListener('keyup', function() {
-            analyzeResult(this, index);
-        });
-
-        input.addEventListener('input', function() {
-            analyzeResult(this, index);
-        });
-
-        input.addEventListener('blur', function() {
-            analyzeResult(this, index);
-        });
-
-        analyzeResult(input, index);
-    });
-
-    // تفعيل tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
-</script>
-
 <style>
+/* تصميم محسن للقراءات المخبرية */
 .lab-results-section {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-radius: 12px;
@@ -592,6 +576,12 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 8px;
     padding: 15px;
     margin-top: 20px;
+}
+
+.results-summary h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 15px;
 }
 
 .summary-stats {
@@ -619,6 +609,11 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
+.stat-item i {
+    font-size: 16px;
+}
+
+/* تحسينات جدول التحاليل */
 .table {
     margin-bottom: 0;
     --bs-table-hover-bg: rgba(0, 123, 255, 0.05);
@@ -644,91 +639,40 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: rgba(0, 123, 255, 0.05);
 }
 
-.test-row .test-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: rgba(0, 123, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
-.test-row:hover .test-icon {
-    transform: scale(1.1);
-    background: rgba(0, 123, 255, 0.2);
-}
-
-.test-row .form-control {
-    border-radius: 0 4px 4px 0;
-}
-
-.test-row .input-group-text {
-    border-radius: 4px 0 0 4px;
-}
-
-.status-indicator {
-    font-size: 1.2rem;
-    display: inline-block;
-    transition: all 0.3s ease;
-}
-
-.status-text {
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-.unit-display {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    padding: 4px 8px;
-    border-radius: 0 4px 4px 0;
-    transition: all 0.3s ease;
-}
-
-.unit-display:hover {
-    background: #e9ecef;
-}
-
-.unit-value {
-    font-weight: 500;
-    color: #495057;
-    font-size: 0.9rem;
-}
-
-.unit-tooltip {
-    cursor: help;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.unit-tooltip:hover {
-    opacity: 1;
-}
-
+.test-row.table-success,
 .test-row.result-normal {
     background-color: rgba(40, 167, 69, 0.05);
 }
 
+.test-row.table-danger,
 .test-row.result-high {
     background-color: rgba(220, 53, 69, 0.05);
 }
 
+.test-row.table-warning,
 .test-row.result-low {
     background-color: rgba(255, 193, 7, 0.05);
 }
 
+.test-row .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-color: #80bdff;
+}
+
+/* تصميم متجاوب للجدول */
+.table-responsive {
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+/* تحسينات للأزرار */
 .btn-success {
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     border: none;
     transition: all 0.3s ease;
 }
 
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
@@ -739,11 +683,12 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
 }
 
+/* تحسينات للبطاقات */
 .card {
     border: none;
     border-radius: 10px;
@@ -760,5 +705,344 @@ document.addEventListener('DOMContentLoaded', function() {
     border: none;
     font-weight: 600;
 }
+
+/* تحسينات للتنبيهات */
+.alert {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-left: 4px solid #17a2b8;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-left: 4px solid #dc3545;
+}
+
+/* تحسينات لقسم المراجع */
+details {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+details:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+details summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.3s ease;
+}
+
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+details summary::before {
+    content: '▶';
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+details summary:hover {
+    color: #0056b3;
+}
+
+details div {
+    margin-top: 15px;
+    padding: 15px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+details ul li {
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+/* تحسينات للحقول */
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+/* تحسينات للأيقونات */
+.test-icon i {
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+@media (max-width: 768px) {
+    .table > :not(caption) > * > * {
+        padding: 0.5rem;
+    }
+    
+    .lab-results-section {
+        padding: 15px;
+        margin: 10px 0;
+    }
+
+    .summary-stats {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .stat-item {
+        width: 100%;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .btn {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .lab-results-section {
+        padding: 25px;
+    }
+}
+
+/* تحسينات عامة */
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
 </style>
+
+<script>
+// ──────────────── تلوين نتائج التحاليل تلقائياً ────────────────
+function evaluateRow(row) {
+    const input = row.querySelector('.test-value');
+    const flag = row.querySelector('.result-flag');
+    if (!input || !flag) return null;
+
+    const val = input.value.trim();
+    const refMin = row.dataset.refMin !== '' ? parseFloat(row.dataset.refMin) : null;
+    const refMax = row.dataset.refMax !== '' ? parseFloat(row.dataset.refMax) : null;
+
+    row.classList.remove('table-success', 'table-danger', 'table-warning', 'result-normal', 'result-high', 'result-low');
+    flag.innerHTML = '<i class="fas fa-circle text-muted small"></i>';
+
+    if (val === '') {
+        flag.innerHTML = '<span class="badge bg-secondary text-white">غير مكتمل</span>';
+        return 'pending';
+    }
+
+    const refText = row.dataset.refText?.trim() || '';
+    const numeric = parseFloat(val);
+
+    if (refText && refMin === null && refMax === null) {
+        const expected = refText.toLowerCase().trim();
+        const actual = val.toLowerCase().trim();
+
+        const cmpMatch = expected.match(/^\s*(<=|≥|>=|≤|<|>)\s*([\d\.]+)\s*$/);
+        if (cmpMatch && !isNaN(numeric)) {
+            const operator = cmpMatch[1];
+            const threshold = parseFloat(cmpMatch[2]);
+            if (operator === '<' && numeric >= threshold) {
+                row.classList.add('table-danger', 'result-high');
+                flag.innerHTML = '<span class="badge bg-danger">↑ مرتفع</span>';
+                return 'high';
+            }
+            if ((operator === '<=' || operator === '≤') && numeric > threshold) {
+                row.classList.add('table-danger', 'result-high');
+                flag.innerHTML = '<span class="badge bg-danger">↑ مرتفع</span>';
+                return 'high';
+            }
+            if (operator === '>' && numeric <= threshold) {
+                row.classList.add('table-warning', 'result-low');
+                flag.innerHTML = '<span class="badge bg-warning text-dark">↓ منخفض</span>';
+                return 'low';
+            }
+            if ((operator === '>=' || operator === '≥') && numeric < threshold) {
+                row.classList.add('table-warning', 'result-low');
+                flag.innerHTML = '<span class="badge bg-warning text-dark">↓ منخفض</span>';
+                return 'low';
+            }
+            row.classList.add('table-success', 'result-normal');
+            flag.innerHTML = '<span class="badge bg-success">✓ طبيعي</span>';
+            return 'normal';
+        }
+
+        if (expected === actual) {
+            row.classList.add('table-success', 'result-normal');
+            flag.innerHTML = '<span class="badge bg-success">✓ طبيعي</span>';
+            return 'normal';
+        }
+
+        flag.innerHTML = '<span class="badge bg-info text-white">راجع المرجع الطبي</span>';
+        return 'unknown';
+    }
+
+    if (isNaN(numeric)) {
+        flag.innerHTML = '<span class="badge bg-secondary text-white">قيمة غير صالحة</span>';
+        return 'unknown';
+    }
+
+    if (refMin === null && refMax === null) {
+        flag.innerHTML = '<span class="badge bg-info text-white">راجع المرجع الطبي</span>';
+        return 'unknown';
+    }
+
+    if (refMin !== null && numeric < refMin) {
+        row.classList.add('table-warning', 'result-low');
+        flag.innerHTML = '<span class="badge bg-warning text-dark">↓ منخفض</span>';
+        return 'low';
+    }
+    if (refMax !== null && numeric > refMax) {
+        row.classList.add('table-danger', 'result-high');
+        flag.innerHTML = '<span class="badge bg-danger">↑ مرتفع</span>';
+        return 'high';
+    }
+    row.classList.add('table-success', 'result-normal');
+    flag.innerHTML = '<span class="badge bg-success">✓ طبيعي</span>';
+    return 'normal';
+}
+
+function updateSummary() {
+    const testRows = document.querySelectorAll('#resultsTable .test-row');
+    let normal = 0, high = 0, low = 0, pending = 0;
+
+    testRows.forEach(row => {
+        const input = row.querySelector('.test-value');
+        const value = parseFloat(input.value);
+
+        if (isNaN(value) || input.value.trim() === '') {
+            pending++;
+        } else if (row.classList.contains('result-high')) {
+            high++;
+        } else if (row.classList.contains('result-low')) {
+            low++;
+        } else {
+            normal++;
+        }
+    });
+
+    const n = document.getElementById('normal-count');
+    const h = document.getElementById('high-count');
+    const l = document.getElementById('low-count');
+    const p = document.getElementById('pending-count');
+    if (n) n.textContent = normal;
+    if (h) h.textContent = high;
+    if (l) l.textContent = low;
+    if (p) p.textContent = pending;
+}
+
+function initializeLabResults() {
+    document.querySelectorAll('#resultsTable .test-value').forEach((input, i) => {
+        input.addEventListener('input', function () {
+            evaluateRow(this.closest('.test-row'));
+            updateSummary();
+        });
+        // تقييم القيم الموجودة مسبقاً عند التحميل
+        if (input.value.trim() !== '') {
+            evaluateRow(input.closest('.test-row'));
+        }
+    });
+    updateSummary();
+}
+
+// وظائف تحليل النتائج المخبرية
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLabResults();
+    
+    // البحث في التحاليل
+    const searchInput = document.getElementById('surgeryLabSearchInput');
+    const testsContainer = document.getElementById('surgeryLabTestsContainer');
+    
+    if (searchInput && testsContainer) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const categories = testsContainer.querySelectorAll('.lab-category');
+            
+            categories.forEach(category => {
+                const tests = category.querySelectorAll('.test-item');
+                let visibleCount = 0;
+                
+                tests.forEach(test => {
+                    const checkbox = test.querySelector('input[type="checkbox"]');
+                    const name = checkbox?.dataset.name?.toLowerCase() || '';
+                    const code = checkbox?.dataset.code?.toLowerCase() || '';
+                    
+                    if (name.includes(searchTerm) || code.includes(searchTerm)) {
+                        test.style.display = '';
+                        visibleCount++;
+                    } else {
+                        test.style.display = 'none';
+                    }
+                });
+                
+                // إخفاء الفئة إذا لم يكن بها نتائج
+                category.style.display = visibleCount > 0 ? '' : 'none';
+            });
+        });
+    }
+    
+    // عد التحاليل المختارة
+    const checkboxes = document.querySelectorAll('.lab-test-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const confirmBtn = document.getElementById('confirmTestsBtn');
+    
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.lab-test-checkbox:checked').length;
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = selected;
+        }
+        if (confirmBtn) {
+            confirmBtn.disabled = selected === 0;
+        }
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    updateSelectedCount();
+    
+    // تفعيل tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
 @endsection

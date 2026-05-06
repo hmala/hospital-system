@@ -84,6 +84,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete lab tests',
             'process lab requests',
             'manage surgery lab tests',
+            // صلاحيات مجموعات المفضلات للتحاليل
+            'view lab test groups',
+            'create lab test groups',
+            'edit lab test groups',
+            'delete lab test groups',
             // صلاحيات الباقات (Packages)
             'view packages',
             'create packages',
@@ -99,6 +104,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create purchases',
             'edit purchases',
             'delete purchases',
+            'view inventory',
             'manage inventory',
             'view products',
             'create products',
@@ -106,6 +112,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete products',
             'view stock_batches',
             'view stock_movements',
+            'view stock transfers',
+            'view stock transfer requests',
 
             // صلاحيات الصيدلية
             'view pharmacy',
@@ -126,6 +134,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'view inquiries',
             'create inquiries',
             'manage inquiries',
+            'inquiry.create.lab',
+            'inquiry.create.radiology',
+            'inquiry.create.pharmacy',
+            'inquiry.create.checkup',
+            'inquiry.create.blood_bank',
             
             // صلاحيات توفر الأطباء الاستشاريين
             'manage consultant availability',
@@ -176,6 +189,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'create emergencies',
             'edit emergencies',
             'manage emergency vitals',
+            'view lab test groups',
+            'create lab test groups',
+            'edit lab test groups',
+            'delete lab test groups',
         ]);
 
         // دور المريض (Patient)
@@ -217,12 +234,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'view inquiries',
             'create inquiries',
             'manage inquiries',
+            'inquiry.create.lab',
+            'inquiry.create.radiology',
+            'inquiry.create.pharmacy',
+            'inquiry.create.checkup',
+            'inquiry.create.blood_bank',
             'view cashier',
             'view occupancy',
             'view emergencies',
             'create emergencies',
             'edit emergencies',
             'manage emergency vitals',
+            'view lab test groups',
+            'create lab test groups',
+            'edit lab test groups',
+            'delete lab test groups',
         ]);
 
         // دور الكاشير (Cashier) - صلاحيات كاملة للكاشير
@@ -250,6 +276,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier',
             'view cashier appointments',
             'process consultation payments',
+            'inquiry.create.checkup',
         ]);
 
         // دور موظف المختبر (Lab Staff)
@@ -264,6 +291,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'create packages',
             'edit packages',
             'delete packages',
+            'view lab test groups',
+            'create lab test groups',
+            'edit lab test groups',
+            'delete lab test groups',
         ]);
 
         // دور موظف الإشعة (Radiology Staff)
@@ -300,6 +331,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete products',
             'view stock_batches',
             'view stock_movements',
+            'view stock transfers',
+            'view stock transfer requests',
         ]);
 
         // دور الممرض (Nurse)

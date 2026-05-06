@@ -28,7 +28,7 @@
                                     @foreach($patients as $patient)
                                         <option value="{{ $patient->id }}"
                                                 {{ old('patient_id') == $patient->id ? 'selected' : '' }}>
-                                            {{ $patient->user->name }} - {{ $patient->user->phone ?? 'لا يوجد هاتف' }}
+                                            {{ optional($patient->user)->name ?? 'مريض غير معروف' }} - {{ optional($patient->user)->phone ?? 'لا يوجد هاتف' }}
                                         </option>
                                     @endforeach
                                 </select>

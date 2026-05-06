@@ -109,167 +109,97 @@
 
         <div class="row g-4 mb-4">
             @unless($isConsultationReceptionist)
-                <!-- بطاقة المختبر -->
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 shadow-sm request-card" data-type="lab" onclick="toggleRequestType('lab')">
-                        <div class="card-body text-center p-4">
-                            <div class="mb-3">
-                                <i class="fas fa-flask fa-4x text-primary"></i>
+                @foreach($requestTypes as $type => $config)
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card h-100 shadow-sm request-card" data-type="{{ $type }}" onclick="toggleRequestType('{{ $type }}')">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="fas {{ $config['icon'] }} fa-4x text-{{ $config['color'] }}"></i>
+                                </div>
+                                <h5 class="card-title">{{ $config['label'] }}</h5>
+                                <p class="card-text text-muted small">
+                                    @switch($type)
+                                        @case('lab')
+                                            فحوصات مخبرية وتحاليل الدم والبول
+                                            @break
+                                        @case('radiology')
+                                            أشعة عادية، مقطعية، وتصوير بالرنين
+                                            @break
+                                        @case('pharmacy')
+                                            صرف أدوية ومستلزمات طبية
+                                            @break
+                                        @case('checkup')
+                                            حجز موعد للطبيب والاستشارة الطبية
+                                            @break
+                                        @case('blood_bank')
+                                            طلب كروس ماتش أو تحضير وحدات دم
+                                            @break
+                                        @default
+                                            خدمة طبية
+                                    @endswitch
+                                </p>
+                                <div class="departments-list small text-muted" style="display: none;">
+                                    @if($config['departments']->count() > 0)
+                                        <strong>الأقسام المتاحة:</strong>
+                                        <ul class="list-unstyled mt-2">
+                                            @foreach($config['departments'] as $dept)
+                                                <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <span class="text-danger">لا توجد أقسام متاحة</span>
+                                    @endif
+                                </div>
                             </div>
-                            <h5 class="card-title">تحاليل طبية</h5>
-                            <p class="card-text text-muted small">
-                                فحوصات مخبرية وتحاليل الدم والبول
-                            </p>
-                            <div class="departments-list small text-muted" style="display: none;">
-                                @if($requestTypes['lab']['departments']->count() > 0)
-                                    <strong>الأقسام المتاحة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($requestTypes['lab']['departments'] as $dept)
-                                            <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-danger">لا توجد أقسام متاحة</span>
-                                @endif
+                            <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
+                                <span class="badge bg-{{ $config['color'] }}">محدد</span>
                             </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                            <span class="badge bg-primary">محدد</span>
                         </div>
                     </div>
-                </div>
+                @endforeach
+            @else
+                <!-- لموظف الاستعلامات الاستشارية: فقط كشف طبي -->
+                @if(isset($requestTypes['checkup']))
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card h-100 shadow-sm request-card" data-type="checkup" onclick="toggleRequestType('checkup')">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="fas {{ $requestTypes['checkup']['icon'] }} fa-4x text-{{ $requestTypes['checkup']['color'] }}"></i>
+                                </div>
+                                <h5 class="card-title">{{ $requestTypes['checkup']['label'] }}</h5>
+                                <p class="card-text text-muted small">
+                                    حجز موعد للطبيب والاستشارة الطبية
+                                </p>
+                                <div class="departments-list small text-muted" style="display: none;">
+                                    @if($requestTypes['checkup']['departments']->count() > 0)
+                                        <strong>العيادات المتاحة:</strong>
+                                        <ul class="list-unstyled mt-2">
+                                            @foreach($requestTypes['checkup']['departments'] as $dept)
+                                                <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <span class="text-danger">لا توجد عيادات متاحة</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
+                                <span class="badge bg-{{ $requestTypes['checkup']['color'] }}">محدد</span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             @endunless
-
-            @unless($isConsultationReceptionist)
-                <!-- بطاقة الأشعة -->
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 shadow-sm request-card" data-type="radiology" onclick="toggleRequestType('radiology')">
-                        <div class="card-body text-center p-4">
-                            <div class="mb-3">
-                                <i class="fas fa-x-ray fa-4x text-info"></i>
-                            </div>
-                            <h5 class="card-title">الأشعة</h5>
-                            <p class="card-text text-muted small">
-                                أشعة عادية، مقطعية، وتصوير بالرنين
-                            </p>
-                            <div class="departments-list small text-muted" style="display: none;">
-                                @if($requestTypes['radiology']['departments']->count() > 0)
-                                    <strong>الأقسام المتاحة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($requestTypes['radiology']['departments'] as $dept)
-                                            <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-danger">لا توجد أقسام متاحة</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                            <span class="badge bg-info">محدد</span>
-                        </div>
-                    </div>
-                </div>
-            @endunless
-
-            @unless($isConsultationReceptionist)
-                <!-- بطاقة الصيدلية -->
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 shadow-sm request-card" data-type="pharmacy" onclick="toggleRequestType('pharmacy')">
-                        <div class="card-body text-center p-4">
-                            <div class="mb-3">
-                                <i class="fas fa-pills fa-4x text-success"></i>
-                            </div>
-                            <h5 class="card-title">الصيدلية</h5>
-                            <p class="card-text text-muted small">
-                                صرف أدوية ومستلزمات طبية
-                            </p>
-                            <div class="departments-list small text-muted" style="display: none;">
-                                @if($requestTypes['pharmacy']['departments']->count() > 0)
-                                    <strong>الأقسام المتاحة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($requestTypes['pharmacy']['departments'] as $dept)
-                                            <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-danger">لا توجد أقسام متاحة</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                            <span class="badge bg-success">محدد</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- بطاقة مصرف الدم -->
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 shadow-sm request-card" data-type="blood_bank" onclick="toggleRequestType('blood_bank')">
-                        <div class="card-body text-center p-4">
-                            <div class="mb-3">
-                                <i class="fas fa-tint fa-4x text-danger"></i>
-                            </div>
-                            <h5 class="card-title">مصرف الدم</h5>
-                            <p class="card-text text-muted small">
-                                طلب كروس ماتش أو تحضير وحدات دم
-                            </p>
-                            <div class="departments-list small text-muted" style="display: none;">
-                                @if($requestTypes['blood_bank']['departments']->count() > 0)
-                                    <strong>الأقسام المتاحة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($requestTypes['blood_bank']['departments'] as $dept)
-                                            <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-danger">لا توجد أقسام متاحة</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                            <span class="badge bg-danger">محدد</span>
-                        </div>
-                    </div>
-                </div>
-            @endunless
-
-
-
-            <!-- بطاقة كشف / حجز طبي -->
-            <div class="col-md-6 col-lg-3">
-                <div class="card h-100 shadow-sm request-card" data-type="checkup" onclick="toggleRequestType('checkup')">
-                    <div class="card-body text-center p-4">
-                        <div class="mb-3">
-                            <i class="fas fa-stethoscope fa-4x text-warning"></i>
-                        </div>
-                        <h5 class="card-title">كشف طبي</h5>
-                        <p class="card-text text-muted small">
-                            حجز موعد للطبيب والاستشارة الطبية
-                        </p>
-                        <div class="departments-list small text-muted" style="display: none;">
-                            @if(!empty($requestTypes['checkup']['departments']) && $requestTypes['checkup']['departments']->count() > 0)
-                                <strong>العيادات المتاحة:</strong>
-                                <ul class="list-unstyled mt-2">
-                                    @foreach($requestTypes['checkup']['departments'] as $dept)
-                                        <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
-                                    @endforeach
-                                </ul>
-                            @else
-                                <span class="text-danger">لا توجد عيادات متاحة</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                        <span class="badge bg-warning">محدد</span>
-                    </div>
-                </div>
-            </div>
 
             @unless($isConsultationReceptionist)
                 <!-- بطاقة حجز عملية جراحية -->
                 <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('surgeries.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                    <a href="{{ route('surgeries.create', [
+                        'patient_id' => $patient->id,
+                        'visit_id' => $visit->id ?? null,
+                        'doctor_id' => $visit->doctor_id ?? null,
+                        'department_id' => $visit->department_id ?? null
+                    ]) }}" class="text-decoration-none">
                         <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
                             <div class="card-body text-center p-4">
                                 <div class="mb-3">
@@ -377,7 +307,7 @@
                             <!-- حقول عامة - تظهر للكشف الطبي والصيدلية فقط -->
                             <div id="generalFields" style="display: none;">
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-12 mb-3">
                                         <label for="description" class="form-label">
                                             <i class="fas fa-comment-medical me-1"></i>
                                             وصف الحالة / التفاصيل <span class="text-danger general-required">*</span>
@@ -391,11 +321,16 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
+                                </div>
+                            </div>
 
+                            <!-- حقول خاصة بالكشف الطبي -->
+                            <div id="checkupFields" style="display: none;">
+                                <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="doctor_id" class="form-label">
                                             <i class="fas fa-user-md me-1"></i>
-                                            الطبيب <span class="text-danger checkup-required" style="display: none;">*</span>
+                                            الطبيب <span class="text-danger">*</span>
                                         </label>
                                         <select class="form-select @error('doctor_id') is-invalid @enderror" 
                                                 id="doctor_id" 
@@ -414,32 +349,6 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- حقول خاصة بالكشف الطبي -->
-                            <div id="checkupFields" style="display: none;">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="department_id" class="form-label">
-                                            <i class="fas fa-clinic-medical me-1"></i>
-                                            العيادة <span class="text-danger">*</span>
-                                        </label>
-                                        <select class="form-select @error('department_id') is-invalid @enderror" 
-                                                id="department_id" 
-                                                name="department_id">
-                                            <option value="">اختر العيادة</option>
-                                            @foreach($requestTypes['checkup']['departments'] as $dept)
-                                                <option value="{{ $dept->id }}" @selected(old('department_id') == $dept->id)>
-                                                    {{ $dept->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        @error('department_id')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-
                                     <div class="col-md-6 mb-3">
                                         <label for="appointment_date" class="form-label">
                                             <i class="fas fa-calendar me-1"></i>
@@ -640,7 +549,6 @@ function updateDetailsForm() {
     // إظهار الحقول حسب الأنواع المحددة
     if (selectedTypes.has('checkup')) {
         checkupFields.style.display = 'block';
-        generalFields.style.display = 'block';
     }
     
     if (selectedTypes.has('lab')) {
@@ -720,17 +628,7 @@ function updateDetailsForm() {
     }, 100);
 }
 
-// عند اختيار طبيب، ملء العيادة تلقائياً
-document.getElementById('doctor_id').addEventListener('change', function() {
-    if (selectedType === 'checkup' && this.value) {
-        const selectedOption = this.options[this.selectedIndex];
-        const departmentId = selectedOption.getAttribute('data-department');
-        
-        if (departmentId) {
-            document.getElementById('department_id').value = departmentId;
-        }
-    }
-});
+
 
 // التحقق قبل الإرسال
 document.getElementById('requestForm').addEventListener('submit', function(e) {
@@ -741,7 +639,7 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
     }
     
     // التحقق من وصف الحالة للخدمات التي تحتاجها
-    if (selectedTypes.has('checkup') || selectedTypes.has('pharmacy')) {
+    if (selectedTypes.has('pharmacy')) {
         const description = document.getElementById('description').value.trim();
         if (!description) {
             e.preventDefault();
@@ -751,10 +649,10 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         }
     }
     
-    // إذا كان كشف طبي، التحقق من الطبيب والعيادة
+    // إذا كان كشف طبي، التحقق من الطبيب وتاريخ الموعد
     if (selectedTypes.has('checkup')) {
         const doctorId = document.getElementById('doctor_id').value;
-        const departmentId = document.getElementById('department_id').value;
+        const appointmentDate = document.getElementById('appointment_date').value;
         
         if (!doctorId) {
             e.preventDefault();
@@ -763,10 +661,10 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
             return false;
         }
         
-        if (!departmentId) {
+        if (!appointmentDate) {
             e.preventDefault();
-            alert('يرجى اختيار العيادة');
-            document.getElementById('department_id').focus();
+            alert('يرجى اختيار تاريخ الموعد');
+            document.getElementById('appointment_date').focus();
             return false;
         }
     }

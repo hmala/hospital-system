@@ -49,6 +49,21 @@
                             <i class="fas fa-info-circle"></i> اترك كلمة المرور فارغة إذا كنت لا تريد تغييرها
                         </div>
 
+                        <div class="mb-3">
+                            <label for="location_id" class="form-label">المخزن</label>
+                            <select name="location_id" id="location_id" class="form-select @error('location_id') is-invalid @enderror">
+                                <option value="">اختر مخزناً</option>
+                                @foreach($locations as $location)
+                                    <option value="{{ $location->id }}" {{ old('location_id', $user->location_id) == $location->id ? 'selected' : '' }}>
+                                        {{ $location->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('location_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="password" class="form-label">كلمة المرور الجديدة</label>
@@ -108,6 +123,9 @@
                                                 @break
                                                 @case('pharmacy_staff') 
                                                     <span class="badge bg-primary">موظف صيدلية</span>
+                                                @break
+                                                @case('inventory_manager')
+                                                    <span class="badge bg-secondary">موظف مخزن</span>
                                                 @break
                                                 @case('consultation_receptionist') 
                                                     <span class="badge bg-info">موظف استعلامات استشارية</span>

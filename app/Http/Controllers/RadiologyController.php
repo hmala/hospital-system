@@ -24,19 +24,6 @@ class RadiologyController extends Controller
         $user = Auth::user();
         $newSystemRequests = collect(); // متغير افتراضي فارغ
 
-        // إذا كان المستخدم موظف إشعة وهنالك طلبات جديدة من الاستعلامات
-        if ($user->hasRole('radiology_staff')) {
-            $count = \App\Models\Request::where('type', 'radiology')
-                        ->where(function($q) {
-                            $q->where('payment_status', 'paid')
-                              ->orWhere('status', 'pending_service_selection');
-                        })->count();
-            if ($count > 0) {
-                // إعادة التوجيه للوحة موظفي الأشعة حيث تُعرض الطلبات الحديثة
-                return redirect()->route('staff.requests.index', ['type' => 'radiology']);
-            }
-        }
-
         if ($user->hasAnyRole(['admin', 'receptionist'])) {
             // الإداريون والاستقبال يرون جميع الطلبات
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
@@ -325,7 +312,7 @@ class RadiologyController extends Controller
 
         $request->validate([
             'findings' => 'required|string|max:2000',
-            'impression' => 'required|string|max:1000',
+            'impression' => 'nullable|string|max:1000',
             'recommendations' => 'nullable|string|max:1000',
             'images.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf,dcm|max:10240', // 10MB max per file
             'is_preliminary' => 'nullable|boolean'
@@ -349,8 +336,8 @@ class RadiologyController extends Controller
         if ($radiology->result) {
             $radiology->result->update([
                 'findings' => $request->findings,
-                'impression' => $request->impression,
-                'recommendations' => $request->recommendations,
+                'impression' => $request->input('impression', ''),
+                'recommendations' => $request->input('recommendations', ''),
                 'images' => $imagePaths,
                 'is_preliminary' => $request->has('is_preliminary'),
                 'reported_at' => now()
@@ -360,8 +347,8 @@ class RadiologyController extends Controller
                 'radiology_request_id' => $radiology->id,
                 'radiologist_id' => $user->id,
                 'findings' => $request->findings,
-                'impression' => $request->impression,
-                'recommendations' => $request->recommendations,
+                'impression' => $request->input('impression', ''),
+                'recommendations' => $request->input('recommendations', ''),
                 'images' => $imagePaths,
                 'is_preliminary' => $request->has('is_preliminary'),
                 'reported_at' => now()

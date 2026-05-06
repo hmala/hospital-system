@@ -412,11 +412,6 @@
                         </div>
                     </div>
 
-
-                                            <div class="text-danger mt-2">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
                                 <div class="alert alert-warning mt-3">
                                     <i class="fas fa-exclamation-triangle me-2"></i>
                                     <strong>تحذير:</strong> تعديل الفحوصات المطلوبة سيؤدي إلى حذف الطلبات السابقة وإنشاء طلبات جديدة. تأكد من أن النتائج السابقة قد تم حفظها بشكل منفصل إن لزم الأمر.
@@ -438,7 +433,6 @@
         </div>
     </div>
 </div>
-@endsection
 
 <script>
 // إظهار/إخفاء حقول التحويل الخارجي
@@ -557,3 +551,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+@endsection

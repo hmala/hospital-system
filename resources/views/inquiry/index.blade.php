@@ -1,6 +1,109 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .inquiry-stat-card {
+        background: rgba(148,163,184,0.18);
+        color: #0f172a;
+        border: 1px solid rgba(148,163,184,0.22);
+        border-radius: 18px;
+    }
+    .inquiry-stat-card .card-body {
+        padding: 1rem 1rem !important;
+    }
+    .inquiry-stat-card .icon-circle {
+        background: rgba(148,163,184,0.16);
+        width: 46px;
+        height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: #475569;
+    }
+    .inquiry-stat-card h6 {
+        color: #475569;
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 0.35rem;
+    }
+    .inquiry-stat-card h1 {
+        font-size: 2rem;
+        margin: 0;
+    }
+    .inquiry-table {
+        background: transparent;
+    }
+    .inquiry-table thead th {
+        background: rgba(191,219,254,0.5);
+        color: #1d4ed8;
+        border-color: rgba(147,197,253,0.3);
+        font-weight: 600;
+    }
+    .inquiry-table tbody tr {
+        background: rgba(238,246,255,0.92);
+    }
+    .inquiry-table tbody tr:nth-of-type(odd) {
+        background: rgba(219,234,254,0.92);
+    }
+    .inquiry-table tbody tr:hover {
+        background: rgba(191,219,254,0.5);
+    }
+    .inquiry-table td,
+    .inquiry-table th {
+        border-color: rgba(147,197,253,0.28);
+        vertical-align: middle;
+        padding: 0.85rem 0.95rem;
+        color: #1e3a8a;
+    }
+    .inquiry-table tbody td small,
+    .inquiry-table tbody td .text-muted {
+        color: #475569 !important;
+    }
+    .inquiry-table .badge {
+        background: rgba(59,130,246,0.18);
+        color: #fff;
+        border: 1px solid rgba(59,130,246,0.2);
+        text-shadow: none;
+    }
+    .inquiry-table .badge.bg-secondary {
+        background: rgba(107,114,128,0.9);
+        color: #fff;
+    }
+    .inquiry-table .badge.bg-info,
+    .inquiry-table .badge.bg-success,
+    .inquiry-table .badge.bg-warning {
+        color: #fff;
+        text-shadow: none;
+    }
+    .inquiry-actions .btn-info {
+        background: #475569;
+        border-color: #475569;
+        color: #fff;
+    }
+    .inquiry-actions .btn-info:hover {
+        background: #334155;
+    }
+    .inquiry-quick .card {
+        background: rgba(203,213,225,0.16);
+        border: 1px solid rgba(148,163,184,0.24);
+        border-radius: 18px;
+    }
+    .inquiry-quick .card-header {
+        background: transparent !important;
+        color: #475569 !important;
+        border-bottom: none !important;
+    }
+    .btn-outline-info {
+        color: #475569;
+        border-color: #475569;
+    }
+    .btn-outline-info:hover {
+        background: rgba(71,85,105,0.08);
+    }
+    .text-muted { color: #6b7280 !important; }
+</style>
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-12">
@@ -28,15 +131,15 @@
     <!-- إحصائيات سريعة -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4e73df 0%, #1cc88a 100%); color:#fff;">
+            <div class="card border-0 shadow-sm inquiry-stat-card">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">زيارات اليوم</h6>
-                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->total() }}</h1>
+                            <h6 class="mb-1 text-uppercase">زيارات اليوم</h6>
+                            <h1 class="mb-0">{{ $todayInquiries->total() }}</h1>
                         </div>
-                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
-                            <i class="fas fa-users fa-2x" style="color:#fff;"></i>
+                        <div class="icon-circle">
+                            <i class="fas fa-users fa-2x"></i>
                         </div>
                     </div>
                 </div>
@@ -44,15 +147,15 @@
         </div>
 
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%); color:#fff;">
+            <div class="card border-0 shadow-sm inquiry-stat-card">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">قيد المعالجة</h6>
-                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h1>
+                            <h6 class="mb-1 text-uppercase">قيد المعالجة</h6>
+                            <h1 class="mb-0">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h1>
                         </div>
-                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
-                            <i class="fas fa-spinner fa-2x" style="color:#fff;"></i>
+                        <div class="icon-circle">
+                            <i class="fas fa-spinner fa-2x"></i>
                         </div>
                     </div>
                 </div>
@@ -60,15 +163,15 @@
         </div>
 
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color:#fff;">
+            <div class="card border-0 shadow-sm inquiry-stat-card">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">مكتملة</h6>
-                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->where('status', 'completed')->count() }}</h1>
+                            <h6 class="mb-1 text-uppercase">مكتملة</h6>
+                            <h1 class="mb-0">{{ $todayInquiries->where('status', 'completed')->count() }}</h1>
                         </div>
-                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
-                            <i class="fas fa-check-circle fa-2x" style="color:#fff;"></i>
+                        <div class="icon-circle">
+                            <i class="fas fa-check-circle fa-2x"></i>
                         </div>
                     </div>
                 </div>
@@ -76,15 +179,15 @@
         </div>
 
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); color:#fff;">
+            <div class="card border-0 shadow-sm inquiry-stat-card">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h6 class="mb-1 text-uppercase" style="font-size:0.80rem;opacity:.9;">في الانتظار</h6>
-                            <h1 class="mb-0" style="font-weight:700;">{{ $todayInquiries->where('status', 'pending')->count() }}</h1>
+                            <h6 class="mb-1 text-uppercase">في الانتظار</h6>
+                            <h1 class="mb-0">{{ $todayInquiries->where('status', 'pending')->count() }}</h1>
                         </div>
-                        <div class="bg-white rounded-circle p-2" style="opacity:.3;">
-                            <i class="fas fa-clock fa-2x" style="color:#fff;"></i>
+                        <div class="icon-circle">
+                            <i class="fas fa-clock fa-2x"></i>
                         </div>
                     </div>
                 </div>
@@ -96,14 +199,14 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header bg-white">
+                <div class="card-header border-0 pb-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-calendar-day me-2"></i>
                             زيارات اليوم
                         </h5>
                         <div class="d-flex gap-2">
-                            <a href="{{ route('inquiry.search') }}" class="btn btn-sm btn-primary">
+                            <a href="{{ route('inquiry.search') }}" class="btn btn-sm btn-outline-secondary">
                                 <i class="fas fa-plus-circle me-1"></i> طلب جديد
                             </a>
                             <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
@@ -116,17 +219,17 @@
                 <div class="card-body p-0">
                     @if($todayInquiries->count() > 0)
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-hover mb-0 inquiry-table">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th>الوقت</th>
-                                        <th>المريض</th>
+                                        <th>وقت الزيارة</th>
+                                        <th>اسم المريض</th>
                                         <th>العمر</th>
-                                        <th>الهاتف</th>
-                                        <th>الشكوى</th>
-                                        <th>الطبيب</th>
-                                        <th>الحالة</th>
-                                        <th>الإجراءات</th>
+                                        <th>رقم الهاتف</th>
+                                        <th>الشكوى الرئيسية</th>
+                                        <th>الطبيب المختص</th>
+                                        <th>حالة الزيارة</th>
+                                        <th>العمليات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -174,11 +277,11 @@
                                             @endif
                                         </td>
                                         <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ Auth::user()->isDoctor() ? route('doctor.visits.show', $visit->id) : route('visits.show', $visit->id) }}" 
-                                                   class="btn btn-sm btn-info"
-                                                   title="التفاصيل">
-                                                    <i class="fas fa-eye"></i>
+                                            <div class="btn-group btn-group-sm inquiry-actions">
+                                                <a href="{{ route('visits.edit', $visit) }}" 
+                                                   class="btn btn-sm btn-warning"
+                                                   title="تعديل الحجز">
+                                                    <i class="fas fa-edit"></i>
                                                 </a>
                                             </div>
                                         </td>
@@ -189,7 +292,7 @@
                         </div>
 
                         <!-- Pagination -->
-                        <div class="card-footer bg-white">
+                        <div class="card-footer bg-transparent border-0">
                             <div class="d-flex justify-content-center">
                                 {{ $todayInquiries->links() }}
                             </div>
@@ -200,7 +303,7 @@
                             <h5 class="text-muted">لا توجد زيارات اليوم</h5>
                             <p class="text-muted">ابدأ بإنشاء طلب جديد للمريض</p>
                             <div class="d-flex justify-content-center gap-2">
-                                <a href="{{ route('inquiry.search') }}" class="btn btn-primary">
+                                <a href="{{ route('inquiry.search') }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-plus-circle me-2"></i>
                                     طلب جديد
                                 </a>
@@ -213,40 +316,5 @@
         </div>
     </div>
 
-    <!-- روابط سريعة -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-link me-2"></i>
-                        روابط سريعة
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <a href="{{ route('patients.index') }}" class="btn btn-outline-info w-100 mb-2">
-                                <i class="fas fa-users me-2"></i>
-                                قائمة المرضى
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{{ route('patients.create') }}" class="btn btn-outline-success w-100 mb-2">
-                                <i class="fas fa-user-plus me-2"></i>
-                                تسجيل مريض جديد
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary w-100 mb-2">
-                                <i class="fas fa-home me-2"></i>
-                                الرئيسية
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 @endsection

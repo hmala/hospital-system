@@ -215,7 +215,7 @@
                                                 @php
                                                     $type = \App\Models\RadiologyType::find($typeId);
                                                     if($type) {
-                                                        $price = $type->price ?? 0;
+                                                        $price = $type->base_price ?? 0;
                                                         $totalAmount += $price;
                                                     }
                                                 @endphp

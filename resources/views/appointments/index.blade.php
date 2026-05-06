@@ -62,6 +62,8 @@
                                     <td>
                                         @if($appointment->payment_status === 'paid')
                                             <span class="badge bg-success"><i class="fas fa-check-circle"></i> مدفوع</span>
+                                        @elseif($appointment->payment_status === 'refunded')
+                                            <span class="badge bg-secondary"><i class="fas fa-undo"></i> مسترجع</span>
                                         @else
                                             <span class="badge bg-warning"><i class="fas fa-clock"></i> معلق</span>
                                         @endif
@@ -134,6 +136,10 @@
                                         @if($appointment->payment_status === 'paid')
                                             <span class="badge bg-success">
                                                 <i class="fas fa-check-circle"></i> مدفوع
+                                            </span>
+                                        @elseif($appointment->payment_status === 'refunded')
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-undo"></i> مسترجع
                                             </span>
                                         @else
                                             <span class="badge bg-warning text-dark">
@@ -215,6 +221,8 @@
                                     <td>
                                         @if($appointment->payment_status === 'paid')
                                             <span class="badge bg-success"><i class="fas fa-check-circle"></i> مدفوع</span>
+                                        @elseif($appointment->payment_status === 'refunded')
+                                            <span class="badge bg-secondary"><i class="fas fa-undo"></i> مسترجع</span>
                                         @else
                                             <span class="badge bg-secondary">غير مطلوب</span>
                                         @endif

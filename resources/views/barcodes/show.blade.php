@@ -5,15 +5,19 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h4 class="mb-0">طباعة باركود الدفعة</h4>
-            <button onclick="window.print()" class="btn btn-primary d-print-none">
-                <i class="bi bi-printer"></i> طباعة
-            </button>
+            <div>
+                <button onclick="window.print()" class="btn btn-primary btn-print d-print-none">
+                    <i class="fas fa-print me-1"></i>طباعة
+                </button>
+                <a href="{{ route('barcodes.index') }}" class="btn btn-outline-secondary d-print-none">
+                    <i class="fas fa-arrow-left me-1"></i>رجوع
+                </a>
+            </div>
         </div>
         <div class="card-body p-4">
-            <!-- معلومات الدفعة -->
             <div class="row mb-4 d-print-none">
                 <div class="col-md-6">
-                    <h6 class="text-muted">معلومات المادة</h6>
+                    <h6 class="text-muted">معلومات الدفعة</h6>
                     <table class="table table-sm">
                         <tr>
                             <th>المادة:</th>
@@ -44,7 +48,7 @@
                         @endif
                         @if($batch->manufacturer_lot_number)
                         <tr>
-                            <th>رقم دفعة المصنع:</th>
+                            <th>رقم الدفعة:</th>
                             <td><code>{{ $batch->manufacturer_lot_number }}</code></td>
                         </tr>
                         @endif
@@ -58,82 +62,111 @@
                 </div>
             </div>
 
-            <!-- منطقة الطباعة -->
-            <div class="print-area text-center">
-                <div class="barcode-label border p-4 mx-auto" style="max-width: 400px;">
-                    <h5 class="mb-3">{{ $batch->product->name }}</h5>
-                    
-                    <!-- QR Code -->
-                    <div class="mb-3">
-                        <canvas id="qrcode"></canvas>
+            <div class="print-area">
+                <div class="barcode-card border p-3 mb-2 text-center">
+                    <div class="product-name mb-2" title="{{ $batch->product->name }}">{{ $batch->product->name }}</div>
+                    <div class="barcode-wrapper mb-2">
+                        <svg class="product-barcode" data-code="{{ $batch->original_barcode ?? $batch->internal_barcode }}"></svg>
                     </div>
-
-                    <!-- Barcode -->
-                    <div class="mb-3">
-                        <svg id="barcode"></svg>
-                    </div>
-
-                    <div class="small text-muted">
-                        <div><strong>الكود:</strong> {{ $batch->internal_barcode }}</div>
-                        @if($batch->expiry_date)
-                        <div><strong>انتهاء:</strong> {{ $batch->expiry_date->format('Y-m-d') }}</div>
-                        @endif
-                        @if($batch->manufacturer_lot_number)
-                        <div><strong>دفعة:</strong> {{ $batch->manufacturer_lot_number }}</div>
-                        @endif
+                    <div class="barcode-code text-muted small">
+                        {{ $batch->original_barcode ?? $batch->internal_barcode }}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
 
-<!-- Include QRCode and JsBarcode libraries -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+@section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
 <script>
-    // Generate QR Code
-    const qrData = JSON.stringify({
-        batch_id: {{ $batch->id }},
-        product_id: {{ $batch->product_id }},
-        internal_barcode: "{{ $batch->internal_barcode }}",
-        product_name: "{{ $batch->product->name }}",
-        expiry_date: "{{ $batch->expiry_date ? $batch->expiry_date->format('Y-m-d') : '' }}",
-        @if($batch->supplier_barcode)
-        supplier_barcode: "{{ $batch->supplier_barcode }}",
-        @endif
-        @if($batch->manufacturer_lot_number)
-        lot_number: "{{ $batch->manufacturer_lot_number }}"
-        @endif
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.product-barcode').forEach(function(svg) {
+            const code = svg.dataset.code;
+            if (!code) {
+                return;
+            }
 
-    QRCode.toCanvas(document.getElementById('qrcode'), qrData, {
-        width: 200,
-        margin: 2
-    });
-
-    // Generate Barcode
-    JsBarcode("#barcode", "{{ $batch->internal_barcode }}", {
-        format: "CODE128",
-        width: 2,
-        height: 60,
-        displayValue: true,
-        fontSize: 14
+            JsBarcode(svg, code, {
+                format: 'CODE128',
+                width: 1.1,
+                height: 30,
+                displayValue: false,
+                margin: 2,
+            });
+        });
     });
 </script>
+@endsection
 
+@section('styles')
 <style>
+    .barcode-card {
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        max-height: 48px;
+        max-width: 600px;
+        margin: 20px auto;
+    }
+
+    .product-name {
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .barcode-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .btn-print,
+    .btn-print:focus,
+    .btn-print:active,
+    .btn-print.focus {
+        border-radius: 0.8rem;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
     @media print {
-        .d-print-none {
-            display: none !important;
+        body * {
+            visibility: hidden;
+        }
+        .print-area,
+        .print-area * {
+            visibility: visible;
         }
         .print-area {
-            margin-top: 0;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: auto;
         }
-        .barcode-label {
-            border: 2px solid #000 !important;
+        .barcode-card {
+            width: 100%;
+            max-width: 550px;
+            border: 1px solid #000 !important;
+            box-shadow: none;
+            border-radius: 3px;
+            padding: 4px 8px !important;
+            margin-bottom: 4px !important;
             page-break-inside: avoid;
+            max-height: 38px;
+        }
+        .product-name {
+            font-size: 0.85rem;
+        }
+        @page {
+            margin: 0.5cm;
         }
     }
 </style>

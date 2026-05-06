@@ -152,9 +152,14 @@
                                 <div class="d-flex align-items-center">
                                     <i class="fas fa-vial text-success me-2"></i>
                                     <div>
-                                        <strong>{{ $test->labTest->name }}</strong>
-                                        @if($test->labTest->category)
-                                        <br><small class="text-muted">{{ $test->labTest->category }}</small>
+                                        @if($test->labTest)
+                                            <strong>{{ $test->labTest->name }}</strong>
+                                            @if($test->labTest->category)
+                                            <br><small class="text-muted">{{ $test->labTest->category }}</small>
+                                            @endif
+                                        @else
+                                            <strong class="text-warning">طلب مختبر عام</strong>
+                                            <br><small class="text-muted">لم يتم تحديد التحليل بعد</small>
                                         @endif
                                     </div>
                                 </div>
