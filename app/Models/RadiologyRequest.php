@@ -113,6 +113,11 @@ class RadiologyRequest extends Model
         return $colors[$this->status] ?? 'secondary';
     }
 
+    public function getCategoryAttribute()
+    {
+        return $this->radiologyType?->category ?? $this->radiologyType?->main_category ?? 'عام';
+    }
+
     public function getPriorityTextAttribute()
     {
         $priorities = [

@@ -121,6 +121,11 @@ class Surgery extends Model
         return $this->hasMany(SurgeryTreatment::class)->orderBy('sort_order');
     }
 
+    public function getSurgeryNameAttribute()
+    {
+        return $this->surgery_type;
+    }
+
     public function anesthesiologist()
     {
         return $this->belongsTo(Doctor::class, 'anesthesiologist_id');
@@ -142,9 +147,29 @@ class Surgery extends Model
         return $this->hasOne(AnesthesiaStation::class);
     }
 
+    public function residentStations()
+    {
+        return $this->hasMany(ResidentStation::class);
+    }
+
     public function residentStation()
     {
         return $this->hasOne(ResidentStation::class);
+    }
+
+    public function preOpResidentStation()
+    {
+        return $this->hasOne(ResidentStation::class)->where('phase', 'pre_op');
+    }
+
+    public function postOpResidentStation()
+    {
+        return $this->hasOne(ResidentStation::class)->where('phase', 'post_op');
+    }
+
+    public function operationTheaterStation()
+    {
+        return $this->hasOne(OperationTheaterStation::class);
     }
 
     public function nursingStation()
@@ -152,21 +177,41 @@ class Surgery extends Model
         return $this->hasOne(NursingStation::class);
     }
 
-    // Helper methods
+    // Helper methods for new workflow
     public function getCurrentStation()
     {
+        // 1. Resident (Pre-op) - التهيئة قبل العملية
+        $preOpResident = $this->preOpResidentStation;
+        if (!$preOpResident || $preOpResident->status !== 'completed') {
+            return 'resident_pre_op';
+        }
+
+        // 2. Operation Theater - صالة العمليات
+        if (!$this->operationTheaterStation || $this->operationTheaterStation->status !== 'completed') {
+            return 'operation_theater';
+        }
+
+        // 3. Surgeon - تسجيل تفاصيل العملية
         if (!$this->surgeonStation || $this->surgeonStation->status !== 'completed') {
             return 'surgeon';
         }
+
+        // 4. Anesthesia - توثيق التخدير
         if (!$this->anesthesiaStation || $this->anesthesiaStation->status !== 'completed') {
             return 'anesthesia';
         }
-        if (!$this->residentStation || $this->residentStation->status !== 'completed') {
-            return 'resident';
+
+        // 5. Resident (Post-op) - متابعة ما بعد العملية
+        $postOpResident = $this->postOpResidentStation;
+        if (!$postOpResident || $postOpResident->status !== 'completed') {
+            return 'resident_post_op';
         }
+
+        // 6. Nursing - التمريض
         if (!$this->nursingStation || $this->nursingStation->status !== 'completed') {
             return 'nursing';
         }
+
         return 'completed';
     }
 
@@ -177,11 +222,11 @@ class Surgery extends Model
         if ($currentStation === 'surgeon') {
             return $this->surgeonStation && $this->surgeonStation->status === 'completed';
         }
-        if ($currentStation === 'anesthesia') {
-            return $this->anesthesiaStation && $this->anesthesiaStation->status === 'completed';
-        }
         if ($currentStation === 'resident') {
             return $this->residentStation && $this->residentStation->status === 'completed';
+        }
+        if ($currentStation === 'anesthesia') {
+            return $this->anesthesiaStation && $this->anesthesiaStation->status === 'completed';
         }
         
         return false;

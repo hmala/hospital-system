@@ -41,6 +41,39 @@ class RadiologyController extends Controller
                 ->where('patient_id', $user->patient->id)
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
+        } elseif ($user->hasAnyRole(['radiology_echo', 'radiology_ultrasound', 'radiology_general', 'radiology_mri'])) {
+            $category = null;
+            if ($user->hasRole('radiology_echo')) {
+                $category = 'إيكو';
+            } elseif ($user->hasRole('radiology_ultrasound')) {
+                $category = 'سونار';
+            } elseif ($user->hasRole('radiology_mri')) {
+                $category = 'الرنين';
+            } elseif ($user->hasRole('radiology_general')) {
+                $category = 'أشعة';
+            }
+
+            $query = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
+                ->whereHas('radiologyType', function ($query) use ($category) {
+                    if ($category === 'أشعة') {
+                        $query->where(function ($sub) {
+                            $sub->where('subcategory', 'أشعة')
+                                ->orWhereNull('subcategory');
+                        });
+                    } else {
+                        $query->where('subcategory', $category);
+                    }
+                })
+                ->whereIn('status', ['pending', 'scheduled', 'in_progress', 'completed']);
+            
+            // فلترة خاصة للإيكو: عرض فقط الطلبات المخصصة للموظف
+            if ($category === 'إيكو') {
+                $query->where('doctor_id', $user->id);
+            }
+            
+            $requests = $query->orderBy('priority', 'desc')
+                ->orderBy('requested_date', 'desc')
+                ->paginate(15);
         } elseif ($user->hasRole('radiology_staff')) {
             // موظفو الإشعة يرون جميع الطلبات من الجدول القديم فقط (ليس هناك جديدة)
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
@@ -53,12 +86,36 @@ class RadiologyController extends Controller
         }
 
         $emergencyRadiologyRequests = collect();
-        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['admin'])) {
-            $emergencyRadiologyRequests = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
+        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['admin', 'radiology_echo', 'radiology_ultrasound', 'radiology_general', 'radiology_mri'])) {
+            $emergencyQuery = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
                 ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
-                ->orderBy('requested_at', 'asc')
-                ->get();
+                ->orderBy('requested_at', 'asc');
+
+            if ($user->hasAnyRole(['radiology_echo', 'radiology_ultrasound', 'radiology_general', 'radiology_mri'])) {
+                if ($user->hasRole('radiology_echo')) {
+                    $emergencyQuery->whereHas('radiologyTypes', function ($query) {
+                        $query->where('subcategory', 'إيكو');
+                    });
+                } elseif ($user->hasRole('radiology_ultrasound')) {
+                    $emergencyQuery->whereHas('radiologyTypes', function ($query) {
+                        $query->where('subcategory', 'سونار');
+                    });
+                } elseif ($user->hasRole('radiology_mri')) {
+                    $emergencyQuery->whereHas('radiologyTypes', function ($query) {
+                        $query->where('subcategory', 'الرنين');
+                    });
+                } elseif ($user->hasRole('radiology_general')) {
+                    $emergencyQuery->whereHas('radiologyTypes', function ($query) {
+                        $query->where(function ($sub) {
+                            $sub->where('subcategory', 'أشعة')
+                                ->orWhereNull('subcategory');
+                        });
+                    });
+                }
+            }
+
+            $emergencyRadiologyRequests = $emergencyQuery->get();
         }
 
         return view('radiology.index', compact('requests', 'newSystemRequests', 'emergencyRadiologyRequests'));
@@ -252,7 +309,7 @@ class RadiologyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('radiology_staff')) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء');
         }
 
@@ -272,7 +329,7 @@ class RadiologyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('radiology_staff')) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء');
         }
 
@@ -306,7 +363,7 @@ class RadiologyController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasRole('radiology_staff')) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بحفظ نتائج الأشعة');
         }
 

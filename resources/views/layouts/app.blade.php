@@ -1,4 +1,4 @@
-<!-- resources/views/layouts/app.blade.php -->
+{{-- resources/views/layouts/app.blade.php --}}
 @php
     // عدادات بسيطة للقائمة الجانبية
     $doctorIncompleteVisits = 0;
@@ -13,6 +13,7 @@
     $surgeonStationCount = 0;
     $anesthesiaStationCount = 0;
     $residentStationCount = 0;
+    $operationTheaterStationCount = 0;
     $nursingStationCount = 0;
 
     if (Auth::check()) {
@@ -22,42 +23,74 @@
                 $pendingSurgeries = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])->count();
                 $waitingSurgeries = \App\Models\Surgery::where('status', 'waiting')->count();
                 
-                // عداد محطة الجراح
-                $surgeonStationCount = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])
+                // عداد محطة المقيم (pre_op) - بعد الحجز مباشرة
+                $residentStationCount = \App\Models\Surgery::where('status', 'scheduled')
                     ->where(function($q) {
-                        $q->whereHas('surgeonStation', function($sq) {
-                            $sq->where('status', '!=', 'completed');
-                        })->orWhereDoesntHave('surgeonStation');
+                        $q->whereDoesntHave('residentStations', function($sq) {
+                            $sq->where('phase', 'pre_op');
+                        })->orWhereHas('residentStations', function($sq) {
+                            $sq->where('phase', 'pre_op')
+                              ->where('status', '!=', 'completed');
+                        });
                     })->count();
                 
-                // عداد محطة التخدير
+                // عداد صالة العمليات - بعد المقيم pre_op
+                $operationTheaterStationCount = \App\Models\Surgery::whereHas('residentStations', function($q) {
+                        $q->where('phase', 'pre_op')
+                          ->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereDoesntHave('operationTheaterStation')
+                          ->orWhereHas('operationTheaterStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
+                    })->count();
+                
+                // عداد محطة الجراح - بعد صالة العمليات
+                $surgeonStationCount = \App\Models\Surgery::whereHas('operationTheaterStation', function($q) {
+                        $q->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereDoesntHave('surgeonStation')
+                          ->orWhereHas('surgeonStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
+                    })->count();
+                
+                // عداد محطة التخدير - بعد الجراح
                 $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
                         $q->where('status', 'completed');
                     })
                     ->where(function($q) {
-                        $q->whereHas('anesthesiaStation', function($sq) {
-                            $sq->where('status', '!=', 'completed');
-                        })->orWhereDoesntHave('anesthesiaStation');
+                        $q->whereDoesntHave('anesthesiaStation')
+                          ->orWhereHas('anesthesiaStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
                     })->count();
                 
-                // عداد محطة المقيم
-                $residentStationCount = \App\Models\Surgery::whereHas('anesthesiaStation', function($q) {
+                // عداد محطة المقيم (post_op) - بعد التخدير
+                $residentStationCount += \App\Models\Surgery::whereHas('anesthesiaStation', function($q) {
                         $q->where('status', 'completed');
                     })
                     ->where(function($q) {
-                        $q->whereHas('residentStation', function($sq) {
-                            $sq->where('status', '!=', 'completed');
-                        })->orWhereDoesntHave('residentStation');
+                        $q->whereDoesntHave('residentStations', function($sq) {
+                            $sq->where('phase', 'post_op');
+                        })->orWhereHas('residentStations', function($sq) {
+                            $sq->where('phase', 'post_op')
+                              ->where('status', '!=', 'completed');
+                        });
                     })->count();
                 
-                // عداد محطة التمريض
-                $nursingStationCount = \App\Models\Surgery::whereHas('residentStation', function($q) {
-                        $q->where('status', 'completed');
+                // عداد محطة التمريض - بعد المقيم post_op
+                $nursingStationCount = \App\Models\Surgery::whereHas('residentStations', function($q) {
+                        $q->where('phase', 'post_op')
+                          ->where('status', 'completed');
                     })
                     ->where(function($q) {
-                        $q->whereHas('nursingStation', function($sq) {
-                            $sq->where('status', '!=', 'completed');
-                        })->orWhereDoesntHave('nursingStation');
+                        $q->whereDoesntHave('nursingStation')
+                          ->orWhereHas('nursingStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
                     })->count();
             }
             if (Auth::user()->can('view inquiries')) {
@@ -739,6 +772,22 @@
 
                         @can('view surgeries')
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('resident-station.*') ? 'active' : '' }}" href="{{ route('resident-station.index') }}">
+                                <i class="fas fa-user-graduate"></i><span> محطة المقيم</span>
+                                @if($residentStationCount > 0)
+                                    <span class="badge bg-primary ms-2">{{ $residentStationCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('operation-theater-station.*') ? 'active' : '' }}" href="{{ route('operation-theater-station.index') }}">
+                                <i class="fas fa-procedures"></i><span> صالة العمليات</span>
+                                @if($operationTheaterStationCount > 0)
+                                    <span class="badge bg-danger ms-2">{{ $operationTheaterStationCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
                                 <i class="fas fa-user-md"></i><span> محطة الجراح</span>
                                 @if($surgeonStationCount > 0)
@@ -751,14 +800,6 @@
                                 <i class="fas fa-syringe"></i><span> محطة التخدير</span>
                                 @if($anesthesiaStationCount > 0)
                                     <span class="badge bg-warning ms-2">{{ $anesthesiaStationCount }}</span>
-                                @endif
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('resident-station.*') ? 'active' : '' }}" href="{{ route('resident-station.index') }}">
-                                <i class="fas fa-user-graduate"></i><span> محطة المقيم</span>
-                                @if($residentStationCount > 0)
-                                    <span class="badge bg-primary ms-2">{{ $residentStationCount }}</span>
                                 @endif
                             </a>
                         </li>
@@ -863,6 +904,11 @@
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeryLabTests }}</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('staff.surgery-lab-tests.selection') ? 'active' : '' }}" href="{{ route('staff.surgery-lab-tests.selection') }}">
+                                <i class="fas fa-list"></i><span> عمليات تحتاج اختيار تحاليل</span>
+                            </a>
+                        </li>
                         @endcan
 
                         @if(auth()->user()->hasRole('radiology_staff') || auth()->user()->hasRole('admin'))
@@ -870,6 +916,11 @@
                             <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
                                 <i class="fas fa-x-ray"></i><span> أشعة العمليات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeryRadiology }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.selection') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.selection') }}">
+                                <i class="fas fa-list"></i><span> عمليات تحتاج اختيار أشعة</span>
                             </a>
                         </li>
                         @endif

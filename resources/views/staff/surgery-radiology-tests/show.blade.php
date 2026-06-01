@@ -172,14 +172,15 @@ function getRadiologyCategory($radiologyName) {
                     <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>معلومات العملية</h5>
                 </div>
                 <div class="card-body">
+                    @if($test->surgery)
                     <div class="row">
                         <div class="col-md-4">
-                            <p><strong>المريض:</strong> {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}</p>
-                            <p><strong>الطبيب:</strong> د. {{ optional($test->surgery->doctor->user)->name ?? 'غير محدد' }}</p>
+                            <p><strong>المريض:</strong> {{ optional($test->surgery->patient?->user)->name ?? 'غير معروف' }}</p>
+                            <p><strong>الطبيب:</strong> د. {{ optional($test->surgery->doctor?->user)->name ?? 'غير محدد' }}</p>
                         </div>
                         <div class="col-md-4">
                             <p><strong>نوع العملية:</strong> {{ $test->surgery->surgery_type }}</p>
-                            <p><strong>تاريخ العملية:</strong> {{ $test->surgery->scheduled_date->format('Y-m-d') }}</p>
+                            <p><strong>تاريخ العملية:</strong> {{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : 'غير محدد' }}</p>
                         </div>
                         <div class="col-md-4">
                             <p><strong>وقت العملية:</strong> {{ $test->surgery->scheduled_time }}</p>
@@ -196,6 +197,12 @@ function getRadiologyCategory($radiologyName) {
                             </p>
                         </div>
                     </div>
+                    @else
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        معلومات العملية غير متوفرة
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>

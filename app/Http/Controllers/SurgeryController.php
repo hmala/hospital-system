@@ -244,10 +244,9 @@ class SurgeryController extends Controller
             $visit = $surgery->visit;
         }
 
-        // إنشاء طلبات المختبر - دائماً في جدول surgery_lab_tests
+        // إنشاء طلبات المختبر - فقط إذا تم تحديد تحاليل معينة
         $labTestIds = $request->input('lab_tests', []);
         if (is_array($labTestIds) && count($labTestIds)) {
-            // إذا تم تحديد تحاليل معينة
             foreach ($labTestIds as $labTestId) {
                 if ($labTestId && !$surgery->labTests()->where('lab_test_id', $labTestId)->exists()) {
                     $surgery->labTests()->create([
@@ -257,21 +256,13 @@ class SurgeryController extends Controller
                     ]);
                 }
             }
-        } else {
-            // إذا لم يتم تحديد تحاليل، نضيف طلب عام في جدول العمليات
-            if (!$surgery->labTests()->whereNull('lab_test_id')->exists()) {
-                $surgery->labTests()->create([
-                    'lab_test_id' => null,
-                    'status' => 'pending',
-                    'payment_status' => 'pending'
-                ]);
-            }
         }
+        // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون lab_test_id)
+        // سيقوم موظف المختبر بإضافة التحاليل المطلوبة لاحقاً
 
-        // إنشاء طلبات الأشعة - دائماً في جدول surgery_radiology_tests
+        // إنشاء طلبات الأشعة - فقط إذا تم تحديد أشعة معينة
         $radiologyTypeIds = $request->input('radiology_tests', []);
         if (is_array($radiologyTypeIds) && count($radiologyTypeIds)) {
-            // إذا تم تحديد أشعة معينة
             foreach ($radiologyTypeIds as $radiologyTypeId) {
                 if ($radiologyTypeId && !$surgery->radiologyTests()->where('radiology_type_id', $radiologyTypeId)->exists()) {
                     $surgery->radiologyTests()->create([
@@ -281,16 +272,9 @@ class SurgeryController extends Controller
                     ]);
                 }
             }
-        } else {
-            // إذا لم يتم تحديد أشعة، نضيف طلب عام في جدول العمليات
-            if (!$surgery->radiologyTests()->whereNull('radiology_type_id')->exists()) {
-                $surgery->radiologyTests()->create([
-                    'radiology_type_id' => null,
-                    'status' => 'pending',
-                    'payment_status' => 'pending'
-                ]);
-            }
         }
+        // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون radiology_type_id)
+        // سيقوم موظف الأشعة بإضافة الأشعة المطلوبة لاحقاً
 
         broadcast(new SurgeryUpdated($surgery));
 
@@ -431,10 +415,9 @@ class SurgeryController extends Controller
             $visit = $surgery->visit;
         }
 
-        // إنشاء طلبات المختبر - دائماً في جدول surgery_lab_tests
+        // إنشاء طلبات المختبر - فقط إذا تم تحديد تحاليل معينة
         $labTestIds = $request->input('lab_tests', []);
         if (is_array($labTestIds) && count($labTestIds)) {
-            // إذا تم تحديد تحاليل معينة
             foreach ($labTestIds as $labTestId) {
                 if ($labTestId && !$surgery->labTests()->where('lab_test_id', $labTestId)->exists()) {
                     $surgery->labTests()->create([
@@ -444,21 +427,13 @@ class SurgeryController extends Controller
                     ]);
                 }
             }
-        } else {
-            // إذا لم يتم تحديد تحاليل، نضيف طلب عام في جدول العمليات
-            if (!$surgery->labTests()->whereNull('lab_test_id')->exists()) {
-                $surgery->labTests()->create([
-                    'lab_test_id' => null,
-                    'status' => 'pending',
-                    'payment_status' => 'pending'
-                ]);
-            }
         }
+        // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون lab_test_id)
+        // سيقوم موظف المختبر بإضافة التحاليل المطلوبة لاحقاً
 
-        // إنشاء طلبات الأشعة - دائماً في جدول surgery_radiology_tests
+        // إنشاء طلبات الأشعة - فقط إذا تم تحديد أشعة معينة
         $radiologyTypeIds = $request->input('radiology_tests', []);
         if (is_array($radiologyTypeIds) && count($radiologyTypeIds)) {
-            // إذا تم تحديد أشعة معينة
             foreach ($radiologyTypeIds as $radiologyTypeId) {
                 if ($radiologyTypeId && !$surgery->radiologyTests()->where('radiology_type_id', $radiologyTypeId)->exists()) {
                     $surgery->radiologyTests()->create([
@@ -468,16 +443,9 @@ class SurgeryController extends Controller
                     ]);
                 }
             }
-        } else {
-            // إذا لم يتم تحديد أشعة، نضيف طلب عام في جدول العمليات
-            if (!$surgery->radiologyTests()->whereNull('radiology_type_id')->exists()) {
-                $surgery->radiologyTests()->create([
-                    'radiology_type_id' => null,
-                    'status' => 'pending',
-                    'payment_status' => 'pending'
-                ]);
-            }
         }
+        // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون radiology_type_id)
+        // سيقوم موظف الأشعة بإضافة الأشعة المطلوبة لاحقاً
 
         broadcast(new SurgeryUpdated($surgery));
 

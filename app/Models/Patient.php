@@ -38,6 +38,11 @@ class Patient extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function getFileNumberAttribute()
+    {
+        return $this->national_id ?? $this->id;
+    }
+
     public function country()
     {
         return $this->belongsTo(Country::class);

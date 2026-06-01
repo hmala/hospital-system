@@ -95,6 +95,12 @@
 - تم إنشاء صفحة إرجاع خاصة لإعادة الكميات من المخازن الفرعية إلى المخزن الرئيسي.
 - تم توجيه زر الإرجاع من صفحة تفاصيل الفاتورة `purchases.show` إلى نموذج الإرجاع.
 
+9. واجهات اختيار التحاليل والأشعة للعمليات
+- إضافة صفحة `staff/surgery-lab-tests/selection` لعرض العمليات الجراحية التي تحتاج اختيار تحاليل.
+- إضافة صفحة `staff/surgery-radiology-tests/selection` لعرض العمليات الجراحية التي تحتاج اختيار أشعة.
+- إضافة روابط في الشريط الجانبي للانتقال السريع إلى القوائم الجديدة.
+- إنشاء طلب عام عند الضغط على `اختر التحاليل` أو `اختر الأشعة` ثم إعادة التوجيه إلى صفحة العرض الصحيحة.
+
 🎯 خطوات العمل الحالية:
 1. ✅ تنفيذ `php artisan migrate`.
 2. تنفيذ `php artisan db:seed --class=RolesAndPermissionsSeeder` و `php artisan db:seed --class=SidebarLinkSeeder`.
@@ -349,5 +355,167 @@ php artisan migrate --path=database/migrations/2026_05_03_130000_create_surgery_
 2. بناء صفحة أو وظيفة لإرجاع الكمية من المخزن الرئيسي إلى المورد.
 3. إضافة صلاحيات عرض/تنفيذ `stock-transfers.returns` حسب الدور.
 4. تطوير API / مسح ضوئي للباركود في الخطوة التالية.
+
+تم بحمد الله ✅
+
+---
+
+## 🔄 التحديثات الأخيرة - 9 مايو 2026
+
+### 11. إصلاح ازدواجية الدفع في الطوارئ (Payment Double-Charging Fix)
+
+**المشكلة:** عند إضافة خدمة جديدة لحالة طوارئ مدفوعة مسبقاً، كانت الفاتورة تحسب الخدمات القديمة مجدداً.
+
+**الحل المنفذ:**
+- إضافة عمود `payment_id` (FK إلى `payments`) في الجداول:
+  - `emergency_emergency_service`
+  - `emergency_lab_requests`
+  - `emergency_radiology_requests`
+- إضافة عمود `follow_up_payment_id` في جدول `emergencies`
+- Migration: `database/migrations/2026_05_09_add_payment_tracking_to_services.php` ✅ منفذ
+
+**الملفات المحدثة:**
+- `app/Http/Controllers/CashierController.php` - دالة `processEmergencyPayment()`:
+  - تضع الـ `payment_id` على جميع الخدمات غير المدفوعة عند معالجة الدفع
+  - تحقق من `follow_up_payment_id` لرسوم متابعة الطبيب
+- `resources/views/cashier/emergency-payment-form.blade.php`:
+  - تعرض فقط الخدمات WHERE `payment_id IS NULL`
+  - تعرض فقط بنود التحاليل والأشعة غير المدفوعة
+
+### 12. رسوم متابعة الطبيب (Doctor Follow-up Fee)
+
+**تفاصيل:**
+- رسوم ثابتة: **30,000 IQD**
+- يتم تفعيلها من صفحة إنشاء حالة الطوارئ عبر checkbox
+
+**الملفات المحدثة:**
+- `resources/views/emergency/create.blade.php`:
+  ```html
+  <input type="checkbox" name="doctor_follow_up" value="1">
+  <label>متابعة الطبيب <span class="text-muted">(+30,000 IQD)</span></label>
+  ```
+- `app/Http/Controllers/EmergencyController.php` - دالة `store()`:
+  - إذا `doctor_follow_up == 1` يضع `doctor_follow_up_fee = 30000`
+
+### 13. نظام العلامات الحيوية المتكامل (Vital Signs History System)
+
+**المشكلة:** كانت العلامات الحيوية تُخزَّن في عمود JSON واحد (تُستبدل القديمة بالجديدة).
+
+**الحل المنفذ:**
+- إنشاء جدول `emergency_vital_signs` لحفظ كل قياس كسجل منفصل مع:
+  - `emergency_id`, `recorded_by` (FK إلى users)
+  - `blood_pressure`, `heart_rate`, `temperature`, `respiratory_rate`
+  - `oxygen_saturation`, `blood_glucose`, `notes`
+  - `created_at`, `updated_at`
+
+**الملفات المنشأة:**
+- `app/Models/EmergencyVitalSign.php` - موديل جديد:
+  ```php
+  protected $fillable = ['emergency_id', 'recorded_by', 'blood_pressure',
+                         'heart_rate', 'temperature', 'respiratory_rate',
+                         'oxygen_saturation', 'blood_glucose', 'notes'];
+  // علاقات: emergency(), recordedBy()
+  ```
+- `database/migrations/2026_05_09_create_emergency_vital_signs_table.php` (الجدول كان موجوداً مسبقاً - تم التأكيد بوجود 5 سجلات)
+
+**الملفات المحدثة:**
+- `app/Models/Emergency.php`:
+  - إضافة imports: `HasMany`, `HasOne`
+  - إضافة علاقات:
+    ```php
+    public function vitalSignReadings(): HasMany { ... } // أحدث أولاً
+    public function latestVitalSign(): HasOne { ... }    // latestOfMany()
+    ```
+  - تحديث Accessors لتقرأ من `latestVitalSign` أولاً ثم JSON كاحتياط
+  - `getBloodPressureAttribute()`, `getHeartRateAttribute()`, `getTemperatureAttribute()`, إلخ
+  - إضافة `follow_up_payment_id` في `$fillable`
+  - إضافة `vital_signs => 'array'` في `$casts`
+
+- `app/Http/Controllers/EmergencyController.php`:
+  - دالة `updateVitals()`: تنشئ سجلاً جديداً في `EmergencyVitalSign` + تحدث JSON كاحتياط
+  - دالة `index()`: تعمل eager load لـ `vitalSignReadings` (آخر 5 مع `recordedBy`)
+  - دالة `show()`: تعمل eager load لـ `vitalSignReadings`
+
+### 14. إصلاح واجهة الطوارئ الرئيسية (index.blade.php)
+
+**المشكلة الرئيسية:** صفحة بيضاء بسبب أخطاء بنية Blade.
+
+**الإصلاحات المنفذة:**
+1. **`@keyframes` → `@@keyframes`**: منع Blade من تفسير `@keyframes pulse` كـ directive
+2. **`@endsection` مفقود**: إضافة `@endsection` قبل `@section('scripts')`
+3. **Modals خارج @section**: نقل جميع المودالز داخل `@section('content')`
+4. **تكرار دالة**: حذف `latestVitalSign()` المكررة في Emergency.php
+
+**البنية الصحيحة الحالية للملف:**
+- سطر 4: `@section('content')`
+- سطر 1100: `@endsection`
+- سطر 1102: `@section('scripts')`
+- سطر 1196: `@endsection`
+
+**أزرار الإجراءات لكل حالة طوارئ:**
+- 🔴 "قياس" → `#vitalSignsModal-{{ $emergency->id }}` (العلامات الحيوية)
+- 🟢 "تشخيص" → `#medicalModal-{{ $emergency->id }}`
+- 🔵 "تحاليل" → `#labModal-{{ $emergency->id }}`
+- 🟦 "أشعة" → `#radiologyModal-{{ $emergency->id }}`
+- 🟡 "استشارة" → `#consultationModal-{{ $emergency->id }}`
+
+**vitalSignsModal يعرض:**
+- جدول بالقراءات السابقة من `$emergency->vitalSignReadings` (آخر 5)
+- أعمدة: التاريخ/الوقت، ضغط الدم، النبض، الحرارة، التنفس، الأكسجين، السكر، المسجِّل
+- نموذج فارغ لإضافة قياس جديد يُرسل إلى `route('emergency.update-vitals', $emergency)`
+
+### 15. إصلاح صفحة تفاصيل الطوارئ (show.blade.php)
+
+- تحديث قسم العلامات الحيوية لعرض جميع السجلات التاريخية
+- جدول يعرض: التاريخ، جميع القيم، اسم المسجِّل
+- بطاقات ملخص للقراءة الحالية في الأعلى
+- زر vitalSignsModal لإضافة قياس جديد
+
+### 📋 ملفات هذه الجلسة:
+
+**Models:**
+- `app/Models/EmergencyVitalSign.php` ← **جديد**
+- `app/Models/Emergency.php` ← محدث (علاقات + accessors + fillable/casts)
+
+**Controllers:**
+- `app/Http/Controllers/EmergencyController.php` ← محدث (updateVitals, index, show, store)
+- `app/Http/Controllers/CashierController.php` ← محدث (processEmergencyPayment)
+
+**Views:**
+- `resources/views/emergency/index.blade.php` ← محدث (إصلاح كامل للبنية + أزرار منفصلة)
+- `resources/views/emergency/show.blade.php` ← محدث (جدول تاريخ العلامات الحيوية)
+- `resources/views/emergency/create.blade.php` ← محدث (checkbox متابعة الطبيب)
+- `resources/views/cashier/emergency-payment-form.blade.php` ← محدث (فلترة payment_id IS NULL)
+- `resources/views/layouts/app.blade.php` ← محدث (حذف تعليق HTML قبل DOCTYPE)
+
+**Migrations:**
+- `database/migrations/2026_05_09_add_payment_tracking_to_services.php` ← **جديد** ✅ منفذ
+- `database/migrations/2026_05_09_create_emergency_vital_signs_table.php` ← **جديد** (تم تخطيه - الجدول موجود)
+
+### ⚡ الأوامر المنفذة في هذه الجلسة:
+```bash
+php artisan migrate
+php artisan view:clear
+php artisan optimize:clear
+```
+
+### 📝 ملاحظات مهمة:
+1. جدول `emergency_vital_signs` موجود مسبقاً ويحتوي على 5 سجلات
+2. نظام الدفع الآن يعتمد على `payment_id` لتتبع ما تم دفعه وما لم يُدفع
+3. العلامات الحيوية تُخزَّن في جدول منفصل + JSON كاحتياط
+4. ملف `index.blade.php` تم إصلاحه بالكامل - لا توجد صفحة بيضاء
+
+### 🔜 المهام المقترحة للجلسة القادمة:
+1. اختبار صفحة `/emergency` للتأكد من عدم وجود صفحة بيضاء أو Quirks Mode
+2. اختبار زر "قياس" وعرض جدول القراءات السابقة
+3. اختبار حفظ قياس جديد في جدول `emergency_vital_signs`
+4. اختبار عدم تكرار الخدمات المدفوعة في الفاتورة
+5. اختبار رسوم متابعة الطبيب (30,000 IQD)
+
+```bash
+# عند الاستمرار:
+php artisan optimize:clear
+php artisan view:cache
+```
 
 تم بحمد الله ✅

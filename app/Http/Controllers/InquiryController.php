@@ -12,6 +12,7 @@ use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Emergency;
 use App\Models\ServiceType;
+use App\Models\User;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -82,8 +83,20 @@ class InquiryController extends Controller
         $requestTypes = [];
         foreach ($serviceTypes as $serviceType) {
             // التحقق من الصلاحية إذا كانت محددة
-            if ($serviceType->required_permission && !$user->can($serviceType->required_permission)) {
-                continue;
+            if ($serviceType->required_permission) {
+                $hasPermission = $user->can($serviceType->required_permission);
+                
+                // للأشعة: تحقق إضافي من الصلاحيات المحددة لكل نوع
+                if (!$hasPermission && $serviceType->name === 'radiology') {
+                    $hasPermission = $user->can('inquiry.create.radiology.general') ||
+                                   $user->can('inquiry.create.radiology.ultrasound') ||
+                                   $user->can('inquiry.create.radiology.mri') ||
+                                   $user->can('inquiry.create.radiology.echo');
+                }
+                
+                if (!$hasPermission) {
+                    continue;
+                }
             }
 
             // تحديد الأقسام بناءً على نوع الخدمة
@@ -141,16 +154,36 @@ class InquiryController extends Controller
         // جلب أنواع التحاليل والأشعة
         $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
+        
+        // جلب موظفي السونار من جدول الأطباء حسب التخصص
+        $ultrasoundStaff = Doctor::with('user')
+            ->where('is_active', true)
+            ->where(function($query) {
+                $query->where('specialization', 'LIKE', '%سونار%')
+                      ->orWhere('specialization', 'LIKE', '%ultrasound%')
+                      ->orWhere('specialization', 'LIKE', '%Ultrasound%');
+            })
+            ->get();
+        
+        // جلب موظفي الإيكو من جدول المستخدمين حسب الدور
+        $echoStaff = User::role('radiology_echo')->get();
 
-        // قيود خاصة بدور موظف الاستعلامات الاستشارية: يمكنه فقط إنشاء طلب كشف طبي
+        // قيود خاصة بدور موظف الاستعلامات الاستشارية
+        // السلوك القديم: كان يسمح له فقط بالكشف الطبي
+        // السلوك الجديد: يسمح له بأي خدمة لديه صلاحية عليها (بما فيها أنواع الأشعة المحددة)
         $isConsultationReceptionist = $user->hasRole('consultation_receptionist');
-        if ($isConsultationReceptionist) {
-            $requestTypes = [
-                'checkup' => $requestTypes['checkup']
-            ];
-        }
+        
+        // لا نحتاج لتقييد requestTypes هنا - الصلاحيات تم التحقق منها مسبقاً في السطر 83-96
 
-        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist'));
+        // التحقق من صلاحيات حجز أنواع الأشعة
+        $radiologyPermissions = [
+            'general' => $user->can('inquiry.create.radiology.general') || $user->can('inquiry.create.radiology'),
+            'ultrasound' => $user->can('inquiry.create.radiology.ultrasound') || $user->can('inquiry.create.radiology'),
+            'mri' => $user->can('inquiry.create.radiology.mri') || $user->can('inquiry.create.radiology'),
+            'echo' => $user->can('inquiry.create.radiology.echo') || $user->can('inquiry.create.radiology'),
+        ];
+
+        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist', 'ultrasoundStaff', 'echoStaff', 'radiologyPermissions'));
     }
 
     /**
@@ -192,6 +225,10 @@ class InquiryController extends Controller
             'lab_test_ids.*' => 'exists:lab_tests,id',
             'radiology_type_ids' => 'nullable|array',  // اختياري - سيحدده موظف الأشعة لاحقاً
             'radiology_type_ids.*' => 'exists:radiology_types,id',
+            'radiology_category' => 'nullable|in:radiology,echo,ultrasound,mri',
+            'ultrasound_staff_id' => 'required_if:radiology_category,ultrasound|nullable|exists:doctors,id',  // الموظف المسؤول عن السونار - مطلوب إذا كانت الفئة ultrasound
+            'echo_type_id' => 'required_if:radiology_category,echo|nullable|exists:radiology_types,id',  // نوع الإيكو المحدد - مطلوب إذا كانت الفئة echo
+            'echo_staff_id' => 'required_if:radiology_category,echo|nullable|exists:users,id',  // الموظف المسؤول عن الإيكو - مطلوب إذا كانت الفئة echo
             'auto_refer' => 'nullable|boolean',
             // حقول الطوارئ
             'emergency_priority' => 'nullable|in:critical,urgent,semi_urgent,non_urgent',
@@ -213,16 +250,34 @@ class InquiryController extends Controller
             if ($serviceType->required_permission && !$user->can($serviceType->required_permission)) {
                 abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
             }
+            
+            // التحقق من صلاحيات الأشعة حسب النوع المحدد
+            if ($requestType === 'radiology') {
+                $radiologyCategory = $httpRequest->radiology_category ?? 'radiology';
+                $radiologyCategoryPermission = 'inquiry.create.radiology.' . $radiologyCategory;
+                
+                // إذا كانت الفئة 'radiology' (أشعة عامة)، نتحقق من 'inquiry.create.radiology.general'
+                if ($radiologyCategory === 'radiology') {
+                    $radiologyCategoryPermission = 'inquiry.create.radiology.general';
+                }
+                
+                // التحقق من الصلاحية المحددة أو الصلاحية العامة
+                if (!$user->can($radiologyCategoryPermission) && !$user->can('inquiry.create.radiology')) {
+                    $categoryNames = [
+                        'general' => 'الأشعة العامة',
+                        'ultrasound' => 'السونار',
+                        'mri' => 'الرنين المغناطيسي',
+                        'echo' => 'الإيكو'
+                    ];
+                    $categoryName = $categoryNames[$radiologyCategory] ?? 'هذا النوع من الأشعة';
+                    abort(403, 'ليس لديك صلاحية حجز ' . $categoryName);
+                }
+            }
         }
 
-        // إذا كان المستخدم من موظفي الاستعلامات الاستشارية، فتقيّد الطلبات لتكون كشف طبي فقط
-        if ($user->hasRole('consultation_receptionist')) {
-            $selectedTypes = collect($requestTypes)->unique()->values();
-            if ($selectedTypes->count() !== 1 || $selectedTypes->first() !== 'checkup') {
-                abort(403, 'ليس لديك صلاحية إنشاء هذا النوع من الطلبات.');
-            }
-            $requestTypes = ['checkup'];
-        }
+        // تم إزالة القيد القديم على موظف الاستعلامات الاستشارية
+        // السلوك الجديد: يتحقق من صلاحياته الفعلية (بما فيها صلاحيات الأشعة المحددة)
+        // التحقق من الصلاحيات تم في السطر 217-252 أعلاه
 
         $messages = [];
         $totalRequests = 0;
@@ -513,12 +568,26 @@ class InquiryController extends Controller
             ]);
         }
 
+        // فئة الأشعة يجب أن تُحَدَّد قبل استخدامها في الوصف
+        $radiologyCategory = $httpRequest->radiology_category ?? 'general';
+
         // إنشاء زيارة في قسم الاستعلامات
-        $description = $httpRequest->description ?? 'طلب ' . ($requestType === 'lab' ? 'تحاليل' : ($requestType === 'radiology' ? 'أشعة' : 'خدمة'));
+        $radiologyDescription = 'أشعة';
+        if ($requestType === 'radiology') {
+            if ($radiologyCategory === 'echo') {
+                $radiologyDescription = 'إيكو';
+            } elseif ($radiologyCategory === 'ultrasound') {
+                $radiologyDescription = 'سونار';
+            } elseif ($radiologyCategory === 'mri') {
+                $radiologyDescription = 'رنين مغناطيسي';
+            }
+        }
+        $description = $httpRequest->description ?? 'طلب ' . ($requestType === 'lab' ? 'تحاليل' : ($requestType === 'radiology' ? $radiologyDescription : 'خدمة'));
         
         // تحديد حالة الزيارة بناءً على ما إذا تم تحديد الخدمات أم لا
         $hasServices = ($requestType === 'lab' && $httpRequest->lab_test_ids) || 
-                       ($requestType === 'radiology' && $httpRequest->radiology_type_ids);
+                       ($requestType === 'radiology' && $httpRequest->radiology_type_ids) ||
+                       ($requestType === 'radiology' && $radiologyCategory === 'echo' && $httpRequest->echo_type_id);
         
         $visitStatus = $hasServices ? 'pending_payment' : 'pending_service_selection';
         
@@ -549,6 +618,57 @@ class InquiryController extends Controller
         
         if ($requestType === 'radiology' && $httpRequest->radiology_type_ids) {
             $details['radiology_type_ids'] = $httpRequest->radiology_type_ids;
+            
+            // تحديد subtype تلقائياً بناءً على أنواع الأشعة المختارة
+            $selectedTypes = \App\Models\RadiologyType::whereIn('id', $httpRequest->radiology_type_ids)->get();
+            $subcategories = $selectedTypes->pluck('subcategory')->unique();
+            
+            if ($subcategories->count() === 1) {
+                $subcategory = $subcategories->first();
+                if ($subcategory === 'سونار') {
+                    $radiologyCategory = 'ultrasound';
+                } elseif ($subcategory === 'الرنين') {
+                    $radiologyCategory = 'mri';
+                } elseif ($subcategory === 'إيكو') {
+                    $radiologyCategory = 'echo';
+                } else {
+                    $radiologyCategory = 'general';
+                }
+            }
+        }
+        
+        // معلومات خاصة بالسونار
+        if ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') {
+            if ($httpRequest->ultrasound_staff_id) {
+                $details['ultrasound_staff_id'] = $httpRequest->ultrasound_staff_id;
+                // تعيين الطبيب المسؤول عن السونار
+                $visit->doctor_id = $httpRequest->ultrasound_staff_id;
+                $visit->save();
+            }
+        }
+        
+        // معلومات خاصة بالإيكو
+        if ($requestType === 'radiology' && $radiologyCategory === 'echo') {
+            if ($httpRequest->echo_type_id) {
+                $details['echo_type_id'] = $httpRequest->echo_type_id;
+                // إضافة نوع الإيكو إلى radiology_type_ids
+                if (!isset($details['radiology_type_ids'])) {
+                    $details['radiology_type_ids'] = [];
+                }
+                if (!in_array($httpRequest->echo_type_id, $details['radiology_type_ids'])) {
+                    $details['radiology_type_ids'][] = $httpRequest->echo_type_id;
+                }
+                $details['services_selected'] = true; // تم تحديد الخدمة
+                $hasServices = true; // تحديث المتغير
+                $visit->status = 'pending_payment'; // تحديث حالة الزيارة للدفع
+            }
+            if ($httpRequest->echo_staff_id) {
+                $details['echo_staff_id'] = $httpRequest->echo_staff_id;
+                // تعيين الطبيب المسؤول عن الإيكو
+                $visit->doctor_id = $httpRequest->echo_staff_id;
+            }
+            // حفظ التغييرات على الزيارة
+            $visit->save();
         }
         
         // تحديد الحالة: إذا تم تحديد الخدمات -> pending للدفع، وإلا -> pending_service_selection
@@ -557,6 +677,7 @@ class InquiryController extends Controller
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,
             'type' => $requestType,
+            'subtype' => $requestType === 'radiology' ? $radiologyCategory : null,
             'description' => $description,
             'status' => $requestStatus,
             'payment_status' => $hasServices ? 'pending' : 'not_applicable',
@@ -564,9 +685,19 @@ class InquiryController extends Controller
         ]);
 
         // رسالة نجاح مفصلة
+        $radiologyLabel = 'أشعة';
+        if ($requestType === 'radiology') {
+            if ($radiologyCategory === 'echo') {
+                $radiologyLabel = 'إيكو';
+            } elseif ($radiologyCategory === 'ultrasound') {
+                $radiologyLabel = 'سونار';
+            } elseif ($radiologyCategory === 'mri') {
+                $radiologyLabel = 'رنين مغناطيسي';
+            }
+        }
         $typeArabic = [
             'lab' => 'تحاليل طبية',
-            'radiology' => 'أشعة',
+            'radiology' => $radiologyLabel,
             'pharmacy' => 'صيدلية'
         ];
         

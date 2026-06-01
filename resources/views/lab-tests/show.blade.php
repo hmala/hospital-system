@@ -54,6 +54,9 @@
                                 <span class="badge bg-info">{{ $labTest->subcategory }}</span>
                             </p>
                             @endif
+                            @if($labTest->unit)
+                            <p><strong>وحدة القياس:</strong> {{ $labTest->unit }}</p>
+                            @endif
                             <p><strong>الحالة:</strong>
                                 <span class="badge bg-{{ $labTest->status_color }}">
                                     {{ $labTest->status_text }}

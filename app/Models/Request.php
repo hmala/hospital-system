@@ -12,6 +12,7 @@ class Request extends Model
     protected $fillable = [
         'visit_id',
         'type',
+        'subtype',
         'description',
         'details',
         'status',

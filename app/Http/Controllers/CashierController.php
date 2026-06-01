@@ -936,9 +936,55 @@ class CashierController extends Controller
                 'notes' => $request->notes,
             ]);
 
+            // تعيين payment_id في جميع الخدمات غير المدفوعة
+            // 1. الخدمات (emergency_emergency_service)
+            \DB::table('emergency_emergency_service')
+                ->where('emergency_id', $payment->emergency_id)
+                ->whereNull('payment_id')
+                ->update(['payment_id' => $payment->id]);
+
+            // 2. طلبات التحاليل
+            \DB::table('emergency_lab_requests')
+                ->where('emergency_id', $payment->emergency_id)
+                ->whereNull('payment_id')
+                ->update(['payment_id' => $payment->id]);
+
+            // 3. طلبات الأشعة
+            \DB::table('emergency_radiology_requests')
+                ->where('emergency_id', $payment->emergency_id)
+                ->whereNull('payment_id')
+                ->update(['payment_id' => $payment->id]);
+
+            // 4. رسوم المتابعة
+            if ($payment->emergency->doctor_follow_up_fee > 0 && !$payment->emergency->follow_up_payment_id) {
+                $payment->emergency->update([
+                    'follow_up_payment_id' => $payment->id,
+                ]);
+            }
+
             // تحديث حالة الدفع في حالة الطوارئ
+            // تحقق إذا كانت جميع الخدمات مدفوعة
+            $hasUnpaidServices = \DB::table('emergency_emergency_service')
+                ->where('emergency_id', $payment->emergency_id)
+                ->whereNull('payment_id')
+                ->exists();
+            
+            $hasUnpaidLabs = \DB::table('emergency_lab_requests')
+                ->where('emergency_id', $payment->emergency_id)
+                ->whereNull('payment_id')
+                ->exists();
+                
+            $hasUnpaidRadiology = \DB::table('emergency_radiology_requests')
+                ->where('emergency_id', $payment->emergency_id)
+                ->whereNull('payment_id')
+                ->exists();
+
+            $paymentStatus = ($hasUnpaidServices || $hasUnpaidLabs || $hasUnpaidRadiology) 
+                ? 'pending' 
+                : 'paid';
+
             $payment->emergency->update([
-                'payment_status' => 'paid',
+                'payment_status' => $paymentStatus,
             ]);
 
             // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة

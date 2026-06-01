@@ -31,6 +31,20 @@
                             </thead>
                             <tbody>
                                 @forelse($surgeries as $surgery)
+                                @php
+                                    $preOpStation = $surgery->preOpResidentStation;
+                                    $postOpStation = $surgery->postOpResidentStation;
+                                    $currentStation = null;
+                                    $currentPhase = '';
+                                    
+                                    if (!$preOpStation || $preOpStation->status !== 'completed') {
+                                        $currentStation = $preOpStation;
+                                        $currentPhase = 'تحضير';
+                                    } elseif ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed') {
+                                        $currentStation = $postOpStation;
+                                        $currentPhase = 'متابعة';
+                                    }
+                                @endphp
                                 <tr>
                                     <td>{{ $surgery->patient->file_number }}</td>
                                     <td>{{ $surgery->patient->user->full_name }}</td>
@@ -40,14 +54,14 @@
                                         <br>
                                         <small>{{ $surgery->scheduled_time ? \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') : '-' }}</small>
                                     </td>
-                                    <td>{{ $surgery->residentStation?->resident?->user?->full_name ?? '-' }}</td>
+                                    <td>{{ $currentStation?->resident?->user?->full_name ?? '-' }}</td>
                                     <td>
-                                        @if(!$surgery->residentStation)
+                                        @if(!$currentStation)
                                             <span class="badge badge-secondary">في الانتظار</span>
-                                        @elseif($surgery->residentStation->status === 'pending')
-                                            <span class="badge badge-warning">معلقة</span>
-                                        @elseif($surgery->residentStation->status === 'in_progress')
-                                            <span class="badge badge-info">جارية</span>
+                                        @elseif($currentStation->status === 'pending')
+                                            <span class="badge badge-warning">معلقة - {{ $currentPhase }}</span>
+                                        @elseif($currentStation->status === 'in_progress')
+                                            <span class="badge badge-info">جارية - {{ $currentPhase }}</span>
                                         @else
                                             <span class="badge badge-success">مكتملة</span>
                                         @endif

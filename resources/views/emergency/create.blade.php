@@ -125,12 +125,24 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+
+                            <div class="col-md-6 mb-3 d-flex align-items-center">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input @error('doctor_follow_up') is-invalid @enderror" type="checkbox" id="doctor_follow_up" name="doctor_follow_up" value="1" {{ old('doctor_follow_up') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="doctor_follow_up">
+                                        متابعة الطبيب <span class="text-muted">(+30,000 IQD)</span>
+                                    </label>
+                                </div>
+                                @error('doctor_follow_up')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
 
-                        <!-- description removed - not needed for quick booking -->
-
-
-                        <!-- required actions removed -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>ملاحظة:</strong> يمكنك إضافة العلامات الحيوية بعد إنشاء الحالة من صفحة التفاصيل
+                        </div>
 
                         <div class="d-flex justify-content-end">
                             <a href="{{ route('emergency.index') }}" class="btn btn-secondary me-2">إلغاء</a>

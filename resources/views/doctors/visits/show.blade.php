@@ -977,7 +977,10 @@ datalist option:hover {
                                                 </h5>
                                                 
                                                 @if(isset($radiologyTypes) && $radiologyTypes->count() > 0)
-                                                    <!-- حقل البحث والفلترة -->
+                                                    <!-- حقل البحث -->
+                                                    @php
+                                                        $radiologyGrouped = $radiologyTypes->groupBy('main_category');
+                                                    @endphp
                                                     <div class="mb-4">
                                                         <div class="row g-3">
                                                             <div class="col-md-8">
@@ -992,15 +995,21 @@ datalist option:hover {
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <select id="radiologyCategoryFilter" class="form-select">
-                                                                    <option value="">جميع الفئات</option>
-                                                                    @php
-                                                                        $radiologyGrouped = $radiologyTypes->groupBy('category');
-                                                                    @endphp
-                                                                    @foreach($radiologyGrouped as $category => $types)
-                                                                        <option value="{{ $category }}">{{ $category ?: 'غير مصنف' }} ({{ $types->count() }})</option>
-                                                                    @endforeach
-                                                                </select>
+                                                                <div class="border rounded p-3 bg-white shadow-sm">
+                                                                    <div class="mb-2 fw-semibold">فلتر النوع</div>
+                                                                    <div class="form-check mb-2">
+                                                                        <input class="form-check-input radiology-modality-checkbox" type="checkbox" value="xray" id="filterRadiologyXray" checked>
+                                                                        <label class="form-check-label" for="filterRadiologyXray">أشعة</label>
+                                                                    </div>
+                                                                    <div class="form-check mb-2">
+                                                                        <input class="form-check-input radiology-modality-checkbox" type="checkbox" value="mri" id="filterRadiologyMri" checked>
+                                                                        <label class="form-check-label" for="filterRadiologyMri">رنين</label>
+                                                                    </div>
+                                                                    <div class="form-check mb-0">
+                                                                        <input class="form-check-input radiology-modality-checkbox" type="checkbox" value="ultrasound" id="filterRadiologyUltrasound" checked>
+                                                                        <label class="form-check-label" for="filterRadiologyUltrasound">سونار</label>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2751,37 +2760,58 @@ function removeTreatment(button) {
     function setupRadiologySearch() {
         const searchInput = document.getElementById('radiologySearchInput');
         const searchBtn = document.getElementById('radiologySearchBtn');
+        const modalityCheckboxes = document.querySelectorAll('.radiology-modality-checkbox');
         
         if (!searchInput) {
             console.warn('Radiology search input not found');
             return;
         }
 
+        function getCategoryModality(categoryName) {
+            const name = normalizeText(categoryName);
+            if (name.includes('رنين') || name.includes('mri') || name.includes('magnetic')) {
+                return 'mri';
+            }
+            if (name.includes('سونار') || name.includes('ultrasound') || name.includes('echo')) {
+                return 'ultrasound';
+            }
+            return 'xray';
+        }
+
+        function getSelectedModalities() {
+            return Array.from(modalityCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+        }
+
         function doRadiologySearch() {
             const searchTerm = normalizeText(searchInput.value);
-            
+            const selectedModalities = getSelectedModalities();
             const categories = document.querySelectorAll('.radiology-category');
-            let totalVisible = 0;
             
             categories.forEach(category => {
+                const categoryName = category.getAttribute('data-category') || '';
+                const modality = getCategoryModality(categoryName);
+                const modalityMatches = selectedModalities.length === 0 || selectedModalities.includes(modality);
                 const items = category.querySelectorAll('.radiology-type-item');
                 let categoryHasVisible = false;
                 
                 items.forEach(item => {
                     const typeName = normalizeText(item.getAttribute('data-type-name') || '');
-                    const matches = searchTerm === '' || typeName.includes(searchTerm);
-                    
-                    // استخدام d-none بدلاً من style.display لتجاوز Bootstrap's flex !important
+                    const matches = (searchTerm === '' || typeName.includes(searchTerm)) && modalityMatches;
                     item.classList.toggle('d-none', !matches);
                     if (matches) {
                         categoryHasVisible = true;
-                        totalVisible++;
                     }
                 });
-                
+
                 category.classList.toggle('d-none', !categoryHasVisible);
             });
         }
+
+        modalityCheckboxes.forEach(cb => {
+            cb.addEventListener('change', doRadiologySearch);
+        });
 
         // ربط الأحداث
         searchInput.addEventListener('input', doRadiologySearch);

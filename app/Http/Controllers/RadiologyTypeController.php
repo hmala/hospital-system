@@ -93,6 +93,7 @@ class RadiologyTypeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:10|unique:radiology_types,code',
+            'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
             'estimated_duration' => 'required|integer|min:1|max:480', // max 8 hours
@@ -133,6 +134,7 @@ class RadiologyTypeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:10|unique:radiology_types,code,' . $type->id,
+            'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
             'estimated_duration' => 'required|integer|min:1|max:480',

@@ -235,6 +235,7 @@
                                         <small class="text-muted">{{ $request->patient->user->phone ?? 'لا يوجد رقم' }}</small>
                                     </td>
                                     <td>
+                                        <span class="badge bg-secondary mb-1">{{ $request->radiologyType->category ?? 'عام' }}</span><br>
                                         <strong>{{ $request->radiologyType->name }}</strong><br>
                                         <small class="text-muted">{{ $request->radiologyType->code }}</small>
                                     </td>
@@ -282,7 +283,7 @@
                                             @endif
                                             @endif
 
-                                            @if(Auth::user()->hasRole('radiology_staff') && $request->canBePerformed())
+                                            @if(Auth::user()->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']) && $request->canBePerformed())
                                             <form action="{{ route('radiology.start', $request) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn btn-success" title="بدء الإجراء">
@@ -291,7 +292,7 @@
                                             </form>
                                             @endif
 
-                                            @if($request->status === 'in_progress' && Auth::user()->hasRole('radiology_staff'))
+                                            @if($request->status === 'in_progress' && Auth::user()->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']))
                                             <form action="{{ route('radiology.complete', $request) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn btn-primary" title="إكمال">
@@ -320,7 +321,7 @@
         </div>
     </div>
 
-    @if(Auth::user()->hasRole('radiology_staff') && isset($newSystemRequests) && $newSystemRequests->count() > 0)
+    @if(Auth::user()->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']) && isset($newSystemRequests) && $newSystemRequests->count() > 0)
     <!-- جدول طلبات الأشعة من النظام الجديد -->
     <div class="row mt-4">
         <div class="col-12">

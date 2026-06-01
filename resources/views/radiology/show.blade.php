@@ -248,7 +248,7 @@
     @endif
 
     <!-- تحديث/إدخال النتائج -->
-    @if(Auth::user()->hasRole('radiology_staff') && in_array($radiology->status, ['scheduled', 'in_progress', 'completed']))
+    @if(Auth::user()->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo']) && in_array($radiology->status, ['scheduled', 'in_progress', 'completed']))
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm mb-4">

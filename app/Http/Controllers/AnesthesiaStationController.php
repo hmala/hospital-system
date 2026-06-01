@@ -11,18 +11,16 @@ class AnesthesiaStationController extends Controller
 {
     public function index()
     {
-        // جلب العمليات التي في محطة التخدير
+        // جلب العمليات التي في محطة التخدير (بعد الجراح)
         $surgeries = Surgery::with(['patient.user', 'doctor.user', 'anesthesiaStation'])
             ->whereHas('surgeonStation', function($q) {
                 $q->where('status', 'completed');
             })
-            ->whereHas('anesthesiaStation', function($q) {
-                $q->where('status', '!=', 'completed');
-            })
-            ->orWhere(function($query) {
-                $query->whereHas('surgeonStation', function($q) {
-                    $q->where('status', 'completed');
-                })->whereDoesntHave('anesthesiaStation');
+            ->where(function($query) {
+                $query->whereDoesntHave('anesthesiaStation')
+                    ->orWhereHas('anesthesiaStation', function($q) {
+                        $q->where('status', '!=', 'completed');
+                    });
             })
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
             ->orderBy('scheduled_date')
@@ -43,6 +41,7 @@ class AnesthesiaStationController extends Controller
         // إنشاء محطة إذا لم تكن موجودة
         if (!$surgery->anesthesiaStation) {
             $surgery->anesthesiaStation()->create([
+                'anesthesiologist_id' => $surgery->operationTheaterStation?->anesthesiologist_id,
                 'status' => 'pending',
             ]);
         }
@@ -92,15 +91,18 @@ class AnesthesiaStationController extends Controller
 
         $station->markAsCompleted();
 
-        // إنشاء محطة المقيم التالية
-        if (!$surgery->residentStation) {
-            $surgery->residentStation()->create([
-                'resident_id' => $surgery->surgeonStation?->resident_assigned_id,
+        // إنشاء محطة المقيم (post_op) التالية
+        $postOpStation = $surgery->postOpResidentStation;
+        if (!$postOpStation) {
+            $preOpStation = $surgery->preOpResidentStation;
+            $surgery->residentStations()->create([
+                'phase' => 'post_op',
+                'resident_id' => $preOpStation?->resident_id,
                 'status' => 'pending',
             ]);
         }
 
         return redirect()->route('anesthesia-station.index')
-            ->with('success', 'تم إتمام محطة التخدير والانتقال لمحطة المقيم');
+            ->with('success', 'تم إتمام محطة التخدير والانتقال لمحطة المقيم (متابعة)');
     }
 }

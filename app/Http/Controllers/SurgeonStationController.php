@@ -11,15 +11,18 @@ class SurgeonStationController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
-        
-        // جلب العمليات التي في محطة الجراح
+        // جلب العمليات التي في محطة الجراح (بعد صالة العمليات)
         $surgeries = Surgery::with(['patient.user', 'doctor.user', 'surgeonStation'])
-            ->whereHas('surgeonStation', function($q) {
-                $q->where('status', '!=', 'completed');
+            ->whereHas('operationTheaterStation', function($q) {
+                $q->where('status', 'completed');
             })
-            ->orWhereDoesntHave('surgeonStation')
-            ->whereIn('status', ['scheduled', 'waiting'])
+            ->where(function($query) {
+                $query->whereDoesntHave('surgeonStation')
+                    ->orWhereHas('surgeonStation', function($q) {
+                        $q->where('status', '!=', 'completed');
+                    });
+            })
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
             ->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
@@ -29,6 +32,12 @@ class SurgeonStationController extends Controller
 
     public function show(Surgery $surgery)
     {
+        // التحقق من أن صالة العمليات مكتملة
+        if (!$surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed') {
+            return redirect()->route('operation-theater-station.show', $surgery)
+                ->with('error', 'يجب إتمام مرحلة صالة العمليات أولاً');
+        }
+
         // إنشاء محطة إذا لم تكن موجودة
         if (!$surgery->surgeonStation) {
             $surgery->surgeonStation()->create([
@@ -37,15 +46,9 @@ class SurgeonStationController extends Controller
             ]);
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'surgeonStation.residentAssigned.user']);
-        
-        $residents = Doctor::with('user')
-            ->where('is_active', true)
-            ->where('type', 'resident')
-            ->orderBy('id')
-            ->get();
+        $surgery->load(['patient.user', 'doctor.user', 'surgeonStation']);
 
-        return view('surgery-stations.surgeon.show', compact('surgery', 'residents'));
+        return view('surgery-stations.surgeon.show', compact('surgery'));
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -83,6 +86,7 @@ class SurgeonStationController extends Controller
         // إنشاء محطة التخدير التالية
         if (!$surgery->anesthesiaStation) {
             $surgery->anesthesiaStation()->create([
+                'anesthesiologist_id' => $surgery->operationTheaterStation?->anesthesiologist_id,
                 'status' => 'pending',
             ]);
         }

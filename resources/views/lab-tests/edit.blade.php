@@ -65,20 +65,29 @@
                                 <div class="form-text">أدخل اسم الفحص المختبري باللغة العربية</div>
                             </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label for="main_category" class="form-label">الفئة الرئيسية <span class="text-danger">*</span></label>
-                                <select class="form-select" id="main_category" name="main_category" required>
-                                    <option value="">اختر الفئة الرئيسية</option>
-                                    @foreach($categories as $key => $value)
-                                        <option value="{{ $key }}" {{ old('main_category', $labTest->main_category) == $key ? 'selected' : '' }}>
-                                            {{ $value }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                            <input type="hidden" name="main_category" value="المختبر">
                             <div class="col-md-6 mb-3">
                                 <label for="subcategory" class="form-label">الفئة الفرعية</label>
-                                <input type="text" class="form-control" id="subcategory" name="subcategory" value="{{ old('subcategory', $labTest->subcategory) }}" placeholder="اختياري">
+                                <select class="form-select" id="subcategory_select" onchange="toggleSubcategoryInput()">
+                                    <option value="">اختر الفئة الفرعية (اختياري)</option>
+                                    @foreach($subcategories as $subcat)
+                                        <option value="{{ $subcat }}" {{ old('subcategory', $labTest->subcategory) == $subcat ? 'selected' : '' }}>
+                                            {{ $subcat }}
+                                        </option>
+                                    @endforeach
+                                    <option value="__other__" {{ old('subcategory', $labTest->subcategory) && !in_array(old('subcategory', $labTest->subcategory), $subcategories) ? 'selected' : '' }}>أخرى (إدخال يدوي)</option>
+                                </select>
+                                <input type="text" class="form-control mt-2" id="subcategory_custom" 
+                                       value="{{ old('subcategory', $labTest->subcategory) && !in_array(old('subcategory', $labTest->subcategory), $subcategories) ? old('subcategory', $labTest->subcategory) : '' }}" 
+                                       placeholder="اكتب الفئة الفرعية بالإنجليزية" 
+                                       style="display: {{ old('subcategory', $labTest->subcategory) && !in_array(old('subcategory', $labTest->subcategory), $subcategories) ? 'block' : 'none' }};">
+                                <input type="hidden" id="subcategory_value" name="subcategory" value="{{ old('subcategory', $labTest->subcategory) }}">
+                                <div class="form-text">اختر من القائمة أو اختر "أخرى" لإدخال قيمة جديدة</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="unit" class="form-label">وحدة القياس</label>
+                                <input type="text" class="form-control" id="unit" name="unit" value="{{ old('unit', $labTest->unit) }}" placeholder="مثال: mg/dL أو U/L أو ml">
+                                <div class="form-text">اكتب وحدة القياس المناسبة لهذا التحليل</div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="price" class="form-label">السعر (د.ع)</label>
@@ -120,4 +129,29 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleSubcategoryInput() {
+    const select = document.getElementById('subcategory_select');
+    const customInput = document.getElementById('subcategory_custom');
+    const hiddenInput = document.getElementById('subcategory_value');
+    
+    if (select.value === '__other__') {
+        customInput.style.display = 'block';
+        customInput.name = 'subcategory';
+        hiddenInput.name = '';
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+        customInput.name = '';
+        hiddenInput.name = 'subcategory';
+        hiddenInput.value = select.value;
+    }
+}
+
+// تعيين القيمة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    toggleSubcategoryInput();
+});
+</script>
 @endsection

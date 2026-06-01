@@ -112,6 +112,7 @@
                                         <th>اسم الفحص</th>
                                         <th>التصنيف الرئيسي</th>
                                         <th>التصنيف الفرعي</th>
+                                        <th>وحدة القياس</th>
                                         <th>الوصف</th>
                                         <th>السعر</th>
                                         <th>الحالة</th>
@@ -139,6 +140,13 @@
                                                 <span class="badge bg-info">{{ $labTest->subcategory }}</span>
                                             @else
                                                 <span class="badge bg-secondary">غير محدد</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($labTest->unit)
+                                                <span class="text-muted">{{ $labTest->unit }}</span>
+                                            @else
+                                                -
                                             @endif
                                         </td>
                                         <td>

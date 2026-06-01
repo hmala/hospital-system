@@ -411,13 +411,9 @@
                             <i class="fas fa-heartbeat me-2"></i>العلامات الحيوية
                         </h5>
                         @if($emergency->status !== 'discharged' && $emergency->status !== 'transferred')
-                        <form action="{{ route('emergency.update-vitals', $emergency) }}" method="POST" class="d-inline no-print">
-                            @csrf
-                            @method('POST')
-                            <button type="submit" class="btn btn-success btn-sm">
-                                <i class="fas fa-plus me-2"></i>تحديث العلامات الحيوية
-                            </button>
-                        </form>
+                        <button type="button" class="btn btn-success btn-sm no-print" data-bs-toggle="modal" data-bs-target="#vitalSignsModal">
+                            <i class="fas fa-plus me-2"></i>قياس علامات حيوية
+                        </button>
                         @endif
                     </div>
                 </div>
@@ -466,6 +462,49 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- عرض جميع القراءات السابقة -->
+                    @if($emergency->vitalSignReadings && $emergency->vitalSignReadings->count() > 0)
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-3"><i class="fas fa-history me-2"></i>سجل جميع القراءات ({{ $emergency->vitalSignReadings->count() }} قراءة)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>التاريخ والوقت</th>
+                                        <th>ضغط الدم</th>
+                                        <th>النبض (bpm)</th>
+                                        <th>الحرارة (°C)</th>
+                                        <th>التنفس (/دقيقة)</th>
+                                        <th>SpO2 (%)</th>
+                                        <th>سكر الدم (mg/dL)</th>
+                                        <th>المسجل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($emergency->vitalSignReadings as $reading)
+                                    <tr>
+                                        <td class="text-nowrap">
+                                            <i class="fas fa-calendar-alt me-1 text-muted"></i>
+                                            {{ $reading->created_at->format('d/m/Y H:i') }}
+                                        </td>
+                                        <td><strong>{{ $reading->blood_pressure ?? '---' }}</strong></td>
+                                        <td>{{ $reading->heart_rate ?? '---' }}</td>
+                                        <td>{{ $reading->temperature ?? '---' }}</td>
+                                        <td>{{ $reading->respiratory_rate ?? '---' }}</td>
+                                        <td>{{ $reading->oxygen_saturation ?? '---' }}</td>
+                                        <td>{{ $reading->blood_glucose ?? '---' }}</td>
+                                        <td class="text-nowrap">
+                                            <i class="fas fa-user-md me-1 text-primary"></i>
+                                            {{ optional($reading->recordedBy)->name ?? optional(optional($reading->recordedBy)->doctor)->user->name ?? 'الطبيب غير معروف' }}
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -580,6 +619,129 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal للعلامات الحيوية -->
+<div class="modal fade" id="vitalSignsModal" tabindex="-1" aria-labelledby="vitalSignsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ route('emergency.update-vitals', $emergency) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="vitalSignsModalLabel">
+                        <i class="fas fa-heartbeat me-2"></i>
+                        قياس العلامات الحيوية
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        جميع القراءات اختيارية - أدخل فقط القراءات المتوفرة
+                    </div>
+
+                    <div class="row">
+                        <!-- ضغط الدم -->
+                        <div class="col-md-6 mb-3">
+                            <label for="blood_pressure" class="form-label">
+                                <i class="fas fa-tint text-primary me-2"></i>
+                                ضغط الدم
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="blood_pressure" 
+                                   name="blood_pressure" 
+                                   placeholder="120/80"
+                                   value="{{ old('blood_pressure', $emergency->blood_pressure) }}">
+                            <small class="text-muted">مثال: 120/80</small>
+                        </div>
+
+                        <!-- معدل ضربات القلب -->
+                        <div class="col-md-6 mb-3">
+                            <label for="heart_rate" class="form-label">
+                                <i class="fas fa-heart text-danger me-2"></i>
+                                معدل ضربات القلب (bpm)
+                            </label>
+                            <input type="number" 
+                                   class="form-control form-control-lg" 
+                                   id="heart_rate" 
+                                   name="heart_rate" 
+                                   placeholder="72"
+                                   min="1"
+                                   max="300"
+                                   value="{{ old('heart_rate', $emergency->heart_rate) }}">
+                            <small class="text-muted">المعدل الطبيعي: 60-100 نبضة/دقيقة</small>
+                        </div>
+
+                        <!-- درجة الحرارة -->
+                        <div class="col-md-4 mb-3">
+                            <label for="temperature" class="form-label">
+                                <i class="fas fa-thermometer-half text-warning me-2"></i>
+                                درجة الحرارة (°C)
+                            </label>
+                            <input type="number" 
+                                   step="0.1" 
+                                   class="form-control form-control-lg" 
+                                   id="temperature" 
+                                   name="temperature" 
+                                   placeholder="37.0"
+                                   min="30"
+                                   max="45"
+                                   value="{{ old('temperature', $emergency->temperature) }}">
+                            <small class="text-muted">الطبيعي: 36.5-37.5°C</small>
+                        </div>
+
+                        <!-- معدل التنفس -->
+                        <div class="col-md-4 mb-3">
+                            <label for="respiratory_rate" class="form-label">
+                                <i class="fas fa-lungs text-info me-2"></i>
+                                معدل التنفس (/دقيقة)
+                            </label>
+                            <input type="number" 
+                                   class="form-control form-control-lg" 
+                                   id="respiratory_rate" 
+                                   name="respiratory_rate" 
+                                   placeholder="16"
+                                   min="1"
+                                   max="100"
+                                   value="{{ old('respiratory_rate', $emergency->respiratory_rate) }}">
+                            <small class="text-muted">الطبيعي: 12-20 نفس/دقيقة</small>
+                        </div>
+
+                        <!-- نسبة الأكسجين -->
+                        <div class="col-md-4 mb-3">
+                            <label for="oxygen_saturation" class="form-label">
+                                <i class="fas fa-wind text-success me-2"></i>
+                                تشبع الأكسجين (%)
+                            </label>
+                            <input type="number" 
+                                   class="form-control form-control-lg" 
+                                   id="oxygen_saturation" 
+                                   name="oxygen_saturation" 
+                                   placeholder="98"
+                                   min="1"
+                                   max="100"
+                                   value="{{ old('oxygen_saturation', $emergency->oxygen_saturation) }}">
+                            <small class="text-muted">الطبيعي: 95-100%</small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> سيتم حفظ هذه القراءة وتحديث السجل الطبي للمريض
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-save me-2"></i>حفظ القراءات
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

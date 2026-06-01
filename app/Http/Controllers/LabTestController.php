@@ -91,7 +91,18 @@ class LabTestController extends Controller
             'other' => 'أخرى'
         ];
 
-        return view('lab-tests.create', compact('categories'));
+        $subcategories = [
+            'Biochemistry',
+            'Haematology',
+            'Microbiology',
+            'Blood Bank',
+            'Immunology',
+            'Serology',
+            'Tumor marker',
+            'Virology'
+        ];
+
+        return view('lab-tests.create', compact('categories', 'subcategories'));
     }
 
     public function store(Request $request)
@@ -106,8 +117,9 @@ class LabTestController extends Controller
             'code' => 'nullable|string|max:50|unique:lab_tests,code',
             'name' => 'required|string|max:255|unique:lab_tests,name',
             'description' => 'nullable|string|max:1000',
-            'main_category' => 'required|string|in:biochemistry,hematology,blood_bank,parasitology,microbiology,immunology,virology,hormones,clinical_immunology,cytology,miscellaneous,other',
+            'main_category' => 'nullable|string|max:255',
             'subcategory' => 'nullable|string|max:255',
+            'unit' => 'nullable|string|max:50',
             'price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean'
         ]);
@@ -152,7 +164,18 @@ class LabTestController extends Controller
             'other' => 'أخرى'
         ];
 
-        return view('lab-tests.edit', compact('labTest', 'categories'));
+        $subcategories = [
+            'Biochemistry',
+            'Haematology',
+            'Microbiology',
+            'Blood Bank',
+            'Immunology',
+            'Serology',
+            'Tumor marker',
+            'Virology'
+        ];
+
+        return view('lab-tests.edit', compact('labTest', 'categories', 'subcategories'));
     }
 
     public function update(Request $request, LabTest $labTest)
@@ -167,8 +190,9 @@ class LabTestController extends Controller
             'code' => 'nullable|string|max:50|unique:lab_tests,code,' . $labTest->id,
             'name' => 'required|string|max:255|unique:lab_tests,name,' . $labTest->id,
             'description' => 'nullable|string|max:1000',
-            'main_category' => 'required|string|in:biochemistry,hematology,blood_bank,parasitology,microbiology,immunology,virology,hormones,clinical_immunology,cytology,miscellaneous,other',
+            'main_category' => 'nullable|string|max:255',
             'subcategory' => 'nullable|string|max:255',
+            'unit' => 'nullable|string|max:50',
             'price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean'
         ]);

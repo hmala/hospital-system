@@ -33,6 +33,17 @@
                                 <input type="text" id="code" name="code" class="form-control" value="{{ old('code', $type->code) }}" required>
                             </div>
 
+                            <div class="col-md-6">
+                                <label for="subcategory" class="form-label">قسم الإشعة <span class="text-danger">*</span></label>
+                                <select id="subcategory" name="subcategory" class="form-select" required>
+                                    <option value="">اختر قسم الإشعة</option>
+                                    <option value="أشعة" {{ old('subcategory', $type->subcategory) === 'أشعة' ? 'selected' : '' }}>أشعة عامة</option>
+                                    <option value="سونار" {{ old('subcategory', $type->subcategory) === 'سونار' ? 'selected' : '' }}>سونار</option>
+                                    <option value="الرنين" {{ old('subcategory', $type->subcategory) === 'الرنين' ? 'selected' : '' }}>رنين مغناطيسي</option>
+                                    <option value="إيكو" {{ old('subcategory', $type->subcategory) === 'إيكو' ? 'selected' : '' }}>إيكو</option>
+                                </select>
+                            </div>
+
                             <div class="col-12">
                                 <label for="description" class="form-label">الوصف</label>
                                 <textarea id="description" name="description" class="form-control" rows="2">{{ old('description', $type->description) }}</textarea>

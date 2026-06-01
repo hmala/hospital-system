@@ -6,10 +6,12 @@ use App\Models\Emergency;
 use App\Models\EmergencyService;
 use App\Models\Patient;
 use App\Models\Doctor;
+use App\Models\EmergencyTreatment;
 use App\Models\User;
 use App\Models\Payment;
 use App\Models\Appointment;
 use App\Models\EmergencyPatient;
+use App\Models\ICD10Code;
 use App\Notifications\EmergencyPatientMigratedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +45,10 @@ class EmergencyController extends Controller
             'services',
             'labRequests.labTests',
             'radiologyRequests.radiologyTypes',
+            'treatments',
+            'vitalSignReadings' => function($query) {
+                $query->latest()->with('recordedBy')->limit(5);
+            }
         ])
             ->where('is_active', true);
 
@@ -83,6 +89,8 @@ class EmergencyController extends Controller
             ->orderBy('name')
             ->get();
 
+        $icd10Codes = ICD10Code::orderBy('code')->get();
+
         // جلب طلبات الخدمات التمريضية من جدول requests بعد الدفع
         $nursingRequests = \App\Models\Request::where('type', 'nursing')
             ->where('payment_status', 'paid')
@@ -91,7 +99,7 @@ class EmergencyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests'));
+        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'icd10Codes'));
     }
 
     /**
@@ -165,6 +173,12 @@ class EmergencyController extends Controller
             'room_assigned' => 'nullable|string|max:50',
             'initial_assessment' => 'nullable|string|max:1000',
             'requires_surgery' => 'boolean',
+            'doctor_follow_up' => 'boolean',
+            'vital_signs.blood_pressure' => 'nullable|string|max:20',
+            'vital_signs.heart_rate' => 'nullable|integer|min:1|max:300',
+            'vital_signs.temperature' => 'nullable|numeric|min:30|max:45',
+            'vital_signs.respiratory_rate' => 'nullable|integer|min:1|max:100',
+            'vital_signs.oxygen_saturation' => 'nullable|integer|min:1|max:100',
         ];
         if ($request->filled('new_patient_name')) {
             $rules['new_patient_name'] = 'required|string|max:255';
@@ -177,6 +191,12 @@ class EmergencyController extends Controller
             $rules['patient_id'] = 'required|exists:patients,id';
         }
         $request->validate($rules);
+
+        if ($request->boolean('doctor_follow_up') && !$request->filled('doctor_id')) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['doctor_follow_up' => 'يرجى اختيار الطبيب قبل تفعيل متابعة الطبيب.']);
+        }
 
         // determine how to link patient
         $patientId = $request->patient_id;
@@ -212,9 +232,14 @@ class EmergencyController extends Controller
             'room_assigned' => $request->room_assigned,
             'initial_assessment' => $request->initial_assessment,
             'requires_surgery' => $request->boolean('requires_surgery'),
+            'doctor_follow_up_fee' => $request->boolean('doctor_follow_up') ? 30000 : 0,
             'admission_time' => now(),
             'status' => 'waiting',
         ]);
+
+        if ($emergency->doctor_follow_up_fee > 0) {
+            $this->upsertUnifiedEmergencyPayment($emergency);
+        }
 
         // return to list instead of details so user sees the emergency table
         return redirect()->route('emergency.index')
@@ -241,6 +266,9 @@ class EmergencyController extends Controller
             'payment',
             'labRequests.labTests',
             'radiologyRequests.radiologyTypes',
+            'vitalSignReadings' => function($query) {
+                $query->latest()->with('recordedBy');
+            }
         ]);
 
         return view('emergency.show', compact('emergency'));
@@ -350,17 +378,22 @@ class EmergencyController extends Controller
             'temperature' => 'nullable|numeric|min:30|max:45',
             'respiratory_rate' => 'nullable|integer|min:1|max:100',
             'oxygen_saturation' => 'nullable|integer|min:1|max:100',
+            'blood_glucose' => 'nullable|numeric|min:1|max:1000',
         ]);
 
-        $currentVitals = $emergency->vital_signs ?? [];
-        $currentVitals['updated_at'] = now()->toISOString();
-        $currentVitals = array_merge($currentVitals, $request->only([
-            'blood_pressure', 'heart_rate', 'temperature', 'respiratory_rate', 'oxygen_saturation'
-        ]));
+        // Create a new vital signs record in the dedicated table
+        $emergency->vitalSignReadings()->create([
+            'recorded_by' => $user->id,
+            'patient_id' => $emergency->patient_id,
+            'blood_pressure' => $request->blood_pressure,
+            'heart_rate' => $request->heart_rate,
+            'temperature' => $request->temperature,
+            'respiratory_rate' => $request->respiratory_rate,
+            'oxygen_saturation' => $request->oxygen_saturation,
+            'blood_glucose' => $request->blood_glucose,
+        ]);
 
-        $emergency->update(['vital_signs' => $currentVitals]);
-
-        return response()->json(['success' => true, 'message' => 'تم تحديث علامات الحياة']);
+        return redirect()->back()->with('success', 'تم حفظ القراءة بنجاح');
     }
 
     /**
@@ -399,6 +432,48 @@ class EmergencyController extends Controller
         $this->upsertUnifiedEmergencyPayment($emergency);
 
         return redirect()->route('emergency.index')->with('success', 'تم تحديث المعلومات الطبية بنجاح');
+    }
+
+    /**
+     * حفظ علاج جديد لحالة الطوارئ
+     */
+    public function storeTreatment(Request $request, Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بتسجيل علاج الطوارئ');
+        }
+
+        $validated = $request->validate([
+            'treatments' => 'required|array|min:1',
+            'treatments.*.treatment_type' => 'required|in:medication,injection,drip,oxygen,other',
+            'treatments.*.description' => 'required|string|max:1000',
+            'treatments.*.notes' => 'nullable|string|max:1000',
+            'treatments.*.frequency_per_day' => 'nullable|integer|min:1|max:24',
+            'treatments.*.status' => 'required|in:planned,in_progress,completed,cancelled',
+            'treatments.*.started_at' => 'nullable|date',
+            'treatments.*.completed_at' => 'nullable|date|after_or_equal:started_at',
+        ]);
+
+        foreach ($validated['treatments'] as $treatmentData) {
+            EmergencyTreatment::create([
+                'emergency_id' => $emergency->id,
+                'created_by' => $user->id,
+                'treatment_type' => $treatmentData['treatment_type'],
+                'description' => $treatmentData['description'],
+                'notes' => $treatmentData['notes'] ?? null,
+                'frequency_per_day' => $treatmentData['frequency_per_day'] ?? null,
+                'status' => $treatmentData['status'],
+                'started_at' => $treatmentData['started_at'] ?? null,
+                'completed_at' => $treatmentData['completed_at'] ?? null,
+            ]);
+        }
+
+        if (!$emergency->treatment_given && !empty($validated['treatments'][0]['description'])) {
+            $emergency->update(['treatment_given' => $validated['treatments'][0]['description']]);
+        }
+
+        return redirect()->route('emergency.index')->with('success', 'تم إضافة علاج الطوارئ بنجاح');
     }
 
     /**
@@ -529,40 +604,47 @@ class EmergencyController extends Controller
         //     return redirect()->back()->with('error', 'لا يمكن إنشاء موعد استشاري إلا لحالات مدفوعة');
         // }
 
-        // التحقق من عدم وجود موعد استشاري سابق
-        $existingConsultation = Appointment::where('emergency_id', $emergency->id)->first();
-        if ($existingConsultation) {
-            return redirect()->back()->with('error', 'يوجد موعد استشاري سابق لهذه الحالة');
-        }
-
         $request->validate([
             'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|date_format:H:i',
-            'doctor_id' => 'required|exists:doctors,id',
+            'doctor_ids' => 'required|array|min:1',
+            'doctor_ids.*' => 'required|exists:doctors,id',
             'reason' => 'required|string',
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        // التحقق من أن الطبيب استشاري
-        $doctor = Doctor::find($request->doctor_id);
-        if ($doctor->type !== 'consultant') {
-            return redirect()->back()->with('error', 'يجب اختيار طبيب استشاري');
-        }
-
-        // التحقق من أن الطبيب متاح اليوم
-        if (!$doctor->is_available_today) {
-            return redirect()->back()->with('error', 'الطبيب المختار غير متاح اليوم');
-        }
-
-        // التحقق من توفر الموعد
         $appointmentDateTime = $request->appointment_date . ' ' . $request->appointment_time . ':00';
-        $existingAppointment = Appointment::where('doctor_id', $request->doctor_id)
-            ->where('appointment_date', $appointmentDateTime)
-            ->whereIn('status', ['scheduled', 'confirmed'])
-            ->exists();
+        $selectedDoctorIds = collect($request->doctor_ids)->unique();
+        $appointmentsCreated = 0;
 
-        if ($existingAppointment) {
-            return redirect()->back()->with('error', 'يوجد موعد محجوز مسبقاً لهذا الطبيب في هذا التاريخ والوقت');
+        foreach ($selectedDoctorIds as $doctorId) {
+            $doctor = Doctor::find($doctorId);
+            if (!$doctor) {
+                return redirect()->back()->with('error', 'تم اختيار طبيب غير موجود');
+            }
+
+            if ($doctor->type !== 'consultant') {
+                return redirect()->back()->with('error', 'يجب اختيار أطباء استشاريين فقط');
+            }
+
+            if (!$doctor->is_available_today) {
+                return redirect()->back()->with('error', "الطبيب {$doctor->user?->name} غير متاح اليوم");
+            }
+
+            $existingAppointment = Appointment::where('doctor_id', $doctorId)
+                ->where('appointment_date', $appointmentDateTime)
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->exists();
+
+            if ($existingAppointment) {
+                return redirect()->back()->with('error', "يوجد موعد محجوز مسبقاً للطبيب {$doctor->user?->name} في هذا التاريخ والوقت");
+            }
+
+            $appointmentsCreated++;
+        }
+
+        if ($appointmentsCreated === 0) {
+            return redirect()->back()->with('error', 'لم يتم تحديد أي طبيب صالح لإنشاء موعد استشاري');
         }
 
         // migrate emergency patient to main table if necessary
@@ -599,27 +681,40 @@ class EmergencyController extends Controller
 
         // أجرة استشارة الطوارئ الثابتة (مقطوعة)
         $emergencyConsultationFee = 50000;
+        $createdAppointmentIds = [];
 
-        // إنشاء الموعد الاستشاري
-        $appointment = Appointment::create([
-            'patient_id' => $emergency->patient_id,
-            'doctor_id' => $request->doctor_id,
-            'department_id' => $doctor->department_id,
-            'emergency_id' => $emergency->id,
-            'appointment_date' => $appointmentDateTime,
-            'reason' => $request->reason,
-            'notes' => $request->notes,
-            'consultation_fee' => $emergencyConsultationFee,
-            'duration' => 30,
-            'status' => 'scheduled',
-            'payment_status' => 'pending'
-        ]);
+        foreach ($selectedDoctorIds as $doctorId) {
+            $doctor = Doctor::find($doctorId);
+            if (!$doctor) {
+                continue;
+            }
+
+            $appointment = Appointment::create([
+                'patient_id' => $emergency->patient_id,
+                'doctor_id' => $doctorId,
+                'department_id' => $doctor->department_id,
+                'emergency_id' => $emergency->id,
+                'appointment_date' => $appointmentDateTime,
+                'reason' => $request->reason,
+                'notes' => $request->notes,
+                'consultation_fee' => $emergencyConsultationFee,
+                'duration' => 30,
+                'status' => 'scheduled',
+                'payment_status' => 'pending'
+            ]);
+
+            $createdAppointmentIds[] = $appointment->id;
+        }
+
+        if (count($createdAppointmentIds) === 0) {
+            return redirect()->back()->with('error', 'لم يتم إنشاء أي موعد استشاري. تحقق من الأطباء المحددين وحاول مرة أخرى.');
+        }
 
         // دمج الاستشارة في فاتورة طوارئ موحدة
         $unifiedPayment = $this->upsertUnifiedEmergencyPayment($emergency);
 
-        // ربط الموعد بفاتورة الطوارئ الموحدة (لمساعدتنا لاحقاً في التقارير)
-        $appointment->update([
+        // ربط المواعيد بفاتورة الطوارئ الموحدة (لمساعدتنا لاحقاً في التقارير)
+        Appointment::whereIn('id', $createdAppointmentIds)->update([
             'payment_id' => $unifiedPayment->id,
             'payment_status' => 'pending',
         ]);
@@ -627,7 +722,7 @@ class EmergencyController extends Controller
         // تحديث حالة الطوارئ إلى محولة
         $emergency->update(['status' => 'transferred']);
 
-        return redirect()->back()->with('success', 'تم إنشاء موعد استشاري بنجاح وإضافته إلى فاتورة الطوارئ الموحدة');
+        return redirect()->back()->with('success', 'تم إنشاء المواعيد الاستشارية بنجاح وإضافتها إلى فاتورة الطوارئ الموحدة');
     }
 
     /**
@@ -769,8 +864,9 @@ class EmergencyController extends Controller
     /**
      * إنشاء/تحديث فاتورة موحدة لحالة الطوارئ (خدمات + تحاليل + أشعة)
      * ملاحظة: رسوم الاستشاري تبقى منفصلة لأنها مرتبطة بموعد (appointment_id)
+     * تحسب فقط الخدمات غير المدفوعة (payment_id = null)
      */
-    private function upsertUnifiedEmergencyPayment(Emergency $emergency): \App\Models\Payment
+    private function upsertUnifiedEmergencyPayment(Emergency $emergency): ?\App\Models\Payment
     {
         $emergency->loadMissing([
             'services',
@@ -779,32 +875,80 @@ class EmergencyController extends Controller
             'appointments',
         ]);
 
-        $servicesAmount = $emergency->services->sum('price');
+        // حساب الخدمات غير المدفوعة فقط
+        // نحتاج للتحقق من جدول emergency_emergency_service للخدمات
+        $unpaidServiceIds = \DB::table('emergency_emergency_service')
+            ->where('emergency_id', $emergency->id)
+            ->whereNull('payment_id')
+            ->pluck('emergency_service_id');
+        
+        $servicesAmount = $emergency->services
+            ->whereIn('id', $unpaidServiceIds)
+            ->sum('price');
 
-        $labAmount = $emergency->labRequests->sum(function ($request) {
-            return $request->labTests->sum('price');
-        });
+        // حساب التحاليل غير المدفوعة فقط
+        $labAmount = $emergency->labRequests
+            ->whereNull('payment_id')
+            ->sum(function ($request) {
+                return $request->labTests->sum('price');
+            });
 
-        $radiologyAmount = $emergency->radiologyRequests->sum(function ($request) {
-            return $request->radiologyTypes->sum('price');
-        });
+        // حساب الأشعة غير المدفوعة فقط
+        $radiologyAmount = $emergency->radiologyRequests
+            ->whereNull('payment_id')
+            ->sum(function ($request) {
+                return $request->radiologyTypes->sum('price');
+            });
 
         $consultationAmount = $emergency->appointments
             ->where('payment_status', 'pending')
             ->where('status', '<>', 'cancelled')
             ->sum('consultation_fee');
 
-        $totalAmount = $servicesAmount + $labAmount + $radiologyAmount + $consultationAmount;
+        // رسوم المتابعة تُحسب فقط إذا لم تُدفع بعد
+        $followUpFee = ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) 
+            ? $emergency->doctor_follow_up_fee 
+            : 0;
+            
+        $totalAmount = $servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee;
 
-        $serviceNames = $emergency->services->pluck('name')->filter()->values();
+        $hasPendingAmount = $totalAmount > 0;
+        $existingPayment = Payment::where('emergency_id', $emergency->id)
+            ->where('payment_type', 'emergency')
+            ->whereNull('appointment_id')
+            ->whereNull('paid_at')
+            ->latest('id')
+            ->first();
+
+        if (!$hasPendingAmount) {
+            if ($existingPayment) {
+                $existingPayment->delete();
+                $emergency->update([
+                    'payment_status' => 'paid',
+                    'payment_id' => null,
+                ]);
+            }
+            return $existingPayment;
+        }
+
+        // بناء الوصف من العناصر غير المدفوعة فقط
+        $serviceNames = $emergency->services
+            ->whereIn('id', $unpaidServiceIds)
+            ->pluck('name')
+            ->filter()
+            ->values();
+            
         $labNames = $emergency->labRequests
+            ->whereNull('payment_id')
             ->flatMap(function ($request) {
                 return $request->labTests->pluck('name');
             })
             ->filter()
             ->unique()
             ->values();
+            
         $radiologyNames = $emergency->radiologyRequests
+            ->whereNull('payment_id')
             ->flatMap(function ($request) {
                 return $request->radiologyTypes->pluck('name');
             })
@@ -835,16 +979,13 @@ class EmergencyController extends Controller
             $descriptionParts[] = 'استشارة: ' . ($consultationNames->isNotEmpty() ? $consultationNames->implode('، ') : 'استشارة طوارئ');
         }
 
+        if ($followUpFee > 0) {
+            $descriptionParts[] = 'رسوم متابعة الطبيب';
+        }
+
         $description = $descriptionParts
             ? implode(' | ', $descriptionParts)
             : 'رسوم طوارئ';
-
-        $existingPayment = Payment::where('emergency_id', $emergency->id)
-            ->where('payment_type', 'emergency')
-            ->whereNull('appointment_id')
-            ->whereNull('paid_at')
-            ->latest('id')
-            ->first();
 
         if ($existingPayment) {
             $existingPayment->update([

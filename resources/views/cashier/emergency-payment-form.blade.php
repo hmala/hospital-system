@@ -201,7 +201,14 @@
                                 $invoiceItems = [];
                                 $invoiceLines = [];
 
-                                foreach($payment->emergency->services as $service) {
+                                // الحصول على IDs الخدمات غير المدفوعة فقط
+                                $unpaidServiceIds = \DB::table('emergency_emergency_service')
+                                    ->where('emergency_id', $payment->emergency_id)
+                                    ->whereNull('payment_id')
+                                    ->pluck('emergency_service_id');
+
+                                // إضافة الخدمات غير المدفوعة فقط
+                                foreach($payment->emergency->services->whereIn('id', $unpaidServiceIds) as $service) {
                                     $invoiceItems[] = [
                                         'name' => $service->name,
                                         'qty' => 1,
@@ -210,7 +217,8 @@
                                     ];
                                 }
 
-                                foreach($payment->emergency->labRequests as $labReq) {
+                                // إضافة طلبات التحاليل غير المدفوعة فقط
+                                foreach($payment->emergency->labRequests->whereNull('payment_id') as $labReq) {
                                     foreach($labReq->labTests as $test) {
                                         $invoiceItems[] = [
                                             'name' => '[تحاليل] ' . $test->name,
@@ -221,7 +229,8 @@
                                     }
                                 }
 
-                                foreach($payment->emergency->radiologyRequests as $radReq) {
+                                // إضافة طلبات الأشعة غير المدفوعة فقط
+                                foreach($payment->emergency->radiologyRequests->whereNull('payment_id') as $radReq) {
                                     foreach($radReq->radiologyTypes as $type) {
                                         $invoiceItems[] = [
                                             'name' => '[أشعة] ' . $type->name,
@@ -232,6 +241,7 @@
                                     }
                                 }
 
+                                // إضافة المواعيد غير المدفوعة
                                 foreach($payment->emergency->appointments as $ap) {
                                     if($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
                                         $invoiceItems[] = [
@@ -241,6 +251,16 @@
                                             'total' => $ap->consultation_fee ?? 0
                                         ];
                                     }
+                                }
+
+                                // إضافة رسوم متابعة الطبيب إذا كانت موجودة ولم تُدفع بعد
+                                if($payment->emergency->doctor_follow_up_fee > 0 && !$payment->emergency->follow_up_payment_id) {
+                                    $invoiceItems[] = [
+                                        'name' => 'رسوم متابعة الطبيب',
+                                        'qty' => 1,
+                                        'price' => $payment->emergency->doctor_follow_up_fee,
+                                        'total' => $payment->emergency->doctor_follow_up_fee
+                                    ];
                                 }
 
                                 $subtotal = array_sum(array_column($invoiceItems, 'total'));

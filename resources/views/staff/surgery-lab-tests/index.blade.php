@@ -5,10 +5,16 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h2>
-                    <i class="fas fa-flask me-2"></i>
-                    طلبات المختبر للعمليات الجراحية
-                </h2>
+                <div>
+                    <h2>
+                        <i class="fas fa-flask me-2"></i>
+                        طلبات المختبر للعمليات الجراحية
+                    </h2>
+                    <a href="{{ route('staff.surgery-lab-tests.selection') }}" class="btn btn-outline-light btn-sm mt-2">
+                        <i class="fas fa-list me-1"></i>
+                        العمليات التي تحتاج اختيار تحاليل
+                    </a>
+                </div>
                 <div class="stats-summary realtime-section" data-section="stats">
                     <span class="badge bg-info me-2">
                         <i class="fas fa-clock me-1"></i>
@@ -115,24 +121,28 @@
                     </thead>
                     <tbody>
                         @foreach($labTests as $index => $test)
-                        @if($test->surgery && $test->surgery->patient)
                         <tr class="test-row {{ $test->status == 'pending' ? 'table-warning' : ($test->status == 'completed' ? 'table-success' : 'table-danger') }}" data-test-id="{{ $test->id }}">
                             <td class="text-center">{{ $loop->iteration }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2" style="width: 32px; height: 32px; background: linear-gradient(135deg, #007bff, #6610f2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                        {{ substr($test->surgery->patient->user->name ?? 'N', 0, 1) }}
+                                        {{ optional($test->surgery?->patient?->user)->name ? substr($test->surgery->patient->user->name, 0, 1) : '?' }}
                                     </div>
                                     <div>
+                                        @if($test->surgery && $test->surgery->patient)
                                         <a href="{{ route('patients.show', $test->surgery->patient) }}" class="text-decoration-none fw-bold">
-                                            {{ $test->surgery->patient->user->name ?? 'غير محدد' }}
+                                            {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}
                                         </a>
                                         <br>
                                         <small class="text-muted">ID: {{ $test->surgery->patient->id }}</small>
+                                        @else
+                                        <span class="text-muted">غير معروف</span>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
                             <td>
+                                @if($test->surgery)
                                 <span class="badge bg-info">{{ $test->surgery->surgery_type }}</span>
                                 @if($test->surgery->surgery_fee_paid !== 'paid')
                                 <br>
@@ -141,12 +151,19 @@
                                     غير مدفوعة
                                 </span>
                                 @endif
+                                @else
+                                <span class="badge bg-secondary">غير محدد</span>
+                                @endif
                             </td>
                             <td>
+                                @if($test->surgery && $test->surgery->scheduled_date)
                                 <i class="fas fa-calendar-alt text-primary me-1"></i>
                                 {{ $test->surgery->scheduled_date->format('Y-m-d') }}
                                 <br>
                                 <small class="text-muted">{{ $test->surgery->scheduled_time }}</small>
+                                @else
+                                <span class="text-muted">غير محدد</span>
+                                @endif
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
@@ -211,14 +228,6 @@
                                 </div>
                             </td>
                         </tr>
-                        @else
-                        <tr>
-                            <td colspan="7" class="text-center text-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                بيانات العملية غير مكتملة - الطلب #{{ $test->id }}
-                            </td>
-                        </tr>
-                        @endif
                         @endforeach
                     </tbody>
                 </table>

@@ -135,10 +135,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'create inquiries',
             'manage inquiries',
             'inquiry.create.lab',
-            'inquiry.create.radiology',
-            'inquiry.create.pharmacy',
+            'inquiry.create.radiology',            'inquiry.create.radiology.general',
+            'inquiry.create.radiology.ultrasound',
+            'inquiry.create.radiology.mri',
+            'inquiry.create.radiology.echo',            'inquiry.create.pharmacy',
             'inquiry.create.checkup',
             'inquiry.create.blood_bank',
+            
+            // صلاحيات حجز الأشعة - حسب النوع (للتحكم المرن)
+            'inquiry.create.radiology.general',     // حجز أشعة عامة
+            'inquiry.create.radiology.ultrasound',  // حجز سونار
+            'inquiry.create.radiology.mri',         // حجز رنين مغناطيسي
+            'inquiry.create.radiology.echo',        // حجز إيكو
             
             // صلاحيات توفر الأطباء الاستشاريين
             'manage consultant availability',
@@ -270,6 +278,10 @@ class RolesAndPermissionsSeeder extends Seeder
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)
         $consultationReceptionistRole = Role::firstOrCreate(['name' => 'consultation_receptionist']);
         $consultationReceptionistRole->givePermissionTo([
+            'view patients',
+            'create patients',
+            'view inquiries',
+            'create inquiries',
             'manage consultant availability',
             'view doctors',
             'view occupancy',
@@ -277,6 +289,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier appointments',
             'process consultation payments',
             'inquiry.create.checkup',
+            // يمكن إضافة صلاحيات الأشعة حسب الحاجة:
+            // 'inquiry.create.radiology.ultrasound',
+            // 'inquiry.create.radiology.general',
+            // إلخ...
         ]);
 
         // دور موظف المختبر (Lab Staff)
@@ -300,6 +316,38 @@ class RolesAndPermissionsSeeder extends Seeder
         // دور موظف الإشعة (Radiology Staff)
         $radiologyStaffRole = Role::firstOrCreate(['name' => 'radiology_staff']);
         $radiologyStaffRole->givePermissionTo([
+            'view patients',
+            'view radiology',
+            'process radiology requests',
+        ]);
+
+        // دور موظف أشعة عامة (General Radiology)
+        $radiologyGeneralRole = Role::firstOrCreate(['name' => 'radiology_general']);
+        $radiologyGeneralRole->givePermissionTo([
+            'view patients',
+            'view radiology',
+            'process radiology requests',
+        ]);
+
+        // دور موظف سونار (Ultrasound Radiology)
+        $radiologyUltrasoundRole = Role::firstOrCreate(['name' => 'radiology_ultrasound']);
+        $radiologyUltrasoundRole->givePermissionTo([
+            'view patients',
+            'view radiology',
+            'process radiology requests',
+        ]);
+
+        // دور موظف الرنين المغناطيسي (MRI Radiology)
+        $radiologyMriRole = Role::firstOrCreate(['name' => 'radiology_mri']);
+        $radiologyMriRole->givePermissionTo([
+            'view patients',
+            'view radiology',
+            'process radiology requests',
+        ]);
+
+        // دور موظف إيكو (Echo Radiology) - جاهز للمستقبل
+        $radiologyEchoRole = Role::firstOrCreate(['name' => 'radiology_echo']);
+        $radiologyEchoRole->givePermissionTo([
             'view patients',
             'view radiology',
             'process radiology requests',

@@ -75,7 +75,10 @@ class User extends Authenticatable
     {
         return $this->belongsTo(\App\Models\Location::class);
     }
-
+    public function getFullNameAttribute()
+    {
+        return $this->name;
+    }
     // مساعدات الأدوار - متوافقة مع Spatie Permission
     public function isAdmin()
     {
@@ -105,5 +108,30 @@ class User extends Authenticatable
     public function isSurgeryStaff()
     {
         return $this->hasRole('surgery_staff');
+    }
+
+    public function isRadiologyEcho()
+    {
+        return $this->hasRole('radiology_echo');
+    }
+
+    public function isRadiologyUltrasound()
+    {
+        return $this->hasRole('radiology_ultrasound');
+    }
+
+    public function isRadiologyMRI()
+    {
+        return $this->hasRole('radiology_mri');
+    }
+
+    public function isRadiologyGeneral()
+    {
+        return $this->hasRole('radiology_general');
+    }
+
+    public function isRadiologyTeam()
+    {
+        return $this->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']);
     }
 }

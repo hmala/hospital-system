@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Emergency extends Model
 {
@@ -31,6 +33,8 @@ class Emergency extends Model
         'payment_id',
         'emergency_patient_id',
         'patient_migrated',
+        'doctor_follow_up_fee',
+        'follow_up_payment_id',
     ];
 
     protected $casts = [
@@ -38,6 +42,7 @@ class Emergency extends Model
         'admission_time' => 'datetime',
         'discharge_time' => 'datetime',
         'requires_surgery' => 'boolean',
+        'doctor_follow_up_fee' => 'integer',
         'is_active' => 'boolean',
         'patient_migrated' => 'boolean',
         'emergency_patient_id' => 'integer',
@@ -69,6 +74,11 @@ class Emergency extends Model
         return $this->belongsToMany(EmergencyService::class, 'emergency_emergency_service');
     }
 
+    public function treatments(): HasMany
+    {
+        return $this->hasMany(EmergencyTreatment::class);
+    }
+
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
@@ -79,12 +89,27 @@ class Emergency extends Model
         return $this->hasMany(EmergencyLabRequest::class);
     }
 
-    public function radiologyRequests()
+    public function radiologyRequests(): HasMany
     {
         return $this->hasMany(EmergencyRadiologyRequest::class);
     }
+    /**
+     * العلاقة مع قراءات العلامات الحيوية
+     */
+    public function vitalSignReadings(): HasMany
+    {
+        return $this->hasMany(EmergencyVitalSign::class)->latest();
+    }
 
-    public function appointments()
+    /**
+     * آخر قراءة للعلامات الحيوية
+     */
+    public function latestVitalSign(): HasOne
+    {
+        return $this->hasOne(EmergencyVitalSign::class)->latestOfMany();
+    }
+
+    public function appointments(): HasMany
     {
         return $this->hasMany(\App\Models\Appointment::class);
     }
@@ -148,32 +173,45 @@ class Emergency extends Model
 
     public function getBloodPressureAttribute()
     {
-        return $this->vital_signs['blood_pressure'] ?? null;
+        // Try to get from latest vital sign reading first, fallback to JSON column
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->blood_pressure : ($this->vital_signs['blood_pressure'] ?? null);
     }
 
     public function getHeartRateAttribute()
     {
-        return $this->vital_signs['heart_rate'] ?? null;
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->heart_rate : ($this->vital_signs['heart_rate'] ?? null);
     }
 
     public function getTemperatureAttribute()
     {
-        return $this->vital_signs['temperature'] ?? null;
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->temperature : ($this->vital_signs['temperature'] ?? null);
     }
 
     public function getOxygenSaturationAttribute()
     {
-        return $this->vital_signs['oxygen_saturation'] ?? null;
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->oxygen_saturation : ($this->vital_signs['oxygen_saturation'] ?? null);
     }
 
     public function getRespiratoryRateAttribute()
     {
-        return $this->vital_signs['respiratory_rate'] ?? null;
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->respiratory_rate : ($this->vital_signs['respiratory_rate'] ?? null);
+    }
+
+    public function getBloodGlucoseAttribute()
+    {
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->blood_glucose : ($this->vital_signs['blood_glucose'] ?? null);
     }
 
     public function getVitalsLastUpdatedAttribute()
     {
-        return isset($this->vital_signs['updated_at']) ? \Carbon\Carbon::parse($this->vital_signs['updated_at']) : null;
+        $latest = $this->latestVitalSign;
+        return $latest ? $latest->created_at : (isset($this->vital_signs['updated_at']) ? \Carbon\Carbon::parse($this->vital_signs['updated_at']) : null);
     }
 
     public function getEmergencyTypeTextAttribute()

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طباعة أشعة العملية - {{ optional($test->surgery->patient->user)->name }}</title>
+    <title>طباعة أشعة العملية - {{ optional($test->surgery?->patient?->user)->name ?? 'غير معروف' }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Arial', 'Tahoma', sans-serif; direction: rtl; background: #fff; color: #333; padding: 20px; }
@@ -85,14 +85,18 @@
 
         <div class="patient-info">
             <h3>معلومات المريض</h3>
+            @if($test->surgery)
             <div class="patient-details">
-                <div class="detail-item"><span class="detail-label">الاسم:</span><span class="detail-value">{{ optional($test->surgery->patient->user)->name ?? '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">العمر:</span><span class="detail-value">{{ optional($test->surgery->patient)->age ? optional($test->surgery->patient)->age . ' سنة' : '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">الجنس:</span><span class="detail-value">{{ optional($test->surgery->patient)->gender === 'male' ? 'ذكر' : (optional($test->surgery->patient)->gender === 'female' ? 'أنثى' : '-') }}</span></div>
-                <div class="detail-item"><span class="detail-label">الهاتف:</span><span class="detail-value">{{ optional($test->surgery->patient->user)->phone ?? '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">الطبيب:</span><span class="detail-value">{{ optional($test->surgery->doctor->user)->name ? 'د. ' . $test->surgery->doctor->user->name : ($test->surgery->surgeon_name ?? '-') }}</span></div>
-                <div class="detail-item"><span class="detail-label">تاريخ العملية:</span><span class="detail-value">{{ optional($test->surgery->scheduled_date)->format('Y-m-d') ?? '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">الاسم:</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->name ?? '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">العمر:</span><span class="detail-value">{{ $test->surgery->patient?->age ? $test->surgery->patient->age . ' سنة' : '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">الجنس:</span><span class="detail-value">{{ $test->surgery->patient?->gender === 'male' ? 'ذكر' : ($test->surgery->patient?->gender === 'female' ? 'أنثى' : '-') }}</span></div>
+                <div class="detail-item"><span class="detail-label">الهاتف:</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->phone ?? '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">الطبيب:</span><span class="detail-value">{{ optional($test->surgery->doctor?->user)->name ? 'د. ' . $test->surgery->doctor->user->name : ($test->surgery->surgeon_name ?? '-') }}</span></div>
+                <div class="detail-item"><span class="detail-label">تاريخ العملية:</span><span class="detail-value">{{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : '-' }}</span></div>
             </div>
+            @else
+            <p class="text-muted">معلومات العملية غير متوفرة</p>
+            @endif
         </div>
 
         <div class="results-section">

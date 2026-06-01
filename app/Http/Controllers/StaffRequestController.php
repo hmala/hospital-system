@@ -7,6 +7,9 @@ use App\Events\SurgeryLabTestUpdated;
 use App\Models\Request as MedicalRequest;
 use App\Models\LabResult;
 use App\Models\LabTest;
+use App\Models\Surgery;
+use App\Models\SurgeryLabTest;
+use App\Models\SurgeryRadiologyTest;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +49,7 @@ class StaffRequestController extends Controller
         if ($user->hasRole('lab_staff') && !$user->hasRole('admin')) {
             return redirect()->route('lab.index');
         }
-        if ($user->hasRole('radiology_staff') && !$user->hasRole('admin')) {
+        if ($user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']) && !$user->hasRole('admin')) {
             return redirect()->route('radiology-staff.index');
         }
 
@@ -56,7 +59,7 @@ class StaffRequestController extends Controller
             $allowedTypes[] = 'lab';
             $allowedTypes[] = 'blood_bank';
         }
-        if ($user->hasRole('radiology_staff')) {
+        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general'])) {
             $allowedTypes[] = 'radiology';
         }
         if ($user->hasRole('pharmacy_staff')) {
@@ -123,7 +126,7 @@ class StaffRequestController extends Controller
                 ->get();
         }
 
-        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['admin'])) {
+        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             $emergencyRadiologyRequests = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
                 ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
@@ -157,7 +160,7 @@ class StaffRequestController extends Controller
             $allowedTypes[] = 'lab';
             $allowedTypes[] = 'blood_bank';
         }
-        if ($user->hasRole('radiology_staff')) {
+        if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general'])) {
             $allowedTypes[] = 'radiology';
         }
         if ($user->hasRole('pharmacy_staff')) {
@@ -828,7 +831,8 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
         }
 
-        $query = \App\Models\SurgeryLabTest::with(['surgery.patient.user', 'surgery.doctor.user', 'labTest']);
+        $query = \App\Models\SurgeryLabTest::with(['surgery.patient.user', 'surgery.doctor.user', 'labTest'])
+            ->whereHas('surgery'); // التأكد من وجود عملية صالحة
 
         // البحث
         if ($request->filled('search')) {
@@ -864,6 +868,128 @@ class StaffRequestController extends Controller
         $labTests = $query->orderBy('created_at', 'desc')->paginate(20)->appends($request->query());
 
         return view('staff.surgery-lab-tests.index', compact('labTests'));
+    }
+
+    /**
+     * عرض قائمة العمليات التي تحتاج اختيار تحاليل
+     */
+    public function surgeryLabTestsSelection(HttpRequest $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بعرض ذلك');
+        }
+
+        if (!$user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض هذه القائمة');
+        }
+
+        $query = Surgery::with(['patient.user', 'doctor.user'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id');
+            });
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('patient.user', function($patientQuery) use ($search) {
+                        $patientQuery->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhere('surgery_type', 'like', '%' . $search . '%');
+            });
+        }
+
+        $surgeries = $query->orderBy('scheduled_date', 'desc')->paginate(20)->appends($request->query());
+
+        return view('staff.surgery-lab-tests.selection', compact('surgeries'));
+    }
+
+    /**
+     * إنشاء طلب عام لاختيار تحاليل لعملية
+     */
+    public function createSurgeryLabTestSelection(Surgery $surgery)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بهذه العملية');
+        }
+
+        if (!$user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بهذه العملية');
+        }
+
+        $test = $surgery->labTests()->whereNull('lab_test_id')->first();
+        if (!$test) {
+            $test = $surgery->labTests()->create([
+                'lab_test_id' => null,
+                'status' => 'pending',
+                'payment_status' => 'pending'
+            ]);
+        }
+
+        return redirect()->route('staff.surgery-lab-tests.show', $test);
+    }
+
+    /**
+     * عرض قائمة العمليات التي تحتاج اختيار أشعة
+     */
+    public function surgeryRadiologyTestsSelection(HttpRequest $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بعرض ذلك');
+        }
+
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض هذه القائمة');
+        }
+
+        $query = Surgery::with(['patient.user', 'doctor.user'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('radiologyTests', function ($q) {
+                $q->whereNotNull('radiology_type_id');
+            });
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('patient.user', function($patientQuery) use ($search) {
+                        $patientQuery->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhere('surgery_type', 'like', '%' . $search . '%');
+            });
+        }
+
+        $surgeries = $query->orderBy('scheduled_date', 'desc')->paginate(20)->appends($request->query());
+
+        return view('staff.surgery-radiology-tests.selection', compact('surgeries'));
+    }
+
+    /**
+     * إنشاء طلب عام لاختيار نوع أشعة لعملية
+     */
+    public function createSurgeryRadiologyTestSelection(Surgery $surgery)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بهذه العملية');
+        }
+
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بهذه العملية');
+        }
+
+        $test = $surgery->radiologyTests()->whereNull('radiology_type_id')->first();
+        if (!$test) {
+            $test = $surgery->radiologyTests()->create([
+                'radiology_type_id' => null,
+                'status' => 'pending',
+                'payment_status' => 'pending'
+            ]);
+        }
+
+        return redirect()->route('staff.surgery-radiology-tests.show', $test);
     }
 
     /**
@@ -1073,7 +1199,8 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى أشعة العمليات الجراحية');
         }
 
-        $query = \App\Models\SurgeryRadiologyTest::with(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType']);
+        $query = \App\Models\SurgeryRadiologyTest::with(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType'])
+            ->whereHas('surgery'); // التأكد من وجود عملية صالحة
 
         // البحث
         if ($request->filled('search')) {
@@ -1248,7 +1375,7 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['radiology_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
@@ -1266,7 +1393,7 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['radiology_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 

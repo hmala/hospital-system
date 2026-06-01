@@ -287,6 +287,8 @@ Route::middleware(['auth'])->group(function () {
         
         // طلبات المختبر للعمليات
         Route::get('/surgery-lab-tests', [StaffRequestController::class, 'surgeryLabTests'])->name('surgery-lab-tests.index');
+        Route::get('/surgery-lab-tests/selection', [StaffRequestController::class, 'surgeryLabTestsSelection'])->name('surgery-lab-tests.selection');
+        Route::post('/surgery-lab-tests/{surgery}/create-selection', [StaffRequestController::class, 'createSurgeryLabTestSelection'])->name('surgery-lab-tests.create-selection');
         Route::get('/surgery-lab-tests/{test}', [StaffRequestController::class, 'showSurgeryLabTest'])->name('surgery-lab-tests.show');
         Route::put('/surgery-lab-tests/{test}', [StaffRequestController::class, 'updateSurgeryLabTest'])->name('surgery-lab-tests.update');
         Route::put('/surgery-lab-tests/{test}/select-tests', [StaffRequestController::class, 'selectTestsForSurgeryLabTest'])->name('surgery-lab-tests.select-tests');
@@ -295,6 +297,8 @@ Route::middleware(['auth'])->group(function () {
         
         // طلبات الأشعة للعمليات
         Route::get('/surgery-radiology-tests', [StaffRequestController::class, 'surgeryRadiologyTests'])->name('surgery-radiology-tests.index');
+        Route::get('/surgery-radiology-tests/selection', [StaffRequestController::class, 'surgeryRadiologyTestsSelection'])->name('surgery-radiology-tests.selection');
+        Route::post('/surgery-radiology-tests/{surgery}/create-selection', [StaffRequestController::class, 'createSurgeryRadiologyTestSelection'])->name('surgery-radiology-tests.create-selection');
         Route::get('/surgery-radiology-tests/{test}', [StaffRequestController::class, 'showSurgeryRadiologyTest'])->name('surgery-radiology-tests.show');
         Route::get('/surgery-radiology-tests/{test}/print', [StaffRequestController::class, 'printSurgeryRadiologyTest'])->name('surgery-radiology-tests.print');
         Route::put('/surgery-radiology-tests/{test}', [StaffRequestController::class, 'updateSurgeryRadiologyTest'])->name('surgery-radiology-tests.update');
@@ -426,6 +430,12 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'update'])->name('resident-station.update');
         Route::post('/resident/{surgery}/complete', [\App\Http\Controllers\ResidentStationController::class, 'complete'])->name('resident-station.complete');
         
+        // محطة صالة العمليات
+        Route::get('/operation-theater', [\App\Http\Controllers\OperationTheaterStationController::class, 'index'])->name('operation-theater-station.index');
+        Route::get('/operation-theater/{surgery}', [\App\Http\Controllers\OperationTheaterStationController::class, 'show'])->name('operation-theater-station.show');
+        Route::patch('/operation-theater/{surgery}', [\App\Http\Controllers\OperationTheaterStationController::class, 'update'])->name('operation-theater-station.update');
+        Route::post('/operation-theater/{surgery}/complete', [\App\Http\Controllers\OperationTheaterStationController::class, 'complete'])->name('operation-theater-station.complete');
+        
         // محطة التمريض
         Route::get('/nursing', [\App\Http\Controllers\NursingStationController::class, 'index'])->name('nursing-station.index');
         Route::get('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'show'])->name('nursing-station.show');
@@ -483,6 +493,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/start-treatment', [\App\Http\Controllers\EmergencyController::class, 'startTreatment'])->name('start-treatment');
         Route::post('/{emergency}/complete', [\App\Http\Controllers\EmergencyController::class, 'complete'])->name('complete');
         Route::post('/{emergency}/update-medical', [\App\Http\Controllers\EmergencyController::class, 'updateMedical'])->name('update-medical');
+        Route::post('/{emergency}/treatments', [\App\Http\Controllers\EmergencyController::class, 'storeTreatment'])->name('treatments.store');
         Route::post('/{emergency}/create-consultation', [\App\Http\Controllers\EmergencyController::class, 'createConsultation'])->name('create-consultation');
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');

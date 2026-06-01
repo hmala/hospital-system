@@ -279,7 +279,34 @@ function getTestUnit($testName, $labTests) {
                                             </div>
                                             <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 400px; overflow-y: auto;">
                                                 @php
-                                                    $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)
+                                                    // تحديد الفئة المسموحة بناءً على دور المستخدم
+                                                    $allowedSubcategories = null;
+                                                    $filterBySubcategory = false; // default: admin يرى كل شيء
+                                                    
+                                                    if (auth()->user()->hasRole('radiology_echo')) {
+                                                        $allowedSubcategories = ['إيكو']; // إيكو فقط (جاهز للمستقبل)
+                                                        $filterBySubcategory = true;
+                                                    } elseif (auth()->user()->hasRole('radiology_ultrasound')) {
+                                                        $allowedSubcategories = ['سونار']; // سونار فقط
+                                                        $filterBySubcategory = true;
+                                                    } elseif (auth()->user()->hasRole('radiology_mri')) {
+                                                        $allowedSubcategories = ['الرنين']; // الرنين المغناطيسي فقط
+                                                        $filterBySubcategory = true;
+                                                    } elseif (auth()->user()->hasRole('radiology_general') || auth()->user()->hasRole('radiology_staff')) {
+                                                        $allowedSubcategories = ['أشعة']; // الأشعة العامة فقط
+                                                        $filterBySubcategory = true;
+                                                    }
+                                                    // إذا كان admin فقط -> كل شيء
+                                                    
+                                                    // جلب أنواع الأشعة
+                                                    $radiologyTypesQuery = \App\Models\RadiologyType::where('is_active', true);
+                                                    
+                                                    // تطبيق الفلترة
+                                                    if ($filterBySubcategory && $allowedSubcategories !== null) {
+                                                        $radiologyTypesQuery->whereIn('subcategory', $allowedSubcategories);
+                                                    }
+                                                    
+                                                    $radiologyTypes = $radiologyTypesQuery
                                                         ->orderBy('main_category')
                                                         ->orderBy('name')
                                                         ->get()

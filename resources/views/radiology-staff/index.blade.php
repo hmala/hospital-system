@@ -46,6 +46,7 @@
                             <tr>
                                 <th style="width:70px;">رقم</th>
                                 <th>مريض</th>
+                                <th>القسم</th>
                                 <th>طبيب</th>
                                 <th style="width:80px;">وقت</th>
                                 <th style="width:90px;">الدفع</th>
@@ -58,6 +59,15 @@
                             <tr class="{{ $request->payment_status == 'pending' ? 'table-danger' : ($request->payment_status == 'paid' ? 'table-success' : '') }}">
                                 <td><strong>#{{ $request->id }}</strong></td>
                                 <td>{{ $request->visit?->patient?->user?->name ?? 'غير محدد' }}</td>
+                                <td>
+                                    @if($request->subtype === 'echo')
+                                        <span class="badge bg-primary">إيكو</span>
+                                    @elseif($request->subtype === 'ultrasound')
+                                        <span class="badge bg-info">سونار</span>
+                                    @else
+                                        <span class="badge bg-secondary">أشعة عامة</span>
+                                    @endif
+                                </td>
                                 <td>د. {{ $request->visit?->doctor?->user?->name ?? 'غير محدد' }}</td>
                                 <td><small>{{ $request->created_at->format('H:i') }}</small></td>
                                 <td>

@@ -1,4 +1,4 @@
-<!-- resources/views/emergency/index.blade.php -->
+{{-- resources/views/emergency/index.blade.php --}}
 @extends('layouts.app')
 
 @section('content')
@@ -92,20 +92,14 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
+                    <div class="table-responsive" style="overflow: visible">
+                        <table class="table table-hover text-center">
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
                                     <th>المريض</th>
-                                    <th>نوع الطوارئ</th>
-                                    <th>الأولوية</th>
-                                    <th>الحالة</th>
-                                    <th>الدفع</th>
                                     <th>نتائج التحاليل</th>
                                     <th>نتائج الأشعة</th>
-                                    <th>الاستشارة</th>
-                                    <th>العلامات الحيوية</th>
                                     <th>الطبيب المسؤول</th>
                                     <th>وقت الدخول</th>
                                     <th>الإجراءات</th>
@@ -144,24 +138,6 @@
                                                 </small>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ $emergency->emergency_type_text }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ $emergency->priority_badge_class }}">{{ $emergency->priority_text }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ $emergency->status_badge_class }}">{{ $emergency->status_text }}</span>
-                                    </td>
-                                    <td>
-                                        @if($emergency->payment_status == 'paid')
-                                            <span class="badge bg-success">مدفوع</span>
-                                        @elseif($emergency->payment_status == 'pending')
-                                            <span class="badge bg-danger">غير مدفوع</span>
-                                        @else
-                                            <span class="badge bg-secondary">غير معروف</span>
-                                        @endif
                                     </td>
                                     <td>
                                         @php
@@ -226,35 +202,6 @@
                                         @endif
                                     </td>
                                     <td>
-                                                @php
-                                                $consultationAppointment = \App\Models\Appointment::where('emergency_id', $emergency->id)->first();
-                                            @endphp
-                                            @if($consultationAppointment)
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-calendar-check me-1"></i>
-                                                    مجدول
-                                                </span>
-                                                <br>
-                                                <small class="text-muted">{{ $consultationAppointment->appointment_date->format('d/m') }}</small>
-                                            @else
-                                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#consultationModal-{{ $emergency->id }}" title="طلب استشارة">
-                                                    <i class="fas fa-plus me-1"></i>
-                                                    طلب
-                                                </button>
-                                            @endif
-                                    </td>
-                                    <td>
-                                        <small>
-                                            @if($emergency->vitals_last_updated)
-                                                ضغط: {{ $emergency->blood_pressure ?? '---' }}<br>
-                                                نبض: {{ $emergency->heart_rate ?? '---' }}<br>
-                                                <span class="text-muted">{{ $emergency->vitals_last_updated->diffForHumans() }}</span>
-                                            @else
-                                                <span class="text-muted">لم يتم تسجيل</span>
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td>
                                         @if($emergency->doctor)
                                             <small>{{ $emergency->doctor->user->name ?? 'غير محدد' }}</small>
                                         @else
@@ -265,33 +212,68 @@
                                         <small>{{ $emergency->created_at->format('d/m/Y H:i') }}</small>
                                     </td>
                                     <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-outline-primary" title="عرض">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#vitalsModal-{{ $emergency->id }}" title="إدخال معلومات طبية">
-                                                <i class="fas fa-notes-medical"></i>
+                                        @php
+                                            $hasConsultation = \App\Models\Appointment::where('emergency_id', $emergency->id)->exists();
+                                        @endphp
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-list-ul me-1"></i>
+                                                <span></span>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#labModal-{{ $emergency->id }}" title="طلب تحليل">
-                                                <i class="fas fa-flask"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#radiologyModal-{{ $emergency->id }}" title="طلب أشعة">
-                                                <i class="fas fa-x-ray"></i>
-                                            </button>
-                                            @php
-                                                $hasConsultation = \App\Models\Appointment::where('emergency_id', $emergency->id)->exists();
-                                            @endphp
-                                            @if(!$hasConsultation)
-                                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#consultationModal-{{ $emergency->id }}" title="طلب استشارة">
-                                                    <i class="fas fa-calendar-plus"></i>
-                                                </button>
-                                            @endif
+                                            <ul class="dropdown-menu dropdown-menu-end" style="min-width: 220px;">
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#vitalSignsModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-heartbeat text-danger me-2"></i>
+                                                        <span>قياس علامات حيوية</span>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#medicalModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-notes-medical text-success me-2"></i>
+                                                        <span>تشخيص وخدمات</span>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#treatmentModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-pills text-warning me-2"></i>
+                                                        <span>علاج الطوارئ</span>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#treatmentResultsModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-eye text-secondary me-2"></i>
+                                                        <span>عرض العلاجات</span>
+                                                        @if($emergency->treatments->count())
+                                                            <span class="badge bg-secondary rounded-pill ms-2">{{ $emergency->treatments->count() }}</span>
+                                                        @endif
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#labModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-flask text-primary me-2"></i>
+                                                        <span>طلب تحاليل</span>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#radiologyModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-x-ray text-info me-2"></i>
+                                                        <span>طلب أشعة</span>
+                                                    </button>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#consultationModal-{{ $emergency->id }}">
+                                                        <i class="fas fa-calendar-plus text-warning me-2"></i>
+                                                        <span>طلب استشارة</span>
+                                                    </button>
+                                                </li>
+                                            </ul>
                                         </div>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="12" class="text-center py-4">
+                                    <td colspan="7" class="text-center py-4">
                                         <i class="fas fa-ambulance fa-3x text-muted mb-3"></i>
                                         <p class="text-muted">لا توجد حالات طوارئ حالياً</p>
                                     </td>
@@ -505,14 +487,21 @@
             });
     }
 
+    function autoRefreshEmergencyPage() {
+        if (document.querySelector('.modal.show')) {
+            return;
+        }
+
+        window.location.reload();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
-        updateEmergencyPaymentStatus();
-        setInterval(updateEmergencyPaymentStatus, 5000);
+        setInterval(autoRefreshEmergencyPage, 5000);
     });
 </script>
 
 <style>
-    @keyframes pulse {
+    @@keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
     }
@@ -520,68 +509,294 @@
     #emergency-live-indicator {
         animation: pulse 2s ease-in-out infinite;
     }
-</style>
-@endsection
 
+    .emergency-action-btn {
+        min-width: 38px;
+        padding: 0.45rem 0.55rem;
+        border-radius: 0.85rem;
+        border: 1px solid transparent;
+        color: #ffffff;
+        background: #f8fafc;
+        transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .emergency-action-btn i {
+        font-size: 0.9rem;
+    }
+
+    .emergency-action-btn:hover,
+    .emergency-action-btn:focus {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+    }
+
+    .emergency-action-btn--red {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .emergency-action-btn--green {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    .emergency-action-btn--blue {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .emergency-action-btn--teal {
+        background-color: #20c997;
+        border-color: #20c997;
+    }
+
+    .emergency-action-btn--red,
+    .emergency-action-btn--yellow {
+        background-color: #f59e0b;
+        border-color: #f59e0b;
+    }
+
+    .emergency-action-btn--green,
+    .emergency-action-btn--blue,
+    .emergency-action-btn--teal,
+    .emergency-action-btn--yellow {
+        color: #ffffff;
+    }
+</style>
+
+@push('modals')
 @foreach($emergencies as $emergency)
-<div class="modal fade" id="vitalsModal-{{ $emergency->id }}" tabindex="-1" aria-labelledby="vitalsModalLabel-{{ $emergency->id }}" aria-hidden="true">
+<!-- Modal للعلامات الحيوية فقط -->
+<div class="modal fade" id="vitalSignsModal-{{ $emergency->id }}" tabindex="-1" aria-labelledby="vitalSignsModalLabel-{{ $emergency->id }}" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content medical-modal">
-            <div class="modal-header medical-modal__header">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
                 <div>
-                    <h5 class="modal-title" id="vitalsModalLabel-{{ $emergency->id }}">معلومات طبية للحالة #{{ $emergency->id }}</h5>
-                    <small class="text-muted">حدّث العلامات الحيوية والتشخيص والخدمة المقدمة بسرعة</small>
+                    <h5 class="modal-title" id="vitalSignsModalLabel-{{ $emergency->id }}">
+                        <i class="fas fa-heartbeat me-2"></i>
+                        قياس العلامات الحيوية - حالة #{{ $emergency->id }}
+                    </h5>
+                    <small class="text-white-50">{{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد' }}</small>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <form method="POST" action="{{ route('emergency.update-vitals', $emergency) }}">
+                @csrf
+                @method('POST')
+                <div class="modal-body">
+                    <!-- عرض القراءات السابقة إن وجدت -->
+                    @if($emergency->vitalSignReadings && $emergency->vitalSignReadings->count() > 0)
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-history me-2"></i>القراءات السابقة ({{ $emergency->vitalSignReadings->count() }} قراءة):</strong>
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>ضغط الدم</th>
+                                        <th>النبض</th>
+                                        <th>الحرارة</th>
+                                        <th>التنفس</th>
+                                        <th>SpO2</th>
+                                        <th>سكر الدم</th>
+                                        <th>المسجل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($emergency->vitalSignReadings->take(5) as $reading)
+                                    <tr>
+                                        <td class="text-nowrap">
+                                            <small>{{ $reading->created_at->format('d/m H:i') }}</small>
+                                        </td>
+                                        <td>{{ $reading->blood_pressure ?? '---' }}</td>
+                                        <td>{{ $reading->heart_rate ?? '---' }}</td>
+                                        <td>{{ $reading->temperature ?? '---' }}</td>
+                                        <td>{{ $reading->respiratory_rate ?? '---' }}</td>
+                                        <td>{{ $reading->oxygen_saturation ?? '---' }}</td>
+                                        <td>{{ $reading->blood_glucose ?? '---' }}</td>
+                                        <td class="text-nowrap">
+                                            <small>{{ optional($reading->recordedBy)->name ?? optional(optional($reading->recordedBy)->doctor)->user->name ?? 'الطبيب غير معروف' }}</small>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
+
+                    <h6 class="text-primary mb-3"><i class="fas fa-plus-circle me-2"></i>قراءة جديدة:</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="blood_pressure_{{ $emergency->id }}" class="form-label">
+                                <i class="fas fa-heartbeat text-danger me-2"></i>
+                                ضغط الدم (mmHg)
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="blood_pressure_{{ $emergency->id }}" 
+                                   name="blood_pressure" 
+                                   placeholder="120/80"
+                                   value="{{ old('blood_pressure') }}">
+                            <small class="text-muted">الطبيعي: 120/80 mmHg</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="heart_rate_{{ $emergency->id }}" class="form-label">
+                                <i class="fas fa-heart text-danger me-2"></i>
+                                معدل ضربات القلب (bpm)
+                            </label>
+                            <input type="number" 
+                                   class="form-control form-control-lg" 
+                                   id="heart_rate_{{ $emergency->id }}" 
+                                   name="heart_rate" 
+                                   placeholder="75"
+                                   min="1"
+                                   max="300"
+                                   value="{{ old('heart_rate', $emergency->heart_rate) }}">
+                            <small class="text-muted">الطبيعي: 60-100 نبضة/دقيقة</small>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="temperature_{{ $emergency->id }}" class="form-label">
+                                <i class="fas fa-thermometer-half text-primary me-2"></i>
+                                درجة الحرارة (°C)
+                            </label>
+                            <input type="number" 
+                                   step="0.1" 
+                                   class="form-control form-control-lg" 
+                                   id="temperature_{{ $emergency->id }}" 
+                                   name="temperature" 
+                                   placeholder="37.0"
+                                   min="30"
+                                   max="45"
+                                   value="{{ old('temperature', $emergency->temperature) }}">
+                            <small class="text-muted">الطبيعي: 36.5-37.5°C</small>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="respiratory_rate_{{ $emergency->id }}" class="form-label">
+                                <i class="fas fa-lungs text-info me-2"></i>
+                                معدل التنفس (/دقيقة)
+                            </label>
+                            <input type="number" 
+                                   class="form-control form-control-lg" 
+                                   id="respiratory_rate_{{ $emergency->id }}" 
+                                   name="respiratory_rate" 
+                                   placeholder="16"
+                                   min="1"
+                                   max="100"
+                                   value="{{ old('respiratory_rate', $emergency->respiratory_rate) }}">
+                            <small class="text-muted">الطبيعي: 12-20 نفس/دقيقة</small>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="oxygen_saturation_{{ $emergency->id }}" class="form-label">
+                                <i class="fas fa-wind text-success me-2"></i>
+                                تشبع الأكسجين (%)
+                            </label>
+                            <input type="number" 
+                                   class="form-control form-control-lg" 
+                                   id="oxygen_saturation_{{ $emergency->id }}" 
+                                   name="oxygen_saturation" 
+                                   placeholder="98"
+                                   min="1"
+                                   max="100"
+                                   value="{{ old('oxygen_saturation', $emergency->oxygen_saturation) }}">
+                            <small class="text-muted">الطبيعي: 95-100%</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="blood_glucose_{{ $emergency->id }}" class="form-label">
+                                <i class="fas fa-tint text-warning me-2"></i>
+                                سكر الدم (mg/dL)
+                            </label>
+                            <input type="number" 
+                                   step="0.1" 
+                                   class="form-control form-control-lg" 
+                                   id="blood_glucose_{{ $emergency->id }}" 
+                                   name="blood_glucose" 
+                                   placeholder="120"
+                                   value="{{ old('blood_glucose', $emergency->blood_glucose) }}">
+                            <small class="text-muted">الطبيعي: 70-140 mg/dL</small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> سيتم حفظ هذه القراءة وتحديث السجل الطبي للمريض
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-save me-2"></i>حفظ القراءات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal للتشخيص والخدمات -->
+<div class="modal fade" id="medicalModal-{{ $emergency->id }}" tabindex="-1" aria-labelledby="medicalModalLabel-{{ $emergency->id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <div>
+                    <h5 class="modal-title" id="medicalModalLabel-{{ $emergency->id }}">
+                        <i class="fas fa-notes-medical me-2"></i>
+                        التشخيص والخدمات - حالة #{{ $emergency->id }}
+                    </h5>
+                    <small class="text-white-50">{{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد' }}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <form method="POST" action="{{ route('emergency.update-medical', $emergency) }}">
                 @csrf
                 @method('POST')
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-lg-7">
-                            <div class="card border-0 shadow-sm h-100">
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm">
                                 <div class="card-header bg-light">
-                                    <strong>العلامات الحيوية</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">ضغط الدم</label>
-                                            <input type="text" name="blood_pressure" class="form-control" value="{{ $emergency->blood_pressure }}" placeholder="120/80">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">معدل ضربات القلب</label>
-                                            <input type="number" name="heart_rate" class="form-control" value="{{ $emergency->heart_rate }}" placeholder="72">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">درجة الحرارة (°C)</label>
-                                            <input type="number" step="0.1" name="temperature" class="form-control" value="{{ $emergency->temperature }}" placeholder="37.0">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">تشبع الأكسجين (SpO2 %)</label>
-                                            <input type="number" name="oxygen_saturation" class="form-control" value="{{ $emergency->oxygen_saturation }}" placeholder="98">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">معدل التنفس (دقيقة)</label>
-                                            <input type="number" name="respiratory_rate" class="form-control" value="{{ $emergency->respiratory_rate }}" placeholder="16">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-light">
-                                    <strong>التقييم والخدمة</strong>
+                                    <strong><i class="fas fa-stethoscope me-2"></i>التشخيص والخدمات المقدمة</strong>
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-3">
-                                        <label class="form-label">التشخيص</label>
-                                        <input type="text" name="diagnosis" class="form-control" value="{{ $emergency->diagnosis }}" placeholder="اكتب التشخيص هنا...">
+                                        <label class="form-label fw-bold">التشخيص (ICD-10)</label>
+                                        @php
+                                            $diagnosisText = (old('emergency_id') == $emergency->id)
+                                                ? old('diagnosis', $emergency->diagnosis)
+                                                : $emergency->diagnosis;
+                                        @endphp
+                                        <input type="hidden" name="emergency_id" value="{{ $emergency->id }}">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-primary text-white">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text"
+                                                   name="diagnosis"
+                                                   class="form-control form-control-lg diagnosis-icd10-input"
+                                                   value="{{ $diagnosisText }}"
+                                                   placeholder="اختر رمز ICD-10 أو اكتب للتصفية..."
+                                                   autocomplete="off"
+                                                   list="icd10-list-{{ $emergency->id }}">
+                                            <datalist id="icd10-list-{{ $emergency->id }}">
+                                                @foreach($icd10Codes as $code)
+                                                    <option value="{{ $code->code }} - {{ $code->description_ar ?: $code->description }}"></option>
+                                                @endforeach
+                                                <option value="أخرى (أدخل يدوياً)"></option>
+                                            </datalist>
+                                        </div>
+                                        <small class="text-muted mt-1">
+                                            اختر التشخيص من جدول ICD-10 أو اكتب رمز/وصف التشخيص.
+                                        </small>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label">الخدمات المقدمة</label>
+                                        <label class="form-label fw-bold">الخدمات المقدمة</label>
                                         <div class="service-rows" id="service-rows-{{ $emergency->id }}">
                                             @php
                                                 $selectedServiceIds = $emergency->services->pluck('id')->all();
@@ -636,13 +851,97 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="treatmentModal-{{ $emergency->id }}" tabindex="-1" aria-labelledby="treatmentModalLabel-{{ $emergency->id }}" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="treatmentModalLabel-{{ $emergency->id }}">
+                    <i class="fas fa-pills me-2"></i>
+                    إضافة علاج لحالة الطوارئ #{{ $emergency->id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <form method="POST" action="{{ route('emergency.treatments.store', $emergency) }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 140px;">نوع العلاج</th>
+                                    <th>اسم الدواء / العلاج</th>
+                                    <th style="width: 120px;">المرات يومياً</th>
+                                    <th style="width: 140px;">الحالة</th>
+                                    <th style="width: 140px;">تاريخ البدء</th>
+                                    <th style="width: 140px;">تاريخ الانتهاء</th>
+                                    <th style="width: 70px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="treatment-rows-{{ $emergency->id }}">
+                                <tr class="treatment-row">
+                                    <td>
+                                        <select name="treatments[0][treatment_type]" class="form-select" required>
+                                            <option value="">اختر النوع</option>
+                                            <option value="medication">دوائي</option>
+                                            <option value="injection">إبرة</option>
+                                            <option value="drip">محلول</option>
+                                            <option value="oxygen">أكسجين</option>
+                                            <option value="other">أخرى</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <textarea name="treatments[0][description]" class="form-control" rows="2" placeholder="اسم الدواء أو العلاج..." required></textarea>
+                                        <input type="hidden" name="treatments[0][notes]" value="">
+                                    </td>
+                                    <td>
+                                        <input type="number" name="treatments[0][frequency_per_day]" class="form-control" min="1" max="24" placeholder="عدد المرات" aria-label="عدد المرات يومياً">
+                                    </td>
+                                    <td>
+                                        <select name="treatments[0][status]" class="form-select" required>
+                                            <option value="planned">مخطط</option>
+                                            <option value="in_progress">قيد التنفيذ</option>
+                                            <option value="completed">مكتمل</option>
+                                            <option value="cancelled">ملغي</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="date" name="treatments[0][started_at]" class="form-control">
+                                    </td>
+                                    <td>
+                                        <input type="date" name="treatments[0][completed_at]" class="form-control">
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row" aria-label="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm add-treatment-row" data-emergency-id="{{ $emergency->id }}">
+                            <i class="fas fa-plus me-1"></i>
+                            إضافة علاج
+                        </button>
+                        <small class="text-muted">أضف علاجاً واحداً أو أكثر ثم احفظ.</small>
+                    </div>
+                </div>
+                <div class="modal-footer gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning">حفظ العلاجات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endforeach
 
 @foreach($emergencies as $emergency)
     @php
         $hasConsultation = \App\Models\Appointment::where('emergency_id', $emergency->id)->exists();
     @endphp
-    @if(!$hasConsultation)
 <div class="modal fade" id="consultationModal-{{ $emergency->id }}" tabindex="-1" aria-labelledby="consultationModalLabel-{{ $emergency->id }}" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -666,9 +965,8 @@
                             <input type="time" name="appointment_time" class="form-control" value="{{ now()->addHour()->format('H:00') }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">الطبيب الاستشاري</label>
-                            <select name="doctor_id" class="form-select" required>
-                                <option value="">اختر الطبيب</option>
+                            <label class="form-label">الأطباء الاستشاريون</label>
+                            <select name="doctor_ids[]" class="form-select" multiple size="5" required>
                                 @php
                                     $daysMap = [
                                         'Saturday' => 'السبت',
@@ -689,13 +987,14 @@
                                 @endphp
                                 @foreach($consultantDoctors as $doctor)
                                     <option value="{{ $doctor->id }}">
-                                        د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->department->name ?? 'غير محدد' }}
+                                        {{ $doctor->user?->name ?? 'بدون اسم' }}
+                                        @if($doctor->department)
+                                            - {{ $doctor->department->name }}
+                                        @endif
                                     </option>
                                 @endforeach
-                                @if($consultantDoctors->isEmpty())
-                                    <option value="" disabled>لا يوجد أطباء استشاريون متاحون اليوم</option>
-                                @endif
                             </select>
+                            <div class="form-text">يمكن اختيار أكثر من طبيب بالضغط على Ctrl أو Shift ثم النقر.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">سبب الاستشارة</label>
@@ -725,7 +1024,6 @@
         </div>
     </div>
 </div>
-    @endif
 @endforeach
 
 @foreach($emergencies as $emergency)
@@ -935,7 +1233,72 @@
         </div>
     </div>
     @endif
+    <div class="modal fade" id="treatmentResultsModal-{{ $emergency->id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-pills me-2"></i>
+                        العلاجات المسجلة - حالة طوارئ #{{ $emergency->id }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    @php
+                        $treatmentTypes = [
+                            'medication' => 'دوائي',
+                            'injection' => 'إبرة',
+                            'drip' => 'محلول',
+                            'oxygen' => 'أكسجين',
+                            'other' => 'أخرى',
+                        ];
+                        $statusLabels = [
+                            'planned' => 'مخطط',
+                            'in_progress' => 'قيد التنفيذ',
+                            'completed' => 'مكتمل',
+                            'cancelled' => 'ملغي',
+                        ];
+                    @endphp
+                    @if($emergency->treatments->count())
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 140px;">نوع العلاج</th>
+                                        <th>اسم الدواء / العلاج</th>
+                                        <th style="width: 120px;">المرات يومياً</th>
+                                        <th style="width: 140px;">الحالة</th>
+                                        <th style="width: 140px;">تاريخ البدء</th>
+                                        <th style="width: 140px;">تاريخ الانتهاء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($emergency->treatments as $treatment)
+                                        <tr>
+                                            <td>{{ $treatmentTypes[$treatment->treatment_type] ?? $treatment->treatment_type }}</td>
+                                            <td>{{ $treatment->description }}</td>
+                                            <td>{{ $treatment->frequency_per_day ? $treatment->frequency_per_day . ' مرة' : '-' }}</td>
+                                            <td>{{ $statusLabels[$treatment->status] ?? $treatment->status }}</td>
+                                            <td>{{ optional($treatment->started_at)->format('d/m/Y') ?? '-' }}</td>
+                                            <td>{{ optional($treatment->completed_at)->format('d/m/Y') ?? '-' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="alert alert-light border text-muted mb-0">
+                            لا يوجد أي علاج مسجل بعد لهذه الحالة.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 @endforeach
+@endpush
+
+@endsection
 
 @section('scripts')
 <script>
@@ -961,6 +1324,34 @@ document.addEventListener('click', function(event) {
             row.querySelector('select').value = '';
         }
     }
+
+    if (event.target.closest('.add-treatment-row')) {
+        const button = event.target.closest('.add-treatment-row');
+        const emergencyId = button.getAttribute('data-emergency-id');
+        const container = document.getElementById(`treatment-rows-${emergencyId}`);
+        const template = document.getElementById(`treatment-row-template-${emergencyId}`);
+        if (!container || !template) {
+            return;
+        }
+        const index = container.querySelectorAll('.treatment-row').length;
+        const clone = template.content.cloneNode(true);
+        clone.querySelectorAll('[data-name]').forEach(el => {
+            el.setAttribute('name', el.getAttribute('data-name').replace('__index__', index));
+        });
+        container.appendChild(clone);
+    }
+
+    if (event.target.closest('.remove-treatment-row')) {
+        const row = event.target.closest('.treatment-row');
+        const container = row.closest('tbody');
+        if (container && container.querySelectorAll('.treatment-row').length > 1) {
+            row.remove();
+        } else if (row) {
+            row.querySelectorAll('select, textarea, input').forEach(field => {
+                field.value = '';
+            });
+        }
+    }
 });
 </script>
 
@@ -979,6 +1370,49 @@ document.addEventListener('click', function(event) {
         </button>
     </div>
 </template>
+
+@foreach($emergencies as $emergency)
+<template id="treatment-row-template-{{ $emergency->id }}">
+    <tr class="treatment-row">
+        <td>
+            <select data-name="treatments[__index__][treatment_type]" class="form-select" required>
+                <option value="">اختر النوع</option>
+                <option value="medication">دوائي</option>
+                <option value="injection">إبرة</option>
+                <option value="drip">محلول</option>
+                <option value="oxygen">أكسجين</option>
+                <option value="other">أخرى</option>
+            </select>
+        </td>
+        <td>
+            <textarea data-name="treatments[__index__][description]" class="form-control" rows="2" placeholder="اسم الدواء أو العلاج..." required></textarea>
+            <input type="hidden" data-name="treatments[__index__][notes]" value="">
+        </td>
+        <td>
+            <input type="number" data-name="treatments[__index__][frequency_per_day]" class="form-control" min="1" max="24" placeholder="عدد المرات" aria-label="عدد المرات يومياً">
+        </td>
+        <td>
+            <select data-name="treatments[__index__][status]" class="form-select" required>
+                <option value="planned">مخطط</option>
+                <option value="in_progress">قيد التنفيذ</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغي</option>
+            </select>
+        </td>
+        <td>
+            <input type="date" data-name="treatments[__index__][started_at]" class="form-control">
+        </td>
+        <td>
+            <input type="date" data-name="treatments[__index__][completed_at]" class="form-control">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row" aria-label="حذف">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+@endforeach
 
 <style>
 .medical-modal {

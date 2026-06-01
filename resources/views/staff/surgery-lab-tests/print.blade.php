@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نتائج تحاليل العملية - {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}</title>
+    <title>نتائج تحاليل العملية - {{ optional($test->surgery?->patient?->user)->name ?? 'غير معروف' }}</title>
     <style>
         * {
             margin: 0;
@@ -473,10 +473,11 @@
         <!-- معلومات المريض والعملية -->
         <div class="patient-info">
             <h3>معلومات المريض والعملية</h3>
+            @if($test->surgery && $test->surgery->patient)
             <div class="patient-details">
                 <div class="detail-item">
                     <span class="detail-label">الاسم:</span>
-                    <span class="detail-value">{{ $test->surgery->patient->user->name }}</span>
+                    <span class="detail-value">{{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">العمر:</span>
@@ -488,11 +489,11 @@
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">رقم الهاتف:</span>
-                    <span class="detail-value">{{ $test->surgery->patient->phone }}</span>
+                    <span class="detail-value">{{ $test->surgery->patient->phone ?? '-' }}</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">الطبيب الجراح:</span>
-                    <span class="detail-value">د. {{ $test->surgery->doctor->user->name }}</span>
+                    <span class="detail-value">د. {{ optional($test->surgery->doctor?->user)->name ?? 'غير محدد' }}</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">نوع العملية:</span>
@@ -500,13 +501,16 @@
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">تاريخ العملية:</span>
-                    <span class="detail-value">{{ $test->surgery->scheduled_date->format('Y-m-d') }} {{ $test->surgery->scheduled_time }}</span>
+                    <span class="detail-value">{{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : '-' }} {{ $test->surgery->scheduled_time }}</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">حالة العملية:</span>
                     <span class="detail-value">{{ $test->surgery->status_text }}</span>
                 </div>
             </div>
+            @else
+            <p class="text-muted">معلومات العملية غير متوفرة</p>
+            @endif
         </div>
 
         <!-- نتائج التحاليل -->

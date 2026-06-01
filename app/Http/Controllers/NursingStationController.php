@@ -11,20 +11,19 @@ class NursingStationController extends Controller
 {
     public function index()
     {
-        // جلب العمليات التي في محطة التمريض
+        // جلب العمليات التي في محطة التمريض (بعد المقيم post_op)
         $surgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse'])
-            ->whereHas('residentStation', function($q) {
-                $q->where('status', 'completed');
+            ->whereHas('residentStations', function($q) {
+                $q->where('phase', 'post_op')
+                  ->where('status', 'completed');
             })
-            ->whereHas('nursingStation', function($q) {
-                $q->where('status', '!=', 'completed');
+            ->where(function($query) {
+                $query->whereDoesntHave('nursingStation')
+                    ->orWhereHas('nursingStation', function($q) {
+                        $q->where('status', '!=', 'completed');
+                    });
             })
-            ->orWhere(function($query) {
-                $query->whereHas('residentStation', function($q) {
-                    $q->where('status', 'completed');
-                })->whereDoesntHave('nursingStation');
-            })
-            ->whereIn('status', ['in_progress', 'completed'])
+            ->whereIn('status', ['in_progress', 'completed', 'waiting'])
             ->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
@@ -34,10 +33,11 @@ class NursingStationController extends Controller
 
     public function show(Surgery $surgery)
     {
-        // التحقق من أن محطة المقيم مكتملة
-        if (!$surgery->residentStation || $surgery->residentStation->status !== 'completed') {
+        // التحقق من أن محطة المقيم (post_op) مكتملة
+        $postOpStation = $surgery->postOpResidentStation;
+        if (!$postOpStation || $postOpStation->status !== 'completed') {
             return redirect()->route('resident-station.show', $surgery)
-                ->with('error', 'يجب إتمام محطة المقيم أولاً');
+                ->with('error', 'يجب إتمام مرحلة متابعة المقيم أولاً');
         }
 
         // إنشاء محطة إذا لم تكن موجودة

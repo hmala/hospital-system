@@ -119,6 +119,11 @@ class RoleManagementController extends Controller
             'create products' => 'products',
             'edit products' => 'products',
             'delete products' => 'products',
+            // صلاحيات حجز الأشعة
+            'inquiry.create.radiology.general' => 'radiology_inquiry',
+            'inquiry.create.radiology.ultrasound' => 'radiology_inquiry',
+            'inquiry.create.radiology.mri' => 'radiology_inquiry',
+            'inquiry.create.radiology.echo' => 'radiology_inquiry',
         ];
 
         if (isset($specialGroups[$permissionName])) {
