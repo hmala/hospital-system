@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LabResult extends Model
 {
@@ -35,6 +36,11 @@ class LabResult extends Model
     public function request(): BelongsTo
     {
         return $this->belongsTo(Request::class);
+    }
+
+    public function subResults(): HasMany
+    {
+        return $this->hasMany(LabResultSubResult::class);
     }
 
     /**

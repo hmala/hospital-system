@@ -9,12 +9,25 @@
                     <i class="fas fa-flask me-2"></i>
                     إدارة الفحوصات المختبرية
                 </h2>
-                @if(Auth::user()->hasRole(['admin', 'lab_staff']))
-                    <a href="{{ route('lab-tests.create') }}" class="btn btn-success">
-                        <i class="fas fa-plus me-1"></i>
-                        إضافة فحص جديد
-                    </a>
-                @endif
+                <div>
+                    @if(request('has_sub_tests') === 'yes')
+                        <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-list me-1"></i>
+                            عرض جميع التحاليل
+                        </a>
+                    @else
+                        <a href="{{ route('lab-tests.index', ['has_sub_tests' => 'yes']) }}" class="btn btn-outline-info me-2">
+                            <i class="fas fa-list-ul me-1"></i>
+                            التحاليل ذات الفحوصات الفرعية
+                        </a>
+                    @endif
+                    @if(Auth::user()->hasRole(['admin', 'lab_staff']))
+                        <a href="{{ route('lab-tests.create') }}" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            إضافة فحص جديد
+                        </a>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
@@ -38,7 +51,7 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ route('lab-tests.index') }}" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="main_category" class="form-label">التصنيف الرئيسي</label>
                             <select class="form-select" id="main_category" name="main_category">
                                 <option value="">جميع التصنيفات الرئيسية</option>
@@ -49,7 +62,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="subcategory" class="form-label">التصنيف الفرعي</label>
                             <select class="form-select" id="subcategory" name="subcategory">
                                 <option value="">جميع التصنيفات الفرعية</option>
@@ -66,6 +79,13 @@
                                 <option value="">جميع الحالات</option>
                                 <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>نشط</option>
                                 <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>غير نشط</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="has_sub_tests" class="form-label">الفحوصات الفرعية</label>
+                            <select class="form-select" id="has_sub_tests" name="has_sub_tests">
+                                <option value="">الكل</option>
+                                <option value="yes" {{ request('has_sub_tests') == 'yes' ? 'selected' : '' }}>لها فحوصات فرعية</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -97,8 +117,11 @@
                     <h5 class="mb-0">
                         <i class="fas fa-list me-2"></i>
                         الفحوصات المختبرية ({{ $labTests->total() }} تحليل)
-                        @if(request('main_category') || request('subcategory') || request('status') || request('search'))
+                        @if(request('main_category') || request('subcategory') || request('status') || request('search') || request('has_sub_tests'))
                             <small class="text-white-50">(مفلترة)</small>
+                        @endif
+                        @if(request('has_sub_tests') === 'yes')
+                            <span class="badge bg-success ms-2">فقط التحاليل ذات الفحوصات الفرعية</span>
                         @endif
                     </h5>
                 </div>
@@ -115,6 +138,7 @@
                                         <th>وحدة القياس</th>
                                         <th>الوصف</th>
                                         <th>السعر</th>
+                                        <th class="text-center">الفحوصات الفرعية</th>
                                         <th>الحالة</th>
                                         <th>الإجراءات</th>
                                     </tr>
@@ -157,6 +181,23 @@
                                                 <strong class="text-success">{{ number_format($labTest->price, 0) }}</strong> د.ع
                                             @else
                                                 -
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($labTest->sub_tests_count > 0)
+                                                <a href="{{ route('admin.lab-test-sub-tests.index', $labTest->id) }}" 
+                                                   class="btn btn-sm btn-success" 
+                                                   title="إدارة الفحوصات الفرعية">
+                                                    <i class="fas fa-list-ul me-1"></i>
+                                                    {{ $labTest->sub_tests_count }}
+                                                </a>
+                                            @else
+                                                <a href="{{ route('admin.lab-test-sub-tests.index', $labTest->id) }}" 
+                                                   class="btn btn-sm btn-outline-secondary btn-sm" 
+                                                   title="إضافة فحوصات فرعية">
+                                                    <i class="fas fa-plus me-1"></i>
+                                                    إضافة
+                                                </a>
                                             @endif
                                         </td>
                                         <td>

@@ -192,10 +192,33 @@ class StaffRequestController extends Controller
         // استخراج النتائج المحفوظة سابقاً
         $savedTestResults = [];
         $savedNotes = '';
+        
+        // جلب النتائج من جدول lab_results مع النتائج الفرعية
+        if (in_array($request->type, ['lab', 'blood_bank'])) {
+            $labResults = LabResult::where('request_id', $request->id)->with('subResults')->get();
+            foreach ($labResults as $labResult) {
+                $savedTestResults[$labResult->test_name] = [
+                    'value' => $labResult->value,
+                    'unit' => $labResult->unit,
+                    'status' => $labResult->status,
+                ];
+                
+                // إضافة النتائج الفرعية إن وجدت
+                if ($labResult->subResults->count() > 0) {
+                    $savedTestResults[$labResult->test_name]['sub_results'] = [];
+                    foreach ($labResult->subResults as $subResult) {
+                        // استخدام value_text إذا كان موجوداً، وإلا استخدام value
+                        $savedTestResults[$labResult->test_name]['sub_results'][$subResult->sub_test_name] = 
+                            $subResult->value_text ?? $subResult->value;
+                    }
+                }
+            }
+        }
+
+        // الاحتفاظ بالملاحظات من JSON المحفوظ
         if ($request->result) {
             $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
             if (is_array($resultData)) {
-                $savedTestResults = $resultData['test_results'] ?? [];
                 $savedNotes = $resultData['notes'] ?? '';
             }
         }
@@ -465,6 +488,27 @@ class StaffRequestController extends Controller
                             'package_id' => $packageId,
                             'lab_test_id' => $labTestId,
                         ]);
+
+                        // حفظ النتائج الفرعية إن وجدت
+                        if (!empty($data['sub_results']) && is_array($data['sub_results'])) {
+                            // جلب معلومات التحليل لمعرفة أنواع الفحوصات الفرعية
+                            $labTest = \App\Models\LabTest::where('name', $testName)->with('subTests')->first();
+                            
+                            foreach ($data['sub_results'] as $subTestName => $subValue) {
+                                if ($subValue !== null && $subValue !== '') {
+                                    // التحقق من نوع الفحص الفرعي
+                                    $subTestInfo = $labTest?->subTests->firstWhere('name', $subTestName);
+                                    $isNumeric = $subTestInfo && $subTestInfo->result_type === 'numeric';
+                                    
+                                    \App\Models\LabResultSubResult::create([
+                                        'lab_result_id' => $labResult->id,
+                                        'sub_test_name' => $subTestName,
+                                        'value' => $isNumeric ? $subValue : null,
+                                        'value_text' => !$isNumeric ? $subValue : null,
+                                    ]);
+                                }
+                            }
+                        }
 
                         Log::info("تم حفظ نتيجة التحليل: {$testName}", [
                             'lab_result_id' => $labResult->id

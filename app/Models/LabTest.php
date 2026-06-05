@@ -83,6 +83,11 @@ class LabTest extends Model
         return $this->hasMany(LabTestReference::class);
     }
 
+    public function subTests()
+    {
+        return $this->hasMany(LabTestSubTest::class)->orderBy('sort_order');
+    }
+
     /**
      * جلب المرجع المناسب لمريض
      */

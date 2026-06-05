@@ -396,6 +396,24 @@ Route::middleware(['auth'])->group(function () {
     // إدارة باقات المختبر (Admin)
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('packages', \App\Http\Controllers\Admin\PackageController::class)->except(['show']);
+        
+        // إدارة التحاليل وعرض قائمتها
+        Route::get('lab-tests', [\App\Http\Controllers\Admin\LabTestController::class, 'index'])
+            ->name('lab-tests.index');
+        
+        // إدارة الفحوصات الفرعية للتحاليل
+        Route::get('lab-tests/{labTest}/sub-tests', [\App\Http\Controllers\Admin\LabTestSubTestController::class, 'index'])
+            ->name('lab-test-sub-tests.index');
+        Route::get('lab-tests/{labTest}/sub-tests/create', [\App\Http\Controllers\Admin\LabTestSubTestController::class, 'create'])
+            ->name('lab-test-sub-tests.create');
+        Route::post('lab-tests/{labTest}/sub-tests', [\App\Http\Controllers\Admin\LabTestSubTestController::class, 'store'])
+            ->name('lab-test-sub-tests.store');
+        Route::get('lab-tests/{labTest}/sub-tests/{subTest}/edit', [\App\Http\Controllers\Admin\LabTestSubTestController::class, 'edit'])
+            ->name('lab-test-sub-tests.edit');
+        Route::put('lab-tests/{labTest}/sub-tests/{subTest}', [\App\Http\Controllers\Admin\LabTestSubTestController::class, 'update'])
+            ->name('lab-test-sub-tests.update');
+        Route::delete('lab-tests/{labTest}/sub-tests/{subTest}', [\App\Http\Controllers\Admin\LabTestSubTestController::class, 'destroy'])
+            ->name('lab-test-sub-tests.destroy');
     });
 
     // إدارة العمليات

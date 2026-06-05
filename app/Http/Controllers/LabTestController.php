@@ -44,7 +44,12 @@ class LabTestController extends Controller
             });
         }
 
-        $labTests = $query->orderBy('main_category')->orderBy('subcategory')->orderBy('name')->paginate(20);
+        // فلترة التحاليل التي لها فحوصات فرعية فقط
+        if (request('has_sub_tests') === 'yes') {
+            $query->has('subTests');
+        }
+
+        $labTests = $query->withCount('subTests')->orderBy('main_category')->orderBy('subcategory')->orderBy('name')->paginate(20);
 
         // الحصول على جميع التصنيفات الرئيسية والفرعية الموجودة
         $mainCategories = LabTest::select('main_category')->distinct()->whereNotNull('main_category')->pluck('main_category')->toArray();

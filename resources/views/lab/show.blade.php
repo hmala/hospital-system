@@ -880,32 +880,123 @@ function buildSelectedLabTests($requestDetails) {
                                                                 <div class="d-flex align-items-center gap-2">
                                                                     <i class="{{ $testIcon }}"></i>
                                                                     <strong>{{ $test }}</strong>
+                                                                    @if($labTestObj && $labTestObj->subTests()->count() > 0)
+                                                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                                                data-bs-toggle="collapse" 
+                                                                                data-bs-target="#sub-{{ $index }}">
+                                                                            <i class="fas fa-chevron-down"></i>
+                                                                        </button>
+                                                                    @endif
                                                                 </div>
                                                             </td>
                                                             <td>
-                                                                <input type="text"
-                                                                       class="form-control form-control-sm test-value"
-                                                                       name="test_results[{{ $test }}][value]"
-                                                                       value="{{ old('test_results.' . $test . '.value', $savedVal) }}"
-                                                                       placeholder="أدخل القيمة"
-                                                                       tabindex="{{ $index + 1 }}"
-                                                                       data-test="{{ $test }}">
+                                                                @if($labTestObj && $labTestObj->subTests()->count() > 0)
+                                                                    <div class="text-muted small fst-italic">
+                                                                        <i class="fas fa-arrow-down text-info"></i>
+                                                                        النتائج في الفحوصات الفرعية
+                                                                    </div>
+                                                                @elseif($unitDisplay === 'text')
+                                                                    <select class="form-select form-select-sm test-value"
+                                                                            name="test_results[{{ $test }}][value]"
+                                                                            tabindex="{{ $index + 1 }}"
+                                                                            data-test="{{ $test }}">
+                                                                        <option value="" {{ old('test_results.' . $test . '.value', $savedVal) === '' ? 'selected' : '' }}>اختيار</option>
+                                                                        <option value="Positive" {{ old('test_results.' . $test . '.value', $savedVal) === 'Positive' ? 'selected' : '' }}>Positive</option>
+                                                                        <option value="Negative" {{ old('test_results.' . $test . '.value', $savedVal) === 'Negative' ? 'selected' : '' }}>Negative</option>
+                                                                    </select>
+                                                                @else
+                                                                    <input type="text"
+                                                                           class="form-control form-control-sm test-value"
+                                                                           name="test_results[{{ $test }}][value]"
+                                                                           value="{{ old('test_results.' . $test . '.value', $savedVal) }}"
+                                                                           placeholder="أدخل القيمة"
+                                                                           tabindex="{{ $index + 1 }}"
+                                                                           data-test="{{ $test }}">
+                                                                @endif
                                                                 <input type="hidden" name="test_results[{{ $test }}][unit]" value="{{ $unitDisplay }}">
                                                             </td>
-                                                            <td class="text-muted small">{{ $unitDisplay }}</td>
+                                                            <td class="text-muted small">
+                                                                @if($labTestObj && $labTestObj->subTests()->count() > 0)
+                                                                    <span class="text-muted small">—</span>
+                                                                @else
+                                                                    {{ $unitDisplay }}
+                                                                @endif
+                                                            </td>
                                                             <td>
-                                                                @if($refObj)
+                                                                @if($labTestObj && $labTestObj->subTests()->count() > 0)
+                                                                    <span class="text-muted small">—</span>
+                                                                @elseif($refObj)
                                                                     <span class="badge bg-light text-dark border">{{ $refDisplay }}</span>
                                                                 @else
                                                                     <span class="text-muted small">غير محدد</span>
                                                                 @endif
                                                             </td>
                                                             <td class="text-center">
-                                                                <span class="result-flag" id="flag-{{ $index }}">
-                                                                    <i class="fas fa-circle text-muted small"></i>
-                                                                </span>
+                                                                @if($labTestObj && $labTestObj->subTests()->count() > 0)
+                                                                    <span class="text-muted small">—</span>
+                                                                @else
+                                                                    <span class="result-flag" id="flag-{{ $index }}">
+                                                                        <i class="fas fa-circle text-muted small"></i>
+                                                                    </span>
+                                                                @endif
                                                             </td>
                                                         </tr>
+                                                        @if($labTestObj && $labTestObj->subTests()->count() > 0)
+                                                        <tr class="collapse" id="sub-{{ $index }}">
+                                                            <td colspan="6" class="bg-light">
+                                                                <div class="p-2">
+                                                                    <h6 class="text-primary mb-2">
+                                                                        <i class="fas fa-list-ul"></i> الفحوصات الفرعية
+                                                                    </h6>
+                                                                    <table class="table table-sm table-bordered mb-0">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th style="width:200px;">اسم الفحص</th>
+                                                                                <th style="width:150px;">القيمة</th>
+                                                                                <th style="width:80px;">الوحدة</th>
+                                                                                <th>المرجع</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            @foreach($labTestObj->subTests as $subTest)
+                                                                            @php
+                                                                                $savedSubValue = '';
+                                                                                if (is_array($savedTestResults) 
+                                                                                    && isset($savedTestResults[$test]) 
+                                                                                    && is_array($savedTestResults[$test])
+                                                                                    && isset($savedTestResults[$test]['sub_results'])
+                                                                                    && isset($savedTestResults[$test]['sub_results'][$subTest->name])) {
+                                                                                    $savedSubValue = $savedTestResults[$test]['sub_results'][$subTest->name];
+                                                                                }
+                                                                            @endphp
+                                                                            <tr>
+                                                                                <td><strong>{{ $subTest->name }}</strong></td>
+                                                                                <td>
+                                                                                    @if($subTest->result_type === 'numeric')
+                                                                                        <input type="number" 
+                                                                                               step="0.01"
+                                                                                               class="form-control form-control-sm"
+                                                                                               name="test_results[{{ $test }}][sub_results][{{ $subTest->name }}]"
+                                                                                               value="{{ old('test_results.' . $test . '.sub_results.' . $subTest->name, $savedSubValue) }}"
+                                                                                               placeholder="القيمة">
+                                                                                    @else
+                                                                                        <input type="text"
+                                                                                               class="form-control form-control-sm"
+                                                                                               name="test_results[{{ $test }}][sub_results][{{ $subTest->name }}]"
+                                                                                               value="{{ old('test_results.' . $test . '.sub_results.' . $subTest->name, $savedSubValue) }}"
+                                                                                               placeholder="{{ $subTest->reference_range }}">
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td class="text-muted small">{{ $subTest->unit }}</td>
+                                                                                <td class="text-muted small">{{ $subTest->reference_range }}</td>
+                                                                            </tr>
+                                                                            @endforeach
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        @endif
                                                     @endforeach
                                                 </tbody>
                                             </table>
