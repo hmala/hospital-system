@@ -612,7 +612,47 @@
                     </div> <!-- end patientMgmtSection -->
                     @endcanany
 
-                
+                    <!-- قسم نظام الحسابات -->
+                    @canany(['view accounting', 'view accounting reports', 'create expenses'])
+                    <div class="sidebar-divider"></div>
+                    <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#accountingSection" aria-expanded="false">
+                        <span><i class="fas fa-calculator"></i> نظام الحسابات</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="collapse collapse-section" id="accountingSection">
+                        @can('view accounting')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('accounting.dashboard') ? 'active' : '' }}" href="{{ route('accounting.dashboard') }}">
+                                <i class="fas fa-tachometer-alt"></i><span> لوحة الحسابات</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('accounting.expenses.*') ? 'active' : '' }}" href="{{ route('accounting.expenses.index') }}">
+                                <i class="fas fa-receipt"></i><span> المصروفات</span>
+                                @php
+                                    $pendingExpensesCount = \App\Models\Expense::where('status', 'pending')->count();
+                                @endphp
+                                @if($pendingExpensesCount > 0)
+                                    <span class="badge bg-warning ms-2">{{ $pendingExpensesCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view accounting reports')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('accounting.reports.revenue') ? 'active' : '' }}" href="{{ route('accounting.reports.revenue') }}">
+                                <i class="fas fa-chart-bar text-success"></i><span> تقرير الإيرادات</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('accounting.reports.expenses') ? 'active' : '' }}" href="{{ route('accounting.reports.expenses') }}">
+                                <i class="fas fa-chart-pie text-danger"></i><span> تقرير المصروفات</span>
+                            </a>
+                        </li>
+                        @endcan
+                    </div>
+                    @endcanany
+
 
                         <!-- قسم الطوارئ -->
                         @canany(['view emergencies', 'create emergencies', 'edit emergencies', 'manage emergency vitals'])

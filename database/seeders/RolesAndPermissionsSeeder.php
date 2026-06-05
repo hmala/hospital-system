@@ -41,6 +41,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit appointments',
             'delete appointments',
             'cancel appointments',
+            // صلاحيات نظام الحسابات
+            'view accounting',
+            'view accounting reports',
+            'create expenses',
+            'edit expenses',
+            'delete expenses',
+            'approve expenses',
+
             // صلاحيات الكاشير - منفصلة لكل قسم
             'view cashier',
             'view cashier appointments',      // عرض مواعيد الاستشارية
@@ -273,6 +281,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'process surgery payments',
             'view cashier reports',
             'view patients',
+            // صلاحيات نظام الحسابات
+            'view accounting',
+            'view accounting reports',
+            'create expenses',
+            'edit expenses',
+            'approve expenses',
         ]);
 
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)

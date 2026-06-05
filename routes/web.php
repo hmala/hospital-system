@@ -225,6 +225,29 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
     });
     
+    // مسارات نظام الحسابات (Accounting Routes)
+    Route::prefix('accounting')->name('accounting.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AccountingController::class, 'dashboard'])->name('dashboard');
+
+        // المصروفات
+        Route::prefix('expenses')->name('expenses.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AccountingController::class, 'expensesIndex'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\AccountingController::class, 'createExpense'])->name('create');
+            Route::post('/', [\App\Http\Controllers\AccountingController::class, 'storeExpense'])->name('store');
+            Route::get('/{expense}/edit', [\App\Http\Controllers\AccountingController::class, 'editExpense'])->name('edit');
+            Route::put('/{expense}', [\App\Http\Controllers\AccountingController::class, 'updateExpense'])->name('update');
+            Route::delete('/{expense}', [\App\Http\Controllers\AccountingController::class, 'destroyExpense'])->name('destroy');
+            Route::post('/{expense}/approve', [\App\Http\Controllers\AccountingController::class, 'approveExpense'])->name('approve');
+            Route::post('/{expense}/reject', [\App\Http\Controllers\AccountingController::class, 'rejectExpense'])->name('reject');
+        });
+
+        // التقارير
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/revenue', [\App\Http\Controllers\AccountingController::class, 'revenueReport'])->name('revenue');
+            Route::get('/expenses', [\App\Http\Controllers\AccountingController::class, 'expensesReport'])->name('expenses');
+        });
+    });
+
     // مسارات الإشعارات (Notifications Routes)
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
