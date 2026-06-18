@@ -19,17 +19,36 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="{{ route('consultant-availability.financial-movements') }}" class="row g-3 align-items-end">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="from_date" class="form-label">من تاريخ</label>
                             <input type="date" id="from_date" name="from_date" class="form-control" value="{{ old('from_date', $fromDate) }}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="to_date" class="form-label">إلى تاريخ</label>
                             <input type="date" id="to_date" name="to_date" class="form-control" value="{{ old('to_date', $toDate) }}">
                         </div>
-                        <div class="col-md-4 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary w-100">تصفية</button>
-                            <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-outline-secondary w-100">مسح</a>
+                        <div class="col-md-3">
+                            <label for="filter_type" class="form-label">نوع الحركة</label>
+                            <select id="filter_type" name="filter_type" class="form-select">
+                                <option value="">كل الحركات</option>
+                                <option value="payment" {{ $filterType === 'payment' ? 'selected' : '' }}>حركات قبض</option>
+                                <option value="refund" {{ $filterType === 'refund' ? 'selected' : '' }}>حركات استرجاع</option>
+                                <option value="appointment_paid" {{ $filterType === 'appointment_paid' ? 'selected' : '' }}>المواعيد المدفوعة بالكامل</option>
+                                <option value="appointment_refunded" {{ $filterType === 'appointment_refunded' ? 'selected' : '' }}>المواعيد المدفوعة ثم المسترجعة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex flex-column gap-2">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-2"></i>تصفية
+                                </button>
+                                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-redo me-2"></i>مسح
+                                </a>
+                            </div>
+                            <a href="{{ route('consultant-availability.financial-movements.export', request()->only(['from_date', 'to_date', 'filter_type'])) }}" class="btn btn-success w-100">
+                                <i class="fas fa-file-excel me-2"></i>تصدير إكسل
+                            </a>
                         </div>
                     </form>
                 </div>
@@ -95,9 +114,10 @@
                                         <th>الطبيب</th>
                                         <th>القسم</th>
                                         <th>المبلغ</th>
+                                        <th>حصة الطبيب</th>
+                                        <th>حصة المستشفى</th>
                                         <th>نوع الحركة</th>
                                         <th>طريقة الدفع</th>
-                                        <th>الوصف</th>
                                         <th>رقم الإيصال</th>
                                         <th>الجهة / الكاشير</th>
                                     </tr>
@@ -110,26 +130,21 @@
                                             <td>{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-' }}</td>
                                             <td>{{ optional(optional(optional($payment->appointment)->doctor)->user)->name ?? '-' }}</td>
                                             <td>{{ optional(optional($payment->appointment)->department)->name ?? '-' }}</td>
-                                            <td class="fw-bold {{ $payment->amount < 0 ? 'text-danger' : 'text-success' }}">
-                                                {{ number_format(abs($payment->amount), 2) }} IQD
+                                            <td class="fw-bold {{ $payment->total_amount < 0 ? 'text-danger' : 'text-success' }}">
+                                                {{ number_format(abs($payment->total_amount), 2) }} IQD
                                             </td>
+                                            <td class="text-success">{{ number_format($payment->doctor_share, 2) }} IQD</td>
+                                            <td class="text-info">{{ number_format($payment->hospital_share, 2) }} IQD</td>
                                             <td>
-                                                @if($payment->amount < 0)
+                                                @if($payment->movement_type === 'refund' || $payment->total_amount < 0)
                                                     <span class="badge bg-danger">استرجاع</span>
                                                 @else
                                                     <span class="badge bg-success">قبض</span>
                                                 @endif
                                             </td>
-                                            <td>{{ $payment->payment_method_name ?? ($payment->payment_method ?: '-') }}</td>
-                                            <td>{{ $payment->description ?? '-' }}</td>
+                                            <td>{{ $payment->payment_method ?? '-' }}</td>
                                             <td>{{ $payment->receipt_number ?? '-' }}</td>
-                                            <td>
-                                                @if($payment->amount < 0)
-                                                    {{ optional($payment->appointment)->cancelled_by ?? optional($payment->appointment)->cancellation_reason ?? 'غير معروف' }}
-                                                @else
-                                                    {{ optional($payment->cashier)->name ?? '-' }}
-                                                @endif
-                                            </td>
+                                            <td>{{ optional($payment->cashier)->name ?? '-' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

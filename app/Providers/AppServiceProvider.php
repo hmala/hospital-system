@@ -12,8 +12,10 @@ use App\Models\Visit;
 use App\Models\Surgery;
 use App\Models\SurgeryRadiologyTest;
 use App\Models\Request as MedicalRequest;
+use App\Models\Payment;
 use App\Models\BedReservation;
 use App\Observers\BedReservationObserver;
+use App\Observers\PaymentObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
 
         // تسجيل Observer لمزامنة حالة الغرف مع الحجوزات
         BedReservation::observe(BedReservationObserver::class);
+        Payment::observe(PaymentObserver::class);
 
         // تسجيل Blade directives لـ Spatie Permission
         Blade::if('role', function ($role) {

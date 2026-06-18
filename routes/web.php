@@ -74,6 +74,16 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.index');
     Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
         ->name('consultant-availability.financial-movements');
+    Route::get('/consultant-availability/financial-movements/export', [ConsultantAvailabilityController::class, 'exportFinancialMovements'])
+        ->name('consultant-availability.financial-movements.export');
+    Route::get('/consultant-availability/doctor-accounts', [ConsultantAvailabilityController::class, 'doctorAccounts'])
+        ->name('consultant-availability.doctor-accounts');
+    Route::get('/consultant-availability/doctor-accounts/{doctor}', [ConsultantAvailabilityController::class, 'doctorAccount'])
+        ->name('consultant-availability.doctor-account');
+    Route::get('/consultant-availability/doctor-accounts/{doctor}/export', [ConsultantAvailabilityController::class, 'exportDoctorAccount'])
+        ->name('consultant-availability.doctor-account.export');
+    Route::post('/consultant-availability/doctor-accounts/{doctor}/payout', [ConsultantAvailabilityController::class, 'doctorPayout'])
+        ->name('consultant-availability.doctor-payout');
     Route::get('/debug-user', function () {
         return \App\Models\User::with(['roles','permissions'])->limit(10)->get();
     });
@@ -223,6 +233,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
+        Route::get('/statements/export', [\App\Http\Controllers\CashierController::class, 'exportStatements'])->name('statements.export');
+        Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
     });
     
     // مسارات الإشعارات (Notifications Routes)
@@ -395,6 +407,9 @@ Route::middleware(['auth'])->group(function () {
 
     // إدارة باقات المختبر (Admin)
     Route::prefix('admin')->name('admin.')->group(function () {
+        Route::resource('doctor-commission-settings', \App\Http\Controllers\Admin\DoctorCommissionSettingController::class)->except(['show']);
+        Route::post('doctor-commission-settings/save', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'save'])
+            ->name('doctor-commission-settings.save');
         Route::resource('packages', \App\Http\Controllers\Admin\PackageController::class)->except(['show']);
     });
 
@@ -413,34 +428,49 @@ Route::middleware(['auth'])->group(function () {
     // محطات العمليات
     Route::prefix('surgery-stations')->group(function () {
         // محطة الجراح
-        Route::get('/surgeon', [\App\Http\Controllers\SurgeonStationController::class, 'index'])->name('surgeon-station.index');
-        Route::get('/surgeon/{surgery}', [\App\Http\Controllers\SurgeonStationController::class, 'show'])->name('surgeon-station.show');
-        Route::patch('/surgeon/{surgery}', [\App\Http\Controllers\SurgeonStationController::class, 'update'])->name('surgeon-station.update');
-        Route::post('/surgeon/{surgery}/complete', [\App\Http\Controllers\SurgeonStationController::class, 'complete'])->name('surgeon-station.complete');
+        Route::middleware('can:view surgeon station')->group(function () {
+            Route::get('/surgeon', [\App\Http\Controllers\SurgeonStationController::class, 'index'])->name('surgeon-station.index');
+            Route::get('/surgeon/{surgery}', [\App\Http\Controllers\SurgeonStationController::class, 'show'])->name('surgeon-station.show');
+            Route::get('/surgeon/{surgery}/resident-follow-ups', [\App\Http\Controllers\SurgeonStationController::class, 'residentFollowUps'])->name('surgeon-station.resident-follow-ups');
+            Route::patch('/surgeon/{surgery}', [\App\Http\Controllers\SurgeonStationController::class, 'update'])->name('surgeon-station.update');
+            Route::post('/surgeon/{surgery}/complete', [\App\Http\Controllers\SurgeonStationController::class, 'complete'])->name('surgeon-station.complete');
+        });
         
         // محطة التخدير
-        Route::get('/anesthesia', [\App\Http\Controllers\AnesthesiaStationController::class, 'index'])->name('anesthesia-station.index');
-        Route::get('/anesthesia/{surgery}', [\App\Http\Controllers\AnesthesiaStationController::class, 'show'])->name('anesthesia-station.show');
-        Route::patch('/anesthesia/{surgery}', [\App\Http\Controllers\AnesthesiaStationController::class, 'update'])->name('anesthesia-station.update');
-        Route::post('/anesthesia/{surgery}/complete', [\App\Http\Controllers\AnesthesiaStationController::class, 'complete'])->name('anesthesia-station.complete');
+        Route::middleware('can:view anesthesia station')->group(function () {
+            Route::get('/anesthesia', [\App\Http\Controllers\AnesthesiaStationController::class, 'index'])->name('anesthesia-station.index');
+            Route::get('/anesthesia/{surgery}', [\App\Http\Controllers\AnesthesiaStationController::class, 'show'])->name('anesthesia-station.show');
+            Route::patch('/anesthesia/{surgery}', [\App\Http\Controllers\AnesthesiaStationController::class, 'update'])->name('anesthesia-station.update');
+            Route::post('/anesthesia/{surgery}/complete', [\App\Http\Controllers\AnesthesiaStationController::class, 'complete'])->name('anesthesia-station.complete');
+        });
         
         // محطة المقيم
-        Route::get('/resident', [\App\Http\Controllers\ResidentStationController::class, 'index'])->name('resident-station.index');
-        Route::get('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'show'])->name('resident-station.show');
-        Route::patch('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'update'])->name('resident-station.update');
-        Route::post('/resident/{surgery}/complete', [\App\Http\Controllers\ResidentStationController::class, 'complete'])->name('resident-station.complete');
+        Route::middleware('can:view resident station')->group(function () {
+            Route::get('/resident', [\App\Http\Controllers\ResidentStationController::class, 'index'])->name('resident-station.index');
+            Route::get('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'show'])->name('resident-station.show');
+            Route::patch('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'update'])->name('resident-station.update');
+            Route::post('/resident/{surgery}/complete', [\App\Http\Controllers\ResidentStationController::class, 'complete'])->name('resident-station.complete');
+            Route::post('/resident/{surgery}/follow-ups', [\App\Http\Controllers\ResidentStationController::class, 'storeFollowUp'])->name('resident-station.follow-ups.store');
+        });
         
         // محطة صالة العمليات
-        Route::get('/operation-theater', [\App\Http\Controllers\OperationTheaterStationController::class, 'index'])->name('operation-theater-station.index');
-        Route::get('/operation-theater/{surgery}', [\App\Http\Controllers\OperationTheaterStationController::class, 'show'])->name('operation-theater-station.show');
-        Route::patch('/operation-theater/{surgery}', [\App\Http\Controllers\OperationTheaterStationController::class, 'update'])->name('operation-theater-station.update');
-        Route::post('/operation-theater/{surgery}/complete', [\App\Http\Controllers\OperationTheaterStationController::class, 'complete'])->name('operation-theater-station.complete');
+        Route::middleware('can:view operation theater station')->group(function () {
+            Route::get('/operation-theater', [\App\Http\Controllers\OperationTheaterStationController::class, 'index'])->name('operation-theater-station.index');
+            Route::get('/operation-theater/{surgery}', [\App\Http\Controllers\OperationTheaterStationController::class, 'show'])->name('operation-theater-station.show');
+            Route::patch('/operation-theater/{surgery}', [\App\Http\Controllers\OperationTheaterStationController::class, 'update'])->name('operation-theater-station.update');
+            Route::post('/operation-theater/{surgery}/complete', [\App\Http\Controllers\OperationTheaterStationController::class, 'complete'])->name('operation-theater-station.complete');
+        });
         
         // محطة التمريض
-        Route::get('/nursing', [\App\Http\Controllers\NursingStationController::class, 'index'])->name('nursing-station.index');
-        Route::get('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'show'])->name('nursing-station.show');
-        Route::patch('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'update'])->name('nursing-station.update');
-        Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
+        Route::middleware('can:view nursing station')->group(function () {
+            Route::get('/nursing', [\App\Http\Controllers\NursingStationController::class, 'index'])->name('nursing-station.index');
+            Route::get('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'show'])->name('nursing-station.show');
+            Route::patch('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'update'])->name('nursing-station.update');
+            Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
+        });
+
+        // إعطاء العلاج (مشترك للمقيم والتمريض)
+        Route::post('/treatments/{treatment}/administer', [\App\Http\Controllers\ResidentStationController::class, 'administerTreatment'])->name('surgery-treatments.administer');
     });
     
     // إضافة طبيب مرسل جديد

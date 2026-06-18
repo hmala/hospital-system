@@ -31,7 +31,12 @@
                             </thead>
                             <tbody>
                                 @forelse($surgeries as $surgery)
-                                <tr>
+                                @php
+                                    $rowClass = $surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed'
+                                        ? 'table-success'
+                                        : '';
+                                @endphp
+                                <tr class="{{ $rowClass }}">
                                     <td>{{ $surgery->patient->file_number }}</td>
                                     <td>{{ $surgery->patient->user->full_name }}</td>
                                     <td>{{ $surgery->surgery_name }}</td>
@@ -53,7 +58,7 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <a href="{{ route('anesthesia-station.show', $surgery) }}" class="btn btn-sm btn-primary">
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye"></i> عرض التفاصيل
                                         </a>
                                     </td>

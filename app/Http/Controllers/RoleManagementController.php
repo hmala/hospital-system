@@ -124,6 +124,12 @@ class RoleManagementController extends Controller
             'inquiry.create.radiology.ultrasound' => 'radiology_inquiry',
             'inquiry.create.radiology.mri' => 'radiology_inquiry',
             'inquiry.create.radiology.echo' => 'radiology_inquiry',
+            // صلاحيات محطات العمليات الجراحية
+            'view resident station' => 'surgeries',
+            'view operation theater station' => 'surgeries',
+            'view surgeon station' => 'surgeries',
+            'view anesthesia station' => 'surgeries',
+            'view nursing station' => 'surgeries',
         ];
 
         if (isset($specialGroups[$permissionName])) {

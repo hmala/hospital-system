@@ -3,12 +3,16 @@
 @section('content')
 @php
     // حساب التكاليف مع تتبع حالة الدفع
-    $surgeryFee = $surgery->surgery_fee ?? 0; // pull from surgery record, not operation model
-    $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid';
+    $surgeryFee = $surgery->surgery_fee ?? 0;
+    $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
+    $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
+    $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $remainingSurgeryFee <= 0;
     
     // رسوم الغرفة (أول ليلة مجانية)
     $roomFee = $surgery->room_fee ?? 0;
-    $roomFeePaid = $surgery->payment_status === 'paid'; // يمكن تعديله حسب نظام تتبع دفع الغرفة
+    $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
+    $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
+    $roomFeePaid = $remainingRoomFee <= 0;
     
     // تحاليل معلقة ومدفوعة
     $pendingLabTests = $surgery->labTests->where('payment_status', '!=', 'paid');
@@ -30,9 +34,9 @@
         return $test->radiologyType->base_price ?? 0;
     });
     
-    // المبالغ (تشمل رسوم الغرفة)
-    $pendingAmount = ($surgeryFeePaid ? 0 : $surgeryFee) + ($roomFeePaid ? 0 : $roomFee) + $pendingLabFee + $pendingRadiologyFee;
-    $paidAmount = ($surgeryFeePaid ? $surgeryFee : 0) + ($roomFeePaid ? $roomFee : 0) + $paidLabFee + $paidRadiologyFee;
+    // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً)
+    $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
+    $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
     $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
 @endphp
 
@@ -82,16 +86,16 @@
                                     معلومات المريض
                                 </h6>
                                 <div class="mb-2">
-                                    <strong>الاسم:</strong> {{ $surgery->patient->user->name }}
+                                    <strong>الاسم:</strong> {{ $surgery->patient && $surgery->patient->user ? $surgery->patient->user->name : 'غير محدد' }}
                                 </div>
                                 <div class="mb-2">
-                                    <strong>رقم الهوية:</strong> {{ $surgery->patient->national_id ?? 'غير محدد' }}
+                                    <strong>رقم الهوية:</strong> {{ $surgery->patient ? ($surgery->patient->national_id ?? 'غير محدد') : 'غير محدد' }}
                                 </div>
                                 <div class="mb-2">
-                                    <strong>رقم الهاتف:</strong> {{ $surgery->patient->user->phone ?? 'غير محدد' }}
+                                    <strong>رقم الهاتف:</strong> {{ $surgery->patient && $surgery->patient->user ? ($surgery->patient->user->phone ?? 'غير محدد') : 'غير محدد' }}
                                 </div>
                                 <div class="mb-2">
-                                    <strong>الطبيب المعالج:</strong> د. {{ $surgery->doctor->user->name }}
+                                    <strong>الطبيب المعالج:</strong> د. {{ $surgery->doctor && $surgery->doctor->user ? $surgery->doctor->user->name : 'غير محدد' }}
                                 </div>
                             </div>
                         </div>
@@ -135,16 +139,58 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if($surgeryFeePaid)
+                                    @if($surgeryFeePaidAmount > 0)
                                     <tr class="table-success">
                                         <td>
                                             <i class="fas fa-procedures text-success me-2"></i>
                                             رسوم العملية الجراحية
                                         </td>
-                                        <td>{{ $surgery->surgery_type }}</td>
-                                        <td class="text-end">{{ number_format($surgeryFee, 0) }}</td>
+                                        <td>
+                                            {{ $surgery->surgery_type }}
+                                            @if($remainingSurgeryFee > 0)
+                                                <small class="text-muted d-block">(تم دفع جزء من الرسوم)</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-end">
+                                            {{ number_format($surgeryFeePaidAmount, 0) }}
+                                            @if($remainingSurgeryFee > 0)
+                                                <br><small class="text-muted">من إجمالي {{ number_format($surgeryFee, 0) }}</small>
+                                            @endif
+                                        </td>
                                         <td class="text-center">
-                                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
+                                            @if($remainingSurgeryFee > 0)
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-adjust me-1"></i>مدفوع جزئياً</span>
+                                            @else
+                                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endif
+                                    
+                                    @if($roomFeePaidAmount > 0)
+                                    <tr class="table-success">
+                                        <td>
+                                            <i class="fas fa-door-open text-success me-2"></i>
+                                            أجور الغرفة
+                                        </td>
+                                        <td>
+                                            الغرفة {{ $surgery->room->room_number ?? 'غير محدد' }}
+                                            @if($remainingRoomFee > 0)
+                                                <small class="text-muted d-block">(تم دفع جزء من الرسوم)</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-end">
+                                            {{ number_format($roomFeePaidAmount, 0) }}
+                                            @if($remainingRoomFee > 0)
+                                                <br><small class="text-muted">من إجمالي {{ number_format($roomFee, 0) }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($remainingRoomFee > 0)
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-adjust me-1"></i>مدفوع جزئياً</span>
+                                            @else
+                                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
+                                            @endif
                                         </td>
                                     </tr>
                                     @endif
@@ -243,65 +289,106 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <!-- رسوم العملية (إذا لم تُدفع) -->
-                                        @if(!$surgeryFeePaid && $surgeryFee > 0)
-                                        <tr class="table-light">
+                                        <!-- رسوم العملية (إذا لم تُدفع بالكامل) -->
+                                        @if(!$surgeryFeePaid && $remainingSurgeryFee > 0)
+                                        <tr class="table-light align-middle">
                                             <td class="text-center">
                                                 <input type="checkbox" 
                                                        class="form-check-input payment-item" 
+                                                       id="pay_surgery_checkbox"
                                                        name="pay_surgery" 
                                                        value="1"
-                                                       data-amount="{{ $surgeryFee }}"
+                                                       data-is-custom="true"
                                                        checked>
                                             </td>
                                             <td>
                                                 <i class="fas fa-procedures text-danger me-2"></i>
                                                 <strong>رسوم العملية الجراحية</strong>
+                                                @if($surgeryFeePaidAmount > 0)
+                                                    <span class="badge bg-warning text-dark ms-1">تم دفع {{ number_format($surgeryFeePaidAmount, 0) }} سابقاً</span>
+                                                @endif
                                             </td>
-                                            <td>{{ $surgery->surgery_type }}</td>
+                                            <td>
+                                                <div class="surgery-payment-options" id="surgery_payment_options_container">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input surgery-payment-type" type="radio" name="surgery_payment_type" id="surgery_pay_full" value="full" checked>
+                                                        <label class="form-check-label text-dark" for="surgery_pay_full">دفع كامل المتبقي</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input surgery-payment-type" type="radio" name="surgery_payment_type" id="surgery_pay_part" value="partial">
+                                                        <label class="form-check-label text-dark" for="surgery_pay_part">دفع جزء من الرسوم</label>
+                                                    </div>
+                                                    <div class="mt-2" id="surgery_custom_amount_wrapper" style="display: none; max-width: 200px;">
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" class="form-control" id="surgery_custom_amount" name="surgery_custom_amount" value="{{ $remainingSurgeryFee }}" min="1" max="{{ $remainingSurgeryFee }}">
+                                                            <span class="input-group-text">IQD</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td class="text-end">
-                                                <strong>{{ number_format($surgeryFee, 0) }}</strong>
+                                                <strong id="surgery_fee_display">{{ number_format($remainingSurgeryFee, 0) }}</strong>
+                                                <input type="hidden" id="surgery_fee_value" value="{{ $remainingSurgeryFee }}">
                                             </td>
                                         </tr>
                                         @endif
 
-                                        <!-- رسوم الغرفة (إذا لم تُدفع) - حتى لو كانت مجانية لعرض الملاحظة -->
-                                        @if(!$roomFeePaid && $surgery->room_id)
-                                        <tr class="table-primary">
+                                        <!-- رسوم الغرفة (إذا لم تُدفع بالكامل) -->
+                                        @if(!$roomFeePaid && $remainingRoomFee > 0)
+                                        <tr class="table-primary align-middle">
                                             <td class="text-center">
                                                 <input type="checkbox" 
                                                        class="form-check-input payment-item" 
+                                                       id="pay_room_checkbox"
                                                        name="pay_room" 
                                                        value="1"
-                                                       data-amount="{{ $roomFee }}"
+                                                       data-is-custom="true"
                                                        checked>
                                             </td>
                                             <td>
                                                 <i class="fas fa-door-open text-info me-2"></i>
                                                 <strong>أجور الغرفة</strong>
+                                                @if($roomFeePaidAmount > 0)
+                                                    <span class="badge bg-warning text-dark ms-1">تم دفع {{ number_format($roomFeePaidAmount, 0) }} سابقاً</span>
+                                                @endif
                                             </td>
                                             <td>
-                                                <strong>{{ $surgery->room->room_number }}</strong>
-                                                @if($surgery->room->room_type === 'vip')
-                                                    <span class="badge bg-warning text-dark ms-1">
-                                                        <i class="fas fa-star"></i> VIP
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-secondary ms-1">عادية</span>
-                                                @endif
-                                                @if($surgery->expected_stay_days)
-                                                    <br><small class="text-muted">
-                                                        {{ $surgery->expected_stay_days }} يوم × {{ number_format($surgery->room->daily_fee ?? 0, 0) }} د.ع
-                                                    </small>
-                                                    <br><small class="text-muted">(أول ليلة مجانية)</small>
-                                                @endif
+                                                <div class="mb-2">
+                                                    <strong>{{ $surgery->room->room_number ?? 'غير محدد' }}</strong>
+                                                    @if($surgery->room && $surgery->room->room_type === 'vip')
+                                                        <span class="badge bg-warning text-dark ms-1">
+                                                            <i class="fas fa-star"></i> VIP
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-secondary ms-1">عادية</span>
+                                                    @endif
+                                                    @if($surgery->expected_stay_days)
+                                                        <br><small class="text-muted">
+                                                            {{ $surgery->expected_stay_days }} يوم × {{ number_format($surgery->room->daily_fee ?? 0, 0) }} د.ع
+                                                        </small>
+                                                        <br><small class="text-muted">(أول ليلة مجانية)</small>
+                                                    @endif
+                                                </div>
+                                                <div class="room-payment-options" id="room_payment_options_container">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input room-payment-type" type="radio" name="room_payment_type" id="room_pay_full" value="full" checked>
+                                                        <label class="form-check-label text-dark" for="room_pay_full">دفع كامل المتبقي</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input room-payment-type" type="radio" name="room_payment_type" id="room_pay_part" value="partial">
+                                                        <label class="form-check-label text-dark" for="room_pay_part">دفع جزء من الرسوم</label>
+                                                    </div>
+                                                    <div class="mt-2" id="room_custom_amount_wrapper" style="display: none; max-width: 200px;">
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" class="form-control" id="room_custom_amount" name="room_custom_amount" value="{{ $remainingRoomFee }}" min="1" max="{{ $remainingRoomFee }}">
+                                                            <span class="input-group-text">IQD</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td class="text-end">
-                                                <strong>{{ number_format($roomFee, 0) }}
-                                                @if($surgery->expected_stay_days && $surgery->room)
-                                                    <br><small class="text-muted">التكلفة الفعلية {{ number_format($surgery->room->daily_fee * $surgery->expected_stay_days, 0) }} د.ع</small>
-                                                @endif
-                                                </strong>
+                                                <strong id="room_fee_display">{{ number_format($remainingRoomFee, 0) }}</strong>
+                                                <input type="hidden" id="room_fee_value" value="{{ $remainingRoomFee }}">
                                             </td>
                                         </tr>
                                         @endif
@@ -526,27 +613,105 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const pendingAmount = {{ $pendingAmount }};
-    const surgeryFee = {{ $surgeryFee }};
+    const remainingSurgeryFee = {{ $remainingSurgeryFee }};
+    const remainingRoomFee = {{ $remainingRoomFee }};
     const inclusiveCheckbox = document.getElementById('inclusive');
 
     function calculateSelectedAmount() {
         let selectedAmount = 0;
         let selectedCount = 0;
 
-        if (inclusiveCheckbox && inclusiveCheckbox.checked) {
-            selectedAmount = surgeryFee;
-            selectedCount = 1;
-        } else {
-            document.querySelectorAll('.payment-item:checked').forEach(function(item) {
-                selectedAmount += parseFloat(item.dataset.amount) || 0;
+        const isIncl = inclusiveCheckbox && inclusiveCheckbox.checked;
+
+        if (isIncl) {
+            // 1. Surgery Fee portion
+            const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
+            if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
+                const payFull = document.getElementById('surgery_pay_full').checked;
+                if (payFull) {
+                    selectedAmount += remainingSurgeryFee;
+                    document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
+                    document.getElementById('surgery_fee_display').textContent = numberFormat(remainingSurgeryFee);
+                } else {
+                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'block';
+                    let customVal = parseFloat(document.getElementById('surgery_custom_amount').value) || 0;
+                    if (customVal > remainingSurgeryFee) {
+                        customVal = remainingSurgeryFee;
+                        document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                    }
+                    selectedAmount += customVal;
+                    document.getElementById('surgery_fee_display').textContent = numberFormat(customVal);
+                }
                 selectedCount++;
+            }
+        } else {
+            // Standard non-inclusive mode:
+            // 1. Surgery Fee
+            const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
+            if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
+                const payFull = document.getElementById('surgery_pay_full').checked;
+                if (payFull) {
+                    selectedAmount += remainingSurgeryFee;
+                    document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
+                    document.getElementById('surgery_fee_display').textContent = numberFormat(remainingSurgeryFee);
+                } else {
+                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'block';
+                    let customVal = parseFloat(document.getElementById('surgery_custom_amount').value) || 0;
+                    if (customVal > remainingSurgeryFee) {
+                        customVal = remainingSurgeryFee;
+                        document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                    }
+                    selectedAmount += customVal;
+                    document.getElementById('surgery_fee_display').textContent = numberFormat(customVal);
+                }
+                selectedCount++;
+            } else if (paySurgeryCheckbox) {
+                document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
+                document.getElementById('surgery_fee_display').textContent = '0';
+            }
+
+            // 2. Room Fee
+            const payRoomCheckbox = document.getElementById('pay_room_checkbox');
+            if (payRoomCheckbox && payRoomCheckbox.checked) {
+                const payFull = document.getElementById('room_pay_full').checked;
+                if (payFull) {
+                    selectedAmount += remainingRoomFee;
+                    document.getElementById('room_custom_amount').value = Math.round(remainingRoomFee);
+                    document.getElementById('room_custom_amount_wrapper').style.display = 'none';
+                    document.getElementById('room_fee_display').textContent = numberFormat(remainingRoomFee);
+                } else {
+                    document.getElementById('room_custom_amount_wrapper').style.display = 'block';
+                    let customVal = parseFloat(document.getElementById('room_custom_amount').value) || 0;
+                    if (customVal > remainingRoomFee) {
+                        customVal = remainingRoomFee;
+                        document.getElementById('room_custom_amount').value = Math.round(remainingRoomFee);
+                    }
+                    selectedAmount += customVal;
+                    document.getElementById('room_fee_display').textContent = numberFormat(customVal);
+                }
+                selectedCount++;
+            } else if (payRoomCheckbox) {
+                document.getElementById('room_custom_amount_wrapper').style.display = 'none';
+                document.getElementById('room_fee_display').textContent = '0';
+            }
+
+            // 3. Lab and Radiology tests
+            document.querySelectorAll('.payment-item:checked').forEach(function(item) {
+                if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
+                    selectedAmount += parseFloat(item.dataset.amount) || 0;
+                    selectedCount++;
+                }
             });
         }
 
         let deferredAmount = pendingAmount - selectedAmount;
-        if (inclusiveCheckbox && inclusiveCheckbox.checked) {
-            deferredAmount = 0; // inclusive covers everything
+        if (isIncl) {
+            deferredAmount = 0; // inclusive covers everything else
         }
+
+        if (deferredAmount < 0) deferredAmount = 0;
 
         document.getElementById('selectedAmount').textContent = numberFormat(selectedAmount) + ' IQD';
         document.getElementById('deferredAmount').textContent = numberFormat(deferredAmount) + ' IQD';
@@ -567,10 +732,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function toggleInclusive() {
-        const isIncl = inclusiveCheckbox.checked;
+        const isIncl = inclusiveCheckbox && inclusiveCheckbox.checked;
         document.querySelectorAll('tbody tr').forEach(function(row) {
-            if (row.querySelector('.payment-item')) {
-                row.style.display = isIncl ? 'none' : '';
+            const item = row.querySelector('.payment-item');
+            if (item) {
+                if (item.id !== 'pay_surgery_checkbox') {
+                    row.style.display = isIncl ? 'none' : '';
+                } else {
+                    row.style.display = '';
+                }
             }
         });
         calculateSelectedAmount();
@@ -659,19 +829,30 @@ document.addEventListener('DOMContentLoaded', function() {
         selectAllRadiology.addEventListener('change', toggleRadiologyTests);
     }
 
-    // حساب أولي
-    calculateSelectedAmount();
-});
-</script>    if (selectAllRadiology) {
-        selectAllRadiology.addEventListener('change', toggleRadiologyTests);
+    // مستمعي أحداث تغيير الراديو للعملية
+    document.querySelectorAll('.surgery-payment-type').forEach(function(radio) {
+        radio.addEventListener('change', calculateSelectedAmount);
+    });
+    const surgeryCustomAmount = document.getElementById('surgery_custom_amount');
+    if (surgeryCustomAmount) {
+        surgeryCustomAmount.addEventListener('input', calculateSelectedAmount);
     }
-    
+
+    // مستمعي أحداث تغيير الراديو للغرفة
+    document.querySelectorAll('.room-payment-type').forEach(function(radio) {
+        radio.addEventListener('change', calculateSelectedAmount);
+    });
+    const roomCustomAmount = document.getElementById('room_custom_amount');
+    if (roomCustomAmount) {
+        roomCustomAmount.addEventListener('input', calculateSelectedAmount);
+    }
+
     // إضافة مستمعي الأحداث لجميع checkboxes العناصر
     document.querySelectorAll('.payment-item').forEach(function(item) {
         item.addEventListener('change', calculateSelectedAmount);
     });
-    
-    // حساب المبلغ عند تحميل الصفحة
+
+    // حساب أولي
     calculateSelectedAmount();
 });
 </script>

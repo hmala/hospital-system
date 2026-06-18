@@ -11,19 +11,29 @@ class AnesthesiaStationController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+
         // جلب العمليات التي في محطة التخدير (بعد الجراح)
         $surgeries = Surgery::with(['patient.user', 'doctor.user', 'anesthesiaStation'])
             ->whereHas('surgeonStation', function($q) {
                 $q->where('status', 'completed');
-            })
-            ->where(function($query) {
-                $query->whereDoesntHave('anesthesiaStation')
-                    ->orWhereHas('anesthesiaStation', function($q) {
-                        $q->where('status', '!=', 'completed');
+            });
+
+        if ($user->doctor && !$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+            $doctorId = $user->doctor->id;
+            $surgeries->where(function($query) use ($doctorId) {
+                $query->whereHas('anesthesiaStation', function($q) use ($doctorId) {
+                        $q->where('anesthesiologist_id', $doctorId)
+                          ->orWhere('anesthesiologist_2_id', $doctorId);
+                    })
+                    ->orWhere(function($q) use ($doctorId) {
+                        $q->where('anesthesiologist_id', $doctorId)
+                          ->orWhere('anesthesiologist_2_id', $doctorId);
                     });
-            })
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
-            ->orderBy('scheduled_date')
+            });
+        }
+
+        $surgeries = $surgeries->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
 
@@ -32,24 +42,46 @@ class AnesthesiaStationController extends Controller
 
     public function show(Surgery $surgery)
     {
+        $this->authorizeAnesthesiologist($surgery);
+
         // التحقق من أن محطة الجراح مكتملة
         if (!$surgery->surgeonStation || $surgery->surgeonStation->status !== 'completed') {
             return redirect()->route('surgeon-station.show', $surgery)
                 ->with('error', 'يجب إتمام محطة الجراح أولاً');
         }
 
-        // إنشاء محطة إذا لم تكن موجودة
+        // إنشاء محطة إذا لم تكن موجودة، أو مزامنة بيانات التخدير من جدول العمليات إذا توفر
         if (!$surgery->anesthesiaStation) {
             $surgery->anesthesiaStation()->create([
-                'anesthesiologist_id' => $surgery->operationTheaterStation?->anesthesiologist_id,
+                'anesthesiologist_id' => $surgery->anesthesiologist_id ?? $surgery->operationTheaterStation?->anesthesiologist_id,
+                'anesthesiologist_2_id' => $surgery->anesthesiologist_2_id,
+                'surgical_assistant_name' => $surgery->surgical_assistant_name,
+                'anesthesia_type' => $surgery->anesthesia_type,
                 'status' => 'pending',
             ]);
+        } else {
+            $syncData = [];
+            if (!$surgery->anesthesiaStation->anesthesiologist_id && $surgery->anesthesiologist_id) {
+                $syncData['anesthesiologist_id'] = $surgery->anesthesiologist_id;
+            }
+            if (!$surgery->anesthesiaStation->anesthesiologist_2_id && $surgery->anesthesiologist_2_id) {
+                $syncData['anesthesiologist_2_id'] = $surgery->anesthesiologist_2_id;
+            }
+            if (!$surgery->anesthesiaStation->surgical_assistant_name && $surgery->surgical_assistant_name) {
+                $syncData['surgical_assistant_name'] = $surgery->surgical_assistant_name;
+            }
+            if (!$surgery->anesthesiaStation->anesthesia_type && $surgery->anesthesia_type) {
+                $syncData['anesthesia_type'] = $surgery->anesthesia_type;
+            }
+            if (!empty($syncData)) {
+                $surgery->anesthesiaStation->update($syncData);
+            }
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'anesthesiaStation.anesthesiologist.user', 'anesthesiaStation.anesthesiologist2.user']);
         
         $doctors = Doctor::with('user')
-            ->where('is_active', true)
+            ->anesthesia()
             ->orderBy('id')
             ->get();
 
@@ -58,10 +90,13 @@ class AnesthesiaStationController extends Controller
 
     public function update(Request $request, Surgery $surgery)
     {
+        $this->authorizeAnesthesiologist($surgery);
+
         $validated = $request->validate([
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
-            'anesthesia_type' => 'nullable|string|in:local,regional,general,sedation',
+            'anesthesia_type' => 'nullable|string|max:255',
+            'status' => 'nullable|string|in:pending,in_progress,completed',
             'surgical_assistant_name' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:2000',
             'start_time' => 'nullable|date_format:H:i',
@@ -71,19 +106,26 @@ class AnesthesiaStationController extends Controller
         $station = $surgery->anesthesiaStation;
         if (!$station) {
             $station = $surgery->anesthesiaStation()->create([
-                'status' => 'in_progress',
+                'status' => $request->status ?? 'in_progress',
                 'started_at' => now(),
             ]);
         }
 
+        // تحديث نوع التخدير في جدول العمليات الرئيسي أيضاً للمزامنة
+        if ($request->filled('anesthesia_type')) {
+            $surgery->update(['anesthesia_type' => $request->anesthesia_type]);
+        }
+
         $station->update($validated);
 
-        return redirect()->route('anesthesia-station.show', $surgery)
-            ->with('success', 'تم حفظ بيانات محطة التخدير بنجاح');
+        return redirect()->route('surgeries.show', $surgery)
+            ->with('success', 'تم حفظ بيانات التخدير بنجاح');
     }
 
     public function complete(Surgery $surgery)
     {
+        $this->authorizeAnesthesiologist($surgery);
+
         $station = $surgery->anesthesiaStation;
         if (!$station) {
             return redirect()->back()->with('error', 'المحطة غير موجودة');
@@ -104,5 +146,27 @@ class AnesthesiaStationController extends Controller
 
         return redirect()->route('anesthesia-station.index')
             ->with('success', 'تم إتمام محطة التخدير والانتقال لمحطة المقيم (متابعة)');
+    }
+
+    private function authorizeAnesthesiologist(Surgery $surgery)
+    {
+        $user = auth()->user();
+
+        if ($user->doctor && !$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+            $doctorId = $user->doctor->id;
+            $assignedToDoctor = false;
+
+            if ($surgery->anesthesiaStation) {
+                $assignedToDoctor = $surgery->anesthesiaStation->anesthesiologist_id === $doctorId
+                    || $surgery->anesthesiaStation->anesthesiologist_2_id === $doctorId;
+            } else {
+                $assignedToDoctor = $surgery->anesthesiologist_id === $doctorId
+                    || $surgery->anesthesiologist_2_id === $doctorId;
+            }
+
+            if (!$assignedToDoctor) {
+                abort(403, 'غير مصرح لك بالوصول لهذه العملية');
+            }
+        }
     }
 }

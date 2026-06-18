@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Payment;
+use App\Models\ResidentStationFollowUp;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -29,6 +30,8 @@ class Surgery extends Model
         'surgery_fee_paid',
         'payment_id',
         'surgery_fee',
+        'surgery_fee_paid_amount',
+        'room_fee_paid_amount',
         'referring_doctor_type',
         'referring_doctor_name',
         'notes',
@@ -116,6 +119,11 @@ class Surgery extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function surgeryTreatments()
     {
         return $this->hasMany(SurgeryTreatment::class)->orderBy('sort_order');
@@ -150,6 +158,11 @@ class Surgery extends Model
     public function residentStations()
     {
         return $this->hasMany(ResidentStation::class);
+    }
+
+    public function residentStationFollowUps()
+    {
+        return $this->hasMany(ResidentStationFollowUp::class);
     }
 
     public function residentStation()

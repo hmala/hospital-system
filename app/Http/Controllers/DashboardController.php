@@ -71,6 +71,44 @@ class DashboardController extends Controller
             return view('dashboard', compact('labStats', 'userStats'));
         }
 
+        // إحصائيات خاصة بمقيم التخدير
+        if ($user->hasRole('التخدير')) {
+            $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
+                    $q->where('status', 'completed');
+                })
+                ->where(function($q) {
+                    $q->whereDoesntHave('anesthesiaStation')
+                      ->orWhereHas('anesthesiaStation', function($sq) {
+                          $sq->where('status', '!=', 'completed');
+                      });
+                })->count();
+
+            $completedToday = \App\Models\AnesthesiaStation::where('status', 'completed')
+                ->whereDate('updated_at', today())
+                ->count();
+
+            $userStats = [
+                'name' => $user->name,
+                'role' => 'مقيم تخدير',
+                'your_todo' => $anesthesiaStationCount,
+                'processed_today' => $completedToday,
+            ];
+
+            $stats = [
+                'totalPatients' => User::role('patient')->count(),
+                'totalDoctors' => User::role('doctor')->count(),
+                'totalDepartments' => Department::count(),
+                'todayAppointments' => Appointment::whereDate('appointment_date', today())->count(),
+                'pendingAppointments' => Appointment::where('status', 'pending')->count(),
+                'completedAppointments' => Appointment::where('status', 'completed')->count(),
+                'cancelledAppointments' => Appointment::where('status', 'cancelled')->count(),
+                'totalVisits' => Visit::count(),
+                'todayVisits' => Visit::whereDate('visit_date', today())->count(),
+            ];
+
+            return view('dashboard', compact('userStats', 'stats'));
+        }
+
         // إحصائيات عامة للمستخدمين الآخرين
         $stats = [
             'totalPatients' => User::role('patient')->count(),

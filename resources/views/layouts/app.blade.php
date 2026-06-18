@@ -22,7 +22,9 @@
             if (Auth::user()->can('view surgeries')) {
                 $pendingSurgeries = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting'])->count();
                 $waitingSurgeries = \App\Models\Surgery::where('status', 'waiting')->count();
-                
+            }
+
+            if (Auth::user()->can('view resident station')) {
                 // عداد محطة المقيم (pre_op) - بعد الحجز مباشرة
                 $residentStationCount = \App\Models\Surgery::where('status', 'scheduled')
                     ->where(function($q) {
@@ -33,41 +35,7 @@
                               ->where('status', '!=', 'completed');
                         });
                     })->count();
-                
-                // عداد صالة العمليات - بعد المقيم pre_op
-                $operationTheaterStationCount = \App\Models\Surgery::whereHas('residentStations', function($q) {
-                        $q->where('phase', 'pre_op')
-                          ->where('status', 'completed');
-                    })
-                    ->where(function($q) {
-                        $q->whereDoesntHave('operationTheaterStation')
-                          ->orWhereHas('operationTheaterStation', function($sq) {
-                              $sq->where('status', '!=', 'completed');
-                          });
-                    })->count();
-                
-                // عداد محطة الجراح - بعد صالة العمليات
-                $surgeonStationCount = \App\Models\Surgery::whereHas('operationTheaterStation', function($q) {
-                        $q->where('status', 'completed');
-                    })
-                    ->where(function($q) {
-                        $q->whereDoesntHave('surgeonStation')
-                          ->orWhereHas('surgeonStation', function($sq) {
-                              $sq->where('status', '!=', 'completed');
-                          });
-                    })->count();
-                
-                // عداد محطة التخدير - بعد الجراح
-                $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
-                        $q->where('status', 'completed');
-                    })
-                    ->where(function($q) {
-                        $q->whereDoesntHave('anesthesiaStation')
-                          ->orWhereHas('anesthesiaStation', function($sq) {
-                              $sq->where('status', '!=', 'completed');
-                          });
-                    })->count();
-                
+
                 // عداد محطة المقيم (post_op) - بعد التخدير
                 $residentStationCount += \App\Models\Surgery::whereHas('anesthesiaStation', function($q) {
                         $q->where('status', 'completed');
@@ -80,7 +48,49 @@
                               ->where('status', '!=', 'completed');
                         });
                     })->count();
-                
+            }
+
+            if (Auth::user()->can('view operation theater station')) {
+                // عداد صالة العمليات - بعد المقيم pre_op
+                $operationTheaterStationCount = \App\Models\Surgery::whereHas('residentStations', function($q) {
+                        $q->where('phase', 'pre_op')
+                          ->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereDoesntHave('operationTheaterStation')
+                          ->orWhereHas('operationTheaterStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
+                    })->count();
+            }
+
+            if (Auth::user()->can('view surgeon station')) {
+                // عداد محطة الجراح - بعد صالة العمليات
+                $surgeonStationCount = \App\Models\Surgery::whereHas('operationTheaterStation', function($q) {
+                        $q->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereDoesntHave('surgeonStation')
+                          ->orWhereHas('surgeonStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
+                    })->count();
+            }
+
+            if (Auth::user()->can('view anesthesia station')) {
+                // عداد محطة التخدير - بعد الجراح
+                $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
+                        $q->where('status', 'completed');
+                    })
+                    ->where(function($q) {
+                        $q->whereDoesntHave('anesthesiaStation')
+                          ->orWhereHas('anesthesiaStation', function($sq) {
+                              $sq->where('status', '!=', 'completed');
+                          });
+                    })->count();
+            }
+
+            if (Auth::user()->can('view nursing station')) {
                 // عداد محطة التمريض - بعد المقيم post_op
                 $nursingStationCount = \App\Models\Surgery::whereHas('residentStations', function($q) {
                         $q->where('phase', 'post_op')
@@ -102,8 +112,11 @@
             if (Auth::user()->can('view visits')) {
                 $incompleteVisits = \App\Models\Visit::whereIn('status', ['pending', 'in_progress'])->count();
             }
-            if (Auth::user()->hasRole('radiology_staff') || Auth::user()->hasRole('admin')) {
+            if (Auth::user()->hasRole('radiology_staff') || Auth::user()->hasRole('التخدير') || Auth::user()->hasRole('admin')) {
                 $pendingSurgeryRadiology = \App\Models\SurgeryRadiologyTest::where('status', 'pending')->count();
+            }
+            if (Auth::user()->hasRole('التخدير') || Auth::user()->hasRole('admin')) {
+                // عداد محطة التخدير - بعد الجراح (موجود مسبقاً بالأعلى ولكن نؤكد عليه هنا إذا لزم الأمر)
             }
             if (Auth::user()->can('view radiology')) {
                 $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
@@ -149,10 +162,12 @@
             color: #1e293b;
         }
         .sidebar {
-            background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+            background: rgba(219, 234, 254, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             height: 100vh;
             max-height: 100vh;
-            box-shadow: 0 0 24px rgba(15, 23, 42, 0.14);
+            border-left: none;
             position: fixed;
             width: 250px;
             overflow-x: hidden;
@@ -160,7 +175,7 @@
             padding-bottom: 1.5rem;
             overscroll-behavior: contain;
             scrollbar-width: auto;
-            scrollbar-color: rgba(148, 163, 184, 1) rgba(30, 41, 59, 0.4);
+            scrollbar-color: rgba(148, 163, 184, 1) rgba(248, 250, 252, 0.85);
         }
         .sidebar::-webkit-scrollbar {
             width: 14px;
@@ -176,15 +191,13 @@
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(148, 163, 184, 1);
         }
-        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; }
-        .sidebar-user { color: #e5e7eb; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
-        .sidebar-user i { font-size: 1rem; }
-        .sidebar-user span { display: block; }
-        .sidebar-user .logout-link { color: #d1d5db; font-size: 0.85rem; text-decoration: none; border: 1px solid rgba(226, 232, 240, 0.16); padding: 0.35rem 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.04); transition: background 0.2s ease, color 0.2s ease; }
-        .sidebar-user .logout-link:hover { background: rgba(255,255,255,0.16); color: #ffffff; }
-        .dark-mode-toggle { background: rgba(255,255,255,0.12); border: 1px solid rgba(248, 250, 252, 0.24); color: #f8fafc; width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.25s ease; cursor: pointer; margin-top: 0.5rem; }
-        .dark-mode-toggle:hover { background: rgba(255,255,255,0.18); }
-        .dark-mode-toggle.active { background: #8b8f96; color: #ffffff; border-color: rgba(255,255,255,0.35); }
+        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
+        .sidebar-header img { background: rgba(59, 130, 246, 0.12); border-radius: 18px; padding: 10px; max-height: 70px; width: auto; border: 1px solid rgba(59, 130, 246, 0.45); box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18); }
+        .sidebar-user { color: #1d4ed8; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
+        .sidebar-user i { font-size: 1rem; color: #1d4ed8; }
+        .sidebar-user span { display: block; color: #1d4ed8; }
+        .sidebar-user .logout-link { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.45); padding: 0.45rem 0.9rem; border-radius: 12px; background: rgba(59, 130, 246, 0.12); transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
+        .sidebar-user .logout-link:hover { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; transform: translateY(-1px); }
         .home-link {
             display: inline-flex;
             align-items: center;
@@ -199,88 +212,14 @@
             text-decoration: none;
             transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
         }
-        body.dark-mode { background-color: #1e242c; color: #e7e9ef; }
-        body.dark-mode .sidebar { background: linear-gradient(180deg, #2a3038 0%, #20252c 100%); }
-        body.dark-mode .sidebar .nav-link { color: #d7dde7; }
-        body.dark-mode .sidebar .nav-link:hover { background-color: rgba(255,255,255,0.08); color: #ffffff; }
-        body.dark-mode .sidebar .nav-link.active { background: rgba(255,255,255,0.12); box-shadow: 0 4px 6px rgba(0,0,0,0.24); }
-        body.dark-mode .main-content { background: rgba(28, 33, 41, 0.95); color: #e7e9ef; }
-        body.dark-mode .main-content .card,
-        body.dark-mode .card,
-        body.dark-mode .bg-white,
-        body.dark-mode .bg-light,
-        body.dark-mode .table-responsive,
-        body.dark-mode .table,
-        body.dark-mode .form-control,
-        body.dark-mode .form-select,
-        body.dark-mode .list-group-item {
-            background-color: rgba(255,255,255,0.06) !important;
-            color: #e7e9ef !important;
-            border-color: rgba(255,255,255,0.12) !important;
-            box-shadow: none !important;
-        }
-        body.dark-mode .table th,
-        body.dark-mode .table td,
-        body.dark-mode .table thead th {
-            color: #e7e9ef !important;
-        }
-        body.dark-mode .table,
-        body.dark-mode .table-bordered,
-        body.dark-mode .table-striped,
-        body.dark-mode .table-responsive,
-        body.dark-mode .table thead th,
-        body.dark-mode .table tbody td {
-            background-color: rgba(255,255,255,0.05) !important;
-        }
-        body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) {
-            background-color: rgba(255,255,255,0.06) !important;
-        }
-        body.dark-mode .table-hover > tbody > tr:hover {
-            background-color: rgba(255,255,255,0.12) !important;
-        }
-        body.dark-mode .table thead th {
-            background-color: rgba(255,255,255,0.08) !important;
-        }
-        body.dark-mode .table-bordered th,
-        body.dark-mode .table-bordered td {
-            border-color: rgba(255,255,255,0.12) !important;
-        }
-        body.dark-mode .main-content,
-        body.dark-mode .main-content h1,
-        body.dark-mode .main-content h2,
-        body.dark-mode .main-content h3,
-        body.dark-mode .main-content h4,
-        body.dark-mode .main-content h5,
-        body.dark-mode .main-content h6,
-        body.dark-mode .main-content p,
-        body.dark-mode .main-content span,
-        body.dark-mode .main-content label,
-        body.dark-mode .main-content a,
-        body.dark-mode .main-content small,
-        body.dark-mode .main-content strong,
-        body.dark-mode .main-content td,
-        body.dark-mode .main-content th,
-        body.dark-mode .main-content .card-header,
-        body.dark-mode .main-content .card-body,
-        body.dark-mode .main-content .card-footer,
-        body.dark-mode .main-content .dropdown-item,
-        body.dark-mode .main-content .btn,
-        body.dark-mode .main-content .form-label,
-        body.dark-mode .main-content .form-text {
-            color: #e5e7eb !important;
-        }
-        body.dark-mode .text-dark,
-        body.dark-mode .table-dark {
-            color: #e5e7eb !important;
-        }
-        .sidebar .nav-link { color: #e5e7eb; padding: 12px 20px; margin: 2px 0; border-radius: 8px; transition: all 0.3s; font-size: 0.9rem; width: 100%; display: inline-flex; align-items: center; justify-content: flex-start; }
-        .sidebar .nav-link:hover { background-color: rgba(255,255,255,0.08); color: #f8fafc; transform: translateX(-5px); }
-        .sidebar .nav-link.active { background: rgba(255,255,255,0.16); color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.14); }
-        .sidebar-section-title { color: #d1d5db; font-size: 0.85rem; font-weight: 600; padding: 12px 20px; margin-top: 10px; cursor: pointer; background: rgba(255,255,255,0.05); border-radius: 8px; transition: all 0.3s; display: flex; justify-content: space-between; align-items: center; }
-        .sidebar-section-title:hover { background: rgba(255,255,255,0.08); color: #f8fafc; }
+        .sidebar .nav-link { color: #1d4ed8; padding: 12px 20px; margin: 2px 0; border-radius: 8px; transition: all 0.3s; font-size: 0.9rem; width: 100%; display: inline-flex; align-items: center; justify-content: flex-start; }
+        .sidebar .nav-link:hover { background-color: rgba(59, 130, 246, 0.12); color: #1d4ed8; transform: translateX(-5px); }
+        .sidebar .nav-link.active { background: rgba(59, 130, 246, 0.18); color: #1d4ed8; box-shadow: 0 4px 6px rgba(15, 23, 42, 0.08); }
+        .sidebar-section-title { color: #1d4ed8; font-size: 0.85rem; font-weight: 700; padding: 12px 20px; margin-top: 10px; cursor: pointer; background: rgba(59, 130, 246, 0.12); border-radius: 8px; transition: all 0.3s; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-section-title:hover { background: rgba(59, 130, 246, 0.18); color: #1d4ed8; }
         .sidebar-section-title i.toggle-icon { transition: transform 0.3s; font-size: 0.8rem; }
         .sidebar-section-title.collapsed i.toggle-icon { transform: rotate(-90deg); }
-        .sidebar-divider { border-top: 1px solid rgba(255,255,255,0.1); margin: 10px 15px; }
+        .sidebar-divider { border-top: 1px solid rgba(148, 163, 184, 0.25); margin: 10px 15px; }
         .collapse-section { padding-right: 0; }
         .main-content {
             margin-right: 250px;
@@ -289,10 +228,10 @@
             width: calc(100% - 250px);
             min-height: 100vh;
             background: rgba(219, 234, 254, 0.92);
-            border: 1px solid rgba(96, 165, 250, 0.28);
-            box-shadow: 0 30px 70px rgba(59, 130, 246, 0.12);
+            border: none;
+            box-shadow: none;
             backdrop-filter: blur(16px);
-            border-radius: 24px;
+            border-radius: 0;
         }
         .main-content .card:not(.stat-card) {
             background: rgba(219, 234, 254, 0.48) !important;
@@ -479,30 +418,6 @@
         .stat-card.bg-doctor { background: linear-gradient(135deg, #0ea5e9, #0f766e); color: #ffffff; border-color: #0f766e; }
         .stat-card.bg-department { background: linear-gradient(135deg, #818cf8, #4338ca); color: #ffffff; border-color: #4338ca; }
         .stat-card.bg-appointment { background: linear-gradient(135deg, #fb923c, #f97316); color: #ffffff; border-color: #f97316; }
-        body.dark-mode .stat-card.bg-warning { background: linear-gradient(135deg, #fbbf24, #f59e0b) !important; color: #ffffff !important; border-color: #f59e0b !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-info { background: linear-gradient(135deg, #38bdf8, #0ea5e9) !important; color: #ffffff !important; border-color: #0ea5e9 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-primary { background: linear-gradient(135deg, #60a5fa, #2563eb) !important; color: #ffffff !important; border-color: #2563eb !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-success { background: linear-gradient(135deg, #34d399, #059669) !important; color: #ffffff !important; border-color: #059669 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-patient { background: linear-gradient(135deg, #ec4899, #8b5cf6) !important; color: #ffffff !important; border-color: #8b5cf6 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-doctor { background: linear-gradient(135deg, #0ea5e9, #0f766e) !important; color: #ffffff !important; border-color: #0f766e !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-department { background: linear-gradient(135deg, #818cf8, #4338ca) !important; color: #ffffff !important; border-color: #4338ca !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card.bg-appointment { background: linear-gradient(135deg, #fb923c, #f97316) !important; color: #ffffff !important; border-color: #f97316 !important; box-shadow: 0 26px 50px rgba(0, 0, 0, 0.4) !important; }
-        body.dark-mode .stat-card::before {
-            background: rgba(255, 255, 255, 0.12);
-        }
-        body.dark-mode .stat-card .fa-3x,
-        body.dark-mode .stat-card .fa-4x {
-            background: rgba(255, 255, 255, 0.15);
-            color: #ffffff !important;
-        }
-        body.dark-mode .card.border-0.shadow-sm {
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: #e7e9ef !important;
-        }
-        body.dark-mode .card.border-0.shadow-sm .text-muted {
-            color: #a1a1aa !important;
-        }
         @media (max-width: 768px) {
             .sidebar { width: 70px; }
             .sidebar .nav-link span { display: none; }
@@ -518,8 +433,8 @@
             <!-- الشريط الجانبي -->
             <nav class="col-md-3 col-lg-2 d-md-block sidebar">
                 <div class="position-sticky pt-0">
-                    <div class="sidebar-header text-center p-3 border-bottom border-secondary">
-                        <img src="{{ asset('images/لوغو.png') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                    <div class="sidebar-header text-center p-3">
+                        <img src="{{ asset('images/logo.jpeg') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                         <div class="sidebar-user">
                             <div><i class="fas fa-user-circle"></i> <span>{{ Auth::user()->name }}</span></div>
                             <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -529,9 +444,6 @@
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                             @csrf
                         </form>
-                        <button id="darkModeToggle" class="dark-mode-toggle" type="button" title="تبديل الوضع الداكن" aria-label="تبديل الوضع الداكن">
-                            <i class="fas fa-moon"></i>
-                        </button>
                     </div>
                     <div class="sidebar-item mt-3">
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
@@ -600,7 +512,7 @@
                                 <i class="fas fa-procedures text-danger"></i><span> كاشير العمليات</span>
                                 @php
                                     $pendingSurgeryPayments = \App\Models\Surgery::whereIn('payment_status', ['pending', 'partial'])
-                                        ->whereIn('status', ['scheduled', 'waiting'])
+                                        ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
                                         ->count();
                                 @endphp
                                 @if($pendingSurgeryPayments > 0)
@@ -674,7 +586,7 @@
 
                         @can('manage consultant availability')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('consultant-availability.*') ? 'active' : '' }}" href="{{ route('consultant-availability.index') }}">
+                            <a class="nav-link {{ request()->routeIs('consultant-availability.index') ? 'active' : '' }}" href="{{ route('consultant-availability.index') }}">
                                 <i class="fas fa-calendar-check"></i><span> توفر الأطباء الاستشاريين</span>
                             </a>
                         </li>
@@ -746,7 +658,7 @@
                         @endcanany
 
                         <!-- قسم العمليات الجراحية -->
-                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list'])
+                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
                             <span><i class="fas fa-procedures"></i> العمليات الجراحية</span>
@@ -770,7 +682,8 @@
                         </li>
                         @endcan
 
-                        @can('view surgeries')
+                        @can('view resident station')
+                        @if((!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('resident-station.*') ? 'active' : '' }}" href="{{ route('resident-station.index') }}">
                                 <i class="fas fa-user-graduate"></i><span> محطة المقيم</span>
@@ -779,6 +692,11 @@
                                 @endif
                             </a>
                         </li>
+                        @endif
+                        @endcan
+                        
+                        @can('view operation theater station')
+                        @if((!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('operation-theater-station.*') ? 'active' : '' }}" href="{{ route('operation-theater-station.index') }}">
                                 <i class="fas fa-procedures"></i><span> صالة العمليات</span>
@@ -787,6 +705,11 @@
                                 @endif
                             </a>
                         </li>
+                        @endif
+                        @endcan
+                        
+                        @can('view surgeon station')
+                        @if(Auth::user()->hasRole('الجراح') || (!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
                                 <i class="fas fa-user-md"></i><span> محطة الجراح</span>
@@ -795,6 +718,11 @@
                                 @endif
                             </a>
                         </li>
+                        @endif
+                        @endcan
+                        
+                        @can('view anesthesia station')
+                        @if(Auth::user()->hasRole('التخدير') || (!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('anesthesia-station.*') ? 'active' : '' }}" href="{{ route('anesthesia-station.index') }}">
                                 <i class="fas fa-syringe"></i><span> محطة التخدير</span>
@@ -803,9 +731,10 @@
                                 @endif
                             </a>
                         </li>
+                        @endif
                         @endcan
 
-                        @canany(['view surgeries', 'manage nursing station'])
+                        @can('view nursing station')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('nursing-station.*') ? 'active' : '' }}" href="{{ route('nursing-station.index') }}">
                                 <i class="fas fa-user-nurse"></i><span> محطة التمريض</span>
@@ -814,7 +743,7 @@
                                 @endif
                             </a>
                         </li>
-                        @endcanany
+                        @endcan
 
                         @can('manage rooms')
                         <li class="nav-item">
@@ -911,7 +840,7 @@
                         </li>
                         @endcan
 
-                        @if(auth()->user()->hasRole('radiology_staff') || auth()->user()->hasRole('admin'))
+                        @if(auth()->user()->hasRole('radiology_staff') || auth()->user()->hasRole('التخدير') || auth()->user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
                                 <i class="fas fa-x-ray"></i><span> أشعة العمليات</span>
@@ -975,8 +904,52 @@
                         </li>
                         @endcan
 
+                        @hasrole('admin')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
+                                <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
+                            </a>
+                        </li>
+                        @endhasrole
+
                         </div>
                         @endcanany
+
+                        @hasanyrole('admin|cashier')
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#accountingSection" aria-expanded="false">
+                            <span><i class="fas fa-calculator"></i> الحسابيات</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section" id="accountingSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
+                                    <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
+                                    <i class="fas fa-chart-line"></i><span> تقارير الحسابات</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('consultant-availability.financial-movements') ? 'active' : '' }}" href="{{ route('consultant-availability.financial-movements') }}">
+                                    <i class="fas fa-money-bill-wave"></i><span> الحركات المالية</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.statements') ? 'active' : '' }}" href="{{ route('cashier.statements') }}">
+                                    <i class="fas fa-file-invoice-dollar"></i><span> كشوفات الحسابات</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('consultant-availability.doctor-accounts') ? 'active' : '' }}" href="{{ route('consultant-availability.doctor-accounts') }}">
+                                    <i class="fas fa-wallet"></i><span> حسابات الأطباء</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endhasanyrole
+
                    @canany(['manage inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests'])
                     <div class="sidebar-divider"></div>
                     <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
@@ -1073,24 +1046,6 @@
             "rtl": true
         };
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggle = document.getElementById('darkModeToggle');
-            const isDark = localStorage.getItem('darkMode') === 'true';
-
-            if (isDark) {
-                document.body.classList.add('dark-mode');
-                toggle.classList.add('active');
-                toggle.innerHTML = '<i class="fas fa-sun"></i>';
-            }
-
-            toggle.addEventListener('click', function() {
-                document.body.classList.toggle('dark-mode');
-                const enabled = document.body.classList.contains('dark-mode');
-                localStorage.setItem('darkMode', enabled ? 'true' : 'false');
-                toggle.classList.toggle('active', enabled);
-                toggle.innerHTML = enabled ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-            });
-        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>

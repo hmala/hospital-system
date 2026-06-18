@@ -101,6 +101,8 @@
                     'radiology_staff' => ['label' => 'موظف أشعة', 'icon' => 'x-ray', 'color' => 'secondary'],
                     'pharmacy_staff' => ['label' => 'موظف صيدلية', 'icon' => 'pills', 'color' => 'secondary'],
                     'surgery_staff' => ['label' => 'موظف عمليات', 'icon' => 'procedures', 'color' => 'secondary'],
+                    'التخدير' => ['label' => 'مقيم تخدير', 'icon' => 'syringe', 'color' => 'warning'],
+                    'الجراح' => ['label' => 'جراح', 'icon' => 'user-md', 'color' => 'info'],
                     default => ['label' => $role->name, 'icon' => 'user-shield', 'color' => 'dark'],
                 };
             @endphp

@@ -47,7 +47,7 @@ class NursingStationController extends Controller
             ]);
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'nursingStation.nurse']);
+        $surgery->load(['patient.user', 'doctor.user', 'nursingStation.nurse', 'surgeryTreatments.administeredBy']);
         
         $nurses = User::role('nurse')->where('is_active', true)->get();
 

@@ -68,6 +68,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'view resident station',
+            'view operation theater station',
+            'view surgeon station',
+            'view anesthesia station',
+            'view nursing station',
             
             // صلاحيات الإشعة
             'view radiology',
@@ -188,6 +193,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view surgeries',
             'create surgeries',
             'edit surgeries',
+            'view resident station',
+            'view surgeon station',
+            'view anesthesia station',
             'view radiology',
             'create radiology',
             'view lab tests',
@@ -235,6 +243,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'view resident station',
+            'view operation theater station',
+            'view surgeon station',
+            'view anesthesia station',
+            'view nursing station',
             'view radiology',
             'create radiology',
             'view lab tests',
@@ -400,6 +413,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create radiology',
             // السماح للممرضين برؤية الباقات
             'view packages',
+            'view nursing station',
         ]);
 
         // دور موظف الطوارئ (Emergency Staff)
@@ -427,6 +441,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'view resident station',
+            'view operation theater station',
+            'view surgeon station',
+            'view anesthesia station',
+            'view nursing station',
             'view cashier',
             'view cashier surgeries',
             'process surgery payments',

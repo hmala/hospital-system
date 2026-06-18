@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\ResidentStationFollowUp;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -49,6 +50,16 @@ class ResidentStation extends Model
     public function resident()
     {
         return $this->belongsTo(Doctor::class, 'resident_id');
+    }
+
+    public function readings()
+    {
+        return $this->hasMany(ResidentStationReading::class, 'resident_station_id')->orderBy('created_at', 'desc');
+    }
+
+    public function followUps()
+    {
+        return $this->hasMany(ResidentStationFollowUp::class, 'resident_station_id')->orderBy('follow_up_date')->orderByDesc('created_at');
     }
 
     public function markAsStarted()

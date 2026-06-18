@@ -534,12 +534,9 @@
         <!-- قسم الترحيب -->
         <div class="welcome-section">
             <div class="text-center mb-4">
-                <img src="{{ asset('images/لوغو.png') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 140px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                <img src="{{ asset('images/logo.jpeg') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 140px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
             </div>
-            <h1 class="welcome-title">نظام إدارة المستشفى</h1>
-            <p class="welcome-subtitle">
-                منصة شاملة لإدارة المستشفيات والعيادات الطبية بكفاءة واحترافية
-            </p>
+           
 
             <div class="luxury-features">
                 <img src="https://images.unsplash.com/photo-1551190822-a9333d879b1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="نظام إدارة المستشفى" style="width: 100%; height: auto; border-radius: var(--border-radius); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1); opacity: 0.7;">

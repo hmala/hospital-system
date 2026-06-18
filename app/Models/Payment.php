@@ -14,6 +14,7 @@ class Payment extends Model
         'appointment_id',
         'request_id',
         'emergency_id',
+        'surgery_id',
         'patient_id',
         'cashier_id',
         'receipt_number',
@@ -84,11 +85,27 @@ class Payment extends Model
     }
 
     /**
+     * العلاقة مع العملية الجراحية
+     */
+    public function surgery()
+    {
+        return $this->belongsTo(Surgery::class);
+    }
+
+    /**
      * العلاقة مع الكاشير (المستخدم)
      */
     public function cashier()
     {
         return $this->belongsTo(User::class, 'cashier_id');
+    }
+
+    /**
+     * العلاقة مع إيراد الاستشارة
+     */
+    public function consultationRevenue()
+    {
+        return $this->hasOne(ConsultationRevenue::class);
     }
 
     /**

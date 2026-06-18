@@ -87,7 +87,7 @@ class User extends Authenticatable
 
     public function isDoctor()
     {
-        return $this->hasRole('doctor');
+        return $this->hasRole('doctor') || $this->hasRole('الجراح') || !is_null($this->doctor);
     }
 
     public function isPatient()
@@ -102,7 +102,12 @@ class User extends Authenticatable
 
     public function isStaff()
     {
-        return $this->hasAnyRole(['lab_staff', 'radiology_staff', 'pharmacy_staff', 'surgery_staff']);
+        return $this->hasAnyRole(['lab_staff', 'radiology_staff', 'pharmacy_staff', 'surgery_staff', 'التخدير']);
+    }
+
+    public function isAnesthesia()
+    {
+        return $this->hasRole('التخدير');
     }
 
     public function isSurgeryStaff()

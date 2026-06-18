@@ -81,7 +81,7 @@
                                         <option value="">-- اختر طبيب التخدير --</option>
                                         @foreach($doctors as $doctor)
                                             <option value="{{ $doctor->id }}" 
-                                                {{ $surgery->anesthesiaStation?->anesthesiologist_id == $doctor->id ? 'selected' : '' }}>
+                                                {{ (($surgery->anesthesiaStation?->anesthesiologist_id ?? $surgery->anesthesiologist_id) == $doctor->id) ? 'selected' : '' }}>
                                                 {{ $doctor->user->full_name }}
                                             </option>
                                         @endforeach
@@ -96,7 +96,7 @@
                                         <option value="">-- اختر طبيب التخدير --</option>
                                         @foreach($doctors as $doctor)
                                             <option value="{{ $doctor->id }}" 
-                                                {{ $surgery->anesthesiaStation?->anesthesiologist_2_id == $doctor->id ? 'selected' : '' }}>
+                                                {{ (($surgery->anesthesiaStation?->anesthesiologist_2_id ?? $surgery->anesthesiologist_2_id) == $doctor->id) ? 'selected' : '' }}>
                                                 {{ $doctor->user->full_name }}
                                             </option>
                                         @endforeach
@@ -109,13 +109,16 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>نوع التخدير</label>
-                                    <select name="anesthesia_type" class="form-control">
-                                        <option value="">-- اختر نوع التخدير --</option>
-                                        <option value="local" {{ $surgery->anesthesiaStation?->anesthesia_type == 'local' ? 'selected' : '' }}>موضعي</option>
-                                        <option value="regional" {{ $surgery->anesthesiaStation?->anesthesia_type == 'regional' ? 'selected' : '' }}>إقليمي</option>
-                                        <option value="general" {{ $surgery->anesthesiaStation?->anesthesia_type == 'general' ? 'selected' : '' }}>عام</option>
-                                        <option value="sedation" {{ $surgery->anesthesiaStation?->anesthesia_type == 'sedation' ? 'selected' : '' }}>تنويم</option>
-                                    </select>
+                                    <input type="text" name="anesthesia_type" class="form-control" list="anesthesiaTypeSuggestions" value="{{ $surgery->anesthesiaStation?->anesthesia_type ?? $surgery->anesthesia_type ?? '' }}" placeholder="أدخل نوع التخدير...">
+                                    <datalist id="anesthesiaTypeSuggestions">
+                                        <option value="تخدير عام"></option>
+                                        <option value="تخدير إقليمي"></option>
+                                        <option value="تخدير موضعي"></option>
+                                        <option value="تهدئة"></option>
+                                        <option value="سباينال"></option>
+                                        <option value="إبيديورال"></option>
+                                        <option value="تخدير فوق الجافية"></option>
+                                    </datalist>
                                 </div>
                             </div>
 
@@ -123,7 +126,7 @@
                                 <div class="form-group">
                                     <label>اسم المساعد الجراحي</label>
                                     <input type="text" name="surgical_assistant_name" class="form-control" 
-                                        value="{{ $surgery->anesthesiaStation?->surgical_assistant_name ?? '' }}">
+                                        value="{{ $surgery->anesthesiaStation?->surgical_assistant_name ?? $surgery->surgical_assistant_name ?? '' }}">
                                 </div>
                             </div>
                         </div>

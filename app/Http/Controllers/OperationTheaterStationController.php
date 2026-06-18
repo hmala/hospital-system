@@ -57,7 +57,7 @@ class OperationTheaterStationController extends Controller
         
         // جلب قائمة الممرضين وأطباء التخدير
         $nurses = User::whereJsonContains('role', 'surgery_nurse')->get();
-        $anesthesiologists = Doctor::where('type', 'anesthesia')->get();
+        $anesthesiologists = Doctor::anesthesia()->get();
 
         return view('surgery-stations.operation-theater.show', compact('surgery', 'nurses', 'anesthesiologists'));
     }

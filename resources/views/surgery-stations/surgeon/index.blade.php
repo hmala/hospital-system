@@ -31,8 +31,12 @@
                             </thead>
                             <tbody>
                                 @forelse($surgeries as $surgery)
-                                <tr>
-                                    <td>{{ $surgery->patient->file_number }}</td>
+                                @php
+                                    $isCompleted = $surgery->surgeonStation && $surgery->surgeonStation->status === 'completed';
+                                    $rowClass = $isCompleted ? 'table-success' : 'table-danger';
+                                @endphp
+                                <tr class="{{ $rowClass }}">
+                                    <td style="border-right: 4px solid {{ $isCompleted ? '#28a745' : '#dc3545' }} !important;">{{ $surgery->patient->file_number }}</td>
                                     <td>{{ $surgery->patient->user->full_name }}</td>
                                     <td>{{ $surgery->surgery_name }}</td>
                                     <td>
@@ -53,8 +57,11 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <a href="{{ route('surgeon-station.show', $surgery) }}" class="btn btn-sm btn-primary">
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye"></i> عرض التفاصيل
+                                        </a>
+                                        <a href="{{ route('surgeon-station.resident-follow-ups', $surgery) }}" class="btn btn-sm btn-info ms-1">
+                                            <i class="fas fa-notes-medical"></i> متابعات المقيم
                                         </a>
                                     </td>
                                 </tr>

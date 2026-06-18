@@ -217,6 +217,11 @@
                                                         'view settings section' => ['label' => 'عرض قسم الإعدادات', 'icon' => 'fa-eye', 'color' => 'dark'],
                                                         'view stock transfers' => ['label' => 'عرض نقل المخزون', 'icon' => 'fa-exchange-alt', 'color' => 'teal'],
                                                         'view stock transfer requests' => ['label' => 'عرض طلبات نقل المخزون', 'icon' => 'fa-clipboard-list', 'color' => 'teal'],
+                                                        'view resident station' => ['label' => 'عرض محطة الطبيب المقيم', 'icon' => 'fa-user-graduate', 'color' => 'primary'],
+                                                        'view operation theater station' => ['label' => 'عرض صالة العمليات', 'icon' => 'fa-procedures', 'color' => 'danger'],
+                                                        'view surgeon station' => ['label' => 'عرض محطة الطبيب الجراح', 'icon' => 'fa-user-md', 'color' => 'info'],
+                                                        'view anesthesia station' => ['label' => 'عرض محطة التخدير', 'icon' => 'fa-syringe', 'color' => 'warning'],
+                                                        'view nursing station' => ['label' => 'عرض محطة التمريض', 'icon' => 'fa-user-nurse', 'color' => 'success'],
                                                     ];
                                                     
                                                     if (isset($sectionPermissions[$permission->name])) {

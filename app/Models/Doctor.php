@@ -46,6 +46,19 @@ class Doctor extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function scopeAnesthesia($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($query) {
+                $query->where('type', 'anesthesiologist')
+                    ->orWhere('type', 'anesthesia')
+                    ->orWhere('specialization', 'تخدير')
+                    ->orWhereHas('user.roles', function ($roleQuery) {
+                        $roleQuery->whereIn('name', ['التخدير', 'Anesthesia']);
+                    });
+            });
+    }
+
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
@@ -60,6 +73,27 @@ class Doctor extends Model
     {
         return $this->belongsToMany(Patient::class, 'visits')
             ->distinct();
+    }
+
+    public function financialAccount()
+    {
+        return $this->hasOne(DoctorFinancialAccount::class);
+    }
+
+    public function dues()
+    {
+        return $this->hasMany(DoctorDue::class);
+    }
+
+    public function commissionSettings()
+    {
+        return $this->hasMany(DoctorCommissionSetting::class);
+    }
+
+    public function currentCommissionSetting()
+    {
+        return $this->hasOne(DoctorCommissionSetting::class)
+            ->latest('id');
     }
 
     public function getTodayAppointmentsCount()

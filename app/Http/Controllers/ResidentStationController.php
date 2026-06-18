@@ -6,13 +6,15 @@ use App\Models\Surgery;
 use App\Models\ResidentStation;
 use App\Models\Doctor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\SurgeryTreatment;
 
 class ResidentStationController extends Controller
 {
     public function index()
     {
-        // جلب العمليات في مرحلة المقيم (pre_op أو post_op)
-        $surgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
+        // 1. جلب العمليات التي تحتاج مرحلة pre_op
+        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
             ->where(function($query) {
                 $query->where(function($q) {
                     // حالة 1: العمليات المحجوزة التي تحتاج pre_op
@@ -21,61 +23,84 @@ class ResidentStationController extends Controller
                           $sq->where('phase', 'pre_op');
                       });
                 })
-                ->orWhere(function($q) {
+                ->orWhereHas('residentStations', function($sq) {
                     // حالة 2: pre_op موجود لكن غير مكتمل
-                    $q->whereHas('residentStations', function($sq) {
-                        $sq->where('phase', 'pre_op')
-                          ->where('status', '!=', 'completed');
-                    });
-                })
-                ->orWhere(function($q) {
-                    // حالة 3: بعد التخدير تحتاج post_op
-                    $q->whereHas('anesthesiaStation', function($sq) {
-                        $sq->where('status', 'completed');
-                    })
-                    ->whereDoesntHave('residentStations', function($sq) {
-                        $sq->where('phase', 'post_op');
-                    });
-                })
-                ->orWhere(function($q) {
-                    // حالة 4: post_op موجود لكن غير مكتمل
-                    $q->whereHas('residentStations', function($sq) {
-                        $sq->where('phase', 'post_op')
-                          ->where('status', '!=', 'completed');
-                    });
+                    $sq->where('phase', 'pre_op')
+                      ->where('status', '!=', 'completed');
                 });
             })
             ->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
 
-        return view('surgery-stations.resident.index', compact('surgeries'));
+        // 2. جلب العمليات التي تحتاج مرحلة post_op بعد اكتمال صالة العمليات
+        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
+            ->whereHas('anesthesiaStation', function($sq) {
+                $sq->where('status', 'completed');
+            })
+            ->where(function($query) {
+                $query->whereDoesntHave('residentStations', function($sq) {
+                    $sq->where('phase', 'post_op');
+                })
+                ->orWhereHas('residentStations', function($sq) {
+                    $sq->where('phase', 'post_op')
+                      ->where('status', '!=', 'completed');
+                });
+            })
+            ->orderBy('scheduled_date')
+            ->orderBy('scheduled_time')
+            ->get();
+
+        // 3. جلب العمليات التي أتمت كل مراحل المقيم (pre_op و post_op)
+        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
+            ->whereHas('residentStations', function($q) {
+                $q->where('phase', 'pre_op')->where('status', 'completed');
+            })
+            ->whereHas('residentStations', function($q) {
+                $q->where('phase', 'post_op')->where('status', 'completed');
+            })
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('surgery-stations.resident.index', compact('preOpSurgeries', 'postOpSurgeries', 'completedSurgeries'));
     }
 
-    public function show(Surgery $surgery)
+    public function show(Surgery $surgery, Request $request)
     {
-        // تحديد المرحلة الحالية (pre_op أو post_op)
+        $requestedPhase = $request->query('phase');
         $preOpStation = $surgery->preOpResidentStation;
         $postOpStation = $surgery->postOpResidentStation;
 
-        // تحديد المرحلة النشطة
-        if (!$preOpStation || $preOpStation->status !== 'completed') {
+        // تحديد المرحلة المعروضة
+        if ($requestedPhase === 'pre_op') {
             $currentPhase = 'pre_op';
             $station = $preOpStation;
-        } elseif ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed') {
-            if (!$postOpStation || $postOpStation->status !== 'completed') {
-                $currentPhase = 'post_op';
-                $station = $postOpStation;
-            } else {
-                return redirect()->route('resident-station.index')
-                    ->with('error', 'تم إتمام جميع مراحل المقيم');
-            }
+        } elseif ($requestedPhase === 'post_op') {
+            $currentPhase = 'post_op';
+            $station = $postOpStation;
         } else {
-            return redirect()->route('operation-theater-station.show', $surgery)
-                ->with('error', 'يجب إتمام مرحلة صالة العمليات أولاً');
+            // التحديد التلقائي للمرحلة
+            if (!$preOpStation || $preOpStation->status !== 'completed') {
+                $currentPhase = 'pre_op';
+                $station = $preOpStation;
+            } elseif ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed') {
+                if (!$postOpStation || $postOpStation->status !== 'completed') {
+                    $currentPhase = 'post_op';
+                    $station = $postOpStation;
+                } else {
+                    // كلا المرحلتين مكتملتين، نعرض post_op بشكل افتراضي
+                    $currentPhase = 'post_op';
+                    $station = $postOpStation;
+                }
+            } else {
+                // مرحلة صالة العمليات لم تكتمل بعد، ولكن مرحلة pre_op مكتملة
+                // نسمح بعرض مرحلة pre_op المكتملة بدلاً من الحظر
+                $currentPhase = 'pre_op';
+                $station = $preOpStation;
+            }
         }
 
-        // إنشاء محطة إذا لم تكن موجودة
+        // إنشاء محطة إذا لم تكن موجودة وكانت المرحلة نشطة وغير مكتملة
         if (!$station) {
             $station = $surgery->residentStations()->create([
                 'phase' => $currentPhase,
@@ -86,15 +111,67 @@ class ResidentStationController extends Controller
         $surgery->load([
             'patient.user', 
             'doctor.user', 
-            'residentStations', 
-            'preOpResidentStation', 
-            'postOpResidentStation',
+            'residentStations.readings.resident.user', 
+            'residentStations.followUps.resident.user', 
+            'preOpResidentStation.readings.resident.user', 
+            'postOpResidentStation.readings.resident.user',
             'labTests.labTest',
-            'radiologyTests.radiologyType'
+            'radiologyTests.radiologyType',
+            'surgeryTreatments.administeredBy'
         ]);
+        $station->load(['readings.resident.user', 'followUps.resident.user']);
         $residents = Doctor::where('type', 'resident')->get();
 
         return view('surgery-stations.resident.show', compact('surgery', 'station', 'currentPhase', 'residents'));
+    }
+
+    public function storeFollowUp(Request $request, Surgery $surgery)
+    {
+        $station = $surgery->postOpResidentStation;
+        if (!$station) {
+            return redirect()->back()->with('error', 'لا توجد محطة متابعة ما بعد العملية لتسجيل المتابعة.');
+        }
+
+        $validated = $request->validate([
+            'follow_up_date' => 'required|date',
+            'session' => 'required|in:morning,evening',
+            'notes' => 'required|string|max:2000',
+        ]);
+
+        $user = Auth::user();
+        $residentId = null;
+        $residentName = null;
+
+        if ($user) {
+            $residentId = $user->doctor?->id;
+            $residentName = $user->full_name ?? $user->name;
+
+            if (!$residentId) {
+                $resident = Doctor::where('user_id', $user->id)->first();
+                $residentId = $resident?->id;
+            }
+        }
+
+        if (!$residentId && $station->resident_id) {
+            $residentId = $station->resident_id;
+        }
+
+        if (!$residentName && $station->resident?->user?->full_name) {
+            $residentName = $station->resident->user->full_name;
+        }
+
+        $station->followUps()->create([
+            'surgery_id' => $surgery->id,
+            'resident_station_id' => $station->id,
+            'resident_id' => $residentId,
+            'resident_name' => $residentName,
+            'follow_up_date' => $validated['follow_up_date'],
+            'session' => $validated['session'],
+            'notes' => $validated['notes'],
+        ]);
+
+        return redirect()->route('resident-station.show', $surgery)
+            ->with('success', 'تم تسجيل متابعة جديدة بنجاح.');
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -135,6 +212,36 @@ class ResidentStationController extends Controller
             $station->markAsStarted();
         }
 
+        // التحقق من وجود قراءة جديدة للعلامات الحيوية أو الفحص السريري لحفظها في السجل الدوري
+        $hasVitalsOrExam = !empty($validated['bp']) || 
+                           !empty($validated['temp']) || 
+                           !empty($validated['pr']) || 
+                           !empty($validated['rr']) || 
+                           !empty($validated['spo2']) || 
+                           !empty($validated['clinical_examination']);
+
+        if ($hasVitalsOrExam) {
+            $isDifferent = $station->bp !== ($validated['bp'] ?? null) ||
+                           $station->temp !== ($validated['temp'] ?? null) ||
+                           $station->pr !== ($validated['pr'] ?? null) ||
+                           $station->rr !== ($validated['rr'] ?? null) ||
+                           $station->spo2 !== ($validated['spo2'] ?? null) ||
+                           $station->clinical_examination !== ($validated['clinical_examination'] ?? null);
+
+            if ($isDifferent) {
+                $station->readings()->create([
+                    'resident_id' => $validated['resident_id'] ?? $station->resident_id,
+                    'bp' => $validated['bp'] ?? null,
+                    'temp' => $validated['temp'] ?? null,
+                    'pr' => $validated['pr'] ?? null,
+                    'rr' => $validated['rr'] ?? null,
+                    'spo2' => $validated['spo2'] ?? null,
+                    'clinical_examination' => $validated['clinical_examination'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            }
+        }
+
         $station->update($validated);
 
         return redirect()->route('resident-station.show', $surgery)
@@ -173,5 +280,28 @@ class ResidentStationController extends Controller
 
         return redirect()->route('resident-station.index')
             ->with('success', $message);
+    }
+
+    public function administerTreatment(Request $request, SurgeryTreatment $treatment)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:administered,cancelled',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validated['status'] === 'administered') {
+            $user = Auth::user();
+            $userName = $user?->full_name ?? $user?->name ?? 'ممرض';
+            $treatment->logAdministration(Auth::id(), $userName, $validated['admin_notes'] ?? null);
+            $actionText = 'إعطاء جرعة من';
+        } else {
+            $treatment->update([
+                'status' => 'cancelled',
+                'admin_notes' => $validated['admin_notes'] ?? null,
+            ]);
+            $actionText = 'إيقاف/إلغاء';
+        }
+
+        return redirect()->back()->with('success', "تم {$actionText} العلاج بنجاح.");
     }
 }

@@ -105,7 +105,6 @@
                                                        {{ in_array($permission->name, old('permissions', [])) ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="perm_{{ $permission->id }}">
                                                     @php
-                                                        // ترجمة صلاحيات الأقسام الرئيسية
                                                         $sectionPermissions = [
                                                             'view patient management section' => 'عرض قسم إدارة المرضى',
                                                             'view emergency section' => 'عرض قسم الطوارئ',
@@ -114,6 +113,11 @@
                                                             'view surgeries section' => 'عرض قسم العمليات الجراحية',
                                                             'view lab section' => 'عرض قسم المختبر والأشعة',
                                                             'view settings section' => 'عرض قسم الإعدادات',
+                                                            'view resident station' => 'عرض محطة الطبيب المقيم',
+                                                            'view operation theater station' => 'عرض صالة العمليات',
+                                                            'view surgeon station' => 'عرض محطة الطبيب الجراح',
+                                                            'view anesthesia station' => 'عرض محطة التخدير',
+                                                            'view nursing station' => 'عرض محطة التمريض',
                                                         ];
                                                         
                                                         if (isset($sectionPermissions[$permission->name])) {
