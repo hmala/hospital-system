@@ -116,6 +116,7 @@ Route::middleware(['auth'])->group(function () {
     
     // إدارة المستخدمين (للمشرف فقط)
     Route::resource('users', UserManagementController::class);
+    Route::patch('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
 
     // روابط القائمة الجانبية يمكن لمسؤولي النظام تعديل رؤية كل رابط
     Route::resource('sidebar-links', \App\Http\Controllers\SidebarLinkController::class);

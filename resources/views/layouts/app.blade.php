@@ -784,14 +784,7 @@
                             </a>
                         </li>
                         @endcan
-                        @can('create lab tests')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.lab-visits.*') ? 'active' : '' }}" href="{{ route('staff.lab-visits.create') }}">
-                                <i class="fas fa-flask"></i><span> زيارة مختبرية</span>
-                            </a>
-                        </li>
-                        @endcan
-                        @can('view surgeries')
+                                             @can('view surgeries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
                                 <i class="fas fa-clock"></i><span> قائمة الانتظار</span>

@@ -18,15 +18,15 @@
                 <div class="stats-summary realtime-section" data-section="stats">
                     <span class="badge bg-info me-2">
                         <i class="fas fa-clock me-1"></i>
-                        {{ $labTests->where('status', 'pending')->count() }} في الانتظار
+                        {{ $stats['pending'] }} في الانتظار
                     </span>
                     <span class="badge bg-success me-2">
                         <i class="fas fa-check-circle me-1"></i>
-                        {{ $labTests->where('status', 'completed')->count() }} مكتمل
+                        {{ $stats['completed'] }} مكتمل
                     </span>
                     <span class="badge bg-danger">
                         <i class="fas fa-times-circle me-1"></i>
-                        {{ $labTests->where('status', 'cancelled')->count() }} ملغي
+                        {{ $stats['cancelled'] }} ملغي
                     </span>
                 </div>
             </div>
@@ -97,14 +97,14 @@
         <div class="card-header bg-primary text-white">
             <h6 class="mb-0">
                 <i class="fas fa-list me-2"></i>
-                قائمة الطلبات المختبرية
+                قائمة الطلبات المختبرية للعمليات
                 @if(request('search') || request('status') || request('date_from') || request('date_to'))
                 <small class="text-light ms-2">(تم تطبيق التصفية)</small>
                 @endif
             </h6>
         </div>
         <div class="card-body">
-            @if($labTests->count() > 0)
+            @if($surgeries->count() > 0)
             <div class="table-responsive realtime-section" data-section="table">
                 <table class="table table-striped table-hover align-middle">
                     <thead class="table-dark">
@@ -113,28 +113,49 @@
                             <th>المريض</th>
                             <th>نوع العملية</th>
                             <th>تاريخ العملية</th>
-                            <th>اسم التحليل</th>
-                            <th class="text-center">الحالة</th>
+                            <th>التحاليل المطلوبة</th>
+                            <th class="text-center">الحالة الإجمالية</th>
                             <th>تاريخ الطلب</th>
                             <th class="text-center" style="width: 150px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($labTests as $index => $test)
-                        <tr class="test-row {{ $test->status == 'pending' ? 'table-warning' : ($test->status == 'completed' ? 'table-success' : 'table-danger') }}" data-test-id="{{ $test->id }}">
+                        @foreach($surgeries as $index => $surgery)
+                        @php
+                            $firstTest = $surgery->labTests->first();
+                            $testCount = $surgery->labTests->count();
+                            $pendingCount = $surgery->labTests->where('status', 'pending')->count();
+                            $completedCount = $surgery->labTests->where('status', 'completed')->count();
+                            $cancelledCount = $surgery->labTests->where('status', 'cancelled')->count();
+                            
+                            if ($pendingCount > 0) {
+                                $statusClass = 'table-warning';
+                                $statusText = 'قيد الانتظار';
+                                $badgeClass = 'bg-warning';
+                            } elseif ($completedCount > 0) {
+                                $statusClass = 'table-success';
+                                $statusText = 'مكتملة';
+                                $badgeClass = 'bg-success';
+                            } else {
+                                $statusClass = 'table-danger';
+                                $statusText = 'ملغاة';
+                                $badgeClass = 'bg-danger';
+                            }
+                        @endphp
+                        <tr class="test-row {{ $statusClass }}" data-surgery-id="{{ $surgery->id }}">
                             <td class="text-center">{{ $loop->iteration }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2" style="width: 32px; height: 32px; background: linear-gradient(135deg, #007bff, #6610f2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                        {{ optional($test->surgery?->patient?->user)->name ? substr($test->surgery->patient->user->name, 0, 1) : '?' }}
+                                        {{ optional($surgery->patient?->user)->name ? mb_substr($surgery->patient->user->name, 0, 1, 'utf-8') : '?' }}
                                     </div>
                                     <div>
-                                        @if($test->surgery && $test->surgery->patient)
-                                        <a href="{{ route('patients.show', $test->surgery->patient) }}" class="text-decoration-none fw-bold">
-                                            {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}
+                                        @if($surgery->patient)
+                                        <a href="{{ route('patients.show', $surgery->patient) }}" class="text-decoration-none fw-bold">
+                                            {{ optional($surgery->patient->user)->name ?? 'غير معروف' }}
                                         </a>
                                         <br>
-                                        <small class="text-muted">ID: {{ $test->surgery->patient->id }}</small>
+                                        <small class="text-muted">ID: {{ $surgery->patient->id }}</small>
                                         @else
                                         <span class="text-muted">غير معروف</span>
                                         @endif
@@ -142,86 +163,71 @@
                                 </div>
                             </td>
                             <td>
-                                @if($test->surgery)
-                                <span class="badge bg-info">{{ $test->surgery->surgery_type }}</span>
-                                @if($test->surgery->surgery_fee_paid !== 'paid')
+                                <span class="badge bg-info">{{ $surgery->surgery_type }}</span>
+                                @if($surgery->surgery_fee_paid !== 'paid')
                                 <br>
                                 <span class="badge bg-danger mt-1" title="لا يمكن إجراء التحليل قبل دفع رسوم العملية">
                                     <i class="fas fa-exclamation-triangle me-1"></i>
                                     غير مدفوعة
                                 </span>
                                 @endif
-                                @else
-                                <span class="badge bg-secondary">غير محدد</span>
-                                @endif
                             </td>
                             <td>
-                                @if($test->surgery && $test->surgery->scheduled_date)
+                                @if($surgery->scheduled_date)
                                 <i class="fas fa-calendar-alt text-primary me-1"></i>
-                                {{ $test->surgery->scheduled_date->format('Y-m-d') }}
+                                {{ $surgery->scheduled_date->format('Y-m-d') }}
                                 <br>
-                                <small class="text-muted">{{ $test->surgery->scheduled_time }}</small>
+                                <small class="text-muted">{{ $surgery->scheduled_time }}</small>
                                 @else
                                 <span class="text-muted">غير محدد</span>
                                 @endif
                             </td>
                             <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-vial text-success me-2"></i>
-                                    <div>
-                                        @if($test->labTest)
-                                            <strong>{{ $test->labTest->name }}</strong>
-                                            @if($test->labTest->category)
-                                            <br><small class="text-muted">{{ $test->labTest->category }}</small>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach($surgery->labTests as $sTest)
+                                        <span class="badge bg-secondary" title="{{ $sTest->status == 'completed' ? 'مكتمل' : ($sTest->status == 'cancelled' ? 'ملغي' : 'في الانتظار') }}">
+                                            {{ $sTest->labTest?->name ?? 'طلب عام' }}
+                                            @if($sTest->status == 'completed')
+                                                <i class="fas fa-check-circle text-success ms-1"></i>
+                                            @elseif($sTest->status == 'cancelled')
+                                                <i class="fas fa-times-circle text-danger ms-1"></i>
+                                            @else
+                                                <i class="fas fa-clock text-warning ms-1"></i>
                                             @endif
-                                        @else
-                                            <strong class="text-warning">طلب مختبر عام</strong>
-                                            <br><small class="text-muted">لم يتم تحديد التحليل بعد</small>
-                                        @endif
-                                    </div>
+                                        </span>
+                                    @endforeach
                                 </div>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-{{ $test->status_color }} fs-6 status-badge">
-                                    <i class="fas {{ $test->status == 'pending' ? 'fa-clock' : ($test->status == 'completed' ? 'fa-check-circle' : 'fa-times-circle') }} me-1"></i>
-                                    {{ $test->status_text }}
+                                <span class="badge {{ $badgeClass }} fs-6">
+                                    <i class="fas {{ $pendingCount > 0 ? 'fa-clock' : ($completedCount > 0 ? 'fa-check-circle' : 'fa-times-circle') }} me-1"></i>
+                                    {{ $statusText }}
                                 </span>
+                                <br>
+                                <small class="text-muted">({{ $completedCount }} من {{ $testCount }} مكتمل)</small>
                             </td>
                             <td>
                                 <i class="fas fa-clock text-info me-1"></i>
-                                {{ $test->created_at->format('Y-m-d') }}
-                                <br>
-                                <small class="text-muted">{{ $test->created_at->format('H:i') }}</small>
+                                @if($surgery->labTests->max('created_at'))
+                                    {{ $surgery->labTests->max('created_at')->format('Y-m-d') }}
+                                    <br>
+                                    <small class="text-muted">{{ $surgery->labTests->max('created_at')->format('H:i') }}</small>
+                                @else
+                                    -
+                                @endif
                             </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{{ route('staff.surgery-lab-tests.show', $test) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
-                                        <i class="fas fa-eye"></i>
+                                    @if($firstTest)
+                                    <a href="{{ route('staff.surgery-lab-tests.show', $firstTest) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل وإدخال النتائج">
+                                        <i class="fas fa-eye"></i> عرض وإدخال
                                     </a>
-                                    @if($test->status == 'pending')
-                                    <button class="btn btn-sm btn-outline-success" 
-                                            title="{{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'يجب دفع رسوم العملية أولاً' : 'تحديث النتائج' }}" 
-                                            onclick="quickUpdate({{ $test->id }}, 'completed')"
-                                            {{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'disabled' : '' }}>
-                                        <i class="fas fa-check"></i>
-                                    </button>
                                     @endif
-                                    @php
-                                        $completedTestsCount = \App\Models\SurgeryLabTest::where('surgery_id', $test->surgery_id)->where('status', 'completed')->count();
-                                    @endphp
-                                    @if($completedTestsCount > 0)
-                                    <a href="{{ route('staff.surgery-lab-tests.print', $test) }}"
+                                    @if($completedCount > 0 && $firstTest)
+                                    <a href="{{ route('staff.surgery-lab-tests.print', $firstTest) }}"
                                        class="btn btn-sm btn-outline-success"
                                        target="_blank"
                                        title="طباعة نتائج العملية">
-                                        <i class="fas fa-print"></i>
-                                    </a>
-                                    @endif
-                                    @if($test->status == 'completed')
-                                    <a href="{{ route('staff.surgery-lab-tests.print', $test) }}"
-                                       class="btn btn-sm btn-outline-success"
-                                       target="_blank"
-                                       title="طباعة النتائج">
                                         <i class="fas fa-print"></i>
                                     </a>
                                     @endif
@@ -234,11 +240,11 @@
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-4">
-                <div class="text-muted">
-                    عرض {{ $labTests->firstItem() }} إلى {{ $labTests->lastItem() }} من أصل {{ $labTests->total() }} طلب
+                <div class="text-muted text-right">
+                    عرض {{ $surgeries->firstItem() }} إلى {{ $surgeries->lastItem() }} من أصل {{ $surgeries->total() }} عملية
                 </div>
                 <div>
-                    {{ $labTests->appends(request()->query())->links() }}
+                    {{ $surgeries->appends(request()->query())->links() }}
                 </div>
             </div>
             @else

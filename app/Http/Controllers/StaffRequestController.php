@@ -831,43 +831,84 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
         }
 
-        $query = \App\Models\SurgeryLabTest::with(['surgery.patient.user', 'surgery.doctor.user', 'labTest'])
-            ->whereHas('surgery'); // التأكد من وجود عملية صالحة
+        $query = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'labTests.labTest'])
+            ->whereHas('labTests')
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed']); // التأكد من وجود عملية صالحة
 
         // البحث
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->whereHas('surgery.patient.user', function($patientQuery) use ($search) {
+                $q->whereHas('patient.user', function($patientQuery) use ($search) {
                     $patientQuery->where('name', 'like', '%' . $search . '%');
                 })
-                ->orWhereHas('surgery', function($surgeryQuery) use ($search) {
-                    $surgeryQuery->where('surgery_type', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('labTest', function($labTestQuery) use ($search) {
+                ->orWhere('surgery_type', 'like', '%' . $search . '%')
+                ->orWhereHas('labTests.labTest', function($labTestQuery) use ($search) {
                     $labTestQuery->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('category', 'like', '%' . $search . '%');
+                                 ->orWhere('category', 'like', '%' . $search . '%');
                 });
             });
         }
 
-        // فلترة حسب الحالة
+        // فلترة حسب الحالة لـ surgery_lab_tests
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $status = $request->status;
+            $query->whereHas('labTests', function($q) use ($status) {
+                $q->where('status', $status);
+            });
         }
 
-        // فلترة حسب التاريخ
+        // فلترة حسب التاريخ لـ surgery_lab_tests
         if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $query->whereHas('labTests', function($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->date_from);
+            });
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $query->whereHas('labTests', function($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->date_to);
+            });
         }
 
-        $labTests = $query->orderBy('created_at', 'desc')->paginate(20)->appends($request->query());
+        $surgeries = $query->orderBy('id', 'desc')->paginate(20)->appends($request->query());
 
-        return view('staff.surgery-lab-tests.index', compact('labTests'));
+        // حساب إحصائيات الفحوصات المطابقة للتصفية
+        $statsQuery = \App\Models\SurgeryLabTest::whereHas('surgery', function($q) use ($request) {
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $q->where(function($sq) use ($search) {
+                    $sq->whereHas('patient.user', function($pq) use ($search) {
+                        $pq->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhere('surgery_type', 'like', '%' . $search . '%');
+                });
+            }
+        });
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $statsQuery->where(function($q) use ($search) {
+                $q->whereHas('labTest', function($ltq) use ($search) {
+                    $ltq->where('name', 'like', '%' . $search . '%');
+                });
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $statsQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $statsQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $stats = [
+            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
+            'completed' => (clone $statsQuery)->where('status', 'completed')->count(),
+            'cancelled' => (clone $statsQuery)->where('status', 'cancelled')->count(),
+        ];
+
+        return view('staff.surgery-lab-tests.index', compact('surgeries', 'stats'));
     }
 
     /**
