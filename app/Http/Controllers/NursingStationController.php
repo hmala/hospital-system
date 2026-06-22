@@ -47,7 +47,14 @@ class NursingStationController extends Controller
             ]);
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'nursingStation.nurse', 'surgeryTreatments.administeredBy']);
+        $surgery->load([
+            'patient.user', 
+            'doctor.user', 
+            'nursingStation.nurse', 
+            'surgeryTreatments.administeredBy',
+            'postOpResidentStation.followUps.resident.user',
+            'postOpResidentStation.readings.resident.user'
+        ]);
         
         $nurses = User::role('nurse')->where('is_active', true)->get();
 
@@ -61,6 +68,12 @@ class NursingStationController extends Controller
             'nursing_notes' => 'nullable|string|max:2000',
             'discharge_notes' => 'nullable|string|max:2000',
             'vital_signs' => 'nullable|string|max:1000',
+            'bp' => 'nullable|string|max:100',
+            'temp' => 'nullable|string|max:100',
+            'pr' => 'nullable|string|max:100',
+            'rr' => 'nullable|string|max:100',
+            'spo2' => 'nullable|string|max:100',
+            'clinical_examination' => 'nullable|string|max:2000',
         ]);
 
         $station = $surgery->nursingStation;
@@ -71,7 +84,56 @@ class NursingStationController extends Controller
             ]);
         }
 
-        $station->update($validated);
+        $station->update([
+            'nurse_id' => $validated['nurse_id'] ?? null,
+            'nursing_notes' => $validated['nursing_notes'] ?? null,
+            'discharge_notes' => $validated['discharge_notes'] ?? null,
+            'vital_signs' => $validated['vital_signs'] ?? (
+                (($validated['bp'] ?? null) || ($validated['temp'] ?? null) || ($validated['pr'] ?? null) || ($validated['rr'] ?? null) || ($validated['spo2'] ?? null))
+                ? implode(' | ', array_filter([
+                    ($validated['bp'] ?? null) ? "ضغط الدم: " . $validated['bp'] : null,
+                    ($validated['temp'] ?? null) ? "الحرارة: " . $validated['temp'] : null,
+                    ($validated['pr'] ?? null) ? "النبض: " . $validated['pr'] : null,
+                    ($validated['rr'] ?? null) ? "التنفس: " . $validated['rr'] : null,
+                    ($validated['spo2'] ?? null) ? "الأكسجين: " . $validated['spo2'] : null,
+                ]))
+                : null
+            ),
+        ]);
+
+        // تحديث العلامات الحيوية في محطة المقيم ما بعد العملية (post_op)
+        $postOpStation = $surgery->postOpResidentStation;
+        if ($postOpStation) {
+            $isDifferent = $postOpStation->bp !== ($validated['bp'] ?? null) ||
+                           $postOpStation->temp !== ($validated['temp'] ?? null) ||
+                           $postOpStation->pr !== ($validated['pr'] ?? null) ||
+                           $postOpStation->rr !== ($validated['rr'] ?? null) ||
+                           $postOpStation->spo2 !== ($validated['spo2'] ?? null) ||
+                           $postOpStation->clinical_examination !== ($validated['clinical_examination'] ?? null);
+
+            if ($isDifferent) {
+                // استخدام معرف الطبيب المقيم المرتبط بالمحطة أو null
+                $postOpStation->readings()->create([
+                    'resident_id' => $postOpStation->resident_id,
+                    'bp' => $validated['bp'] ?? null,
+                    'temp' => $validated['temp'] ?? null,
+                    'pr' => $validated['pr'] ?? null,
+                    'rr' => $validated['rr'] ?? null,
+                    'spo2' => $validated['spo2'] ?? null,
+                    'clinical_examination' => $validated['clinical_examination'] ?? null,
+                    'notes' => 'تم تسجيل القراءة بواسطة التمريض',
+                ]);
+
+                $postOpStation->update([
+                    'bp' => $validated['bp'] ?? null,
+                    'temp' => $validated['temp'] ?? null,
+                    'pr' => $validated['pr'] ?? null,
+                    'rr' => $validated['rr'] ?? null,
+                    'spo2' => $validated['spo2'] ?? null,
+                    'clinical_examination' => $validated['clinical_examination'] ?? null,
+                ]);
+            }
+        }
 
         return redirect()->route('nursing-station.show', $surgery)
             ->with('success', 'تم حفظ بيانات محطة التمريض بنجاح');

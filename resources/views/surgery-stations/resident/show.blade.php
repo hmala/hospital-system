@@ -226,6 +226,13 @@
 
                     <!-- TAB 2: CLINICAL EXAMINATION & VITALS -->
                     <div class="tab-pane fade" id="examination-content" role="tabpanel" aria-labelledby="examination-tab">
+                        <div class="alert alert-info border-info bg-info bg-opacity-10 mb-4 rounded-3 d-flex align-items-center">
+                            <i class="fas fa-info-circle me-2 fs-5 text-info"></i>
+                            <div>
+                                <strong>تنبيه:</strong> يتم تسجيل وتحديث العلامات الحيوية والفحص السريري من قبل كادر التمريض في محطة التمريض. هذه البيانات للعرض فقط هنا.
+                            </div>
+                        </div>
+
                         <!-- Vital Signs Section -->
                         <h6 class="fw-bold text-dark mb-3"><i class="fas fa-heartbeat text-danger me-1"></i> العلامات الحيوية (Vital Signs)</h6>
                         <div class="row g-2 mb-3 row-cols-5">
@@ -233,35 +240,35 @@
                             <div class="col">
                                 <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-2 h-100">
                                     <label class="form-label fw-bold text-danger mb-1 small"><i class="fas fa-tachometer-alt"></i> ضغط الدم BP</label>
-                                    <input type="text" name="bp" class="form-control form-control-sm text-center rounded-2 border-danger-subtle bg-white" placeholder="120/80" value="{{ $station?->bp ?? '' }}">
+                                    <input type="text" name="bp" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-danger-subtle" placeholder="120/80" value="{{ $station?->bp ?? '' }}">
                                 </div>
                             </div>
                             <!-- Temp Card -->
                             <div class="col">
                                 <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 text-center p-2 h-100">
                                     <label class="form-label fw-bold text-warning-emphasis mb-1 small"><i class="fas fa-thermometer-half"></i> الحرارة Temp</label>
-                                    <input type="text" name="temp" class="form-control form-control-sm text-center rounded-2 border-warning-subtle bg-white" placeholder="37°C" value="{{ $station?->temp ?? '' }}">
+                                    <input type="text" name="temp" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-warning-subtle" placeholder="37°C" value="{{ $station?->temp ?? '' }}">
                                 </div>
                             </div>
                             <!-- Pulse Card -->
                             <div class="col">
                                 <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-2 h-100">
                                     <label class="form-label fw-bold text-danger mb-1 small"><i class="fas fa-heart"></i> النبض PR</label>
-                                    <input type="text" name="pr" class="form-control form-control-sm text-center rounded-2 border-danger-subtle bg-white" placeholder="80 bpm" value="{{ $station?->pr ?? '' }}">
+                                    <input type="text" name="pr" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-danger-subtle" placeholder="80 bpm" value="{{ $station?->pr ?? '' }}">
                                 </div>
                             </div>
                             <!-- RR Card -->
                             <div class="col">
                                 <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 text-center p-2 h-100">
                                     <label class="form-label fw-bold text-info-emphasis mb-1 small"><i class="fas fa-lungs"></i> التنفس RR</label>
-                                    <input type="text" name="rr" class="form-control form-control-sm text-center rounded-2 border-info-subtle bg-white" placeholder="16 /min" value="{{ $station?->rr ?? '' }}">
+                                    <input type="text" name="rr" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-info-subtle" placeholder="16 /min" value="{{ $station?->rr ?? '' }}">
                                 </div>
                             </div>
                             <!-- SPO2 Card -->
                             <div class="col">
                                 <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 text-center p-2 h-100">
                                     <label class="form-label fw-bold text-success mb-1 small"><i class="fas fa-wind"></i> أكسجين SPo2</label>
-                                    <input type="text" name="spo2" class="form-control form-control-sm text-center rounded-2 border-success-subtle bg-white" placeholder="98%" value="{{ $station?->spo2 ?? '' }}">
+                                    <input type="text" name="spo2" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-success-subtle" placeholder="98%" value="{{ $station?->spo2 ?? '' }}">
                                 </div>
                             </div>
                         </div>
@@ -271,13 +278,13 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="form-label fw-semibold text-dark"><i class="fas fa-stethoscope text-primary me-1"></i> الفحص السريري العام (Clinical Examination)</label>
-                                    <textarea name="clinical_examination" class="form-control rounded-3 border-secondary-subtle" rows="5" placeholder="اكتب الملاحظات السريرية ونتائج فحص المريض...">{{ $station?->clinical_examination ?? '' }}</textarea>
+                                    <textarea name="clinical_examination" readonly style="background-color: #e9ecef;" class="form-control rounded-3 border-secondary-subtle" rows="5" placeholder="اكتب الملاحظات السريرية ونتائج فحص المريض...">{{ $station?->clinical_examination ?? '' }}</textarea>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="form-label fw-semibold text-dark"><i class="fas fa-notes-medical text-secondary me-1"></i> مراجعة الأنظمة الطبية الأخرى (Review of Other Systems)</label>
-                                    <textarea name="review_of_other_systems" class="form-control rounded-3 border-secondary-subtle" rows="5" placeholder="اكتب نتائج فحص الأجهزة الأخرى (القلب، الصدر، التنفس... إلخ)...">{{ $station?->review_of_other_systems ?? '' }}</textarea>
+                                    <textarea name="review_of_other_systems" readonly style="background-color: #e9ecef;" class="form-control rounded-3 border-secondary-subtle" rows="5" placeholder="اكتب نتائج فحص الأجهزة الأخرى (القلب، الصدر، التنفس... إلخ)...">{{ $station?->review_of_other_systems ?? '' }}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -737,55 +744,12 @@
                                             </table>
                                         </div>
 
-                                        @if($followUpStation)
-                                            <div class="table-responsive">
-                                                <table class="table table-bordered mb-0 align-middle">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th class="py-2">تاريخ المتابعة</th>
-                                                            <th class="py-2">الوردية</th>
-                                                            <th class="py-2">الطبيب المقيم</th>
-                                                            <th class="py-2">الملاحظات</th>
-                                                            <th class="py-2"></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td>
-                                                                <input form="resident-follow-up-form" type="date" name="follow_up_date" class="form-control rounded-3 border-secondary-subtle @error('follow_up_date') is-invalid @enderror" value="{{ old('follow_up_date', now()->format('Y-m-d')) }}">
-                                                                @error('follow_up_date')
-                                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                                @enderror
-                                                            </td>
-                                                            <td>
-                                                                <select form="resident-follow-up-form" name="session" class="form-select rounded-3 border-secondary-subtle @error('session') is-invalid @enderror">
-                                                                    <option value="">اختر الوردية</option>
-                                                                    <option value="morning" {{ old('session') === 'morning' ? 'selected' : '' }}>صباحاً</option>
-                                                                    <option value="evening" {{ old('session') === 'evening' ? 'selected' : '' }}>مساءً</option>
-                                                                </select>
-                                                                @error('session')
-                                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                                @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" readonly class="form-control rounded-3 bg-white border-secondary-subtle" value="{{ auth()->user()?->full_name ?? auth()->user()?->name ?? 'غير محدد' }}">
-                                                            </td>
-                                                            <td>
-                                                                <textarea form="resident-follow-up-form" name="notes" class="form-control rounded-3 border-secondary-subtle @error('notes') is-invalid @enderror" rows="1" placeholder="اكتب ملاحظات المتابعة...">{{ old('notes') }}</textarea>
-                                                                @error('notes')
-                                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                                @enderror
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <button form="resident-follow-up-form" type="submit" class="btn btn-success rounded-pill px-4 py-2 shadow-sm">
-                                                                    <i class="fas fa-save me-1"></i> حفظ
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
+                                        <div class="alert alert-info border-info bg-info bg-opacity-10 mb-0 rounded-3 d-flex align-items-center">
+                                            <i class="fas fa-info-circle me-2 fs-5 text-info"></i>
+                                            <div>
+                                                <strong>تنبيه:</strong> يتم تسجيل وتحديث المتابعة الدورية من قبل كادر التمريض في محطة التمريض.
                                             </div>
-                                        @endif
+                                        </div>
                                     </div>
                                 </div>
                             </div>

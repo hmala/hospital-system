@@ -170,7 +170,7 @@ class ResidentStationController extends Controller
             'notes' => $validated['notes'],
         ]);
 
-        return redirect()->route('resident-station.show', $surgery)
+        return redirect()->back()
             ->with('success', 'تم تسجيل متابعة جديدة بنجاح.');
     }
 
