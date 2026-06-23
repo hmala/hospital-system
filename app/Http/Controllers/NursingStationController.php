@@ -6,16 +6,34 @@ use App\Models\Surgery;
 use App\Models\NursingStation;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class NursingStationController extends Controller
 {
     public function index()
     {
-        // جلب العمليات التي في محطة التمريض (بعد المقيم post_op)
-        $surgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse'])
-            ->whereHas('residentStations', function($q) {
-                $q->where('phase', 'post_op')
-                  ->where('status', 'completed');
+        // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
+        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation'])
+            ->where(function($query) {
+                $query->where(function($q) {
+                    $q->where('status', 'scheduled')
+                      ->whereDoesntHave('residentStations', function($sq) {
+                          $sq->where('phase', 'pre_op');
+                      });
+                })
+                ->orWhereHas('residentStations', function($sq) {
+                    $sq->where('phase', 'pre_op')
+                      ->where('status', '!=', 'completed');
+                });
+            })
+            ->orderBy('scheduled_date')
+            ->orderBy('scheduled_time')
+            ->get();
+
+        // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد الصالة)
+        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation'])
+            ->whereHas('anesthesiaStation', function($sq) {
+                $sq->where('status', 'completed');
             })
             ->where(function($query) {
                 $query->whereDoesntHave('nursingStation')
@@ -28,18 +46,19 @@ class NursingStationController extends Controller
             ->orderBy('scheduled_time')
             ->get();
 
-        return view('surgery-stations.nursing.index', compact('surgeries'));
+        // 3. جلب العمليات التي أتمت مرحلة التمريض (الأرشيف)
+        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse'])
+            ->whereHas('nursingStation', function($q) {
+                $q->where('status', 'completed');
+            })
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('surgery-stations.nursing.index', compact('preOpSurgeries', 'postOpSurgeries', 'completedSurgeries'));
     }
 
     public function show(Surgery $surgery)
     {
-        // التحقق من أن محطة المقيم (post_op) مكتملة
-        $postOpStation = $surgery->postOpResidentStation;
-        if (!$postOpStation || $postOpStation->status !== 'completed') {
-            return redirect()->route('resident-station.show', $surgery)
-                ->with('error', 'يجب إتمام مرحلة متابعة المقيم أولاً');
-        }
-
         // إنشاء محطة إذا لم تكن موجودة
         if (!$surgery->nursingStation) {
             $surgery->nursingStation()->create([
@@ -52,6 +71,8 @@ class NursingStationController extends Controller
             'doctor.user', 
             'nursingStation.nurse', 
             'surgeryTreatments.administeredBy',
+            'preOpResidentStation.followUps.resident.user',
+            'preOpResidentStation.readings.resident.user',
             'postOpResidentStation.followUps.resident.user',
             'postOpResidentStation.readings.resident.user'
         ]);
@@ -73,8 +94,34 @@ class NursingStationController extends Controller
             'pr' => 'nullable|string|max:100',
             'rr' => 'nullable|string|max:100',
             'spo2' => 'nullable|string|max:100',
+            'pain_score' => 'nullable|string|max:100',
+            'rbs' => 'nullable|string|max:100',
+            'gcs' => 'nullable|string|max:100',
+            'crt' => 'nullable|string|max:100',
+            'intake_iv_fluids' => 'nullable|numeric|min:0',
+            'intake_oral' => 'nullable|numeric|min:0',
+            'intake_blood' => 'nullable|numeric|min:0',
+            'output_urine' => 'nullable|numeric|min:0',
+            'output_drain' => 'nullable|numeric|min:0',
+            'output_gtube_ng' => 'nullable|numeric|min:0',
+            'output_vomiting' => 'nullable|numeric|min:0',
+            'output_stool' => 'nullable|numeric|min:0',
             'clinical_examination' => 'nullable|string|max:2000',
         ]);
+
+        $intake = ($validated['intake_iv_fluids'] ?? 0) + ($validated['intake_oral'] ?? 0) + ($validated['intake_blood'] ?? 0);
+        $output = ($validated['output_urine'] ?? 0) + ($validated['output_drain'] ?? 0) + ($validated['output_gtube_ng'] ?? 0) + ($validated['output_vomiting'] ?? 0) + ($validated['output_stool'] ?? 0);
+        
+        $anyFluids = isset($validated['intake_iv_fluids']) || isset($validated['intake_oral']) || isset($validated['intake_blood']) ||
+                     isset($validated['output_urine']) || isset($validated['output_drain']) || isset($validated['output_gtube_ng']) ||
+                     isset($validated['output_vomiting']) || isset($validated['output_stool']);
+                     
+        $validated['fluid_balance'] = $anyFluids ? ($intake - $output) : null;
+
+        $user = Auth::user();
+        if ($user) {
+            $validated['nurse_id'] = $user->id;
+        }
 
         $station = $surgery->nursingStation;
         if (!$station) {
@@ -101,35 +148,77 @@ class NursingStationController extends Controller
             ),
         ]);
 
-        // تحديث العلامات الحيوية في محطة المقيم ما بعد العملية (post_op)
-        $postOpStation = $surgery->postOpResidentStation;
-        if ($postOpStation) {
-            $isDifferent = $postOpStation->bp !== ($validated['bp'] ?? null) ||
-                           $postOpStation->temp !== ($validated['temp'] ?? null) ||
-                           $postOpStation->pr !== ($validated['pr'] ?? null) ||
-                           $postOpStation->rr !== ($validated['rr'] ?? null) ||
-                           $postOpStation->spo2 !== ($validated['spo2'] ?? null) ||
-                           $postOpStation->clinical_examination !== ($validated['clinical_examination'] ?? null);
+        // تحديث العلامات الحيوية في محطة المقيم (ما قبل أو ما بعد العملية حسب المرحلة الحالية)
+        $currentStationName = $surgery->getCurrentStation();
+        $activeResidentStation = ($currentStationName === 'resident_pre_op' || !$surgery->postOpResidentStation)
+            ? $surgery->preOpResidentStation
+            : $surgery->postOpResidentStation;
+
+        if ($activeResidentStation) {
+            $isDifferent = $activeResidentStation->bp !== ($validated['bp'] ?? null) ||
+                           $activeResidentStation->temp !== ($validated['temp'] ?? null) ||
+                           $activeResidentStation->pr !== ($validated['pr'] ?? null) ||
+                           $activeResidentStation->rr !== ($validated['rr'] ?? null) ||
+                           $activeResidentStation->spo2 !== ($validated['spo2'] ?? null) ||
+                           $activeResidentStation->pain_score !== ($validated['pain_score'] ?? null) ||
+                           $activeResidentStation->rbs !== ($validated['rbs'] ?? null) ||
+                           $activeResidentStation->gcs !== ($validated['gcs'] ?? null) ||
+                           $activeResidentStation->crt !== ($validated['crt'] ?? null) ||
+                           $activeResidentStation->intake_iv_fluids !== ($validated['intake_iv_fluids'] ?? null) ||
+                           $activeResidentStation->intake_oral !== ($validated['intake_oral'] ?? null) ||
+                           $activeResidentStation->intake_blood !== ($validated['intake_blood'] ?? null) ||
+                           $activeResidentStation->output_urine !== ($validated['output_urine'] ?? null) ||
+                           $activeResidentStation->output_drain !== ($validated['output_drain'] ?? null) ||
+                           $activeResidentStation->output_gtube_ng !== ($validated['output_gtube_ng'] ?? null) ||
+                           $activeResidentStation->output_vomiting !== ($validated['output_vomiting'] ?? null) ||
+                           $activeResidentStation->output_stool !== ($validated['output_stool'] ?? null) ||
+                           $activeResidentStation->clinical_examination !== ($validated['clinical_examination'] ?? null);
 
             if ($isDifferent) {
                 // استخدام معرف الطبيب المقيم المرتبط بالمحطة أو null
-                $postOpStation->readings()->create([
-                    'resident_id' => $postOpStation->resident_id,
+                $activeResidentStation->readings()->create([
+                    'resident_id' => $activeResidentStation->resident_id,
                     'bp' => $validated['bp'] ?? null,
                     'temp' => $validated['temp'] ?? null,
                     'pr' => $validated['pr'] ?? null,
                     'rr' => $validated['rr'] ?? null,
                     'spo2' => $validated['spo2'] ?? null,
+                    'pain_score' => $validated['pain_score'] ?? null,
+                    'rbs' => $validated['rbs'] ?? null,
+                    'gcs' => $validated['gcs'] ?? null,
+                    'crt' => $validated['crt'] ?? null,
+                    'intake_iv_fluids' => $validated['intake_iv_fluids'] ?? null,
+                    'intake_oral' => $validated['intake_oral'] ?? null,
+                    'intake_blood' => $validated['intake_blood'] ?? null,
+                    'output_urine' => $validated['output_urine'] ?? null,
+                    'output_drain' => $validated['output_drain'] ?? null,
+                    'output_gtube_ng' => $validated['output_gtube_ng'] ?? null,
+                    'output_vomiting' => $validated['output_vomiting'] ?? null,
+                    'output_stool' => $validated['output_stool'] ?? null,
+                    'fluid_balance' => $validated['fluid_balance'] ?? null,
                     'clinical_examination' => $validated['clinical_examination'] ?? null,
                     'notes' => 'تم تسجيل القراءة بواسطة التمريض',
                 ]);
 
-                $postOpStation->update([
+                $activeResidentStation->update([
                     'bp' => $validated['bp'] ?? null,
                     'temp' => $validated['temp'] ?? null,
                     'pr' => $validated['pr'] ?? null,
                     'rr' => $validated['rr'] ?? null,
                     'spo2' => $validated['spo2'] ?? null,
+                    'pain_score' => $validated['pain_score'] ?? null,
+                    'rbs' => $validated['rbs'] ?? null,
+                    'gcs' => $validated['gcs'] ?? null,
+                    'crt' => $validated['crt'] ?? null,
+                    'intake_iv_fluids' => $validated['intake_iv_fluids'] ?? null,
+                    'intake_oral' => $validated['intake_oral'] ?? null,
+                    'intake_blood' => $validated['intake_blood'] ?? null,
+                    'output_urine' => $validated['output_urine'] ?? null,
+                    'output_drain' => $validated['output_drain'] ?? null,
+                    'output_gtube_ng' => $validated['output_gtube_ng'] ?? null,
+                    'output_vomiting' => $validated['output_vomiting'] ?? null,
+                    'output_stool' => $validated['output_stool'] ?? null,
+                    'fluid_balance' => $validated['fluid_balance'] ?? null,
                     'clinical_examination' => $validated['clinical_examination'] ?? null,
                 ]);
             }
@@ -153,5 +242,38 @@ class NursingStationController extends Controller
 
         return redirect()->route('nursing-station.index')
             ->with('success', 'تم إتمام محطة التمريض والعملية مكتملة');
+    }
+
+    public function storeFollowUp(Request $request, Surgery $surgery)
+    {
+        $currentStationName = $surgery->getCurrentStation();
+        $station = ($currentStationName === 'resident_pre_op' || !$surgery->postOpResidentStation)
+            ? $surgery->preOpResidentStation
+            : $surgery->postOpResidentStation;
+
+        if (!$station) {
+            return redirect()->back()->with('error', 'لا توجد محطة مقيم لتسجيل المتابعة.');
+        }
+
+        $validated = $request->validate([
+            'follow_up_date' => 'required|date',
+            'session' => 'required|in:morning,evening',
+            'notes' => 'required|string|max:2000',
+        ]);
+
+        $user = Auth::user();
+        $nurseName = $user?->full_name ?? $user?->name ?? 'ممرض';
+
+        $station->followUps()->create([
+            'surgery_id' => $surgery->id,
+            'resident_station_id' => $station->id,
+            'resident_id' => null,
+            'resident_name' => $nurseName . ' (كادر التمريض)',
+            'follow_up_date' => $validated['follow_up_date'],
+            'session' => $validated['session'],
+            'notes' => $validated['notes'],
+        ]);
+
+        return redirect()->back()->with('success', 'تم تسجيل متابعة جديدة بنجاح بواسطة التمريض.');
     }
 }

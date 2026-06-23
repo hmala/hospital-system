@@ -191,12 +191,47 @@ class ResidentStationController extends Controller
             'pr' => 'nullable|string|max:100',
             'rr' => 'nullable|string|max:100',
             'spo2' => 'nullable|string|max:100',
+            'pain_score' => 'nullable|string|max:100',
+            'rbs' => 'nullable|string|max:100',
+            'gcs' => 'nullable|string|max:100',
+            'crt' => 'nullable|string|max:100',
+            'intake_iv_fluids' => 'nullable|numeric|min:0',
+            'intake_oral' => 'nullable|numeric|min:0',
+            'intake_blood' => 'nullable|numeric|min:0',
+            'output_urine' => 'nullable|numeric|min:0',
+            'output_drain' => 'nullable|numeric|min:0',
+            'output_gtube_ng' => 'nullable|numeric|min:0',
+            'output_vomiting' => 'nullable|numeric|min:0',
+            'output_stool' => 'nullable|numeric|min:0',
             'review_of_other_systems' => 'nullable|string|max:2000',
             'notes' => 'nullable|string|max:2000',
             'post_op_notes' => 'nullable|string|max:2000',
             'treatment_plan' => 'nullable|string|max:2000',
             'follow_up_date' => 'nullable|date',
         ]);
+
+        $intake = ($validated['intake_iv_fluids'] ?? 0) + ($validated['intake_oral'] ?? 0) + ($validated['intake_blood'] ?? 0);
+        $output = ($validated['output_urine'] ?? 0) + ($validated['output_drain'] ?? 0) + ($validated['output_gtube_ng'] ?? 0) + ($validated['output_vomiting'] ?? 0) + ($validated['output_stool'] ?? 0);
+        
+        $anyFluids = isset($validated['intake_iv_fluids']) || isset($validated['intake_oral']) || isset($validated['intake_blood']) ||
+                     isset($validated['output_urine']) || isset($validated['output_drain']) || isset($validated['output_gtube_ng']) ||
+                     isset($validated['output_vomiting']) || isset($validated['output_stool']);
+                     
+        $validated['fluid_balance'] = $anyFluids ? ($intake - $output) : null;
+
+        $user = Auth::user();
+        $residentId = null;
+        if ($user) {
+            $residentId = $user->doctor?->id;
+            if (!$residentId) {
+                $resident = \App\Models\Doctor::where('user_id', $user->id)->first();
+                $residentId = $resident?->id;
+            }
+        }
+
+        if ($residentId) {
+            $validated['resident_id'] = $residentId;
+        }
 
         $station = $surgery->residentStations()->where('phase', $validated['phase'])->first();
         

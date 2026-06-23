@@ -168,19 +168,15 @@
                     
                     <!-- TAB 1: MEDICAL HISTORY -->
                     <div class="tab-pane fade show active" id="history-content" role="tabpanel" aria-labelledby="history-tab">
-                        <!-- Select Assigned Resident -->
+                        <!-- Assigned Resident Display -->
                         <div class="row mb-4">
                             <div class="col-md-12">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-user-md text-primary me-1"></i> الطبيب المقيم المسؤول عن الحالة</label>
-                                <select name="resident_id" class="form-select form-select-lg rounded-3 border-secondary-subtle">
-                                    <option value="">-- اختر الطبيب المقيم --</option>
-                                    @foreach($residents as $resident)
-                                        <option value="{{ $resident->id }}" 
-                                            {{ ($station?->resident_id ?? old('resident_id')) == $resident->id ? 'selected' : '' }}>
-                                            {{ $resident->user->full_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <div class="p-3 bg-light rounded-3 border border-secondary-subtle">
+                                    <span class="fw-bold text-dark"><i class="fas fa-user-md text-primary me-1"></i> الطبيب المقيم المسؤول عن الحالة: </span>
+                                    <span class="fw-semibold text-secondary">
+                                        {{ $station?->resident?->user?->full_name ?? Auth::user()->full_name ?? Auth::user()->name }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -273,6 +269,38 @@
                             </div>
                         </div>
 
+                        <!-- Advanced Vital Signs Section -->
+                        <div class="row g-2 mb-4 row-cols-4">
+                            <!-- Pain Score Card -->
+                            <div class="col">
+                                <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 text-center p-2 h-100">
+                                    <label class="form-label fw-bold text-warning-emphasis mb-1 small"><i class="fas fa-angry text-danger"></i> مستوى الألم Pain</label>
+                                    <input type="text" name="pain_score" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-warning-subtle" placeholder="0 - 10" value="{{ $station?->pain_score ?? '' }}">
+                                </div>
+                            </div>
+                            <!-- RBS Card -->
+                            <div class="col">
+                                <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-2 h-100">
+                                    <label class="form-label fw-bold text-danger mb-1 small"><i class="fas fa-chart-bar"></i> السكر العشوائي RBS</label>
+                                    <input type="text" name="rbs" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-danger-subtle" placeholder="70 - 140" value="{{ $station?->rbs ?? '' }}">
+                                </div>
+                            </div>
+                            <!-- GCS Card -->
+                            <div class="col">
+                                <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 text-center p-2 h-100">
+                                    <label class="form-label fw-bold text-info-emphasis mb-1 small"><i class="fas fa-brain"></i> مقياس الوعي GCS</label>
+                                    <input type="text" name="gcs" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-info-subtle" placeholder="15/15" value="{{ $station?->gcs ?? '' }}">
+                                </div>
+                            </div>
+                            <!-- CRT Card -->
+                            <div class="col">
+                                <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 text-center p-2 h-100">
+                                    <label class="form-label fw-bold text-success mb-1 small"><i class="fas fa-hand-holding"></i> امتلاء الشعيرات CRT</label>
+                                    <input type="text" name="crt" readonly style="background-color: #e9ecef;" class="form-control form-control-sm text-center rounded-2 border-success-subtle" placeholder="أقل من ثانيتين" value="{{ $station?->crt ?? '' }}">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Clinical Examination Textarea -->
                         <div class="row g-4">
                             <div class="col-md-6">
@@ -315,6 +343,11 @@
                                 $fakeReading->pr = $station->pr;
                                 $fakeReading->rr = $station->rr;
                                 $fakeReading->spo2 = $station->spo2;
+                                $fakeReading->pain_score = $station->pain_score;
+                                $fakeReading->rbs = $station->rbs;
+                                $fakeReading->gcs = $station->gcs;
+                                $fakeReading->crt = $station->crt;
+                                $fakeReading->fluid_balance = $station->fluid_balance;
                                 $fakeReading->clinical_examination = $station->clinical_examination;
                                 $fakeReading->notes = $station->notes ?? null;
                                 $fakeReading->resident = $station->resident;
@@ -328,7 +361,7 @@
                         @if($combinedReadings->count() > 0)
                         <div class="card border border-light-subtle shadow-sm rounded-3 mt-4">
                             <div class="card-header bg-light bg-opacity-50 border-bottom p-3 d-flex align-items-center justify-content-between">
-                                <h6 class="mb-0 fw-bold text-primary"><i class="fas fa-heartbeat text-danger me-2"></i>سجل قراءات العلامات الحيوية السابقة</h6>
+                                <h6 class="mb-0 fw-bold text-primary"><i class="fas fa-heartbeat text-danger me-2"></i>سجل قراءات العلامات الحيوية والسوائل السابقة</h6>
                                 <span class="badge bg-secondary rounded-pill px-2.5 py-1">{{ $combinedReadings->count() }} قراءات</span>
                             </div>
                             <div class="card-body p-3">
@@ -349,7 +382,7 @@
                                 <div class="tab-content" id="vitalSignsTabContent">
                                     <!-- 1. Charts Tab View -->
                                     <div class="tab-pane fade show active" id="charts-view" role="tabpanel" aria-labelledby="charts-tab">
-                                        <!-- Row containing 2 charts per line -->
+                                        <!-- Row containing charts -->
                                         <div class="row g-2 mb-2">
                                             <!-- Chart 1: Blood Pressure -->
                                             <div class="col-md-6 col-12">
@@ -402,38 +435,29 @@
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            <!-- Chart 5: Respiratory Rate -->
-                                            <div class="col-md-6 col-12">
-                                                <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                    <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                        <span class="fw-bold text-purple" style="color: #8b5cf6;"><i class="fas fa-lungs me-1"></i>التنفس (RR)</span>
-                                                        <span class="badge text-white p-1" style="background-color: #8b5cf6; font-size: 0.65rem;">/min</span>
-                                                    </div>
-                                                    <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
-                                                        <canvas id="rrChart"></canvas>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
 
                                     <!-- 2. Table Tab View -->
                                     <div class="tab-pane fade" id="table-view" role="tabpanel" aria-labelledby="table-tab">
                                         <div class="table-responsive">
-                                            <table class="table table-hover align-middle mb-0">
+                                            <table class="table table-hover align-middle mb-0 text-center">
                                                 <thead class="table-light">
                                                     <tr>
                                                         <th class="py-2.5">المرحلة</th>
                                                         <th class="py-2.5">التاريخ والوقت</th>
-                                                        <th class="py-2.5">الطبيب المقيم</th>
-                                                        <th class="py-2.5">PR (النبض)</th>
-                                                        <th class="py-2.5">Temp (الحرارة)</th>
-                                                        <th class="py-2.5">BP (الضغط)</th>
-                                                        <th class="py-2.5">RR (التنفس)</th>
-                                                        <th class="py-2.5">SPo2 (الأكسجين)</th>
-                                                        <th class="py-2.5">الفحص السريري</th>
-                                                        <th class="py-2.5">ملاحظات</th>
+                                                        <th class="py-2.5">بواسطة</th>
+                                                        <th class="py-2.5">BP</th>
+                                                        <th class="py-2.5">Temp</th>
+                                                        <th class="py-2.5">PR</th>
+                                                        <th class="py-2.5">RR</th>
+                                                        <th class="py-2.5">SPo2</th>
+                                                        <th class="py-2.5">الألم</th>
+                                                        <th class="py-2.5">RBS</th>
+                                                        <th class="py-2.5">GCS</th>
+                                                        <th class="py-2.5">CRT</th>
+                                                        <th class="py-2.5">التوازن المائي</th>
+                                                        <th class="py-2.5 text-start">الفحص والملاحظات</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -450,28 +474,34 @@
                                                         <td>
                                                             @if(isset($reading->resident) && $reading->resident?->user?->full_name)
                                                                 <small class="text-secondary"><i class="fas fa-user-md me-1"></i> {{ $reading->resident->user->full_name }}</small>
+                                                            @elseif(!empty($reading->notes))
+                                                                <small class="text-info fw-bold">{{ $reading->notes }}</small>
                                                             @else
                                                                 <small class="text-muted">-</small>
                                                             @endif
                                                         </td>
-                                                        <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2.5 py-1.5">{{ $reading->pr ?? '-' }}</span></td>
-                                                        <td><span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2.5 py-1.5">{{ $reading->temp ?? '-' }}</span></td>
-                                                        <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2.5 py-1.5">{{ $reading->bp ?? '-' }}</span></td>
-                                                        <td><span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info-subtle px-2.5 py-1.5">{{ $reading->rr ?? '-' }}</span></td>
-                                                        <td><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2.5 py-1.5">{{ $reading->spo2 ?? '-' }}</span></td>
+                                                        <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1.5">{{ $reading->bp ?? '-' }}</span></td>
+                                                        <td><span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1.5">{{ $reading->temp ? $reading->temp . '°C' : '-' }}</span></td>
+                                                        <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1.5">{{ $reading->pr ? $reading->pr . ' bpm' : '-' }}</span></td>
+                                                        <td><span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info-subtle px-2 py-1.5">{{ $reading->rr ? $reading->rr . ' /min' : '-' }}</span></td>
+                                                        <td><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1.5">{{ $reading->spo2 ? $reading->spo2 . '%' : '-' }}</span></td>
+                                                        <td><span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1.5">{{ $reading->pain_score ?? '-' }}</span></td>
+                                                        <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1.5">{{ $reading->rbs ? $reading->rbs . ' mg/dL' : '-' }}</span></td>
+                                                        <td><span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1.5">{{ $reading->gcs ?? '-' }}</span></td>
+                                                        <td><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1.5">{{ $reading->crt ?? '-' }}</span></td>
                                                         <td>
+                                                            @if(isset($reading->fluid_balance))
+                                                                <span class="badge {{ $reading->fluid_balance >= 0 ? 'bg-success text-success' : 'bg-danger text-danger' }} bg-opacity-10 border border-{{ $reading->fluid_balance >= 0 ? 'success' : 'danger' }}-subtle px-2 py-1.5">
+                                                                    {{ ($reading->fluid_balance >= 0 ? '+' : '') . $reading->fluid_balance . ' مل' }}
+                                                                </span>
+                                                            @else
+                                                                <span class="text-muted">-</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-start">
                                                             @if(!empty($reading->clinical_examination))
-                                                                <div class="text-wrap text-muted small" style="max-width: 200px; max-height: 60px; overflow-y: auto; line-height: 1.25;">
+                                                                <div class="text-wrap text-muted small" style="max-width: 250px; max-height: 85px; overflow-y: auto; line-height: 1.3;">
                                                                     {{ $reading->clinical_examination }}
-                                                                </div>
-                                                            @else
-                                                                <small class="text-muted">-</small>
-                                                            @endif
-                                                        </td>
-                                                        <td>
-                                                            @if(!empty($reading->notes))
-                                                                <div class="text-wrap text-muted small" style="max-width: 150px; max-height: 60px; overflow-y: auto; line-height: 1.25;">
-                                                                    {{ $reading->notes }}
                                                                 </div>
                                                             @else
                                                                 <small class="text-muted">-</small>
@@ -862,6 +892,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     'pr' => $item->pr,
                     'rr' => $item->rr,
                     'spo2' => $item->spo2,
+                    'pain_score' => $item->pain_score,
+                    'rbs' => $item->rbs,
+                    'gcs' => $item->gcs,
                 ];
             })->values();
         @endphp
@@ -881,6 +914,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const tempData = [];
         const spo2Data = [];
         const rrData = [];
+        const painData = [];
+        const rbsData = [];
+        const gcsData = [];
 
         rawData.forEach(item => {
             // Blood pressure splitting
@@ -897,6 +933,15 @@ document.addEventListener('DOMContentLoaded', function() {
             tempData.push(item.temp ? parseFloat(item.temp) : null);
             spo2Data.push(item.spo2 ? parseInt(item.spo2) : null);
             rrData.push(item.rr ? parseInt(item.rr) : null);
+            painData.push(item.pain_score !== null && item.pain_score !== undefined && item.pain_score !== '' ? parseInt(item.pain_score) : null);
+            rbsData.push(item.rbs ? parseInt(item.rbs) : null);
+            
+            if (item.gcs) {
+                const parts = item.gcs.split('/');
+                gcsData.push(parts[0] ? parseInt(parts[0]) : null);
+            } else {
+                gcsData.push(null);
+            }
         });
 
         // Config variables for charts styling
@@ -1076,40 +1121,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             ...commonOptions.scales.y,
                             suggestedMin: 80,
                             suggestedMax: 100
-                        },
-                        x: commonOptions.scales.x
-                    }
-                }
-            });
-        }
-
-        // 5. RR Chart
-        const rrCanvas = document.getElementById('rrChart');
-        if (rrCanvas) {
-            const rrCtx = rrCanvas.getContext('2d');
-            new Chart(rrCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'معدل التنفس',
-                        data: rrData,
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.06)',
-                        borderWidth: 2.5,
-                        tension: 0.3,
-                        spanGaps: true,
-                        pointRadius: 3.5,
-                        pointBackgroundColor: '#8b5cf6'
-                    }]
-                },
-                options: {
-                    ...commonOptions,
-                    scales: {
-                        y: {
-                            ...commonOptions.scales.y,
-                            suggestedMin: 10,
-                            suggestedMax: 30
                         },
                         x: commonOptions.scales.x
                     }

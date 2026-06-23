@@ -468,6 +468,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'show'])->name('nursing-station.show');
             Route::patch('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'update'])->name('nursing-station.update');
             Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
+            Route::post('/nursing/{surgery}/follow-ups', [\App\Http\Controllers\NursingStationController::class, 'storeFollowUp'])->name('nursing-station.follow-ups.store');
         });
 
         // إعطاء العلاج (مشترك للمقيم والتمريض)

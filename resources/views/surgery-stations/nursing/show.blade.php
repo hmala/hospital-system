@@ -3,8 +3,74 @@
 @section('content')
 @php
     $postOpStation = $surgery->postOpResidentStation;
+    $currentStationName = $surgery->getCurrentStation();
+    if ($currentStationName === 'resident_pre_op' || !$postOpStation) {
+        $postOpStation = $surgery->preOpResidentStation;
+    }
     $combinedReadings = $postOpStation ? $postOpStation->readings : collect();
     $combinedReadingsAsc = $combinedReadings->sortBy('created_at');
+
+    if (!function_exists('isTempNormal')) {
+        function isTempNormal($val) {
+            if (empty($val)) return true;
+            $num = (float) filter_var($val, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+            return ($num >= 36.5 && $num <= 37.5);
+        }
+        function isBpNormal($val) {
+            if (empty($val)) return true;
+            $parts = explode('/', $val);
+            if (count($parts) === 2) {
+                $sys = (int) filter_var($parts[0], FILTER_SANITIZE_NUMBER_INT);
+                $dia = (int) filter_var($parts[1], FILTER_SANITIZE_NUMBER_INT);
+                return ($sys >= 90 && $sys <= 120 && $dia >= 60 && $dia <= 80);
+            }
+            return true;
+        }
+        function isPrNormal($val) {
+            if (empty($val)) return true;
+            $num = (int) filter_var($val, FILTER_SANITIZE_NUMBER_INT);
+            return ($num >= 60 && $num <= 100);
+        }
+        function isRrNormal($val) {
+            if (empty($val)) return true;
+            $num = (int) filter_var($val, FILTER_SANITIZE_NUMBER_INT);
+            return ($num >= 12 && $num <= 20);
+        }
+        function isSpo2Normal($val) {
+            if (empty($val)) return true;
+            $num = (int) filter_var($val, FILTER_SANITIZE_NUMBER_INT);
+            return ($num >= 95 && $num <= 100);
+        }
+        function isPainNormal($val) {
+            if (empty($val)) return true;
+            $num = (int) $val;
+            return ($num <= 3);
+        }
+        function isRbsNormal($val) {
+            if (empty($val)) return true;
+            $num = (int) filter_var($val, FILTER_SANITIZE_NUMBER_INT);
+            return ($num >= 70 && $num <= 140);
+        }
+        function isGcsNormal($val) {
+            if (empty($val)) return true;
+            $parts = explode('/', $val);
+            $num = (int) filter_var($parts[0], FILTER_SANITIZE_NUMBER_INT);
+            return ($num === 15);
+        }
+        function isCrtNormal($val) {
+            if (empty($val)) return true;
+            preg_match('/\d+/', $val, $matches);
+            if (!empty($matches)) {
+                $num = (int) $matches[0];
+                return ($num <= 2);
+            }
+            $clean = mb_strtolower($val);
+            if (str_contains($clean, 'أقل') || str_contains($clean, 'ثانيت') || str_contains($clean, 'طبيعي') || str_contains($clean, 'normal')) {
+                return true;
+            }
+            return false;
+        }
+    }
 @endphp
 <div class="container-fluid">
     <div class="row">
@@ -221,6 +287,11 @@
                                             <i class="fas fa-calendar-alt me-2"></i> ورقة المتابعة (Follow Up)
                                         </button>
                                     </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link rounded-pill py-2.5 d-flex align-items-center justify-content-center" id="fluids-tab" data-bs-toggle="tab" data-bs-target="#fluids-content" type="button" role="tab" aria-selected="false">
+                                            <i class="fas fa-tint me-2"></i> مخطط السوائل (Intake & Output)
+                                        </button>
+                                    </li>
                                 </ul>
                             </div>
                             <div class="card-body p-4">
@@ -231,17 +302,11 @@
                                         <div class="tab-pane fade show active" id="care-content" role="tabpanel" aria-labelledby="care-tab">
                                             <div class="row g-4">
                                                 <div class="col-md-12">
-                                                    <div class="form-group">
-                                                        <label class="form-label fw-bold text-dark"><i class="fas fa-user-nurse text-primary me-1"></i> الممرض/ة المسؤول عن الحالة</label>
-                                                        <select name="nurse_id" class="form-select form-select-lg rounded-3 border-secondary-subtle">
-                                                            <option value="">-- اختر الممرض/ة المسؤول --</option>
-                                                            @foreach($nurses as $nurse)
-                                                                <option value="{{ $nurse->id }}" 
-                                                                    {{ ($surgery->nursingStation?->nurse_id ?? old('nurse_id')) == $nurse->id ? 'selected' : '' }}>
-                                                                    {{ $nurse->full_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
+                                                    <div class="p-3 bg-light rounded-3 border border-secondary-subtle">
+                                                        <span class="fw-bold text-dark"><i class="fas fa-user-nurse text-primary me-1"></i> الممرض/ة المسؤول عن الحالة: </span>
+                                                        <span class="fw-semibold text-secondary">
+                                                            {{ $surgery->nursingStation?->nurse?->full_name ?? Auth::user()->full_name ?? Auth::user()->name }}
+                                                        </span>
                                                     </div>
                                                 </div>
 
@@ -264,40 +329,87 @@
                                         <!-- TAB 2: VITALS ENTRY & HISTORY -->
                                         <div class="tab-pane fade" id="vitals-content" role="tabpanel" aria-labelledby="vitals-tab">
                                             <h6 class="fw-bold text-dark mb-3"><i class="fas fa-heartbeat text-danger me-1"></i> تسجيل العلامات الحيوية الجديدة (Vital Signs Entry)</h6>
-                                            <div class="row g-3 mb-4 row-cols-1 row-cols-sm-5">
+                                            <!-- Row 1: Traditional Vitals -->
+                                            <div class="row g-3 mb-3 row-cols-1 row-cols-sm-5">
                                                 <!-- BP Card -->
                                                 <div class="col">
-                                                    <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-3 h-100">
-                                                        <label class="form-label fw-bold text-danger mb-1 small"><i class="fas fa-tachometer-alt"></i> ضغط الدم BP</label>
-                                                        <input type="text" name="bp" class="form-control text-center rounded-2 border-danger-subtle bg-white" placeholder="120/80" value="{{ $postOpStation?->bp ?? '' }}">
+                                                    <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-bp">
+                                                        <label class="form-label fw-bold text-danger mb-0 small"><i class="fas fa-tachometer-alt"></i> ضغط الدم BP</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">90/60 - 120/80 mmHg</span>
+                                                        <input type="text" name="bp" id="input-bp" class="form-control text-center rounded-2 border-danger-subtle bg-white" placeholder="120/80" value="{{ $postOpStation?->bp ?? '' }}">
                                                     </div>
                                                 </div>
                                                 <!-- Temp Card -->
                                                 <div class="col">
-                                                    <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 text-center p-3 h-100">
-                                                        <label class="form-label fw-bold text-warning-emphasis mb-1 small"><i class="fas fa-thermometer-half"></i> الحرارة Temp</label>
-                                                        <input type="text" name="temp" class="form-control text-center rounded-2 border-warning-subtle bg-white" placeholder="37°C" value="{{ $postOpStation?->temp ?? '' }}">
+                                                    <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-temp">
+                                                        <label class="form-label fw-bold text-warning-emphasis mb-0 small"><i class="fas fa-thermometer-half"></i> الحرارة Temp</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">36.5 - 37.5 °C</span>
+                                                        <input type="text" name="temp" id="input-temp" class="form-control text-center rounded-2 border-warning-subtle bg-white" placeholder="37°C" value="{{ $postOpStation?->temp ?? '' }}">
                                                     </div>
                                                 </div>
                                                 <!-- Pulse Card -->
                                                 <div class="col">
-                                                    <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-3 h-100">
-                                                        <label class="form-label fw-bold text-danger mb-1 small"><i class="fas fa-heart"></i> النبض PR</label>
-                                                        <input type="text" name="pr" class="form-control text-center rounded-2 border-danger-subtle bg-white" placeholder="80 bpm" value="{{ $postOpStation?->pr ?? '' }}">
+                                                    <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-pr">
+                                                        <label class="form-label fw-bold text-danger mb-0 small"><i class="fas fa-heart"></i> النبض PR</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">60 - 100 bpm</span>
+                                                        <input type="text" name="pr" id="input-pr" class="form-control text-center rounded-2 border-danger-subtle bg-white" placeholder="80 bpm" value="{{ $postOpStation?->pr ?? '' }}">
                                                     </div>
                                                 </div>
                                                 <!-- RR Card -->
                                                 <div class="col">
-                                                    <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 text-center p-3 h-100">
-                                                        <label class="form-label fw-bold text-info-emphasis mb-1 small"><i class="fas fa-lungs"></i> التنفس RR</label>
-                                                        <input type="text" name="rr" class="form-control text-center rounded-2 border-info-subtle bg-white" placeholder="16 /min" value="{{ $postOpStation?->rr ?? '' }}">
+                                                    <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-rr">
+                                                        <label class="form-label fw-bold text-info-emphasis mb-0 small"><i class="fas fa-lungs"></i> التنفس RR</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">12 - 20 /min</span>
+                                                        <input type="text" name="rr" id="input-rr" class="form-control text-center rounded-2 border-info-subtle bg-white" placeholder="16 /min" value="{{ $postOpStation?->rr ?? '' }}">
                                                     </div>
                                                 </div>
                                                 <!-- SPO2 Card -->
                                                 <div class="col">
-                                                    <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 text-center p-3 h-100">
-                                                        <label class="form-label fw-bold text-success mb-1 small"><i class="fas fa-wind"></i> أكسجين SPo2</label>
-                                                        <input type="text" name="spo2" class="form-control text-center rounded-2 border-success-subtle bg-white" placeholder="98%" value="{{ $postOpStation?->spo2 ?? '' }}">
+                                                    <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-spo2">
+                                                        <label class="form-label fw-bold text-success mb-0 small"><i class="fas fa-wind"></i> أكسجين SPo2</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">95 - 100%</span>
+                                                        <input type="text" name="spo2" id="input-spo2" class="form-control text-center rounded-2 border-success-subtle bg-white" placeholder="98%" value="{{ $postOpStation?->spo2 ?? '' }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 2: Advanced Vitals -->
+                                            <div class="row g-3 mb-4 row-cols-1 row-cols-sm-4">
+                                                <!-- Pain Score Card -->
+                                                <div class="col">
+                                                    <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-pain">
+                                                        <label class="form-label fw-bold text-warning-emphasis mb-0 small"><i class="fas fa-angry text-danger"></i> مستوى الألم Pain</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">0 (بدون ألم) - 10 (أشد ألم)</span>
+                                                        <select name="pain_score" id="input-pain" class="form-select text-center rounded-2 border-warning-subtle bg-white">
+                                                            <option value="">اختر</option>
+                                                            @for($i=0; $i<=10; $i++)
+                                                                <option value="{{ $i }}" {{ ($postOpStation?->pain_score ?? '') == (string)$i ? 'selected' : '' }}>{{ $i }}</option>
+                                                            @endfor
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <!-- RBS Card -->
+                                                <div class="col">
+                                                    <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-rbs">
+                                                        <label class="form-label fw-bold text-danger mb-0 small"><i class="fas fa-chart-bar"></i> السكر العشوائي RBS</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">70 - 140 mg/dL</span>
+                                                        <input type="text" name="rbs" id="input-rbs" class="form-control text-center rounded-2 border-danger-subtle bg-white" placeholder="100 mg/dL" value="{{ $postOpStation?->rbs ?? '' }}">
+                                                    </div>
+                                                </div>
+                                                <!-- GCS Card -->
+                                                <div class="col">
+                                                    <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-gcs">
+                                                        <label class="form-label fw-bold text-info-emphasis mb-0 small"><i class="fas fa-brain"></i> مقياس الوعي GCS</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">15/15 طبيعي</span>
+                                                        <input type="text" name="gcs" id="input-gcs" class="form-control text-center rounded-2 border-info-subtle bg-white" placeholder="15/15" value="{{ $postOpStation?->gcs ?? '' }}">
+                                                    </div>
+                                                </div>
+                                                <!-- CRT Card -->
+                                                <div class="col">
+                                                    <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 text-center p-3 h-100" id="card-crt">
+                                                        <label class="form-label fw-bold text-success mb-0 small"><i class="fas fa-hand-holding"></i> امتلاء الشعيرات CRT</label>
+                                                        <span class="text-muted d-block small mb-1" style="font-size: 0.75rem;">أقل من ثانيتين</span>
+                                                        <input type="text" name="crt" id="input-crt" class="form-control text-center rounded-2 border-success-subtle bg-white" placeholder="أقل من ثانيتين" value="{{ $postOpStation?->crt ?? '' }}">
                                                     </div>
                                                 </div>
                                             </div>
@@ -363,6 +475,10 @@
                                                                 <th class="py-2">النبض</th>
                                                                 <th class="py-2">التنفس</th>
                                                                 <th class="py-2">الأكسجين</th>
+                                                                <th class="py-2">الألم</th>
+                                                                <th class="py-2">RBS</th>
+                                                                <th class="py-2">GCS</th>
+                                                                <th class="py-2">CRT</th>
                                                                 <th class="py-2">الملاحظات السريرية / التمريضية</th>
                                                             </tr>
                                                         </thead>
@@ -371,11 +487,15 @@
                                                             <tr>
                                                                 <td class="text-dark">{{ $reading->created_at->format('Y-m-d h:i A') }}</td>
                                                                 <td class="text-dark fw-bold text-info">{{ $reading->resident?->user?->full_name ?? $reading->notes }}</td>
-                                                                <td class="text-dark fw-bold text-danger">{{ $reading->bp ?? '-' }}</td>
-                                                                <td class="text-dark fw-bold text-warning-emphasis">{{ $reading->temp ? $reading->temp . '°C' : '-' }}</td>
-                                                                <td class="text-dark fw-bold text-danger">{{ $reading->pr ? $reading->pr . ' bpm' : '-' }}</td>
-                                                                <td class="text-dark fw-bold text-info-emphasis">{{ $reading->rr ? $reading->rr . ' /min' : '-' }}</td>
-                                                                <td class="text-dark fw-bold text-success">{{ $reading->spo2 ? $reading->spo2 . '%' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isBpNormal($reading->bp) ? 'text-success' : 'text-danger' }}">{{ $reading->bp ?? '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isTempNormal($reading->temp) ? 'text-success' : 'text-danger' }}">{{ $reading->temp ? $reading->temp . '°C' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isPrNormal($reading->pr) ? 'text-success' : 'text-danger' }}">{{ $reading->pr ? $reading->pr . ' bpm' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isRrNormal($reading->rr) ? 'text-success' : 'text-danger' }}">{{ $reading->rr ? $reading->rr . ' /min' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isSpo2Normal($reading->spo2) ? 'text-success' : 'text-danger' }}">{{ $reading->spo2 ? $reading->spo2 . '%' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isPainNormal($reading->pain_score) ? 'text-success' : 'text-danger' }}">{{ $reading->pain_score ?? '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isRbsNormal($reading->rbs) ? 'text-success' : 'text-danger' }}">{{ $reading->rbs ? $reading->rbs . ' mg/dL' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isGcsNormal($reading->gcs) ? 'text-success' : 'text-danger' }}">{{ $reading->gcs ?? '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ isCrtNormal($reading->crt) ? 'text-success' : 'text-danger' }}">{{ $reading->crt ?? '-' }}</td>
                                                                 <td class="text-start small text-dark">{{ $reading->clinical_examination ?? '-' }}</td>
                                                             </tr>
                                                             @endforeach
@@ -443,7 +563,7 @@
                                                                     <tr>
                                                                         <td class="text-dark text-center fw-bold">{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
                                                                         <td class="text-dark text-center">{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>
-                                                                        <td class="text-dark text-center small">{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير حدد' }}</td>
+                                                                        <td class="text-dark text-center small">{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
                                                                         <td class="text-dark">{!! nl2br(e($followUp->notes)) !!}</td>
                                                                         <td class="text-dark text-center small">{{ $followUp->created_at->format('Y-m-d H:i') }}</td>
                                                                     </tr>
@@ -459,6 +579,200 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <!-- TAB 4: FLUID BALANCE CHART (Intake & Output) -->
+                                        <div class="tab-pane fade" id="fluids-content" role="tabpanel" aria-labelledby="fluids-tab">
+                                            <h6 class="fw-bold text-dark mb-3"><i class="fas fa-tint text-primary me-1"></i> مخطط السوائل (Intake & Output Chart)</h6>
+                                            
+                                            <div class="row g-4">
+                                                <!-- Intake Inputs -->
+                                                <div class="col-md-6">
+                                                    <div class="card border border-primary-subtle bg-primary bg-opacity-5 p-3 rounded-3 h-100">
+                                                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-arrow-alt-circle-down"></i> المدخلات / المتناول (Intake)</h6>
+                                                        
+                                                        <div class="row g-3">
+                                                            <div class="col-md-12">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">السوائل الوريدية (IV Fluids) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="intake_iv_fluids" id="intake_iv_fluids" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->intake_iv_fluids ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-12">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">المدخول الفموي (Oral Intake) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="intake_oral" id="intake_oral" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->intake_oral ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-12">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">الدم ومشتقاته (Blood & Blood Products) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="intake_blood" id="intake_blood" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->intake_blood ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Output Inputs -->
+                                                <div class="col-md-6">
+                                                    <div class="card border border-danger-subtle bg-danger bg-opacity-5 p-3 rounded-3 h-100">
+                                                        <h6 class="fw-bold text-danger mb-3 border-bottom pb-2"><i class="fas fa-arrow-alt-circle-up"></i> المخرجات / المطروح (Output)</h6>
+                                                        
+                                                        <div class="row g-3">
+                                                            <div class="col-md-6">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">البول (Urine) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="output_urine" id="output_urine" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->output_urine ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">المنزح / الدرنقة (Drain) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="output_drain" id="output_drain" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->output_drain ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">أنبوب التغذية G-Tube/NG <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="output_gtube_ng" id="output_gtube_ng" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->output_gtube_ng ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">القيء (Vomiting) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="output_vomiting" id="output_vomiting" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->output_vomiting ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-12">
+                                                                <div class="form-group">
+                                                                    <label class="form-label fw-semibold text-dark">البراز (Stool) <span class="text-muted small">(مل)</span></label>
+                                                                    <input type="number" step="0.01" min="0" name="output_stool" id="output_stool" class="form-control rounded-3 border-secondary-subtle fluid-calc-input text-center" placeholder="0.00" value="{{ $postOpStation?->output_stool ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Summary Balance & Normal Ranges -->
+                                            <div class="row g-3 mt-3">
+                                                <div class="col-md-12">
+                                                    <div class="card border border-info-subtle bg-info bg-opacity-5 p-3 rounded-3 h-100 d-flex flex-column justify-content-between">
+                                                        <div>
+                                                            <h6 class="fw-bold text-info-emphasis mb-2"><i class="fas fa-info-circle"></i> المؤشرات والمعدلات الطبيعية للسوائل</h6>
+                                                            <ul class="text-secondary small ps-0 pe-3 mb-0" style="line-height: 1.6;">
+                                                                <li>معدل إخراج البول الطبيعي: لا يقل عن 0.5 مل/كغم/ساعة (تقريباً 30-50 مل/ساعة للبالغ).</li>
+                                                                <li>إجمالي التوازن المائي اليومي الطبيعي يكون متوازناً وقريباً من الصفر أو إيجابياً قليلاً تبعاً لحالة المريض السريرية وتوجيهات الطبيب.</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Fluids and Advanced Charts -->
+                                            @if($combinedReadings->count() > 0)
+                                                <div class="row g-3 mt-3">
+                                                    <div class="col-md-6">
+                                                        <div class="card border border-secondary-subtle rounded-3 p-3">
+                                                            <h6 class="text-center fw-bold text-purple mb-2" style="color: #8b5cf6;">معدل التنفس (RR)</h6>
+                                                            <div style="height: 220px; position: relative;">
+                                                                <canvas id="rrChart"></canvas>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="card border border-secondary-subtle rounded-3 p-3">
+                                                            <h6 class="text-center fw-bold text-danger mb-2">السكر العشوائي (RBS)</h6>
+                                                            <div style="height: 220px; position: relative;">
+                                                                <canvas id="rbsChart"></canvas>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="card border border-secondary-subtle rounded-3 p-3">
+                                                            <h6 class="text-center fw-bold text-warning mb-2">مستوى الألم (Pain Score)</h6>
+                                                            <div style="height: 220px; position: relative;">
+                                                                <canvas id="painChart"></canvas>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="card border border-secondary-subtle rounded-3 p-3">
+                                                            <h6 class="text-center fw-bold text-info mb-2">مقياس الوعي (GCS)</h6>
+                                                            <div style="height: 220px; position: relative;">
+                                                                <canvas id="gcsChart"></canvas>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-12">
+                                                        <div class="card border border-secondary-subtle rounded-3 p-3">
+                                                            <h6 class="text-center fw-bold text-primary mb-2">منحنى صافي التوازن المائي (Net Fluid Balance Trend)</h6>
+                                                            <div style="height: 220px; position: relative;">
+                                                                <canvas id="fluidBalanceChart"></canvas>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            <!-- Historical Fluid Chart Log -->
+                                            @php
+                                                $fluidReadings = $combinedReadings->filter(function($r) {
+                                                    return !is_null($r->intake_iv_fluids) || !is_null($r->intake_oral) || !is_null($r->intake_blood) ||
+                                                           !is_null($r->output_urine) || !is_null($r->output_drain) || !is_null($r->output_gtube_ng) ||
+                                                           !is_null($r->output_vomiting) || !is_null($r->output_stool);
+                                                });
+                                            @endphp
+                                            @if($fluidReadings->count() > 0)
+                                                <h6 class="fw-bold text-dark mt-4 mb-2"><i class="fas fa-history text-secondary me-1"></i> سجل قياسات السوائل التاريخي</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped table-bordered table-sm align-middle text-center mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th rowspan="2" class="align-middle py-2">تاريخ/وقت التسجيل</th>
+                                                                <th colspan="3" class="table-primary py-1">المدخلات (Intake)</th>
+                                                                <th colspan="5" class="table-danger py-1">المخرجات (Output)</th>
+                                                                <th rowspan="2" class="align-middle py-2">صافي التوازن</th>
+                                                                <th rowspan="2" class="align-middle py-2">سُجِّل بواسطة</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <th class="small py-1">محلول وريدي</th>
+                                                                <th class="small py-1">فموي</th>
+                                                                <th class="small py-1">دم</th>
+                                                                <th class="small py-1">بول</th>
+                                                                <th class="small py-1">درنقة</th>
+                                                                <th class="small py-1">أنبوب معدة</th>
+                                                                <th class="small py-1">قيء</th>
+                                                                <th class="small py-1">براز</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($fluidReadings as $reading)
+                                                            <tr>
+                                                                <td class="text-dark">{{ $reading->created_at->format('Y-m-d h:i A') }}</td>
+                                                                <td class="text-dark fw-bold text-primary">{{ !is_null($reading->intake_iv_fluids) ? $reading->intake_iv_fluids . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-primary">{{ !is_null($reading->intake_oral) ? $reading->intake_oral . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-primary">{{ !is_null($reading->intake_blood) ? $reading->intake_blood . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-danger">{{ !is_null($reading->output_urine) ? $reading->output_urine . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-danger">{{ !is_null($reading->output_drain) ? $reading->output_drain . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-danger">{{ !is_null($reading->output_gtube_ng) ? $reading->output_gtube_ng . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-danger">{{ !is_null($reading->output_vomiting) ? $reading->output_vomiting . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold text-danger">{{ !is_null($reading->output_stool) ? $reading->output_stool . ' مل' : '-' }}</td>
+                                                                <td class="text-dark fw-bold {{ $reading->fluid_balance >= 0 ? 'text-success' : 'text-danger' }}">
+                                                                    {{ !is_null($reading->fluid_balance) ? ($reading->fluid_balance >= 0 ? '+' : '') . $reading->fluid_balance . ' مل' : '0 مل' }}
+                                                                </td>
+                                                                <td class="text-dark small fw-bold">{{ $reading->resident?->user?->full_name ?? $reading->notes }}</td>
+                                                            </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="alert alert-light border text-center py-4 mt-4 rounded-3">
+                                                    <i class="fas fa-tint text-primary me-1 fs-5"></i> لا توجد قياسات سوائل مسجلة مسبقاً لعرضها.
+                                                </div>
+                                            @endif
                                         </div>
 
                                     </div>
@@ -571,7 +885,7 @@
 </div>
 
 <!-- Hidden Follow-Up Form -->
-<form id="nursing-follow-up-form" action="{{ route('resident-station.follow-ups.store', $surgery) }}" method="POST" style="display: none;">
+<form id="nursing-follow-up-form" action="{{ route('nursing-station.follow-ups.store', $surgery) }}" method="POST" style="display: none;">
     @csrf
 </form>
 
@@ -628,6 +942,10 @@
                         'pr' => $item->pr,
                         'rr' => $item->rr,
                         'spo2' => $item->spo2,
+                        'pain_score' => $item->pain_score,
+                        'rbs' => $item->rbs,
+                        'gcs' => $item->gcs,
+                        'fluid_balance' => $item->fluid_balance,
                     ];
                 })->values();
             @endphp
@@ -645,6 +963,10 @@
             const tempData = [];
             const spo2Data = [];
             const rrData = [];
+            const painData = [];
+            const rbsData = [];
+            const gcsData = [];
+            const fluidBalanceData = [];
 
             rawData.forEach(item => {
                 if (item.bp) {
@@ -660,6 +982,16 @@
                 tempData.push(item.temp ? parseFloat(item.temp) : null);
                 spo2Data.push(item.spo2 ? parseInt(item.spo2) : null);
                 rrData.push(item.rr ? parseInt(item.rr) : null);
+                painData.push(item.pain_score !== null && item.pain_score !== undefined && item.pain_score !== '' ? parseInt(item.pain_score) : null);
+                rbsData.push(item.rbs ? parseInt(item.rbs) : null);
+                fluidBalanceData.push(item.fluid_balance !== null && item.fluid_balance !== undefined && item.fluid_balance !== '' ? parseFloat(item.fluid_balance) : null);
+                
+                if (item.gcs) {
+                    const parts = item.gcs.split('/');
+                    gcsData.push(parts[0] ? parseInt(parts[0]) : null);
+                } else {
+                    gcsData.push(null);
+                }
             });
 
             const gridColor = 'rgba(148, 163, 184, 0.12)';
@@ -844,7 +1176,404 @@
                     }
                 });
             }
+
+            // 5. RR Chart
+            const rrCanvas = document.getElementById('rrChart');
+            if (rrCanvas) {
+                const rrCtx = rrCanvas.getContext('2d');
+                new Chart(rrCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'معدل التنفس',
+                            data: rrData,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.06)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            spanGaps: true,
+                            pointRadius: 3.5,
+                            pointBackgroundColor: '#8b5cf6'
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                ...commonOptions.scales.y,
+                                suggestedMin: 10,
+                                suggestedMax: 30
+                            },
+                            x: commonOptions.scales.x
+                        }
+                    }
+                });
+            }
+
+            // 6. RBS Chart
+            const rbsCanvas = document.getElementById('rbsChart');
+            if (rbsCanvas) {
+                const rbsCtx = rbsCanvas.getContext('2d');
+                new Chart(rbsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'السكر العشوائي (RBS)',
+                            data: rbsData,
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.06)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            spanGaps: true,
+                            pointRadius: 3.5,
+                            pointBackgroundColor: '#dc3545'
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                ...commonOptions.scales.y,
+                                suggestedMin: 50,
+                                suggestedMax: 200
+                            },
+                            x: commonOptions.scales.x
+                        }
+                    }
+                });
+            }
+
+            // 7. Pain Chart
+            const painCanvas = document.getElementById('painChart');
+            if (painCanvas) {
+                const painCtx = painCanvas.getContext('2d');
+                new Chart(painCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'مستوى الألم (Pain Score)',
+                            data: painData,
+                            borderColor: '#ffc107',
+                            backgroundColor: 'rgba(255, 193, 7, 0.06)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            spanGaps: true,
+                            pointRadius: 3.5,
+                            pointBackgroundColor: '#ffc107'
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                ...commonOptions.scales.y,
+                                suggestedMin: 0,
+                                suggestedMax: 10
+                            },
+                            x: commonOptions.scales.x
+                        }
+                    }
+                });
+            }
+
+            // 8. GCS Chart
+            const gcsCanvas = document.getElementById('gcsChart');
+            if (gcsCanvas) {
+                const gcsCtx = gcsCanvas.getContext('2d');
+                new Chart(gcsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'مقياس الوعي (GCS)',
+                            data: gcsData,
+                            borderColor: '#0dcaf0',
+                            backgroundColor: 'rgba(13, 202, 240, 0.06)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            spanGaps: true,
+                            pointRadius: 3.5,
+                            pointBackgroundColor: '#0dcaf0'
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                ...commonOptions.scales.y,
+                                suggestedMin: 3,
+                                suggestedMax: 15
+                            },
+                            x: commonOptions.scales.x
+                        }
+                    }
+                });
+            }
+
+            // 9. Fluid Balance Chart
+            const fluidBalanceCanvas = document.getElementById('fluidBalanceChart');
+            if (fluidBalanceCanvas) {
+                const fluidBalanceCtx = fluidBalanceCanvas.getContext('2d');
+                new Chart(fluidBalanceCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'صافي التوازن المائي (مل)',
+                            data: fluidBalanceData,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.06)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            spanGaps: true,
+                            pointRadius: 3.5,
+                            pointBackgroundColor: '#0d6efd'
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                ...commonOptions.scales.y,
+                                suggestedMin: -500,
+                                suggestedMax: 500
+                            },
+                            x: commonOptions.scales.x
+                        }
+                    }
+                });
+            }
         @endif
+
+        // Dynamic Fluid Balance Calculator
+        const intakeInputs = [
+            document.getElementById('intake_iv_fluids'),
+            document.getElementById('intake_oral'),
+            document.getElementById('intake_blood')
+        ];
+        
+        const outputInputs = [
+            document.getElementById('output_urine'),
+            document.getElementById('output_drain'),
+            document.getElementById('output_gtube_ng'),
+            document.getElementById('output_vomiting'),
+            document.getElementById('output_stool')
+        ];
+
+        function calculateFluidBalance() {
+            let totalIntake = 0;
+            let totalOutput = 0;
+
+            intakeInputs.forEach(input => {
+                if (input && input.value) {
+                    totalIntake += parseFloat(input.value) || 0;
+                }
+            });
+
+            outputInputs.forEach(input => {
+                if (input && input.value) {
+                    totalOutput += parseFloat(input.value) || 0;
+                }
+            });
+
+            const netBalance = totalIntake - totalOutput;
+
+            const totalIntakeSpan = document.getElementById('total-intake-span');
+            const totalOutputSpan = document.getElementById('total-output-span');
+            const netBalanceSpan = document.getElementById('net-balance-span');
+
+            if (totalIntakeSpan) totalIntakeSpan.textContent = totalIntake.toFixed(2) + ' مل';
+            if (totalOutputSpan) totalOutputSpan.textContent = totalOutput.toFixed(2) + ' مل';
+            
+            if (netBalanceSpan) {
+                netBalanceSpan.textContent = (netBalance >= 0 ? '+' : '') + netBalance.toFixed(2) + ' مل';
+                if (netBalance >= 0) {
+                    netBalanceSpan.className = 'fw-bold fs-4 text-success';
+                } else {
+                    netBalanceSpan.className = 'fw-bold fs-4 text-danger';
+                }
+            }
+        }
+
+        [...intakeInputs, ...outputInputs].forEach(input => {
+            if (input) {
+                input.addEventListener('input', calculateFluidBalance);
+            }
+        });
+
+        // Run initial calculation on page load
+        calculateFluidBalance();
+
+        // Dynamic Vitals Range Validator
+        function validateVitals() {
+            // BP
+            const bpInput = document.getElementById('input-bp');
+            if (bpInput) {
+                const val = bpInput.value.trim();
+                if (val) {
+                    const match = val.match(/^(\d+)\/(\d+)$/);
+                    if (match) {
+                        const sys = parseInt(match[1]);
+                        const dia = parseInt(match[2]);
+                        const isNormal = (sys >= 90 && sys <= 120 && dia >= 60 && dia <= 80);
+                        setCardStatus(document.getElementById('card-bp'), isNormal);
+                    } else {
+                        setCardStatus(document.getElementById('card-bp'), false);
+                    }
+                } else {
+                    resetCardStatus(document.getElementById('card-bp'));
+                }
+            }
+
+            // Temp
+            const tempInput = document.getElementById('input-temp');
+            if (tempInput) {
+                const val = parseFloat(tempInput.value) || null;
+                if (val !== null) {
+                    const isNormal = (val >= 36.5 && val <= 37.5);
+                    setCardStatus(document.getElementById('card-temp'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-temp'));
+                }
+            }
+
+            // PR
+            const prInput = document.getElementById('input-pr');
+            if (prInput) {
+                const val = parseInt(prInput.value) || null;
+                if (val !== null) {
+                    const isNormal = (val >= 60 && val <= 100);
+                    setCardStatus(document.getElementById('card-pr'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-pr'));
+                }
+            }
+
+            // RR
+            const rrInput = document.getElementById('input-rr');
+            if (rrInput) {
+                const val = parseInt(rrInput.value) || null;
+                if (val !== null) {
+                    const isNormal = (val >= 12 && val <= 20);
+                    setCardStatus(document.getElementById('card-rr'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-rr'));
+                }
+            }
+
+            // SpO2
+            const spo2Input = document.getElementById('input-spo2');
+            if (spo2Input) {
+                const val = parseInt(spo2Input.value) || null;
+                if (val !== null) {
+                    const isNormal = (val >= 95 && val <= 100);
+                    setCardStatus(document.getElementById('card-spo2'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-spo2'));
+                }
+            }
+
+            // Pain
+            const painInput = document.getElementById('input-pain');
+            if (painInput) {
+                const val = painInput.value;
+                if (val !== "") {
+                    const score = parseInt(val);
+                    const isNormal = (score <= 3);
+                    setCardStatus(document.getElementById('card-pain'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-pain'));
+                }
+            }
+
+            // RBS
+            const rbsInput = document.getElementById('input-rbs');
+            if (rbsInput) {
+                const val = parseInt(rbsInput.value) || null;
+                if (val !== null) {
+                    const isNormal = (val >= 70 && val <= 140);
+                    setCardStatus(document.getElementById('card-rbs'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-rbs'));
+                }
+            }
+
+            // GCS
+            const gcsInput = document.getElementById('input-gcs');
+            if (gcsInput) {
+                const val = gcsInput.value.trim();
+                if (val) {
+                    const num = parseInt(val.split('/')[0]);
+                    const isNormal = (num === 15);
+                    setCardStatus(document.getElementById('card-gcs'), isNormal);
+                } else {
+                    resetCardStatus(document.getElementById('card-gcs'));
+                }
+            }
+
+            // CRT
+            const crtInput = document.getElementById('input-crt');
+            if (crtInput) {
+                const val = crtInput.value.trim();
+                if (val) {
+                    const match = val.match(/\d+/);
+                    if (match) {
+                        const num = parseInt(match[0]);
+                        setCardStatus(document.getElementById('card-crt'), num <= 2);
+                    } else if (val.includes('أقل') || val.includes('ثانيت') || val.includes('طبيعي') || val.includes('normal') || val.includes('<')) {
+                        setCardStatus(document.getElementById('card-crt'), true);
+                    } else {
+                        setCardStatus(document.getElementById('card-crt'), false);
+                    }
+                } else {
+                    resetCardStatus(document.getElementById('card-crt'));
+                }
+            }
+        }
+
+        function setCardStatus(card, isNormal) {
+            if (!card) return;
+            if (isNormal) {
+                card.style.borderColor = '#198754';
+                card.style.backgroundColor = 'rgba(25, 135, 84, 0.08)';
+                const label = card.querySelector('label');
+                if (label) {
+                    label.style.color = '#198754';
+                }
+            } else {
+                card.style.borderColor = '#dc3545';
+                card.style.backgroundColor = 'rgba(220, 53, 69, 0.08)';
+                const label = card.querySelector('label');
+                if (label) {
+                    label.style.color = '#dc3545';
+                }
+            }
+        }
+
+        function resetCardStatus(card) {
+            if (!card) return;
+            card.style.borderColor = '';
+            card.style.backgroundColor = '';
+            const label = card.querySelector('label');
+            if (label) {
+                label.style.color = '';
+            }
+        }
+
+        const vitalsInputs = ['input-bp', 'input-temp', 'input-pr', 'input-rr', 'input-spo2', 'input-pain', 'input-rbs', 'input-gcs', 'input-crt'];
+        vitalsInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', validateVitals);
+                el.addEventListener('change', validateVitals);
+            }
+        });
+
+        // Run validation initially
+        validateVitals();
     });
 </script>
 @endsection
