@@ -416,6 +416,27 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nursing station',
         ]);
 
+        // دور الطبيب المقيم (Resident)
+        $residentRole = Role::firstOrCreate(['name' => 'resident']);
+        $residentRole->givePermissionTo([
+            'view patients',
+            'view visits',
+            'create visits',
+            'edit visits',
+            'view surgeries',
+            'view resident station', // محطة المقيم فقط
+            'view lab tests',
+            'create lab tests',
+            'view radiology',
+            'create radiology',
+            'view packages',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
+            'view lab test groups',
+        ]);
+
         // دور موظف الطوارئ (Emergency Staff)
         $emergencyStaffRole = Role::firstOrCreate(['name' => 'emergency_staff']);
         $emergencyStaffRole->givePermissionTo([

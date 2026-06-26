@@ -103,6 +103,18 @@
                     'surgery_staff' => ['label' => 'موظف عمليات', 'icon' => 'procedures', 'color' => 'secondary'],
                     'التخدير' => ['label' => 'مقيم تخدير', 'icon' => 'syringe', 'color' => 'warning'],
                     'الجراح' => ['label' => 'جراح', 'icon' => 'user-md', 'color' => 'info'],
+                    'cashier' => ['label' => 'موظف كاشير', 'icon' => 'cash-register', 'color' => 'success'],
+                    'consultation_receptionist' => ['label' => 'موظف استعلامات استشارية', 'icon' => 'user-tie', 'color' => 'info'],
+                    'emergency_staff' => ['label' => 'موظف طوارئ', 'icon' => 'ambulance', 'color' => 'danger'],
+                    'inquiry_staff' => ['label' => 'موظف استعلامات', 'icon' => 'info-circle', 'color' => 'info'],
+                    'inventory_manager' => ['label' => 'موظف مخزن', 'icon' => 'boxes', 'color' => 'secondary'],
+                    'nurse' => ['label' => 'ممرض', 'icon' => 'user-nurse', 'color' => 'success'],
+                    'radiology_echo' => ['label' => 'موظف إيكو', 'icon' => 'heartbeat', 'color' => 'secondary'],
+                    'radiology_general' => ['label' => 'موظف أشعة عامة', 'icon' => 'x-ray', 'color' => 'secondary'],
+                    'radiology_mri' => ['label' => 'موظف رنين مغناطيسي', 'icon' => 'x-ray', 'color' => 'secondary'],
+                    'radiology_ultrasound' => ['label' => 'موظف سونار', 'icon' => 'wave-square', 'color' => 'secondary'],
+                    'staff' => ['label' => 'موظف عام', 'icon' => 'user', 'color' => 'dark'],
+                    'resident' => ['label' => 'طبيب مقيم', 'icon' => 'user-graduate', 'color' => 'success'],
                     default => ['label' => $role->name, 'icon' => 'user-shield', 'color' => 'dark'],
                 };
             @endphp

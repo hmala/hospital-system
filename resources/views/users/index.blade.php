@@ -32,7 +32,7 @@
         </div>
         <div class="card-body">
             <form action="{{ route('users.index') }}" method="GET" class="row g-3 align-items-end">
-                <div class="col-md-4">
+                <div class="col-md-5">
                     <label for="search" class="form-label small text-muted">البحث العام (الاسم، البريد، الهاتف، الاختصاص)</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
@@ -58,6 +58,18 @@
                                     @case('inventory_manager') موظف مخزن @break
                                     @case('consultation_receptionist') موظف استعلامات استشارية @break
                                     @case('surgery_staff') موظف عمليات @break
+                                    @case('cashier') موظف كاشير @break
+                                    @case('emergency_staff') موظف طوارئ @break
+                                    @case('inquiry_staff') موظف استعلامات @break
+                                    @case('nurse') ممرض @break
+                                    @case('radiology_echo') موظف إيكو @break
+                                    @case('radiology_general') موظف أشعة عامة @break
+                                    @case('radiology_mri') موظف رنين مغناطيسي @break
+                                    @case('radiology_ultrasound') موظف سونار @break
+                                    @case('staff') موظف عام @break
+                                    @case('resident') طبيب مقيم @break
+                                    @case('التخدير') مقيم تخدير @break
+                                    @case('الجراح') جراح @break
                                     @default {{ $role->name }}
                                 @endswitch
                             </option>
@@ -65,17 +77,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-3">
-                    <label for="location_id" class="form-label small text-muted">الموقع / القسم</label>
-                    <select name="location_id" id="location_id" class="form-select bg-light">
-                        <option value="">كل المواقع</option>
-                        @foreach($locations as $location)
-                            <option value="{{ $location->id }}" {{ request('location_id') == $location->id ? 'selected' : '' }}>
-                                {{ $location->name }} ({{ $location->type }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+
 
                 <div class="col-md-2">
                     <label for="status" class="form-label small text-muted">الحالة</label>
@@ -136,13 +138,13 @@
                             </td>
                             <td>
                                 @foreach($user->roles as $role)
-                                <span class="badge bg-{{ 
-                                    $role->name == 'admin' ? 'danger' : 
-                                    ($role->name == 'doctor' ? 'success' : 
-                                    ($role->name == 'patient' ? 'info' : 
-                                    ($role->name == 'receptionist' ? 'warning' : 
-                                    ($role->name == 'consultation_receptionist' ? 'info' : 'secondary')))) 
-                                }}">
+                                 <span class="badge bg-{{ 
+                                     $role->name == 'admin' ? 'danger' : 
+                                     ($role->name == 'doctor' || $role->name == 'resident' ? 'success' : 
+                                     ($role->name == 'patient' ? 'info' : 
+                                     ($role->name == 'receptionist' ? 'warning' : 
+                                     ($role->name == 'consultation_receptionist' ? 'info' : 'secondary')))) 
+                                 }}">
                                     @switch($role->name)
                                         @case('admin') مدير النظام @break
                                         @case('doctor') طبيب @break
@@ -154,6 +156,7 @@
                                         @case('inventory_manager') موظف مخزن @break
                                         @case('consultation_receptionist') موظف استعلامات استشارية @break
                                         @case('surgery_staff') موظف عمليات @break
+                                        @case('resident') طبيب مقيم @break
                                         @default {{ $role->name }}
                                     @endswitch
                                 </span>

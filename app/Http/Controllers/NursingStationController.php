@@ -7,6 +7,7 @@ use App\Models\NursingStation;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Notifications\NursingUpdateNotification;
 
 class NursingStationController extends Controller
 {
@@ -131,6 +132,9 @@ class NursingStationController extends Controller
             ]);
         }
 
+        // حفظ القيم القديمة قبل التحديث
+        $oldAttrs = $station->exists ? $station->getOriginal() : [];
+
         $station->update([
             'nurse_id' => $validated['nurse_id'] ?? null,
             'nursing_notes' => $validated['nursing_notes'] ?? null,
@@ -147,6 +151,51 @@ class NursingStationController extends Controller
                 : null
             ),
         ]);
+
+        // ── بناء قائمة التغييرات ────────────────────────────────────────────
+        $changes = [];
+
+        $fieldLabels = [
+            'nursing_notes' => 'ملاحظات تمريض',
+            'discharge_notes' => 'ملاحظات الخروج',
+            'vital_signs' => 'العلامات الحيوية',
+            'bp' => 'ضغط الدم',
+            'temp' => 'الحرارة',
+            'pr' => 'النبض',
+            'rr' => 'التنفس',
+            'spo2' => 'الأكسجين',
+            'pain_score' => 'مقياس الألم',
+            'rbs' => 'سكر الدم',
+            'gcs' => 'GCS',
+            'crt' => 'CRT',
+            'clinical_examination' => 'الفحص السريري',
+            'intake_iv_fluids' => 'محاليل وريدية',
+            'intake_oral' => 'محاليل فموية',
+            'intake_blood' => 'دم',
+            'output_urine' => 'بول',
+            'output_drain' => 'تصريف',
+            'output_gtube_ng' => 'أنبوب معدي',
+            'output_vomiting' => 'تقيؤ',
+            'output_stool' => 'براز',
+            'fluid_balance' => 'توازن السوائل',
+        ];
+
+        foreach ($fieldLabels as $field => $label) {
+            $oldVal = $oldAttrs[$field] ?? null;
+            $newVal = $validated[$field] ?? null;
+            if ((string) $oldVal !== (string) $newVal && ($newVal !== null && $newVal !== '')) {
+                $changes[$label] = $newVal;
+            }
+        }
+        if (isset($changes['ملاحظات تمريض'])) {
+            $v = $changes['ملاحظات تمريض'];
+            $changes['ملاحظات تمريض'] = mb_strlen($v) > 100 ? mb_substr($v, 0, 100) . '...' : $v;
+        }
+        if (isset($changes['ملاحظات الخروج'])) {
+            $v = $changes['ملاحظات الخروج'];
+            $changes['ملاحظات الخروج'] = mb_strlen($v) > 100 ? mb_substr($v, 0, 100) . '...' : $v;
+        }
+        // ──────────────────────────────────────────────────────────────────────
 
         // تحديث العلامات الحيوية في محطة المقيم (ما قبل أو ما بعد العملية حسب المرحلة الحالية)
         $currentStationName = $surgery->getCurrentStation();
@@ -223,6 +272,48 @@ class NursingStationController extends Controller
                 ]);
             }
         }
+
+        // ── إرسال إشعار للمقيم والجراح ──────────────────────────────────────
+        $nurseName = $user?->full_name ?? $user?->name ?? 'ممرض';
+        $recipients = collect();
+
+        // 1) المقيم المرتبط بالمحطة الفعّالة
+        if ($activeResidentStation && $activeResidentStation->resident?->user) {
+            $recipients->push($activeResidentStation->resident->user);
+        }
+
+        // 2) إذا لم نجد مقيماً في المحطة النشطة، نبحث في محطات المقيم الأخرى
+        if ($recipients->isEmpty() || !$recipients->first()) {
+            $allResidentStations = collect([$surgery->preOpResidentStation, $surgery->postOpResidentStation])
+                ->filter()
+                ->unique('id');
+            foreach ($allResidentStations as $rs) {
+                if ($rs->resident?->user) {
+                    $recipients->push($rs->resident->user);
+                }
+            }
+        }
+
+        // 3) إذا لم نجد مقيماً في أي محطة، نرسل لجميع المستخدمين بدور مقيم
+        if ($recipients->isEmpty() || !$recipients->first()) {
+            $residentUsers = \App\Models\User::role('resident')->get();
+            foreach ($residentUsers as $ru) {
+                $recipients->push($ru);
+            }
+        }
+
+        // 4) الجراح / الاختصاص المسؤول عن العملية
+        if ($surgery->doctor?->user) {
+            $recipients->push($surgery->doctor->user);
+        }
+
+        // إرسال الإشعار لكل مستلم فريد (لا تكرار إن كان نفس الشخص)
+        $recipients
+            ->unique('id')
+            ->each(function (User $recipient) use ($surgery, $nurseName, $changes) {
+                $recipient->notify(new NursingUpdateNotification($surgery, $nurseName, $changes));
+            });
+        // ──────────────────────────────────────────────────────────────────────
 
         return redirect()->route('nursing-station.show', $surgery)
             ->with('success', 'تم حفظ بيانات محطة التمريض بنجاح');

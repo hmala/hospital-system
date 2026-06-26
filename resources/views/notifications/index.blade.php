@@ -57,12 +57,7 @@
                                             </small>
                                         </div>
                                         <div class="d-flex flex-column align-items-end">
-                                            @if(isset($data['url']) && $data['url'] !== '#')
-                                                <a href="{{ $data['url'] }}" class="btn btn-sm btn-outline-primary mb-2">
-                                                    <i class="fas fa-eye me-1"></i>
-                                                    عرض
-                                                </a>
-                                            @endif
+
                                             @if(!$notification->read_at)
                                                 <button type="button" class="btn btn-sm btn-outline-success mark-as-read"
                                                         data-id="{{ $notification->id }}">

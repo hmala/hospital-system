@@ -445,7 +445,66 @@
                             @csrf
                         </form>
                     </div>
-                    <div class="sidebar-item mt-3">
+
+                    {{-- ===== جرس الإشعارات ===== --}}
+                    @php
+                        $unreadNotifCount = Auth::check() ? Auth::user()->unreadNotifications()->count() : 0;
+                        $latestNotifs     = Auth::check() ? Auth::user()->unreadNotifications()->latest()->take(5)->get() : collect();
+                    @endphp
+                    <div class="px-3 py-2" style="position:relative;">
+                        <div class="d-flex align-items-center justify-content-between"
+                             style="background:rgba(59,130,246,0.10);border-radius:12px;padding:8px 14px;cursor:pointer;"
+                             id="notifBellToggle">
+                            <span style="font-size:.85rem;color:#1d4ed8;font-weight:600;">
+                                <i class="fas fa-bell me-1"></i> الإشعارات
+                            </span>
+                            @if($unreadNotifCount > 0)
+                                <span class="badge rounded-pill bg-danger" id="notifBadge" style="font-size:.75rem;">
+                                    {{ $unreadNotifCount }}
+                                </span>
+                            @else
+                                <span class="badge rounded-pill bg-secondary" id="notifBadge" style="font-size:.75rem;display:none;">0</span>
+                            @endif
+                        </div>
+
+                        {{-- القائمة المنسدلة --}}
+                        <div id="notifDropdown"
+                             style="display:none;position:absolute;top:calc(100% - 4px);right:12px;left:12px;
+                                    background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(37,99,235,.18);
+                                    z-index:9999;max-height:320px;overflow-y:auto;border:1px solid rgba(96,165,250,.25);">
+                            @if($latestNotifs->count())
+                                @foreach($latestNotifs as $notif)
+                                    @php $nd = is_string($notif->data) ? json_decode($notif->data, true) : $notif->data; @endphp
+                                    <div class="notif-item" style="padding:10px 14px;border-bottom:1px solid #f0f4ff;">
+                                        <div style="font-size:.82rem;font-weight:700;color:#1e3a8a;">
+                                            {{ $nd['title'] ?? 'إشعار' }}
+                                        </div>
+                                        <div style="font-size:.78rem;color:#475569;margin-top:2px;line-height:1.4;">
+                                            {{ Str::limit($nd['message'] ?? '', 70) }}
+                                        </div>
+                                        <div style="font-size:.72rem;color:#94a3b8;margin-top:4px;">
+                                            <i class="fas fa-clock me-1"></i>{{ $notif->created_at->diffForHumans() }}
+                                        </div>
+
+                                    </div>
+                                @endforeach
+                                <div style="padding:8px 14px;text-align:center;">
+                                    <a href="{{ route('notifications.index') }}"
+                                       style="font-size:.8rem;color:#2563eb;font-weight:600;text-decoration:none;">
+                                        عرض كل الإشعارات
+                                    </a>
+                                </div>
+                            @else
+                                <div style="padding:20px;text-align:center;color:#94a3b8;font-size:.82rem;">
+                                    <i class="fas fa-bell-slash mb-2 d-block fa-2x"></i>
+                                    لا توجد إشعارات جديدة
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    {{-- ===== نهاية جرس الإشعارات ===== --}}
+
+                    <div class="sidebar-item mt-1">
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                             <i class="fas fa-home me-2"></i>الرئيسية
                         </a>
@@ -1080,6 +1139,78 @@
         }
         setInterval(reloadRealtimeSections, 5000); // كل 5 ثواني
     </script>
+
+    {{-- ===== جرس الإشعارات JS ===== --}}
+    <script>
+    (function() {
+        const toggle   = document.getElementById('notifBellToggle');
+        const dropdown = document.getElementById('notifDropdown');
+        const badge    = document.getElementById('notifBadge');
+
+        if (!toggle) return;
+
+        // فتح / إغلاق القائمة عند الضغط على الجرس
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.style.display = (dropdown.style.display === 'none' || !dropdown.style.display)
+                ? 'block' : 'none';
+        });
+
+        // إغلاق القائمة عند الضغط خارجها
+        document.addEventListener('click', function() {
+            dropdown.style.display = 'none';
+        });
+        dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+
+        // ===== تحديث الإشعارات في الوقت الفعلي عبر Pusher =====
+        @auth
+        if (typeof window.Echo !== 'undefined') {
+            window.Echo.private('App.Models.User.{{ Auth::id() }}')
+                .notification(function(notification) {
+                    // زيادة العداد
+                    let current = parseInt(badge.textContent) || 0;
+                    current++;
+                    badge.textContent = current;
+                    badge.style.display = '';
+                    badge.classList.remove('bg-secondary');
+                    badge.classList.add('bg-danger');
+
+                    // إضافة الإشعار في أعلى القائمة
+                    const noNotif = dropdown.querySelector('.fa-bell-slash');
+                    if (noNotif) {
+                        // إزالة رسالة "لا توجد إشعارات" وإضافة رابط "عرض الكل"
+                        dropdown.innerHTML =
+                            '<div style="padding:8px 14px;text-align:center;">'
+                            + '<a href="/notifications" style="font-size:.8rem;color:#2563eb;font-weight:600;text-decoration:none;">'
+                            + 'عرض كل الإشعارات</a></div>';
+                    }
+
+                    // إدراج الإشعار الجديد في الأعلى
+                    const item = document.createElement('div');
+                    item.className = 'notif-item';
+                    item.style.cssText = 'padding:10px 14px;border-bottom:1px solid #f0f4ff;background:#eff6ff;';
+                    item.innerHTML =
+                        '<div style="font-size:.82rem;font-weight:700;color:#1e3a8a;">'
+                        + (notification.title || 'إشعار جديد') + '</div>'
+                        + '<div style="font-size:.78rem;color:#475569;margin-top:2px;">'
+                        + ((notification.message || '').substring(0, 70)) + '</div>'
+                        + '<div style="font-size:.72rem;color:#94a3b8;margin-top:4px;">'
+                        + '<i class="fas fa-clock me-1"></i>الآن</div>'
+                        + (notification.url
+                            ? '<a href="' + notification.url + '" style="font-size:.75rem;color:#2563eb;text-decoration:none;display:block;margin-top:4px;">'
+                              + '<i class="fas fa-arrow-left me-1"></i>عرض التفاصيل</a>'
+                            : '');
+                    dropdown.insertBefore(item, dropdown.firstChild);
+
+                    // إظهار القائمة تلقائياً لثانيتين كتنبيه بصري
+                    dropdown.style.display = 'block';
+                    setTimeout(function() { dropdown.style.display = 'none'; }, 4000);
+                });
+        }
+        @endauth
+    })();
+    </script>
+    {{-- ===== نهاية جرس الإشعارات JS ===== --}}
 
     @stack('modals')
 </body>

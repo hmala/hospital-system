@@ -133,6 +133,9 @@
                                                 @case('surgery_staff') 
                                                     <span class="badge bg-danger">موظف عمليات</span>
                                                 @break
+                                                @case('resident') 
+                                                    <span class="badge bg-success">طبيب مقيم</span>
+                                                @break
                                                 @default 
                                                     <span class="badge bg-secondary">{{ $role->name }}</span>
                                             @endswitch

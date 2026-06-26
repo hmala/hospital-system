@@ -32,7 +32,7 @@ class SurgeryStationsSeeder extends Seeder
                 'title' => 'محطة المقيم',
                 'route' => 'resident-station.index',
                 'icon' => 'fas fa-user-graduate',
-                'roles' => ['admin', 'doctor', 'surgery_staff'],
+                'roles' => ['admin', 'doctor', 'surgery_staff', 'resident'],
                 'permission' => null,
                 'order' => 52,
                 'enabled' => true,

@@ -102,9 +102,21 @@ class ResidentStationController extends Controller
 
         // إنشاء محطة إذا لم تكن موجودة وكانت المرحلة نشطة وغير مكتملة
         if (!$station) {
+            // تعيين المقيم تلقائياً من المستخدم الحالي
+            $defaultResidentId = null;
+            $user = Auth::user();
+            if ($user) {
+                $defaultResidentId = $user->doctor?->id;
+                if (!$defaultResidentId) {
+                    $doctor = Doctor::where('user_id', $user->id)->first();
+                    $defaultResidentId = $doctor?->id;
+                }
+            }
+
             $station = $surgery->residentStations()->create([
                 'phase' => $currentPhase,
                 'status' => 'pending',
+                'resident_id' => $defaultResidentId,
             ]);
         }
 
