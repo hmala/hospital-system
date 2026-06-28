@@ -21,6 +21,7 @@ class Surgery extends Model
         'room_fee',
         'visit_id',
         'surgery_type',
+        'previous_surgery_type',
         'description',
         'scheduled_date',
         'scheduled_time',

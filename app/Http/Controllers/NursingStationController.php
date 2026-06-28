@@ -302,6 +302,19 @@ class NursingStationController extends Controller
             }
         }
 
+        // 3.5) إذا لم نجد، نبحث عن أطباء من نوع resident (مقيم) ونجلب حساباتهم
+        if ($recipients->isEmpty() || !$recipients->first()) {
+            $residentDoctors = \App\Models\Doctor::where('type', 'resident')
+                ->where('is_active', true)
+                ->with('user')
+                ->get();
+            foreach ($residentDoctors as $doctor) {
+                if ($doctor->user) {
+                    $recipients->push($doctor->user);
+                }
+            }
+        }
+
         // 4) الجراح / الاختصاص المسؤول عن العملية
         if ($surgery->doctor?->user) {
             $recipients->push($surgery->doctor->user);

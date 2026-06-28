@@ -61,10 +61,11 @@
                                 <label for="type" class="form-label">نوع الطبيب *</label>
                                 <select class="form-select @error('type') is-invalid @enderror" id="type" name="type" required>
                                     <option value="">اختر نوع الطبيب</option>
-                                    <option value="consultant" {{ old('type') == 'consultant' ? 'selected' : '' }}>استشاري</option>
-                                    <option value="anesthesiologist" {{ old('type') == 'anesthesiologist' ? 'selected' : '' }}>مخدر</option>
-                                    <option value="surgeon" {{ old('type') == 'surgeon' ? 'selected' : '' }}>جراح</option>
-                                    <option value="emergency" {{ old('type') == 'emergency' ? 'selected' : '' }}>طوارئ</option>
+                                     <option value="consultant" {{ old('type') == 'consultant' ? 'selected' : '' }}>استشاري</option>
+                                     <option value="anesthesiologist" {{ old('type') == 'anesthesiologist' ? 'selected' : '' }}>مخدر</option>
+                                     <option value="surgeon" {{ old('type') == 'surgeon' ? 'selected' : '' }}>جراح</option>
+                                     <option value="resident" {{ old('type') == 'resident' ? 'selected' : '' }}>مقيم</option>
+                                     <option value="emergency" {{ old('type') == 'emergency' ? 'selected' : '' }}>طوارئ</option>
                                 </select>
                                 @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>

@@ -177,21 +177,8 @@
     @endphp
 
     @if($surgery->status === 'in_progress')
-        <!-- 1. Resident Station Pre-Op -->
-        @if(!$surgery->preOpResidentStation || $surgery->preOpResidentStation->status !== 'completed')
-            @if($user->can('view resident station'))
-                <div class="alert alert-warning border-warning shadow-sm d-flex align-items-center justify-content-between mb-4" role="alert">
-                    <div>
-                        <i class="fas fa-user-md fa-lg me-2 text-warning"></i>
-                        <strong>محطة المقيم (قبل العملية):</strong> المريض بانتظار تحضير الطبيب المقيم قبل العملية الجراحية.
-                    </div>
-                    <a href="{{ route('resident-station.show', $surgery) }}?phase=pre_op" class="btn btn-warning text-dark btn-sm fw-bold">
-                        <i class="fas fa-edit me-1"></i>الانتقال للمحطة والتحضير
-                    </a>
-                </div>
-            @endif
-        <!-- 2. Operation Theater Station -->
-        @elseif(!$surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed')
+        <!-- 1. Operation Theater Station -->
+        @if(!$surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed')
             @if($user->can('view operation theater station'))
                 <div class="alert alert-info border-info shadow-sm d-flex align-items-center justify-content-between mb-4" role="alert">
                     <div>
@@ -223,17 +210,7 @@
                     </div>
                 </div>
             @endif
-        <!-- 5. Resident Station Post-Op -->
-        @elseif(!$surgery->postOpResidentStation || $surgery->postOpResidentStation->status !== 'completed')
-            @if($user->can('view resident station'))
-                <div class="alert alert-warning border-warning shadow-sm d-flex align-items-center mb-4" role="alert">
-                    <div>
-                        <i class="fas fa-user-md fa-lg me-2 text-warning"></i>
-                        <strong>محطة المقيم (بعد العملية):</strong> المريض في مرحلة المتابعة بعد العملية وبانتظار إنهاء هذه المرحلة.
-                    </div>
-                </div>
-            @endif
-        <!-- 6. Nursing Station -->
+        <!-- 5. Nursing Station -->
         @elseif(!$surgery->nursingStation || $surgery->nursingStation->status !== 'completed')
             @if($user->can('view nursing station'))
                 <div class="alert alert-info border-info shadow-sm d-flex align-items-center justify-content-between mb-4" role="alert">
@@ -291,6 +268,9 @@
                                 <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                                     <button class="nav-link active text-end" id="v-pills-visit-tests-tab" data-bs-toggle="pill" data-bs-target="#v-pills-visit-tests" type="button" role="tab">
                                         التحاليل والفحوصات الطبية<i class="fas fa-flask ms-2"></i>
+                                    </button>
+                                    <button class="nav-link text-end" id="v-pills-type-tab" data-bs-toggle="pill" data-bs-target="#v-pills-type" type="button" role="tab">
+                                        نوع العملية<i class="fas fa-scalpel ms-2"></i>
                                     </button>
                                     <button class="nav-link text-end" id="v-pills-diagnosis-tab" data-bs-toggle="pill" data-bs-target="#v-pills-diagnosis" type="button" role="tab">
                                         التشخيص الطبي للجراح<i class="fas fa-stethoscope ms-2"></i>
@@ -546,7 +526,78 @@
                                         </div>
                                     </div>
 
-                                    <!-- 1. Diagnosis & Anesthesia Tab -->
+                                    <!-- 1. Surgery Type Tab -->
+                                    <div class="tab-pane fade" id="v-pills-type" role="tabpanel">
+                                        <h6 class="border-bottom pb-2 mb-3 fw-bold text-primary">
+                                            <i class="fas fa-scalpel me-2"></i>نوع العملية
+                                        </h6>
+
+                                        @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'inquiry_staff']))
+                                        <form action="{{ route('surgeries.updateSurgeryType', $surgery) }}" method="POST" class="mb-4">
+                                            @csrf
+                                            @method('PATCH')
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold text-primary">نوع العملية الحالي</label>
+                                                    <div class="input-group">
+                                                        <input type="text" name="surgery_type" class="form-control form-control-lg border-primary" value="{{ $surgery->surgery_type }}" required>
+                                                        <button type="submit" class="btn btn-primary">
+                                                            <i class="fas fa-save me-1"></i>حفظ
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                @if($surgery->previous_surgery_type)
+                                                <div class="col-md-6">
+                                                    <label class="form-label text-muted">
+                                                        <i class="fas fa-history me-1"></i>النوع السابق
+                                                    </label>
+                                                    <div class="form-control bg-light text-muted" readonly>
+                                                        <s>{{ $surgery->previous_surgery_type }}</s>
+                                                    </div>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        </form>
+                                        @else
+                                        <div class="row g-4 mb-4">
+                                            <div class="col-md-6">
+                                                <div class="card border border-primary-subtle bg-primary bg-opacity-10 rounded-3 p-3 h-100">
+                                                    <small class="text-muted mb-1">نوع العملية</small>
+                                                    <div class="fw-bold text-dark fs-5">{{ $surgery->surgery_type ?? 'غير محدد' }}</div>
+                                                </div>
+                                            </div>
+                                            @if($surgery->previous_surgery_type)
+                                            <div class="col-md-6">
+                                                <div class="card border border-secondary-subtle bg-secondary bg-opacity-10 rounded-3 p-3 h-100">
+                                                    <small class="text-muted mb-1"><i class="fas fa-history me-1"></i>النوع السابق</small>
+                                                    <div class="fw-bold text-muted"><s>{{ $surgery->previous_surgery_type }}</s></div>
+                                                </div>
+                                            </div>
+                                            @endif
+                                        </div>
+                                        @endif
+
+                                        <div class="row g-4">
+                                            @if($surgery->surgery_type_detail)
+                                            <div class="col-md-6">
+                                                <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 p-3 h-100">
+                                                    <small class="text-muted mb-1">تفاصيل العملية</small>
+                                                    <div class="fw-bold text-dark">{{ $surgery->surgery_type_detail }}</div>
+                                                </div>
+                                            </div>
+                                            @endif
+                                            @if($surgery->anesthesia_type)
+                                            <div class="col-md-6">
+                                                <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 p-3 h-100">
+                                                    <small class="text-muted mb-1">نوع التخدير</small>
+                                                    <div class="fw-bold text-dark">{{ $surgery->anesthesia_type }}</div>
+                                                </div>
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. Diagnosis & Anesthesia Tab -->
                                     <div class="tab-pane fade" id="v-pills-diagnosis" role="tabpanel">
                                         <h6 class="border-bottom pb-2 mb-3 fw-bold text-primary">
                                             <i class="fas fa-stethoscope me-2"></i>التشخيص الطبي للعملية

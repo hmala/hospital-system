@@ -63,7 +63,7 @@ class DoctorController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:15',
             'department_id' => 'required|exists:departments,id',
-            'type' => 'required|in:consultant,anesthesiologist,surgeon,emergency',
+'type' => 'required|in:consultant,anesthesiologist,surgeon,resident,emergency',
             'specialization' => 'required|string|max:255',
             'consultation_fee' => 'required|numeric|min:0',
             'start_time' => 'required|date_format:H:i',
@@ -72,7 +72,6 @@ class DoctorController extends Controller
             'working_days.*' => 'string',
         ]);
 
-        // إنشاء مستخدم للطبيب
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -124,7 +123,7 @@ class DoctorController extends Controller
             'email' => 'required|email|unique:users,email,' . $doctor->user_id,
             'phone' => 'required|string|max:15',
             'department_id' => 'required|exists:departments,id',
-            'type' => 'required|in:consultant,anesthesiologist,surgeon,emergency',
+            'type' => 'required|in:consultant,anesthesiologist,surgeon,resident,emergency',
             'specialization' => 'required|string|max:255',
             'consultation_fee' => 'required|numeric|min:0',
             'start_time' => 'required|date_format:H:i',

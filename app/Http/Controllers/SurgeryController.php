@@ -881,4 +881,29 @@ class SurgeryController extends Controller
 
         return redirect()->route('surgeries.show', $surgery)->with('success', 'تم حفظ تفاصيل العملية بنجاح وإرسالها لمحطة التخدير');
     }
+
+    public function updateSurgeryType(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+
+        if (!$user->hasRole(['admin', 'surgery_staff', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بتغيير نوع العملية');
+        }
+
+        $validated = $request->validate([
+            'surgery_type' => 'required|string|max:255',
+        ]);
+
+        $oldType = $surgery->surgery_type;
+
+        if ($validated['surgery_type'] !== $oldType) {
+            $surgery->previous_surgery_type = $oldType;
+            $surgery->surgery_type = $validated['surgery_type'];
+            $surgery->save();
+
+            return redirect()->back()->with('success', 'تم تغيير نوع العملية من "' . $oldType . '" إلى "' . $validated['surgery_type'] . '"');
+        }
+
+        return redirect()->back()->with('info', 'لم يتم تغيير نوع العملية');
+    }
 }

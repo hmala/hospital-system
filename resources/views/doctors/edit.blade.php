@@ -77,10 +77,11 @@
                             <div class="col-md-8">
                                 <select id="type" class="form-control @error('type') is-invalid @enderror" name="type" required>
                                     <option value="">اختر نوع الطبيب</option>
-                                    <option value="consultant" {{ old('type', $doctor->type) == 'consultant' ? 'selected' : '' }}>استشاري</option>
-                                    <option value="anesthesiologist" {{ old('type', $doctor->type) == 'anesthesiologist' ? 'selected' : '' }}>مخدر</option>
-                                    <option value="surgeon" {{ old('type', $doctor->type) == 'surgeon' ? 'selected' : '' }}>جراح</option>
-                                    <option value="emergency" {{ old('type', $doctor->type) == 'emergency' ? 'selected' : '' }}>طوارئ</option>
+                                     <option value="consultant" {{ old('type', $doctor->type) == 'consultant' ? 'selected' : '' }}>استشاري</option>
+                                     <option value="anesthesiologist" {{ old('type', $doctor->type) == 'anesthesiologist' ? 'selected' : '' }}>مخدر</option>
+                                     <option value="surgeon" {{ old('type', $doctor->type) == 'surgeon' ? 'selected' : '' }}>جراح</option>
+                                     <option value="resident" {{ old('type', $doctor->type) == 'resident' ? 'selected' : '' }}>مقيم</option>
+                                     <option value="emergency" {{ old('type', $doctor->type) == 'emergency' ? 'selected' : '' }}>طوارئ</option>
                                 </select>
                                 @error('type')
                                     <span class="invalid-feedback" role="alert">

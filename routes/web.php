@@ -420,6 +420,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/surgeries/{surgery}/print', [SurgeryController::class, 'print'])->name('surgeries.print');
     Route::resource('surgeries', SurgeryController::class);
     Route::patch('/surgeries/{surgery}/update-details', [SurgeryController::class, 'updateDetails'])->name('surgeries.updateDetails');
+    Route::patch('/surgeries/{surgery}/update-surgery-type', [SurgeryController::class, 'updateSurgeryType'])->name('surgeries.updateSurgeryType');
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');

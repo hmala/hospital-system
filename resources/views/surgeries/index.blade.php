@@ -269,13 +269,9 @@ input[type="radio"]:checked + .frequency-btn {
                                                                 @endif
                                                         </td>
                                                         <td>
-                                                            @if($surgery->diagnosis || ($surgery->surgeonStation && $surgery->surgeonStation->status == 'completed'))
-                                                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary" title="تفاصيل العملية">
-                                                                    <i class="fas fa-eye me-1"></i> تفاصيل العملية
-                                                                </a>
-                                                            @else
-                                                                <span class="text-muted small"><i class="fas fa-hourglass-half me-1"></i>بانتظار التشخيص</span>
-                                                            @endif
+                                                            <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary" title="تفاصيل العملية">
+                                                                <i class="fas fa-eye me-1"></i> تفاصيل العملية
+                                                            </a>
                                                         </td>
                                                 </tr>
                                                 <tr class="bg-light">
