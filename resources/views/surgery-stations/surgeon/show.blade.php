@@ -88,6 +88,17 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>بروتوكول المراقبة</label>
+                                    <select name="monitoring_protocol" class="form-control">
+                                        <option value="standard" {{ ($surgery->surgeonStation?->monitoring_protocol ?? 'standard') == 'standard' ? 'selected' : '' }}>قياسي (علامات حيوية فقط)</option>
+                                        <option value="fluid_monitoring" {{ ($surgery->surgeonStation?->monitoring_protocol ?? '') == 'fluid_monitoring' ? 'selected' : '' }}>مراقبة السوائل (حيوية + سوائل)</option>
+                                        <option value="intensive" {{ ($surgery->surgeonStation?->monitoring_protocol ?? '') == 'intensive' ? 'selected' : '' }}>مكثف (حيوية + سوائل + متابعة دقيقة)</option>
+                                    </select>
+                                    <small class="text-muted">البروتوكول الموصى به من الجراح بناءً على نوع العملية</small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -201,7 +212,10 @@
                             <h5 class="mb-0">متابعات الطبيب المقيم</h5>
                         </div>
                         <div class="card-body">
-                            @if($surgery->postOpResidentStation && $surgery->postOpResidentStation->followUps->count() > 0)
+                            @php
+                                $surgeonFollowUps = $surgery->residentStationFollowUps->sortByDesc('created_at');
+                            @endphp
+                            @if($surgeonFollowUps->count() > 0)
                                 <div class="table-responsive">
                                     <table class="table table-bordered align-middle mb-0">
                                         <thead class="table-light">
@@ -214,7 +228,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($surgery->postOpResidentStation->followUps as $followUp)
+                                            @foreach($surgeonFollowUps as $followUp)
                                             <tr>
                                                 <td>{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
                                                 <td>{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>

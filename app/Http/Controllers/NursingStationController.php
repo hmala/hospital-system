@@ -75,7 +75,8 @@ class NursingStationController extends Controller
             'preOpResidentStation.followUps.resident.user',
             'preOpResidentStation.readings.resident.user',
             'postOpResidentStation.followUps.resident.user',
-            'postOpResidentStation.readings.resident.user'
+            'postOpResidentStation.readings.resident.user',
+            'residentStationFollowUps',
         ]);
         
         $nurses = User::role('nurse')->where('is_active', true)->get();

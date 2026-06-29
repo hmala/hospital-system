@@ -15,6 +15,8 @@ class SurgeonStation extends Model
         'resident_assigned_id',
         'notes',
         'treatment_plan',
+        'monitoring_protocol',
+        'required_fluids',
         'status',
         'started_at',
         'completed_at',
@@ -23,6 +25,7 @@ class SurgeonStation extends Model
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'required_fluids' => 'array',
     ];
 
     public function surgery()

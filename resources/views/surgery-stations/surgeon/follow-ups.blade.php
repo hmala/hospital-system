@@ -56,70 +56,70 @@
                                      <div class="tab-pane fade show active" id="charts-view" role="tabpanel" aria-labelledby="charts-tab">
                                          <!-- Row containing 2 charts per line -->
                                          <div class="row g-2 mb-4">
-                                             <!-- Chart 1: Blood Pressure -->
-                                             <div class="col-md-6 col-12">
-                                                 <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                     <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                         <span class="fw-bold text-primary"><i class="fas fa-heartbeat text-danger me-1"></i>الضغط (BP)</span>
-                                                         <span class="badge bg-danger p-1" style="font-size: 0.65rem;">mmHg</span>
-                                                     </div>
-                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
-                                                         <canvas id="bpChart"></canvas>
-                                                     </div>
-                                                 </div>
-                                             </div>
-                                             
-                                             <!-- Chart 2: Pulse Rate -->
-                                             <div class="col-md-6 col-12">
-                                                 <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                     <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                         <span class="fw-bold text-warning"><i class="fas fa-heart me-1"></i>النبض (Pulse)</span>
-                                                         <span class="badge bg-warning p-1" style="font-size: 0.65rem; color: #fff;">bpm</span>
-                                                     </div>
-                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
-                                                         <canvas id="pulseChart"></canvas>
-                                                     </div>
-                                                 </div>
-                                             </div>
+                                              <!-- Chart 1: Blood Pressure -->
+                                              <div class="col-md-6 col-12">
+                                                  <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 h-100">
+                                                      <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(220, 53, 69, 0.2) !important; font-size: 0.8rem;">
+                                                          <span class="fw-bold text-danger"><i class="fas fa-heartbeat text-danger me-1"></i>الضغط (BP)</span>
+                                                          <span class="badge bg-danger p-1" style="font-size: 0.65rem;">mmHg</span>
+                                                      </div>
+                                                      <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
+                                                          <canvas id="bpChart"></canvas>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                              
+                                              <!-- Chart 2: Pulse Rate -->
+                                              <div class="col-md-6 col-12">
+                                                  <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 h-100">
+                                                      <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(220, 53, 69, 0.2) !important; font-size: 0.8rem;">
+                                                          <span class="fw-bold text-danger"><i class="fas fa-heart me-1"></i>النبض (Pulse)</span>
+                                                          <span class="badge bg-danger p-1" style="font-size: 0.65rem;">bpm</span>
+                                                      </div>
+                                                      <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
+                                                          <canvas id="pulseChart"></canvas>
+                                                      </div>
+                                                  </div>
+                                              </div>
 
-                                             <!-- Chart 3: Temperature -->
-                                             <div class="col-md-6 col-12">
-                                                 <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                     <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                         <span class="fw-bold text-orange" style="color: #f97316;"><i class="fas fa-thermometer-half me-1"></i>الحرارة (Temp)</span>
-                                                         <span class="badge p-1" style="background-color: #f97316; color: #fff; font-size: 0.65rem;">°C</span>
-                                                     </div>
-                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
-                                                         <canvas id="tempChart"></canvas>
-                                                     </div>
-                                                 </div>
-                                             </div>
+                                              <!-- Chart 3: Temperature -->
+                                              <div class="col-md-6 col-12">
+                                                  <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 h-100">
+                                                      <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(255, 193, 7, 0.3) !important; font-size: 0.8rem;">
+                                                          <span class="fw-bold text-warning-emphasis"><i class="fas fa-thermometer-half me-1"></i>الحرارة (Temp)</span>
+                                                          <span class="badge p-1" style="background-color: #f97316; color: #fff; font-size: 0.65rem;">°C</span>
+                                                      </div>
+                                                      <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
+                                                          <canvas id="tempChart"></canvas>
+                                                      </div>
+                                                  </div>
+                                              </div>
 
-                                             <!-- Chart 4: SPO2 -->
-                                             <div class="col-md-6 col-12">
-                                                 <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                     <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                         <span class="fw-bold text-success"><i class="fas fa-wind me-1"></i>الأكسجين (SPO2)</span>
-                                                         <span class="badge bg-success p-1" style="font-size: 0.65rem;">%</span>
-                                                     </div>
-                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
-                                                         <canvas id="spo2Chart"></canvas>
-                                                     </div>
-                                                 </div>
-                                             </div>
+                                              <!-- Chart 4: SPO2 -->
+                                              <div class="col-md-6 col-12">
+                                                  <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 h-100">
+                                                      <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(25, 135, 84, 0.2) !important; font-size: 0.8rem;">
+                                                          <span class="fw-bold text-success"><i class="fas fa-wind me-1"></i>الأكسجين (SPO2)</span>
+                                                          <span class="badge bg-success p-1" style="font-size: 0.65rem;">%</span>
+                                                      </div>
+                                                      <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
+                                                          <canvas id="spo2Chart"></canvas>
+                                                      </div>
+                                                  </div>
+                                              </div>
 
-                                             <!-- Chart 5: Respiratory Rate -->
-                                             <div class="col-md-6 col-12">
-                                                 <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                     <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                         <span class="fw-bold text-purple" style="color: #8b5cf6;"><i class="fas fa-lungs me-1"></i>التنفس (RR)</span>
-                                                         <span class="badge text-white p-1" style="background-color: #8b5cf6; font-size: 0.65rem;">/min</span>
-                                                     </div>
-                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
-                                                         <canvas id="rrChart"></canvas>
-                                                     </div>
-                                                 </div>
-                                             </div>
+                                              <!-- Chart 5: Respiratory Rate -->
+                                              <div class="col-md-6 col-12">
+                                                  <div class="card border border-info-subtle bg-info bg-opacity-10 rounded-3 h-100">
+                                                      <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(13, 202, 240, 0.3) !important; font-size: 0.8rem;">
+                                                          <span class="fw-bold text-info-emphasis"><i class="fas fa-lungs me-1"></i>التنفس (RR)</span>
+                                                          <span class="badge bg-info p-1" style="font-size: 0.65rem;">/min</span>
+                                                      </div>
+                                                      <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
+                                                          <canvas id="rrChart"></canvas>
+                                                      </div>
+                                                  </div>
+                                              </div>
                                          </div>
                                      </div>
 
@@ -166,7 +166,10 @@
                              <h5 class="mb-3">متابعات الطبيب المقيم</h5>
                          </div>
 
-                         @if($surgery->postOpResidentStation && $surgery->postOpResidentStation->followUps->count() > 0)
+                         @php
+                             $allFollowUps = $surgery->residentStationFollowUps->sortByDesc('created_at');
+                         @endphp
+                         @if($allFollowUps->count() > 0)
                              <div class="table-responsive">
                                  <table class="table table-bordered table-hover align-middle">
                                      <thead class="table-light">
@@ -180,7 +183,7 @@
                                          </tr>
                                      </thead>
                                      <tbody>
-                                         @foreach($surgery->postOpResidentStation->followUps as $followUp)
+                                         @foreach($allFollowUps as $followUp)
                                              <tr>
                                                  <td>{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
                                                  <td>{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>

@@ -295,7 +295,7 @@ class SurgeryController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم باستعراض العمليات الجراحية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'surgeryTreatments', 'anesthesiaStation']);
+        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'surgeryTreatments', 'anesthesiaStation', 'residentStationFollowUps']);
         $patients = Patient::with('user')->get()->sortBy(function($p) {
             return optional($p->user)->name ?? '';
         });
@@ -740,6 +740,8 @@ class SurgeryController extends Controller
             'asa_classification' => 'nullable|string|in:asa1,asa2,asa3,asa4,asa5,asa6',
             'surgical_complexity' => 'nullable|string|in:minor,intermediate,major,complex',
             'surgical_notes' => 'nullable|string|max:1000',
+            'required_fluids' => 'nullable|array',
+            'required_fluids.*' => 'string|in:intake_iv_fluids,intake_oral,intake_blood,output_urine,output_drain,output_gtube_ng,output_vomiting,output_stool',
         ]);
 
         \Log::info('Validation passed, validated data: ', $validated);
@@ -843,6 +845,16 @@ class SurgeryController extends Controller
 
         // Remove prescribed_medications from validated array as we handled it separately
         unset($validated['prescribed_medications']);
+
+        // Save required_fluids to surgeon station
+        if ($request->has('required_fluids')) {
+            $station = $surgery->surgeonStation;
+            if (!$station) {
+                $station = $surgery->surgeonStation()->create(['status' => 'pending', 'surgeon_id' => $surgery->doctor_id]);
+            }
+            $station->update(['required_fluids' => $request->input('required_fluids', [])]);
+        }
+        unset($validated['required_fluids']);
 
         \Log::info('Final validated data to update: ', $validated);
 

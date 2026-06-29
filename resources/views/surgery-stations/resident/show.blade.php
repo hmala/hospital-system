@@ -386,9 +386,9 @@
                                         <div class="row g-2 mb-2">
                                             <!-- Chart 1: Blood Pressure -->
                                             <div class="col-md-6 col-12">
-                                                <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                    <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                        <span class="fw-bold text-primary"><i class="fas fa-heartbeat text-danger me-1"></i>الضغط (BP)</span>
+                                                <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 h-100">
+                                                    <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(220, 53, 69, 0.2) !important; font-size: 0.8rem;">
+                                                        <span class="fw-bold text-danger"><i class="fas fa-heartbeat text-danger me-1"></i>الضغط (BP)</span>
                                                         <span class="badge bg-danger p-1" style="font-size: 0.65rem;">mmHg</span>
                                                     </div>
                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
@@ -399,10 +399,10 @@
                                             
                                             <!-- Chart 2: Pulse Rate -->
                                             <div class="col-md-6 col-12">
-                                                <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                    <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                        <span class="fw-bold text-warning"><i class="fas fa-heart me-1"></i>النبض (Pulse)</span>
-                                                        <span class="badge bg-warning p-1" style="font-size: 0.65rem; color: #fff;">bpm</span>
+                                                <div class="card border border-danger-subtle bg-danger bg-opacity-10 rounded-3 h-100">
+                                                    <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(220, 53, 69, 0.2) !important; font-size: 0.8rem;">
+                                                        <span class="fw-bold text-danger"><i class="fas fa-heart me-1"></i>النبض (Pulse)</span>
+                                                        <span class="badge bg-danger p-1" style="font-size: 0.65rem;">bpm</span>
                                                     </div>
                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
                                                         <canvas id="pulseChart"></canvas>
@@ -412,9 +412,9 @@
 
                                             <!-- Chart 3: Temperature -->
                                             <div class="col-md-6 col-12">
-                                                <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                    <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
-                                                        <span class="fw-bold text-orange" style="color: #f97316;"><i class="fas fa-thermometer-half me-1"></i>الحرارة (Temp)</span>
+                                                <div class="card border border-warning-subtle bg-warning bg-opacity-10 rounded-3 h-100">
+                                                    <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(255, 193, 7, 0.3) !important; font-size: 0.8rem;">
+                                                        <span class="fw-bold text-warning-emphasis"><i class="fas fa-thermometer-half me-1"></i>الحرارة (Temp)</span>
                                                         <span class="badge p-1" style="background-color: #f97316; color: #fff; font-size: 0.65rem;">°C</span>
                                                     </div>
                                                     <div class="card-body p-1" style="position: relative; height: 160px; background: transparent !important;">
@@ -425,8 +425,8 @@
 
                                             <!-- Chart 4: SPO2 -->
                                             <div class="col-md-6 col-12">
-                                                <div class="card border shadow-sm h-100" style="background: rgba(255, 255, 255, 0.9) !important; border: 1px solid #bfdbfe !important;">
-                                                    <div class="card-header bg-light d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid #bfdbfe !important; font-size: 0.8rem;">
+                                                <div class="card border border-success-subtle bg-success bg-opacity-10 rounded-3 h-100">
+                                                    <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-1 px-2" style="border-bottom: 1px solid rgba(25, 135, 84, 0.2) !important; font-size: 0.8rem;">
                                                         <span class="fw-bold text-success"><i class="fas fa-wind me-1"></i>الأكسجين (SPO2)</span>
                                                         <span class="badge bg-success p-1" style="font-size: 0.65rem;">%</span>
                                                     </div>
@@ -742,7 +742,7 @@
                                         <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-clipboard-list text-primary me-1"></i> سجل المتابعة</h6>
                                     </div>
                                     <div class="card-body p-3">
-                                        @php $followUpStation = $surgery->postOpResidentStation; @endphp
+                                        @php $residentFollowUps = $surgery->residentStationFollowUps->sortByDesc('created_at'); @endphp
                                         <div class="table-responsive mb-4">
                                             <table class="table table-bordered mb-0 align-middle">
                                                 <thead class="table-light">
@@ -755,7 +755,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @forelse($followUpStation?->followUps ?? [] as $followUp)
+                                                    @forelse($residentFollowUps as $followUp)
                                                         <tr>
                                                             <td class="text-dark">{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
                                                             <td class="text-dark">{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>

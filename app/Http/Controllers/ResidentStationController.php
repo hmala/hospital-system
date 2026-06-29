@@ -129,7 +129,8 @@ class ResidentStationController extends Controller
             'postOpResidentStation.readings.resident.user',
             'labTests.labTest',
             'radiologyTests.radiologyType',
-            'surgeryTreatments.administeredBy'
+            'surgeryTreatments.administeredBy',
+            'residentStationFollowUps',
         ]);
         $station->load(['readings.resident.user', 'followUps.resident.user']);
         $residents = Doctor::where('type', 'resident')->get();

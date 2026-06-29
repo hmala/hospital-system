@@ -52,7 +52,7 @@ class SurgeonStationController extends Controller
             ]);
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'surgeonStation']);
+        $surgery->load(['patient.user', 'doctor.user', 'surgeonStation', 'residentStationFollowUps']);
 
         // جلب الأطباء المقيمين لتعيين أحدهم للمتابعة
         $residents = Doctor::where('type', 'resident')->where('is_active', true)->with('user')->get();
@@ -68,8 +68,8 @@ class SurgeonStationController extends Controller
             'patient.user',
             'doctor.user',
             'preOpResidentStation.readings.resident.user',
-            'postOpResidentStation.followUps.resident.user',
             'postOpResidentStation.readings.resident.user',
+            'residentStationFollowUps',
         ]);
 
         return view('surgery-stations.surgeon.follow-ups', compact('surgery'));
@@ -83,6 +83,9 @@ class SurgeonStationController extends Controller
             'resident_assigned_id' => 'nullable|exists:doctors,id',
             'notes' => 'nullable|string|max:2000',
             'treatment_plan' => 'nullable|string|max:2000',
+            'monitoring_protocol' => 'nullable|string|in:standard,fluid_monitoring,intensive',
+            'required_fluids' => 'nullable|array',
+            'required_fluids.*' => 'string|in:intake_iv_fluids,intake_oral,intake_blood,output_urine,output_drain,output_gtube_ng,output_vomiting,output_stool',
             
             'prescribed_medications.surgery_treatments' => 'nullable|array',
             'prescribed_medications.surgery_treatments.*' => 'nullable|array',
@@ -107,6 +110,8 @@ class SurgeonStationController extends Controller
             'resident_assigned_id' => $validated['resident_assigned_id'] ?? null,
             'notes' => $validated['notes'] ?? null,
             'treatment_plan' => $validated['treatment_plan'] ?? null,
+            'monitoring_protocol' => $validated['monitoring_protocol'] ?? 'standard',
+            'required_fluids' => $validated['required_fluids'] ?? [],
         ]);
 
         // حفظ العلاجات المهيكلة في جدول surgery_treatments
