@@ -773,7 +773,7 @@ class SurgeryController extends Controller
             $validated['follow_up_date'] = null;
         }
 
-        // If the current user is surgery staff, allow only team and timing fields to be updated.
+        // If the current user is surgery staff, allow only team, timing, and supplies fields to be updated.
         if ($user->hasRole('surgery_staff')) {
             $validated = Arr::only($validated, [
                 'anesthesiologist_id',
@@ -781,6 +781,7 @@ class SurgeryController extends Controller
                 'surgical_assistant_name',
                 'start_time',
                 'end_time',
+                'supplies',
             ]);
         }
 

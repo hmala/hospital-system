@@ -106,6 +106,11 @@
 @php
     $canManageSurgery = auth()->user()->hasRole(['surgery_staff', 'admin']) || 
                        (auth()->user()->isDoctor() && auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id);
+    $isSurgeryStaff = auth()->user()->hasRole('surgery_staff');
+    $teamMissing = $isSurgeryStaff && empty($surgery->anesthesiologist_id) && empty($surgery->anesthesiaStation?->anesthesiologist_id);
+    $timingMissing = $isSurgeryStaff && empty($surgery->start_time);
+    $suppliesMissing = $isSurgeryStaff && empty($surgery->supplies);
+    $anesthesiaMissing = $isSurgeryStaff && empty($surgery->anesthesiaStation?->anesthesia_type) && empty($surgery->anesthesia_type);
 @endphp
 
 <div class="container-fluid py-4">
@@ -272,18 +277,28 @@
                                     <button class="nav-link text-end" id="v-pills-type-tab" data-bs-toggle="pill" data-bs-target="#v-pills-type" type="button" role="tab">
                                         نوع العملية<i class="fas fa-scalpel ms-2"></i>
                                     </button>
-                                    <button class="nav-link text-end" id="v-pills-diagnosis-tab" data-bs-toggle="pill" data-bs-target="#v-pills-diagnosis" type="button" role="tab">
-                                        التشخيص الطبي للجراح<i class="fas fa-stethoscope ms-2"></i>
+                                    <button class="nav-link text-end @if(auth()->user()->hasRole('surgery_staff') && empty($surgery->diagnosis)) border-danger @endif" id="v-pills-diagnosis-tab" data-bs-toggle="pill" data-bs-target="#v-pills-diagnosis" type="button" role="tab">
+                                        التشخيص الطبي للجراح
+                                        @if(auth()->user()->hasRole('surgery_staff') && empty($surgery->diagnosis))
+                                            <span class="badge bg-danger text-white ms-1"><i class="fas fa-exclamation-triangle"></i></span>
+                                        @endif
+                                        <i class="fas fa-stethoscope ms-2"></i>
                                     </button>
-                                    <button class="nav-link text-end" id="v-pills-anesthesia-tab" data-bs-toggle="pill" data-bs-target="#v-pills-anesthesia" type="button" role="tab">
-                                        تفاصيل التخدير<i class="fas fa-syringe ms-2"></i>
+                                    <button class="nav-link text-end @if($anesthesiaMissing) border-danger @endif" id="v-pills-anesthesia-tab" data-bs-toggle="pill" data-bs-target="#v-pills-anesthesia" type="button" role="tab">
+                                        تفاصيل التخدير
+                                        @if($anesthesiaMissing) <span class="badge bg-danger text-white ms-1"><i class="fas fa-exclamation-triangle"></i></span> @endif
+                                        <i class="fas fa-syringe ms-2"></i>
                                     </button>
                                     @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
-                                    <button class="nav-link text-end" id="v-pills-team-tab" data-bs-toggle="pill" data-bs-target="#v-pills-team" type="button" role="tab">
-                                        الفريق الطبي<i class="fas fa-users ms-2"></i>
+                                    <button class="nav-link text-end @if($teamMissing) border-warning @endif" id="v-pills-team-tab" data-bs-toggle="pill" data-bs-target="#v-pills-team" type="button" role="tab">
+                                        الفريق الطبي
+                                        @if($teamMissing) <span class="badge bg-warning text-dark ms-1"><i class="fas fa-exclamation-triangle"></i></span> @endif
+                                        <i class="fas fa-users ms-2"></i>
                                     </button>
-                                    <button class="nav-link text-end" id="v-pills-timing-tab" data-bs-toggle="pill" data-bs-target="#v-pills-timing" type="button" role="tab">
-                                        التوقيت والمدة<i class="fas fa-clock ms-2"></i>
+                                    <button class="nav-link text-end @if($timingMissing) border-warning @endif" id="v-pills-timing-tab" data-bs-toggle="pill" data-bs-target="#v-pills-timing" type="button" role="tab">
+                                        التوقيت والمدة
+                                        @if($timingMissing) <span class="badge bg-warning text-dark ms-1"><i class="fas fa-exclamation-triangle"></i></span> @endif
+                                        <i class="fas fa-clock ms-2"></i>
                                     </button>
                                     @endif
                                     <button class="nav-link text-end" id="v-pills-treatments-tab" data-bs-toggle="pill" data-bs-target="#v-pills-treatments" type="button" role="tab">
@@ -296,8 +311,10 @@
                                         المتابعات<i class="fas fa-clipboard-list ms-2"></i>
                                     </button>
                                     @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
-                                    <button class="nav-link text-end" id="v-pills-notes-tab" data-bs-toggle="pill" data-bs-target="#v-pills-notes" type="button" role="tab">
-                                        المستلزمات<i class="fas fa-box-open ms-2"></i>
+                                    <button class="nav-link text-end @if($suppliesMissing) border-warning @endif" id="v-pills-notes-tab" data-bs-toggle="pill" data-bs-target="#v-pills-notes" type="button" role="tab">
+                                        المستلزمات
+                                        @if($suppliesMissing) <span class="badge bg-warning text-dark ms-1"><i class="fas fa-exclamation-triangle"></i></span> @endif
+                                        <i class="fas fa-box-open ms-2"></i>
                                     </button>
                                     @endif
                                 </div>
@@ -624,19 +641,33 @@
                                             <i class="fas fa-stethoscope me-2"></i>التشخيص الطبي للعملية
                                         </h6>
                                         @if(auth()->user()->hasRole('surgery_staff'))
-                                        <div class="alert alert-warning border-warning text-dark bg-warning bg-opacity-10 mb-4" role="alert">
-                                            <i class="fas fa-user-md me-2"></i>
-                                            هذا القسم مخصص لطبيب الجراح / موظف العمليات لتدوين التشخيص الطبي وخطة العلاج.
+                                            @if(empty($surgery->diagnosis))
+                                            <div class="alert alert-warning border-warning text-dark bg-warning bg-opacity-10 mb-4" role="alert">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                <strong>لم يُدخل الجراح التشخيص بعد.</strong> يرجى التواصل مع الجراح لإدخال التشخيص الطبي للعملية.
+                                            </div>
+                                            @else
+                                            <div class="alert alert-success border-success text-dark bg-success bg-opacity-10 mb-4" role="alert">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                تم إدخال التشخيص من قبل الجراح. يمكنك الاطلاع عليه أدناه.
+                                            </div>
+                                            @endif
+                                        @elseif(auth()->user()->hasRole('admin'))
+                                        <div class="alert alert-info border-info text-dark bg-info bg-opacity-10 mb-4" role="alert">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            يمكنك تعديل التشخيص الطبي للعملية أدناه.
                                         </div>
                                         @endif
                                         <div class="row">
-                                            <div class="{{ auth()->user()->hasRole(['admin', 'surgery_staff']) ? 'col-md-8' : 'col-md-12' }} mb-3">
+                                            <div class="col-md-12 mb-3">
                                                 <label for="diagnosis" class="form-label">التشخيص الطبي للعملية</label>
-                                                <textarea class="form-control {{ auth()->user()->hasRole('surgery_staff') ? 'border-warning bg-warning bg-opacity-10' : '' }}" id="diagnosis" name="diagnosis" rows="4" placeholder="أدخل التشخيص الطبي المفصل للمريض...">{{ $surgery->diagnosis }}</textarea>
+                                                @if(auth()->user()->hasRole('surgery_staff'))
+                                                    <textarea class="form-control bg-light" id="diagnosis" rows="4" readonly placeholder="لم يُدخل الجراح التشخيص بعد...">{{ $surgery->diagnosis }}</textarea>
+                                                    <small class="text-muted mt-1 d-block"><i class="fas fa-lock me-1"></i>عرض فقط — لا يمكنك تعديل التشخيص، يرجى التواصل مع الجراح.</small>
+                                                @else
+                                                    <textarea class="form-control" id="diagnosis" name="diagnosis" rows="4" placeholder="أدخل التشخيص الطبي المفصل للمريض...">{{ $surgery->diagnosis }}</textarea>
+                                                @endif
                                             </div>
-                                            @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
-                                            {{-- توثيق التشخيص فقط في تبويب التشخيص والتخدير --}}
-                                            @endif
                                         </div>
                                     </div>
 
