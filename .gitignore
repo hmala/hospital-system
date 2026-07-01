@@ -22,5 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/graphify-out/
 # Antigravity Chat & Agent Sync
 !.antigravity-local/

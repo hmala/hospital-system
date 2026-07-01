@@ -105,6 +105,11 @@ class Surgery extends Model
         return $this->belongsTo(Visit::class);
     }
 
+    public function surgeryTypeChanges()
+    {
+        return $this->hasMany(SurgeryTypeChange::class);
+    }
+
     public function labTests()
     {
         return $this->hasMany(SurgeryLabTest::class);

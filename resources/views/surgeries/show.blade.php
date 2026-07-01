@@ -563,22 +563,22 @@
                                                 <div class="col-md-6">
                                                     <label class="form-label fw-bold text-primary">نوع العملية الحالي</label>
                                                     <div class="input-group">
-                                                        <input type="text" name="surgery_type" class="form-control form-control-lg border-primary" value="{{ $surgery->surgery_type }}" required>
+                                                        <select name="surgery_type_select" id="surgery_type_select" class="form-select form-select-lg border-primary" onchange="toggleSurgeryTypeInput()">
+                                                            <option value="">-- اختر نوع العملية --</option>
+                                                            @foreach($surgeryTypes as $type)
+                                                                <option value="{{ $type->name }}" {{ $surgery->surgery_type === $type->name ? 'selected' : '' }}>{{ $type->name }}</option>
+                                                            @endforeach
+                                                            <option value="other" {{ !$surgeryTypes->contains('name', $surgery->surgery_type) && $surgery->surgery_type ? 'selected' : '' }}>أخرى (يدوي)</option>
+                                                        </select>
                                                         <button type="submit" class="btn btn-primary">
                                                             <i class="fas fa-save me-1"></i>حفظ
                                                         </button>
                                                     </div>
-                                                </div>
-                                                @if($surgery->previous_surgery_type)
-                                                <div class="col-md-6">
-                                                    <label class="form-label text-muted">
-                                                        <i class="fas fa-history me-1"></i>النوع السابق
-                                                    </label>
-                                                    <div class="form-control bg-light text-muted" readonly>
-                                                        <s>{{ $surgery->previous_surgery_type }}</s>
+                                                    <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
+                                                        <input type="text" id="custom_surgery_type" class="form-control border-primary" placeholder="اكتب نوع العملية يدوياً..." value="{{ !$surgeryTypes->contains('name', $surgery->surgery_type) ? $surgery->surgery_type : '' }}">
                                                     </div>
+                                                    <input type="hidden" name="surgery_type" id="hidden_surgery_type" value="{{ $surgery->surgery_type }}">
                                                 </div>
-                                                @endif
                                             </div>
                                         </form>
                                         @else
@@ -589,14 +589,35 @@
                                                     <div class="fw-bold text-dark fs-5">{{ $surgery->surgery_type ?? 'غير محدد' }}</div>
                                                 </div>
                                             </div>
-                                            @if($surgery->previous_surgery_type)
-                                            <div class="col-md-6">
-                                                <div class="card border border-secondary-subtle bg-secondary bg-opacity-10 rounded-3 p-3 h-100">
-                                                    <small class="text-muted mb-1"><i class="fas fa-history me-1"></i>النوع السابق</small>
-                                                    <div class="fw-bold text-muted"><s>{{ $surgery->previous_surgery_type }}</s></div>
-                                                </div>
+                                        </div>
+                                        @endif
+
+                                        @php $typeChanges = $surgery->surgeryTypeChanges()->latest()->get(); @endphp
+                                        @if($typeChanges->count() > 0)
+                                        <div class="mb-4">
+                                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-history me-1"></i>سجل تغييرات نوع العملية</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered align-middle mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="py-1">التاريخ</th>
+                                                            <th class="py-1">النوع القديم</th>
+                                                            <th class="py-1">النوع الجديد</th>
+                                                            <th class="py-1">تم بواسطة</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($typeChanges as $change)
+                                                        <tr>
+                                                            <td class="text-dark small">{{ $change->created_at->format('Y-m-d h:i A') }}</td>
+                                                            <td class="text-danger"><s>{{ $change->old_type ?? '-' }}</s></td>
+                                                            <td class="text-success fw-bold">{{ $change->new_type }}</td>
+                                                            <td class="text-muted small">{{ $change->changedBy?->name ?? 'غير معروف' }}</td>
+                                                        </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                            @endif
                                         </div>
                                         @endif
 
@@ -1429,5 +1450,40 @@
             jsonField.value = JSON.stringify(data);
         });
     }
+
+    // Surgery type: toggle custom input for "other"
+    window.toggleSurgeryTypeInput = function() {
+        const select = document.getElementById('surgery_type_select');
+        const wrapper = document.getElementById('custom_surgery_type_wrapper');
+        const hiddenInput = document.getElementById('hidden_surgery_type');
+        if (select.value === 'other') {
+            wrapper.style.display = 'block';
+        } else {
+            wrapper.style.display = 'none';
+            hiddenInput.value = select.value;
+        }
+    };
+
+    // On form submit, ensure the correct value is in the hidden field
+    document.querySelector('#v-pills-type form')?.addEventListener('submit', function(e) {
+        const select = document.getElementById('surgery_type_select');
+        const wrapper = document.getElementById('custom_surgery_type_wrapper');
+        const hiddenInput = document.getElementById('hidden_surgery_type');
+        if (select.value === 'other') {
+            const customVal = document.getElementById('custom_surgery_type').value.trim();
+            if (!customVal) {
+                e.preventDefault();
+                alert('يرجى كتابة نوع العملية');
+                return;
+            }
+            hiddenInput.value = customVal;
+        }
+        hiddenInput.disabled = false;
+    });
+
+    // Init on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleSurgeryTypeInput();
+    });
 </script>
 @endsection

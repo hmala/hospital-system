@@ -308,7 +308,8 @@ class SurgeryController extends Controller
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
-        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes'));
+        $surgeryTypes = \App\Models\SurgeryType::active()->orderBy('name')->get();
+        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgeryTypes'));
     }
 
     public function edit(Surgery $surgery)
@@ -913,6 +914,12 @@ class SurgeryController extends Controller
             $surgery->previous_surgery_type = $oldType;
             $surgery->surgery_type = $validated['surgery_type'];
             $surgery->save();
+
+            $surgery->surgeryTypeChanges()->create([
+                'old_type' => $oldType,
+                'new_type' => $validated['surgery_type'],
+                'changed_by' => $user->id,
+            ]);
 
             return redirect()->back()->with('success', 'تم تغيير نوع العملية من "' . $oldType . '" إلى "' . $validated['surgery_type'] . '"');
         }
