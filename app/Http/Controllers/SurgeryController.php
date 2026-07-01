@@ -308,8 +308,8 @@ class SurgeryController extends Controller
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
-        $surgeryTypes = \App\Models\SurgeryType::active()->orderBy('name')->get();
-        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgeryTypes'));
+        $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations'));
     }
 
     public function edit(Surgery $surgery)
@@ -906,13 +906,20 @@ class SurgeryController extends Controller
 
         $validated = $request->validate([
             'surgery_type' => 'required|string|max:255',
+            'surgical_operation_id' => 'nullable|exists:surgical_operations,id',
         ]);
 
         $oldType = $surgery->surgery_type;
 
         if ($validated['surgery_type'] !== $oldType) {
+            $opId = $validated['surgical_operation_id'];
+            if (!$opId && $validated['surgery_type'] !== 'other') {
+                $op = \App\Models\SurgicalOperation::where('name', $validated['surgery_type'])->first();
+                $opId = $op?->id;
+            }
             $surgery->previous_surgery_type = $oldType;
             $surgery->surgery_type = $validated['surgery_type'];
+            $surgery->surgical_operation_id = $opId ?: null;
             $surgery->save();
 
             $surgery->surgeryTypeChanges()->create([

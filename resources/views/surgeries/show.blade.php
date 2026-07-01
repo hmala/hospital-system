@@ -556,31 +556,53 @@
                                         </h6>
 
                                         @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'inquiry_staff']))
-                                        <form action="{{ route('surgeries.updateSurgeryType', $surgery) }}" method="POST" class="mb-4">
-                                            @csrf
-                                            @method('PATCH')
-                                            <div class="row g-3 align-items-end">
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-bold text-primary">نوع العملية الحالي</label>
-                                                    <div class="input-group">
-                                                        <select name="surgery_type_select" id="surgery_type_select" class="form-select form-select-lg border-primary" onchange="toggleSurgeryTypeInput()">
-                                                            <option value="">-- اختر نوع العملية --</option>
-                                                            @foreach($surgeryTypes as $type)
-                                                                <option value="{{ $type->name }}" {{ $surgery->surgery_type === $type->name ? 'selected' : '' }}>{{ $type->name }}</option>
-                                                            @endforeach
-                                                            <option value="other" {{ !$surgeryTypes->contains('name', $surgery->surgery_type) && $surgery->surgery_type ? 'selected' : '' }}>أخرى (يدوي)</option>
-                                                        </select>
-                                                        <button type="submit" class="btn btn-primary">
-                                                            <i class="fas fa-save me-1"></i>حفظ
-                                                        </button>
-                                                    </div>
-                                                    <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
-                                                        <input type="text" id="custom_surgery_type" class="form-control border-primary" placeholder="اكتب نوع العملية يدوياً..." value="{{ !$surgeryTypes->contains('name', $surgery->surgery_type) ? $surgery->surgery_type : '' }}">
-                                                    </div>
-                                                    <input type="hidden" name="surgery_type" id="hidden_surgery_type" value="{{ $surgery->surgery_type }}">
+                                        <div class="mb-4">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <small class="text-muted mb-1">نوع العملية الحالي</small>
+                                                    <div class="fw-bold text-dark fs-5">{{ $surgery->surgery_type ?? 'غير محدد' }}</div>
                                                 </div>
+                                                <button type="button" class="btn btn-outline-primary" onclick="toggleSurgeryTypeArea()">
+                                                    <i class="fas fa-exchange-alt me-1"></i>تغير عملية
+                                                </button>
                                             </div>
-                                        </form>
+
+                                            <div id="surgeryTypeChangeArea" style="display: none;" class="mt-3 p-3 border rounded bg-light">
+                                                <form action="{{ route('surgeries.updateSurgeryType', $surgery) }}" method="POST">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <div class="row g-3">
+                                                        <div class="col-md-8">
+                                                            <input type="text" id="surgeryTypeSearch" class="form-control mb-2" placeholder="ابحث عن نوع العملية..." oninput="filterSurgeryTypes()">
+                                                            <select name="surgery_type_select" id="surgery_type_select" class="form-select border-primary" size="8" onchange="toggleSurgeryTypeInput()">
+                                                                <option value="">-- اختر نوع العملية --</option>
+                                                                @foreach($surgicalOperations->groupBy('category') as $category => $operations)
+                                                                <optgroup label="{{ $category }}">
+                                                                    @foreach($operations as $op)
+                                                                    <option value="{{ $op->name }}" data-op-id="{{ $op->id }}">{{ $op->name }}</option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                                @endforeach
+                                                                <option value="other">أخرى (يدوي)</option>
+                                                            </select>
+                                                            <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
+                                                                <input type="text" id="custom_surgery_type" class="form-control border-primary" placeholder="اكتب نوع العملية يدوياً...">
+                                                            </div>
+                                                            <input type="hidden" name="surgery_type" id="hidden_surgery_type">
+                                                            <input type="hidden" name="surgical_operation_id" id="hidden_surgical_operation_id">
+                                                        </div>
+                                                        <div class="col-md-4 d-flex align-items-end gap-2">
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="fas fa-check me-1"></i>تأكيد
+                                                            </button>
+                                                            <button type="button" class="btn btn-secondary" onclick="toggleSurgeryTypeArea()">
+                                                                إلغاء
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                         @else
                                         <div class="row g-4 mb-4">
                                             <div class="col-md-6">
@@ -1451,24 +1473,44 @@
         });
     }
 
-    // Surgery type: toggle custom input for "other"
+    // Surgery type: toggle change area
+    window.toggleSurgeryTypeArea = function() {
+        const area = document.getElementById('surgeryTypeChangeArea');
+        area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        document.getElementById('surgeryTypeSearch').value = '';
+        filterSurgeryTypes();
+    };
+
+    // Filter surgery types by search text
+    window.filterSurgeryTypes = function() {
+        const q = document.getElementById('surgeryTypeSearch').value.trim().toLowerCase();
+        const select = document.getElementById('surgery_type_select');
+        for (let i = 0; i < select.options.length; i++) {
+            const opt = select.options[i];
+            if (!opt.value) continue;
+            const text = opt.text.toLowerCase();
+            opt.style.display = q === '' || text.includes(q) ? '' : 'none';
+        }
+        // Show/hide optgroup labels (they're not real options)
+        const groups = select.querySelectorAll('optgroup');
+        groups.forEach(g => {
+            const visible = Array.from(g.options).some(o => o.style.display !== 'none');
+            g.style.display = visible ? '' : 'none';
+        });
+    };
+
+    // Toggle custom input for "other"
     window.toggleSurgeryTypeInput = function() {
         const select = document.getElementById('surgery_type_select');
         const wrapper = document.getElementById('custom_surgery_type_wrapper');
-        const hiddenInput = document.getElementById('hidden_surgery_type');
-        if (select.value === 'other') {
-            wrapper.style.display = 'block';
-        } else {
-            wrapper.style.display = 'none';
-            hiddenInput.value = select.value;
-        }
+        wrapper.style.display = select.value === 'other' ? 'block' : 'none';
     };
 
-    // On form submit, ensure the correct value is in the hidden field
-    document.querySelector('#v-pills-type form')?.addEventListener('submit', function(e) {
+    // On form submit, ensure the correct values are in the hidden fields
+    document.querySelector('#surgeryTypeChangeArea form')?.addEventListener('submit', function(e) {
         const select = document.getElementById('surgery_type_select');
-        const wrapper = document.getElementById('custom_surgery_type_wrapper');
-        const hiddenInput = document.getElementById('hidden_surgery_type');
+        const hiddenType = document.getElementById('hidden_surgery_type');
+        const hiddenOpId = document.getElementById('hidden_surgical_operation_id');
         if (select.value === 'other') {
             const customVal = document.getElementById('custom_surgery_type').value.trim();
             if (!customVal) {
@@ -1476,14 +1518,13 @@
                 alert('يرجى كتابة نوع العملية');
                 return;
             }
-            hiddenInput.value = customVal;
+            hiddenType.value = customVal;
+            hiddenOpId.value = '';
+        } else {
+            const selOpt = select.selectedOptions[0];
+            hiddenType.value = select.value;
+            hiddenOpId.value = selOpt ? (selOpt.getAttribute('data-op-id') || '') : '';
         }
-        hiddenInput.disabled = false;
-    });
-
-    // Init on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        toggleSurgeryTypeInput();
     });
 </script>
 @endsection

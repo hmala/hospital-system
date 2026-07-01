@@ -52,6 +52,7 @@ class Surgery extends Model
         'supplies',
         'surgery_category',
         'surgery_type_detail',
+        'surgical_operation_id',
         'anesthesia_position',
         'asa_classification',
         'surgical_complexity',
