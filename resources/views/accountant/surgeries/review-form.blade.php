@@ -121,7 +121,7 @@
                                            id="surgery_fee" 
                                            name="surgery_fee" 
                                            class="form-control form-control-lg border-primary" 
-                                           value="{{ old('surgery_fee', $surgery->surgery_fee ?? $surgery->surgicalOperation->fee ?? 0) }}" 
+                                           value="{{ old('surgery_fee', 0) }}" 
                                            step="1000" 
                                            min="0" 
                                            required>
@@ -157,7 +157,7 @@
                                                     <input type="number" 
                                                            name="additional_ops[{{ $addOp->id }}]" 
                                                            class="form-control border-success" 
-                                                           value="{{ old('additional_ops.'.$addOp->id, $addOp->fee ?? $addOp->surgicalOperation->fee ?? 0) }}" 
+                                                           value="{{ old('additional_ops.'.$addOp->id, 0) }}" 
                                                            step="1000" 
                                                            min="0" 
                                                            required>
