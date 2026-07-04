@@ -901,12 +901,19 @@ class SurgeryController extends Controller
         $user = auth()->user();
 
         if (!$user->hasRole(['admin', 'surgery_staff', 'inquiry_staff'])) {
-            abort(403, 'غير مصرح لك بتغيير نوع العملية');
+            return $request->expectsJson()
+                ? response()->json(['message' => 'غير مصرح لك'], 403)
+                : abort(403, 'غير مصرح لك بتغيير نوع العملية');
+        }
+
+        // تحويل القيم الفارغة إلى null لتمرير validate بشكل صحيح
+        if ($request->has('surgical_operation_id') && $request->surgical_operation_id === '') {
+            $request->merge(['surgical_operation_id' => null]);
         }
 
         $validated = $request->validate([
             'surgery_type' => 'required|string|max:255',
-            'surgical_operation_id' => 'nullable|exists:surgical_operations,id',
+            'surgical_operation_id' => 'nullable|integer|exists:surgical_operations,id',
         ]);
 
         $oldType = $surgery->surgery_type;
@@ -928,9 +935,50 @@ class SurgeryController extends Controller
                 'changed_by' => $user->id,
             ]);
 
-            return redirect()->back()->with('success', 'تم تغيير نوع العملية من "' . $oldType . '" إلى "' . $validated['surgery_type'] . '"');
+            $msg = 'تم تغيير نوع العملية من "' . $oldType . '" إلى "' . $validated['surgery_type'] . '"';
+
+            return $request->expectsJson()
+                ? response()->json(['success' => $msg, 'type' => $validated['surgery_type']])
+                : redirect()->back()->with('success', $msg);
         }
 
-        return redirect()->back()->with('info', 'لم يتم تغيير نوع العملية');
+        return $request->expectsJson()
+            ? response()->json(['message' => 'لم يتم تغيير نوع العملية'])
+            : redirect()->back()->with('info', 'لم يتم تغيير نوع العملية');
+    }
+
+    public function addOperation(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'surgical_operation_ids' => 'required|array',
+            'surgical_operation_ids.*' => 'integer|exists:surgical_operations,id',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $ops = \App\Models\SurgicalOperation::whereIn('id', $validated['surgical_operation_ids'])->get();
+
+        foreach ($ops as $op) {
+            $surgery->additionalOperations()->create([
+                'surgical_operation_id' => $op->id,
+                'notes' => $validated['notes'] ?? null,
+                'added_by' => $user?->id,
+            ]);
+        }
+
+        $names = $ops->pluck('name')->join('، ');
+        $msg = 'تم إضافة ' . $ops->count() . ' عملية: ' . $names;
+
+        return $request->expectsJson()
+            ? response()->json(['success' => $msg])
+            : redirect()->back()->with('success', $msg);
+    }
+
+    public function removeOperation(Surgery $surgery, \App\Models\SurgeryAdditionalOperation $additionalOp)
+    {
+        $additionalOp->delete();
+
+        return redirect()->back()->with('success', 'تم حذف العملية الإضافية');
     }
 }

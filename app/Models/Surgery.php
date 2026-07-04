@@ -111,6 +111,11 @@ class Surgery extends Model
         return $this->hasMany(SurgeryTypeChange::class);
     }
 
+    public function additionalOperations()
+    {
+        return $this->hasMany(SurgeryAdditionalOperation::class);
+    }
+
     public function labTests()
     {
         return $this->hasMany(SurgeryLabTest::class);

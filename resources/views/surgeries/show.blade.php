@@ -245,6 +245,23 @@
     </div>
     @endif
 
+    @if(session('info'))
+    <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+        <i class="fas fa-info-circle me-2"></i>{{ session('info') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
+    @if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        @foreach($errors->all() as $error)
+            <div>{{ $error }}</div>
+        @endforeach
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
     <div class="row">
         <!-- Main Form Column (12/12 grid) -->
         <div class="col-lg-12 mb-4">
@@ -555,7 +572,7 @@
                                             <i class="fas fa-scalpel me-2"></i>نوع العملية
                                         </h6>
 
-                                        @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'inquiry_staff']))
+                                        @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'inquiry_staff', 'doctor', 'الجراح']))
                                         <div class="mb-4">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div>
@@ -568,39 +585,118 @@
                                             </div>
 
                                             <div id="surgeryTypeChangeArea" style="display: none;" class="mt-3 p-3 border rounded bg-light">
-                                                <form action="{{ route('surgeries.updateSurgeryType', $surgery) }}" method="POST">
-                                                    @csrf
-                                                    @method('PATCH')
+                                                <input type="hidden" id="surgeryTypeCsrf" value="{{ csrf_token() }}">
+                                                <input type="hidden" id="surgeryTypeMethod" value="PATCH">
+                                                <div class="row g-3">
+                                                    <div class="col-md-8">
+                                                        <input type="text" id="surgeryTypeSearch" class="form-control mb-2" placeholder="ابحث عن نوع العملية..." oninput="filterSurgeryTypes()">
+                                                        <select id="surgery_type_select" class="form-select border-primary" size="8" onchange="toggleSurgeryTypeInput()">
+                                                            <option value="">-- اختر نوع العملية --</option>
+                                                            @foreach($surgicalOperations->groupBy('category') as $category => $operations)
+                                                            <optgroup label="{{ $category }}">
+                                                                @foreach($operations as $op)
+                                                                <option value="{{ $op->name }}" data-op-id="{{ $op->id }}">{{ $op->name }}</option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                            @endforeach
+                                                            <option value="other">أخرى (يدوي)</option>
+                                                        </select>
+                                                        <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
+                                                            <input type="text" id="custom_surgery_type" class="form-control border-primary" placeholder="اكتب نوع العملية يدوياً...">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4 d-flex align-items-end gap-2">
+                                                        <button type="button" class="btn btn-primary" onclick="submitSurgeryTypeChange()">
+                                                            <i class="fas fa-check me-1"></i>تأكيد
+                                                        </button>
+                                                        <button type="button" class="btn btn-secondary" onclick="toggleSurgeryTypeArea()">
+                                                            إلغاء
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {{-- العمليات الإضافية --}}
+                                            <div class="mt-4 pt-3 border-top">
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <h6 class="fw-bold mb-0">
+                                                        <i class="fas fa-plus-circle me-1 text-success"></i>العمليات الإضافية
+                                                    </h6>
+                                                    @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor']))
+                                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="toggleAddOperationArea()">
+                                                        <i class="fas fa-plus me-1"></i>إضافة عملية
+                                                    </button>
+                                                    @endif
+                                                </div>
+
+                                                @if($surgery->additionalOperations->count() > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>العملية</th>
+                                                                <th>ملاحظات</th>
+                                                                <th>تاريخ الإضافة</th>
+                                                                @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor']))
+                                                                <th></th>
+                                                                @endif
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($surgery->additionalOperations as $addOp)
+                                                            <tr>
+                                                                <td>{{ $addOp->surgicalOperation?->name ?? 'غير محدد' }}</td>
+                                                                <td>{{ $addOp->notes ?? '-' }}</td>
+                                                                <td class="text-muted small">{{ $addOp->created_at->format('Y-m-d H:i') }}</td>
+                                                                @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor']))
+                                                                <td class="text-center">
+                                                                    <form action="{{ route('surgeries.removeOperation', [$surgery, $addOp]) }}" method="POST" onsubmit="return confirm('حذف هذه العملية الإضافية؟')">
+                                                                        @csrf @method('DELETE')
+                                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                </td>
+                                                                @endif
+                                                            </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                @else
+                                                <p class="text-muted small mb-0">لا توجد عمليات إضافية</p>
+                                                @endif
+
+                                                {{-- إضافة عملية جديدة --}}
+                                                <div id="addOperationArea" style="display: none;" class="mt-2 p-3 border rounded bg-light">
+                                                    <input type="hidden" id="addOpCsrf" value="{{ csrf_token() }}">
                                                     <div class="row g-3">
                                                         <div class="col-md-8">
-                                                            <input type="text" id="surgeryTypeSearch" class="form-control mb-2" placeholder="ابحث عن نوع العملية..." oninput="filterSurgeryTypes()">
-                                                            <select name="surgery_type_select" id="surgery_type_select" class="form-select border-primary" size="8" onchange="toggleSurgeryTypeInput()">
-                                                                <option value="">-- اختر نوع العملية --</option>
+                                                            <input type="text" id="addOpSearch" class="form-control mb-2" placeholder="ابحث عن العملية..." oninput="filterAddOperations()">
+                                                            <select id="add_op_select" class="form-select border-primary" size="8" multiple>
                                                                 @foreach($surgicalOperations->groupBy('category') as $category => $operations)
                                                                 <optgroup label="{{ $category }}">
                                                                     @foreach($operations as $op)
-                                                                    <option value="{{ $op->name }}" data-op-id="{{ $op->id }}">{{ $op->name }}</option>
+                                                                    <option value="{{ $op->id }}">{{ $op->name }}</option>
                                                                     @endforeach
                                                                 </optgroup>
                                                                 @endforeach
-                                                                <option value="other">أخرى (يدوي)</option>
                                                             </select>
-                                                            <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
-                                                                <input type="text" id="custom_surgery_type" class="form-control border-primary" placeholder="اكتب نوع العملية يدوياً...">
+                                                            <div class="mt-1">
+                                                                <small class="text-muted">اضغط Ctrl + اختر لاختيار عدة عمليات</small>
                                                             </div>
-                                                            <input type="hidden" name="surgery_type" id="hidden_surgery_type">
-                                                            <input type="hidden" name="surgical_operation_id" id="hidden_surgical_operation_id">
                                                         </div>
-                                                        <div class="col-md-4 d-flex align-items-end gap-2">
-                                                            <button type="submit" class="btn btn-primary">
-                                                                <i class="fas fa-check me-1"></i>تأكيد
+                                                        <div class="col-md-4 d-flex flex-column gap-2">
+                                                            <textarea id="add_op_notes" class="form-control" rows="3" placeholder="ملاحظات..."></textarea>
+                                                            <button type="button" class="btn btn-success" onclick="submitAddOperation()">
+                                                                <i class="fas fa-check me-1"></i>إضافة
                                                             </button>
-                                                            <button type="button" class="btn btn-secondary" onclick="toggleSurgeryTypeArea()">
-                                                                إلغاء
+                                                            <button type="button" class="btn btn-secondary" onclick="toggleAddOperationArea()">
+                                                                <i class="fas fa-times me-1"></i>إلغاء
                                                             </button>
                                                         </div>
                                                     </div>
-                                                </form>
+                                                </div>
                                             </div>
                                         </div>
                                         @else
@@ -1506,25 +1602,115 @@
         wrapper.style.display = select.value === 'other' ? 'block' : 'none';
     };
 
-    // On form submit, ensure the correct values are in the hidden fields
-    document.querySelector('#surgeryTypeChangeArea form')?.addEventListener('submit', function(e) {
+    // Filter additional operations by search text
+    window.filterAddOperations = function() {
+        const q = document.getElementById('addOpSearch').value.trim().toLowerCase();
+        const select = document.getElementById('add_op_select');
+        for (let i = 0; i < select.options.length; i++) {
+            const opt = select.options[i];
+            if (!opt.value) continue;
+            const text = opt.text.toLowerCase();
+            opt.style.display = q === '' || text.includes(q) ? '' : 'none';
+        }
+        const groups = select.querySelectorAll('optgroup');
+        groups.forEach(g => {
+            const visible = Array.from(g.options).some(o => o.style.display !== 'none');
+            g.style.display = visible ? '' : 'none';
+        });
+    };
+
+    // Submit surgery type change via AJAX
+    window.submitSurgeryTypeChange = function() {
         const select = document.getElementById('surgery_type_select');
-        const hiddenType = document.getElementById('hidden_surgery_type');
-        const hiddenOpId = document.getElementById('hidden_surgical_operation_id');
+        if (!select.value) {
+            alert('يرجى اختيار نوع العملية');
+            return;
+        }
+        let surgeryType, opId;
         if (select.value === 'other') {
             const customVal = document.getElementById('custom_surgery_type').value.trim();
             if (!customVal) {
-                e.preventDefault();
                 alert('يرجى كتابة نوع العملية');
                 return;
             }
-            hiddenType.value = customVal;
-            hiddenOpId.value = '';
+            surgeryType = customVal;
+            opId = null;
         } else {
             const selOpt = select.selectedOptions[0];
-            hiddenType.value = select.value;
-            hiddenOpId.value = selOpt ? (selOpt.getAttribute('data-op-id') || '') : '';
+            surgeryType = select.value;
+            opId = selOpt ? (selOpt.getAttribute('data-op-id') || null) : null;
         }
-    });
+
+        const url = '{{ route('surgeries.updateSurgeryType', $surgery) }}';
+        const token = document.getElementById('surgeryTypeCsrf').value;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                _method: 'PATCH',
+                surgery_type: surgeryType,
+                surgical_operation_id: opId,
+            }),
+        })
+        .then(r => {
+            if (!r.ok) return r.json().then(e => { throw new Error(e.message || Object.values(e.errors || {}).flat().join(', ')); });
+            return r.json();
+        })
+        .then(data => {
+            window.location.reload();
+        })
+        .catch(err => {
+            alert('خطأ: ' + err.message);
+        });
+    };
+
+    // Toggle add operation area
+    window.toggleAddOperationArea = function() {
+        const area = document.getElementById('addOperationArea');
+        area.style.display = area.style.display === 'none' ? 'block' : 'none';
+    };
+
+    // Submit additional operation via AJAX
+    window.submitAddOperation = function() {
+        const select = document.getElementById('add_op_select');
+        const selected = Array.from(select.selectedOptions).map(o => o.value);
+        if (!selected.length) {
+            alert('يرجى اختيار عملية أو أكثر (Ctrl + click لاختيار متعدد)');
+            return;
+        }
+        const notes = document.getElementById('add_op_notes').value.trim();
+        const token = document.getElementById('addOpCsrf').value;
+        const url = '{{ route('surgeries.addOperation', $surgery) }}';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                surgical_operation_ids: selected,
+                notes: notes || null,
+            }),
+        })
+        .then(r => {
+            if (!r.ok) return r.json().then(e => { throw new Error(e.message || Object.values(e.errors || {}).flat().join(', ')); });
+            return r.json();
+        })
+        .then(() => {
+            window.location.reload();
+        })
+        .catch(err => {
+            alert('خطأ: ' + err.message);
+        });
+    };
 </script>
 @endsection
