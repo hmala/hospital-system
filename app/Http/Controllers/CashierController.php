@@ -730,7 +730,8 @@ class CashierController extends Controller
             'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
-            'visit'
+            'visit',
+            'additionalOperations'
         ])
         ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
         ->whereIn('payment_status', ['pending', 'partial'])

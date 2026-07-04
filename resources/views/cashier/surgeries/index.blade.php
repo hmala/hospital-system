@@ -154,7 +154,8 @@
                             $patientPendingAmount = 0;
                             $patientPaidAmount = 0;
                             foreach($surgeries as $surgery) {
-                                $surgeryFee = $surgery->surgery_fee ?? 0;
+                                $additionalOpsFee = $surgery->additionalOperations->sum('fee');
+                                $surgeryFee = ($surgery->surgery_fee ?? 0) + $additionalOpsFee;
                                 $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                 $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
                                 
@@ -239,7 +240,8 @@
                                     @foreach($surgeries as $surgery)
                                         @php
                                             // حساب الرسوم مع تتبع ما تم دفعه
-                                            $surgeryFee = $surgery->surgery_fee ?? 0;
+                                            $additionalOpsFee = $surgery->additionalOperations->sum('fee');
+                                            $surgeryFee = ($surgery->surgery_fee ?? 0) + $additionalOpsFee;
                                             $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                             $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
                                             $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $remainingSurgeryFee <= 0;
