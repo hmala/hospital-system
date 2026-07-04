@@ -47,6 +47,7 @@ class AccountantController extends Controller
             'doctor.user',
             'surgicalOperation',
             'additionalOperations.surgicalOperation',
+            'surgeryTypeChanges.changedBy',
         ]);
 
         return view('accountant.surgeries.review-form', compact('surgery'));

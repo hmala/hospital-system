@@ -56,6 +56,36 @@
                     </table>
                 </div>
             </div>
+
+            <!-- History Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fas fa-history text-warning me-2"></i>سجل تغيير نوع العملية
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if($surgery->surgeryTypeChanges->isEmpty())
+                        <p class="text-muted mb-0 text-center py-2">لا توجد تغييرات سابقة على هذه العملية.</p>
+                    @else
+                        <div class="timeline">
+                            @foreach($surgery->surgeryTypeChanges as $change)
+                                <div class="mb-3 pb-3 border-bottom">
+                                    <div class="fw-bold text-dark">إلى: {{ $change->new_type }}</div>
+                                    <div class="small text-muted mb-1">
+                                        كانت: <span class="text-decoration-line-through text-danger">{{ $change->old_type }}</span>
+                                    </div>
+                                    <div class="small text-muted">
+                                        بواسطة: {{ $change->changedBy->name ?? 'غير معروف' }}
+                                        <br>
+                                        الوقت: {{ $change->created_at->format('Y-m-d H:i') }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <!-- Pricing Form Column -->
