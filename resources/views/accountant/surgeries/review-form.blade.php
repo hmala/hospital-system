@@ -116,15 +116,14 @@
                                     @endif
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="surgery_fee" class="form-label fw-bold">السعر المقترح للعملية (د.ع):</label>
-                                    <input type="number" 
-                                           id="surgery_fee" 
-                                           name="surgery_fee" 
-                                           class="form-control form-control-lg border-primary" 
+                                    <label for="surgery_fee_display" class="form-label fw-bold">السعر المقترح للعملية (د.ع):</label>
+                                    <input type="text" 
+                                           id="surgery_fee_display" 
+                                           class="form-control form-control-lg border-primary price-format" 
                                            value="{{ old('surgery_fee', 0) }}" 
-                                           step="1000" 
-                                           min="0" 
+                                           data-target="surgery_fee"
                                            required>
+                                    <input type="hidden" id="surgery_fee" name="surgery_fee" value="{{ old('surgery_fee', 0) }}">
                                 </div>
                             </div>
                         </div>
@@ -154,13 +153,15 @@
                                                     <small class="text-muted">{{ $addOp->notes ?? 'لا يوجد' }}</small>
                                                 </td>
                                                 <td>
-                                                    <input type="number" 
-                                                           name="additional_ops[{{ $addOp->id }}]" 
-                                                           class="form-control border-success" 
+                                                    <input type="text" 
+                                                           class="form-control border-success price-format" 
                                                            value="{{ old('additional_ops.'.$addOp->id, 0) }}" 
-                                                           step="1000" 
-                                                           min="0" 
+                                                           data-target="add_op_{{ $addOp->id }}"
                                                            required>
+                                                    <input type="hidden" 
+                                                           id="add_op_{{ $addOp->id }}" 
+                                                           name="additional_ops[{{ $addOp->id }}]" 
+                                                           value="{{ old('additional_ops.'.$addOp->id, 0) }}">
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -187,4 +188,45 @@
         </div>
     </div>
 </div>
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.price-format').forEach(function(input) {
+            // Function to format value
+            function formatValue(val) {
+                // Strip everything except numbers
+                var clean = String(val).replace(/[^\d]/g, '');
+                if (clean === '') clean = '0';
+                
+                // Set clean numeric value to hidden input
+                var targetId = input.getAttribute('data-target');
+                var hiddenInput = document.getElementById(targetId);
+                if (hiddenInput) {
+                    hiddenInput.value = clean;
+                }
+                
+                // Return formatted with commas
+                return parseInt(clean, 10).toLocaleString('en-US');
+            }
+
+            // Initialize with default
+            input.value = formatValue(input.value);
+
+            input.addEventListener('input', function(e) {
+                // Save cursor position
+                var selectionStart = input.selectionStart;
+                var oldLength = input.value.length;
+                
+                var formatted = formatValue(input.value);
+                input.value = formatted;
+                
+                // Adjust cursor position after formatting
+                var newLength = input.value.length;
+                var newPosition = selectionStart + (newLength - oldLength);
+                input.setSelectionRange(newPosition, newPosition);
+            });
+        });
+    });
+</script>
 @endsection
