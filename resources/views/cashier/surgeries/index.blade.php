@@ -236,304 +236,78 @@
                                  class="accordion-collapse collapse {{ $loop->first ? 'show' : '' }}" 
                                  aria-labelledby="heading{{ $patientId }}" 
                                  data-bs-parent="#patientsAccordion">
-                                <div class="accordion-body bg-light">
-                                    @foreach($surgeries as $surgery)
-                                        @php
-                                            // حساب الرسوم مع تتبع ما تم دفعه
-                                            $additionalOpsFee = $surgery->additionalOperations->sum('fee');
-                                            $surgeryFee = ($surgery->surgery_fee ?? 0) + $additionalOpsFee;
-                                            $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
-                                            $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
-                                            $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $remainingSurgeryFee <= 0;
-                                            
-                                            // حساب رسوم الغرفة
-                                            $roomFee = $surgery->room_fee ?? 0;
-                                            $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
-                                            $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
-                                            $roomFeePaid = $remainingRoomFee <= 0;
-                                            
-                                            // حساب تحاليل معلقة ومدفوعة
-                                            $pendingLabTests = $surgery->labTests->where('payment_status', '!=', 'paid');
-                                            $paidLabTests = $surgery->labTests->where('payment_status', 'paid');
-                                            $pendingLabFee = $pendingLabTests->sum(function($test) {
-                                                return $test->labTest->price ?? 0;
-                                            });
-                                            $paidLabFee = $paidLabTests->sum(function($test) {
-                                                return $test->labTest->price ?? 0;
-                                            });
-                                            
-                                            // حساب أشعة معلقة ومدفوعة
-                                            $pendingRadiologyTests = $surgery->radiologyTests->where('payment_status', '!=', 'paid');
-                                            $paidRadiologyTests = $surgery->radiologyTests->where('payment_status', 'paid');
-                                            $pendingRadiologyFee = $pendingRadiologyTests->sum(function($test) {
-                                                return $test->radiologyType->base_price ?? 0;
-                                            });
-                                            $paidRadiologyFee = $paidRadiologyTests->sum(function($test) {
-                                                return $test->radiologyType->base_price ?? 0;
-                                            });
-                                            
-                                            // المبلغ المعلق
-                                            $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
-                                            // المبلغ المدفوع
-                                            $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
-                                            // الإجمالي
-                                            $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
-                                        @endphp
-                                        <div class="card mb-3 border-0 shadow-sm">
-                                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <h6 class="mb-0">
-                                                        <span class="badge bg-danger me-2">#{{ $surgery->id }}</span>
-                                                        {{ $surgery->surgery_type }}
-                                                        @if($surgery->payment_status === 'partial')
-                                                            <span class="badge bg-warning ms-2">دفع جزئي</span>
-                                                        @endif
-                                                    </h6>
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-user-md me-1"></i>
-                                                        @if($surgery->doctor && $surgery->doctor->user)
-                                                            د. {{ $surgery->doctor->user->name }}
-                                                        @elseif($surgery->surgeon_name)
-                                                            {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
-                                                        @else
-                                                            <span class="text-muted">غير محدد</span>
-                                                        @endif
-                                                        <span class="mx-2">|</span>
-                                                        <i class="fas fa-hospital me-1"></i>
-                                                        {{ $surgery->department->name ?? 'غير محدد' }}
-                                                        <span class="mx-2">|</span>
-                                                        <i class="fas fa-calendar me-1"></i>
-                                                        {{ $surgery->scheduled_date->format('Y-m-d') }}
-                                                        <i class="fas fa-clock me-1 ms-1"></i>
-                                                        {{ $surgery->scheduled_time->format('H:i') }}
-                                                    </small>
-                                                </div>
-                                                @if($pendingAmount > 0)
-                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" 
-                                                   class="btn btn-success btn-sm">
-                                                    <i class="fas fa-money-bill-wave me-1"></i>
-                                                    تسديد المتبقي ({{ number_format($pendingAmount, 0) }} IQD)
-                                                </a>
-                                                @endif
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="table-responsive">
-                                                    <table class="table table-sm table-bordered mb-0">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th>البند</th>
-                                                                <th>التفاصيل</th>
-                                                                <th class="text-end">التكلفة (IQD)</th>
-                                                                <th class="text-center">حالة الدفع</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <!-- رسوم العملية -->
-                                                            <tr class="{{ $surgeryFeePaid ? 'table-success' : ($surgeryFeePaidAmount > 0 ? 'table-warning' : '') }}">
-                                                                <td>
-                                                                    <i class="fas fa-procedures text-danger me-2"></i>
-                                                                    رسوم العملية الجراحية
-                                                                </td>
-                                                                <td>
-                                                                    {{ $surgery->surgery_type }}
-                                                                    @if($remainingSurgeryFee > 0 && $surgeryFeePaidAmount > 0)
-                                                                        <br><small class="text-muted">المتبقي: {{ number_format($remainingSurgeryFee, 0) }} د.ع</small>
-                                                                    @endif
-                                                                </td>
-                                                                <td class="text-end">
-                                                                    {{ number_format($surgeryFee, 0) }}
-                                                                    @if($remainingSurgeryFee > 0 && $surgeryFeePaidAmount > 0)
-                                                                        <br><small class="text-muted">المدفوع: {{ number_format($surgeryFeePaidAmount, 0) }}</small>
-                                                                    @endif
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    @if($surgeryFeePaid)
-                                                                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
-                                                                    @elseif($surgeryFeePaidAmount > 0)
-                                                                        <span class="badge bg-warning text-dark"><i class="fas fa-adjust me-1"></i>جزئي</span>
-                                                                    @else
-                                                                        <span class="badge bg-danger"><i class="fas fa-clock me-1"></i>معلق</span>
-                                                                    @endif
-                                                                </td>
-                                                            </tr>
+                                <div class="accordion-body bg-white p-3">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0 text-right" style="direction: rtl;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>رقم العملية</th>
+                                                    <th>نوع العملية</th>
+                                                    <th>الجراح</th>
+                                                    <th>القسم</th>
+                                                    <th>التكلفة الإجمالية</th>
+                                                    <th>المدفوع</th>
+                                                    <th>المتبقي</th>
+                                                    <th class="text-center">الإجراءات</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($surgeries as $surgery)
+                                                    @php
+                                                        $additionalOpsFee = $surgery->additionalOperations->sum('fee');
+                                                        $surgeryFee = ($surgery->surgery_fee ?? 0) + $additionalOpsFee;
+                                                        $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
+                                                        $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
 
-                                                            <!-- رسوم الغرفة -->
-                                                            @if($surgery->room_id && $surgery->room)
-                                                                <tr class="table-primary">
-                                                                    <td colspan="4">
-                                                                        <strong>
-                                                                            <i class="fas fa-door-open me-2"></i>
-                                                                            تفاصيل الغرفة
-                                                                        </strong>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr class="{{ $roomFeePaid ? 'table-success' : ($roomFeePaidAmount > 0 ? 'table-warning' : '') }}">
-                                                                    <td class="ps-4">
-                                                                        <i class="fas fa-bed text-info me-2"></i>
-                                                                        أجور الغرفة
-                                                                    </td>
-                                                                    <td>
-                                                                        <strong>{{ $surgery->room->room_number }}</strong>
-                                                                        @if($surgery->room->room_type === 'vip')
-                                                                            <span class="badge bg-warning text-dark ms-1">
-                                                                                <i class="fas fa-star"></i> VIP
-                                                                            </span>
-                                                                        @else
-                                                                            <span class="badge bg-secondary ms-1">عادية</span>
-                                                                        @endif
-                                                                        @if($surgery->room->floor)
-                                                                            <br><small class="text-muted">{{ $surgery->room->floor }}</small>
-                                                                        @endif
-                                                                        @if($surgery->expected_stay_days)
-                                                                            <br><small class="text-muted">
-                                                                                مدة الإقامة: {{ $surgery->expected_stay_days }} يوم
-                                                                                ({{ number_format($surgery->room->daily_fee ?? 0, 0) }} د.ع/يوم)
-                                                                            </small>
-                                                                        @endif
-                                                                        @if($remainingRoomFee > 0 && $roomFeePaidAmount > 0)
-                                                                            <br><small class="text-muted">المتبقي: {{ number_format($remainingRoomFee, 0) }} د.ع</small>
-                                                                        @endif
-                                                                    </td>
-                                                                    <td class="text-end">
-                                                                        {{ number_format($roomFee, 0) }}
-                                                                        @if($surgery->expected_stay_days && $surgery->room)
-                                                                            <br><small class="text-muted">(أول ليلة مجانية، التكلفة الفعلية {{ number_format($surgery->room->daily_fee * $surgery->expected_stay_days, 0) }} د.ع)</small>
-                                                                        @endif
-                                                                        @if($remainingRoomFee > 0 && $roomFeePaidAmount > 0)
-                                                                            <br><small class="text-muted">المدفوع: {{ number_format($roomFeePaidAmount, 0) }}</small>
-                                                                        @endif
-                                                                    </td>
-                                                                    <td class="text-center">
-                                                                        @if($roomFeePaid)
-                                                                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
-                                                                        @elseif($roomFeePaidAmount > 0)
-                                                                            <span class="badge bg-warning text-dark"><i class="fas fa-adjust me-1"></i>جزئي</span>
-                                                                        @else
-                                                                            <span class="badge bg-danger"><i class="fas fa-clock me-1"></i>معلق</span>
-                                                                        @endif
-                                                                    </td>
-                                                                </tr>
-                                                            @endif
+                                                        $roomFee = $surgery->room_fee ?? 0;
+                                                        $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
+                                                        $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
 
-                                                            <!-- التحاليل المطلوبة -->
-                                                            @if($surgery->labTests->count() > 0)
-                                                                <tr class="table-info">
-                                                                    <td colspan="4">
-                                                                        <strong>
-                                                                            <i class="fas fa-flask me-2"></i>
-                                                                            التحاليل المطلوبة ({{ $surgery->labTests->count() }})
-                                                                            @if($paidLabTests->count() > 0)
-                                                                                - <span class="text-success">{{ $paidLabTests->count() }} مدفوع</span>
-                                                                            @endif
-                                                                            @if($pendingLabTests->count() > 0)
-                                                                                - <span class="text-warning">{{ $pendingLabTests->count() }} معلق</span>
-                                                                            @endif
-                                                                        </strong>
-                                                                    </td>
-                                                                </tr>
-                                                                @foreach($surgery->labTests as $labTest)
-                                                                    @php $isPaid = $labTest->payment_status === 'paid'; @endphp
-                                                                    <tr class="{{ $isPaid ? 'table-success' : '' }}">
-                                                                        <td class="ps-4">
-                                                                            <i class="fas fa-vial text-primary me-2"></i>
-                                                                            تحليل
-                                                                        </td>
-                                                                        <td>
-                                                                            @if($labTest->labTest)
-                                                                                {{ $labTest->labTest->name }} ({{ $labTest->labTest->code ?? '-' }})
-                                                                            @else
-                                                                                <em>غير محدد</em> (ID #{{ $labTest->lab_test_id }})
-                                                                            @endif
-                                                                        </td>
-                                                                        <td class="text-end">
-                                                                            {{ number_format(optional($labTest->labTest)->price ?? 0, 0) }}
-                                                                        </td>
-                                                                        <td class="text-center">
-                                                                            @if($isPaid)
-                                                                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
-                                                                            @else
-                                                                                <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>معلق</span>
-                                                                            @endif
-                                                                        </td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            @endif
+                                                        $pendingLabFee = $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
+                                                            return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                                        });
+                                                        $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
+                                                            return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                                        });
 
-                                                            <!-- الأشعة المطلوبة -->
-                                                            @if($surgery->radiologyTests->count() > 0)
-                                                                <tr class="table-warning">
-                                                                    <td colspan="4">
-                                                                        <strong>
-                                                                            <i class="fas fa-x-ray me-2"></i>
-                                                                            الفحوصات الإشعاعية ({{ $surgery->radiologyTests->count() }})
-                                                                            @if($paidRadiologyTests->count() > 0)
-                                                                                - <span class="text-success">{{ $paidRadiologyTests->count() }} مدفوع</span>
-                                                                            @endif
-                                                                            @if($pendingRadiologyTests->count() > 0)
-                                                                                - <span class="text-warning">{{ $pendingRadiologyTests->count() }} معلق</span>
-                                                                            @endif
-                                                                        </strong>
-                                                                    </td>
-                                                                </tr>
-                                                                @foreach($surgery->radiologyTests as $radiologyTest)
-                                                                    @php $isPaid = $radiologyTest->payment_status === 'paid'; @endphp
-                                                                    <tr class="{{ $isPaid ? 'table-success' : '' }}">
-                                                                        <td class="ps-4">
-                                                                            <i class="fas fa-radiation text-info me-2"></i>
-                                                                            أشعة
-                                                                        </td>
-                                                                        <td>{{ $radiologyTest->radiologyType ? $radiologyTest->radiologyType->name : 'غير محدد' }}</td>
-                                                                        <td class="text-end">{{ number_format($radiologyTest->radiologyType ? ($radiologyTest->radiologyType->base_price ?? 0) : 0, 0) }}</td>
-                                                                        <td class="text-center">
-                                                                            @if($isPaid)
-                                                                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
-                                                                            @else
-                                                                                <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>معلق</span>
-                                                                            @endif
-                                                                        </td>
-                                                                    </tr>
-                                                                @endforeach
+                                                        $pendingRadiologyFee = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
+                                                            return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                                        });
+                                                        $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
+                                                            return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                                        });
+
+                                                        $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
+                                                        $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
+                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+                                                    @endphp
+                                                    <tr>
+                                                        <td><span class="badge bg-secondary">#{{ $surgery->id }}</span></td>
+                                                        <td>
+                                                            <div class="fw-bold">{{ $surgery->surgery_type }}</div>
+                                                            @if($surgery->payment_status === 'partial')
+                                                                <small class="text-warning"><i class="fas fa-adjust"></i> دفع جزئي</small>
                                                             @endif
-                                                        </tbody>
-                                                        <tfoot>
-                                                            @if($paidAmount > 0)
-                                                            <tr class="table-success">
-                                                                <td colspan="2" class="text-end">
-                                                                    <strong><i class="fas fa-check-circle me-1"></i>المبلغ المدفوع:</strong>
-                                                                </td>
-                                                                <td class="text-end">
-                                                                    <strong class="text-success">{{ number_format($paidAmount, 0) }} IQD</strong>
-                                                                </td>
-                                                                <td></td>
-                                                            </tr>
-                                                            @endif
+                                                        </td>
+                                                        <td>{{ $surgery->doctor->user->name ?? $surgery->surgeon_name ?? 'غير محدد' }}</td>
+                                                        <td>{{ $surgery->department->name ?? 'غير محدد' }}</td>
+                                                        <td>{{ number_format($totalAmount, 0) }} IQD</td>
+                                                        <td class="text-success">{{ number_format($paidAmount, 0) }} IQD</td>
+                                                        <td class="text-danger fw-bold">{{ number_format($pendingAmount, 0) }} IQD</td>
+                                                        <td class="text-center">
                                                             @if($pendingAmount > 0)
-                                                            <tr class="table-warning">
-                                                                <td colspan="2" class="text-end">
-                                                                    <strong><i class="fas fa-clock me-1"></i>المبلغ المعلق:</strong>
-                                                                </td>
-                                                                <td class="text-end">
-                                                                    <strong class="text-warning">{{ number_format($pendingAmount, 0) }} IQD</strong>
-                                                                </td>
-                                                                <td></td>
-                                                            </tr>
+                                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-success btn-sm px-3">
+                                                                    <i class="fas fa-money-bill-wave me-1"></i> تسديد الرسوم
+                                                                </a>
+                                                            @else
+                                                                <span class="text-success"><i class="fas fa-check-double me-1"></i> مدفوع بالكامل</span>
                                                             @endif
-                                                            <tr class="table-secondary">
-                                                                <td colspan="2" class="text-end">
-                                                                    <strong>الإجمالي الكلي:</strong>
-                                                                </td>
-                                                                <td class="text-end">
-                                                                    <strong>{{ number_format($totalAmount, 0) }} IQD</strong>
-                                                                </td>
-                                                                <td></td>
-                                                            </tr>
-                                                        </tfoot>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
                                     <!-- إجمالي المريض -->
                                     @if($surgeries->count() > 1 || $patientPaidAmount > 0)
                                         <div class="row mt-3">
