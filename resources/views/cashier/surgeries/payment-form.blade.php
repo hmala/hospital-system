@@ -4,8 +4,10 @@
 @php
     // حساب التكاليف مع تتبع حالة الدفع
     $surgeryFee = $surgery->surgery_fee ?? 0;
+    $additionalOpsFee = $surgery->additionalOperations->sum('fee');
+    $totalSurgeryFee = $surgeryFee + $additionalOpsFee;
     $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
-    $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
+    $remainingSurgeryFee = max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
     $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $remainingSurgeryFee <= 0;
     
     // رسوم الغرفة (أول ليلة مجانية)
@@ -37,7 +39,7 @@
     // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً)
     $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
     $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
-    $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+    $totalAmount = $totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
 @endphp
 
 <div class="container-fluid">
@@ -303,7 +305,13 @@
                                             </td>
                                             <td>
                                                 <i class="fas fa-procedures text-danger me-2"></i>
-                                                <strong>رسوم العملية الجراحية</strong>
+                                                <strong>رسوم العمليات الجراحية</strong>
+                                                <div class="small text-muted ms-4">
+                                                    العملية الأساسية: {{ number_format($surgeryFee, 0) }} د.ع
+                                                    @if($additionalOpsFee > 0)
+                                                        + العمليات الإضافية: {{ number_format($additionalOpsFee, 0) }} د.ع
+                                                    @endif
+                                                </div>
                                                 @if($surgeryFeePaidAmount > 0)
                                                     <span class="badge bg-warning text-dark ms-1">تم دفع {{ number_format($surgeryFeePaidAmount, 0) }} سابقاً</span>
                                                 @endif

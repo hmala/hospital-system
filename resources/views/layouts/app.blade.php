@@ -580,6 +580,19 @@
                             </a>
                         </li>
                         @endcan
+                        @if(auth()->user()->hasRole(['admin', 'cashier']))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('accountant.surgeries.*') ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
+                                <i class="fas fa-calculator text-primary"></i><span> مراجعة أسعار العمليات</span>
+                                @php
+                                    $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
+                                @endphp
+                                @if($pendingPriceReviews > 0)
+                                    <span class="badge bg-warning text-dark ms-2">{{ $pendingPriceReviews }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endif
                     </div> <!-- end patientMgmtSection -->
                     @endcanany
 

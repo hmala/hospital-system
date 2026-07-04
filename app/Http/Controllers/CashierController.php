@@ -734,6 +734,7 @@ class CashierController extends Controller
         ])
         ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
         ->whereIn('payment_status', ['pending', 'partial'])
+        ->where('billing_status', '!=', 'pending_review')
         ->orderBy('scheduled_date')
         ->get();
 
@@ -743,7 +744,7 @@ class CashierController extends Controller
         // إحصائيات العمليات
         $today = Carbon::today();
         $surgeryStats = [
-            'pending_count' => Surgery::whereIn('payment_status', ['pending', 'partial'])->count(),
+            'pending_count' => Surgery::whereIn('payment_status', ['pending', 'partial'])->where('billing_status', '!=', 'pending_review')->count(),
             'patients_count' => $surgeriesByPatient->count(),
             'today_paid' => Payment::whereDate('paid_at', $today)
                 ->where('payment_type', 'surgery')
@@ -846,12 +847,16 @@ class CashierController extends Controller
             'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
-            'visit'
+            'visit',
+            'additionalOperations.surgicalOperation'
         ]);
 
         // حساب التكلفة الإجمالية
         // use the stored fee on the surgery itself (preserved at creation/edit time)
         $surgeryFee = $surgery->surgery_fee ?? 0;
+        $additionalOpsFee = $surgery->additionalOperations->sum('fee');
+        $totalSurgeryFee = $surgeryFee + $additionalOpsFee;
+
         $labTestsFee = $surgery->labTests->sum(function($test) {
             return $test->labTest->price ?? 0;
         });
@@ -859,9 +864,9 @@ class CashierController extends Controller
             return $test->radiologyType->base_price ?? 0;
         });
         
-        $totalAmount = $surgeryFee + $labTestsFee + $radiologyTestsFee;
+        $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee;
 
-        return view('cashier.surgeries.payment-form', compact('surgery', 'surgeryFee', 'labTestsFee', 'radiologyTestsFee', 'totalAmount'));
+        return view('cashier.surgeries.payment-form', compact('surgery', 'surgeryFee', 'additionalOpsFee', 'totalSurgeryFee', 'labTestsFee', 'radiologyTestsFee', 'totalAmount'));
     }
 
     /**
@@ -932,7 +937,8 @@ class CashierController extends Controller
             // 1. Surgery Fee Payment
             $surgeryFeePaidThisTime = 0;
             if ($paySurgery) {
-                $remainingSurgeryFee = max(0, ($surgery->surgery_fee ?? 0) - ($surgery->surgery_fee_paid_amount ?? 0));
+                $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
+                $remainingSurgeryFee = max(0, $totalSurgeryFee - ($surgery->surgery_fee_paid_amount ?? 0));
                 if ($remainingSurgeryFee > 0) {
                     if ($request->input('surgery_payment_type') === 'partial') {
                         $customAmount = floatval($request->input('surgery_custom_amount'));
@@ -943,7 +949,7 @@ class CashierController extends Controller
                     } else {
                         $surgeryFeePaidThisTime = $remainingSurgeryFee;
                     }
-                    $paidItems[] = 'رسوم العملية الجراحية' . ($isInclusive ? ' (شاملة)' : '') . ' - مدفوع: ' . number_format($surgeryFeePaidThisTime, 0) . ' د.ع';
+                    $paidItems[] = 'رسوم العملية الجراحية (الأساسية والإضافية)' . ($isInclusive ? ' (شاملة)' : '') . ' - مدفوع: ' . number_format($surgeryFeePaidThisTime, 0) . ' د.ع';
                     $actualAmount += $surgeryFeePaidThisTime;
                 }
             }
@@ -1034,8 +1040,9 @@ class CashierController extends Controller
 
             // تحديث مبالغ وحالة رسوم العملية
             if ($paySurgery && $surgeryFeePaidThisTime > 0) {
+                $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
                 $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + $surgeryFeePaidThisTime;
-                $surgeryFeePaidStatus = $newSurgeryFeePaidAmount >= ($surgery->surgery_fee ?? 0) ? 'paid' : 'partial';
+                $surgeryFeePaidStatus = $newSurgeryFeePaidAmount >= $totalSurgeryFee ? 'paid' : 'partial';
                 
                 $surgery->update([
                     'surgery_fee_paid_amount' => $newSurgeryFeePaidAmount,
@@ -1077,7 +1084,8 @@ class CashierController extends Controller
 
             // تحديد إذا تم دفع كل شيء أم لا
             $surgery->refresh();
-            $allSurgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || ($surgery->surgery_fee ?? 0) <= ($surgery->surgery_fee_paid_amount ?? 0);
+            $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
+            $allSurgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $totalSurgeryFee <= ($surgery->surgery_fee_paid_amount ?? 0);
             $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
             $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;

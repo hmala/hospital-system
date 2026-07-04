@@ -235,7 +235,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
         Route::get('/statements/export', [\App\Http\Controllers\CashierController::class, 'exportStatements'])->name('statements.export');
-        Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
+    });
+
+    // مسارات مراجعة أسعار العمليات للمحاسب
+    Route::prefix('accountant')->name('accountant.')->group(function () {
+        Route::get('/surgeries/review', [\App\Http\Controllers\AccountantController::class, 'pendingReviews'])->name('surgeries.index');
+        Route::get('/surgeries/{surgery}/review', [\App\Http\Controllers\AccountantController::class, 'reviewForm'])->name('surgeries.review');
+        Route::post('/surgeries/{surgery}/confirm', [\App\Http\Controllers\AccountantController::class, 'confirmPrices'])->name('surgeries.confirm');
     });
     
     // مسارات الإشعارات (Notifications Routes)

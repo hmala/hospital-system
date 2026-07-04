@@ -927,6 +927,7 @@ class SurgeryController extends Controller
             $surgery->previous_surgery_type = $oldType;
             $surgery->surgery_type = $validated['surgery_type'];
             $surgery->surgical_operation_id = $opId ?: null;
+            $surgery->billing_status = 'pending_review';
             $surgery->save();
 
             $surgery->surgeryTypeChanges()->create([
@@ -963,9 +964,13 @@ class SurgeryController extends Controller
             $surgery->additionalOperations()->create([
                 'surgical_operation_id' => $op->id,
                 'notes' => $validated['notes'] ?? null,
+                'fee' => $op->fee,
                 'added_by' => $user?->id,
             ]);
         }
+
+        $surgery->billing_status = 'pending_review';
+        $surgery->save();
 
         $names = $ops->pluck('name')->join('، ');
         $msg = 'تم إضافة ' . $ops->count() . ' عملية: ' . $names;
@@ -978,6 +983,9 @@ class SurgeryController extends Controller
     public function removeOperation(Surgery $surgery, \App\Models\SurgeryAdditionalOperation $additionalOp)
     {
         $additionalOp->delete();
+
+        $surgery->billing_status = 'pending_review';
+        $surgery->save();
 
         return redirect()->back()->with('success', 'تم حذف العملية الإضافية');
     }
