@@ -22,7 +22,7 @@ class AccountantController extends Controller
 
     public function pendingReviews()
     {
-        $pendingSurgeries = Surgery::with([
+        $surgeriesToReview = Surgery::with([
             'patient.user',
             'doctor.user',
             'department',
@@ -33,7 +33,7 @@ class AccountantController extends Controller
         ->orderBy('updated_at', 'desc')
         ->get();
 
-        return view('accountant.surgeries.index', compact('pendingSurgeries'));
+        return view('accountant.surgeries.index', compact('surgeriesToReview'));
     }
 
     public function reviewForm(Surgery $surgery)

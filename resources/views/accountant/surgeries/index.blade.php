@@ -47,7 +47,7 @@
             </h5>
         </div>
         <div class="card-body p-0">
-            @if($pendingSurgeries->isEmpty())
+            @if($surgeriesToReview->isEmpty())
                 <div class="text-center py-5">
                     <div class="mb-3 text-muted">
                         <i class="fas fa-clipboard-check fa-4x opacity-50"></i>
@@ -70,7 +70,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($pendingSurgeries as $surgery)
+                            @foreach($surgeriesToReview as $surgery)
                                 <tr>
                                     <td class="ps-4">
                                         <div class="fw-bold">{{ $surgery->patient->user->name ?? 'غير معروف' }}</div>
