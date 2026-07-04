@@ -61,10 +61,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-4">المريض</th>
-                                <th>الطبيب الجراح</th>
                                 <th>نوع العملية الحالي</th>
-                                <th>العملية الأساسية (الربط)</th>
-                                <th>العمليات الإضافية</th>
                                 <th>تاريخ التعديل</th>
                                 <th class="text-center pe-4">الإجراءات</th>
                             </tr>
@@ -77,24 +74,9 @@
                                         <small class="text-muted">ID: #{{ $surgery->patient_id }}</small>
                                     </td>
                                     <td>
-                                        <div>{{ $surgery->doctor->user->name ?? $surgery->surgeon_name ?? 'غير محدد' }}</div>
-                                    </td>
-                                    <td>
                                         <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2">
                                             {{ $surgery->surgery_type }}
                                         </span>
-                                    </td>
-                                    <td>
-                                        {{ $surgery->surgicalOperation->name ?? 'غير مربوطة (كتابة يدوية)' }}
-                                    </td>
-                                    <td>
-                                        @if($surgery->additionalOperations->isEmpty())
-                                            <span class="text-muted">—</span>
-                                        @else
-                                            <span class="badge bg-info bg-opacity-10 text-info px-3 py-2">
-                                                {{ $surgery->additionalOperations->count() }} عمليات إضافية
-                                            </span>
-                                        @endif
                                     </td>
                                     <td>
                                         {{ $surgery->updated_at->format('Y-m-d H:i') }}
@@ -102,7 +84,7 @@
                                     <td class="text-center pe-4">
                                         <a href="{{ route('accountant.surgeries.review', $surgery) }}" class="btn btn-primary btn-sm px-3">
                                             <i class="fas fa-coins me-1"></i>
-                                            مراجعة الأسعار
+                                            تسعير العملية
                                         </a>
                                     </td>
                                 </tr>
