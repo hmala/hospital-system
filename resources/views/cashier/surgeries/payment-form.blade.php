@@ -8,7 +8,8 @@
     $totalSurgeryFee = $surgeryFee + $additionalOpsFee;
     $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
     $remainingSurgeryFee = max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
-    $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $remainingSurgeryFee <= 0;
+    $excessSurgeryFee = $surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0;
+    $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0);
     
     // رسوم الغرفة (أول ليلة مجانية)
     $roomFee = $surgery->room_fee ?? 0;
@@ -239,6 +240,62 @@
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($excessSurgeryFee > 0)
+                    <!-- نموذج إرجاع المبلغ الزائد -->
+                    <div class="alert alert-info border-info shadow-sm mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle fa-2x text-info me-3"></i>
+                            <div>
+                                <h5 class="alert-heading fw-bold mb-1">مسترجع مالي معلق للمريض</h5>
+                                <p class="mb-0">
+                                    بعد تعديل سعر العملية، أصبح إجمالي السعر المطلوب ({{ number_format($totalSurgeryFee, 0) }} د.ع) 
+                                    أقل من المبلغ المدفوع سابقاً ({{ number_format($surgeryFeePaidAmount, 0) }} د.ع).
+                                    يجب إرجاع الفارق المالي للمريض البالغ <strong>{{ number_format($excessSurgeryFee, 0) }} د.ع</strong>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-info mb-4">
+                        <div class="card-header bg-info text-white fw-bold">
+                            <i class="fas fa-undo me-2"></i> معالجة إرجاع المبلغ الزائد (Refund)
+                        </div>
+                        <div class="card-body">
+                            <form action="{{ route('cashier.surgeries.payment.refund', $surgery->id) }}" method="POST">
+                                @csrf
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">طريقة إرجاع المبلغ <span class="text-danger">*</span></label>
+                                            <div class="d-flex gap-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="payment_method" id="refund_cash" value="cash" checked required>
+                                                    <label class="form-check-label fw-semibold" for="refund_cash">💵 نقداً (Cash)</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="payment_method" id="refund_card" value="card">
+                                                    <label class="form-check-label fw-semibold" for="refund_card">💳 بطاقة (Card)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="refund_notes" class="form-label fw-bold">ملاحظات الاسترجاع</label>
+                                            <textarea class="form-control" id="refund_notes" name="notes" rows="2" placeholder="ملاحظات حول سبب الاسترجاع..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-info btn-lg text-white fw-bold px-4">
+                                        <i class="fas fa-check me-2"></i> تأكيد إرجاع {{ number_format($excessSurgeryFee, 0) }} د.ع
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                     @endif
@@ -599,12 +656,12 @@
                             </div>
                         </div>
                     </form>
-                    @else
+                    @elseif($excessSurgeryFee <= 0)
                     <!-- لا توجد عناصر معلقة -->
                     <div class="alert alert-success text-center">
                         <i class="fas fa-check-circle fa-3x mb-3"></i>
                         <h5>تم دفع جميع رسوم هذه العملية!</h5>
-                        <p class="mb-0">لا توجد مبالغ معلقة للدفع.</p>
+                        <p class="mb-0">لا توجد مبالغ معلقة للدفع أو مسترجعات مالية.</p>
                         <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-primary mt-3">
                             <i class="fas fa-arrow-left me-1"></i>
                             العودة لقائمة العمليات

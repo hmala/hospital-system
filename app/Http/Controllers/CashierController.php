@@ -721,7 +721,7 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // جلب العمليات المعلقة (بانتظار الدفع أو دفع جزئي) مجمعة حسب المريض
+        // جلب العمليات المعلقة (بانتظار الدفع أو دفع جزئي، أو التي تحتوي مبالغ زائدة للاسترجاع) مجمعة حسب المريض
         $pendingSurgeries = Surgery::with([
             'patient.user', 
             'doctor.user', 
@@ -734,8 +734,11 @@ class CashierController extends Controller
             'additionalOperations'
         ])
         ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-        ->whereIn('payment_status', ['pending', 'partial'])
         ->where('billing_status', '!=', 'pending_review')
+        ->where(function($query) {
+            $query->whereIn('payment_status', ['pending', 'partial'])
+                  ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))');
+        })
         ->orderBy('scheduled_date')
         ->get();
 
@@ -745,7 +748,11 @@ class CashierController extends Controller
         // إحصائيات العمليات
         $today = Carbon::today();
         $surgeryStats = [
-            'pending_count' => Surgery::whereIn('payment_status', ['pending', 'partial'])->where('billing_status', '!=', 'pending_review')->count(),
+            'pending_count' => Surgery::where('billing_status', '!=', 'pending_review')
+                ->where(function($query) {
+                    $query->whereIn('payment_status', ['pending', 'partial'])
+                          ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))');
+                })->count(),
             'patients_count' => $surgeriesByPatient->count(),
             'today_paid' => Payment::whereDate('paid_at', $today)
                 ->where('payment_type', 'surgery')
@@ -1125,6 +1132,85 @@ class CashierController extends Controller
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
                 ->withInput();
+        }
+    }
+
+    /**
+     * معالجة إرجاع المبالغ الزائدة للعملية الجراحية (Refund)
+     */
+    public function processSurgeryRefund(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+
+        if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        if ($surgery->status === 'cancelled') {
+            return redirect()->route('cashier.surgeries.index')
+                ->with('warning', 'لا يمكن إجراء عملية استرجاع لعملية ملغاة');
+        }
+
+        $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
+        $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
+        $excessAmount = $surgeryFeePaidAmount - $totalSurgeryFee;
+
+        if ($excessAmount <= 0) {
+            return redirect()->back()->with('error', 'لا يوجد مبلغ زائد للاسترجاع.');
+        }
+
+        $request->validate([
+            'payment_method' => 'required|in:cash,card',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // إنشاء وصف الاسترجاع
+            $description = 'إرجاع مبلغ زائد مدفوع للعملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ")\n" .
+                           'المبلغ المعاد: ' . number_format($excessAmount, 0) . ' د.ع بعد تعديل سعر العملية من قبل المحاسب.';
+
+            // إنشاء سجل الدفع بقيمة سالبة
+            $payment = Payment::create([
+                'patient_id' => $surgery->patient_id,
+                'cashier_id' => $user->id,
+                'surgery_id' => $surgery->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'amount' => -$excessAmount,
+                'payment_method' => $request->payment_method,
+                'payment_type' => 'surgery',
+                'description' => $description,
+                'notes' => $request->notes,
+                'is_inclusive' => false,
+                'paid_at' => Carbon::now()
+            ]);
+
+            // تحديث مبالغ الدفع وحالتها في الجراحة
+            $newPaidAmount = $totalSurgeryFee; // بما أننا أرجعنا الفارق، فالمدفوع الفعلي يساوي المطلوب
+            
+            $surgery->update([
+                'surgery_fee_paid_amount' => $newPaidAmount,
+                'surgery_fee_paid' => 'paid'
+            ]);
+
+            // التحقق من الدفع الكامل لكامل البنود (الغرفة، التحاليل، الأشعة)
+            $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
+            $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
+            $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
+            $allPaid = $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;
+
+            $surgery->update([
+                'payment_status' => $allPaid ? 'paid' : 'partial'
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('cashier.surgeries.index')
+                ->with('success', 'تم إرجاع المبلغ الزائد بنجاح بقيمة ' . number_format($excessAmount, 0) . ' د.ع. رقم الإيصال: ' . $payment->receipt_number);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة المرتجع: ' . $e->getMessage());
         }
     }
 

@@ -280,6 +280,7 @@
                                                         $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
                                                         $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
                                                         $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+                                                        $excessAmount = $surgeryFeePaidAmount > $surgeryFee ? ($surgeryFeePaidAmount - $surgeryFee) : 0;
                                                     @endphp
                                                     <tr>
                                                         <td><span class="badge bg-secondary">#{{ $surgery->id }}</span></td>
@@ -298,6 +299,10 @@
                                                             @if($pendingAmount > 0)
                                                                 <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-success btn-sm px-3">
                                                                     <i class="fas fa-money-bill-wave me-1"></i> تسديد الرسوم
+                                                                </a>
+                                                            @elseif($excessAmount > 0)
+                                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-warning btn-sm px-3 text-dark fw-bold">
+                                                                    <i class="fas fa-undo me-1"></i> إرجاع الفارق ({{ number_format($excessAmount, 0) }} د.ع)
                                                                 </a>
                                                             @else
                                                                 <span class="text-success"><i class="fas fa-check-double me-1"></i> مدفوع بالكامل</span>

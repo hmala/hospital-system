@@ -231,6 +231,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/surgeries/paid', [\App\Http\Controllers\CashierController::class, 'surgeriesPaid'])->name('surgeries.paid');
         Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
         Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
+        Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
