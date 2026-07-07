@@ -197,6 +197,13 @@ class Surgery extends Model
         return $this->hasOne(OperationTheaterStation::class);
     }
 
+    public function medicalDevices()
+    {
+        return $this->belongsToMany(MedicalDevice::class, 'surgery_medical_device')
+                    ->withPivot('assigned_by')
+                    ->withTimestamps();
+    }
+
     public function nursingStation()
     {
         return $this->hasOne(NursingStation::class);

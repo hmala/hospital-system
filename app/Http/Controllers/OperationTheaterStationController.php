@@ -53,13 +53,14 @@ class OperationTheaterStationController extends Controller
             ]);
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'operationTheaterStation.orNurse', 'operationTheaterStation.anesthesiologist.user']);
+        $surgery->load(['patient.user', 'doctor.user', 'operationTheaterStation.orNurse', 'operationTheaterStation.anesthesiologist.user', 'medicalDevices']);
         
         // جلب قائمة الممرضين وأطباء التخدير
         $nurses = User::whereJsonContains('role', 'surgery_nurse')->get();
         $anesthesiologists = Doctor::anesthesia()->get();
+        $devices = \App\Models\MedicalDevice::where('status', 'active')->get();
 
-        return view('surgery-stations.operation-theater.show', compact('surgery', 'nurses', 'anesthesiologists'));
+        return view('surgery-stations.operation-theater.show', compact('surgery', 'nurses', 'anesthesiologists', 'devices'));
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -71,6 +72,8 @@ class OperationTheaterStationController extends Controller
             'procedure_notes' => 'nullable|string|max:2000',
             'start_time' => 'nullable|date_format:H:i',
             'end_time' => 'nullable|date_format:H:i|after:start_time',
+            'devices' => 'nullable|array',
+            'devices.*' => 'exists:medical_devices,id',
         ]);
 
         $station = $surgery->operationTheaterStation;
@@ -85,7 +88,24 @@ class OperationTheaterStationController extends Controller
             $station->markAsStarted();
         }
 
-        $station->update($validated);
+        // تحديث محطة صالة العمليات
+        $station->update([
+            'or_nurse_id' => $validated['or_nurse_id'] ?? null,
+            'anesthesiologist_id' => $validated['anesthesiologist_id'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'procedure_notes' => $validated['procedure_notes'] ?? null,
+            'start_time' => $validated['start_time'] ?? null,
+            'end_time' => $validated['end_time'] ?? null,
+        ]);
+
+        // مزامنة الأجهزة الطبية المستخدمة
+        $syncData = [];
+        if ($request->has('devices')) {
+            foreach ($request->devices as $deviceId) {
+                $syncData[$deviceId] = ['assigned_by' => auth()->id()];
+            }
+        }
+        $surgery->medicalDevices()->sync($syncData);
 
         return redirect()->route('operation-theater-station.show', $surgery)
             ->with('success', 'تم حفظ بيانات صالة العمليات بنجاح');

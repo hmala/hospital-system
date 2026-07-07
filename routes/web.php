@@ -121,6 +121,9 @@ Route::middleware(['auth'])->group(function () {
     // روابط القائمة الجانبية يمكن لمسؤولي النظام تعديل رؤية كل رابط
     Route::resource('sidebar-links', \App\Http\Controllers\SidebarLinkController::class);
     
+    // إدارة الأجهزة الطبية
+    Route::resource('medical-devices', \App\Http\Controllers\MedicalDeviceController::class);
+    
     // إدارة الأدوار والصلاحيات (للمشرف فقط)
     Route::prefix('roles')->name('roles.')->group(function () {
         Route::get('/', [RoleManagementController::class, 'rolesIndex'])->name('index');

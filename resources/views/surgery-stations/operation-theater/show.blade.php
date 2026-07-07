@@ -129,6 +129,37 @@
                             <textarea name="procedure_notes" class="form-control" rows="4">{{ $surgery->operationTheaterStation?->procedure_notes ?? '' }}</textarea>
                         </div>
 
+                        <!-- الأجهزة الطبية المستخدمة -->
+                        <div class="card mb-4 border-0 shadow-sm" style="background: rgba(219, 234, 254, 0.3) !important;">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 text-primary">
+                                    <i class="fas fa-stethoscope me-2"></i> الأجهزة الطبية المستخدمة في العملية
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    @php
+                                        $assignedDeviceIds = $surgery->medicalDevices->pluck('id')->toArray();
+                                    @endphp
+                                    @forelse($devices as $device)
+                                        <div class="col-md-4 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="devices[]" value="{{ $device->id }}" id="device_{{ $device->id }}" {{ in_array($device->id, $assignedDeviceIds) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="device_{{ $device->id }}">
+                                                    <strong>{{ $device->name }}</strong>
+                                                    <span class="badge bg-secondary ms-1">{{ $device->type }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="col-12 text-center text-muted py-2">
+                                            <i class="fas fa-info-circle me-1"></i> لا توجد أجهزة طبية نشطة مسجلة في النظام.
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> حفظ البيانات

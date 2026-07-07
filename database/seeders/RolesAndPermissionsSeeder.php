@@ -73,6 +73,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view surgeon station',
             'view anesthesia station',
             'view nursing station',
+            'manage medical devices',
+            'view medical devices',
             
             // صلاحيات الإشعة
             'view radiology',
@@ -470,6 +472,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier',
             'view cashier surgeries',
             'process surgery payments',
+            'manage medical devices',
+            'view medical devices',
         ]);
 
         // دور موظف الاستعلامات (Inquiry Staff)

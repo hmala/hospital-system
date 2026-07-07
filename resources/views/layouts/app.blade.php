@@ -730,7 +730,7 @@
                         @endcanany
 
                         <!-- قسم العمليات الجراحية -->
-                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station'])
+                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
                             <span><i class="fas fa-procedures"></i> العمليات الجراحية</span>
@@ -750,6 +750,13 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgical-operations.*') ? 'active' : '' }}" href="{{ route('surgical-operations.index') }}">
                                 <i class="fas fa-cogs"></i><span> أنواع العمليات</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view medical devices')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('medical-devices.*') ? 'active' : '' }}" href="{{ route('medical-devices.index') }}">
+                                <i class="fas fa-stethoscope"></i><span> الأجهزة الطبية</span>
                             </a>
                         </li>
                         @endcan
