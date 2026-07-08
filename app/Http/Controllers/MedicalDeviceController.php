@@ -17,9 +17,26 @@ class MedicalDeviceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $devices = MedicalDevice::withCount('surgeries')->get();
+        $query = MedicalDevice::withCount('surgeries');
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('serial_number', 'like', '%' . $search . '%')
+                  ->orWhere('type', 'like', '%' . $search . '%')
+                  ->orWhere('supplier', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $devices = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
+
         return view('medical-devices.index', compact('devices'));
     }
 

@@ -434,6 +434,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/surgeries/{surgery}/update-surgery-type', [SurgeryController::class, 'updateSurgeryType'])->name('surgeries.updateSurgeryType');
     Route::post('/surgeries/{surgery}/add-operation', [SurgeryController::class, 'addOperation'])->name('surgeries.addOperation');
     Route::delete('/surgeries/{surgery}/remove-operation/{additionalOp}', [SurgeryController::class, 'removeOperation'])->name('surgeries.removeOperation');
+    Route::post('/surgeries/{surgery}/add-device', [SurgeryController::class, 'addDevice'])->name('surgeries.addDevice');
+    Route::delete('/surgeries/{surgery}/remove-device/{device}', [SurgeryController::class, 'removeDevice'])->name('surgeries.removeDevice');
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');

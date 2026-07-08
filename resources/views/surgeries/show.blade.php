@@ -327,13 +327,11 @@
                                     <button class="nav-link text-end" id="v-pills-followups-tab" data-bs-toggle="pill" data-bs-target="#v-pills-followups" type="button" role="tab">
                                         المتابعات<i class="fas fa-clipboard-list ms-2"></i>
                                     </button>
-                                    @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
                                     <button class="nav-link text-end @if($suppliesMissing) border-warning @endif" id="v-pills-notes-tab" data-bs-toggle="pill" data-bs-target="#v-pills-notes" type="button" role="tab">
-                                        المستلزمات
+                                        المستلزمات والأجهزة
                                         @if($suppliesMissing) <span class="badge bg-warning text-dark ms-1"><i class="fas fa-exclamation-triangle"></i></span> @endif
                                         <i class="fas fa-box-open ms-2"></i>
                                     </button>
-                                    @endif
                                 </div>
                             </div>
 
@@ -1191,85 +1189,216 @@
                                         @endif
                                     </div>
 
-                                    @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
                                     <!-- 6. Supplies Tab -->
                                     <div class="tab-pane fade" id="v-pills-notes" role="tabpanel">
+                                        @php
+                                            $isStaff = auth()->user()->hasRole(['admin', 'surgery_staff']);
+                                        @endphp
+                                        
                                         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                                             <h6 class="fw-bold text-primary mb-0">
                                                 <i class="fas fa-box-open me-2"></i>المستلزمات الطبية المطلوبة للعملية
                                             </h6>
-                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSupplyRow()">
-                                                <i class="fas fa-plus me-1"></i>إضافة مستلزم
-                                            </button>
+                                            @if($isStaff)
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSupplyRow()">
+                                                    <i class="fas fa-plus me-1"></i>إضافة مستلزم
+                                                </button>
+                                            @endif
                                         </div>
 
-                                        {{-- Hidden field to store supplies as JSON --}}
-                                        <input type="hidden" name="supplies" id="suppliesJsonField">
+                                        @if($isStaff)
+                                            {{-- Hidden field to store supplies as JSON --}}
+                                            <input type="hidden" name="supplies" id="suppliesJsonField">
 
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered align-middle" id="suppliesTable" style="font-size:0.9rem;">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th class="text-center" width="5%">#</th>
-                                                        <th width="35%">اسم المستلزم / المادة</th>
-                                                        <th width="15%">الكمية</th>
-                                                        <th width="20%">الوحدة</th>
-                                                        <th width="20%">ملاحظات</th>
-                                                        <th class="text-center" width="5%">حذف</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="suppliesContainer">
-                                                    @php
-                                                        $savedSupplies = [];
-                                                        if ($surgery->supplies) {
-                                                            $decoded = json_decode($surgery->supplies, true);
-                                                            if (is_array($decoded)) {
-                                                                $savedSupplies = $decoded;
-                                                            } else {
-                                                                // قيمة نصية قديمة - نضعها كصف واحد
-                                                                $savedSupplies = [['name' => $surgery->supplies, 'qty' => '', 'unit' => '', 'notes' => '']];
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered align-middle" id="suppliesTable" style="font-size:0.9rem;">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="text-center" width="5%">#</th>
+                                                            <th width="35%">اسم المستلزم / المادة</th>
+                                                            <th width="15%">الكمية</th>
+                                                            <th width="20%">الوحدة</th>
+                                                            <th width="20%">ملاحظات</th>
+                                                            <th class="text-center" width="5%">حذف</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="suppliesContainer">
+                                                        @php
+                                                            $savedSupplies = [];
+                                                            if ($surgery->supplies) {
+                                                                $decoded = json_decode($surgery->supplies, true);
+                                                                if (is_array($decoded)) {
+                                                                    $savedSupplies = $decoded;
+                                                                } else {
+                                                                    // قيمة نصية قديمة - نضعها كصف واحد
+                                                                    $savedSupplies = [['name' => $surgery->supplies, 'qty' => '', 'unit' => '', 'notes' => '']];
+                                                                }
                                                             }
-                                                        }
-                                                    @endphp
-                                                    @forelse($savedSupplies as $idx => $supply)
-                                                    <tr class="supply-row">
-                                                        <td class="text-center text-muted supply-num">{{ $idx + 1 }}</td>
-                                                        <td><input type="text" class="form-control form-control-sm supply-name" value="{{ $supply['name'] ?? '' }}" placeholder="مثال: قفازات جراحية، شاش معقم..."></td>
-                                                        <td><input type="number" class="form-control form-control-sm supply-qty" value="{{ $supply['qty'] ?? '' }}" placeholder="0" min="0" step="0.5"></td>
-                                                        <td>
-                                                            <select class="form-select form-select-sm supply-unit">
-                                                                <option value="قطعة" {{ ($supply['unit'] ?? '') == 'قطعة' ? 'selected' : '' }}>قطعة</option>
-                                                                <option value="علبة" {{ ($supply['unit'] ?? '') == 'علبة' ? 'selected' : '' }}>علبة</option>
-                                                                <option value="زجاجة" {{ ($supply['unit'] ?? '') == 'زجاجة' ? 'selected' : '' }}>زجاجة</option>
-                                                                <option value="حقنة" {{ ($supply['unit'] ?? '') == 'حقنة' ? 'selected' : '' }}>حقنة</option>
-                                                                <option value="مل" {{ ($supply['unit'] ?? '') == 'مل' ? 'selected' : '' }}>مل</option>
-                                                                <option value="غرام" {{ ($supply['unit'] ?? '') == 'غرام' ? 'selected' : '' }}>غرام</option>
-                                                                <option value="لتر" {{ ($supply['unit'] ?? '') == 'لتر' ? 'selected' : '' }}>لتر</option>
-                                                                <option value="زوج" {{ ($supply['unit'] ?? '') == 'زوج' ? 'selected' : '' }}>زوج</option>
-                                                                <option value="طقم" {{ ($supply['unit'] ?? '') == 'طقم' ? 'selected' : '' }}>طقم</option>
-                                                                <option value="أخرى" {{ ($supply['unit'] ?? '') == 'أخرى' ? 'selected' : '' }}>أخرى</option>
+                                                        @endphp
+                                                        @forelse($savedSupplies as $idx => $supply)
+                                                        <tr class="supply-row">
+                                                            <td class="text-center text-muted supply-num">{{ $idx + 1 }}</td>
+                                                            <td><input type="text" class="form-control form-control-sm supply-name" value="{{ $supply['name'] ?? '' }}" placeholder="مثال: قفازات جراحية، شاش معقم..."></td>
+                                                            <td><input type="number" class="form-control form-control-sm supply-qty" value="{{ $supply['qty'] ?? '' }}" placeholder="0" min="0" step="0.5"></td>
+                                                            <td>
+                                                                <select class="form-select form-select-sm supply-unit">
+                                                                    <option value="قطعة" {{ ($supply['unit'] ?? '') == 'قطعة' ? 'selected' : '' }}>قطعة</option>
+                                                                    <option value="علبة" {{ ($supply['unit'] ?? '') == 'علبة' ? 'selected' : '' }}>علبة</option>
+                                                                    <option value="زجاجة" {{ ($supply['unit'] ?? '') == 'زجاجة' ? 'selected' : '' }}>زجاجة</option>
+                                                                    <option value="حقنة" {{ ($supply['unit'] ?? '') == 'حقنة' ? 'selected' : '' }}>حقنة</option>
+                                                                    <option value="مل" {{ ($supply['unit'] ?? '') == 'مل' ? 'selected' : '' }}>مل</option>
+                                                                    <option value="غرام" {{ ($supply['unit'] ?? '') == 'غرام' ? 'selected' : '' }}>غرام</option>
+                                                                    <option value="لتر" {{ ($supply['unit'] ?? '') == 'لتر' ? 'selected' : '' }}>لتر</option>
+                                                                    <option value="زوج" {{ ($supply['unit'] ?? '') == 'زوج' ? 'selected' : '' }}>زوج</option>
+                                                                    <option value="طقم" {{ ($supply['unit'] ?? '') == 'طقم' ? 'selected' : '' }}>طقم</option>
+                                                                    <option value="أخرى" {{ ($supply['unit'] ?? '') == 'أخرى' ? 'selected' : '' }}>أخرى</option>
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="text" class="form-control form-control-sm supply-notes" value="{{ $supply['notes'] ?? '' }}" placeholder="ملاحظة اختيارية"></td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSupplyRow(this)">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                        @empty
+                                                        <tr id="emptySuppliesRow">
+                                                            <td colspan="6" class="text-center py-4 text-muted">
+                                                                <i class="fas fa-box-open fa-2x mb-2 d-block opacity-50"></i>
+                                                                لا توجد مستلزمات مسجلة — اضغط "إضافة مستلزم" للبدء
+                                                            </td>
+                                                        </tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @else
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered align-middle" style="font-size:0.9rem;">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="text-center" width="10%">#</th>
+                                                            <th width="40%">اسم المستلزم / المادة</th>
+                                                            <th width="15%">الكمية</th>
+                                                            <th width="15%">الوحدة</th>
+                                                            <th width="20%">ملاحظات</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @php
+                                                            $savedSupplies = [];
+                                                            if ($surgery->supplies) {
+                                                                $decoded = json_decode($surgery->supplies, true);
+                                                                if (is_array($decoded)) {
+                                                                    $savedSupplies = $decoded;
+                                                                } else {
+                                                                    $savedSupplies = [['name' => $surgery->supplies, 'qty' => '', 'unit' => '', 'notes' => '']];
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        @forelse($savedSupplies as $idx => $supply)
+                                                        <tr>
+                                                            <td class="text-center text-muted">{{ $idx + 1 }}</td>
+                                                            <td class="fw-semibold text-dark">{{ $supply['name'] ?? '' }}</td>
+                                                            <td>{{ $supply['qty'] ?? '-' }}</td>
+                                                            <td>{{ $supply['unit'] ?? '-' }}</td>
+                                                            <td>{{ $supply['notes'] ?? '-' }}</td>
+                                                        </tr>
+                                                        @empty
+                                                        <tr>
+                                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                                <i class="fas fa-box-open fa-2x mb-2 d-block opacity-50"></i>
+                                                                لا توجد مستلزمات مسجلة لهذه العملية
+                                                            </td>
+                                                        </tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endif
+
+                                        <!-- الأجهزة الطبية المستخدمة -->
+                                        <div class="mt-5 pt-3 border-top">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <h6 class="fw-bold text-primary mb-0">
+                                                    <i class="fas fa-stethoscope me-2"></i>الأجهزة الطبية المستخدمة في العملية
+                                                </h6>
+                                                @if($isStaff)
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAddDeviceArea()">
+                                                    <i class="fas fa-plus me-1"></i>إضافة جهاز
+                                                </button>
+                                                @endif
+                                            </div>
+
+                                            @if($surgery->medicalDevices->count() > 0)
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered table-sm align-middle" style="font-size:0.9rem;">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>اسم الجهاز</th>
+                                                            <th>الرقم التسلسلي</th>
+                                                            <th>النوع</th>
+                                                            @if($isStaff)
+                                                            <th></th>
+                                                            @endif
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($surgery->medicalDevices as $device)
+                                                        <tr>
+                                                            <td class="fw-semibold text-dark">{{ $device->name }}</td>
+                                                            <td><code>{{ $device->serial_number ?? '-' }}</code></td>
+                                                            <td><span class="badge bg-secondary">{{ $device->type }}</span></td>
+                                                            @if($isStaff)
+                                                            <td class="text-center">
+                                                                <form action="{{ route('surgeries.removeDevice', [$surgery, $device]) }}" method="POST" onsubmit="return confirm('إزالة هذا الجهاز من العملية؟')">
+                                                                    @csrf @method('DELETE')
+                                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            </td>
+                                                            @endif
+                                                        </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            @else
+                                            <p class="text-muted small mb-0">لا توجد أجهزة طبية مستخدمة مسجلة</p>
+                                            @endif
+
+                                            {{-- إضافة جهاز جديد --}}
+                                            @if($isStaff)
+                                            <div id="addDeviceArea" style="display: none;" class="mt-2 p-3 border rounded bg-light">
+                                                <form action="{{ route('surgeries.addDevice', $surgery) }}" method="POST">
+                                                    @csrf
+                                                    <div class="row g-3">
+                                                        <div class="col-md-8">
+                                                            <input type="text" id="deviceSearch" class="form-control mb-2" placeholder="ابحث عن الجهاز..." oninput="filterDevices()">
+                                                            <select name="device_ids[]" id="device_select" class="form-select border-primary" size="8" multiple required>
+                                                                @foreach($devices as $device)
+                                                                    <option value="{{ $device->id }}">{{ $device->name }} ({{ $device->type }} - {{ $device->serial_number ?? 'بدون رقم' }})</option>
+                                                                @endforeach
                                                             </select>
-                                                        </td>
-                                                        <td><input type="text" class="form-control form-control-sm supply-notes" value="{{ $supply['notes'] ?? '' }}" placeholder="ملاحظة اختيارية"></td>
-                                                        <td class="text-center">
-                                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSupplyRow(this)">
-                                                                <i class="fas fa-trash"></i>
+                                                            <div class="mt-1">
+                                                                <small class="text-muted">اضغط Ctrl + اختر لاختيار عدة أجهزة</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4 d-flex flex-column justify-content-end gap-2">
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="fas fa-check me-1"></i>تأكيد الإضافة
                                                             </button>
-                                                        </td>
-                                                    </tr>
-                                                    @empty
-                                                    <tr id="emptySuppliesRow">
-                                                        <td colspan="6" class="text-center py-4 text-muted">
-                                                            <i class="fas fa-box-open fa-2x mb-2 d-block opacity-50"></i>
-                                                            لا توجد مستلزمات مسجلة — اضغط "إضافة مستلزم" للبدء
-                                                        </td>
-                                                    </tr>
-                                                    @endforelse
-                                                </tbody>
-                                            </table>
+                                                            <button type="button" class="btn btn-secondary" onclick="toggleAddDeviceArea()">
+                                                                إلغاء
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                            @endif
                                         </div>
                                     </div>
-                                    @endif
 
                                 </div>
                             </div>
@@ -1711,6 +1840,24 @@
         .catch(err => {
             alert('خطأ: ' + err.message);
         });
+    };
+
+    // Toggle add device area
+    window.toggleAddDeviceArea = function() {
+        const area = document.getElementById('addDeviceArea');
+        area.style.display = area.style.display === 'none' ? 'block' : 'none';
+    };
+
+    // Filter devices by search text
+    window.filterDevices = function() {
+        const q = document.getElementById('deviceSearch').value.trim().toLowerCase();
+        const select = document.getElementById('device_select');
+        for (let i = 0; i < select.options.length; i++) {
+            const opt = select.options[i];
+            if (!opt.value) continue;
+            const text = opt.text.toLowerCase();
+            opt.style.display = q === '' || text.includes(q) ? '' : 'none';
+        }
     };
 </script>
 @endsection

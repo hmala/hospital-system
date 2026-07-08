@@ -40,6 +40,42 @@
         </div>
     @endif
 
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form action="{{ route('medical-devices.index') }}" method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" 
+                               placeholder="بحث باسم الجهاز، الرقم التسلسلي، النوع، أو المورد..." 
+                               value="{{ request('search') }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">كل الحالات</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>نشط / متاح</option>
+                        <option value="maintenance" {{ request('status') === 'maintenance' ? 'selected' : '' }}>تحت الصيانة</option>
+                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>غير نشط</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i>
+                        تصفية
+                    </button>
+                    @if(request()->anyFilled(['search', 'status']))
+                        <a href="{{ route('medical-devices.index') }}" class="btn btn-outline-secondary" title="إعادة تعيين">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-light">
             <h5 class="mb-0">
@@ -129,6 +165,13 @@
                 </table>
             </div>
         </div>
+        @if($devices->hasPages())
+        <div class="card-footer bg-white border-top py-3">
+            <div class="d-flex justify-content-center">
+                {{ $devices->links() }}
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 @endsection

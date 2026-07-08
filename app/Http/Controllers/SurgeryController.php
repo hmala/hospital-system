@@ -295,7 +295,7 @@ class SurgeryController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم باستعراض العمليات الجراحية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'surgeryTreatments', 'anesthesiaStation', 'residentStationFollowUps']);
+        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'surgeryTreatments', 'anesthesiaStation', 'residentStationFollowUps', 'medicalDevices']);
         $patients = Patient::with('user')->get()->sortBy(function($p) {
             return optional($p->user)->name ?? '';
         });
@@ -309,7 +309,8 @@ class SurgeryController extends Controller
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations'));
+        $devices = \App\Models\MedicalDevice::where('status', 'active')->orderBy('name')->get();
+        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'devices'));
     }
 
     public function edit(Surgery $surgery)
@@ -988,5 +989,57 @@ class SurgeryController extends Controller
         $surgery->save();
 
         return redirect()->back()->with('success', 'تم حذف العملية الإضافية');
+    }
+
+    public function addDevice(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        if (!$user->hasRole(['admin', 'surgery_staff'])) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'غير مصرح لك'], 403)
+                : abort(403, 'غير مصرح لك بإضافة أجهزة طبية');
+        }
+
+        $validated = $request->validate([
+            'device_ids' => 'required|array',
+            'device_ids.*' => 'integer|exists:medical_devices,id',
+        ]);
+
+        $existingDeviceIds = $surgery->medicalDevices()->pluck('medical_devices.id')->toArray();
+        $newDeviceIds = array_diff($validated['device_ids'], $existingDeviceIds);
+
+        if (!empty($newDeviceIds)) {
+            $syncData = [];
+            foreach ($newDeviceIds as $deviceId) {
+                $syncData[$deviceId] = ['assigned_by' => $user->id];
+            }
+            $surgery->medicalDevices()->attach($syncData);
+
+            $surgery->billing_status = 'pending_review';
+            $surgery->save();
+        }
+
+        $devices = \App\Models\MedicalDevice::whereIn('id', $validated['device_ids'])->get();
+        $names = $devices->pluck('name')->join('، ');
+        $msg = 'تم إضافة أجهزة طبية: ' . $names;
+
+        return $request->expectsJson()
+            ? response()->json(['success' => $msg])
+            : redirect()->back()->with('success', $msg);
+    }
+
+    public function removeDevice(Surgery $surgery, \App\Models\MedicalDevice $device)
+    {
+        $user = auth()->user();
+        if (!$user->hasRole(['admin', 'surgery_staff'])) {
+            abort(403, 'غير مصرح لك بإزالة أجهزة طبية');
+        }
+
+        $surgery->medicalDevices()->detach($device->id);
+
+        $surgery->billing_status = 'pending_review';
+        $surgery->save();
+
+        return redirect()->back()->with('success', 'تم إزالة الجهاز الطبي من العملية بنجاح');
     }
 }
