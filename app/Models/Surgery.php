@@ -63,6 +63,7 @@ class Surgery extends Model
         'discharge_notes',
         'cancellation_reason',
         'referral_letter_path',
+        'location_id',
     ];
 
     protected $casts = [
@@ -89,6 +90,11 @@ class Surgery extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function room()

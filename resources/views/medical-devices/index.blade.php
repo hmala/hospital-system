@@ -43,7 +43,7 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <form action="{{ route('medical-devices.index') }}" method="GET" class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0">
                             <i class="fas fa-search text-muted"></i>
@@ -54,6 +54,14 @@
                     </div>
                 </div>
                 <div class="col-md-3">
+                    <select name="location_id" class="form-select">
+                        <option value="">كل الردهات / الأقسام</option>
+                        @foreach($locations as $loc)
+                            <option value="{{ $loc->id }}" {{ request('location_id') == $loc->id ? 'selected' : '' }}>{{ $loc->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <select name="status" class="form-select">
                         <option value="">كل الحالات</option>
                         <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>نشط / متاح</option>
@@ -66,7 +74,7 @@
                         <i class="fas fa-filter me-1"></i>
                         تصفية
                     </button>
-                    @if(request()->anyFilled(['search', 'status']))
+                    @if(request()->anyFilled(['search', 'status', 'location_id']))
                         <a href="{{ route('medical-devices.index') }}" class="btn btn-outline-secondary" title="إعادة تعيين">
                             <i class="fas fa-undo"></i>
                         </a>
@@ -91,6 +99,7 @@
                             <th>الرقم التسلسلي</th>
                             <th>اسم الجهاز</th>
                             <th>نوع الجهاز</th>
+                            <th>القسم / الردهة</th>
                             <th>المزود</th>
                             <th>سعر الجهاز</th>
                             <th>مرات الاستخدام</th>
@@ -113,6 +122,11 @@
                             </td>
                             <td>
                                 <span class="badge bg-secondary">{{ $device->type }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ $device->location->name ?? 'عام' }}
+                                </span>
                             </td>
                             <td>{{ $device->supplier ?? '-' }}</td>
                             <td>

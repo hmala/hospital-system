@@ -33,4 +33,9 @@ class Location extends Model
     {
         return $this->hasMany(LocationProductThreshold::class);
     }
+
+    public function medicalDevices()
+    {
+        return $this->hasMany(MedicalDevice::class);
+    }
 }

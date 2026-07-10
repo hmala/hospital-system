@@ -677,6 +677,28 @@ body {
                             </div>
                         </div>
                         
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="location_id" class="form-label fw-bold">
+                                        <i class="fas fa-map-marker-alt me-1 text-warning"></i>
+                                        الردهة / الموقع <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="location_id" id="location_id" class="form-select form-select-lg @error('location_id') is-invalid @enderror" required>
+                                        <option value="">اختر الردهة / الموقع</option>
+                                        @foreach($locations as $loc)
+                                            <option value="{{ $loc->id }}" {{ old('location_id') == $loc->id ? 'selected' : '' }}>
+                                                {{ $loc->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('location_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        
                         @if(Auth::user()->hasRole(['admin', 'surgery_staff', 'doctor']))
                         <div class="section-divider" data-title="أطباء التخدير (اختياري)"></div>
                         

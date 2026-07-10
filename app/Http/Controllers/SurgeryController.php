@@ -138,7 +138,8 @@ class SurgeryController extends Controller
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
         $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->orderBy('room_type')->orderBy('room_number')->get();
-        return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms'));
+        $locations = \App\Models\Location::orderBy('name')->get();
+        return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations'));
     }
 
     public function store(Request $request)
@@ -159,6 +160,7 @@ class SurgeryController extends Controller
             'doctor_id' => 'required|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',
             'room_id' => 'nullable|exists:rooms,id',
+            'location_id' => 'nullable|exists:locations,id',
             'expected_stay_days' => 'nullable|integer|min:1|max:365',
             'surgery_category' => 'required|string|max:255',
             'surgical_operation_id' => 'required|exists:surgical_operations,id',
@@ -309,8 +311,11 @@ class SurgeryController extends Controller
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        $devices = \App\Models\MedicalDevice::where('status', 'active')->orderBy('name')->get();
-        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'devices'));
+        $devices = \App\Models\MedicalDevice::where('status', 'active')
+            ->orderBy('name')
+            ->get();
+        $locations = \App\Models\Location::orderBy('name')->get();
+        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'devices', 'locations'));
     }
 
     public function edit(Surgery $surgery)
@@ -336,7 +341,8 @@ class SurgeryController extends Controller
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
-        return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'departments', 'labTests', 'radiologyTypes'));
+        $locations = \App\Models\Location::orderBy('name')->get();
+        return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'departments', 'labTests', 'radiologyTypes', 'locations'));
     }
 
     public function print(Surgery $surgery)
@@ -372,6 +378,7 @@ class SurgeryController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
             'department_id' => 'required|exists:departments,id',
+            'location_id' => 'nullable|exists:locations,id',
             'surgery_type' => 'required|string|max:255',
             'description' => 'nullable|string',
             'scheduled_date' => 'required|date',
@@ -713,6 +720,7 @@ class SurgeryController extends Controller
         \Log::info('End time from request: ' . $request->input('end_time'));
 
         $validated = $request->validate([
+            'location_id' => 'nullable|exists:locations,id',
             'diagnosis' => 'nullable|string|max:1000',
             'anesthesia_type' => 'nullable|string|max:255',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
@@ -775,7 +783,7 @@ class SurgeryController extends Controller
             $validated['follow_up_date'] = null;
         }
 
-        // If the current user is surgery staff, allow only team, timing, and supplies fields to be updated.
+        // If the current user is surgery staff, allow only team, timing, supplies and location fields to be updated.
         if ($user->hasRole('surgery_staff')) {
             $validated = Arr::only($validated, [
                 'anesthesiologist_id',
@@ -784,6 +792,7 @@ class SurgeryController extends Controller
                 'start_time',
                 'end_time',
                 'supplies',
+                'location_id',
             ]);
         }
 

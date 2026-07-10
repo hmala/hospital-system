@@ -17,7 +17,8 @@ class MedicalDevice extends Model
         'status',
         'serial_number',
         'last_maintenance_at',
-        'purchase_date'
+        'purchase_date',
+        'location_id'
     ];
 
     protected $casts = [
@@ -25,6 +26,14 @@ class MedicalDevice extends Model
         'last_maintenance_at' => 'date',
         'purchase_date' => 'date',
     ];
+
+    /**
+     * Get the location associated with the medical device.
+     */
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
 
     /**
      * Get the surgeries associated with the medical device.

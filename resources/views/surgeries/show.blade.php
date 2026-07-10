@@ -648,12 +648,9 @@
                                                                 <td class="text-muted small">{{ $addOp->created_at->format('Y-m-d H:i') }}</td>
                                                                 @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor']))
                                                                 <td class="text-center">
-                                                                    <form action="{{ route('surgeries.removeOperation', [$surgery, $addOp]) }}" method="POST" onsubmit="return confirm('حذف هذه العملية الإضافية؟')">
-                                                                        @csrf @method('DELETE')
-                                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1">
-                                                                            <i class="fas fa-trash"></i>
-                                                                        </button>
-                                                                    </form>
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="submitDeleteAction('{{ route('surgeries.removeOperation', [$surgery, $addOp]) }}', 'حذف هذه العملية الإضافية؟')">
+                                                                             <i class="fas fa-trash"></i>
+                                                                         </button>
                                                                 </td>
                                                                 @endif
                                                             </tr>
@@ -861,6 +858,21 @@
 
                                     @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
                                     <div class="tab-pane fade" id="v-pills-team" role="tabpanel">
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <label class="form-label fw-bold text-dark">
+                                                    <i class="fas fa-map-marker-alt me-1 text-danger"></i>صالة العمليات / الردهة <span class="text-danger">*</span>
+                                                </label>
+                                                <select name="location_id" class="form-select border-primary">
+                                                    <option value="">اختر صالة العمليات / الردهة</option>
+                                                    @foreach($locations as $loc)
+                                                        <option value="{{ $loc->id }}" {{ $surgery->location_id == $loc->id ? 'selected' : '' }}>
+                                                            {{ $loc->name }}
+                                                        </option>
+                                                     @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
                                         <h6 class="border-bottom pb-2 mb-3 fw-bold text-primary">
                                             <i class="fas fa-users me-2"></i>الفريق الطبي المشارك
                                         </h6>
@@ -1329,15 +1341,13 @@
                                                 </button>
                                                 @endif
                                             </div>
-
+ 
                                             @if($surgery->medicalDevices->count() > 0)
                                             <div class="table-responsive">
                                                 <table class="table table-bordered table-sm align-middle" style="font-size:0.9rem;">
                                                     <thead class="table-light">
                                                         <tr>
                                                             <th>اسم الجهاز</th>
-                                                            <th>الرقم التسلسلي</th>
-                                                            <th>النوع</th>
                                                             @if($isStaff)
                                                             <th></th>
                                                             @endif
@@ -1347,16 +1357,13 @@
                                                         @foreach($surgery->medicalDevices as $device)
                                                         <tr>
                                                             <td class="fw-semibold text-dark">{{ $device->name }}</td>
-                                                            <td><code>{{ $device->serial_number ?? '-' }}</code></td>
-                                                            <td><span class="badge bg-secondary">{{ $device->type }}</span></td>
+
+
                                                             @if($isStaff)
                                                             <td class="text-center">
-                                                                <form action="{{ route('surgeries.removeDevice', [$surgery, $device]) }}" method="POST" onsubmit="return confirm('إزالة هذا الجهاز من العملية؟')">
-                                                                    @csrf @method('DELETE')
-                                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </form>
+                                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="submitDeleteAction('{{ route('surgeries.removeDevice', [$surgery, $device]) }}', 'إزالة هذا الجهاز من العملية؟')">
+                                                                         <i class="fas fa-trash"></i>
+                                                                     </button>
                                                             </td>
                                                             @endif
                                                         </tr>
@@ -1376,9 +1383,15 @@
                                                     <div class="row g-3">
                                                         <div class="col-md-8">
                                                             <input type="text" id="deviceSearch" class="form-control mb-2" placeholder="ابحث عن الجهاز..." oninput="filterDevices()">
+                                                            <div class="form-check mb-2">
+                                                                <input class="form-check-input" type="checkbox" id="showAllDevices" onchange="filterDevices()">
+                                                                <label class="form-check-label small text-muted" for="showAllDevices">
+                                                                    عرض أجهزة الردهات الأخرى
+                                                                </label>
+                                                            </div>
                                                             <select name="device_ids[]" id="device_select" class="form-select border-primary" size="8" multiple required>
                                                                 @foreach($devices as $device)
-                                                                    <option value="{{ $device->id }}">{{ $device->name }} ({{ $device->type }} - {{ $device->serial_number ?? 'بدون رقم' }})</option>
+                                                                    <option value="{{ $device->id }}" data-location-id="{{ $device->location_id }}">{{ $device->name }}</option>
                                                                 @endforeach
                                                             </select>
                                                             <div class="mt-1">
@@ -1846,18 +1859,44 @@
     window.toggleAddDeviceArea = function() {
         const area = document.getElementById('addDeviceArea');
         area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        if (area.style.display === 'block') {
+            filterDevices();
+        }
     };
 
-    // Filter devices by search text
+    // Filter devices by search text and location
     window.filterDevices = function() {
         const q = document.getElementById('deviceSearch').value.trim().toLowerCase();
+        const showAll = document.getElementById('showAllDevices').checked;
+        const surgeryLocationId = "{{ $surgery->location_id }}";
+        const userLocationId = "{{ auth()->user()->location_id }}";
+        const activeLocationId = surgeryLocationId || userLocationId;
+        
         const select = document.getElementById('device_select');
         for (let i = 0; i < select.options.length; i++) {
             const opt = select.options[i];
             if (!opt.value) continue;
             const text = opt.text.toLowerCase();
-            opt.style.display = q === '' || text.includes(q) ? '' : 'none';
+            const deviceLocId = opt.getAttribute('data-location-id');
+            
+            const matchesQuery = q === '' || text.includes(q);
+            const matchesLocation = showAll || !activeLocationId || deviceLocId === activeLocationId || !deviceLocId;
+            
+            opt.style.display = matchesQuery && matchesLocation ? '' : 'none';
+        }
+    };
+
+    window.submitDeleteAction = function(url, message) {
+        if (confirm(message || 'هل أنت متأكد من الإجراء؟')) {
+            const form = document.getElementById('global-delete-form');
+            form.action = url;
+            form.submit();
         }
     };
 </script>
+
+<form id="global-delete-form" action="" method="POST" style="display: none;">
+    @csrf
+    @method('DELETE')
+</form>
 @endsection

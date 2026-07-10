@@ -19,7 +19,7 @@ class MedicalDeviceController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MedicalDevice::withCount('surgeries');
+        $query = MedicalDevice::with(['location'])->withCount('surgeries');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -27,7 +27,10 @@ class MedicalDeviceController extends Controller
                 $q->where('name', 'like', '%' . $search . '%')
                   ->orWhere('serial_number', 'like', '%' . $search . '%')
                   ->orWhere('type', 'like', '%' . $search . '%')
-                  ->orWhere('supplier', 'like', '%' . $search . '%');
+                  ->orWhere('supplier', 'like', '%' . $search . '%')
+                  ->orWhereHas('location', function ($lq) use ($search) {
+                      $lq->where('name', 'like', '%' . $search . '%');
+                  });
             });
         }
 
@@ -35,9 +38,14 @@ class MedicalDeviceController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        $devices = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
+        if ($request->filled('location_id')) {
+            $query->where('location_id', $request->input('location_id'));
+        }
 
-        return view('medical-devices.index', compact('devices'));
+        $devices = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
+        $locations = \App\Models\Location::orderBy('name')->get();
+
+        return view('medical-devices.index', compact('devices', 'locations'));
     }
 
     /**
@@ -45,7 +53,8 @@ class MedicalDeviceController extends Controller
      */
     public function create()
     {
-        return view('medical-devices.create');
+        $locations = \App\Models\Location::orderBy('name')->get();
+        return view('medical-devices.create', compact('locations'));
     }
 
     /**
@@ -62,6 +71,7 @@ class MedicalDeviceController extends Controller
             'serial_number' => 'nullable|string|max:255|unique:medical_devices,serial_number',
             'last_maintenance_at' => 'nullable|date',
             'purchase_date' => 'nullable|date',
+            'location_id' => 'nullable|exists:locations,id',
         ]);
 
         MedicalDevice::create($validated);
@@ -75,7 +85,8 @@ class MedicalDeviceController extends Controller
      */
     public function edit(MedicalDevice $medicalDevice)
     {
-        return view('medical-devices.edit', compact('medicalDevice'));
+        $locations = \App\Models\Location::orderBy('name')->get();
+        return view('medical-devices.edit', compact('medicalDevice', 'locations'));
     }
 
     /**
@@ -92,6 +103,7 @@ class MedicalDeviceController extends Controller
             'serial_number' => 'nullable|string|max:255|unique:medical_devices,serial_number,' . $medicalDevice->id,
             'last_maintenance_at' => 'nullable|date',
             'purchase_date' => 'nullable|date',
+            'location_id' => 'nullable|exists:locations,id',
         ]);
 
         $medicalDevice->update($validated);

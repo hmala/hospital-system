@@ -108,6 +108,19 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="location_id" class="form-label">القسم / الردهة</label>
+                        <select name="location_id" id="location_id" class="form-select @error('location_id') is-invalid @enderror">
+                            <option value="">-- غير محدد (عام) --</option>
+                            @foreach($locations as $loc)
+                                <option value="{{ $loc->id }}" {{ old('location_id', $medicalDevice->location_id) == $loc->id ? 'selected' : '' }}>{{ $loc->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('location_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">

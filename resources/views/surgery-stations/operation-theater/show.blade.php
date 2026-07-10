@@ -131,10 +131,14 @@
 
                         <!-- الأجهزة الطبية المستخدمة -->
                         <div class="card mb-4 border-0 shadow-sm" style="background: rgba(219, 234, 254, 0.3) !important;">
-                            <div class="card-header bg-light">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0 text-primary">
                                     <i class="fas fa-stethoscope me-2"></i> الأجهزة الطبية المستخدمة في العملية
                                 </h6>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="showAllOTDevices" onchange="filterOTDevices()">
+                                    <label class="form-check-label small text-muted" for="showAllOTDevices">عرض أجهزة الردهات الأخرى</label>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -142,12 +146,11 @@
                                         $assignedDeviceIds = $surgery->medicalDevices->pluck('id')->toArray();
                                     @endphp
                                     @forelse($devices as $device)
-                                        <div class="col-md-4 mb-2">
+                                        <div class="col-md-4 mb-2 device-container" data-location-id="{{ $device->location_id }}" data-assigned="{{ in_array($device->id, $assignedDeviceIds) ? '1' : '0' }}">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="devices[]" value="{{ $device->id }}" id="device_{{ $device->id }}" {{ in_array($device->id, $assignedDeviceIds) ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="device_{{ $device->id }}">
                                                     <strong>{{ $device->name }}</strong>
-                                                    <span class="badge bg-secondary ms-1">{{ $device->type }}</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -202,4 +205,26 @@
         </div>
     </div>
 </div>
+
+<script>
+    function filterOTDevices() {
+        const showAll = document.getElementById('showAllOTDevices').checked;
+        const userLocationId = "{{ auth()->user()->location_id }}";
+        const containers = document.querySelectorAll('.device-container');
+        
+        containers.forEach(el => {
+            const locId = el.getAttribute('data-location-id');
+            const isAssigned = el.getAttribute('data-assigned') === '1';
+            
+            // Show if: showAll is checked, or device belongs to current user location, or has no location, or is already assigned
+            const show = showAll || !userLocationId || locId === userLocationId || !locId || isAssigned;
+            el.style.display = show ? '' : 'none';
+        });
+    }
+    
+    // Run filter on load
+    document.addEventListener('DOMContentLoaded', function() {
+        filterOTDevices();
+    });
+</script>
 @endsection

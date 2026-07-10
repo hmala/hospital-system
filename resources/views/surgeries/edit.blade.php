@@ -191,6 +191,25 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="location_id" class="form-label">الردهة / الموقع <span class="text-danger">*</span></label>
+                                    <select name="location_id" id="location_id" class="form-select @error('location_id') is-invalid @enderror" required>
+                                        <option value="">اختر الردهة / الموقع</option>
+                                        @foreach($locations as $loc)
+                                            <option value="{{ $loc->id }}" {{ old('location_id', $surgery->location_id) == $loc->id ? 'selected' : '' }}>
+                                                {{ $loc->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('location_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Surgery Details Tab -->

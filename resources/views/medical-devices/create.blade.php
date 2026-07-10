@@ -99,11 +99,24 @@
                     <div class="col-md-6 mb-3">
                         <label for="status" class="form-label">حالة الجهاز <span class="text-danger">*</span></label>
                         <select name="status" id="status" class="form-select @error('status') is-invalid @enderror" required>
-                            <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>نشط / متاح</option>
+                            <option value="active" {{ old('status', 'active') == 'active' ? 'selected' : '' }}>نشط / متاح</option>
                             <option value="maintenance" {{ old('status') == 'maintenance' ? 'selected' : '' }}>تحت الصيانة</option>
                             <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>غير نشط</option>
                         </select>
                         @error('status')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="location_id" class="form-label">القسم / الردهة</label>
+                        <select name="location_id" id="location_id" class="form-select @error('location_id') is-invalid @enderror">
+                            <option value="">-- غير محدد (عام) --</option>
+                            @foreach($locations as $loc)
+                                <option value="{{ $loc->id }}" {{ old('location_id') == $loc->id ? 'selected' : '' }}>{{ $loc->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('location_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

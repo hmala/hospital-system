@@ -52,21 +52,26 @@ class Department extends Model
     }
     // في app/Models/Department.php أضف هذه الدالة:
 
-public function getTypeText()
-{
-    $types = [
-        'internal' => 'باطنية',
-        'surgery' => 'جراحة',
-        'pediatrics' => 'أطفال',
-        'obstetrics' => 'نسائية',
-        'orthopedics' => 'عظام',
-        'cardiology' => 'قلب',
-        'dentistry' => 'أسنان',
-        'dermatology' => 'جلدية',
-        'emergency' => 'طوارئ',
-        'other' => 'أخرى'
-    ];
+    public function getTypeText()
+    {
+        $types = [
+            'internal' => 'باطنية',
+            'surgery' => 'جراحة',
+            'pediatrics' => 'أطفال',
+            'obstetrics' => 'نسائية',
+            'orthopedics' => 'عظام',
+            'cardiology' => 'قلب',
+            'dentistry' => 'أسنان',
+            'dermatology' => 'جلدية',
+            'emergency' => 'طوارئ',
+            'other' => 'أخرى'
+        ];
 
-    return $types[$this->type] ?? $this->type;
-}
+        return $types[$this->type] ?? $this->type;
+    }
+
+    public function medicalDevices()
+    {
+        return $this->hasMany(MedicalDevice::class);
+    }
 }
