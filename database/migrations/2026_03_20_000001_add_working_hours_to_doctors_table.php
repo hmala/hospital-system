@@ -19,8 +19,9 @@ return new class extends Migration
             // إضافة حقل أيام الأسبوع (JSON array)
             $table->json('working_days')->nullable()->after('end_time')->comment('أيام العمل في الأسبوع');
             
-            // حذف الحقول غير المطلوبة
-            $table->dropColumn(['qualification', 'license_number', 'experience_years', 'max_patients_per_day', 'bio']);
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') {
+                $table->dropColumn(['qualification', 'license_number', 'experience_years', 'max_patients_per_day', 'bio']);
+            }
         });
     }
 

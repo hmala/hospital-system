@@ -17,21 +17,23 @@ return new class extends Migration
             $table->string('subtype', 50)->nullable()->after('type');
         });
 
-        // تحديث البيانات الموجودة: نقل radiology_category من details إلى subtype
-        DB::statement("
-            UPDATE requests 
-            SET subtype = JSON_UNQUOTE(JSON_EXTRACT(details, '$.radiology_category'))
-            WHERE type = 'radiology' 
-            AND JSON_EXTRACT(details, '$.radiology_category') IS NOT NULL
-        ");
+        if (DB::getDriverName() !== 'sqlite') {
+            // تحديث البيانات الموجودة: نقل radiology_category من details إلى subtype
+            DB::statement("
+                UPDATE requests 
+                SET subtype = JSON_UNQUOTE(JSON_EXTRACT(details, '$.radiology_category'))
+                WHERE type = 'radiology' 
+                AND JSON_EXTRACT(details, '$.radiology_category') IS NOT NULL
+            ");
 
-        // تعيين 'general' للطلبات التي ليس لها فئة محددة
-        DB::statement("
-            UPDATE requests 
-            SET subtype = 'general'
-            WHERE type = 'radiology' 
-            AND (subtype IS NULL OR subtype = '')
-        ");
+            // تعيين 'general' للطلبات التي ليس لها فئة محددة
+            DB::statement("
+                UPDATE requests 
+                SET subtype = 'general'
+                WHERE type = 'radiology' 
+                AND (subtype IS NULL OR subtype = '')
+            ");
+        }
     }
 
     /**

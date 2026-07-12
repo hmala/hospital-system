@@ -101,8 +101,11 @@
                             <th>نوع الجهاز</th>
                             <th>القسم / الردهة</th>
                             <th>المزود</th>
-                            <th>سعر الجهاز</th>
-                            <th>مرات الاستخدام</th>
+                            <th>سعر الشراء</th>
+                            <th>أجرة الاستخدام</th>
+                            <th>الاستخدام</th>
+                            <th>العائد المحقق</th>
+                            <th>استرداد التكلفة</th>
                             <th>تاريخ الشراء</th>
                             <th>آخر صيانة</th>
                             <th class="text-center">الحالة</th>
@@ -133,10 +136,31 @@
                                 <strong>{{ number_format($device->price, 0) }} د.ع</strong>
                             </td>
                             <td>
+                                <span class="text-primary fw-semibold">{{ number_format($device->usage_price, 0) }} د.ع</span>
+                            </td>
+                            <td>
                                 <span class="badge bg-info text-dark">
                                     <i class="fas fa-history me-1"></i>
                                     {{ $device->surgeries_count }} مرات
                                 </span>
+                            </td>
+                            <td>
+                                <strong class="text-success">{{ number_format($device->total_revenue, 0) }} د.ع</strong>
+                            </td>
+                            <td>
+                                @php
+                                    $recPercent = $device->recovery_percentage;
+                                    $barColor = 'bg-danger';
+                                    if ($recPercent >= 100) $barColor = 'bg-success';
+                                    elseif ($recPercent >= 50) $barColor = 'bg-primary';
+                                    elseif ($recPercent >= 25) $barColor = 'bg-warning';
+                                @endphp
+                                <div class="d-flex align-items-center gap-2" style="min-width: 100px;">
+                                    <div class="progress flex-grow-1" style="height: 6px;">
+                                        <div class="progress-bar {{ $barColor }}" role="progressbar" style="width: {{ $recPercent }}%" aria-valuenow="{{ $recPercent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="small fw-bold text-dark">{{ $recPercent }}%</span>
+                                </div>
                             </td>
                             <td>{{ $device->purchase_date ? $device->purchase_date->format('Y-m-d') : '-' }}</td>
                             <td>{{ $device->last_maintenance_at ? $device->last_maintenance_at->format('Y-m-d') : '-' }}</td>
@@ -169,7 +193,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->can('manage medical devices') ? 10 : 9 }}" class="text-center py-4">
+                            <td colspan="{{ auth()->user()->can('manage medical devices') ? 14 : 13 }}" class="text-center py-4">
                                 <i class="fas fa-info-circle text-muted fa-2x mb-2"></i>
                                 <p class="text-muted mb-0">لا توجد أجهزة طبية مسجلة حالياً</p>
                             </td>

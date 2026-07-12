@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE departments MODIFY COLUMN type ENUM('internal', 'surgery', 'pediatrics', 'obstetrics', 'orthopedics', 'cardiology', 'dentistry', 'dermatology', 'emergency', 'laboratory', 'other')");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE departments MODIFY COLUMN type ENUM('internal', 'surgery', 'pediatrics', 'obstetrics', 'orthopedics', 'cardiology', 'dentistry', 'dermatology', 'emergency', 'laboratory', 'other')"); }
     }
 
     /**
@@ -20,6 +20,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE departments MODIFY COLUMN type ENUM('internal', 'surgery', 'pediatrics', 'obstetrics', 'orthopedics', 'cardiology', 'dentistry', 'dermatology', 'emergency', 'other')");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE departments MODIFY COLUMN type ENUM('internal', 'surgery', 'pediatrics', 'obstetrics', 'orthopedics', 'cardiology', 'dentistry', 'dermatology', 'emergency', 'other')"); }
     }
 };

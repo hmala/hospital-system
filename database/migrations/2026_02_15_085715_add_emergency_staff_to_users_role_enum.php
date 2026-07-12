@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // إضافة emergency_staff إلى enum role
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'nurse', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'cashier', 'surgery_staff', 'consultation_receptionist', 'emergency_staff') DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'nurse', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'cashier', 'surgery_staff', 'consultation_receptionist', 'emergency_staff') DEFAULT 'patient'"); }
     }
 
     /**
@@ -22,6 +22,6 @@ return new class extends Migration
     public function down(): void
     {
         // إزالة emergency_staff من enum role
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'nurse', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'cashier', 'surgery_staff', 'consultation_receptionist') DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'nurse', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'cashier', 'surgery_staff', 'consultation_receptionist') DEFAULT 'patient'"); }
     }
 };

@@ -9,13 +9,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // تغيير نوع عمود notes إلى price
-        DB::statement('ALTER TABLE lab_tests CHANGE notes price DECIMAL(10,2) DEFAULT 0');
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('lab_tests', function (Blueprint $table) {
+                $table->renameColumn('notes', 'price');
+            });
+        } else {
+            DB::statement('ALTER TABLE lab_tests CHANGE notes price DECIMAL(10,2) DEFAULT 0');
+        }
     }
 
     public function down(): void
     {
-        // إرجاع العمود إلى notes
-        DB::statement('ALTER TABLE lab_tests CHANGE price notes TEXT');
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('lab_tests', function (Blueprint $table) {
+                $table->renameColumn('price', 'notes');
+            });
+        } else {
+            DB::statement('ALTER TABLE lab_tests CHANGE price notes TEXT');
+        }
     }
 };

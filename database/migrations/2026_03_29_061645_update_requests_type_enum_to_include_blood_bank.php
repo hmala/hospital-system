@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab','radiology','pharmacy','emergency','blood_bank') NOT NULL");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab','radiology','pharmacy','emergency','blood_bank') NOT NULL"); }
     }
 
     /**
@@ -19,6 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab','radiology','pharmacy','emergency') NOT NULL");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab','radiology','pharmacy','emergency') NOT NULL"); }
     }
 };

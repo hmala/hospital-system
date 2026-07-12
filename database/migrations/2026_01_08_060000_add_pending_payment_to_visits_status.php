@@ -10,12 +10,12 @@ return new class extends Migration
     public function up(): void
     {
         // تعديل enum لإضافة pending_payment
-        DB::statement("ALTER TABLE visits MODIFY COLUMN status ENUM('scheduled', 'in_progress', 'completed', 'cancelled', 'pending_payment') DEFAULT 'scheduled'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE visits MODIFY COLUMN status ENUM('scheduled', 'in_progress', 'completed', 'cancelled', 'pending_payment') DEFAULT 'scheduled'"); }
     }
 
     public function down(): void
     {
         // إرجاع enum إلى حالته الأصلية
-        DB::statement("ALTER TABLE visits MODIFY COLUMN status ENUM('scheduled', 'in_progress', 'completed', 'cancelled') DEFAULT 'scheduled'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE visits MODIFY COLUMN status ENUM('scheduled', 'in_progress', 'completed', 'cancelled') DEFAULT 'scheduled'"); }
     }
 };

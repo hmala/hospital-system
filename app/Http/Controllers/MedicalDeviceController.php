@@ -19,7 +19,9 @@ class MedicalDeviceController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MedicalDevice::with(['location'])->withCount('surgeries');
+        $query = MedicalDevice::with(['location'])
+            ->withCount('surgeries')
+            ->withSum('surgeries as total_revenue', 'surgery_medical_device.price');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -67,6 +69,7 @@ class MedicalDeviceController extends Controller
             'type' => 'required|string|max:255',
             'supplier' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
+            'usage_price' => 'required|numeric|min:0',
             'status' => 'required|in:active,inactive,maintenance',
             'serial_number' => 'nullable|string|max:255|unique:medical_devices,serial_number',
             'last_maintenance_at' => 'nullable|date',
@@ -99,6 +102,7 @@ class MedicalDeviceController extends Controller
             'type' => 'required|string|max:255',
             'supplier' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
+            'usage_price' => 'required|numeric|min:0',
             'status' => 'required|in:active,inactive,maintenance',
             'serial_number' => 'nullable|string|max:255|unique:medical_devices,serial_number,' . $medicalDevice->id,
             'last_maintenance_at' => 'nullable|date',

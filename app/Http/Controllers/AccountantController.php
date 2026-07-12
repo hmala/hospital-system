@@ -28,6 +28,7 @@ class AccountantController extends Controller
             'department',
             'surgicalOperation',
             'additionalOperations.surgicalOperation',
+            'medicalDevices'
         ])
         ->where('billing_status', 'pending_review')
         ->orderBy('updated_at', 'desc')
@@ -48,6 +49,7 @@ class AccountantController extends Controller
             'surgicalOperation',
             'additionalOperations.surgicalOperation',
             'surgeryTypeChanges.changedBy',
+            'medicalDevices'
         ]);
 
         return view('accountant.surgeries.review-form', compact('surgery'));
@@ -60,9 +62,11 @@ class AccountantController extends Controller
         }
 
         $validated = $request->validate([
-            'surgery_fee' => 'required|numeric|min:0',
+            'surgery_fee' => 'required|numeric|min:0|max:99999999',
             'additional_ops' => 'nullable|array',
-            'additional_ops.*' => 'required|numeric|min:0',
+            'additional_ops.*' => 'required|numeric|min:0|max:99999999',
+            'device_prices' => 'nullable|array',
+            'device_prices.*' => 'required|numeric|min:0|max:99999999',
         ]);
 
         // تحديث سعر العملية الرئيسية
@@ -81,6 +85,13 @@ class AccountantController extends Controller
                     $additionalOp->fee = $fee;
                     $additionalOp->save();
                 }
+            }
+        }
+
+        // تحديث أسعار الأجهزة الطبية
+        if (!empty($validated['device_prices'])) {
+            foreach ($validated['device_prices'] as $deviceId => $price) {
+                $surgery->medicalDevices()->updateExistingPivot($deviceId, ['price' => $price]);
             }
         }
 

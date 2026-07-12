@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
-            $table->enum('payment_status', ['pending', 'paid', 'cancelled'])->default('pending')->after('status');
-        });
+        if (!Schema::hasColumn('requests', 'payment_status')) {
+            Schema::table('requests', function (Blueprint $table) {
+                $table->enum('payment_status', ['pending', 'paid', 'cancelled'])->default('pending')->after('status');
+            });
+        }
     }
 
     /**

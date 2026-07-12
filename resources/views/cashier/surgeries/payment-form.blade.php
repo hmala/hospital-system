@@ -5,7 +5,8 @@
     // حساب التكاليف مع تتبع حالة الدفع
     $surgeryFee = $surgery->surgery_fee ?? 0;
     $additionalOpsFee = $surgery->additionalOperations->sum('fee');
-    $totalSurgeryFee = $surgeryFee + $additionalOpsFee;
+    $devicesFee = $surgery->medicalDevices->sum('pivot.price');
+    $totalSurgeryFee = $surgeryFee + $additionalOpsFee + $devicesFee;
     $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
     $remainingSurgeryFee = max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
     $excessSurgeryFee = $surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0;
@@ -367,6 +368,13 @@
                                                     العملية الأساسية: {{ number_format($surgeryFee, 0) }} د.ع
                                                     @if($additionalOpsFee > 0)
                                                         + العمليات الإضافية: {{ number_format($additionalOpsFee, 0) }} د.ع
+                                                    @endif
+                                                    @if($surgery->medicalDevices->isNotEmpty())
+                                                        <br>
+                                                        + الأجهزة الطبية ({{ $surgery->medicalDevices->count() }}): 
+                                                        @foreach($surgery->medicalDevices as $device)
+                                                            {{ $device->name }} ({{ number_format($device->pivot->price ?? 0, 0) }} د.ع)@if(!$loop->last)، @endif
+                                                        @endforeach
                                                     @endif
                                                 </div>
                                                 @if($surgeryFeePaidAmount > 0)

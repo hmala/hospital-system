@@ -15,7 +15,7 @@ return new class extends Migration
         \Illuminate\Support\Facades\DB::statement("UPDATE requests SET type = 'lab' WHERE type NOT IN ('lab', 'radiology', 'pharmacy')");
         
         // في MySQL لتغيير ENUM نحتاج لتدرج الحقل بالكامل
-        \Illuminate\Support\Facades\DB::statement("ALTER TABLE requests MODIFY type ENUM('lab', 'radiology', 'pharmacy', 'emergency') NOT NULL");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { \Illuminate\Support\Facades\DB::statement("ALTER TABLE requests MODIFY type ENUM('lab', 'radiology', 'pharmacy', 'emergency') NOT NULL"); }
     }
 
     /**
@@ -24,6 +24,6 @@ return new class extends Migration
     public function down(): void
     {
         // العكس - إزالة emergency من ENUM
-        Illuminate\Support\Facades\DB::statement("ALTER TABLE requests MODIFY type ENUM('lab', 'radiology', 'pharmacy') NOT NULL");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { Illuminate\Support\Facades\DB::statement("ALTER TABLE requests MODIFY type ENUM('lab', 'radiology', 'pharmacy') NOT NULL"); }
     }
 };

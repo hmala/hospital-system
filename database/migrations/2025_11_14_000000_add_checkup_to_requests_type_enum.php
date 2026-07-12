@@ -14,10 +14,10 @@ return new class extends Migration
     {
         // تعديل العمود type لإضافة 'checkup'
         if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab', 'radiology', 'pharmacy', 'checkup') NOT NULL");
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab', 'radiology', 'pharmacy', 'checkup') NOT NULL"); }
         } else {
             // للـ SQLite والقواعد الأخرى
-            DB::statement("ALTER TABLE requests MODIFY type TEXT CHECK(type IN ('lab', 'radiology', 'pharmacy', 'checkup'))");
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE requests MODIFY type TEXT CHECK(type IN ('lab', 'radiology', 'pharmacy', 'checkup'))"); }
         }
     }
 
@@ -27,7 +27,7 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab', 'radiology', 'pharmacy') NOT NULL");
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('lab', 'radiology', 'pharmacy') NOT NULL"); }
         }
     }
 };

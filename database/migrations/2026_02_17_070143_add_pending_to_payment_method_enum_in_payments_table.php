@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE payments MODIFY COLUMN payment_method ENUM('pending', 'cash', 'card', 'insurance') DEFAULT 'pending'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE payments MODIFY COLUMN payment_method ENUM('pending', 'cash', 'card', 'insurance') DEFAULT 'pending'"); }
     }
 
     /**
@@ -20,6 +20,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE payments MODIFY COLUMN payment_method ENUM('cash', 'card', 'insurance') DEFAULT 'cash'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE payments MODIFY COLUMN payment_method ENUM('cash', 'card', 'insurance') DEFAULT 'cash'"); }
     }
 };

@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE payments MODIFY COLUMN payment_type ENUM('appointment', 'lab', 'radiology', 'pharmacy', 'surgery', 'emergency', 'other') DEFAULT 'appointment'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE payments MODIFY COLUMN payment_type ENUM('appointment', 'lab', 'radiology', 'pharmacy', 'surgery', 'emergency', 'other') DEFAULT 'appointment'"); }
     }
 
     /**
@@ -20,6 +20,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE payments MODIFY COLUMN payment_type ENUM('appointment', 'lab', 'radiology', 'pharmacy', 'surgery', 'other') DEFAULT 'appointment'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE payments MODIFY COLUMN payment_type ENUM('appointment', 'lab', 'radiology', 'pharmacy', 'surgery', 'other') DEFAULT 'appointment'"); }
     }
 };

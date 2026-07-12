@@ -16,7 +16,7 @@ return new class extends Migration
         \DB::statement("UPDATE users SET role = 'patient' WHERE role NOT IN ('admin', 'doctor', 'receptionist', 'patient')");
         
         // تحديث enum لحقل role لإضافة consultation_receptionist
-        \DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'consultation_receptionist') DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { \DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'consultation_receptionist') DEFAULT 'patient'"); }
     }
 
     /**
@@ -27,6 +27,6 @@ return new class extends Migration
         // إزالة consultation_receptionist من enum
         // أولاً تحويل أي مستخدمين لديهم هذا الدور إلى patient
         \DB::statement("UPDATE users SET role = 'patient' WHERE role = 'consultation_receptionist'");
-        \DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient') DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { \DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient') DEFAULT 'patient'"); }
     }
 };

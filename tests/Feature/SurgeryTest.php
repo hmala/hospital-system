@@ -21,12 +21,10 @@ class SurgeryTest extends TestCase
         // Seed roles & permissions
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        // Create a department
-        $department = Department::create([
-            'name' => 'Surgery Department',
-            'code' => 'SURG',
-            'is_active' => true,
-        ]);
+        // Seed hospital and departments
+        $this->seed(\Database\Seeders\HospitalSeeder::class);
+        $this->seed(\Database\Seeders\DepartmentSeeder::class);
+        $department = Department::where('type', 'surgery')->first();
 
         // Create doctor user and doctor profile
         $doctorUser = User::create([
@@ -37,19 +35,19 @@ class SurgeryTest extends TestCase
         ]);
         $doctorUser->assignRole('doctor');
 
-        $doctor = Doctor::create([
-            'user_id' => $doctorUser->id,
-            'department_id' => $department->id,
-            'phone' => '12345678',
-            'specialization' => 'General Surgery',
-            'qualification' => 'MBBS',
-            'license_number' => 'LIC123',
-            'experience_years' => 10,
-            'bio' => 'Surgeon',
-            'consultation_fee' => 50000,
-            'max_patients_per_day' => 10,
-            'is_active' => true,
-        ]);
+        $doctor = new Doctor();
+        $doctor->user_id = $doctorUser->id;
+        $doctor->department_id = $department->id;
+        $doctor->phone = '12345678';
+        $doctor->specialization = 'General Surgery';
+        $doctor->qualification = 'MBBS';
+        $doctor->license_number = 'LIC123';
+        $doctor->experience_years = 10;
+        $doctor->bio = 'Surgeon';
+        $doctor->consultation_fee = 50000;
+        $doctor->max_patients_per_day = 10;
+        $doctor->is_active = true;
+        $doctor->save();
 
         // Create patient user and profile
         $patientUser = User::create([
@@ -84,6 +82,7 @@ class SurgeryTest extends TestCase
             'visit_time' => now()->toTimeString(),
             'visit_type' => 'surgery',
             'status' => 'pending_payment',
+            'chief_complaint' => 'Normal',
         ]);
 
         // Create a surgery
@@ -109,11 +108,10 @@ class SurgeryTest extends TestCase
     {
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        $department = Department::create([
-            'name' => 'Surgery Department',
-            'code' => 'SURG',
-            'is_active' => true,
-        ]);
+        // Seed hospital and departments
+        $this->seed(\Database\Seeders\HospitalSeeder::class);
+        $this->seed(\Database\Seeders\DepartmentSeeder::class);
+        $department = Department::where('type', 'surgery')->first();
 
         $doctorUser = User::create([
             'name' => 'Dr. Ahmad',
@@ -123,19 +121,19 @@ class SurgeryTest extends TestCase
         ]);
         $doctorUser->assignRole('doctor');
 
-        $doctor = Doctor::create([
-            'user_id' => $doctorUser->id,
-            'department_id' => $department->id,
-            'phone' => '12345678',
-            'specialization' => 'General Surgery',
-            'qualification' => 'MBBS',
-            'license_number' => 'LIC123',
-            'experience_years' => 10,
-            'bio' => 'Surgeon',
-            'consultation_fee' => 50000,
-            'max_patients_per_day' => 10,
-            'is_active' => true,
-        ]);
+        $doctor = new Doctor();
+        $doctor->user_id = $doctorUser->id;
+        $doctor->department_id = $department->id;
+        $doctor->phone = '12345678';
+        $doctor->specialization = 'General Surgery';
+        $doctor->qualification = 'MBBS';
+        $doctor->license_number = 'LIC123';
+        $doctor->experience_years = 10;
+        $doctor->bio = 'Surgeon';
+        $doctor->consultation_fee = 50000;
+        $doctor->max_patients_per_day = 10;
+        $doctor->is_active = true;
+        $doctor->save();
 
         $patientUser = User::create([
             'name' => 'John Doe',
@@ -167,6 +165,7 @@ class SurgeryTest extends TestCase
             'visit_time' => now()->toTimeString(),
             'visit_type' => 'surgery',
             'status' => 'pending_payment',
+            'chief_complaint' => 'Normal',
         ]);
 
         $surgery = Surgery::create([

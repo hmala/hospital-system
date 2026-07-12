@@ -13,11 +13,11 @@ return new class extends Migration
     public function up(): void
     {
         // في MySQL لا يمكن تحديث enum مباشرة، لذا سنستخدم raw SQL
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'lab_staff', 'radiology_staff', 'pharmacy_staff') DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient', 'lab_staff', 'radiology_staff', 'pharmacy_staff') DEFAULT 'patient'"); }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient') DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'doctor', 'receptionist', 'patient') DEFAULT 'patient'"); }
     }
 };

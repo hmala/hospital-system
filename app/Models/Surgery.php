@@ -206,7 +206,7 @@ class Surgery extends Model
     public function medicalDevices()
     {
         return $this->belongsToMany(MedicalDevice::class, 'surgery_medical_device')
-                    ->withPivot('assigned_by')
+                    ->withPivot('assigned_by', 'price')
                     ->withTimestamps();
     }
 

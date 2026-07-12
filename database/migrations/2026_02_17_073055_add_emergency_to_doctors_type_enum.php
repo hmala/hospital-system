@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        \DB::statement("ALTER TABLE doctors MODIFY COLUMN type ENUM('consultant', 'anesthesiologist', 'surgeon', 'emergency') DEFAULT 'consultant'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { \DB::statement("ALTER TABLE doctors MODIFY COLUMN type ENUM('consultant', 'anesthesiologist', 'surgeon', 'emergency') DEFAULT 'consultant'"); }
     }
 
     /**
@@ -19,6 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        \DB::statement("ALTER TABLE doctors MODIFY COLUMN type ENUM('consultant', 'anesthesiologist', 'surgeon') DEFAULT 'consultant'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { \DB::statement("ALTER TABLE doctors MODIFY COLUMN type ENUM('consultant', 'anesthesiologist', 'surgeon') DEFAULT 'consultant'"); }
     }
 };

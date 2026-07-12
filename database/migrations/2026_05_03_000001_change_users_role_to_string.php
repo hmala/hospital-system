@@ -10,7 +10,7 @@ return new class extends Migration
         if (DB::getDriverName() === 'sqlite') {
             return;
         }
-        DB::statement("ALTER TABLE `users` MODIFY `role` VARCHAR(50) NOT NULL DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE `users` MODIFY `role` VARCHAR(50) NOT NULL DEFAULT 'patient'"); }
     }
 
     public function down()
@@ -18,6 +18,6 @@ return new class extends Migration
         if (DB::getDriverName() === 'sqlite') {
             return;
         }
-        DB::statement("ALTER TABLE `users` MODIFY `role` ENUM('admin','doctor','receptionist','patient') NOT NULL DEFAULT 'patient'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE `users` MODIFY `role` ENUM('admin','doctor','receptionist','patient') NOT NULL DEFAULT 'patient'"); }
     }
 };

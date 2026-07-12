@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // في MySQL، لتعديل ENUM نحتاج للتعديل على العمود مباشرة
-        DB::statement("ALTER TABLE `requests` 
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE `requests` 
             MODIFY COLUMN `type` ENUM(
                 'lab', 
                 'radiology', 
@@ -21,16 +21,16 @@ return new class extends Migration
                 'blood_bank',
                 'nursing',
                 'emergency'
-            ) NOT NULL");
+            ) NOT NULL"); }
 
         // تحديث payment_status أيضاً إن وجد
         if (Schema::hasColumn('requests', 'payment_status')) {
-            DB::statement("ALTER TABLE `requests` 
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE `requests` 
                 MODIFY COLUMN `payment_status` ENUM(
                     'pending', 
                     'paid',
                     'not_applicable'
-                ) DEFAULT 'pending'");
+                ) DEFAULT 'pending'"); }
         } else {
             // إضافة العمود إذا لم يكن موجوداً
             Schema::table('requests', function (Blueprint $table) {
@@ -47,20 +47,20 @@ return new class extends Migration
     public function down(): void
     {
         // استرجاع القيم الأصلية
-        DB::statement("ALTER TABLE `requests` 
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE `requests` 
             MODIFY COLUMN `type` ENUM(
                 'lab', 
                 'radiology', 
                 'pharmacy', 
                 'blood_bank'
-            ) NOT NULL");
+            ) NOT NULL"); }
 
         if (Schema::hasColumn('requests', 'payment_status')) {
-            DB::statement("ALTER TABLE `requests` 
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE `requests` 
                 MODIFY COLUMN `payment_status` ENUM(
                     'pending', 
                     'paid'
-                ) DEFAULT 'pending'");
+                ) DEFAULT 'pending'"); }
         }
     }
 };

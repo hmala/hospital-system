@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // We use raw SQL to modify the ENUM column to include 'waiting'
-        DB::statement("ALTER TABLE surgeries MODIFY COLUMN status ENUM('scheduled', 'waiting', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE surgeries MODIFY COLUMN status ENUM('scheduled', 'waiting', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled'"); }
     }
 
     /**
@@ -23,6 +23,6 @@ return new class extends Migration
     {
         // Revert back to the original ENUM values
         // WARNING: This will fail if there are records with 'waiting' status
-        DB::statement("ALTER TABLE surgeries MODIFY COLUMN status ENUM('scheduled', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') { DB::statement("ALTER TABLE surgeries MODIFY COLUMN status ENUM('scheduled', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled'"); }
     }
 };
