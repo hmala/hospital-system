@@ -195,6 +195,63 @@
         </div>
     </div>
 
+    @if(isset($pendingTransfers) && count($pendingTransfers) > 0)
+        <!-- مرضى محولون للعمليات من الطوارئ -->
+        <div class="row mb-4 animate__animated animate__fadeIn">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-danger">
+                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
+                            مرضى الطوارئ المحولين للعمليات الجراحية
+                        </h5>
+                        <span class="badge bg-white text-danger fw-bold fs-6">{{ count($pendingTransfers) }} مرضى بانتظار الحجز</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>وقت التحويل</th>
+                                        <th>اسم المريض</th>
+                                        <th>رقم المريض</th>
+                                        <th>الطبيب المحيل</th>
+                                        <th>الشكوى/الحالة</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($pendingTransfers as $transfer)
+                                        <tr>
+                                            <td>
+                                                <small class="text-danger fw-bold">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ $transfer->updated_at->format('Y-m-d H:i') }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <strong>{{ optional($transfer->patient->user)->name }}</strong>
+                                                <br><small class="text-muted">{{ optional($transfer->patient->user)->phone }}</small>
+                                            </td>
+                                            <td><code>#{{ $transfer->patient_id }}</code></td>
+                                            <td>د. {{ optional($transfer->doctor->user)->name ?? 'طبيب الطوارئ' }}</td>
+                                            <td><span class="text-muted">{{ Str::limit($transfer->description ?: $transfer->symptoms, 50) }}</span></td>
+                                            <td>
+                                                <a href="{{ route('surgeries.create', ['patient_id' => $transfer->patient_id, 'referring_doctor_name' => optional($transfer->doctor->user)->name ?? 'طبيب الطوارئ']) }}" class="btn btn-sm btn-danger fw-bold">
+                                                    <i class="fas fa-plus me-1"></i> حجز عملية جراحية
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- قائمة الزيارات -->
     <div class="row">
         <div class="col-12">

@@ -19,6 +19,14 @@
                     @endif
                 </h2>
                 <div class="no-print">
+                    @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
+                        <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" class="d-inline me-2" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
+                            @csrf
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-procedures me-2"></i>تحويل إلى العمليات
+                            </button>
+                        </form>
+                    @endif
                     @if($emergency->payment && $emergency->payment->paid_at)
                         <button onclick="window.print()" class="btn btn-primary me-2">
                             <i class="fas fa-print me-2"></i>طباعة
@@ -39,6 +47,13 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show no-print" role="alert">
             {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
+            {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif

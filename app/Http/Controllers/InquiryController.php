@@ -50,7 +50,20 @@ class InquiryController extends Controller
         ->latest()
         ->paginate(15);
 
-        return view('inquiry.index', compact('todayInquiries'));
+        // جلب المرضى المحولين من الطوارئ بانتظار حجز العمليات الجراحية
+        $pendingTransfers = \App\Models\Emergency::with(['patient.user', 'doctor.user'])
+            ->where('status', 'transferred')
+            ->where('requires_surgery', true)
+            ->whereNotNull('patient_id')
+            ->whereNotIn('patient_id', function($q) {
+                $q->select('patient_id')
+                  ->from('surgeries')
+                  ->whereIn('status', ['scheduled', 'waiting', 'in_progress']);
+            })
+            ->latest()
+            ->get();
+
+        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers'));
     }
 
     /**

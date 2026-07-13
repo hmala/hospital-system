@@ -1353,4 +1353,328 @@ class CashierController extends Controller
                 ->withInput();
         }
     }
+
+    /**
+     * عرض الحركات المالية لقسم الطوارئ
+     */
+    public function emergencyFinancialMovements(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'cashier'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+        $paymentMethod = $request->query('payment_method');
+
+        $query = Payment::with(['emergency.patient.user', 'cashier'])
+            ->where('payment_type', 'emergency')
+            ->whereNotNull('paid_at');
+
+        if ($fromDate) {
+            $query->whereDate('paid_at', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('paid_at', '<=', $toDate);
+        }
+
+        if ($paymentMethod) {
+            $query->where('payment_method', $paymentMethod);
+        }
+
+        $totalsQuery = clone $query;
+        $totalReceived = (clone $totalsQuery)->where('amount', '>=', 0)->sum('amount');
+        $totalRefunded = abs((clone $totalsQuery)->where('amount', '<', 0)->sum('amount'));
+        $netTotal = (clone $totalsQuery)->sum('amount');
+
+        $payments = $query->orderBy('paid_at', 'desc')->paginate(25);
+
+        return view('cashier.emergency-movements', compact(
+            'payments',
+            'totalReceived',
+            'totalRefunded',
+            'netTotal',
+            'fromDate',
+            'toDate',
+            'paymentMethod'
+        ));
+    }
+
+    /**
+     * كشوفات حسابات الطوارئ بالتفصيل
+     */
+    public function emergencyStatements(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+
+        $query = \App\Models\Payment::with(['emergency.patient.user', 'cashier'])
+            ->where('payment_type', 'emergency')
+            ->whereNotNull('paid_at');
+
+        if ($fromDate) {
+            $query->whereDate('paid_at', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('paid_at', '<=', $toDate);
+        }
+
+        $payments = $query->orderBy('paid_at', 'desc')->get();
+
+        $totalServices = 0;
+        $totalLabs = 0;
+        $totalRadiology = 0;
+        $totalFollowUps = 0;
+        $totalCollected = 0;
+
+        $statements = [];
+
+        foreach ($payments as $payment) {
+            $servicesSum = 0;
+            $labsSum = 0;
+            $radiologySum = 0;
+            $followUpSum = 0;
+
+            if ($payment->emergency) {
+                // Services
+                $servicesSum = \DB::table('emergency_emergency_service')
+                    ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
+                    ->where('emergency_emergency_service.payment_id', $payment->id)
+                    ->sum('emergency_services.price');
+
+                // Labs
+                $labRequestIds = \DB::table('emergency_lab_requests')
+                    ->where('payment_id', $payment->id)
+                    ->pluck('id');
+                if ($labRequestIds->isNotEmpty()) {
+                    $labsSum = \DB::table('emergency_lab_request_test')
+                        ->join('lab_tests', 'emergency_lab_request_test.lab_test_id', '=', 'lab_tests.id')
+                        ->whereIn('emergency_lab_request_test.emergency_lab_request_id', $labRequestIds)
+                        ->sum('lab_tests.price');
+                }
+
+                // Radiology
+                $radiologyRequestIds = \DB::table('emergency_radiology_requests')
+                    ->where('payment_id', $payment->id)
+                    ->pluck('id');
+                if ($radiologyRequestIds->isNotEmpty()) {
+                    $radiologySum = \DB::table('emergency_radiology_request_type')
+                        ->join('radiology_types', 'emergency_radiology_request_type.radiology_type_id', '=', 'radiology_types.id')
+                        ->whereIn('emergency_radiology_request_type.emergency_radiology_request_id', $radiologyRequestIds)
+                        ->sum('radiology_types.base_price');
+                }
+
+                // Follow-up
+                if ($payment->emergency->follow_up_payment_id == $payment->id) {
+                    $followUpSum = $payment->emergency->doctor_follow_up_fee;
+                }
+            }
+
+            $totalServices += $servicesSum;
+            $totalLabs += $labsSum;
+            $totalRadiology += $radiologySum;
+            $totalFollowUps += $followUpSum;
+            $totalCollected += $payment->amount;
+
+            $statements[] = [
+                'payment' => $payment,
+                'services_sum' => $servicesSum,
+                'labs_sum' => $labsSum,
+                'radiology_sum' => $radiologySum,
+                'follow_up_sum' => $followUpSum,
+                'total' => $payment->amount,
+            ];
+        }
+
+        $perPage = 25;
+        $page = $request->query('page', 1);
+        $offset = ($page * $perPage) - $perPage;
+        $paginatedStatements = new \Illuminate\Pagination\LengthAwarePaginator(
+            array_slice($statements, $offset, $perPage, true),
+            count($statements),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('cashier.emergency-statements', compact(
+            'paginatedStatements',
+            'totalServices',
+            'totalLabs',
+            'totalRadiology',
+            'totalFollowUps',
+            'totalCollected',
+            'fromDate',
+            'toDate'
+        ));
+    }
+
+    /**
+     * حسابات أطباء الطوارئ
+     */
+    public function emergencyDoctorAccounts(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $doctors = \App\Models\Doctor::with(['user', 'department'])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->orderBy('users.name')
+            ->select('doctors.*')
+            ->get();
+
+        $doctorAccounts = [];
+
+        foreach ($doctors as $doctor) {
+            $earnedCases = \App\Models\Emergency::where('doctor_id', $doctor->id)
+                ->whereNotNull('follow_up_payment_id')
+                ->whereHas('payment', function($q) {
+                    $q->whereNotNull('paid_at');
+                })
+                ->where('doctor_follow_up_fee', '>', 0)
+                ->get();
+
+            $totalEarned = $earnedCases->sum('doctor_follow_up_fee');
+
+            $totalPaid = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+                ->where('notes', 'like', '%طوارئ%')
+                ->sum('amount');
+
+            $balance = $totalEarned - $totalPaid;
+
+            if ($totalEarned > 0 || $totalPaid > 0) {
+                $doctorAccounts[] = [
+                    'doctor' => $doctor,
+                    'cases_count' => $earnedCases->count(),
+                    'total_earned' => $totalEarned,
+                    'total_paid' => $totalPaid,
+                    'balance' => $balance,
+                ];
+            }
+        }
+
+        return view('cashier.emergency-doctor-accounts', compact('doctorAccounts'));
+    }
+
+    /**
+     * تفاصيل مستحقات طبيب طوارئ واحد
+     */
+    public function emergencyDoctorAccount(Request $request, \App\Models\Doctor $doctor)
+    {
+        $doctor->load(['user', 'department']);
+
+        $earnedCases = \App\Models\Emergency::with(['patient.user', 'payment'])
+            ->where('doctor_id', $doctor->id)
+            ->whereNotNull('follow_up_payment_id')
+            ->whereHas('payment', function($q) {
+                $q->whereNotNull('paid_at');
+            })
+            ->where('doctor_follow_up_fee', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'cases_page');
+
+        $totalEarned = \App\Models\Emergency::where('doctor_id', $doctor->id)
+            ->whereNotNull('follow_up_payment_id')
+            ->whereHas('payment', function($q) {
+                $q->whereNotNull('paid_at');
+            })
+            ->where('doctor_follow_up_fee', '>', 0)
+            ->sum('doctor_follow_up_fee');
+
+        $payouts = \App\Models\DoctorDue::with('paidBy')
+            ->where('doctor_id', $doctor->id)
+            ->where('notes', 'like', '%طوارئ%')
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'payouts_page');
+
+        $totalPaid = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+            ->where('notes', 'like', '%طوارئ%')
+            ->sum('amount');
+
+        $balance = $totalEarned - $totalPaid;
+
+        return view('cashier.emergency-doctor-account', compact(
+            'doctor',
+            'earnedCases',
+            'totalEarned',
+            'payouts',
+            'totalPaid',
+            'balance'
+        ));
+    }
+
+    /**
+     * صرف مستحقات طبيب طوارئ
+     */
+    public function emergencyDoctorPayout(Request $request, \App\Models\Doctor $doctor)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'cashier'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        $amount = $request->amount;
+
+        $totalEarned = \App\Models\Emergency::where('doctor_id', $doctor->id)
+            ->whereNotNull('follow_up_payment_id')
+            ->whereHas('payment', function($q) {
+                $q->whereNotNull('paid_at');
+            })
+            ->where('doctor_follow_up_fee', '>', 0)
+            ->sum('doctor_follow_up_fee');
+
+        $totalPaid = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+            ->where('notes', 'like', '%طوارئ%')
+            ->sum('amount');
+
+        $balance = $totalEarned - $totalPaid;
+
+        if ($amount > $balance) {
+            return redirect()->back()->with('error', 'المبلغ المدخل أكبر من الرصيد المتاح للطبيب.');
+        }
+
+        DB::beginTransaction();
+        try {
+            \App\Models\DoctorDue::create([
+                'doctor_id' => $doctor->id,
+                'amount' => $amount,
+                'status' => 'paid',
+                'notes' => $request->notes ?: 'صرف مستحقات أطباء الطوارئ',
+                'paid_by_id' => $user->id,
+                'paid_at' => now(),
+            ]);
+
+            \App\Models\FinancialTransaction::create([
+                'transaction_type' => 'expense',
+                'related_type' => \App\Models\Doctor::class,
+                'related_id' => $doctor->id,
+                'amount' => $amount,
+                'currency' => 'IQD',
+                'description' => 'صرف مستحقات طوارئ للطبيب ' . optional($doctor->user)->name,
+                'performed_by_id' => $user->id,
+                'performed_at' => now(),
+            ]);
+
+            DB::commit();
+            return redirect()->route('cashier.emergency.doctor-account', $doctor)->with('success', 'تم تسجيل دفعة الصرف للطبيب بنجاح.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء الصرف: ' . $e->getMessage());
+        }
+    }
 }

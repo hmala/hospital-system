@@ -267,6 +267,17 @@
                                                         <span>طلب استشارة</span>
                                                     </button>
                                                 </li>
+                                                @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
+                                                <li>
+                                                    <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item d-flex align-items-center text-start text-danger">
+                                                            <i class="fas fa-procedures me-2"></i>
+                                                            <span>تحويل إلى العمليات</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                @endif
                                             </ul>
                                         </div>
                                     </td>

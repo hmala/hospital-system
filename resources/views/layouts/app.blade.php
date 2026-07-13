@@ -988,37 +988,79 @@
                         @endcanany
 
                         @hasanyrole('admin|cashier')
+                        @php
+                            $isConsultantActive = request()->routeIs('admin.doctor-commission-settings.*') ||
+                                                   request()->routeIs('cashier.report') ||
+                                                   request()->routeIs('consultant-availability.financial-movements') ||
+                                                   request()->routeIs('cashier.statements') ||
+                                                   request()->routeIs('consultant-availability.doctor-accounts');
+                            
+                            $isEmergencyActive = request()->routeIs('cashier.emergency.financial-movements') ||
+                                                 request()->routeIs('cashier.emergency.statements') ||
+                                                 request()->routeIs('cashier.emergency.doctor-accounts') ||
+                                                 request()->routeIs('cashier.emergency.doctor-account');
+                        @endphp
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#accountingSection" aria-expanded="false">
+                        <div class="sidebar-section-title {{ ($isConsultantActive || $isEmergencyActive) ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#accountingSection" aria-expanded="{{ ($isConsultantActive || $isEmergencyActive) ? 'true' : 'false' }}">
                             <span><i class="fas fa-calculator"></i> الحسابيات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="accountingSection">
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
-                                    <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
-                                    <i class="fas fa-chart-line"></i><span> تقارير الحسابات</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('consultant-availability.financial-movements') ? 'active' : '' }}" href="{{ route('consultant-availability.financial-movements') }}">
-                                    <i class="fas fa-money-bill-wave"></i><span> الحركات المالية</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('cashier.statements') ? 'active' : '' }}" href="{{ route('cashier.statements') }}">
-                                    <i class="fas fa-file-invoice-dollar"></i><span> كشوفات الحسابات</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('consultant-availability.doctor-accounts') ? 'active' : '' }}" href="{{ route('consultant-availability.doctor-accounts') }}">
-                                    <i class="fas fa-wallet"></i><span> حسابات الأطباء</span>
-                                </a>
-                            </li>
+                        <div class="collapse collapse-section {{ ($isConsultantActive || $isEmergencyActive) ? 'show' : '' }}" id="accountingSection">
+                            <!-- القسم الفرعي: الاستشارية -->
+                            <div class="sidebar-section-title {{ $isConsultantActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#consultantSubSection" aria-expanded="{{ $isConsultantActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
+                                <span><i class="fas fa-clinic-medical me-1"></i> حسابات الاستشارية</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ $isConsultantActive ? 'show' : '' }} ps-2" id="consultantSubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
+                                        <i class="fas fa-file-invoice-dollar"></i><span> إعدادات العمولات</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
+                                        <i class="fas fa-chart-line"></i><span> تقارير الحسابات</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('consultant-availability.financial-movements') ? 'active' : '' }}" href="{{ route('consultant-availability.financial-movements') }}">
+                                        <i class="fas fa-money-bill-wave"></i><span> الحركات المالية</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('cashier.statements') ? 'active' : '' }}" href="{{ route('cashier.statements') }}">
+                                        <i class="fas fa-file-invoice-dollar"></i><span> كشوفات الحسابات</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('consultant-availability.doctor-accounts') ? 'active' : '' }}" href="{{ route('consultant-availability.doctor-accounts') }}">
+                                        <i class="fas fa-wallet"></i><span> حسابات الأطباء</span>
+                                    </a>
+                                </li>
+                            </div>
+
+                            <!-- القسم الفرعي: الطوارئ -->
+                            <div class="sidebar-section-title {{ $isEmergencyActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#emergencySubSection" aria-expanded="{{ $isEmergencyActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
+                                <span><i class="fas fa-ambulance me-1"></i> حسابات الطوارئ</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ $isEmergencyActive ? 'show' : '' }} ps-2" id="emergencySubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('cashier.emergency.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.emergency.financial-movements') }}">
+                                        <i class="fas fa-money-bill-wave text-danger"></i><span> الحركات المالية للطوارئ</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('cashier.emergency.statements') ? 'active' : '' }}" href="{{ route('cashier.emergency.statements') }}">
+                                        <i class="fas fa-file-invoice-dollar text-danger"></i><span> كشوفات الطوارئ</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('cashier.emergency.doctor-accounts') || request()->routeIs('cashier.emergency.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.emergency.doctor-accounts') }}">
+                                        <i class="fas fa-wallet text-danger"></i><span> حسابات أطباء الطوارئ</span>
+                                    </a>
+                                </li>
+                            </div>
                         </div>
                         @endhasanyrole
 

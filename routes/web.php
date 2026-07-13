@@ -238,6 +238,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
+        Route::get('/emergency/financial-movements', [\App\Http\Controllers\CashierController::class, 'emergencyFinancialMovements'])->name('emergency.financial-movements');
+        Route::get('/emergency/statements', [\App\Http\Controllers\CashierController::class, 'emergencyStatements'])->name('emergency.statements');
+        Route::get('/emergency/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorAccounts'])->name('emergency.doctor-accounts');
+        Route::get('/emergency/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorAccount'])->name('emergency.doctor-account');
+        Route::post('/emergency/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorPayout'])->name('emergency.doctor-payout');
         Route::get('/statements/export', [\App\Http\Controllers\CashierController::class, 'exportStatements'])->name('statements.export');
         Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
     });
@@ -545,6 +550,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/create-consultation', [\App\Http\Controllers\EmergencyController::class, 'createConsultation'])->name('create-consultation');
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');
+        Route::post('/{emergency}/transfer-to-surgery', [\App\Http\Controllers\EmergencyController::class, 'transferToSurgery'])->name('transfer-to-surgery');
         
         // تحديث حالة طلبات الخدمات التمريضية
         Route::put('/nursing-request/{request}', [\App\Http\Controllers\EmergencyController::class, 'updateNursingRequest'])->name('nursing-request.update');

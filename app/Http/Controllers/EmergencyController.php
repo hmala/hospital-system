@@ -1077,4 +1077,54 @@ class EmergencyController extends Controller
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
     }
+
+    /**
+     * تحويل المريض من الطوارئ إلى صالة العمليات
+     */
+    public function transferToSurgery(Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بإجراء التحويل');
+        }
+
+        // 1. ترحيل المريض إلى الجدول الرئيسي إذا لم يكن مرحلاً
+        if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
+            $emergencyPatient = $emergency->emergencyPatient;
+            
+            $userAccount = \App\Models\User::create([
+                'name' => $emergencyPatient->name,
+                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'role' => 'patient',
+                'password' => bcrypt(\Illuminate\Support\Str::random(12)),
+            ]);
+
+            $mainPatient = \App\Models\Patient::create([
+                'user_id' => $userAccount->id,
+                'date_of_birth' => $emergencyPatient->date_of_birth,
+                'gender' => $emergencyPatient->gender,
+                'phone' => $emergencyPatient->phone,
+            ]);
+
+            $emergency->update([
+                'patient_id' => $mainPatient->id,
+                'patient_migrated' => true,
+            ]);
+
+            $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
+        }
+
+        if (!$emergency->patient_id) {
+            return redirect()->back()->with('error', 'فشل تحويل الحالة: لم يتم العثور على مريض مسجل.');
+        }
+
+        // تحديث حالة الطوارئ إلى محولة
+        $emergency->update([
+            'status' => 'transferred',
+            'requires_surgery' => true,
+        ]);
+
+        // توجيه المستخدم للخلف مع رسالة نجاح للبقاء في نفس الصفحة
+        return redirect()->back()->with('success', 'تم تحويل المريض بنجاح إلى الاستعلامات لتهيئة حجز العملية.');
+    }
 }
