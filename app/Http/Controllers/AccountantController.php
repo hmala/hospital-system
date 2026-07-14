@@ -13,7 +13,7 @@ class AccountantController extends Controller
     {
         $this->middleware(function ($request, $next) {
             $user = Auth::user();
-            if (!$user || (!$user->hasRole('admin') && !$user->hasRole('cashier'))) {
+            if (!$user || (!$user->hasRole('admin') && !$user->can('review surgery prices'))) {
                 abort(403, 'غير مصرح لك بالوصول إلى صفحات مراجعة الحسابات.');
             }
             return $next($request);

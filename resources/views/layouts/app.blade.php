@@ -580,7 +580,7 @@
                             </a>
                         </li>
                         @endcan
-                        @if(auth()->user()->hasRole(['admin', 'cashier']))
+                        @can('review surgery prices')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('accountant.surgeries.*') ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
                                 <i class="fas fa-calculator text-primary"></i><span> مراجعة أسعار العمليات</span>
@@ -592,7 +592,7 @@
                                 @endif
                             </a>
                         </li>
-                        @endif
+                        @endcan
                     </div> <!-- end patientMgmtSection -->
                     @endcanany
 
@@ -987,7 +987,7 @@
                         </div>
                         @endcanany
 
-                        @hasanyrole('admin|cashier')
+                        @hasanyrole('admin|accountant')
                         @php
                             $isConsultantActive = request()->routeIs('admin.doctor-commission-settings.*') ||
                                                    request()->routeIs('cashier.report') ||

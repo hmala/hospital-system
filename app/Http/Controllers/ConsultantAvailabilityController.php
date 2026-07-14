@@ -23,8 +23,9 @@ class ConsultantAvailabilityController extends Controller
                 return $next($request);
             }
             
-            // التحقق من أن المستخدم لديه صلاحية إدارة توفر الأطباء الاستشاريين
-            if (!auth()->user() || !auth()->user()->can('manage consultant availability')) {
+            // التحقق من أن المستخدم لديه صلاحية إدارة توفر الأطباء الاستشاريين أو عرض تقارير الحسابات
+            $user = auth()->user();
+            if (!$user || (!$user->can('manage consultant availability') && !$user->can('view cashier reports') && !$user->hasRole('admin'))) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
             }
             return $next($request);

@@ -22,7 +22,7 @@ class CashierController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'permission:view cashier']);
+        $this->middleware(['auth', 'permission:view cashier|view cashier reports']);
     }
 
     /**
@@ -1360,7 +1360,7 @@ class CashierController extends Controller
     public function emergencyFinancialMovements(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier'])) {
+        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1455,9 +1455,9 @@ class CashierController extends Controller
                     ->where('payment_id', $payment->id)
                     ->pluck('id');
                 if ($labRequestIds->isNotEmpty()) {
-                    $labsSum = \DB::table('emergency_lab_request_test')
-                        ->join('lab_tests', 'emergency_lab_request_test.lab_test_id', '=', 'lab_tests.id')
-                        ->whereIn('emergency_lab_request_test.emergency_lab_request_id', $labRequestIds)
+                    $labsSum = \DB::table('emergency_lab_request_tests')
+                        ->join('lab_tests', 'emergency_lab_request_tests.lab_test_id', '=', 'lab_tests.id')
+                        ->whereIn('emergency_lab_request_tests.emergency_lab_request_id', $labRequestIds)
                         ->sum('lab_tests.price');
                 }
 
@@ -1466,9 +1466,9 @@ class CashierController extends Controller
                     ->where('payment_id', $payment->id)
                     ->pluck('id');
                 if ($radiologyRequestIds->isNotEmpty()) {
-                    $radiologySum = \DB::table('emergency_radiology_request_type')
-                        ->join('radiology_types', 'emergency_radiology_request_type.radiology_type_id', '=', 'radiology_types.id')
-                        ->whereIn('emergency_radiology_request_type.emergency_radiology_request_id', $radiologyRequestIds)
+                    $radiologySum = \DB::table('emergency_radiology_request_types')
+                        ->join('radiology_types', 'emergency_radiology_request_types.radiology_type_id', '=', 'radiology_types.id')
+                        ->whereIn('emergency_radiology_request_types.emergency_radiology_request_id', $radiologyRequestIds)
                         ->sum('radiology_types.base_price');
                 }
 
@@ -1505,6 +1505,255 @@ class CashierController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
+        // حساب الملخصات المجمعة حسب الطبيب والملخص الشهري
+        $groupedRevenues = [];
+        $monthlyDoctorRevenues = [];
+
+        foreach ($statements as $stmt) {
+            $payment = $stmt['payment'];
+            if ($payment->emergency && $payment->emergency->doctor_id) {
+                $doctorId = $payment->emergency->doctor_id;
+                $doctor = \App\Models\Doctor::with('user')->find($doctorId);
+                if (!$doctor) continue;
+
+                $paidAt = $payment->paid_at;
+                $month = (int)$paidAt->format('m');
+
+                // ملخص حسب الطبيب
+                if (!isset($groupedRevenues[$doctorId])) {
+                    $groupedRevenues[$doctorId] = [
+                        'doctor' => $doctor,
+                        'first_appointment_date' => $paidAt,
+                        'examination_count' => 0,
+                        'total_amount' => 0,
+                        'doctor_share' => 0,
+                        'hospital_share' => 0,
+                    ];
+                }
+                
+                $groupedRevenues[$doctorId]['examination_count']++;
+                $groupedRevenues[$doctorId]['total_amount'] += $stmt['total'];
+                $groupedRevenues[$doctorId]['doctor_share'] += $stmt['follow_up_sum'];
+                $groupedRevenues[$doctorId]['hospital_share'] += ($stmt['total'] - $stmt['follow_up_sum']);
+                
+                if ($paidAt->lt($groupedRevenues[$doctorId]['first_appointment_date'])) {
+                    $groupedRevenues[$doctorId]['first_appointment_date'] = $paidAt;
+                }
+
+                // الكشف الشهري المجمع
+                if (!isset($monthlyDoctorRevenues[$doctorId])) {
+                    $monthlyDoctorRevenues[$doctorId] = [];
+                }
+                if (!isset($monthlyDoctorRevenues[$doctorId][$month])) {
+                    $monthlyDoctorRevenues[$doctorId][$month] = 0;
+                }
+                $monthlyDoctorRevenues[$doctorId][$month]++;
+            }
+        }
+
+        // تحويل المصفوفة لـ Collection وكائنات متوافقة مع الواجهة
+        $groupedRevenues = collect($groupedRevenues)->sortByDesc('examination_count')->map(function($item) {
+            return (object)$item;
+        });
+
+        $monthNames = [
+            1 => 'يناير',
+            2 => 'فبراير',
+            3 => 'مارس',
+            4 => 'أبريل',
+            5 => 'مايو',
+            6 => 'يونيو',
+            7 => 'يوليو',
+            8 => 'أغسطس',
+            9 => 'سبتمبر',
+            10 => 'أكتوبر',
+            11 => 'نوفمبر',
+            12 => 'ديسمبر',
+        ];
+
+        $monthlyDoctorSummary = collect();
+        foreach ($monthlyDoctorRevenues as $doctorId => $monthsData) {
+            $doctor = \App\Models\Doctor::with('user')->find($doctorId);
+            $months = array_fill(1, 12, 0);
+            foreach ($monthsData as $m => $cnt) {
+                $months[$m] = $cnt;
+            }
+
+            $monthTrends = array_fill(1, 12, 'flat');
+            $previousCount = null;
+            foreach ($months as $month => $count) {
+                if ($previousCount === null) {
+                    $monthTrends[$month] = 'flat';
+                } elseif ($count > $previousCount) {
+                    $monthTrends[$month] = 'up';
+                } elseif ($count < $previousCount) {
+                    $monthTrends[$month] = 'down';
+                } else {
+                    $monthTrends[$month] = 'flat';
+                }
+                $previousCount = $count;
+            }
+
+            $firstMonthCount = 0;
+            foreach ($months as $count) {
+                if ($count > 0) {
+                    $firstMonthCount = $count;
+                    break;
+                }
+            }
+
+            $lastMonthCount = 0;
+            for ($month = 12; $month >= 1; $month--) {
+                if ($months[$month] > 0) {
+                    $lastMonthCount = $months[$month];
+                    break;
+                }
+            }
+
+            $percent = 0;
+            if ($firstMonthCount > 0) {
+                $percent = round((($lastMonthCount - $firstMonthCount) / $firstMonthCount) * 100, 2);
+            } elseif ($lastMonthCount > 0) {
+                $percent = 100;
+            }
+
+            $monthlyDoctorSummary->push((object)[
+                'doctor' => $doctor,
+                'months' => $months,
+                'month_trends' => $monthTrends,
+                'total' => array_sum($months),
+                'first_month_count' => $firstMonthCount,
+                'last_month_count' => $lastMonthCount,
+                'percent_change' => $percent,
+            ]);
+        }
+
+        $monthlyTotals = array_fill(1, 12, 0);
+        foreach ($monthlyDoctorSummary as $row) {
+            foreach ($row->months as $month => $count) {
+                $monthlyTotals[$month] += $count;
+            }
+        }
+
+        // جلب إحصائيات الحالات المحولة للعمليات حسب الطبيب
+        $surgeryReferrals = \App\Models\Emergency::selectRaw('doctor_id, COUNT(*) as total_cases, SUM(CASE WHEN requires_surgery = 1 THEN 1 ELSE 0 END) as referred_count')
+            ->whereNotNull('doctor_id')
+            ->when($fromDate, function ($q) use ($fromDate) {
+                $q->whereDate('created_at', '>=', $fromDate);
+            })
+            ->when($toDate, function ($q) use ($toDate) {
+                $q->whereDate('created_at', '<=', $toDate);
+            })
+            ->groupBy('doctor_id')
+            ->with('doctor.user')
+            ->get();
+
+        // إحصائيات تحويلات الفحوصات والتحاليل حسب الطبيب
+        $diagnosticReferrals = \App\Models\Emergency::select('doctor_id')
+            ->whereNotNull('doctor_id')
+            ->when($fromDate, function ($q) use ($fromDate) {
+                $q->whereDate('created_at', '>=', $fromDate);
+            })
+            ->when($toDate, function ($q) use ($toDate) {
+                $q->whereDate('created_at', '<=', $toDate);
+            })
+            ->groupBy('doctor_id')
+            ->get()
+            ->map(function ($emergencyGroup) use ($fromDate, $toDate) {
+                $doctorId = $emergencyGroup->doctor_id;
+                $doctor = \App\Models\Doctor::with('user')->find($doctorId);
+
+                $totalCases = \App\Models\Emergency::where('doctor_id', $doctorId)
+                    ->when($fromDate, function ($q) use ($fromDate) {
+                        $q->whereDate('created_at', '>=', $fromDate);
+                    })
+                    ->when($toDate, function ($q) use ($toDate) {
+                        $q->whereDate('created_at', '<=', $toDate);
+                    })
+                    ->count();
+
+                $labCount = \App\Models\Emergency::where('doctor_id', $doctorId)
+                    ->whereHas('labRequests')
+                    ->when($fromDate, function ($q) use ($fromDate) {
+                        $q->whereDate('created_at', '>=', $fromDate);
+                    })
+                    ->when($toDate, function ($q) use ($toDate) {
+                        $q->whereDate('created_at', '<=', $toDate);
+                    })
+                    ->count();
+
+                $radiologyCount = \App\Models\Emergency::where('doctor_id', $doctorId)
+                    ->whereHas('radiologyRequests.radiologyTypes', function ($q) {
+                        $q->where('main_category', 'أشعة');
+                    })
+                    ->when($fromDate, function ($q) use ($fromDate) {
+                        $q->whereDate('created_at', '>=', $fromDate);
+                    })
+                    ->when($toDate, function ($q) use ($toDate) {
+                        $q->whereDate('created_at', '<=', $toDate);
+                    })
+                    ->count();
+
+                $sonarCount = \App\Models\Emergency::where('doctor_id', $doctorId)
+                    ->whereHas('radiologyRequests.radiologyTypes', function ($q) {
+                        $q->where('main_category', 'السونار');
+                    })
+                    ->when($fromDate, function ($q) use ($fromDate) {
+                        $q->whereDate('created_at', '>=', $fromDate);
+                    })
+                    ->when($toDate, function ($q) use ($toDate) {
+                        $q->whereDate('created_at', '<=', $toDate);
+                    })
+                    ->count();
+
+                $echoCount = \App\Models\Emergency::where('doctor_id', $doctorId)
+                    ->whereHas('radiologyRequests.radiologyTypes', function ($q) {
+                        $q->where('main_category', 'الإيكو');
+                    })
+                    ->when($fromDate, function ($q) use ($fromDate) {
+                        $q->whereDate('created_at', '>=', $fromDate);
+                    })
+                    ->when($toDate, function ($q) use ($toDate) {
+                        $q->whereDate('created_at', '<=', $toDate);
+                    })
+                    ->count();
+
+                $mriCount = \App\Models\Emergency::where('doctor_id', $doctorId)
+                    ->whereHas('radiologyRequests.radiologyTypes', function ($q) {
+                        $q->where('main_category', 'الرنين');
+                    })
+                    ->when($fromDate, function ($q) use ($fromDate) {
+                        $q->whereDate('created_at', '>=', $fromDate);
+                    })
+                    ->when($toDate, function ($q) use ($toDate) {
+                        $q->whereDate('created_at', '<=', $toDate);
+                    })
+                    ->count();
+
+                return (object)[
+                    'doctor' => $doctor,
+                    'doctor_id' => $doctorId,
+                    'total_cases' => $totalCases,
+                    'lab_count' => $labCount,
+                    'radiology_count' => $radiologyCount,
+                    'sonar_count' => $sonarCount,
+                    'echo_count' => $echoCount,
+                    'mri_count' => $mriCount
+                ];
+            })->filter(function($item) {
+                return $item->doctor !== null;
+            });
+
+        $totals = [
+            'grouped_count' => $groupedRevenues->count(),
+            'grouped_total_amount' => $groupedRevenues->sum('total_amount'),
+            'grouped_total_doctor_share' => $groupedRevenues->sum('doctor_share'),
+            'grouped_total_hospital_share' => $groupedRevenues->sum('hospital_share'),
+            'monthly_grouped_count' => $monthlyDoctorSummary->count(),
+            'monthly_examination_count' => $groupedRevenues->sum('examination_count'),
+            'total_referred_surgeries' => $surgeryReferrals->sum('referred_count'),
+        ];
+
         return view('cashier.emergency-statements', compact(
             'paginatedStatements',
             'totalServices',
@@ -1513,7 +1762,142 @@ class CashierController extends Controller
             'totalFollowUps',
             'totalCollected',
             'fromDate',
-            'toDate'
+            'toDate',
+            'groupedRevenues',
+            'monthlyDoctorSummary',
+            'monthNames',
+            'monthlyTotals',
+            'totals',
+            'surgeryReferrals',
+            'diagnosticReferrals'
+        ));
+    }
+
+    /**
+     * عرض تقرير الحالات المحولة لطبيب طوارئ معين في فترة محددة بالفئات
+     */
+    public function emergencyReferrals(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $doctorId = $request->query('doctor_id');
+        $type = $request->query('type'); // 'lab', 'radiology', 'sonar', 'echo', 'mri', 'surgery'
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+
+        $doctor = \App\Models\Doctor::with('user')->find($doctorId);
+        if (!$doctor) {
+            abort(404, 'الطبيب غير موجود');
+        }
+
+        $emergencies = \App\Models\Emergency::with(['patient.user'])
+            ->where('doctor_id', $doctorId)
+            ->when($fromDate, function ($q) use ($fromDate) {
+                $q->whereDate('created_at', '>=', $fromDate);
+            })
+            ->when($toDate, function ($q) use ($toDate) {
+                $q->whereDate('created_at', '<=', $toDate);
+            });
+
+        $details = [];
+        $totalAmount = 0;
+
+        if ($type === 'lab') {
+            $emergencies->whereHas('labRequests');
+            $records = $emergencies->get();
+            foreach ($records as $em) {
+                $items = [];
+                $caseSum = 0;
+                foreach ($em->labRequests as $req) {
+                    $labTests = \DB::table('emergency_lab_request_tests')
+                        ->join('lab_tests', 'emergency_lab_request_tests.lab_test_id', '=', 'lab_tests.id')
+                        ->where('emergency_lab_request_tests.emergency_lab_request_id', $req->id)
+                        ->select('lab_tests.name', 'lab_tests.price')
+                        ->get();
+                    foreach ($labTests as $t) {
+                        $items[] = $t->name . ' (' . number_format($t->price, 0) . ' د.ع)';
+                        $caseSum += $t->price;
+                    }
+                }
+                $details[] = (object)[
+                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'date' => $em->created_at->format('Y-m-d H:i'),
+                    'items' => implode(', ', $items),
+                    'amount' => $caseSum
+                ];
+                $totalAmount += $caseSum;
+            }
+        } elseif (in_array($type, ['radiology', 'sonar', 'echo', 'mri'])) {
+            $categoryMap = [
+                'radiology' => 'أشعة',
+                'sonar' => 'السونار',
+                'echo' => 'الإيكو',
+                'mri' => 'الرنين'
+            ];
+            $dbCategory = $categoryMap[$type];
+
+            $emergencies->whereHas('radiologyRequests.radiologyTypes', function($q) use ($dbCategory) {
+                $q->where('main_category', $dbCategory);
+            });
+            
+            $records = $emergencies->get();
+            foreach ($records as $em) {
+                $items = [];
+                $caseSum = 0;
+                foreach ($em->radiologyRequests as $req) {
+                    $radiologyTypes = \DB::table('emergency_radiology_request_types')
+                        ->join('radiology_types', 'emergency_radiology_request_types.radiology_type_id', '=', 'radiology_types.id')
+                        ->where('emergency_radiology_request_types.emergency_radiology_request_id', $req->id)
+                        ->where('radiology_types.main_category', $dbCategory)
+                        ->select('radiology_types.name', 'radiology_types.base_price')
+                        ->get();
+                    foreach ($radiologyTypes as $r) {
+                        $items[] = $r->name . ' (' . number_format($r->base_price, 0) . ' د.ع)';
+                        $caseSum += $r->base_price;
+                    }
+                }
+                $details[] = (object)[
+                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'date' => $em->created_at->format('Y-m-d H:i'),
+                    'items' => implode(', ', $items),
+                    'amount' => $caseSum
+                ];
+                $totalAmount += $caseSum;
+            }
+        } elseif ($type === 'surgery') {
+            $emergencies->where('requires_surgery', true);
+            $records = $emergencies->get();
+            foreach ($records as $em) {
+                $surgery = \App\Models\Surgery::where('patient_id', $em->patient_id)
+                    ->whereDate('created_at', '>=', $em->created_at->toDateString())
+                    ->first();
+                
+                $caseSum = $surgery ? (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee')) : 0;
+                $items = $surgery ? $surgery->surgery_type : 'تحويل للعمليات (قيد الانتظار)';
+                
+                $details[] = (object)[
+                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'date' => $em->created_at->format('Y-m-d H:i'),
+                    'items' => $items,
+                    'amount' => $caseSum
+                ];
+                $totalAmount += $caseSum;
+            }
+        }
+
+        $typeLabel = ($type === 'lab' ? 'تحاليل المختبر' : ($type === 'radiology' ? 'الأشعة' : ($type === 'sonar' ? 'السونار' : ($type === 'echo' ? 'الإيكو' : ($type === 'mri' ? 'المفراس والرنين' : 'العمليات الجراحية')))));
+
+        return view('cashier.emergency-referrals', compact(
+            'doctor',
+            'type',
+            'typeLabel',
+            'fromDate',
+            'toDate',
+            'details',
+            'totalAmount'
         ));
     }
 
@@ -1538,7 +1922,7 @@ class CashierController extends Controller
         foreach ($doctors as $doctor) {
             $earnedCases = \App\Models\Emergency::where('doctor_id', $doctor->id)
                 ->whereNotNull('follow_up_payment_id')
-                ->whereHas('payment', function($q) {
+                ->whereHas('followUpPayment', function($q) {
                     $q->whereNotNull('paid_at');
                 })
                 ->where('doctor_follow_up_fee', '>', 0)
@@ -1571,12 +1955,17 @@ class CashierController extends Controller
      */
     public function emergencyDoctorAccount(Request $request, \App\Models\Doctor $doctor)
     {
+        $user = Auth::user();
+        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
         $doctor->load(['user', 'department']);
 
-        $earnedCases = \App\Models\Emergency::with(['patient.user', 'payment'])
+        $earnedCases = \App\Models\Emergency::with(['patient.user', 'followUpPayment'])
             ->where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
-            ->whereHas('payment', function($q) {
+            ->whereHas('followUpPayment', function($q) {
                 $q->whereNotNull('paid_at');
             })
             ->where('doctor_follow_up_fee', '>', 0)
@@ -1585,7 +1974,7 @@ class CashierController extends Controller
 
         $totalEarned = \App\Models\Emergency::where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
-            ->whereHas('payment', function($q) {
+            ->whereHas('followUpPayment', function($q) {
                 $q->whereNotNull('paid_at');
             })
             ->where('doctor_follow_up_fee', '>', 0)
@@ -1619,7 +2008,7 @@ class CashierController extends Controller
     public function emergencyDoctorPayout(Request $request, \App\Models\Doctor $doctor)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1632,7 +2021,7 @@ class CashierController extends Controller
 
         $totalEarned = \App\Models\Emergency::where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
-            ->whereHas('payment', function($q) {
+            ->whereHas('followUpPayment', function($q) {
                 $q->whereNotNull('paid_at');
             })
             ->where('doctor_follow_up_fee', '>', 0)

@@ -52,6 +52,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier surgeries',         // عرض عمليات الكاشير
             'process surgery payments',       // معالجة دفع العمليات
             'view cashier reports',           // عرض تقارير المدفوعات
+            'review surgery prices',          // مراجعة أسعار العمليات الجراحية
             
             // صلاحيات الزيارات
             'view visits',
@@ -288,6 +289,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'process surgery payments',
             'view cashier reports',
             'view patients',
+        ]);
+
+        // دور المحاسب (Accountant)
+        $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
+        $accountantRole->givePermissionTo([
+            'view cashier reports',
+            'view patients',
+            'review surgery prices',
         ]);
 
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)

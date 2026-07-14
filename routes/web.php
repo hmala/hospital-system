@@ -240,6 +240,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');
         Route::get('/emergency/financial-movements', [\App\Http\Controllers\CashierController::class, 'emergencyFinancialMovements'])->name('emergency.financial-movements');
         Route::get('/emergency/statements', [\App\Http\Controllers\CashierController::class, 'emergencyStatements'])->name('emergency.statements');
+        Route::get('/emergency/statements/referrals', [\App\Http\Controllers\CashierController::class, 'emergencyReferrals'])->name('emergency.statements.referrals');
         Route::get('/emergency/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorAccounts'])->name('emergency.doctor-accounts');
         Route::get('/emergency/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorAccount'])->name('emergency.doctor-account');
         Route::post('/emergency/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorPayout'])->name('emergency.doctor-payout');

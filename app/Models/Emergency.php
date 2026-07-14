@@ -84,6 +84,11 @@ class Emergency extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    public function followUpPayment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class, 'follow_up_payment_id');
+    }
+
     public function labRequests()
     {
         return $this->hasMany(EmergencyLabRequest::class);

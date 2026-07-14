@@ -106,6 +106,8 @@ class RoleManagementController extends Controller
             'view cashier' => 'cashier',
             'view cashier appointments' => 'cashier',
             'view cashier medical requests' => 'cashier',
+            'view cashier reports' => 'accounting',
+            'review surgery prices' => 'accounting',
             'manage consultant availability' => 'consultant',
             'manage surgery waiting list' => 'surgeries',
             'process pharmacy requests' => 'pharmacy',
@@ -134,6 +136,10 @@ class RoleManagementController extends Controller
 
         if (isset($specialGroups[$permissionName])) {
             return $specialGroups[$permissionName];
+        }
+
+        if (str_starts_with($permissionName, 'inquiry')) {
+            return 'inquiries';
         }
 
         $parts = explode(' ', $permissionName);

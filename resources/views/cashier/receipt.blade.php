@@ -110,8 +110,49 @@
 
                         // حالة الدفع المرتبط مباشرةً بطوارئ (دون طلب med)
                         if ($payment->emergency) {
-                            foreach ($payment->emergency->services as $svc) {
+                            // 1. الخدمات التمريضية المدفوعة في هذا السند
+                            $paidServices = \DB::table('emergency_emergency_service')
+                                ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
+                                ->where('emergency_emergency_service.payment_id', $payment->id)
+                                ->select('emergency_services.name', 'emergency_services.price')
+                                ->get();
+                            foreach ($paidServices as $svc) {
                                 $lineItems[] = ['الخدمة' => 'خدمة طوارئ: ' . $svc->name, 'السعر' => $svc->price ?? 0];
+                            }
+
+                            // 2. التحاليل الطبية المدفوعة في هذا السند
+                            $labRequestIds = \DB::table('emergency_lab_requests')
+                                ->where('payment_id', $payment->id)
+                                ->pluck('id');
+                            if ($labRequestIds->isNotEmpty()) {
+                                $labTests = \DB::table('emergency_lab_request_tests')
+                                    ->join('lab_tests', 'emergency_lab_request_tests.lab_test_id', '=', 'lab_tests.id')
+                                    ->whereIn('emergency_lab_request_tests.emergency_lab_request_id', $labRequestIds)
+                                    ->select('lab_tests.name', 'lab_tests.price')
+                                    ->get();
+                                foreach ($labTests as $test) {
+                                    $lineItems[] = ['الخدمة' => 'تحليل طوارئ: ' . $test->name, 'السعر' => $test->price ?? 0];
+                                }
+                            }
+
+                            // 3. الأشعة المدفوعة في هذا السند
+                            $radiologyRequestIds = \DB::table('emergency_radiology_requests')
+                                ->where('payment_id', $payment->id)
+                                ->pluck('id');
+                            if ($radiologyRequestIds->isNotEmpty()) {
+                                $radiologyTests = \DB::table('emergency_radiology_request_types')
+                                    ->join('radiology_types', 'emergency_radiology_request_types.radiology_type_id', '=', 'radiology_types.id')
+                                    ->whereIn('emergency_radiology_request_types.emergency_radiology_request_id', $radiologyRequestIds)
+                                    ->select('radiology_types.name', 'radiology_types.base_price')
+                                    ->get();
+                                foreach ($radiologyTests as $rad) {
+                                    $lineItems[] = ['الخدمة' => 'أشعة طوارئ: ' . $rad->name, 'السعر' => $rad->base_price ?? 0];
+                                }
+                            }
+
+                            // 4. أجور متابعة الطبيب المدفوعة في هذا السند
+                            if ($payment->emergency->follow_up_payment_id == $payment->id && $payment->emergency->doctor_follow_up_fee > 0) {
+                                $lineItems[] = ['الخدمة' => 'متابعة طبيب (طوارئ)', 'السعر' => $payment->emergency->doctor_follow_up_fee];
                             }
                         }
 
