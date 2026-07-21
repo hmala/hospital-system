@@ -425,9 +425,166 @@
             .main-content { margin-right: 70px; }
         }
     </style>
+    <style>
+        /* Loader Overlay Ultra Premium */
+        #global-page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            transition: opacity 0.35s ease-in-out, visibility 0.35s ease-in-out;
+        }
+
+        #global-page-loader.active {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        /* Top Progress Line */
+        .loader-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+            box-shadow: 0 0 10px #3b82f6;
+            transition: width 0.4s ease;
+        }
+
+        .loader-logo-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Glow Aura Backdrop */
+        .loader-glow-aura {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0) 70%);
+            animation: auraPulse 1.8s ease-in-out infinite alternate;
+        }
+
+        .loader-spinner-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #3b82f6;
+            border-right-color: #60a5fa;
+            animation: loaderSpin 0.9s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        }
+
+        .loader-spinner-ring-outer {
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            border-radius: 50%;
+            border: 2px dashed rgba(96, 165, 250, 0.35);
+            animation: loaderSpinReverse 3.5s linear infinite;
+        }
+
+        .loader-logo-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: #ffffff;
+            padding: 9px;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+            z-index: 2;
+            animation: logoPulse 1.4s ease-in-out infinite alternate;
+        }
+
+        .loader-text-wrapper {
+            margin-top: 26px;
+            text-align: center;
+        }
+
+        .loader-text {
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .loader-dots span {
+            animation: dotBlink 1.4s infinite fill-mode: both;
+            opacity: 0;
+            font-weight: bold;
+        }
+        .loader-dots span:nth-child(1) { animation-delay: 0.2s; }
+        .loader-dots span:nth-child(2) { animation-delay: 0.4s; }
+        .loader-dots span:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes loaderSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes loaderSpinReverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes logoPulse {
+            0% { transform: scale(0.92); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+            100% { transform: scale(1.06); box-shadow: 0 0 35px rgba(59, 130, 246, 0.9); }
+        }
+
+        @keyframes auraPulse {
+            0% { transform: scale(0.8); opacity: 0.3; }
+            100% { transform: scale(1.6); opacity: 0.8; }
+        }
+
+        @keyframes dotBlink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+    </style>
     @yield('styles')
 </head>
 <body>
+    {{-- Global Page Loader Ultra --}}
+    <div id="global-page-loader">
+        <div class="loader-top-bar" id="loader-top-bar"></div>
+        <div class="loader-logo-wrapper">
+            <div class="loader-glow-aura"></div>
+            <div class="loader-spinner-ring-outer"></div>
+            <div class="loader-spinner-ring"></div>
+            <img src="{{ asset('images/logo.jpeg') }}" alt="جاري التحميل..." class="loader-logo-img">
+        </div>
+        <div class="loader-text-wrapper">
+            <div class="loader-text">
+                جاري التحميل<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+        </div>
+    </div>
+
     <div class="container-fluid">
         <div class="row">
             <!-- الشريط الجانبي -->
@@ -1272,7 +1429,102 @@
         @endauth
     })();
     </script>
-    {{-- ===== نهاية جرس الإشعارات JS ===== --}}
+    {{-- ===== جافاسكريبت التحكم باللودر الصفحة ===== --}}
+    <script>
+    (function() {
+        const loader = document.getElementById('global-page-loader');
+        const topBar = document.getElementById('loader-top-bar');
+        if (!loader) return;
+
+        let progressInterval = null;
+
+        function startProgress() {
+            if (!topBar) return;
+            topBar.style.width = '0%';
+            let width = 0;
+            clearInterval(progressInterval);
+            progressInterval = setInterval(function() {
+                if (width < 88) {
+                    width += Math.random() * 6 + 2;
+                    if (width > 88) width = 88;
+                    topBar.style.width = width + '%';
+                }
+            }, 150);
+        }
+
+        function completeProgress() {
+            if (!topBar) return;
+            clearInterval(progressInterval);
+            topBar.style.width = '100%';
+        }
+
+        function showLoader() {
+            startProgress();
+            loader.classList.add('active');
+        }
+
+        function hideLoader() {
+            completeProgress();
+            setTimeout(function() {
+                loader.classList.remove('active');
+                setTimeout(function() {
+                    if (topBar) topBar.style.width = '0%';
+                }, 400);
+            }, 2500); // زيادة مدة الظهور بوضوح كافي جداً (2.5 ثانية)
+        }
+
+        // إظهار اللودر فور مغادرة الصفحة current page beforeunload
+        window.addEventListener('beforeunload', function() {
+            showLoader();
+        });
+
+        // إخفاء عند اكتمال التحميل
+        window.addEventListener('load', hideLoader);
+        document.addEventListener('DOMContentLoaded', hideLoader);
+
+        // إظهار عند الضغط على أي رابط خارجي/داخلي ناتجة عن تغيير الصفحة
+        document.addEventListener('click', function(e) {
+            const anchor = e.target.closest('a');
+            if (!anchor) return;
+
+            const href = anchor.getAttribute('href');
+            const target = anchor.getAttribute('target');
+
+            // التجاوز للروابط المؤقتة أو فتح تبويب جديد أو زر التصدير/الطباعة
+            if (!href || 
+                href.startsWith('#') || 
+                href.startsWith('javascript:') || 
+                target === '_blank' || 
+                anchor.hasAttribute('download') ||
+                anchor.classList.contains('no-loader') ||
+                e.ctrlKey || e.metaKey
+            ) {
+                return;
+            }
+
+            e.preventDefault();
+            showLoader();
+
+            setTimeout(function() {
+                window.location.href = href;
+            }, 700); // تأخير الانتقال 700ms ليظهر اللودر والأنيميشن كاملاً قبل تغيير الصفحة
+        });
+
+        // إظهار عند تقديم النماذج (Forms submit)
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.getAttribute('target') === '_blank' || form.classList.contains('no-loader')) {
+                return;
+            }
+            showLoader();
+        });
+
+        // حماية ضد التعليق: إخفاء تلقائي بعد 7 ثوانٍ كحد أقصى
+        window.addEventListener('pageshow', function(event) {
+            hideLoader();
+        });
+    })();
+    </script>
 
     @stack('modals')
 </body>

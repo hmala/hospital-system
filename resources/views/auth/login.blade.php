@@ -615,6 +615,161 @@
         </div>
     </div>
 
+    {{-- Global Page Loader Ultra --}}
+    <div id="global-page-loader">
+        <div class="loader-top-bar" id="loader-top-bar"></div>
+        <div class="loader-logo-wrapper">
+            <div class="loader-glow-aura"></div>
+            <div class="loader-spinner-ring-outer"></div>
+            <div class="loader-spinner-ring"></div>
+            <img src="{{ asset('images/logo.jpeg') }}" alt="جاري التحميل..." class="loader-logo-img">
+        </div>
+        <div class="loader-text-wrapper">
+            <div class="loader-text">
+                جاري تسجيل الدخول<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #global-page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            transition: opacity 0.35s ease-in-out, visibility 0.35s ease-in-out;
+        }
+
+        #global-page-loader.active {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .loader-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+            box-shadow: 0 0 10px #3b82f6;
+            transition: width 0.4s ease;
+        }
+
+        .loader-logo-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader-glow-aura {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0) 70%);
+            animation: auraPulse 1.8s ease-in-out infinite alternate;
+        }
+
+        .loader-spinner-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #3b82f6;
+            border-right-color: #60a5fa;
+            animation: loaderSpin 0.9s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        }
+
+        .loader-spinner-ring-outer {
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            border-radius: 50%;
+            border: 2px dashed rgba(96, 165, 250, 0.35);
+            animation: loaderSpinReverse 3.5s linear infinite;
+        }
+
+        .loader-logo-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: #ffffff;
+            padding: 9px;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+            z-index: 2;
+            animation: logoPulse 1.4s ease-in-out infinite alternate;
+        }
+
+        .loader-text-wrapper {
+            margin-top: 26px;
+            text-align: center;
+        }
+
+        .loader-text {
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .loader-dots span {
+            animation: dotBlink 1.4s infinite fill-mode: both;
+            opacity: 0;
+            font-weight: bold;
+        }
+        .loader-dots span:nth-child(1) { animation-delay: 0.2s; }
+        .loader-dots span:nth-child(2) { animation-delay: 0.4s; }
+        .loader-dots span:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes loaderSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes loaderSpinReverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes logoPulse {
+            0% { transform: scale(0.92); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+            100% { transform: scale(1.06); box-shadow: 0 0 35px rgba(59, 130, 246, 0.9); }
+        }
+
+        @keyframes auraPulse {
+            0% { transform: scale(0.8); opacity: 0.3; }
+            100% { transform: scale(1.6); opacity: 0.8; }
+        }
+
+        @keyframes dotBlink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+    </style>
+
     <script>
         // وظيفة إظهار/إخفاء كلمة المرور
         function togglePassword() {
@@ -632,18 +787,36 @@
 
         // إضافة تأثيرات تفاعلية بسيطة
         document.addEventListener('DOMContentLoaded', function() {
+            const loader = document.getElementById('global-page-loader');
+            const topBar = document.getElementById('loader-top-bar');
+
             // تأثير التركيز على الحقول
             const inputs = document.querySelectorAll('.form-input');
-
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
                     this.parentElement.parentElement.classList.add('focused');
                 });
-
                 input.addEventListener('blur', function() {
                     this.parentElement.parentElement.classList.remove('focused');
                 });
             });
+
+            // إظهار اللودر عند ضغط تسجيل الدخول
+            const loginForm = document.querySelector('.login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function() {
+                    if (loader) {
+                        loader.classList.add('active');
+                        if (topBar) {
+                            topBar.style.width = '0%';
+                            let w = 0;
+                            setInterval(function() {
+                                if (w < 90) { w += 5; topBar.style.width = w + '%'; }
+                            }, 100);
+                        }
+                    }
+                });
+            }
         });
     </script>
 </body>
