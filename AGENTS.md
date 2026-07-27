@@ -58,14 +58,13 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
-## Session log (2026-07-06 — نظام استرجاع مبالغ العمليات وتبسيط واجهات الحسابات والصندوق)
+## Session log (2026-07-27 — لوحات تحليلات الحسابات للطوارئ والمختبر والأشعة)
 
 ### Done
-- إضافة ميزة إرجاع المبالغ الزائدة للعمليات (`refund`) عند تعديل أسعار العمليات ليكون المجموع الفعلي أقل من المدفوع سابقاً.
-- إنشاء المسار `cashier.surgeries.payment.refund` وربطه بالتابع `processSurgeryRefund` في `CashierController`.
-- إعادة تصميم نموذج مراجعة المحاسب للعمليات (`review-form.blade.php`) ليصبح العرض جانباً إلى جنب (السجل التاريخي للمراجعات والعمليات بجانب المجموع الفعلي التلقائي).
-- تبسيط جداول العمليات الجراحية لعرض ملخص بسيط ومباشر بدلاً من الجداول المتداخلة لكل من أمين الصندوق والمحاسب.
-- الـ commits: `4813da4` ← `5205ae1` ← `d9ef98e` ← `378ccb4` ← `8c216b1` (الكل push لـ origin/main).
+- إنشاء لوحة تحليلات وتصنيفات حسابات الطوارئ وإنجاز ومخطط خدمات الأطباء (`accountant.emergency.analytics`).
+- إنشاء لوحة تحليلات وإحصاءات التشخيص المالي للمختبر والأشعة والمفراس الحلزوني والسونار والإيكو والرنين المغناطيسي (`accountant.diagnostics.analytics`).
+- ربط علاقة `emergencies` و `radiologyRequests` في نموذج `Doctor`.
+- الـ commits: `5c0945d` (push لـ origin/main).
 
 ### Issues known
 - لا يوجد حالياً.
