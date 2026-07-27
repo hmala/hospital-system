@@ -46,6 +46,16 @@ class Doctor extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function emergencies()
+    {
+        return $this->hasMany(Emergency::class);
+    }
+
+    public function radiologyRequests()
+    {
+        return $this->hasMany(RadiologyRequest::class);
+    }
+
     public function scopeAnesthesia($query)
     {
         return $query->where('is_active', true)

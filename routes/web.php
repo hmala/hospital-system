@@ -561,4 +561,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/patients/{patient}', [\App\Http\Controllers\EmergencyPatientController::class, 'show'])->name('patients.show');
         Route::post('/patients/{patient}/migrate', [\App\Http\Controllers\EmergencyPatientController::class, 'migrate'])->name('patients.migrate');
     });
+
+    // تحليلات الطوارئ للمحاسب
+    Route::get('/accountant/emergency-analytics', [\App\Http\Controllers\AccountantController::class, 'emergencyAnalytics'])->name('accountant.emergency.analytics');
+    Route::get('/accountant/diagnostic-analytics', [\App\Http\Controllers\AccountantController::class, 'diagnosticAnalytics'])->name('accountant.diagnostics.analytics');
 });
+

@@ -1203,6 +1203,11 @@
                             </div>
                             <div class="collapse {{ $isEmergencyActive ? 'show' : '' }} ps-2" id="emergencySubSection">
                                 <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('accountant.emergency.analytics') ? 'active' : '' }}" href="{{ route('accountant.emergency.analytics') }}">
+                                        <i class="fas fa-chart-bar text-danger"></i><span> تحليلات إحصاءات الطوارئ</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('cashier.emergency.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.emergency.financial-movements') }}">
                                         <i class="fas fa-money-bill-wave text-danger"></i><span> الحركات المالية للطوارئ</span>
                                     </a>
@@ -1215,6 +1220,19 @@
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('cashier.emergency.doctor-accounts') || request()->routeIs('cashier.emergency.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.emergency.doctor-accounts') }}">
                                         <i class="fas fa-wallet text-danger"></i><span> حسابات أطباء الطوارئ</span>
+                                    </a>
+                                </li>
+                            </div>
+
+                            <!-- القسم الفرعي: التشخيص (المختبر والأشعة والمفراس والإيكو) -->
+                            <div class="sidebar-section-title {{ request()->routeIs('accountant.diagnostics.*') ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#diagnosticsSubSection" aria-expanded="{{ request()->routeIs('accountant.diagnostics.*') ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.05); color: #10b981; border-radius: 4px; cursor: pointer;">
+                                <span><i class="fas fa-microscope me-1"></i> حسابات المختبر والأشعّة</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ request()->routeIs('accountant.diagnostics.*') ? 'show' : '' }} ps-2" id="diagnosticsSubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('accountant.diagnostics.analytics') ? 'active' : '' }}" href="{{ route('accountant.diagnostics.analytics') }}">
+                                        <i class="fas fa-chart-line text-success"></i><span> تحليلات المختبر والأشعة والمفراس</span>
                                     </a>
                                 </li>
                             </div>

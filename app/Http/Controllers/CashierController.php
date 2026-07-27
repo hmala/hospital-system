@@ -219,7 +219,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('view cashier') && !$user->hasRole(['admin', 'patient'])) {
+        if (!$user->can('view cashier') && !$user->can('view cashier reports') && !$user->hasRole(['admin', 'patient'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
