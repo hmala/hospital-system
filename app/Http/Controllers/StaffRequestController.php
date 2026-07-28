@@ -119,7 +119,7 @@ class StaffRequestController extends Controller
 
         if ($user->hasRole('lab_staff') || $user->hasAnyRole(['admin'])) {
             // show pending, in progress, and completed so that rows remain after completion
-            $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests'])
+            $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
                 ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
                 ->orderBy('requested_at', 'asc')
@@ -1497,21 +1497,21 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['lab_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
         $request->validate([
             'results' => 'nullable|array',
-            'results.*' => 'nullable|string',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         if ($request->has('results')) {
             foreach ($request->results as $testId => $result) {
+                $resultVal = is_array($result) ? json_encode($result, JSON_UNESCAPED_UNICODE) : $result;
                 $emergencyLab->requestTests()
                     ->where('lab_test_id', $testId)
-                    ->update(['result' => $result]);
+                    ->update(['result' => $resultVal]);
             }
         }
 
@@ -1521,7 +1521,7 @@ class StaffRequestController extends Controller
             'notes' => $request->notes
         ]);
 
-        return redirect()->back()->with('success', 'تم إكمال طلب التحاليل بنجاح');
+        return redirect()->back()->with('success', 'تم إكمال طلب التحاليل الطبية وحفظ النتائج بنجاح');
     }
 }
 

@@ -433,50 +433,152 @@
 
     @foreach($emergencyLabRequests as $emergencyRequest)
         @if($emergencyRequest->status == 'in_progress')
-            <div class="modal fade" id="completeEmergencyLabModal{{ $emergencyRequest->id }}" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
+            <div class="modal fade" id="completeEmergencyLabModal{{ $emergencyRequest->id }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="false" data-bs-focus="false">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+                        <!-- الترويسة الأنيقة -->
+                        <div class="modal-header bg-gradient-dark text-white p-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-shape bg-primary text-white rounded-circle p-2 me-3 shadow-sm" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-flask fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-bold mb-0">إدخال وتدقيق تحاليل الطوارئ #{{ $emergencyRequest->emergency_id }}</h5>
+                                    <small class="text-white-50">ادخل النتائج وسيتم مقارنتها تلقائياً بالمعدلات المرجعية</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
                         <form action="{{ route('staff.emergency-lab.complete', $emergencyRequest) }}" method="POST">
                             @csrf
-                            @method('PUT')
-                            <div class="modal-header bg-success text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    إكمال طلب تحاليل الطوارئ #{{ $emergencyRequest->emergency_id }}
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="alert alert-info">
-                                    <strong>المريض:</strong> {{ $emergencyRequest->patient->user->name }}
+                        @method('PUT')
+                            <div class="modal-body p-4" style="background-color: #f8fafc;">
+                                <!-- بطاقة معلومات المريض -->
+                                <div class="p-3 mb-4 rounded-3 border" style="background: #ffffff; border-right: 4px solid #3b82f6 !important;">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user-injured fa-2x text-primary me-3"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark fs-6">{{ $emergencyRequest->patient->user->name }}</div>
+                                                    <small class="text-muted">رقم المريض: #{{ $emergencyRequest->patient->id }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                                            <span class="badge bg-light text-dark border me-1">
+                                                <i class="fas fa-calendar-alt text-secondary me-1"></i> العمر: {{ $emergencyRequest->patient->age ?? '-' }} سنة
+                                            </span>
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fas fa-venus-mars text-secondary me-1"></i> الجنس: {{ ($emergencyRequest->patient->gender ?? $emergencyRequest->patient->user->gender ?? null) === 'female' ? 'أنثى' : 'ذكر' }}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <h6 class="mb-3">نتائج التحاليل:</h6>
+                                <h6 class="fw-bold text-secondary mb-3">
+                                    <i class="fas fa-list-check me-2"></i> فحوصات الطلب الحالي:
+                                </h6>
+
                                 @foreach($emergencyRequest->labTests as $test)
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        <strong>{{ $test->name }}</strong>
-                                        @if($test->unit)
-                                            <small class="text-muted">({{ $test->unit }})</small>
+                                @php
+                                    $patientGender = $emergencyRequest->patient->gender ?? $emergencyRequest->patient->user->gender ?? 'male';
+                                    $patientAge = $emergencyRequest->patient->age ?? 30;
+                                    
+                                    // 1. محاولة جلب المرجع المقترن بـ LabTestReference
+                                    $refObj = $test->referenceForPatient($patientGender, (int)$patientAge) ?? $test->references->first();
+                                    $refRangeText = $refObj?->range_display ?? '';
+                                    $refMin = $refObj?->ref_min ?? '';
+                                    $refMax = $refObj?->ref_max ?? '';
+                                    $unit = $test->unit ?: ($refObj?->unit ?? '');
+
+                                    // 2. الاحتياطي من قواعد LabResult المستعملة في التحاليل العادية
+                                    if (empty($refRangeText)) {
+                                        $labResultHelper = new \App\Models\LabResult();
+                                        $refRangeText = $labResultHelper->getReferenceRange($test->name);
+                                        if (empty($unit)) {
+                                            $unit = $labResultHelper->getUnit($test->name);
+                                        }
+                                        if (preg_match('/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/', $refRangeText, $matches)) {
+                                            $refMin = $matches[1];
+                                            $refMax = $matches[2];
+                                        } elseif (preg_match('/<\s*(\d+(?:\.\d+)?)/', $refRangeText, $matches)) {
+                                            $refMax = $matches[1];
+                                        } elseif (preg_match('/>=\s*(\d+(?:\.\d+)?)/', $refRangeText, $matches)) {
+                                            $refMin = $matches[1];
+                                        }
+                                    }
+
+                                    // استخراج القيم الحالية إذا كانت مخزنة سابقاً
+                                    $prevRaw = $test->pivot->result ?? '';
+                                    $prevData = is_string($prevRaw) ? json_decode($prevRaw, true) : $prevRaw;
+                                    $prevVal = is_array($prevData) ? ($prevData['value'] ?? '') : (is_string($prevRaw) && !str_contains($prevRaw, '{') ? $prevRaw : '');
+                                    $prevUnit = is_array($prevData) ? ($prevData['unit'] ?? $unit) : $unit;
+                                    $prevRef = is_array($prevData) ? ($prevData['reference'] ?? $refRangeText) : $refRangeText;
+                                @endphp
+
+                                <!-- بطاقة الفحص -->
+                                <div class="test-card p-3 mb-3 bg-white rounded-3 border shadow-sm" style="transition: all 0.2s ease;">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fw-bold text-dark fs-6">
+                                            <i class="fas fa-microscope text-primary me-2"></i> {{ $test->name }}
+                                        </span>
+                                        @if($refRangeText)
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill" style="font-size: 0.85rem;">
+                                                <i class="fas fa-shield-halved me-1"></i> المعدل الطبيعي: {{ $refRangeText }} {{ $unit }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary-subtle text-secondary border px-3 py-1 rounded-pill" style="font-size: 0.85rem;">
+                                                لا يوجد مدى مرجعي مسجل
+                                            </span>
                                         @endif
-                                    </label>
-                                    <textarea name="results[{{ $test->id }}]"
-                                              class="form-control"
-                                              rows="2"
-                                              placeholder="أدخل نتيجة التحليل...">{{ $test->pivot->result ?? '' }}</textarea>
+                                    </div>
+
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-5">
+                                            <label class="form-label small text-muted mb-1">النتيجة الرقمية</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="fas fa-pen text-secondary"></i></span>
+                                                <input type="text" 
+                                                       name="results[{{ $test->id }}][value]" 
+                                                       class="form-control test-result-input fw-bold" 
+                                                       placeholder="أدخل النتيجة" 
+                                                       value="{{ $prevVal }}"
+                                                       data-ref-min="{{ $refMin }}" 
+                                                       data-ref-max="{{ $refMax }}" 
+                                                       data-ref-range="{{ $refRangeText }}"
+                                                       required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small text-muted mb-1">الوحدة</label>
+                                            <input type="text" name="results[{{ $test->id }}][unit]" class="form-control bg-light" placeholder="الوحدة" value="{{ $prevUnit }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted mb-1">المرجع</label>
+                                            <input type="text" name="results[{{ $test->id }}][reference]" class="form-control bg-light" placeholder="المرجع" value="{{ $prevRef }}">
+                                        </div>
+                                    </div>
+
+                                    <!-- إشعار التقييم التلقائي المباشر -->
+                                    <div class="result-status-alert alert d-none mt-3 mb-0 py-2 px-3 border-0 rounded-3" style="font-size: 0.9rem;">
+                                    </div>
                                 </div>
                                 @endforeach
 
-                                <div class="mb-3">
-                                    <label class="form-label">ملاحظات إضافية</label>
-                                    <textarea name="notes" class="form-control" rows="2">{{ $emergencyRequest->notes }}</textarea>
+                                <div class="mt-3">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="fas fa-comment-dots text-primary me-1"></i> ملاحظات إضافية
+                                    </label>
+                                    <textarea name="notes" class="form-control" rows="2" placeholder="اكتب أي ملاحظات أو توصيات للمختبر..." style="border-radius: 8px;">{{ $emergencyRequest->notes }}</textarea>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-check me-2"></i>
-                                    إكمال وحفظ النتائج
+
+                            <div class="modal-footer bg-white border-top-0 p-3">
+                                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm" style="border-radius: 8px;">
+                                    <i class="fas fa-check-circle me-1"></i> حفظ نتائج التحليل
                                 </button>
                             </div>
                         </form>
@@ -489,20 +591,63 @@
 
 </div>
 
-@push('scripts')
-<script>
-    // Poll and refresh list every 20s
-    setInterval(function(){
-        location.reload();
-    }, 20000);
-</script>
-@endpush
-@endsection
-
 @section('scripts')
 <script>
-// تحديث تلقائي للصفحة كل 5 ثواني
+// تقييم مباشر لحظي وعرض إشعار نتيجة الفحص عند كتابة القيمة
+$(document).on('input', '.test-result-input', function() {
+    const val = parseFloat($(this).val());
+    const minStr = $(this).data('ref-min');
+    const maxStr = $(this).data('ref-max');
+    const refRange = $(this).data('ref-range') || '';
+    const min = minStr !== '' ? parseFloat(minStr) : NaN;
+    const max = maxStr !== '' ? parseFloat(maxStr) : NaN;
+    const alertBox = $(this).closest('.test-card').find('.result-status-alert');
+
+    if (isNaN(val) || (isNaN(min) && isNaN(max))) {
+        alertBox.addClass('d-none').html('');
+        return;
+    }
+
+    alertBox.removeClass('d-none alert-success alert-danger alert-warning');
+    
+    if (!isNaN(min) && val < min) {
+        alertBox.addClass('alert-warning').html(
+            `<div class="d-flex align-items-center">
+                <i class="fas fa-arrow-down fa-lg me-2 text-warning"></i>
+                <div>
+                    <strong>إشعار النتيجة: منخفض ⬇</strong>
+                    <div class="small">القيمة المُدخلة (<strong>${val}</strong>) أقل من الحد الطبيعي الأدنى (<strong>${min}</strong>).</div>
+                </div>
+            </div>`
+        );
+    } else if (!isNaN(max) && val > max) {
+        alertBox.addClass('alert-danger').html(
+            `<div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-lg me-2 text-danger"></i>
+                <div>
+                    <strong>إشعار النتيجة: مرتفع ⬆</strong>
+                    <div class="small">القيمة المُدخلة (<strong>${val}</strong>) أعلى من الحد الطبيعي الأعلى (<strong>${max}</strong>).</div>
+                </div>
+            </div>`
+        );
+    } else {
+        alertBox.addClass('alert-success').html(
+            `<div class="d-flex align-items-center">
+                <i class="fas fa-check-circle fa-lg me-2 text-success"></i>
+                <div>
+                    <strong>إشعار النتيجة: طبيعي ✓</strong>
+                    <div class="small">القيمة المُدخلة (<strong>${val}</strong>) تقع ضمن المعدل الطبيعي الأصلي (<strong>${refRange || 'المحدد'}</strong>).</div>
+                </div>
+            </div>`
+        );
+    }
+});
+
+// تحديث تلقائي للصفحة كل 5 ثواني مع إيقاف المؤقت إذا كان هناك مودال مفتوح
 setInterval(function() {
+    if ($('.modal.show').length > 0) {
+        return;
+    }
     $.ajax({
         url: window.location.href,
         type: 'GET',
@@ -516,22 +661,19 @@ setInterval(function() {
                 $('#requests-content').html($(newContent).html());
                 window.scrollTo(0, currentScroll);
                 
-                // تحديث الوقت
                 const now = new Date();
                 const time = now.toLocaleTimeString('ar-IQ');
                 $('#last-update').text('آخر تحديث: ' + time);
             }
-        },
-        error: function(error) {
-            console.error('خطأ في التحديث:', error);
         }
     });
-}, 5000); // 5 ثواني
+}, 5000);
 
 $(document).ready(function() {
     const now = new Date();
     const time = now.toLocaleTimeString('ar-IQ');
     $('#last-update').text('آخر تحديث: ' + time);
+    $('.modal').appendTo('body');
 });
 </script>
 
@@ -577,5 +719,17 @@ $(document).ready(function() {
     overflow-x: auto;
     max-width: 100%;
 }
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+}
+.modal {
+    background: rgba(15, 23, 42, 0.55) !important;
+    z-index: 10000 !important;
+}
+.modal-dialog { z-index: 10001 !important; }
+.modal-content { position: relative; z-index: 10002 !important; pointer-events: auto !important; }
 </style>
 @endsection

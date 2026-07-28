@@ -341,7 +341,7 @@ Route::middleware(['auth'])->group(function () {
         
         // طلبات الطوارئ - التحاليل
         Route::post('/emergency-lab/{emergencyLab}/start', [StaffRequestController::class, 'startEmergencyLab'])->name('emergency-lab.start');
-        Route::put('/emergency-lab/{emergencyLab}/complete', [StaffRequestController::class, 'completeEmergencyLab'])->name('emergency-lab.complete');
+        Route::match(['post', 'put'], '/emergency-lab/{emergencyLab}/complete', [StaffRequestController::class, 'completeEmergencyLab'])->name('emergency-lab.complete');
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 

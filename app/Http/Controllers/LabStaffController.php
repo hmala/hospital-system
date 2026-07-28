@@ -30,7 +30,7 @@ class LabStaffController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests'])
+        $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
             ->whereIn('status', ['pending', 'in_progress', 'completed'])
             ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
             ->orderBy('requested_at', 'asc')
