@@ -552,6 +552,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');
         Route::post('/{emergency}/transfer-to-surgery', [\App\Http\Controllers\EmergencyController::class, 'transferToSurgery'])->name('transfer-to-surgery');
+        Route::post('/{emergency}/transfer-to-admission', [\App\Http\Controllers\EmergencyController::class, 'transferToAdmission'])->name('transfer-to-admission');
         
         // تحديث حالة طلبات الخدمات التمريضية
         Route::put('/nursing-request/{request}', [\App\Http\Controllers\EmergencyController::class, 'updateNursingRequest'])->name('nursing-request.update');

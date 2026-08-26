@@ -26,6 +26,7 @@ class Emergency extends Model
         'discharge_time',
         'room_assigned',
         'requires_surgery',
+        'requires_admission',
         'is_active',
         'diagnosis',
         'service_provided',
@@ -42,6 +43,7 @@ class Emergency extends Model
         'admission_time' => 'datetime',
         'discharge_time' => 'datetime',
         'requires_surgery' => 'boolean',
+        'requires_admission' => 'boolean',
         'doctor_follow_up_fee' => 'integer',
         'is_active' => 'boolean',
         'patient_migrated' => 'boolean',
@@ -242,5 +244,15 @@ class Emergency extends Model
             'general' => 'طوارئ عامة',
             default => 'غير محدد'
         };
+    }
+
+    public function latestSurgery(): HasOne
+    {
+        return $this->hasOne(Surgery::class, 'patient_id', 'patient_id')->latestOfMany();
+    }
+
+    public function latestBedReservation(): HasOne
+    {
+        return $this->hasOne(BedReservation::class, 'patient_id', 'patient_id')->latestOfMany();
     }
 }

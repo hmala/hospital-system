@@ -213,73 +213,129 @@
                                     </td>
                                     <td>
                                         @php
-                                            $hasConsultation = \App\Models\Appointment::where('emergency_id', $emergency->id)->exists();
+                                            $surgeryBooking = $emergency->latestSurgery;
+                                            $bedBooking = $emergency->latestBedReservation;
                                         @endphp
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-list-ul me-1"></i>
-                                                <span></span>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end" style="min-width: 220px;">
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#vitalSignsModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-heartbeat text-danger me-2"></i>
-                                                        <span>قياس علامات حيوية</span>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#medicalModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-notes-medical text-success me-2"></i>
-                                                        <span>تشخيص وخدمات</span>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#treatmentModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-pills text-warning me-2"></i>
-                                                        <span>علاج الطوارئ</span>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#treatmentResultsModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-eye text-secondary me-2"></i>
-                                                        <span>عرض العلاجات</span>
-                                                        @if($emergency->treatments->count())
-                                                            <span class="badge bg-secondary rounded-pill ms-2">{{ $emergency->treatments->count() }}</span>
-                                                        @endif
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#labModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-flask text-primary me-2"></i>
-                                                        <span>طلب تحاليل</span>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#radiologyModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-x-ray text-info me-2"></i>
-                                                        <span>طلب أشعة</span>
-                                                    </button>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#consultationModal-{{ $emergency->id }}">
-                                                        <i class="fas fa-calendar-plus text-warning me-2"></i>
-                                                        <span>طلب استشارة</span>
-                                                    </button>
-                                                </li>
-                                                @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
-                                                <li>
-                                                    <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
-                                                        @csrf
-                                                        <button type="submit" class="dropdown-item d-flex align-items-center text-start text-danger">
-                                                            <i class="fas fa-procedures me-2"></i>
-                                                            <span>تحويل إلى العمليات</span>
+
+                                        @if($emergency->requires_surgery && $surgeryBooking)
+                                            <div class="d-flex flex-column align-items-center">
+                                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm" title="تم حجز العملية بنجاح">
+                                                    <i class="fas fa-procedures me-1"></i> تم حجز العملية #{{ $surgeryBooking->id }}
+                                                </span>
+                                                <div class="d-flex gap-1 align-items-center mt-1">
+                                                    @if($surgeryBooking->room)
+                                                        <span class="badge bg-primary px-1" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-bed me-1"></i> غ {{ $surgeryBooking->room->room_number }}
+                                                        </span>
+                                                    @endif
+                                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                                        <i class="fas fa-calendar-check text-success me-1"></i>
+                                                        {{ $surgeryBooking->scheduled_date ? $surgeryBooking->scheduled_date->format('Y-m-d') : '' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        @elseif($emergency->requires_admission && $bedBooking)
+                                            <div class="d-flex flex-column align-items-center">
+                                                <span class="badge bg-warning text-dark px-2 py-1 shadow-sm fw-bold" title="تم حجز الرقود والسرير بنجاح">
+                                                    <i class="fas fa-bed me-1"></i> تم حجز الرقود
+                                                </span>
+                                                <div class="d-flex gap-1 align-items-center mt-1">
+                                                    @if($bedBooking->room)
+                                                        <span class="badge bg-primary px-1" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-door-open me-1"></i> غ {{ $bedBooking->room->room_number }}
+                                                        </span>
+                                                    @endif
+                                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                                        <i class="fas fa-calendar-check text-success me-1"></i>
+                                                        {{ $bedBooking->scheduled_date ? \Carbon\Carbon::parse($bedBooking->scheduled_date)->format('Y-m-d') : '' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm {{ $emergency->status === 'transferred' ? 'btn-info text-dark' : 'btn-outline-secondary' }} dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-list-ul me-1"></i>
+                                                    @if($emergency->status === 'transferred')
+                                                        <span class="small fw-bold">{{ $emergency->requires_surgery ? 'محول لعمليات' : 'محول لرقود' }}</span>
+                                                    @endif
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" style="min-width: 220px;">
+                                                    @if($emergency->status === 'transferred')
+                                                        <li class="px-3 py-1 text-center bg-light border-bottom mb-1">
+                                                            <small class="text-primary fw-bold">
+                                                                <i class="fas fa-clock me-1"></i> بانتظار حجز الاستعلامات...
+                                                            </small>
+                                                        </li>
+                                                    @endif
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#vitalSignsModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-heartbeat text-danger me-2"></i>
+                                                            <span>قياس علامات حيوية</span>
                                                         </button>
-                                                    </form>
-                                                </li>
-                                                @endif
-                                            </ul>
-                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#medicalModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-notes-medical text-success me-2"></i>
+                                                            <span>تشخيص وخدمات</span>
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#treatmentModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-pills text-warning me-2"></i>
+                                                            <span>علاج الطوارئ</span>
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#treatmentResultsModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-eye text-secondary me-2"></i>
+                                                            <span>عرض العلاجات</span>
+                                                            @if($emergency->treatments->count())
+                                                                <span class="badge bg-secondary rounded-pill ms-2">{{ $emergency->treatments->count() }}</span>
+                                                            @endif
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#labModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-flask text-primary me-2"></i>
+                                                            <span>طلب تحاليل</span>
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#radiologyModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-x-ray text-info me-2"></i>
+                                                            <span>طلب أشعة</span>
+                                                        </button>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item d-flex align-items-center text-start" data-bs-toggle="modal" data-bs-target="#consultationModal-{{ $emergency->id }}">
+                                                            <i class="fas fa-calendar-plus text-warning me-2"></i>
+                                                            <span>طلب استشارة</span>
+                                                        </button>
+                                                    </li>
+                                                    @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
+                                                    <li>
+                                                        <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
+                                                            @csrf
+                                                            <button type="submit" class="dropdown-item d-flex align-items-center text-start text-danger">
+                                                                <i class="fas fa-procedures me-2"></i>
+                                                                <span>تحويل إلى العمليات</span>
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
+                                                            @csrf
+                                                            <button type="submit" class="dropdown-item d-flex align-items-center text-start text-primary">
+                                                                <i class="fas fa-bed me-2"></i>
+                                                                <span>تحويل رقود</span>
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    @endif
+                                                </ul>
+                                            </div>
+                                        @endif
                                     </td>
                                 </tr>
                                 @empty
@@ -497,18 +553,6 @@
                 console.error('خطأ في تحديث حالة الدفع:', error);
             });
     }
-
-    function autoRefreshEmergencyPage() {
-        if (document.querySelector('.modal.show')) {
-            return;
-        }
-
-        window.location.reload();
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        setInterval(autoRefreshEmergencyPage, 5000);
-    });
 </script>
 
 <style>

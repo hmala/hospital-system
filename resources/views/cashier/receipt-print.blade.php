@@ -1,252 +1,762 @@
+@php
+    $isConsultation = $payment->appointment_id 
+        || $payment->payment_type === 'appointment' 
+        || $payment->payment_type === 'consultation' 
+        || ($payment->appointment !== null)
+        || request('format') === 'thermal'
+        || (str_contains($payment->description ?? '', 'استشارية') && !$payment->emergency_id && !$payment->surgery_id);
+@endphp
+
+@if($isConsultation)
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إيصال استشارية - {{ $payment->receipt_number }}</title>
+    <!-- Google Fonts Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', Tahoma, Arial, sans-serif;
+            color: #000000;
+        }
+
+        body {
+            direction: rtl;
+            text-align: right;
+            background-color: #f3f4f6;
+            padding: 20px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .thermal-ticket {
+            width: 78mm;
+            max-width: 100%;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 12px 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        /* Screen action buttons */
+        .no-print {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-print {
+            background-color: #10b981;
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .btn-back {
+            background-color: #6b7280;
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        /* Header box */
+        .header-box {
+            border: 1px solid #000000;
+            border-radius: 4px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+        }
+
+        .header-titles {
+            flex: 1;
+            text-align: center;
+        }
+
+        .header-titles .ar-title {
+            font-size: 14.5px;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .header-titles .en-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        /* Meta details */
+        .meta-group {
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .meta-label {
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .meta-val-number {
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .meta-val-date {
+            font-size: 14px;
+            font-weight: 800;
+            text-align: center;
+            flex: 1;
+        }
+
+        .patient-doctor-row {
+            margin-top: 6px;
+            margin-bottom: 10px;
+            font-size: 12.5px;
+            font-weight: 800;
+            line-height: 1.5;
+        }
+
+        /* Services table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000000;
+            margin-bottom: 8px;
+            font-size: 12.5px;
+        }
+
+        .items-table th, 
+        .items-table td {
+            border: 1px solid #000000;
+            padding: 4px 6px;
+        }
+
+        .items-table th {
+            font-weight: 900;
+            text-align: center;
+            background-color: #ffffff;
+        }
+
+        .items-table .col-service {
+            text-align: right;
+            font-weight: 800;
+        }
+
+        .items-table .col-qty {
+            text-align: center;
+            width: 40px;
+            font-weight: 800;
+        }
+
+        .items-table .col-price {
+            text-align: center;
+            width: 75px;
+            font-weight: 800;
+        }
+
+        .items-table .total-row td {
+            font-weight: 900;
+        }
+
+        .items-table .total-label {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .items-table .total-val {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        /* Bottom currency / payment box */
+        .footer-amount-box {
+            border: 1px solid #000000;
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 4px;
+            font-size: 12.5px;
+        }
+
+        .footer-amount-box td {
+            border: 1px solid #000000;
+            padding: 4px 8px;
+            font-weight: 800;
+        }
+
+        .footer-amount-box .box-label {
+            text-align: right;
+            width: 65%;
+        }
+
+        .footer-amount-box .box-val {
+            text-align: center;
+            width: 35%;
+        }
+
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            body {
+                background: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .thermal-ticket {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 1mm 2mm !important;
+                margin: 0 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ طباعة الإيصال</button>
+        <button class="btn-back" onclick="window.history.back()">⬅️ العودة</button>
+    </div>
+
+    <div class="thermal-ticket">
+        <!-- Header Box with Logo & Name -->
+        <div class="header-box">
+            <img src="{{ asset('images/لوغو.png') }}" class="header-logo" alt="Logo" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
+            <div class="header-titles">
+                <div class="ar-title">مستشفى الكفاءات الاهلي</div>
+                <div class="en-title">Al-Kafaat Hospital</div>
+            </div>
+            <div style="width: 36px;"></div>
+        </div>
+
+        @php
+            // Extract numeric receipt number or ID
+            $rawNumber = preg_replace('/[^0-9]/', '', $payment->receipt_number);
+            $receiptNum = $rawNumber ? substr($rawNumber, -5) : $payment->id;
+            
+            // Patient Name
+            $patientName = '-';
+            if ($payment->patient && $payment->patient->user) {
+                $patientName = $payment->patient->user->name;
+            } elseif ($payment->appointment && $payment->appointment->patient && $payment->appointment->patient->user) {
+                $patientName = $payment->appointment->patient->user->name;
+            } elseif ($payment->emergency && $payment->emergency->emergencyPatient) {
+                $patientName = $payment->emergency->emergencyPatient->name;
+            }
+
+            // Doctor Name
+            $doctorName = '';
+            if ($payment->appointment && $payment->appointment->doctor && $payment->appointment->doctor->user) {
+                $doctorName = $payment->appointment->doctor->user->name;
+            } elseif ($payment->request && $payment->request->visit && $payment->request->visit->doctor && $payment->request->visit->doctor->user) {
+                $doctorName = $payment->request->visit->doctor->user->name;
+            }
+
+            $dateFormatted = ($payment->paid_at ?? now())->format('Y/m/d');
+            $consultFee = $payment->amount;
+        @endphp
+
+        <!-- Metadata Section -->
+        <div class="meta-group">
+            <div class="meta-row">
+                <span class="meta-val-number">{{ $receiptNum }}</span>
+                <span class="meta-label">الرقم</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-val-date">{{ $dateFormatted }}</span>
+                <span class="meta-label">التاريخ</span>
+            </div>
+        </div>
+
+        <!-- Patient and Doctor Line -->
+        <div class="patient-doctor-row">
+            اسم المريض <strong>{{ $patientName }}</strong>
+            @if($doctorName)
+                - <span>د. {{ $doctorName }}</span>
+            @endif
+        </div>
+
+        <!-- Services Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th class="col-service">الخدمة الطبية</th>
+                    <th class="col-qty">عدد</th>
+                    <th class="col-price">السعر</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="col-service">اجور استشارية</td>
+                    <td class="col-qty">1</td>
+                    <td class="col-price">{{ number_format($consultFee, 0) }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="2" class="total-label">المجموع</td>
+                    <td class="total-val">{{ number_format($consultFee, 0) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Bottom Payment / Dollar Box -->
+        <table class="footer-amount-box">
+            <tr>
+                <td class="box-label">مجموع الدولار المقبوض</td>
+                <td class="box-val"></td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        // Auto print trigger
+        // window.onload = function() { window.print(); };
+    </script>
+</body>
+</html>
+@else
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إيصال دفع - {{ $payment->receipt_number }}</title>
+    <!-- Google Fonts Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            
-            @page {
-                size: A5;
-                margin: 0.5cm;
-            }
-            
-            body {
-                margin: 0;
-                padding: 10px;
-            }
-        }
-        
+        /* General resets & typography */
         * {
-            font-family: 'Courier New', 'Arial', monospace;
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Cairo', 'Arial', sans-serif;
         }
         
         body {
             direction: rtl;
             text-align: right;
-            background-color: white;
-            font-size: 12px;
-            line-height: 1.4;
+            background-color: #f3f4f6;
+            color: #2c3e50;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 20px 10px;
         }
         
+        /* Container A5 format */
         .container {
-            max-width: 210mm;
+            max-width: 148mm;
             margin: 0 auto;
-            background: white;
-            padding: 15px;
+            background: #ffffff;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            position: relative;
         }
         
+        /* Buttons for screen view */
+        .no-print {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .print-button {
+            background-color: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 5px rgba(16, 185, 129, 0.2);
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        .print-button:hover {
+            background-color: #059669;
+            transform: translateY(-1px);
+        }
+        
+        .print-button-back {
+            background-color: #6b7280;
+            box-shadow: 0 2px 5px rgba(107, 114, 128, 0.2);
+        }
+        
+        .print-button-back:hover {
+            background-color: #4b5563;
+        }
+
+        /* Header */
         .header {
             text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
+            border-bottom: 2px dashed #10b981;
+            padding-bottom: 12px;
             margin-bottom: 15px;
         }
         
         .header h1 {
-            font-size: 20px;
-            margin: 5px 0;
-            font-weight: bold;
-            text-transform: uppercase;
+            font-size: 22px;
+            color: #065f46;
+            font-weight: 800;
+            margin-bottom: 3px;
         }
         
         .header .subtitle {
-            font-size: 11px;
-            color: #333;
-            margin: 3px 0;
+            font-size: 12px;
+            color: #4b5563;
+            font-weight: 600;
         }
         
+        /* Receipt metadata box */
         .receipt-number-box {
             text-align: center;
-            padding: 8px;
-            border: 2px dashed #000;
-            margin: 10px 0;
-            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #10b981;
+            background-color: #f0fdf4;
+            border-radius: 6px;
+            margin: 15px 0;
         }
         
         .receipt-number {
             font-size: 16px;
-            font-weight: bold;
-            letter-spacing: 1px;
+            font-weight: 800;
+            color: #065f46;
         }
         
         .receipt-date {
-            font-size: 10px;
-            margin-top: 3px;
+            font-size: 12px;
+            color: #4b5563;
+            margin-top: 2px;
+            font-weight: 600;
         }
         
+        /* Sections */
         .section {
-            margin: 12px 0;
-            padding: 8px;
-            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 12px;
+            border: 1px solid #f3f4f6;
+            background-color: #fafafa;
+            border-radius: 6px;
         }
         
         .section-title {
-            font-weight: bold;
-            font-size: 11px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #000;
-            padding-bottom: 4px;
-            margin-bottom: 6px;
+            font-weight: 800;
+            font-size: 13px;
+            color: #065f46;
+            border-right: 3px solid #10b981;
+            padding-right: 8px;
+            margin-bottom: 10px;
         }
         
+        /* Key-value rows */
         .info-row {
             display: flex;
             justify-content: space-between;
-            padding: 3px 0;
-            font-size: 11px;
+            padding: 4px 0;
+            font-size: 13px;
+            border-bottom: 1px dotted #f1f5f9;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
         }
         
         .info-label {
-            font-weight: bold;
-            min-width: 80px;
+            font-weight: 600;
+            color: #6b7280;
         }
         
         .info-value {
-            flex: 1;
+            font-weight: 700;
+            color: #1f2937;
             text-align: left;
         }
         
+        /* Services table */
         .services-table {
             width: 100%;
             border-collapse: collapse;
             margin: 10px 0;
-            font-size: 11px;
+            font-size: 13px;
         }
         
         .services-table th {
-            background-color: #000;
-            color: white;
-            padding: 6px 4px;
+            background-color: #f3f4f6;
+            color: #374151;
+            padding: 8px 6px;
             text-align: center;
-            font-weight: bold;
-            font-size: 10px;
+            font-weight: 800;
+            border-bottom: 2px solid #e5e7eb;
         }
         
         .services-table td {
-            border: 1px solid #ddd;
-            padding: 5px 4px;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 8px 6px;
             text-align: center;
+            color: #4b5563;
+            font-weight: 600;
         }
         
         .services-table td:nth-child(2) {
             text-align: right;
+            font-weight: 700;
+            color: #1f2937;
         }
         
         .total-row {
-            background-color: #000;
-            color: white;
-            font-weight: bold;
+            background-color: #f0fdf4;
+            color: #065f46;
+            font-weight: 800;
+        }
+        
+        .total-row td {
+            border-top: 2px solid #10b981;
+            color: #065f46 !important;
+            font-weight: 800 !important;
         }
         
         .total-amount {
             font-size: 14px;
         }
         
+        /* Payment summary box */
         .payment-info {
-            margin: 10px 0;
-            padding: 8px;
-            background: #f5f5f5;
-            border: 1px dashed #000;
+            margin: 15px 0;
+            padding: 12px;
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 6px;
             text-align: center;
         }
         
         .payment-method {
-            font-weight: bold;
-            font-size: 13px;
+            font-weight: 800;
+            color: #047857;
         }
         
         .divider {
-            border-top: 1px dashed #000;
-            margin: 10px 0;
+            border-top: 1px dashed #e5e7eb;
+            margin: 15px 0;
         }
         
+        /* Footer */
         .footer {
             text-align: center;
             margin-top: 15px;
             padding-top: 10px;
-            border-top: 2px solid #000;
-            font-size: 10px;
-        }
-        
-        .signature-box {
-            display: inline-block;
-            margin: 10px 20px;
-            text-align: center;
-        }
-        
-        .signature-line {
-            width: 120px;
-            border-bottom: 1px solid #000;
-            margin: 20px auto 5px;
+            border-top: 1px solid #f3f4f6;
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 600;
         }
         
         .badge {
             display: inline-block;
             padding: 2px 6px;
-            border: 1px solid #000;
+            border: 1px solid #10b981;
+            background-color: #f0fdf4;
+            color: #065f46;
             font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
+            font-weight: 700;
+            border-radius: 4px;
         }
         
         .text-center {
             text-align: center;
         }
         
-        .mt-5 {
-            margin-top: 5px;
-        }
-        
-        .mb-5 {
-            margin-bottom: 5px;
-        }
-        
-        .print-button {
-            background-color: #000;
-            color: white;
-            padding: 10px 25px;
-            border: none;
-            border-radius: 3px;
-            font-size: 14px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        
-        .print-button:hover {
-            background-color: #333;
-        }
-        
         .watermark {
             text-align: center;
-            font-size: 9px;
-            color: #999;
-            margin-top: 10px;
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 12px;
+            font-weight: 600;
+        }
+
+        /* Print styles */
+        @media print {
+            * {
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                text-shadow: none !important;
+                box-shadow: none !important;
+            }
+            
+            html, body {
+                height: 99%;
+                overflow: hidden;
+                background-color: white !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-size: 11.5px;
+                line-height: 1.35;
+                font-weight: 700;
+            }
+            
+            h1, h2, h3, h4, h5, h6, .section-title, .receipt-number, .payment-method, strong {
+                font-weight: 800 !important;
+            }
+            
+            .container {
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 5px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            @page {
+                size: A5;
+                margin: 0.4cm;
+            }
+
+            .section {
+                margin: 6px 0 !important;
+                padding: 8px !important;
+                border: 1px solid #000000 !important;
+                background-color: transparent !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            .section-title {
+                margin-bottom: 6px !important;
+                border-right: 3px solid #000000 !important;
+            }
+
+            .services-table {
+                margin: 5px 0 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .services-table th {
+                background-color: #f3f4f6 !important;
+                border-bottom: 2px solid #000000 !important;
+                padding: 5px 4px !important;
+            }
+
+            .services-table td {
+                padding: 5px 4px !important;
+                border-bottom: 1px solid #000000 !important;
+                font-weight: 700 !important;
+            }
+
+            .total-row {
+                background-color: #f3f4f6 !important;
+            }
+            
+            .total-row td {
+                border-top: 2px solid #000000 !important;
+                border-bottom: 2px double #000000 !important;
+            }
+            
+            .payment-info {
+                margin: 8px 0 !important;
+                padding: 8px !important;
+                background-color: #f0fdf4 !important;
+                border: 1px solid #000000 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            .divider {
+                border-top: 1px dashed #000000 !important;
+                margin: 8px 0 !important;
+            }
+            
+            .footer {
+                margin-top: 10px !important;
+                padding-top: 5px !important;
+                border-top: 1px solid #000000 !important;
+            }
+            
+            .watermark {
+                margin-top: 6px !important;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Print Buttons -->
-        <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+        <div class="no-print">
             <button class="print-button" onclick="window.print()">
                 طباعة الإيصال
             </button>
-            <button class="print-button" onclick="window.history.back()" style="background-color: #666;">
+            <button class="print-button print-button-back" onclick="window.history.back()">
                 العودة
             </button>
         </div>
 
         <!-- Header -->
         <div class="header">
-            <h1>مستشفى النظام الطبي</h1>
+            <h1>مستشفى الكفاءات الأهلي</h1>
             <div class="subtitle">إيصال دفع رسوم الخدمات الطبية</div>
             <div class="subtitle">Medical Services Payment Receipt</div>
         </div>
@@ -340,12 +850,8 @@
                 }
             }
             if($payment->appointment) {
-                $doctorFee = $payment->appointment->doctor->fee_by_specialization ?? 0;
                 $consultFee = $payment->appointment->consultation_fee ?? 0;
-                $hospitalProfit = $consultFee - $doctorFee;
-                $lineItems[] = ['الخدمة'=>'أجر الطبيب','السعر'=>$doctorFee];
-                $lineItems[] = ['الخدمة'=>'مبلغ الكشف','السعر'=>$consultFee];
-                $lineItems[] = ['الخدمة'=>'ربح المستشفى','السعر'=>$hospitalProfit];
+                $lineItems[] = ['الخدمة'=>'رسوم كشف العيادة الاستشارية','السعر'=>$consultFee];
             }
             if($payment->request) {
                 $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
@@ -384,8 +890,10 @@
                 $surgery = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'department', 'labTests.labTest', 'radiologyTests.radiologyType'])->find($matches[1]);
             }
             if($payment->payment_type==='surgery' && $surgery) {
-                if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description, $descMatches)) {
-                    $itemLines = explode("\n", trim($descMatches[1]));
+                if (preg_match('/العناصر المدفوعة:
+(.+)/s', $payment->description, $descMatches)) {
+                    $itemLines = explode("
+", trim($descMatches[1]));
                     foreach ($itemLines as $line) {
                         $line = trim(str_replace('- ', '', $line));
                         if (!empty($line)) {
@@ -420,12 +928,12 @@
         <div class="section">
             <div class="section-title">تفصيل الخدمات المقدمة</div>
             <div class="table-responsive">
-                <table class="table table-sm">
+                <table class="services-table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th style="width: 40px;">#</th>
                             <th>الخدمة</th>
-                            <th class="text-end">السعر (IQD)</th>
+                            <th style="width: 120px;" class="text-end">السعر (IQD)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -433,7 +941,7 @@
                         <tr>
                             <td>{{ $idx+1 }}</td>
                             <td>{{ $ln['الخدمة'] }}</td>
-                            <td class="text-end">{{ number_format($ln['السعر'],2) }}</td>
+                            <td class="text-end">{{ number_format($ln['السعر'], 0) }}</td>
                         </tr>
                     @endforeach
                     </tbody>
@@ -443,29 +951,7 @@
         @else
         <div class="section">
             <div class="section-title">تفاصيل الخدمة</div>
-            <p>{{ number_format($payment->amount,2) }} IQD</p>
-        </div>
-        @endif
-
-        @if($payment->appointment)
-        <div class="section">
-            <div class="section-title">تفاصيل الموعد</div>
-            <div class="info-row">
-                <span class="info-label">رقم الموعد:</span>
-                <span class="info-value">#{{ $payment->appointment->id }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">الطبيب:</span>
-                <span class="info-value">د. {{ $payment->appointment->doctor->user->name }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">القسم:</span>
-                <span class="info-value">{{ $payment->appointment->department->name }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">التاريخ:</span>
-                <span class="info-value">{{ $payment->appointment->appointment_date->format('Y-m-d H:i') }}</span>
-            </div>
+            <p>{{ number_format($payment->amount, 0) }} IQD</p>
         </div>
         @endif
 
@@ -498,86 +984,7 @@
             </div>
             @endif
         </div>
-
-        @php
-            $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
-        @endphp
-
-        @if($payment->request->type === 'lab' && isset($details['lab_test_ids']))
-        <!-- Lab Tests Table -->
-        <table class="services-table">
-            <thead>
-                <tr>
-                    <th style="width: 40px;">#</th>
-                    <th>اسم التحليل</th>
-                    <th style="width: 80px;">الرمز</th>
-                    <th style="width: 100px;">السعر (IQD)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php $totalAmount = 0; @endphp
-                @foreach($details['lab_test_ids'] as $index => $testId)
-                    @php
-                        $test = \App\Models\LabTest::find($testId);
-                        if($test) {
-                            $price = $test->price ?? 0;
-                            $totalAmount += $price;
-                        }
-                    @endphp
-                    @if($test)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $test->name }}</td>
-                        <td>{{ $test->code }}</td>
-                        <td>{{ number_format($price, 0) }}</td>
-                    </tr>
-                    @endif
-                @endforeach
-                <tr class="total-row">
-                    <td colspan="3">الإجمالي</td>
-                    <td class="total-amount">{{ number_format($totalAmount, 0) }}</td>
-                </tr>
-            </tbody>
-        </table>
-        @elseif($payment->request->type === 'radiology' && isset($details['radiology_type_ids']))
-        <!-- Radiology Tests Table -->
-        <table class="services-table">
-            <thead>
-                <tr>
-                    <th style="width: 40px;">#</th>
-                    <th>نوع الأشعة</th>
-                    <th>الوصف</th>
-                    <th style="width: 100px;">السعر (IQD)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php $totalAmount = 0; @endphp
-                @foreach($details['radiology_type_ids'] as $index => $typeId)
-                    @php
-                        $radiologyType = \App\Models\RadiologyType::find($typeId);
-                        if($radiologyType) {
-                            $price = $radiologyType->base_price ?? 0;
-                            $totalAmount += $price;
-                        }
-                    @endphp
-                    @if($radiologyType)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $radiologyType->name }}</td>
-                        <td>{{ $radiologyType->description ?? '-' }}</td>
-                        <td>{{ number_format($price, 0) }}</td>
-                    </tr>
-                    @endif
-                @endforeach
-                <tr class="total-row">
-                    <td colspan="3">الإجمالي</td>
-                    <td class="total-amount">{{ number_format($totalAmount, 0) }}</td>
-                </tr>
-            </tbody>
-        </table>
         @endif
-        @endif
-
 
         @if($payment->payment_type === 'surgery' && $surgery)
         <!-- Surgery Info -->
@@ -598,67 +1005,20 @@
             <div class="info-row">
                 <span class="info-label">الجراح:</span>
                 <span class="info-value">
-                                            @if($surgery->doctor && $surgery->doctor->user)
-                                                د. {{ $surgery->doctor->user->name }}
-                                            @elseif($surgery->surgeon_name)
-                                                {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
-                                            @else
-                                                غير محدد
-                                            @endif
-                                        </span>
+                    @if($surgery->doctor && $surgery->doctor->user)
+                        د. {{ $surgery->doctor->user->name }}
+                    @elseif($surgery->surgeon_name)
+                        {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
+                    @else
+                        غير محدد
+                    @endif
+                </span>
             </div>
             <div class="info-row">
                 <span class="info-label">القسم:</span>
                 <span class="info-value">{{ $surgery->department->name ?? 'غير محدد' }}</span>
             </div>
-        </div>
-
-        @php
-            $surgeryFee = $surgery->surgery_fee ?? 0;
-            $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid';
-            
-            $totalLabFee = $surgery->labTests->sum(function($test) {
-                return $test->labTest->price ?? 0;
-            });
-            $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
-                return $test->labTest->price ?? 0;
-            });
-            
-            $totalRadFee = $surgery->radiologyTests->sum(function($test) {
-                return $test->radiologyType->base_price ?? 0;
-            });
-            $paidRadFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
-                return $test->radiologyType->base_price ?? 0;
-            });
-            
-            $totalSurgeryAmount = $surgeryFee + $totalLabFee + $totalRadFee;
-            $totalPaidAmount = ($surgeryFeePaid ? $surgeryFee : 0) + $paidLabFee + $paidRadFee;
-            $remainingAmount = $totalSurgeryAmount - $totalPaidAmount;
-        @endphp
-
-        <div class="section" style="text-align: center;">
-            <div class="section-title">ملخص حالة دفع العملية</div>
-            <div style="display: flex; justify-content: space-around; margin-top: 8px;">
-                <div>
-                    <div style="font-size: 10px; color: #666;">إجمالي العملية</div>
-                    <div style="font-weight: bold; font-size: 13px;">{{ number_format($totalSurgeryAmount, 0) }} IQD</div>
-                </div>
-                <div>
-                    <div style="font-size: 10px; color: #666;">المدفوع</div>
-                    <div style="font-weight: bold; font-size: 13px; color: green;">{{ number_format($totalPaidAmount, 0) }} IQD</div>
-                </div>
-                <div>
-                    <div style="font-size: 10px; color: #666;">المتبقي</div>
-                    <div style="font-weight: bold; font-size: 13px; color: {{ $remainingAmount > 0 ? 'orange' : 'green' }};">
-                        {{ number_format($remainingAmount, 0) }} IQD
-                    </div>
-                </div>
-            </div>
-            @if($remainingAmount > 0)
-            <div style="margin-top: 8px; padding: 5px; background: #fff3cd; border: 1px solid #ffc107; font-size: 10px;">
-                ⚠️ يوجد مبلغ متبقي سيُدفع لاحقاً
-            </div>
-            @else
+            @if($surgery->payment_status === 'paid')
             <div style="margin-top: 8px; padding: 5px; background: #d4edda; border: 1px solid #28a745; font-size: 10px;">
                 ✓ تم سداد جميع رسوم العملية بالكامل
             </div>
@@ -684,25 +1044,15 @@
         <div class="divider"></div>
 
         <!-- Footer Signatures -->
-        <div class="text-center">
-            <div class="signature-box">
-                <div style="font-size: 10px; margin-bottom: 5px;">الكاشير</div>
-                <div>{{ $payment->cashier->name }}</div>
-                <div class="signature-line"></div>
-                <div style="font-size: 9px;">التوقيع</div>
-            </div>
-            <div class="signature-box">
-                <div style="font-size: 10px; margin-bottom: 5px;">المريض</div>
-                <div>{{ $pname ?? '-' }}</div>
-                <div class="signature-line"></div>
-                <div style="font-size: 9px;">التوقيع</div>
-            </div>
+        <div class="text-center" style="margin-top: 15px; font-size: 14px;">
+            <span><strong>الكاشير:</strong> {{ $payment->cashier->name ?? 'النظام' }}</span>
+            <span style="margin-right: 30px;"><strong>المريض:</strong> {{ $pname ?? '-' }}</span>
         </div>
 
         <!-- Footer -->
         <div class="footer">
             <div>هذا إيصال رسمي صادر من نظام إدارة المستشفى</div>
-            <div class="mt-5">للاستفسارات: 0790-XXX-XXXX | info@hospital.com</div>
+            <div class="mt-5">للاستفسارات: info@hospital.com</div>
         </div>
 
         <div class="watermark">طبع في: {{ now()->format('Y-m-d H:i:s') }}</div>
@@ -714,3 +1064,4 @@
     </script>
 </body>
 </html>
+@endif

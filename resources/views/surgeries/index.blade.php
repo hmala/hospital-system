@@ -217,7 +217,9 @@ input[type="radio"]:checked + .frequency-btn {
                                             <th>الوقت</th>
                                             <th>الغرفة</th>
                                             <th>الحالة</th>
-                                            <th>تشخيص / علاج</th>
+                                            @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                <th>تشخيص / علاج</th>
+                                            @endif
                                             <th>الإجراءات</th>
                                         </tr>
                                     </thead>
@@ -268,14 +270,34 @@ input[type="radio"]:checked + .frequency-btn {
                                                                         <span class="badge bg-danger">ملغاة</span>
                                                                 @endif
                                                         </td>
+                                                        @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
                                                         <td>
                                                             <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary" title="تفاصيل العملية">
                                                                 <i class="fas fa-eye me-1"></i> تفاصيل العملية
                                                             </a>
                                                         </td>
+                                                        @endif
+                                                        <td>
+                                                            @if(auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                                <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning fw-bold text-dark" title="تعديل الحجز">
+                                                                    <i class="fas fa-edit me-1"></i> تعديل الحجز
+                                                                </a>
+                                                            @else
+                                                                <div class="btn-group btn-group-sm">
+                                                                    @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
+                                                                        <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning" title="تعديل الحجز">
+                                                                            <i class="fas fa-edit me-1"></i> تعديل الحجز
+                                                                        </a>
+                                                                    @endif
+                                                                    <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
+                                                                        <i class="fas fa-print"></i>
+                                                                    </a>
+                                                                </div>
+                                                            @endif
+                                                        </td>
                                                 </tr>
                                                 <tr class="bg-light">
-                                                    <td colspan="8">
+                                                    <td colspan="{{ auth()->user()->hasRole(['receptionist', 'inquiry_staff']) ? '8' : '9' }}">
                                                         <div class="collapse" id="detailsRow{{ $surgery->id }}">
                                                             <div class="p-3 border border-secondary rounded">
                                                                 @php
@@ -681,11 +703,25 @@ input[type="radio"]:checked + .frequency-btn {
                                                 @endif
                                             </td>
                                             <td>
-                                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary me-1" title="تفاصيل العملية">
-                                                    <i class="fas fa-eye me-1"></i> تفاصيل العملية
-                                                </a>
-                                                
-
+                                                @if(auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                    <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning fw-bold text-dark" title="تعديل الحجز">
+                                                        <i class="fas fa-edit me-1"></i> تعديل الحجز
+                                                    </a>
+                                                @else
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary me-1" title="تفاصيل العملية">
+                                                            <i class="fas fa-eye me-1"></i> تفاصيل العملية
+                                                        </a>
+                                                        @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
+                                                            <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning" title="تعديل الحجز">
+                                                                <i class="fas fa-edit me-1"></i> تعديل الحجز
+                                                            </a>
+                                                        @endif
+                                                        <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
+                                                            <i class="fas fa-print"></i>
+                                                        </a>
+                                                    </div>
+                                                @endif
                                             </td>
                                         </tr>
                                         @endforeach

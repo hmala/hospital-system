@@ -21,7 +21,7 @@ class SurgeryController extends Controller
     public function index()
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'receptionist', 'doctor', 'surgery_staff'])) {
+        if (!$user->hasRole(['admin', 'receptionist', 'doctor', 'surgery_staff', 'inquiry_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -116,7 +116,7 @@ class SurgeryController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist'])) {
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
@@ -159,14 +159,14 @@ class SurgeryController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',
-            'room_id' => 'nullable|exists:rooms,id',
+            'room_id' => 'required|exists:rooms,id',
             'location_id' => 'nullable|exists:locations,id',
-            'expected_stay_days' => 'nullable|integer|min:1|max:365',
+            'expected_stay_days' => 'required|integer|min:1|max:365',
             'surgery_category' => 'required|string|max:255',
             'surgical_operation_id' => 'required|exists:surgical_operations,id',
             'description' => 'nullable|string',
             'scheduled_date' => 'required|date',
-            'scheduled_time' => 'required|date_format:H:i',
+            'scheduled_time' => 'nullable',
             'referring_doctor_name' => 'required|string|max:255',
             'referral_letter' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
             'custom_surgery_fee' => 'required|numeric|min:0',
@@ -208,7 +208,8 @@ class SurgeryController extends Controller
             }
         }
         
-        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $request->scheduled_time);
+        $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
+        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
 
         // حساب أجرة الغرفة
         if ($request->room_id && $request->expected_stay_days) {
@@ -321,7 +322,7 @@ class SurgeryController extends Controller
     public function edit(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'الجراح', 'التخدير']) && 
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff', 'doctor', 'الجراح', 'التخدير']) && 
             !$user->hasAnyPermission(['edit surgeries', 'view surgeon station'])) {
             abort(403, 'غير مصرح لك بتعديل العمليات الجراحية');
         }
@@ -331,24 +332,41 @@ class SurgeryController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتعديل العمليات الجراحية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation']);
+        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room']);
         $patients = Patient::with('user')->get()->sortBy(function($p) {
             return optional($p->user)->name ?? '';
         });
-        $doctors = Doctor::with('user')->where('is_active', true)->get()->sortBy(function($d) {
-            return optional($d->user)->name ?? '';
-        });
-        $departments = Department::where('is_active', true)->orderBy('name')->get();
-        $labTests = LabTest::active()->orderBy('name')->get();
-        $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
-        $locations = \App\Models\Location::orderBy('name')->get();
-        return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'departments', 'labTests', 'radiologyTypes', 'locations'));
+        $doctors = Doctor::with('user')
+                        ->where('is_active', true)
+                        ->where(function($query) {
+                            $query->where('type', 'surgeon')
+                                  ->orWhere('specialization', 'جراحة')
+                                  ->orWhere('type', 'anesthesia');
+                        })
+                        ->get()
+                        ->sortBy(function($d) {
+                            return optional($d->user)->name ?? '';
+                        });
+        $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        // إحضار الغرف مع الغرفة المحجوزة حالياً
+        $rooms = Room::where('room_purpose', 'beds')
+                     ->where(function($query) use ($surgery) {
+                         $query->where('is_active', true);
+                         if ($surgery->room_id) {
+                             $query->orWhere('id', $surgery->room_id);
+                         }
+                     })
+                     ->orderBy('room_type')
+                     ->orderBy('room_number')
+                     ->get();
+
+        return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'surgicalOperations', 'rooms'));
     }
 
     public function print(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'الجراح']) && 
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff', 'doctor', 'الجراح']) && 
             !$user->hasAnyPermission(['view surgeries', 'view surgeon station'])) {
             abort(403, 'غير مصرح لك بطباعة تفاصيل العملية');
         }
@@ -364,118 +382,84 @@ class SurgeryController extends Controller
     public function update(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'الجراح']) && 
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff', 'doctor', 'الجراح']) && 
             !$user->hasAnyPermission(['edit surgeries', 'view surgeon station'])) {
             abort(403, 'غير مصرح لك بتعديل العمليات الجراحية');
         }
 
-        // منع الأطباء الاستشاريين من تعديل العمليات
         if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتعديل العمليات الجراحية');
+        }
+
+        if ($request->filled('custom_surgery_fee')) {
+            $normalizedFee = str_replace([',', ' '], ['', ''], $request->custom_surgery_fee);
+            $request->merge(['custom_surgery_fee' => $normalizedFee]);
         }
 
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
-            'department_id' => 'required|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
-            'surgery_type' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'room_id' => 'required|exists:rooms,id',
+            'expected_stay_days' => 'required|integer|min:1|max:365',
+            'surgery_category' => 'required|string|max:255',
+            'surgical_operation_id' => 'required|exists:surgical_operations,id',
             'scheduled_date' => 'required|date',
-            'scheduled_time' => 'required|date_format:H:i',
-            'status' => 'required|in:scheduled,waiting,in_progress,completed,cancelled',
-            'referral_source' => 'required|in:internal,external',
-            'external_doctor_name' => 'nullable|string|max:255',
-            'external_hospital_name' => 'nullable|string|max:255',
-            'referral_notes' => 'nullable|string',
+            'scheduled_time' => 'nullable',
+            'referring_doctor_name' => 'required|string|max:255',
             'referral_letter' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
-            'custom_surgery_fee' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-            'post_op_notes' => 'nullable|string',
-            'diagnosis' => 'nullable|string|max:1000',
+            'custom_surgery_fee' => 'required|numeric|min:0',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
-            'surgical_assistant_name' => 'nullable|string|max:255',
-            'start_time' => 'nullable|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            'referring_physician' => 'nullable|string|max:255',
-            'anesthesia_type' => 'nullable|string|max:255',
-            'surgery_classification' => 'nullable|string|max:255',
-            'supplies' => 'nullable|string',
-            'surgery_category' => 'nullable|string|in:elective,emergency,urgent,semi_urgent',
-            'surgery_type_detail' => 'nullable|string|in:diagnostic,therapeutic,preventive,cosmetic,reconstructive,palliative',
-            'anesthesia_position' => 'nullable|string|in:supine,prone,lateral,lithotomy,fowler,trendelenburg,sitting,other',
-            'asa_classification' => 'nullable|string|in:asa1,asa2,asa3,asa4,asa5,asa6',
-            'surgical_complexity' => 'nullable|string|in:minor,intermediate,major,complex',
-            'surgical_notes' => 'nullable|string|max:1000',
-            'treatment_plan' => 'nullable|string|max:2000',
-            'follow_up_date' => 'nullable|date|after:today',
-            'lab_tests' => 'nullable|array',
-            'lab_tests.*' => 'exists:lab_tests,id',
-            'radiology_tests' => 'nullable|array',
-            'radiology_tests.*' => 'exists:radiology_types,id',
+        ], [
+            'room_id.required' => 'يرجى اختيار غرفة للمريض قبل تأكيد الحجز.',
+            'expected_stay_days.required' => 'يرجى تحديد عدد أيام الإقامة المتوقعة.',
         ]);
 
-        $surgeryData = $request->except(['referral_letter']);
-        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $request->scheduled_time);
+        $doctor = Doctor::find($request->doctor_id);
+        if ($doctor && $doctor->department_id) {
+            $request->merge(['department_id' => $doctor->department_id]);
+        }
 
-        // if operation changed, refresh fee and type
-        if ($request->filled('surgical_operation_id')) {
-            $operation = SurgicalOperation::find($request->surgical_operation_id);
-            if ($operation) {
-                $surgeryData['surgery_type'] = $operation->name;
-                
-                // استخدام السعر المخصص دائماً (يدوياً في كلتا الحالتين)
-                if ($request->filled('custom_surgery_fee')) {
-                    $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
-                } else {
-                    // احتياطي: استخدام السعر من الجدول في حالة عدم وجود سعر مخصص
-                    $surgeryData['surgery_fee'] = $operation->fee;
-                }
+        $surgeryData = $request->except(['referral_letter']);
+        $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
+        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
+
+        $operation = SurgicalOperation::find($request->surgical_operation_id);
+        if ($operation) {
+            $surgeryData['surgery_type'] = $operation->name;
+            if ($request->filled('custom_surgery_fee')) {
+                $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
+            } else {
+                $surgeryData['surgery_fee'] = $operation->fee;
             }
         }
 
-        // process referral letter if new file uploaded
+        // معالجة تغيير الغرفة
+        if ($surgery->room_id != $request->room_id) {
+            if ($surgery->room_id) {
+                Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+            }
+            if ($request->room_id) {
+                $newRoom = Room::find($request->room_id);
+                if ($newRoom) {
+                    $newRoom->update(['status' => 'occupied']);
+                    $surgeryData['room_fee'] = $newRoom->daily_fee * $request->expected_stay_days;
+                }
+            }
+        } elseif ($request->room_id && $request->expected_stay_days) {
+            $currentRoom = Room::find($request->room_id);
+            if ($currentRoom) {
+                $surgeryData['room_fee'] = $currentRoom->daily_fee * $request->expected_stay_days;
+            }
+        }
+
         if ($request->hasFile('referral_letter')) {
             $file = $request->file('referral_letter');
             $path = $file->store('referrals', 'public');
             $surgeryData['referral_letter_path'] = $path;
         }
+
         $surgery->update($surgeryData);
-
-        // التأكد من وجود زيارة
-        if (!$surgery->visit_id) {
-            $visit = \App\Models\Visit::create([
-                'patient_id' => $surgery->patient_id,
-                'department_id' => $surgery->department_id,
-                'doctor_id' => $surgery->doctor_id,
-                'visit_date' => $surgery->scheduled_date,
-                'visit_time' => $surgery->scheduled_time,
-                'visit_type' => 'surgery',
-                'chief_complaint' => 'عملية جراحية: ' . $surgery->surgery_type,
-                'status' => 'pending_payment',
-                'notes' => 'زيارة خاصة بالعملية الجراحية #' . $surgery->id
-            ]);
-            $surgery->update(['visit_id' => $visit->id]);
-        } else {
-            $visit = $surgery->visit;
-        }
-
-        // إنشاء طلبات المختبر - فقط إذا تم تحديد تحاليل معينة
-        $labTestIds = $request->input('lab_tests', []);
-        if (is_array($labTestIds) && count($labTestIds)) {
-            foreach ($labTestIds as $labTestId) {
-                if ($labTestId && !$surgery->labTests()->where('lab_test_id', $labTestId)->exists()) {
-                    $surgery->labTests()->create([
-                        'lab_test_id' => $labTestId,
-                        'status' => 'pending',
-                        'payment_status' => 'pending'
-                    ]);
-                }
-            }
-        }
-        // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون lab_test_id)
-        // سيقوم موظف المختبر بإضافة التحاليل المطلوبة لاحقاً
 
         // إنشاء طلبات الأشعة - فقط إذا تم تحديد أشعة معينة
         $radiologyTypeIds = $request->input('radiology_tests', []);
@@ -495,8 +479,8 @@ class SurgeryController extends Controller
 
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->route('surgeries.show', $surgery)
-            ->with('success', 'تم تحديث العملية الجراحية بنجاح');
+        return redirect()->route('surgeries.index')
+            ->with('success', 'تم تعديل حجز العملية الجراحية بنجاح');
     }
 
     public function waiting()

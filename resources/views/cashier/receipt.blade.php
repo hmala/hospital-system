@@ -29,7 +29,7 @@
                      style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                     <h3 class="mb-1">
                         <i class="fas fa-hospital-alt me-2"></i>
-                        مستشفى النظام الطبي
+                        مستشفى الكفاءات الأهلي
                     </h3>
                     <p class="mb-0">إيصال دفع رسوم الخدمات الطبية</p>
                 </div>
@@ -158,12 +158,8 @@
 
                         // 1. تفاصيل الموعد
                         if ($payment->appointment) {
-                            $doctorFee = $payment->appointment->doctor->fee_by_specialization ?? 0;
                             $consultFee = $payment->appointment->consultation_fee ?? 0;
-                            $hospitalProfit = $consultFee - $doctorFee;
-                            $lineItems[] = ['الخدمة' => 'أجر الطبيب', 'السعر' => $doctorFee];
-                            $lineItems[] = ['الخدمة' => 'مبلغ الكشف', 'السعر' => $consultFee];
-                            $lineItems[] = ['الخدمة' => 'ربح المستشفى', 'السعر' => $hospitalProfit];
+                            $lineItems[] = ['الخدمة' => 'رسوم كشف العيادة الاستشارية', 'السعر' => $consultFee];
                         }
 
                         // 2. طلبات طبية (تحاليل، أشعة، صيدلية، طوارئ)
@@ -300,32 +296,7 @@
                         </div>
                     </div>
 
-                    <!-- تفصيل الرسوم للموعد -->
-                    @php
-                        $doctorFee = $payment->appointment->doctor->fee_by_specialization ?? 0;
-                        $consultFee = $payment->appointment->consultation_fee ?? 0;
-                        $hospitalProfit = $consultFee - $doctorFee;
-                    @endphp
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-list-check me-2 text-success"></i>
-                            تفصيل الرسوم
-                        </h6>
-                        <table class="table table-sm mb-0">
-                            <tr>
-                                <td>أجر الطبيب</td>
-                                <td class="text-end">{{ number_format($doctorFee,2) }} IQD</td>
-                            </tr>
-                            <tr>
-                                <td>مبلغ الكشف</td>
-                                <td class="text-end">{{ number_format($consultFee,2) }} IQD</td>
-                            </tr>
-                            <tr>
-                                <td>ربح المستشفى</td>
-                                <td class="text-end">{{ number_format($hospitalProfit,2) }} IQD</td>
-                            </tr>
-                        </table>
-                    </div>
+
                     @endif
 
                     @if($payment->request)
@@ -728,13 +699,9 @@
                     <!-- معلومات الكاشير -->
                     <div class="border-top pt-3">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <small class="text-muted">تم الاستلام بواسطة:</small>
                                 <div class="fw-bold">{{ $payment->cashier->name }}</div>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <small class="text-muted">التوقيع:</small>
-                                <div style="height: 40px; border-bottom: 1px solid #ddd; width: 200px; display: inline-block;"></div>
                             </div>
                         </div>
                     </div>

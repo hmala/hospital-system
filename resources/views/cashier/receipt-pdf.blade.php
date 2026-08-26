@@ -7,41 +7,45 @@
     <style>
         @page {
             size: A4;
-            margin: 1cm;
+            margin: 0.5cm;
         }
         
         * {
             font-family: 'Arial', sans-serif;
+            font-weight: bold !important;
         }
         
         body {
             direction: rtl;
             text-align: right;
+            font-size: 16px;
         }
         
         .header {
             text-align: center;
             border-bottom: 3px solid #28a745;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
         
         .header h1 {
             color: #28a745;
             margin: 0;
-            font-size: 28px;
+            font-size: 32px;
         }
         
         .header p {
             margin: 5px 0;
             color: #666;
+            font-size: 18px;
         }
         
         .receipt-info {
             background-color: #f8f9fa;
-            padding: 15px;
+            padding: 10px;
             border-radius: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            font-size: 16px;
         }
         
         .receipt-info table {
@@ -49,44 +53,47 @@
         }
         
         .receipt-info td {
-            padding: 5px 10px;
+            padding: 3px 10px;
         }
         
         .section-title {
             background-color: #28a745;
             color: white;
-            padding: 8px 15px;
-            margin: 20px 0 10px 0;
+            padding: 5px 10px;
+            margin: 10px 0 5px 0;
             border-radius: 3px;
+            font-size: 18px;
         }
         
         .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .info-table td {
-            padding: 8px;
+            padding: 5px;
             border-bottom: 1px solid #ddd;
+            font-size: 16px;
         }
         
         .info-table td:first-child {
-            color: #666;
+            color: #555;
             width: 150px;
         }
         
         .payment-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 10px 0;
         }
         
         .payment-table th,
         .payment-table td {
             border: 1px solid #ddd;
-            padding: 12px;
+            padding: 8px;
             text-align: center;
+            font-size: 16px;
         }
         
         .payment-table th {
@@ -97,7 +104,7 @@
         .total-row {
             background-color: #f8f9fa;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 20px;
         }
         
         .total-amount {
@@ -105,8 +112,8 @@
         }
         
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 20px;
+            padding-top: 10px;
             border-top: 2px solid #ddd;
         }
         
@@ -157,7 +164,7 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <h1>مستشفى النظام الطبي</h1>
+        <h1>مستشفى الكفاءات الأهلي</h1>
         <p>إيصال دفع رسوم الخدمات الطبية</p>
     </div>
 
@@ -248,12 +255,7 @@
         <table style="width: 100%;">
             <tr>
                 <td>
-                    <strong>تم الاستلام بواسطة:</strong><br>
-                    {{ $payment->cashier->name }}
-                </td>
-                <td style="text-align: left;">
-                    <strong>التوقيع:</strong><br>
-                    <div class="signature-line"></div>
+                    <strong>تم الاستلام بواسطة:</strong> {{ $payment->cashier->name }}
                 </td>
             </tr>
         </table>

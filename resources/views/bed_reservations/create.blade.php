@@ -288,7 +288,7 @@ body {
                                             <select name="doctor_id" id="doctor_id" class="form-select form-select-lg @error('doctor_id') is-invalid @enderror">
                                                 <option value="">اختر الطبيب (اختياري)</option>
                                                 @foreach($doctors as $doctor)
-                                                    <option value="{{ $doctor->id }}" {{ old('doctor_id') == $doctor->id ? 'selected' : '' }}>
+                                                    <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
                                                         د. {{ optional($doctor->user)->name ?? 'غير معروف' }}
                                                     </option>
                                                 @endforeach

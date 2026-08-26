@@ -7,10 +7,47 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::orderBy('name')->paginate(25);
-        return view('products.index', compact('products'));
+        $query = Product::query();
+
+        if ($search = $request->input('search')) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('unit', 'like', "%{$search}%");
+            });
+        }
+
+        if ($category = $request->input('category')) {
+            $query->where('category', $category);
+        }
+
+        if ($request->filled('is_perishable')) {
+            $query->where('is_perishable', $request->boolean('is_perishable'));
+        }
+
+        $products = $query->orderBy('name')->paginate(25)->withQueryString();
+
+        $totalProducts = Product::count();
+        $nonPerishableCount = Product::where('is_perishable', 0)->count();
+        $perishableCount = Product::where('is_perishable', 1)->count();
+
+        $categories = Product::distinct()
+            ->whereNotNull('category')
+            ->where('category', '<>', '')
+            ->orderBy('category')
+            ->pluck('category');
+
+        return view('products.index', compact(
+            'products',
+            'totalProducts',
+            'nonPerishableCount',
+            'perishableCount',
+            'categories'
+        ));
     }
 
     public function create()

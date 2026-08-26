@@ -2,20 +2,20 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="row mb-4">
+    <div class="row mb-4 no-print">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
                 <h2><i class="fas fa-chart-line me-2 text-primary"></i>الحركات المالية للعيادات الاستشارية</h2>
                 <p class="text-muted mb-0">سجل الدفعات والاسترجاعات للمواعيد الاستشارية.</p>
             </div>
-            <a href="{{ route('consultant-availability.index') }}" class="btn btn-secondary">
+            <a href="{{ route('consultant-availability.index') }}" class="btn btn-secondary no-print">
                 <i class="fas fa-arrow-left me-2"></i>العودة إلى توفر الأطباء
             </a>
         </div>
     </div>
 
     <div class="row mb-4">
-        <div class="col-lg-8">
+        <div class="col-lg-8 no-print">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="{{ route('consultant-availability.financial-movements') }}" class="row g-3 align-items-end">
@@ -37,7 +37,7 @@
                                 <option value="appointment_refunded" {{ $filterType === 'appointment_refunded' ? 'selected' : '' }}>المواعيد المدفوعة ثم المسترجعة</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex flex-column gap-2">
+                        <div class="col-md-3 d-flex flex-column gap-2 no-print">
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-primary w-100">
                                     <i class="fas fa-filter me-2"></i>تصفية
@@ -46,15 +46,20 @@
                                     <i class="fas fa-redo me-2"></i>مسح
                                 </a>
                             </div>
-                            <a href="{{ route('consultant-availability.financial-movements.export', request()->only(['from_date', 'to_date', 'filter_type'])) }}" class="btn btn-success w-100">
-                                <i class="fas fa-file-excel me-2"></i>تصدير إكسل
-                            </a>
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('consultant-availability.financial-movements.export', request()->only(['from_date', 'to_date', 'filter_type'])) }}" class="btn btn-success w-100">
+                                    <i class="fas fa-file-excel me-2"></i>إكسل
+                                </a>
+                                <button type="button" onclick="window.print()" class="btn btn-info text-white w-100">
+                                    <i class="fas fa-print me-2"></i>طباعة
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-4 no-print">
             <div class="row g-3">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm text-white bg-success">
@@ -102,7 +107,18 @@
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-body">
+                <div class="card-body" id="print-area">
+                    <div class="d-none d-print-block mb-4 text-center">
+                        <h2>مستشفى الأهلي</h2>
+                        <h4>تقرير الحركات المالية للعيادات الاستشارية</h4>
+                        <div class="mt-2">
+                            <span>تاريخ الطباعة: {{ now()->format('Y-m-d H:i') }}</span>
+                            @if($fromDate || $toDate)
+                                <span class="ms-3">الفترة: من {{ $fromDate ?? 'البداية' }} إلى {{ $toDate ?? 'النهاية' }}</span>
+                            @endif
+                        </div>
+                        <hr>
+                    </div>
                     @if($payments->count() > 0)
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
@@ -143,14 +159,23 @@
                                                 @endif
                                             </td>
                                             <td>{{ $payment->payment_method ?? '-' }}</td>
-                                            <td>{{ $payment->receipt_number ?? '-' }}</td>
+                                            <td>
+                                                @if($payment->receipt_number && $payment->payment_id)
+                                                    <a href="{{ route('cashier.receipt.print', $payment->payment_id) }}" class="btn btn-sm btn-link p-0 no-print" target="_blank" title="طباعة الإيصال">
+                                                        <i class="fas fa-print me-1 text-primary"></i>{{ $payment->receipt_number }}
+                                                    </a>
+                                                    <span class="d-none d-print-inline">{{ $payment->receipt_number }}</span>
+                                                @else
+                                                    {{ $payment->receipt_number ?? '-' }}
+                                                @endif
+                                            </td>
                                             <td>{{ optional($payment->cashier)->name ?? '-' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
-                        <div class="mt-3">
+                        <div class="mt-3 no-print">
                             {{ $payments->appends(request()->query())->links('pagination::bootstrap-5') }}
                         </div>
                     @else
@@ -164,14 +189,51 @@
         </div>
     </div>
 </div>
+@endsection
 
-@push('styles')
+@section('styles')
 <style>
 @media print {
-    .no-print, .no-print * {
+    /* Hide layout chrome and marked elements */
+    .sidebar, .navbar, header, footer, .no-print, .no-print * {
         display: none !important;
+    }
+    
+    /* Make main content occupy full width */
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+    
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    th, td {
+        border: 1px solid #dee2e6 !important;
+        padding: 6px !important;
+        font-size: 11px !important;
     }
 }
 </style>
-@endpush
 @endsection

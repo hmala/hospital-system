@@ -1,1054 +1,693 @@
 @extends('layouts.app')
 
 @section('styles')
-<!-- نظام أرشفة مجاني 100% - يتصل بالسكانر مباشرة -->
 <style>
-.step-wizard {
-    margin-bottom: 40px;
-    padding: 25px 35px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-.progress-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.progress-percent-text {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #667eea;
-    margin-bottom: 15px;
-}
-.progress-bar-container {
-    width: 100%;
-    height: 30px;
-    background: #e9ecef;
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-    display: block !important;
-}
-.progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    border-radius: 15px;
-    transition: width 0.5s ease;
-    position: relative;
-    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
-    display: block !important;
-    min-width: 5%;
-}
-.progress-bar-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
-    border-radius: 15px;
-}
-.progress-step-info {
-    margin-top: 15px;
-    text-align: center;
-    color: #6c757d;
-    font-size: 0.95rem;
-}
-.tab-content {
-    padding: 30px 20px;
-    min-height: 400px;
-}
-.section-divider {
-    border-top: 2px solid #e9ecef;
-    margin: 30px 0;
-    position: relative;
-}
-.section-divider::before {
-    content: attr(data-title);
-    position: absolute;
-    top: -12px;
-    left: 20px;
-    background: white;
-    padding: 0 10px;
-    color: #6c757d;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-/* Room Cards Styles */
-.room-card {
-    transition: all 0.3s ease;
-    border-width: 2px !important;
-}
-
-/* page and input-cell backgrounds */
 body {
-    background: #f5f6fa;
+    background-color: #f1f5f9 !important;
+    color: #0f172a;
+    font-size: 0.88rem;
 }
 
-#surgeryForm .mb-4 {
-    background: #f0f4ff; /* light blue tone for contrast */
-    border: 1px solid #ced4da;
-    border-radius: 8px;
-    padding: 1rem;
+/* كروت مدمجة وأنيقة */
+.compact-card {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.compact-card-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 8px 14px !important;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.compact-card-header:hover {
+    background: #f8fafc !important;
+}
+
+.compact-card-body {
+    padding: 12px 14px !important;
+    background: #ffffff !important;
+}
+
+/* تصغير وتنسيق الحقول بدقة وتباعد عالي */
+.form-label {
+    color: #1e293b !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    margin-bottom: 3px !important;
+}
+
+.form-label .text-danger {
+    font-size: 0.9rem;
 }
 
 #surgeryForm .form-control,
 #surgeryForm .form-select {
-    border: 2px solid #4a8eff;
-    border-radius: 6px;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    background: #ffffff;
+    background-color: #ffffff !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-radius: 5px !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 0.3rem 0.55rem !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
 }
 
 #surgeryForm .form-control:focus,
 #surgeryForm .form-select:focus {
-    border-color: #0056d6;
-    box-shadow: 0 0 0 0.3rem rgba(0,86,214,.25);
-    background: #ffffff;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.15) !important;
+    outline: none !important;
 }
 
-/* Accordion step styling */
-#surgeryAccordion {
-    gap: 12px;
-}
-#surgeryAccordion .accordion-item {
-    border: none;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
-    background: transparent;
-}
-#surgeryAccordion .accordion-header {
-    border-radius: 16px;
-    overflow: hidden;
-}
-#surgeryAccordion .accordion-button {
-    padding: 1.1rem 1.25rem;
-    border-radius: 16px;
-    background: #f8faff;
-    border: 1px solid #e6ecf7;
-    color: #1f2937;
-    font-weight: 700;
-    font-size: 1rem;
-    gap: 0.8rem;
-}
-#surgeryAccordion .accordion-button:not(.collapsed) {
-    background: #eaf2ff;
-    box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.18);
-}
-#surgeryAccordion .accordion-button:after {
-    filter: brightness(0.4);
-}
-#surgeryAccordion .step-number {
-    min-width: 32px;
-    min-height: 32px;
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
-    font-weight: 800;
-}
-#surgeryAccordion .accordion-body {
-    padding: 1.75rem 1.5rem 1.5rem;
-    background: #ffffff;
-    border: 1px solid #e9ecef;
-    border-top: none;
-    border-radius: 0 0 16px 16px;
-}
-#surgeryForm .accordion-body h5 {
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #ebedf2;
-    margin-bottom: 1.5rem;
+/* تنسيق Select2 المدمج */
+.select2-container--bootstrap-5 .select2-selection {
+    background-color: #ffffff !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-radius: 5px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0.15rem 0.45rem !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: #0f172a !important;
 }
 
-/* Let Bootstrap handle accordion collapse with proper CSS classes */
-/* Removed: display: none !important; - this was blocking Bootstrap's accordion functionality */
-
-.room-card[data-available="1"]:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
-}
-.room-card.border-4 {
-    border-width: 4px !important;
-}
-.room-card .card-header {
-    transition: all 0.3s ease;
-}
-.room-card[data-available="0"] {
-    cursor: not-allowed !important;
-}
-.room-card[data-available="1"] {
-    cursor: pointer;
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    line-height: 30px !important;
 }
 
-/* Style for Add Doctor Button in Select2 */
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.15) !important;
+}
+
+.select2-dropdown {
+    border: 1.5px solid #2563eb !important;
+    border-radius: 6px !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12) !important;
+    font-size: 0.84rem !important;
+    z-index: 1060 !important;
+}
+
+.select2-results__option {
+    padding: 6px 8px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.select2-results__option--highlighted[aria-selected] {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
 .select2-new-tag {
-    background: linear-gradient(135deg, #f0fff4 0%, #e6f9f0 100%);
-    padding: 12px 16px;
-    border-radius: 8px;
-    border: 2px dashed #198754;
-    margin: 4px 0;
+    background: #f0fdf4;
+    padding: 5px 8px;
+    border-radius: 4px;
+    border: 1.5px dashed #16a34a;
+    margin: 2px 0;
+    font-size: 0.82rem;
 }
 
-.select2-new-tag:hover {
-    background: linear-gradient(135deg, #e6f9f0 0%, #d4f4e3 100%);
-    border-color: #146c43;
-    transform: translateX(-2px);
+/* تبويبات وأزرار الغرف الميكرو */
+.nav-pills .nav-link {
+    border-radius: 5px;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    transition: all 0.2s ease;
+}
+.nav-pills .nav-link.active {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    border-color: #2563eb;
 }
 
-.select2-results__option--highlighted .select2-new-tag {
-    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
-    border-color: #fff;
-    color: white;
+.room-tile {
+    width: 54px;
+    height: 40px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: #dee2e6;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    margin: 2px;
+    padding: 1px;
 }
 
-.select2-results__option--highlighted .select2-new-tag i,
-.select2-results__option--highlighted .select2-new-tag strong {
-    color: white !important;
+.room-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
 }
 
-/* ضمان أن Dropdown الخاص بـ Select2 لا يغطي مودالات Bootstrap */
-.select2-container--open .select2-dropdown {
-    z-index: 1030 !important;
+.room-number {
+    font-weight: 800;
+    font-size: 0.82rem;
+    text-align: center;
+    line-height: 1;
 }
 
-/* تأكيد أن مودال إضافة الطبيب فوق أي طبقات أخرى */
-#addDoctorModal {
-    z-index: 1060;
-}
+.room-badges { position: absolute; top: 1px; right: 2px; }
+.room-status { position: absolute; bottom: 2px; left: 2px; }
+.room-actions { position: absolute; top: 1px; left: 2px; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+.room-selectable { cursor: pointer; }
+.room-selectable[data-available="0"] { cursor: not-allowed; opacity: 0.45; }
 
-.modal-backdrop {
-    z-index: 1050;
+.accordion-toggle-icon {
+    transition: transform 0.2s ease;
 }
-
+.collapsed .accordion-toggle-icon {
+    transform: rotate(-90deg);
+}
 </style>
 @endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-4">
-                <i class="fas fa-procedures me-2 text-primary"></i>
-                حجز عملية جراحية جديدة
-            </h2>
-            
-            <!-- مؤشر الخطوات -->
-            <div class="step-wizard" style="background: #f8f9fa; border: 2px solid #dee2e6; padding: 30px;">
-                <div class="progress-header">
-                    <div class="progress-percent-text" id="progressPercentText" style="color: #667eea; font-size: 1.3rem; font-weight: bold; margin-bottom: 15px;">0% اكتمال</div>
-                    <div class="progress-bar-container" style="width: 100%; height: 35px; background: #dee2e6; border-radius: 20px; overflow: hidden; margin-bottom: 10px;">
-                        <div class="progress-bar-fill" id="progressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #667eea 0%, #1262da 100%); border-radius: 20px;"></div>
+<div class="container-fluid py-2">
+    <!-- ترويسة مدمجة -->
+    <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+        <h1 class="h5 mb-0 text-dark fw-bold">
+            <i class="fas fa-procedures text-primary me-2"></i>
+            حجز عملية جراحية جديدة
+        </h1>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" id="toggleAllSectionsBtn" style="font-size:0.8rem;">
+                <i class="fas fa-layer-group me-1"></i> طي / توسيع
+            </button>
+            <a href="{{ route('surgeries.index') }}" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size:0.8rem;">
+                <i class="fas fa-arrow-left me-1"></i> العمليات
+            </a>
+        </div>
+    </div>
+
+    <!-- نموذج العملية المدمج كلياً في كارتين -->
+    <form action="{{ route('surgeries.store') }}" method="POST" id="surgeryForm" enctype="multipart/form-data">
+        @csrf
+        <input type="hidden" name="visit_id" value="{{ request('visit_id') }}">
+
+        <!-- الكارت 1: دمج بيانات المريض، العملية، والفريق الطبي -->
+        <div class="compact-card">
+            <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseSurgeryInfo" aria-expanded="true">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">1</span>
+                    <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
+                        <i class="fas fa-notes-medical text-primary me-1"></i>
+                        بيانات المريض، العملية، والفريق الطبي
+                    </h6>
+                </div>
+                <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
+            </div>
+            <div id="collapseSurgeryInfo" class="collapse show">
+                <div class="compact-card-body">
+                    <!-- سطر ملخص المريض المختار -->
+                    <div id="selectedPatientInfo" style="display: none;" class="mb-2">
+                        <div class="bg-light border rounded px-2 py-1 text-dark small d-flex justify-content-between align-items-center" style="font-size:0.82rem;">
+                            <div>
+                                <span class="badge bg-primary me-1"><i class="fas fa-id-card"></i></span>
+                                <strong id="patientNameHeader" class="text-primary me-2">-</strong>
+                                <span class="text-muted me-2">العمر: <b id="patientAge">-</b></span>
+                                <span class="text-muted me-2">الجنس: <b id="patientGender">-</b></span>
+                                <span class="text-muted">الهاتف: <b id="patientPhone" dir="ltr">-</b></span>
+                            </div>
+                            <span class="badge bg-success py-1"><i class="fas fa-check me-1"></i> جاهز</span>
+                        </div>
                     </div>
-                    <div class="progress-step-info" style="color: #495057; font-size: 1rem;">
-                        الخطوة <strong id="currentStepNum">-</strong> من <strong>3</strong>: <span id="stepName">اضغط على خطوة للبدء</span>
+
+                    <!-- السطر 1: تفاصيل العملية -->
+                    <div class="row g-2 mb-2">
+                        <!-- المريض -->
+                        <div class="col-md-3">
+                            <label for="patient_id" class="form-label">
+                                المريض <span class="text-danger">*</span>
+                            </label>
+                            <select name="patient_id" id="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required autofocus>
+                                <option value="">اختر المريض</option>
+                                @foreach($patients as $patient)
+                                    @php 
+                                        $patientName = optional($patient->user)->name ?? 'غير معروف';
+                                        $patientAge = optional($patient)->age ?? '-';
+                                        $patientGender = optional($patient)->gender ?? '-';
+                                        $patientPhone = optional($patient->user)->phone ?? '-';
+                                        $patientData = [
+                                            'id' => $patient->id,
+                                            'name' => $patientName,
+                                            'age' => $patientAge,
+                                            'gender' => $patientGender,
+                                            'phone' => $patientPhone
+                                        ];
+                                    @endphp
+                                    <option value="{{ $patient->id }}" 
+                                            data-patient='@json($patientData)'
+                                            {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
+                                        {{ $patientName }} ({{ $patientAge }} سنة)
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('patient_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        <!-- صنف العملية -->
+                        <div class="col-md-3">
+                            <label for="surgery_category" class="form-label">
+                                صنف العملية <span class="text-danger">*</span>
+                            </label>
+                            <select name="surgery_category" id="surgery_category" class="form-select @error('surgery_category') is-invalid @enderror" required>
+                                <option value="">-- اختر الصنف --</option>
+                                @foreach($surgicalOperations->unique('category')->pluck('category') as $category)
+                                    <option value="{{ $category }}" {{ old('surgery_category') == $category ? 'selected' : '' }}>
+                                        {{ $category }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('surgery_category') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        <!-- نوع العملية -->
+                        <div class="col-md-3">
+                            <label for="surgical_operation_id" class="form-label">
+                                نوع العملية <span class="text-danger">*</span>
+                            </label>
+                            <select name="surgical_operation_id" id="surgical_operation_id" class="form-select @error('surgical_operation_id') is-invalid @enderror" required>
+                                <option value="">-- اختر العملية --</option>
+                                @foreach($surgicalOperations as $operation)
+                                    <option value="{{ $operation->id }}" 
+                                            data-category="{{ $operation->category }}"
+                                            data-fee="{{ $operation->fee }}"
+                                            {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
+                                        {{ $operation->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('surgical_operation_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        <!-- سعر العملية -->
+                        <div class="col-md-3" id="custom_fee_container">
+                            <label for="custom_surgery_fee" class="form-label d-flex justify-content-between">
+                                <span>سعر العملية (د.ع) <span class="text-danger">*</span></span>
+                                <span id="surgery_fee_hint" class="text-primary small fw-normal" style="display:none; font-size:0.75rem;"></span>
+                            </label>
+                            <input type="text" 
+                                   name="custom_surgery_fee" 
+                                   id="custom_surgery_fee" 
+                                   class="form-control @error('custom_surgery_fee') is-invalid @enderror" 
+                                   value="{{ old('custom_surgery_fee') }}"
+                                   placeholder="مثال: 1,000,000"
+                                   inputmode="numeric"
+                                   required>
+                            @error('custom_surgery_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+
+                    <!-- السطر 2: الفريق الطبي والتاريخ -->
+                    <div class="row g-2 mb-2">
+                        <!-- الطبيب المرسل -->
+                        <div class="col-md-4">
+                            <label class="form-label">
+                                الطبيب المرسل <span class="text-danger">*</span>
+                            </label>
+                            <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
+                                <option value="">اختر الطبيب المرسل أو اكتب اسماً جديداً</option>
+                                <optgroup label="أطباء المستشفى">
+                                    @foreach($doctors as $doctor)
+                                        @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
+                                        <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $referringDoctorName) ? 'selected' : '' }}>
+                                            د. {{ $referringDoctorName ?: 'غير معروف' }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                                @php
+                                    $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
+                                        ->distinct()
+                                        ->pluck('referring_doctor_name')
+                                        ->filter()
+                                        ->unique()
+                                        ->reject(function($name) use ($doctors) {
+                                            return $doctors->pluck('user.name')->contains($name);
+                                        })
+                                        ->sort();
+                                @endphp
+                                @if($externalDoctors->isNotEmpty())
+                                    <optgroup label="أطباء خارجيين سابقين">
+                                        @foreach($externalDoctors as $externalDoctor)
+                                            <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $externalDoctor) ? 'selected' : '' }}>
+                                                {{ $externalDoctor }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                            </select>
+                            @error('referring_doctor_name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        </div>
+
+                        <!-- الطبيب الجراح -->
+                        <div class="col-md-4">
+                            <label for="doctor_id" class="form-label">
+                                الطبيب الجراح <span class="text-danger">*</span>
+                            </label>
+                            <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
+                                <option value="">اختر الجراح</option>
+                                @foreach($doctors as $doctor)
+                                    @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
+                                    <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
+                                        د. {{ $doctorName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        <!-- تاريخ العملية -->
+                        <div class="col-md-4">
+                            <label for="scheduled_date" class="form-label">
+                                تاريخ العملية <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" name="scheduled_date" id="scheduled_date" 
+                                   class="form-control @error('scheduled_date') is-invalid @enderror" 
+                                   value="{{ old('scheduled_date', date('Y-m-d')) }}" required>
+                            @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+
+                    <!-- السطر 3: أطباء التخدير وورقة التحويل بالسكانر -->
+                    <div class="row g-2 align-items-end pt-1 border-top mt-2">
+                        @if(Auth::user()->hasRole(['admin', 'surgery_staff', 'doctor']))
+                        <div class="col-md-4">
+                            <label for="anesthesiologist_id" class="form-label text-muted">المخدر الأول (اختياري)</label>
+                            <select name="anesthesiologist_id" id="anesthesiologist_id" class="form-select @error('anesthesiologist_id') is-invalid @enderror">
+                                <option value="">اختر الطبيب المخدر</option>
+                                @foreach($doctors as $doctor)
+                                    @php $anesthesiologistName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
+                                    <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_id') == $doctor->id) ? 'selected' : '' }}>
+                                        د. {{ $anesthesiologistName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="anesthesiologist_2_id" class="form-label text-muted">المخدر الثاني (اختياري)</label>
+                            <select name="anesthesiologist_2_id" id="anesthesiologist_2_id" class="form-select @error('anesthesiologist_2_id') is-invalid @enderror">
+                                <option value="">اختر الطبيب المخدر الثاني</option>
+                                @foreach($doctors as $doctor)
+                                    @php $anesthesiologist2Name = optional($doctor->user)->name ?? 'غير معروف'; @endphp
+                                    <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_2_id') == $doctor->id) ? 'selected' : '' }}>
+                                        د. {{ $anesthesiologist2Name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                        @else
+                        <div class="col-md-12">
+                        @endif
+                            <label class="form-label text-muted">ورقة التحويل الطبي (سكانر / ملف)</label>
+                            <div class="d-flex gap-1" id="referral_letter_container">
+                                <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
+                                    <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:34px;">
+                                    <i class="fas fa-upload me-1"></i> رفع ملف
+                                </button>
+                                <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
+                                <textarea id="scan_data_receiver" style="display:none;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- معاينة الوثيقة الممسوحة -->
+                    <div id="referral_letter_preview" class="mt-2" style="display: none;">
+                        <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                            <span><i class="fas fa-check-circle me-1"></i> تم مسح/رفع ورقة التحويل بنجاح</span>
+                            <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
+                                <i class="fas fa-times me-1"></i> إلغاء
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-            <form action="{{ route('surgeries.store') }}" method="POST" id="surgeryForm" enctype="multipart/form-data">
-                @csrf
-                <input type="hidden" name="visit_id" value="{{ request('visit_id') }}">
-                
-                <!-- التبويبات (اصبحت اكوردين) -->
-                <div class="accordion" id="surgeryAccordion">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading1">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="false" aria-controls="collapse1">
-                                <span class="step-number bg-primary text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">1</span>
-                                <i class="fas fa-user me-2"></i>اختيار المريض والعملية
-                            </button>
-                        </h2>
-                        <div id="collapse1" class="accordion-collapse collapse" aria-labelledby="heading1" data-bs-parent="#surgeryAccordion">
-                            <div class="accordion-body">
-                                <!-- عرض معلومات المريض المختار -->
-                                <div class="row mb-4">
-                                    <div class="col-12">
-                                        <div id="selectedPatientInfo" style="display: none;">
-                                            <div class="alert alert-info border-start border-4 border-info">
-                                                <div class="row">
-                                                    <div class="col-md-3">
-                                                        <small class="text-muted">الاسم</small>
-                                                        <p class="fw-bold mb-0" id="patientName">-</p>
-                                                    </div>
-                                                    <div class="col-md-3">
-                                                        <small class="text-muted">العمر</small>
-                                                        <p class="fw-bold mb-0" id="patientAge">-</p>
-                                                    </div>
-                                                    <div class="col-md-3">
-                                                        <small class="text-muted">الجنس</small>
-                                                        <p class="fw-bold mb-0" id="patientGender">-</p>
-                                                    </div>
-                                                    <div class="col-md-3">
-                                                        <small class="text-muted">الهاتف</small>
-                                                        <p class="fw-bold mb-0" id="patientPhone">-</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-4">
-                                            <label for="patient_id" class="form-label fw-bold">
-                                                <i class="fas fa-user me-1 text-primary"></i>
-                                                المريض <span class="text-danger">*</span>
-                                            </label>
-                                            <select name="patient_id" id="patient_id" class="form-select form-select-lg @error('patient_id') is-invalid @enderror" required autofocus>
-                                                <option value="">اختر المريض</option>
-                                                @foreach($patients as $patient)
-                                                    @php 
-                                                        $patientName = optional($patient->user)->name ?? 'غير معروف';
-                                                        $patientAge = optional($patient)->age ?? '-';
-                                                        $patientGender = optional($patient)->gender ?? '-';
-                                                        $patientPhone = optional($patient->user)->phone ?? '-';
-                                                        $patientData = [
-                                                            'id' => $patient->id,
-                                                            'name' => $patientName,
-                                                            'age' => $patientAge,
-                                                            'gender' => $patientGender,
-                                                            'phone' => $patientPhone
-                                                        ];
-                                                    @endphp
-                                                    <option value="{{ $patient->id }}" 
-                                                            data-patient='@json($patientData)'
-                                                            {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
-                                                        {{ $patientName }} ({{ $patientAge }} سنة)
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            @error('patient_id')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="surgery_category" class="form-label fw-bold">
-                                        <i class="fas fa-folder me-1 text-warning"></i>
-                                        صنف العملية <span class="text-danger">*</span>
-                                    </label>
-                                    <select name="surgery_category" id="surgery_category" 
-                                            class="form-select form-select-lg @error('surgery_category') is-invalid @enderror" 
-                                            required>
-                                        <option value="">-- اختر صنف العملية --</option>
-                                        @foreach($surgicalOperations->unique('category')->pluck('category') as $category)
-                                            <option value="{{ $category }}" {{ old('surgery_category') == $category ? 'selected' : '' }}>
-                                                {{ $category }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('surgery_category')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="surgical_operation_id" class="form-label fw-bold">
-                                        <i class="fas fa-stethoscope me-1 text-info"></i>
-                                        نوع العملية <span class="text-danger">*</span>
-                                    </label>
-                                    <select name="surgical_operation_id" id="surgical_operation_id" 
-                                            class="form-select form-select-lg @error('surgical_operation_id') is-invalid @enderror" 
-                                            required>
-                                        <option value="">-- اختر نوع العملية --</option>
-                                        @foreach($surgicalOperations as $operation)
-                                            <option value="{{ $operation->id }}" 
-                                                    data-category="{{ $operation->category }}"
-                                                    data-fee="{{ $operation->fee }}"
-                                                    {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
-                                                {{ $operation->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('surgical_operation_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <div id="surgery_fee_info" class="alert alert-info mt-3" style="display: none;">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        <span>سعر العملية حسب الجدول: <strong id="surgery_fee_display">0</strong> د.ع</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6" id="custom_fee_container">
-                                <div class="mb-4">
-                                    <label for="custom_surgery_fee" class="form-label fw-bold">
-                                        <i class="fas fa-coins me-1 text-warning"></i>
-                                        سعر العملية <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           name="custom_surgery_fee" 
-                                           id="custom_surgery_fee" 
-                                           class="form-control form-control-lg @error('custom_surgery_fee') is-invalid @enderror" 
-                                           value="{{ old('custom_surgery_fee') }}"
-                                           placeholder="أدخل سعر العملية بالدينار العراقي (مثال: 1,000,000)"
-                                           inputmode="numeric"
-                                           pattern="[0-9,]+"
-                                           required>
-                                    <div class="form-text">
-                                        <i class="fas fa-info-circle me-1 text-info"></i>
-                                        يجب إدخال سعر العملية يدوياً - سيتم تنسيق الأرقام تلقائياً
-                                    </div>
-                                    @error('custom_surgery_fee')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold">
-                                        <i class="fas fa-user-doctor me-1 text-info"></i>
-                                        الطبيب المرسل <span class="text-danger">*</span>
-                                    </label>
-                                    
-                                    <!-- قائمة موحدة للأطباء الداخليين والخارجيين -->
-                                    <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select form-select-lg @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
-                                        <option value="">اختر الطبيب أو أدخل اسماً جديداً</option>
-                                        
-                                        <!-- الأطباء الداخليين -->
-                                        <optgroup label="أطباء المستشفى">
-                                            @foreach($doctors as $doctor)
-                                                @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
-                                                <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $referringDoctorName) ? 'selected' : '' }}>
-                                                    د. {{ $referringDoctorName ?: 'غير معروف' }}
-                                                </option>
-                                            @endforeach
-                                        </optgroup>
-                                        
-                                        <!-- الأطباء الخارجيين السابقين -->
-                                        @php
-                                            $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
-                                                ->distinct()
-                                                ->pluck('referring_doctor_name')
-                                                ->filter()
-                                                ->unique()
-                                                ->reject(function($name) use ($doctors) {
-                                                    // استبعاد الأطباء الداخليين من القائمة الخارجية
-                                                    return $doctors->pluck('user.name')->contains($name);
-                                                })
-                                                ->sort();
-                                        @endphp
-                                        @if($externalDoctors->isNotEmpty())
-                                            <optgroup label="أطباء خارجيين سابقين">
-                                                @foreach($externalDoctors as $externalDoctor)
-                                                    <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $externalDoctor) ? 'selected' : '' }}>
-                                                        {{ $externalDoctor }}
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endif
-                                    </select>
-                                    
-                                    <div class="alert alert-success alert-sm mt-2 mb-0 py-2" style="font-size: 0.9rem;">
-                                        <i class="fas fa-lightbulb me-2"></i>
-                                        <strong>للإضافة السريعة:</strong> اكتب اسم الطبيب الجديد واضغط Enter - سيُفتح نموذج لإدخال التفاصيل
-                                    </div>
-                                    
-                                    @error('referring_doctor_name')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold">&nbsp;</label>
-                                    <div class="alert alert-secondary py-3" style="height:100%;">
-                                        <p class="mb-1"><strong>ملاحظة:</strong> يمكنك مسح أو رفع ورقة التحويل من القسم التالي.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- نظام الأرشفة المجاني - متاح دائماً -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="mb-4">
-                                    <div class="mt-3" id="referral_letter_container">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-file-medical-alt me-1 text-info"></i>
-                                            ورقة التحويل
-                                        </label>
-                                        
-                                        <!-- إرشادات النظام -->
-                                        <div class="alert alert-primary mb-3" id="scan_instructions">
-                                            <div class="d-flex align-items-start">
-                                                <i class="fas fa-print fa-2x me-3 text-primary"></i>
-                                                <div>
-                                                    <h6 class="alert-heading mb-2">🎯 نظام الأرشفة التلقائي (يعمل مع أي سكانر)</h6>
-                                                    <p class="mb-2"><strong>خطوة واحدة فقط:</strong></p>
-                                                    <ol class="mb-2 ps-3">
-                                                        <li>ضع الورقة في السكانر</li>
-                                                        <li>اضغط الزر الأزرق أدناه</li>
-                                                        <li>سيتم المسح تلقائياً!</li>
-                                                    </ol>
-                                                    <div id="scanner_status" class="mt-2"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- أزرار المسح -->
-                                        <div class="d-grid gap-2 mb-3">
-                                            <button type="button" class="btn btn-lg btn-primary" id="scan_btn" onclick="scanFromDevice()">
-                                                <i class="fas fa-print me-2"></i>
-                                                <span id="scan_btn_text">مسح الورقة من السكانر الآن</span>
-                                            </button>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('referral_letter').click()">
-                                                <i class="fas fa-upload me-2"></i>
-                                                أو رفع ملف إذا مسحته مسبقاً
-                                            </button>
-                                        </div>
-
-                                        <!-- رسالة تثبيت البرنامج -->
-                                        <div class="alert alert-warning border-2" id="install_prompt" style="display:none;">
-                                            <h6 class="mb-3">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                برنامج السكانر غير مشغّل
-                                            </h6>
-                                            <div class="mb-3">
-                                                <p class="mb-2"><strong>لتشغيل المسح التلقائي:</strong></p>
-                                                <ol class="mb-0">
-                                                    <li>شغّل ملف <code class="bg-light px-2 py-1 rounded">تشغيل_السكانر_التلقائي.bat</code></li>
-                                                    <li>تأكد من توصيل السكانر بالكمبيوتر</li>
-                                                    <li>انتظر حتى تظهر رسالة "جاهز"</li>
-                                                </ol>
-                                            </div>
-                                            <div class="d-flex gap-2 flex-wrap">
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-warning" 
-                                                        onclick="checkScannerStatus()">
-                                                    <i class="fas fa-redo me-1"></i>
-                                                    إعادة الفحص
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-secondary" 
-                                                        onclick="document.getElementById('referral_letter').click()">
-                                                    <i class="fas fa-upload me-1"></i>
-                                                    رفع ملف يدوياً
-                                                    أعد المحاولة
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-secondary" 
-                                                        onclick="document.getElementById('referral_letter').click()">
-                                                    <i class="fas fa-upload me-1"></i>
-                                                    رفع ملف بدلاً
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <!-- حقل الملف المخفي -->
-                                        <input type="file" 
-                                               name="referral_letter" 
-                                               id="referral_letter" 
-                                               class="d-none @error('referral_letter') is-invalid @enderror" 
-                                               accept="image/*,application/pdf">
-                                        
-                                        <!-- textarea مخفي لاستقبال البيانات من NAPS2 -->
-                                        <textarea id="scan_data_receiver" style="display:none;"></textarea>
-                                        
-                                        <!-- حالة المسح -->
-                                        <div id="scan_status" class="alert" style="display: none;">
-                                            <div class="d-flex align-items-center">
-                                                <div class="spinner-border spinner-border-sm me-2" role="status">
-                                                    <span class="visually-hidden">جاري المسح...</span>
-                                                </div>
-                                                <span id="scan_status_text">جاري تشغيل السكانر...</span>
-                                            </div>
-                                        </div>
-
-                                        @error('referral_letter')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                    
-                                    <!-- معاينة الوثيقة -->
-                                    <div id="referral_letter_preview" class="mt-3" style="display: none;">
-                                        <div class="card border-success">
-                                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                                <span>
-                                                    <i class="fas fa-check-circle me-2"></i>
-                                                    تم المسح بنجاح من السكانر
-                                                </span>
-                                                <button type="button" class="btn btn-sm btn-light" onclick="clearScannedDoc()">
-                                                    <i class="fas fa-redo me-1"></i>إعادة المسح
-                                                </button>
-                                            </div>
-                                            <div class="card-body text-center">
-                                                <img id="preview_image" src="" class="img-fluid rounded shadow" style="max-height:400px;">
-                                                <p id="preview_info" class="mt-2 text-muted small"></p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-            </div> <!-- /.accordion-collapse step1 -->
-        </div> <!-- /.accordion-item step1 -->
-
-                    <!-- الخطوة 2: التفاصيل الطبية والموعد -->
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="heading2">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2">
-                    <span class="step-number bg-success text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">2</span>
-                    <i class="fas fa-calendar-check me-2"></i>اختيار الطبيب والموعد
-                </button>
-            </h2>
-            <div id="collapse2" class="accordion-collapse collapse" aria-labelledby="heading2" data-bs-parent="#surgeryAccordion">
-                <div class="accordion-body">
-                        <h5 class="mb-4 text-success">
-                            <i class="fas fa-calendar-check me-2"></i>
-                            اختيار الطبيب والموعد
-                        </h5>
-                        
-                        <div class="row align-items-end">
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="doctor_id" class="form-label fw-bold">
-                                        <i class="fas fa-user-md me-1 text-primary"></i>
-                                        الطبيب الجراح <span class="text-danger">*</span>
-                                    </label>
-                                    <select name="doctor_id" id="doctor_id" class="form-select form-select-lg @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
-                                        <option value="">اختر الطبيب</option>
-                                        @foreach($doctors as $doctor)
-                                            @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                            <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $doctorName }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('doctor_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-4 h-100">
-                                    <label class="form-label fw-bold text-transparent">&nbsp;</label>
-                                    <div class="alert alert-secondary h-100">
-                                        <p class="mb-1"><strong>ملاحظة:</strong> اختر الطبيب الجراح المناسب لنوع العملية.</p>
-                                        <p class="mb-0 text-muted">سيقترح النظام الطبيب الأفضل عند الاختيار.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="scheduled_date" class="form-label fw-bold">
-                                        <i class="fas fa-calendar me-1 text-warning"></i>
-                                        تاريخ العملية <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="date" name="scheduled_date" id="scheduled_date" 
-                                           class="form-control form-control-lg @error('scheduled_date') is-invalid @enderror" 
-                                           value="{{ old('scheduled_date') }}" required>
-                                    @error('scheduled_date')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="scheduled_time" class="form-label fw-bold">
-                                        <i class="fas fa-clock me-1 text-warning"></i>
-                                        وقت العملية <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="time" name="scheduled_time" id="scheduled_time" 
-                                           class="form-control form-control-lg @error('scheduled_time') is-invalid @enderror" 
-                                           value="{{ old('scheduled_time', '09:00') }}" required>
-                                    @error('scheduled_time')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="location_id" class="form-label fw-bold">
-                                        <i class="fas fa-map-marker-alt me-1 text-warning"></i>
-                                        الردهة / الموقع <span class="text-danger">*</span>
-                                    </label>
-                                    <select name="location_id" id="location_id" class="form-select form-select-lg @error('location_id') is-invalid @enderror" required>
-                                        <option value="">اختر الردهة / الموقع</option>
-                                        @foreach($locations as $loc)
-                                            <option value="{{ $loc->id }}" {{ old('location_id') == $loc->id ? 'selected' : '' }}>
-                                                {{ $loc->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('location_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                        
-                        @if(Auth::user()->hasRole(['admin', 'surgery_staff', 'doctor']))
-                        <div class="section-divider" data-title="أطباء التخدير (اختياري)"></div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="anesthesiologist_id" class="form-label fw-bold">
-                                        <i class="fas fa-syringe me-1 text-secondary"></i>
-                                        الطبيب المخدر الأول
-                                    </label>
-                                    <select name="anesthesiologist_id" id="anesthesiologist_id" class="form-select @error('anesthesiologist_id') is-invalid @enderror">
-                                        <option value="">اختر الطبيب المخدر</option>
-                                        @foreach($doctors as $doctor)
-                                            @php $anesthesiologistName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                            <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_id') == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $anesthesiologistName }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('anesthesiologist_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <label for="anesthesiologist_2_id" class="form-label fw-bold">
-                                        <i class="fas fa-syringe me-1 text-secondary"></i>
-                                        الطبيب المخدر الثاني
-                                    </label>
-                                    <select name="anesthesiologist_2_id" id="anesthesiologist_2_id" class="form-select @error('anesthesiologist_2_id') is-invalid @enderror">
-                                        <option value="">اختر الطبيب المخدر الثاني</option>
-                                        @foreach($doctors as $doctor)
-                                            @php $anesthesiologist2Name = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                            <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_2_id') == $doctor->id) ? 'selected' : '' }}>
-                                                د. {{ $anesthesiologist2Name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('anesthesiologist_2_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-
-                </div> <!-- /.accordion-body step2 -->
-            </div> <!-- /.accordion-collapse step2 -->
-        </div> <!-- /.accordion-item step2 -->
-
-                <div class="accordion-item">
-            <h2 class="accordion-header" id="heading3">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3" aria-expanded="false" aria-controls="collapse3">
-                    <span class="step-number bg-warning text-white rounded-circle me-2" style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;">3</span>
-                    <i class="fas fa-door-open me-2"></i>اختيار الغرفة والإقامة
-                </button>
-            </h2>
-            <div id="collapse3" class="accordion-collapse collapse" aria-labelledby="heading3" data-bs-parent="#surgeryAccordion">
-                <div class="accordion-body">
-                        <h5 class="mb-4 text-danger">
-                            <i class="fas fa-door-open me-2"></i>
-                            اختيار الغرفة والإقامة
-                        </h5>
-                        
-                        <!-- مدة الإقامة -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <div class="card border-info">
-                                    <div class="card-body">
-                                        <label for="expected_stay_days" class="form-label fw-bold">
-                                            <i class="fas fa-calendar-day me-1 text-info"></i>
-                                            مدة الإقامة المتوقعة (أيام)
-                                        </label>
-                                        <input type="number" name="expected_stay_days" id="expected_stay_days" 
-                                               class="form-control form-control-lg @error('expected_stay_days') is-invalid @enderror"
-                                               value="{{ old('expected_stay_days', 1) }}" min="1" max="365">
-                                        @error('expected_stay_days')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-8">
-                                <div class="card border-success h-100">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="w-100">
-                                            <h6 class="text-success mb-2">
-                                                <i class="fas fa-money-bill-wave me-2"></i>
-                                                ملخص التكلفة
-                                            </h6>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="text-muted">الغرفة المختارة:</span>
-                                                <span id="selected_room_name" class="fw-bold">لم يتم الاختيار</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                                <span class="text-muted">حالة الغرفة:</span>
-                                                <span id="selected_room_status" class="fw-bold text-success">-</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                                <span class="text-muted">إجمالي أجرة الغرفة:</span>
-                                                <span id="room_total_fee" class="fs-4 fw-bold text-success">0 د.ع</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- دليل الألوان -->
-                        <div class="alert alert-light border mb-4">
-                            <div class="row text-center">
-                                <div class="col">
-                                    <span class="badge bg-success me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
-                                    <small>متاحة</small>
-                                </div>
-                                <div class="col">
-                                    <span class="badge bg-danger me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
-                                    <small>محجوزة</small>
-                                </div>
-                                <div class="col">
-                                    <span class="badge bg-warning me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
-                                    <small>صيانة</small>
-                                </div>
-                                <div class="col">
-                                    <span class="badge bg-secondary me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
-                                    <small>عادية</small>
-                                </div>
-                                <div class="col">
-                                    <span class="badge bg-warning me-1" style="width: 12px; height: 12px; display: inline-block;"></span>
-                                    <small>VIP</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- حقل الغرفة المخفي -->
-                        <input type="hidden" name="room_id" id="room_id" value="{{ old('room_id', '') }}">
-
-                        <!-- لوحة الغرف -->
-                        @php
-                            $roomsByFloor = $rooms->groupBy('floor');
-                        @endphp
-
-                        @forelse($roomsByFloor as $floor => $floorRooms)
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header py-2 bg-light">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-layer-group me-1 text-primary"></i>
-                                        {{ $floor ?: 'بدون طابق' }}
-                                    </h6>
-                                    <span class="badge bg-primary">{{ $floorRooms->count() }} غرفة</span>
-                                </div>
-                            </div>
-                            <div class="card-body py-2">
-                                <div class="d-flex flex-wrap gap-2">
-                                    @foreach($floorRooms as $room)
-                                    @php
-                                        // flip colors: red = available, green = occupied
-                                        $borderHex = match($room->status) {
-                                            'available'   => '#198754',
-                                            'occupied'    => '#dc3545',
-                                            'maintenance' => '#ffc107',
-                                            default       => '#6c757d'
-                                        };
-                                        $typeBg = $room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '';
-                                        $isAvailable = $room->status === 'available';
-                                    @endphp
-                                    <div class="room-tile room-selectable {{ $typeBg }} {{ !$room->is_active ? 'opacity-50' : '' }}"
-                                         data-room-id="{{ $room->id }}"
-                                         data-room-fee="{{ $room->daily_fee }}"
-                                         data-room-type="{{ $room->room_type }}"
-                                         data-room-number="{{ $room->room_number }}"
-                                         data-available="{{ $isAvailable ? '1' : '0' }}"
-                                         data-status-color="{{ $borderHex }}"
-                                         data-bs-toggle="tooltip"
-                                         data-bs-html="true"
-                                         title="<b>{{ $room->room_number }}</b><br>{{ $room->room_type_name }}<br>{{ number_format($room->daily_fee) }} د.ع/يوم<br>{{ $room->status_name }}"
-                                         style="border-color: {{ $borderHex }}; border-width: 3px; {{ !$isAvailable ? 'pointer-events:none; opacity:0.6;' : 'cursor:pointer;' }}">
-
-                                        <div class="room-number" style="color: {{ $borderHex }};">{{ $room->room_number }}</div>
-
-                                        <div class="room-badges">
-                                            @if($room->room_type === 'vip')
-                                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">VIP</span>
-                                            @endif
-                                        </div>
-
-                                        <div class="room-status">
-                                            <span class="status-dot" style="background-color: {{ $borderHex }};"></span>
-                                        </div>
-
-                                        @if($isAvailable)
-                                        <div class="room-actions" style="display: none;">
-                                            <i class="fas fa-check-circle text-success" style="font-size: 0.8rem;"></i>
-                                        </div>
-                                        @endif
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                        @empty
-                        <div class="alert alert-info text-center">
-                            <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
-                            <h5>لا توجد غرف متاحة</h5>
-                            <p class="mb-0">لم يتم العثور على غرف متاحة للحجز</p>
-                        </div>
-                        @endforelse
-
-                        <!-- زر إلغاء اختيار الغرفة -->
-                        <div class="text-center mt-4" id="clear_room_section" style="display: none;">
-                            <button type="button" class="btn btn-outline-secondary" id="clear_room_btn">
-                                <i class="fas fa-times me-2"></i>
-                                إلغاء اختيار الغرفة
-                            </button>
-                        </div>
-
-                </div> <!-- /.accordion-body step3 -->
-            </div> <!-- /.accordion-collapse step3 -->
-        </div> <!-- /.accordion-item step3 -->
-    </div> <!-- /#surgeryAccordion -->
-
-                <!-- أزرار التنقل -->
-                <div class="d-flex justify-content-between mt-4 pt-4 border-top">
-                    <button type="button" class="btn btn-outline-secondary btn-lg" id="prevBtn" style="display: none;">
-                        <i class="fas fa-arrow-right me-2"></i>
-                        السابق
-                    </button>
-                    <div></div>
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('surgeries.index') }}" class="btn btn-outline-danger btn-lg">
-                            <i class="fas fa-times me-2"></i>
-                            إلغاء
-                        </a>
-                        <button type="button" class="btn btn-primary btn-lg" id="nextBtn">
-                            التالي
-                            <i class="fas fa-arrow-left ms-2"></i>
-                        </button>
-                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn" style="display: none;">
-                            <i class="fas fa-save me-2"></i>
-                            حجز العملية
-                        </button>
-                    </div>
+        <!-- الكارت 2: حجز الغرفة والإقامة الإجباري -->
+        <div class="compact-card">
+            <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseRoomStay" aria-expanded="true">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-warning text-dark rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">2</span>
+                    <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
+                        <i class="fas fa-door-open text-warning me-1"></i>
+                        اختيار الغرفة والإقامة <span class="text-danger">*</span>
+                    </h6>
                 </div>
-            </form>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="header_room_badge" class="badge bg-light text-muted border" style="font-size:0.75rem;">لم يتم الاختيار</span>
+                    <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
+                </div>
+            </div>
+            <div id="collapseRoomStay" class="collapse show">
+                <div class="compact-card-body">
+                    <div class="row g-2 mb-2 align-items-center">
+                        <div class="col-md-3">
+                            <label for="expected_stay_days" class="form-label">مدة الإقامة (أيام) <span class="text-danger">*</span></label>
+                            <input type="number" name="expected_stay_days" id="expected_stay_days" 
+                                   class="form-control @error('expected_stay_days') is-invalid @enderror"
+                                   value="{{ old('expected_stay_days', 1) }}" min="1" max="365" required>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="px-2 py-1 bg-light rounded border d-flex justify-content-between align-items-center small" style="font-size:0.82rem; height:34px;">
+                                <div>
+                                    <span class="text-muted">الغرفة:</span> <b id="selected_room_name" class="text-dark">لم يتم الاختيار</b>
+                                    <span class="mx-2 text-muted">|</span>
+                                    <span class="text-muted">الحالة:</span> <b id="selected_room_status" class="text-success">-</b>
+                                </div>
+                                <div>
+                                    <span class="text-muted">الأجرة:</span> <b id="room_total_fee" class="text-success fs-6">0 د.ع</b>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end" id="clear_room_section" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline-danger w-100" id="clear_room_btn" style="height:34px;">
+                                <i class="fas fa-times me-1"></i> إلغاء اختيار الغرفة
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- دليل ألوان مدمج -->
+                    <div class="d-flex gap-3 py-1 mb-2 small text-muted border-top border-bottom" style="font-size:0.75rem;">
+                        <div><span class="badge bg-success me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> متاحة</div>
+                        <div><span class="badge bg-danger me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> محجوزة</div>
+                        <div><span class="badge bg-warning me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> صيانة</div>
+                        <div><span class="badge bg-warning text-dark me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> VIP</div>
+                    </div>
+
+                    <input type="hidden" name="room_id" id="room_id" value="{{ old('room_id', '') }}">
+
+                    <!-- رسالة خطأ عند عدم اختيار غرفة -->
+                    <div id="room_validation_error" class="alert alert-danger py-1 mb-2 d-none fw-bold" style="border-right: 4px solid #dc3545; font-size:0.82rem;">
+                        <i class="fas fa-exclamation-triangle me-1"></i> يرجى النقر على إحدى الغرف المتاحة (باللون الأخضر) لاختيارها للمريض قبل الحجز.
+                    </div>
+
+                    <!-- تبويبات الطوابق المدمجة لاختيار الغرفة بأقل مساحة -->
+                    @php $roomsByFloor = $rooms->groupBy('floor'); @endphp
+                    @if($roomsByFloor->isNotEmpty())
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <ul class="nav nav-pills gap-1" id="floorPills" role="tablist">
+                            @foreach($roomsByFloor as $floor => $floorRooms)
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ $loop->first ? 'active' : '' }}" 
+                                        id="pills-floor-{{ $loop->index }}-tab" 
+                                        data-bs-toggle="pill" 
+                                        data-bs-target="#pills-floor-{{ $loop->index }}" 
+                                        type="button" role="tab">
+                                    <i class="fas fa-layer-group me-1"></i> {{ $floor ?: 'عام' }}
+                                    <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65rem;">{{ $floorRooms->count() }}</span>
+                                </button>
+                            </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    <div class="tab-content" id="floorPillsContent">
+                        @foreach($roomsByFloor as $floor => $floorRooms)
+                        <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="pills-floor-{{ $loop->index }}" role="tabpanel">
+                            <div class="d-flex flex-wrap gap-1 p-1 bg-light rounded border">
+                                @foreach($floorRooms as $room)
+                                @php
+                                    $borderHex = match($room->status) {
+                                        'available'   => '#16a34a',
+                                        'occupied'    => '#dc2626',
+                                        'maintenance' => '#d97706',
+                                        default       => '#64748b'
+                                    };
+                                    $typeBg = $room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '';
+                                    $isAvailable = $room->status === 'available';
+                                @endphp
+                                <div class="room-tile room-selectable {{ $typeBg }} {{ !$room->is_active ? 'opacity-50' : '' }}"
+                                     data-room-id="{{ $room->id }}"
+                                     data-room-fee="{{ $room->daily_fee }}"
+                                     data-room-type="{{ $room->room_type }}"
+                                     data-room-number="{{ $room->room_number }}"
+                                     data-available="{{ $isAvailable ? '1' : '0' }}"
+                                     data-status-color="{{ $borderHex }}"
+                                     data-bs-toggle="tooltip"
+                                     title="غرفة {{ $room->room_number }} ({{ $room->room_type_name }}) - {{ number_format($room->daily_fee) }} د.ع"
+                                     style="border-color: {{ $borderHex }}; {{ !$isAvailable ? 'pointer-events:none; opacity:0.45;' : '' }}">
+
+                                    <div class="room-number" style="color: {{ $borderHex }};">{{ $room->room_number }}</div>
+                                    <div class="room-badges">
+                                        @if($room->room_type === 'vip')
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VIP</span>
+                                        @endif
+                                    </div>
+                                    <div class="room-status">
+                                        <span class="status-dot" style="background-color: {{ $borderHex }};"></span>
+                                    </div>
+                                    @if($isAvailable)
+                                    <div class="room-actions" style="display: none;">
+                                        <i class="fas fa-check-circle text-success" style="font-size: 0.7rem;"></i>
+                                    </div>
+                                    @endif
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <div class="alert alert-info py-1 small text-center mb-0">لا توجد غرف متاحة</div>
+                    @endif
+                </div>
+            </div>
         </div>
-    </div>
+
+        <!-- زر الحفظ النهائي المدمج -->
+        <div class="d-flex justify-content-between align-items-center p-2 bg-white border rounded shadow-sm mb-4">
+            <a href="{{ route('surgeries.index') }}" class="btn btn-sm btn-outline-danger px-3">
+                <i class="fas fa-times me-1"></i> إلغاء
+            </a>
+            <button type="submit" class="btn btn-sm btn-success px-4 fw-bold" id="submitBtn" style="font-size:0.9rem;">
+                <i class="fas fa-save me-1"></i> تأكيد وحجز العملية الجراحية
+            </button>
+        </div>
+    </form>
 </div>
 
 <!-- Modal إضافة طبيب جديد -->
 <div class="modal fade" id="addDoctorModal" tabindex="-1" aria-labelledby="addDoctorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="addDoctorModalLabel">
-                    <i class="fas fa-user-plus me-2"></i>
-                    إضافة طبيب مرسل جديد للنظام
-                </h5>
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title mb-0 fw-bold" id="addDoctorModalLabel" style="font-size:0.9rem;">
+                    <i class="fas fa-user-plus me-1"></i> إضافة طبيب مرسل جديد
+                </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    سيتم إضافة هذا الطبيب إلى قاعدة البيانات ليكون متاحاً في المرات القادمة
-                </div>
+            <div class="modal-body p-3">
                 <form id="addDoctorForm">
-                    <div class="mb-3">
-                        <label for="new_doctor_name" class="form-label fw-bold">
-                            <i class="fas fa-user me-1"></i>
-                            اسم الطبيب <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control form-control-lg" id="new_doctor_name" required>
+                    <div class="mb-2">
+                        <label for="new_doctor_name" class="form-label">اسم الطبيب <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="new_doctor_name" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="new_doctor_specialization" class="form-label fw-bold">
-                            <i class="fas fa-stethoscope me-1"></i>
-                            التخصص <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="new_doctor_specialization" placeholder="مثال: جراحة عامة، باطنية، أطفال..." required>
+                    <div class="mb-2">
+                        <label for="new_doctor_specialization" class="form-label">التخصص <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="new_doctor_specialization" placeholder="مثال: جراحة عامة" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="new_doctor_phone" class="form-label fw-bold">
-                            <i class="fas fa-phone me-1"></i>
-                            رقم الهاتف
-                        </label>
+                    <div class="mb-2">
+                        <label for="new_doctor_phone" class="form-label">رقم الهاتف</label>
                         <input type="text" class="form-control" id="new_doctor_phone" placeholder="اختياري">
                     </div>
-                    <div class="mb-3">
-                        <label for="new_doctor_notes" class="form-label fw-bold">
-                            <i class="fas fa-notes-medical me-1"></i>
-                            ملاحظات
-                        </label>
-                        <textarea class="form-control" id="new_doctor_notes" rows="2" placeholder="أي معلومات إضافية عن الطبيب (اختياري)"></textarea>
+                    <div class="mb-0">
+                        <label for="new_doctor_notes" class="form-label">ملاحظات</label>
+                        <textarea class="form-control" id="new_doctor_notes" rows="2" placeholder="اختياري"></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    إلغاء
-                </button>
-                <button type="button" class="btn btn-primary" id="saveDoctorBtn">
-                    <i class="fas fa-save me-2"></i>
-                    <span id="saveDoctorBtnText">حفظ وإضافة للنظام</span>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-sm btn-primary" id="saveDoctorBtn">
+                    <i class="fas fa-save me-1"></i> <span id="saveDoctorBtnText">حفظ وإضافة</span>
                 </button>
             </div>
         </div>
     </div>
 </div>
-
 @endsection
 
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // تفعيل Select2 على جميع القوائم المنسدلة (ما عدا surgical_operation_id)
+    // زر طي/توسيع كل الأقسام
+    const toggleAllBtn = document.getElementById('toggleAllSectionsBtn');
+    if (toggleAllBtn) {
+        let allExpanded = true;
+        toggleAllBtn.addEventListener('click', function() {
+            const collapses = document.querySelectorAll('.compact-card .collapse');
+            allExpanded = !allExpanded;
+            collapses.forEach(c => {
+                const bsCollapse = bootstrap.Collapse.getOrCreateInstance(c, { toggle: false });
+                if (allExpanded) {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                }
+            });
+        });
+    }
+
+    // تهيئة Select2
     if (typeof $.fn.select2 !== 'undefined') {
         $('#doctor_id, #department_id, #patient_id, #anesthesiologist_id, #anesthesiologist_2_id, #surgery_category').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
+            width: '100%',
             language: {
-                noResults: function() {
-                    return 'لا توجد نتائج';
-                },
-                searching: function() {
-                    return 'جاري البحث...';
-                }
+                noResults: function() { return 'لا توجد نتائج'; },
+                searching: function() { return 'جاري البحث...'; }
             },
-            placeholder: function() {
-                return $(this).data('placeholder') || 'اختر...';
-            },
+            placeholder: function() { return $(this).data('placeholder') || 'اختر...'; },
             allowClear: true
         });
 
-        // تهيئة Select2 للطبيب المرسل مع إمكانية إضافة أسماء جديدة
+        // قائمة الطبيب المرسل
         let pendingDoctorName = '';
         let isNewDoctor = false;
         
         $('#referring_doctor_name_select').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
+            width: '100%',
             dropdownParent: $('body'),
             tags: true,
             createTag: function (params) {
                 const term = $.trim(params.term);
-                if (term === '') {
-                    return null;
-                }
+                if (term === '') return null;
                 return {
                     id: term,
                     text: '➕ إضافة طبيب جديد: ' + term,
@@ -1057,47 +696,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             },
             templateResult: function(data) {
-                if (!data.id) {
-                    return data.text;
-                }
-                
-                // إذا كان tag جديد، أضف أيقونة وتنسيق خاص
+                if (!data.id) return data.text;
                 if (data.newTag) {
-                    const $result = $(
-                        '<div class="select2-new-tag">' +
-                            '<i class="fas fa-user-plus text-success me-2"></i>' +
-                            '<strong style="color: #198754;">' + data.text + '</strong>' +
-                        '</div>'
-                    );
-                    return $result;
+                    return $('<div class="select2-new-tag"><i class="fas fa-user-plus text-success me-1"></i><strong style="color: #16a34a;">' + data.text + '</strong></div>');
                 }
-                
                 return data.text;
             },
             templateSelection: function(data) {
-                // عند الاختيار، نعرض فقط الاسم بدون البادئة
-                if (data.newTag && data.originalName) {
-                    return data.originalName;
-                }
+                if (data.newTag && data.originalName) return data.originalName;
                 return data.text;
             },
-            escapeMarkup: function(markup) {
-                return markup;
-            },
-            language: {
-                noResults: function() {
-                    return '🔍 لا توجد نتائج - اكتب اسماً جديداً للإضافة';
-                },
-                searching: function() {
-                    return 'جاري البحث...';
-                }
-            },
+            escapeMarkup: function(markup) { return markup; },
             placeholder: 'اختر الطبيب أو أدخل اسماً جديداً',
-            allowClear: true,
-            minimumResultsForSearch: 0
+            allowClear: true
         });
-        
-        // معالج حدث الاختيار - نفتح المودال للأسماء الجديدة
+
         const addDoctorModalElement = document.getElementById('addDoctorModal');
         if (addDoctorModalElement && addDoctorModalElement.parentElement !== document.body) {
             document.body.appendChild(addDoctorModalElement);
@@ -1106,50 +719,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
         $('#referring_doctor_name_select').on('select2:select', function(e) {
             const data = e.params.data;
-            
-            // إذا كان طبيب جديد
             if (data.newTag && data.originalName) {
                 isNewDoctor = true;
                 pendingDoctorName = data.originalName;
-                
-                // إغلاق قائمة Select2 قبل عرض المودال
                 $(this).select2('close');
                 $('.select2-container--open').removeClass('select2-container--open');
                 $('.select2-container--open .select2-dropdown').hide();
                 $('.select2-dropdown').remove();
-                if (document.activeElement) {
-                    document.activeElement.blur();
-                }
-                
-                // ملء اسم الطبيب في المودال
+                if (document.activeElement) document.activeElement.blur();
                 $('#new_doctor_name').val(data.originalName);
                 $('#new_doctor_specialization').val('');
                 $('#new_doctor_phone').val('');
                 $('#new_doctor_notes').val('');
-                
-                // فتح المودال بعد إغلاق Select2 بالكامل
-                setTimeout(function() {
-                    addDoctorModalInstance.show();
-                }, 50);
+                setTimeout(function() { addDoctorModalInstance.show(); }, 50);
             }
         });
 
-        addDoctorModalElement.addEventListener('shown.bs.modal', function() {
-            $('#new_doctor_name').trigger('focus');
-        });
-
-        addDoctorModalElement.addEventListener('hidden.bs.modal', function() {
-            if (isNewDoctor && pendingDoctorName) {
-                // مسح الاختيار إذا لم يتم الحفظ
-                const currentVal = $('#referring_doctor_name_select').val();
-                if (currentVal === pendingDoctorName) {
-                    $('#referring_doctor_name_select').val(null).trigger('change');
-                }
-                isNewDoctor = false;
-            }
-        });
-        
-        // معالج حفظ الطبيب الجديد
         $('#saveDoctorBtn').on('click', function() {
             const name = $('#new_doctor_name').val().trim();
             const specialization = $('#new_doctor_specialization').val().trim();
@@ -1161,13 +746,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // تعطيل الزر ووضع loading
             const $btn = $(this);
-            const originalText = $('#saveDoctorBtnText').text();
             $btn.prop('disabled', true);
-            $('#saveDoctorBtnText').html('<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...');
+            $('#saveDoctorBtnText').html('<i class="fas fa-spinner fa-spin me-1"></i>جاري الحفظ...');
             
-            // إرسال طلب AJAX
             $.ajax({
                 url: '{{ route("doctors.store-referring") }}',
                 method: 'POST',
@@ -1180,904 +762,346 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 success: function(response) {
                     if (response.success) {
-                        // إزالة الخيار القديم (المؤقت)
                         $('#referring_doctor_name_select option[value="' + name + '"]').remove();
-                        
-                        // إضافة الطبيب للقائمة كخيار دائم
                         const newOption = new Option(name, name, true, true);
                         $('#referring_doctor_name_select').append(newOption).trigger('change');
-                        
                         isNewDoctor = false;
-                        
-                        // إغلاق المودال
                         bootstrap.Modal.getInstance(document.getElementById('addDoctorModal')).hide();
-                        
-                        // رسالة نجاح
-                        const successAlert = $(
-                            '<div class="alert alert-success alert-dismissible fade show position-fixed" role="alert" style="top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 400px;">' +
-                                '<i class="fas fa-check-circle me-2"></i>' +
-                                '<strong>تم بنجاح!</strong> أُضيف الطبيب ' + response.doctor.name + ' للنظام' +
-                                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-                            '</div>'
-                        );
-                        $('body').append(successAlert);
-                        
-                        // إزالة الرسالة بعد 5 ثواني
-                        setTimeout(function() {
-                            successAlert.fadeOut(function() { $(this).remove(); });
-                        }, 5000);
                     }
                 },
                 error: function(xhr) {
-                    let errorMsg = 'حدث خطأ أثناء حفظ الطبيب';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMsg = xhr.responseJSON.message;
-                    }
-                    alert(errorMsg);
+                    alert(xhr.responseJSON?.message || 'حدث خطأ أثناء حفظ الطبيب');
                 },
                 complete: function() {
-                    // إعادة تفعيل الزر
                     $btn.prop('disabled', false);
-                    $('#saveDoctorBtnText').text(originalText);
+                    $('#saveDoctorBtnText').text('حفظ وإضافة');
                 }
             });
         });
 
-        // تفعيل Select2 على قائمة العمليات مع الفلترة حسب الصنف
+        // فلترة وترتيب العمليات الجراحية أبجدياً
         let allOperations = [];
-        
-        // حفظ جميع العمليات عند التحميل الأول
         $('#surgical_operation_id option').each(function() {
             const $option = $(this);
-            allOperations.push({
-                id: $option.val(),
-                text: $option.text(),
-                category: $option.data('category'),
-                fee: $option.data('fee'),
-                element: this
-            });
-        });
-        
-        function initOperationSelect2() {
-            const selectedCategory = $('#surgery_category').val();
-            
-            // مسح جميع الخيارات الحالية ما عدا الأول
-            $('#surgical_operation_id option:not(:first)').remove();
-            
-            // إضافة الخيارات المفلترة
-            if (selectedCategory) {
-                allOperations.forEach(function(op) {
-                    if (op.id && op.category === selectedCategory) {
-                        const $option = $('<option></option>')
-                            .val(op.id)
-                            .text(op.text)
-                            .attr('data-category', op.category)
-                            .attr('data-fee', op.fee);
-                        $('#surgical_operation_id').append($option);
-                    }
-                });
-            } else {
-                // إضافة جميع العمليات
-                allOperations.forEach(function(op) {
-                    if (op.id) {
-                        const $option = $('<option></option>')
-                            .val(op.id)
-                            .text(op.text)
-                            .attr('data-category', op.category)
-                            .attr('data-fee', op.fee);
-                        $('#surgical_operation_id').append($option);
-                    }
+            if ($option.val()) {
+                allOperations.push({
+                    id: $option.val(),
+                    text: $option.text().trim(),
+                    category: $option.data('category'),
+                    fee: $option.data('fee')
                 });
             }
+        });
+
+        allOperations.sort(function(a, b) {
+            return a.text.localeCompare(b.text, 'ar');
+        });
+
+        function initOperationSelect2() {
+            const selectedCategory = $('#surgery_category').val();
+            $('#surgical_operation_id option:not(:first)').remove();
             
-            // تفعيل Select2
+            allOperations.forEach(function(op) {
+                if (!selectedCategory || op.category === selectedCategory) {
+                    const $option = $('<option></option>')
+                        .val(op.id)
+                        .text(op.text)
+                        .attr('data-category', op.category)
+                        .attr('data-fee', op.fee);
+                    $('#surgical_operation_id').append($option);
+                }
+            });
+            
             $('#surgical_operation_id').select2({
                 theme: 'bootstrap-5',
                 dir: 'rtl',
-                language: {
-                    noResults: function() {
-                        return selectedCategory ? 'لا توجد عمليات في هذا الصنف' : 'لا توجد نتائج';
-                    },
-                    searching: function() {
-                        return 'جاري البحث...';
-                    }
-                },
+                width: '100%',
                 placeholder: 'اختر نوع العملية',
                 allowClear: true
             });
         }
-        
+
         initOperationSelect2();
-        
-        // عند تغيير صنف العملية
+
         $('#surgery_category').on('change', function() {
-            // إعادة تعيين قيمة العملية المختارة
-            $('#surgical_operation_id').val(null);
-            
-            // إعادة تهيئة Select2 مع الفلترة الجديدة
+            $('#surgical_operation_id').val(null).trigger('change');
             $('#surgical_operation_id').select2('destroy');
             initOperationSelect2();
         });
-    }
 
-    // تفعيل Tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-
-    // accordion controls replace tabs
-    const accordionButtons = document.querySelectorAll('#surgeryAccordion .accordion-button');
-    const collapseItems = document.querySelectorAll('#surgeryAccordion .accordion-collapse');
-    const stepItems = document.querySelectorAll('.step-item');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const form = document.getElementById('surgeryForm'); // main form element
-    let currentStep = -1;
-
-    const stepNames = ['اختيار المريض والعملية', 'اختيار الطبيب والموعد', 'اختيار الغرفة والإقامة'];
-    const progressPercentText = document.getElementById('progressPercentText');
-    const progressBarFill = document.getElementById('progressBarFill');
-    const currentStepNum = document.getElementById('currentStepNum');
-    const stepName = document.getElementById('stepName');
-
-    function updateUI() {
-        // حساب النسبة المئوية
-        const percent = currentStep >= 0 ? Math.round(((currentStep + 1) / accordionButtons.length) * 100) : 0;
-        
-        progressPercentText.textContent = percent + '% اكتمال';
-        progressBarFill.style.width = percent + '%';
-        currentStepNum.textContent = currentStep >= 0 ? currentStep + 1 : '-';
-        stepName.textContent = currentStep >= 0 ? stepNames[currentStep] : 'اضغط على خطوة للبدء';
-
-        // تحديث الأزرار
-        prevBtn.style.display = currentStep <= 0 ? 'none' : 'inline-block';
-        nextBtn.style.display = (currentStep === accordionButtons.length - 1) ? 'none' : 'inline-block';
-        submitBtn.style.display = currentStep === accordionButtons.length - 1 ? 'inline-block' : 'none';
-
-        // تحديث أزرار الاكورديون
-        accordionButtons.forEach((btn, index) => {
-            if (index === currentStep) {
-                btn.classList.remove('collapsed');
-                btn.setAttribute('aria-expanded', 'true');
-            } else {
-                btn.classList.add('collapsed');
-                btn.setAttribute('aria-expanded', 'false');
-            }
-        });
-
-        collapseItems.forEach((collapse, index) => {
-            if (index === currentStep) {
-                collapse.classList.add('show');
-            } else {
-                collapse.classList.remove('show');
-            }
-        });
-
-        // التمرير
-        if (currentStep === accordionButtons.length - 1) {
-            // final step: show submit button by scrolling down
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        } else {
-            // other steps: scroll to top for clarity
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }
-
-    // استخدام Bootstrap events للأكورديون
-    collapseItems.forEach((collapse, idx) => {
-        collapse.addEventListener('show.bs.collapse', function() {
-            currentStep = idx;
-        });
-        
-        collapse.addEventListener('shown.bs.collapse', function() {
-            currentStep = idx;
-            updateUI();
-        });
-        
-        collapse.addEventListener('hide.bs.collapse', function() {
-            if (currentStep === idx) {
-                currentStep = -1;
-            }
-        });
-        
-        collapse.addEventListener('hidden.bs.collapse', function() {
-            if (currentStep === idx) {
-                currentStep = -1;
-                updateUI();
-            }
-        });
-    });
-
-    // previous button
-    prevBtn.addEventListener('click', function() {
-        if (currentStep > 0) {
-            currentStep--;
-            // Trigger the collapse programmatically
-            const collapseInstance = new bootstrap.Collapse(collapseItems[currentStep], { toggle: true });
-            collapseInstance.show();
-            updateUI();
-        }
-    });
-
-    // next button - handle both initial step and advancing steps
-    nextBtn.addEventListener('click', function() {
-        if (currentStep < 0) {
-            // First click - open first accordion
-            currentStep = 0;
-            const collapseInstance = new bootstrap.Collapse(collapseItems[currentStep], { toggle: true });
-            collapseInstance.show();
-            updateUI();
-        } else if (currentStep < accordionButtons.length - 1) {
-            // Advance to next step
-            currentStep++;
-            const collapseInstance = new bootstrap.Collapse(collapseItems[currentStep], { toggle: true });
-            collapseInstance.show();
-            updateUI();
-        }
-    });
-
-    // form submission validation
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            // إزالة الفواصل من حقل السعر قبل الإرسال
-            const feeInput = document.getElementById('custom_surgery_fee');
-            if (feeInput && feeInput.value) {
-                feeInput.value = feeInput.value.replace(/,/g, '');
-            }
+        // تفاصيل المريض المختار
+        $('#patient_id').on('change', function() {
+            const selectedOption = $(this).find(':selected');
+            const patientData = selectedOption.data('patient');
             
-            console.log('form submit triggered, validity=', form.checkValidity());
-            if (!form.checkValidity()) {
-                e.preventDefault();
-                form.reportValidity();
-                // find first invalid input
-                const invalid = form.querySelector(':invalid');
-                if (invalid) {
-                    // determine step of this input
-                    let stepIndex = 0;
-                    if (invalid.closest('#collapse1')) stepIndex = 0;
-                    else if (invalid.closest('#collapse2')) stepIndex = 1;
-                    else if (invalid.closest('#collapse3')) stepIndex = 2;
-                    currentStep = stepIndex;
-                    updateUI();
-                    invalid.focus();
-                }
+            if (patientData && patientData.name) {
+                $('#patientNameHeader').text(patientData.name);
+                $('#patientAge').text((patientData.age || '-') + ' سنة');
+                $('#patientGender').text(patientData.gender || '-');
+                $('#patientPhone').text(patientData.phone || '-');
+                $('#selectedPatientInfo').slideDown(150);
+            } else {
+                $('#selectedPatientInfo').slideUp(100);
             }
         });
-    }
 
-    // التحكم في حقول التحويل الخارجي
-    const internalRadio = document.getElementById('referral_internal');
-    const externalRadio = document.getElementById('referral_external');
-    const externalFields = document.getElementById('external_fields');
+        if ($('#patient_id').val()) {
+            $('#patient_id').trigger('change');
+        }
 
-    function toggleExternalFields() {
-        if (externalRadio && externalRadio.checked) {
-            externalFields.style.display = 'block';
-        } else {
-            externalFields.style.display = 'none';
+        // تفاصيل العملية والسعر المقترح
+        $('#surgical_operation_id').on('change', function() {
+            const selectedOption = $(this).find(':selected');
+            const opId = selectedOption.val();
+            const fee = selectedOption.data('fee');
+
+            if (opId && fee !== undefined && fee !== null) {
+                const formattedFee = new Intl.NumberFormat('en-US').format(fee);
+                $('#surgery_fee_hint').text('السعر الافتراضي: ' + formattedFee + ' د.ع').show();
+                if (!$('#custom_surgery_fee').val()) {
+                    $('#custom_surgery_fee').val(formattedFee);
+                }
+            } else {
+                $('#surgery_fee_hint').hide();
+            }
+        });
+
+        if ($('#surgical_operation_id').val()) {
+            $('#surgical_operation_id').trigger('change');
         }
     }
 
-    if (internalRadio && externalRadio) {
-        internalRadio.addEventListener('change', toggleExternalFields);
-        externalRadio.addEventListener('change', toggleExternalFields);
-        toggleExternalFields();
-    }
-
-    // تم إزالة كود التحكم في radio buttons - الآن لدينا قائمة موحدة فقط
-    
-    // التحكم في حقل السعر المخصص
-    const customFeeContainer = document.getElementById('custom_fee_container');
+    // تنسيق فواصل الآلاف
     const customFeeInput = document.getElementById('custom_surgery_fee');
-    const surgicalOperationSelect = document.getElementById('surgical_operation_id');
-    const surgeryFeeInfo = document.getElementById('surgery_fee_info');
-    const surgeryFeeDisplay = document.getElementById('surgery_fee_display');
-
-    // تنسيق الأرقام بفواصل آلاف أثناء الإدخال
-    function formatWithThousandSeparators(value) {
-        if (!value) return '';
-        const digits = value.toString().replace(/[^0-9]/g, '');
-        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    function formatWithCommas(val) {
+        if (!val) return '';
+        const digits = val.toString().replace(/[^0-9]/g, '');
+        if (!digits) return '';
+        return parseInt(digits, 10).toLocaleString('en-US');
     }
 
     if (customFeeInput) {
         customFeeInput.addEventListener('input', function() {
-            const cursorPos = customFeeInput.selectionStart;
-            const originalLength = customFeeInput.value.length;
-
-            customFeeInput.value = formatWithThousandSeparators(customFeeInput.value);
-
-            // محاولة الاحتفاظ بموقع المؤشر بعد التنسيق
-            const newLength = customFeeInput.value.length;
-            const diff = newLength - originalLength;
-            customFeeInput.setSelectionRange(cursorPos + diff, cursorPos + diff);
+            const pos = customFeeInput.selectionStart;
+            const len = customFeeInput.value.length;
+            customFeeInput.value = formatWithCommas(customFeeInput.value);
+            const diff = customFeeInput.value.length - len;
+            customFeeInput.setSelectionRange(pos + diff, pos + diff);
         });
     }
 
-    // if server returned validation errors, jump to the appropriate step
-    function focusFirstError() {
-        if (!form) return;
-        const invalid = form.querySelector(':invalid');
-        if (invalid) {
-            let stepIndex = 0;
-            if (invalid.closest('#collapse2')) stepIndex = 1;
-            else if (invalid.closest('#collapse3')) stepIndex = 2;
-            currentStep = stepIndex;
-            updateUI();
-            invalid.focus();
-        }
-    }
-
-    focusFirstError();
-
-    // ===== نظام الأرشفة التلقائي - يعمل مع أي سكانر =====
-    const referralInput = document.getElementById('referral_letter');
-    const previewContainer = document.getElementById('referral_letter_preview');
-    const previewImage = document.getElementById('preview_image');
-    const previewInfo = document.getElementById('preview_info');
-    const scanStatus = document.getElementById('scan_status');
-    const scanStatusText = document.getElementById('scan_status_text');
-    const scanBtn = document.getElementById('scan_btn');
-    const scanBtnText = document.getElementById('scan_btn_text');
-    const installPrompt = document.getElementById('install_prompt');
-    const scanInstructions = document.getElementById('scan_instructions');
-    const scannerStatusDiv = document.getElementById('scanner_status');
-
-    // حالة السكانر
-    let scannerReady = false;
-    let availableScanners = [];
-
-    // عنوان جسر السكانر
-    const scannerBridgeHosts = [
-        'http://localhost:37426',
-        'http://127.0.0.1:37426'
-    ];
-    let scannerBridgeHostIndex = 0;
-
-    function getScannerBridgeUrl(path) {
-        return `${scannerBridgeHosts[scannerBridgeHostIndex]}${path}`;
-    }
-
-    // ═════════════════════════════════════════════════════════════════
-    //  فحص حالة السكانر
-    // ═════════════════════════════════════════════════════════════════
-    
-    async function checkScannerStatus() {
-        try {
-            const response = await fetch(getScannerBridgeUrl('/status'), {
-                method: 'GET',
-                mode: 'cors'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                scannerReady = true;
-                availableScanners = data.scanners || [];
-                
-                // إخفاء رسالة التثبيت وإظهار الإرشادات
-                installPrompt.style.display = 'none';
-                scanInstructions.style.display = 'block';
-                
-                // عرض حالة السكانر
-                if (availableScanners.length > 0) {
-                    scannerStatusDiv.innerHTML = `
-                        <span class="badge bg-success">
-                            <i class="fas fa-check-circle me-1"></i>
-                            جاهز - ${availableScanners.length} سكانر متصل
-                        </span>
-                        <small class="d-block text-muted mt-1">
-                            ${availableScanners.map(s => s.name).join('، ')}
-                        </small>
-                    `;
-                    scanBtn.classList.remove('btn-secondary');
-                    scanBtn.classList.add('btn-primary');
-                } else {
-                    scannerStatusDiv.innerHTML = `
-                        <span class="badge bg-warning text-dark">
-                            <i class="fas fa-exclamation-triangle me-1"></i>
-                            لا يوجد سكانر متصل
-                        </span>
-                        <small class="d-block text-muted mt-1">وصّل السكانر ثم أعد المحاولة</small>
-                    `;
-                }
-                
-                return true;
-            }
-        } catch (e) {
-            // محاولة التبديل إلى عنوان بديل (127.0.0.1) إذا فشلت localhost
-            if (scannerBridgeHostIndex === 0) {
-                scannerBridgeHostIndex = 1;
-                return await checkScannerStatus();
-            }
-
-            scannerReady = false;
-            installPrompt.style.display = 'block';
-            const errorMsg = e?.message || 'حدث خطأ غير متوقع';
-            scannerStatusDiv.innerHTML = `
-                <span class="badge bg-danger">
-                    <i class="fas fa-times-circle me-1"></i>
-                    خطأ في الاتصال ببرنامج السكانر: ${errorMsg}
-                </span>
-                <small class="d-block text-muted mt-1">تأكد من تشغيل الملف: <code>تشغيل_السكانر_التلقائي.bat</code> أو <code>python scanner_bridge_auto.py</code> ثم أعد تحميل الصفحة.</small>
-            `;
-        }
-        return false;
-    }
-
-    // ═════════════════════════════════════════════════════════════════
-    //  المسح من السكانر
-    // ═════════════════════════════════════════════════════════════════
-    
-    window.scanFromDevice = async function() {
-        if (!scanBtn) return;
-        
-        // التحقق من جاهزية السكانر أولاً
-        if (!scannerReady) {
-            const isReady = await checkScannerStatus();
-            if (!isReady) {
-                showScanStatus('warning', 'برنامج السكانر غير مشغل. شغّل الملف: <code>تشغيل_السكانر_التلقائي.bat</code>');
-                return;
-            }
-        }
-        
-        scanBtn.disabled = true;
-        scanBtnText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري المسح...';
-        showScanStatus('info', '📄 ضع الورقة في السكانر... جاري المسح');
-        
-        try {
-            await scanViaLocalBridge();
-        } catch (error) {
-            console.error('خطأ في المسح:', error);
-            handleScanError(error);
-        } finally {
-            scanBtn.disabled = false;
-            scanBtnText.innerHTML = 'مسح الورقة من السكانر الآن';
-        }
-    };
-
-    // المسح باستخدام برنامج الأرشفة المحلي
-    async function scanViaLocalBridge() {
-        try {
-            const response = await fetch(getScannerBridgeUrl('/scan'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    color_mode: 'color',
-                    resolution: 200
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                
-                if (response.status === 404) {
-                    throw new Error('لم يتم العثور على سكانر متصل. تأكد من توصيل السكانر وتشغيله.');
-                } else if (response.status === 408) {
-                    throw new Error('انتهت مهلة المسح. تأكد من وضع الورقة في السكانر.');
-                } else {
-                    throw new Error(errorData.error || 'فشل المسح من السكانر');
-                }
-            }
-            
-            // استلام الصورة الممسوحة
-            const blob = await response.blob();
-            
-            if (blob.size === 0) {
-                throw new Error('الصورة الممسوحة فارغة');
-            }
-            
-            // معالجة وعرض الصورة
-            handleScannedImage(blob);
-            
-        } catch (e) {
-            if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
-                scannerReady = false;
-                installPrompt.style.display = 'block';
-                throw new Error('لم يتم الاتصال ببرنامج السكانر. تأكد من تشغيله أولاً.');
-            }
-            throw e;
-        }
-    }
-
-    // معالجة الصورة الممسوحة
-    function handleScannedImage(blobOrFile) {
-        const file = blobOrFile instanceof File ? blobOrFile : 
-                     new File([blobOrFile], `scanned-${Date.now()}.jpg`, { type: 'image/jpeg' });
-        
-        // تعيين الملف في input
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        referralInput.files = dataTransfer.files;
-        
-        // عرض المعاينة
-        const url = URL.createObjectURL(file);
-        previewImage.src = url;
-        previewInfo.innerHTML = `
-            <i class="fas fa-check-circle text-success me-1"></i>
-            تم المسح بنجاح - ${(file.size / 1024).toFixed(0)} KB
-        `;
-        previewContainer.style.display = 'block';
-        
-        showScanStatus('success', '✅ تم المسح بنجاح!');
-        setTimeout(() => {
-            if (scanStatus) scanStatus.style.display = 'none';
-        }, 3000);
-    }
-
-    // معالجة أخطاء المسح
-    function handleScanError(error) {
-        console.error(error);
-        showScanStatus('danger', `
-            <i class="fas fa-times-circle me-2"></i>
-            ${error.message}<br>
-            <small class="d-block mt-2">
-                يمكنك <a href="javascript:void(0)" onclick="document.getElementById('referral_letter').click()" class="text-white text-decoration-underline">رفع الصورة يدوياً</a>
-            </small>
-        `);
-    }
-
-    // عرض حالة المسح
-    function showScanStatus(type, message) {
-        if (!scanStatus || !scanStatusText) return;
-        scanStatus.className = `alert alert-${type}`;
-        scanStatusText.innerHTML = message;
-        scanStatus.style.display = 'block';
-    }
-
-    // حذف الوثيقة
-    window.clearScannedDoc = function() {
-        if (referralInput) referralInput.value = '';
-        if (previewContainer) previewContainer.style.display = 'none';
-        if (scanStatus) scanStatus.style.display = 'none';
-    };
-
-    // معالجة رفع الملف العادي
-    if (referralInput) {
-        referralInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (!file) {
-                previewContainer.style.display = 'none';
-                return;
-            }
-            
-            const url = URL.createObjectURL(file);
-            previewImage.src = url;
-            previewInfo.innerHTML = `
-                <i class="fas fa-file-image me-1"></i>
-                ${file.name} (${(file.size / 1024).toFixed(0)} KB)
-            `;
-            previewContainer.style.display = 'block';
-        });
-    }
-
-    // فحص حالة السكانر عند تحميل الصفحة
-    checkScannerStatus();
-
-    // اختيار الغرفة من اللوحة
-    const roomTiles = document.querySelectorAll('.room-selectable');
+    // نظام اختيار الغرفة المدمج والتحقق
     const roomIdInput = document.getElementById('room_id');
     const stayDaysInput = document.getElementById('expected_stay_days');
-    const roomTotalFee = document.getElementById('room_total_fee');
-    const selectedRoomName = document.getElementById('selected_room_name');
+    const roomTotalFeeEl = document.getElementById('room_total_fee');
+    const selectedRoomNameEl = document.getElementById('selected_room_name');
     const clearRoomSection = document.getElementById('clear_room_section');
     const clearRoomBtn = document.getElementById('clear_room_btn');
+    const headerRoomBadge = document.getElementById('header_room_badge');
+    const roomValidationError = document.getElementById('room_validation_error');
+    const floorPillsContent = document.getElementById('floorPillsContent');
     let selectedRoomFee = 0;
 
-    function selectRoom(tile) {
-        // تجاهل الغرف غير المتاحة
-        if (tile.dataset.available === '0') {
-            return;
-        }
-
-        // إزالة التحديد من جميع البطاقات
-        document.querySelectorAll('.room-tile').forEach(t => {
-            t.classList.remove('border-4', 'border-primary', 'shadow-lg');
-            // إخفاء جميع أيقونات التحديد
-            const checkIcon = t.querySelector('.room-actions');
-            if (checkIcon) {
-                checkIcon.style.display = 'none';
+    function validateRoomSelection() {
+        const val = roomIdInput ? roomIdInput.value : '';
+        if (!val) {
+            if (roomValidationError) roomValidationError.classList.remove('d-none');
+            if (floorPillsContent) {
+                floorPillsContent.style.border = '2.5px solid #dc3545';
+                floorPillsContent.style.borderRadius = '8px';
             }
-        });
 
-        // تحديد البطاقة الحالية
-        tile.classList.add('border-4', 'border-primary', 'shadow-lg');
-        
-        // إظهار أيقونة التحديد
-        const checkIcon = tile.querySelector('.room-actions');
-        if (checkIcon) {
-            checkIcon.style.display = 'block';
-        }
-
-        // تحديث القيم
-        const roomId = tile.dataset.roomId;
-        const roomNumber = tile.dataset.roomNumber;
-        const roomType = tile.dataset.roomType;
-        selectedRoomFee = parseFloat(tile.dataset.roomFee);
-
-        roomIdInput.value = roomId;
-        selectedRoomName.textContent = roomNumber + (roomType === 'vip' ? ' (VIP)' : ' (عادية)');
-        // show availability text
-        const statusSpan = document.getElementById('selected_room_status');
-        if (statusSpan) {
-            if(tile.dataset.available === '1') {
-                statusSpan.textContent = 'متاحة';
-                statusSpan.classList.remove('text-success');
-                statusSpan.classList.add('text-danger');
-            } else {
-                statusSpan.textContent = 'غير متاحة';
-                statusSpan.classList.remove('text-danger');
-                statusSpan.classList.add('text-success');
+            const roomCollapse = document.getElementById('collapseRoomStay');
+            if (roomCollapse) {
+                const bsCollapse = bootstrap.Collapse.getOrCreateInstance(roomCollapse, { toggle: false });
+                bsCollapse.show();
             }
+
+            const oldToast = document.querySelector('.room-required-toast');
+            if (oldToast) oldToast.remove();
+            const toast = document.createElement('div');
+            toast.className = 'room-required-toast alert alert-danger position-fixed shadow-lg';
+            toast.style.cssText = 'top:25px;left:50%;transform:translateX(-50%);z-index:9999;border-right:6px solid #dc3545;font-weight:bold;font-size:0.95rem;background:#fff;';
+            toast.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i> يرجى اختيار غرفة للمريض من قائمة الغرف المتاحة.';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4500);
+
+            document.getElementById('collapseRoomStay')?.scrollIntoView({ behavior: 'smooth' });
+            return false;
         }
-        clearRoomSection.style.display = 'block';
 
-        calculateRoomFee();
-
-        // move to last step so submit button appears immediately
-        currentStep = accordionButtons.length - 1;
-        updateUI();
-
-        // if form is now valid we can auto-submit (user already filled prior steps)
-        if (form.checkValidity()) {
-            console.log('form valid after room select, auto-submitting');
-            form.submit();
-        } else {
-            // focus submit button so user can click it if validation still fails
-            submitBtn.focus();
-        }
+        if (roomValidationError) roomValidationError.classList.add('d-none');
+        if (floorPillsContent) floorPillsContent.style.border = '';
+        return true;
     }
 
-    function clearRoomSelection() {
-        // إزالة التحديد من جميع البطاقات
-        document.querySelectorAll('.room-tile').forEach(t => {
-            t.classList.remove('border-4', 'border-primary', 'shadow-lg');
-            // إخفاء جميع أيقونات التحديد
-            const checkIcon = t.querySelector('.room-actions');
-            if (checkIcon) {
-                checkIcon.style.display = 'none';
+    const form = document.getElementById('surgeryForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            if (!validateRoomSelection()) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return false;
             }
         });
-
-        roomIdInput.value = '';
-        selectedRoomName.textContent = 'لم يتم الاختيار';
-        selectedRoomFee = 0;
-        clearRoomSection.style.display = 'none';
-
-        calculateRoomFee();
     }
 
-    function calculateRoomFee() {
-        if (!stayDaysInput || !roomTotalFee) return;
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validateRoomSelection()) {
+                e.preventDefault();
+                return false;
+            }
 
-        const days = parseInt(stayDaysInput.value) || 0;
-        const total = selectedRoomFee * days;
-
-        roomTotalFee.textContent = new Intl.NumberFormat('ar-IQ').format(total) + ' د.ع';
-    }
-
-    // إضافة أحداث النقر على بطاقات الغرف
-    roomTiles.forEach(tile => {
-        tile.addEventListener('click', function() {
-            selectRoom(this);
+            if (customFeeInput && customFeeInput.value) {
+                customFeeInput.value = customFeeInput.value.replace(/,/g, '');
+            }
         });
+    }
+
+    document.querySelectorAll('.room-tile').forEach(t => {
+        t.dataset.origBorder = t.dataset.statusColor || t.style.borderColor || '#dee2e6';
+        t.dataset.origWidth  = '2px';
     });
 
-    // زر إلغاء اختيار الغرفة
-    if (clearRoomBtn) {
-        clearRoomBtn.addEventListener('click', clearRoomSelection);
+    function calculateRoomFee() {
+        if (!stayDaysInput || !roomTotalFeeEl) return;
+        const days = parseInt(stayDaysInput.value) || 0;
+        roomTotalFeeEl.textContent = new Intl.NumberFormat('ar-IQ').format(selectedRoomFee * days) + ' د.ع';
     }
 
-    // حساب الأجرة عند تغيير عدد الأيام
+    function selectRoom(tile) {
+        if (tile.dataset.available === '0') return;
+
+        if (roomValidationError) roomValidationError.classList.add('d-none');
+        if (floorPillsContent) floorPillsContent.style.border = '';
+
+        document.querySelectorAll('.room-tile').forEach(t => {
+            t.style.borderColor = t.dataset.origBorder;
+            t.style.borderWidth = t.dataset.origWidth;
+            t.style.boxShadow   = '';
+            const icon = t.querySelector('.room-actions');
+            if (icon) icon.style.display = 'none';
+        });
+
+        tile.style.borderColor = '#0d6efd';
+        tile.style.borderWidth = '3px';
+        tile.style.boxShadow   = '0 0 0 3px rgba(13,110,253,.25)';
+        const icon = tile.querySelector('.room-actions');
+        if (icon) icon.style.display = 'block';
+
+        if (roomIdInput) roomIdInput.value = tile.dataset.roomId;
+        selectedRoomFee  = parseFloat(tile.dataset.roomFee) || 0;
+        const roomName = 'غرفة ' + tile.dataset.roomNumber + (tile.dataset.roomType === 'vip' ? ' (VIP)' : '');
+        if (selectedRoomNameEl) selectedRoomNameEl.textContent = roomName;
+        if (headerRoomBadge) {
+            headerRoomBadge.textContent = roomName;
+            headerRoomBadge.className = 'badge bg-success text-white';
+        }
+
+        const statusSpan = document.getElementById('selected_room_status');
+        if (statusSpan) {
+            statusSpan.textContent = 'متاحة';
+            statusSpan.className   = 'fw-bold text-success';
+        }
+
+        if (clearRoomSection) clearRoomSection.style.display = 'block';
+        calculateRoomFee();
+    }
+
+    document.querySelectorAll('.room-selectable').forEach(tile => {
+        tile.addEventListener('click', function() { selectRoom(this); });
+    });
+
     if (stayDaysInput) {
         stayDaysInput.addEventListener('input', calculateRoomFee);
     }
 
-    // استعادة الاختيار المحفوظ
-    if (roomIdInput && roomIdInput.value) {
-        const savedTile = document.querySelector('.room-tile[data-room-id="' + roomIdInput.value + '"]');
-        if (savedTile) {
-            selectRoom(savedTile);
-        }
-    }
-
-    calculateRoomFee();
-
-    // تنسيق حقل السعر المخصص بالفواصل
-    if (customFeeInput) {
-        // دالة لتنسيق الرقم بالفواصل
-        function formatNumberWithCommas(value) {
-            // إزالة كل الفواصل الموجودة
-            let numValue = value.toString().replace(/,/g, '');
-            // التحقق من أنه رقم صحيح
-            if (!/^\d*$/.test(numValue)) {
-                return value;
+    if (clearRoomBtn) {
+        clearRoomBtn.addEventListener('click', function() {
+            document.querySelectorAll('.room-tile').forEach(t => {
+                t.style.borderColor = t.dataset.origBorder;
+                t.style.borderWidth = t.dataset.origWidth;
+                t.style.boxShadow   = '';
+                const icon = t.querySelector('.room-actions');
+                if (icon) icon.style.display = 'none';
+            });
+            if (roomIdInput) roomIdInput.value = '';
+            selectedRoomFee   = 0;
+            if (selectedRoomNameEl) selectedRoomNameEl.textContent = 'لم يتم الاختيار';
+            if (headerRoomBadge) {
+                headerRoomBadge.textContent = 'لم يتم الاختيار';
+                headerRoomBadge.className = 'badge bg-light text-muted border';
             }
-            // إضافة الفواصل للآلاف
-            return numValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        }
-
-        // دالة لإزالة الفواصل وإرجاع الرقم الصحيح
-        function removeCommas(value) {
-            return value.replace(/,/g, '');
-        }
-
-        // عند الكتابة في الحقل
-        customFeeInput.addEventListener('input', function(e) {
-            let cursorPosition = this.selectionStart;
-            let oldValue = this.value;
-            let oldLength = oldValue.length;
-            
-            // إزالة الفواصل أولاً
-            let cleanValue = removeCommas(this.value);
-            
-            // السماح بالأرقام فقط
-            cleanValue = cleanValue.replace(/\D/g, '');
-            
-            // تنسيق القيمة بالفواصل
-            let formattedValue = formatNumberWithCommas(cleanValue);
-            
-            // تحديث القيمة
-            this.value = formattedValue;
-            
-            // حساب الموقع الجديد للمؤشر
-            let newLength = formattedValue.length;
-            let diff = newLength - oldLength;
-            
-            // ضبط موقع المؤشر
-            this.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+            if (clearRoomSection) clearRoomSection.style.display = 'none';
+            calculateRoomFee();
         });
-
-        // تنسيق القيمة الأولية إذا كانت موجودة
-        if (customFeeInput.value) {
-            customFeeInput.value = formatNumberWithCommas(removeCommas(customFeeInput.value));
-        }
     }
 
-    // عرض معلومات المريض عند الاختيار
-    const patientSelect = document.getElementById('patient_id');
-    if (patientSelect) {
-        function updatePatientInfo() {
-            const selectedOption = patientSelect.options[patientSelect.selectedIndex];
-            const patientData = selectedOption.getAttribute('data-patient');
-            const infoDiv = document.getElementById('selectedPatientInfo');
-            
-            if (patientData && selectedOption.value !== '') {
-                try {
-                    const patient = JSON.parse(patientData);
-                    document.getElementById('patientName').textContent = patient.name || '-';
-                    document.getElementById('patientAge').textContent = patient.age || '-';
-                    document.getElementById('patientGender').textContent = patient.gender || '-';
-                    document.getElementById('patientPhone').textContent = patient.phone || '-';
-                    infoDiv.style.display = 'block';
-                } catch (e) {
-                    console.error('Error parsing patient data:', e);
-                    infoDiv.style.display = 'none';
-                }
-            } else {
-                infoDiv.style.display = 'none';
+    // تهيئة Tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // ===== نظام الأرشفة التلقائي - يعمل مع أي سكانر =====
+    const referralInput = document.getElementById('referral_letter');
+    const previewContainer = document.getElementById('referral_letter_preview');
+    const scanStatus = document.getElementById('scan_status');
+
+    function checkScannerStatus() {
+        fetch('http://127.0.0.1:5000/status', { method: 'GET', mode: 'cors' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ready' || data.status === 'ok') {
+                console.log('Scanner server ready');
             }
-        }
-        
-        patientSelect.addEventListener('change', updatePatientInfo);
-        
-        // عرض البيانات عند تحميل الصفحة إذا تم اختيار مريض مسبقاً
-        if (patientSelect.value !== '') {
-            updatePatientInfo();
-        }
+        })
+        .catch(err => console.log('Scanner check offline'));
     }
 
-    updateUI();
+    window.scanFromDevice = function() {
+        const btn = document.getElementById('scan_btn');
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
+
+        fetch('http://127.0.0.1:5000/scan', { method: 'POST', mode: 'cors' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.image) {
+                if (previewContainer) previewContainer.style.display = 'block';
+                const hiddenInput = document.getElementById('scan_data_receiver');
+                if (hiddenInput) hiddenInput.value = data.image;
+            } else {
+                alert(data.message || 'تعذر إتمام المسح من السكانر');
+            }
+        })
+        .catch(err => {
+            alert('برنامج السكانر غير مشغل أو غير متصل. يمكنك استخدام زر "رفع ملف" بدلاً منه.');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+        });
+    };
+
+    window.clearScannedDoc = function() {
+        if (referralInput) referralInput.value = '';
+        const hiddenInput = document.getElementById('scan_data_receiver');
+        if (hiddenInput) hiddenInput.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+    };
+
+    if (referralInput) {
+        referralInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                if (previewContainer) previewContainer.style.display = 'block';
+            }
+        });
+    }
 });
 </script>
 @endsection
-
-<style>
-/* Room tiles styles */
-.room-tile {
-    width: 80px;
-    height: 70px;
-    border-width: 2px;
-    border-style: solid;
-    border-color: #dee2e6;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    background: white;
-    transition: all 0.3s ease;
-    margin: 2px;
-}
-
-.room-tile:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-
-.room-tile[data-available="0"] {
-    background: #f8f9fa;
-    opacity: 0.6;
-}
-
-.room-number {
-    font-weight: bold;
-    font-size: 1rem;
-    text-align: center;
-    color: #333;
-    margin-bottom: 2px;
-}
-
-.room-badges {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-}
-
-.room-status {
-    position: absolute;
-    bottom: 2px;
-    left: 2px;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.room-actions {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-}
-
-.room-selectable {
-    cursor: pointer;
-}
-
-.room-selectable[data-available="0"] {
-    cursor: not-allowed;
-}
-</style>
-<!--
-====================================
-إعداد نظام الأرشفة بالسكانر
-====================================
-
-هذا النموذج يدعم المسح المباشر من أجهزة السكانر المتصلة بالحاسوب.
-
-الخيارات المتاحة:
-
-1. Dynamsoft Dynamic Web TWAIN (موصى به)
-   - يدعم معظم أجهزة السكانر TWAIN/WIA/SANE
-   - يعمل على Windows, Mac, Linux
-   - يتطلب تثبيت Service على الحاسوب
-   - التحميل: https://www.dynamsoft.com/web-twain/downloads
-   - مجاني للتطوير (يحتاج ترخيص للإنتاج)
-
-2. Asprise Scanning (بديل مجاني)
-   - أخف وزناً
-   - يدعم Windows, Mac, Linux
-   - التحميل: https://asprise.com/document-scan-upload-image-browser/direct-to-web-browser-scan-upload.html
-
-3. البديل اليدوي (متوفر دائماً)
-   - يمكن للمستخدم المسح يدوياً ثم رفع الملف
-   - لا يتطلب أي إعدادات إضافية
-
-التثبيت:
-1. اختر إحدى المكتبتين أعلاه
-2. حمّل وثبت البرنامج المساعد على أجهزة المستخدمين
-3. تأكد من تشغيل خدمة المسح (Service)
-4. تأكد من توصيل السكانر وتثبيت تعريفاته
-
-ملاحظات:
-- النظام يحتوي على fallback تلقائي لرفع الملفات إذا لم يتوفر السكانر
-- يمكن تخصيص إعدادات الدقة (Resolution) والألوان
-- يدعم المسح متعدد الصفحات
-- يحفظ الملفات بصيغة JPG أو PDF حسب الإعدادات
--->

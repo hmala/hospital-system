@@ -63,7 +63,20 @@ class InquiryController extends Controller
             ->latest()
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers'));
+        // جلب المرضى المحولين من الطوارئ بانتظار حجز الرقود
+        $pendingAdmissionTransfers = \App\Models\Emergency::with(['patient.user', 'doctor.user'])
+            ->where('status', 'transferred')
+            ->where('requires_admission', true)
+            ->whereNotNull('patient_id')
+            ->whereNotIn('patient_id', function($q) {
+                $q->select('patient_id')
+                  ->from('bed_reservations')
+                  ->whereIn('status', ['confirmed', 'active']);
+            })
+            ->latest()
+            ->get();
+
+        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers'));
     }
 
     /**
@@ -168,15 +181,8 @@ class InquiryController extends Controller
         $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         
-        // جلب موظفي السونار من جدول الأطباء حسب التخصص
-        $ultrasoundStaff = Doctor::with('user')
-            ->where('is_active', true)
-            ->where(function($query) {
-                $query->where('specialization', 'LIKE', '%سونار%')
-                      ->orWhere('specialization', 'LIKE', '%ultrasound%')
-                      ->orWhere('specialization', 'LIKE', '%Ultrasound%');
-            })
-            ->get();
+        // جلب موظفي السونار من جدول المستخدمين حسب الدور
+        $ultrasoundStaff = User::role('radiology_ultrasound')->get();
         
         // جلب موظفي الإيكو من جدول المستخدمين حسب الدور
         $echoStaff = User::role('radiology_echo')->get();
@@ -239,7 +245,7 @@ class InquiryController extends Controller
             'radiology_type_ids' => 'nullable|array',  // اختياري - سيحدده موظف الأشعة لاحقاً
             'radiology_type_ids.*' => 'exists:radiology_types,id',
             'radiology_category' => 'nullable|in:radiology,echo,ultrasound,mri',
-            'ultrasound_staff_id' => 'required_if:radiology_category,ultrasound|nullable|exists:doctors,id',  // الموظف المسؤول عن السونار - مطلوب إذا كانت الفئة ultrasound
+            'ultrasound_staff_id' => 'required_if:radiology_category,ultrasound|nullable|exists:users,id',  // الموظف المسؤول عن السونار - مطلوب إذا كانت الفئة ultrasound
             'echo_type_id' => 'required_if:radiology_category,echo|nullable|exists:radiology_types,id',  // نوع الإيكو المحدد - مطلوب إذا كانت الفئة echo
             'echo_staff_id' => 'required_if:radiology_category,echo|nullable|exists:users,id',  // الموظف المسؤول عن الإيكو - مطلوب إذا كانت الفئة echo
             'auto_refer' => 'nullable|boolean',

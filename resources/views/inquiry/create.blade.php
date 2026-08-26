@@ -402,7 +402,7 @@
                                                             <option value="">اختر الموظف...</option>
                                                             @foreach($ultrasoundStaff as $staff)
                                                                 <option value="{{ $staff->id }}" {{ old('ultrasound_staff_id') == $staff->id ? 'selected' : '' }}>
-                                                                    د. {{ optional($staff->user)->name ?? 'غير معروف' }} - {{ $staff->specialization }}
+                                                                    {{ $staff->name }}
                                                                 </option>
                                                             @endforeach
                                                         </select>

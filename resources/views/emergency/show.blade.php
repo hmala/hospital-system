@@ -26,6 +26,12 @@
                                 <i class="fas fa-procedures me-2"></i>تحويل إلى العمليات
                             </button>
                         </form>
+                        <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" class="d-inline me-2" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
+                            @csrf
+                            <button type="submit" class="btn btn-warning text-dark fw-bold">
+                                <i class="fas fa-bed me-2"></i>تحويل رقود
+                            </button>
+                        </form>
                     @endif
                     @if($emergency->payment && $emergency->payment->paid_at)
                         <button onclick="window.print()" class="btn btn-primary me-2">

@@ -46,6 +46,8 @@ class EmergencyController extends Controller
             'labRequests.labTests',
             'radiologyRequests.radiologyTypes',
             'treatments',
+            'latestSurgery.room',
+            'latestBedReservation.room',
             'vitalSignReadings' => function($query) {
                 $query->latest()->with('recordedBy')->limit(5);
             }
@@ -1084,7 +1086,8 @@ class EmergencyController extends Controller
     public function transferToSurgery(Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
+            !$user->isDoctor() && !$user->isNurse()) {
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
 
@@ -1126,5 +1129,55 @@ class EmergencyController extends Controller
 
         // توجيه المستخدم للخلف مع رسالة نجاح للبقاء في نفس الصفحة
         return redirect()->back()->with('success', 'تم تحويل المريض بنجاح إلى الاستعلامات لتهيئة حجز العملية.');
+    }
+
+    /**
+     * تحويل المريض من الطوارئ إلى الرقود / التنويم
+     */
+    public function transferToAdmission(Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
+            !$user->isDoctor() && !$user->isNurse()) {
+            abort(403, 'غير مصرح لك بإجراء التحويل');
+        }
+
+        // 1. ترحيل المريض إلى الجدول الرئيسي إذا لم يكن مرحلاً
+        if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
+            $emergencyPatient = $emergency->emergencyPatient;
+            
+            $userAccount = \App\Models\User::create([
+                'name' => $emergencyPatient->name,
+                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'role' => 'patient',
+                'password' => bcrypt(\Illuminate\Support\Str::random(12)),
+            ]);
+
+            $mainPatient = \App\Models\Patient::create([
+                'user_id' => $userAccount->id,
+                'date_of_birth' => $emergencyPatient->date_of_birth,
+                'gender' => $emergencyPatient->gender,
+                'phone' => $emergencyPatient->phone,
+            ]);
+
+            $emergency->update([
+                'patient_id' => $mainPatient->id,
+                'patient_migrated' => true,
+            ]);
+
+            $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
+        }
+
+        if (!$emergency->patient_id) {
+            return redirect()->back()->with('error', 'فشل تحويل الحالة: لم يتم العثور على مريض مسجل.');
+        }
+
+        // تحديث حالة الطوارئ إلى محولة للرقود
+        $emergency->update([
+            'status' => 'transferred',
+            'requires_admission' => true,
+        ]);
+
+        return redirect()->back()->with('success', 'تم تحويل المريض بنجاح إلى الاستعلامات لتهيئة حجز الرقود.');
     }
 }

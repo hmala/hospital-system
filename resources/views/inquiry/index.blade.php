@@ -252,6 +252,63 @@
         </div>
     @endif
 
+    @if(isset($pendingAdmissionTransfers) && count($pendingAdmissionTransfers) > 0)
+        <!-- مرضى محولون للرقود من الطوارئ -->
+        <div class="row mb-4 animate__animated animate__fadeIn">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-bed me-2 animate__animated animate__pulse animate__infinite"></i>
+                            مرضى الطوارئ المحولين للرقود (التنويم)
+                        </h5>
+                        <span class="badge bg-dark text-white fw-bold fs-6">{{ count($pendingAdmissionTransfers) }} مرضى بانتظار حجز سرير</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>وقت التحويل</th>
+                                        <th>اسم المريض</th>
+                                        <th>رقم المريض</th>
+                                        <th>الطبيب المحيل</th>
+                                        <th>الشكوى/الحالة</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($pendingAdmissionTransfers as $admTransfer)
+                                        <tr>
+                                            <td>
+                                                <small class="text-warning fw-bold text-dark">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ $admTransfer->updated_at->format('Y-m-d H:i') }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <strong>{{ optional($admTransfer->patient->user)->name }}</strong>
+                                                <br><small class="text-muted">{{ optional($admTransfer->patient->user)->phone }}</small>
+                                            </td>
+                                            <td><code>#{{ $admTransfer->patient_id }}</code></td>
+                                            <td>د. {{ optional($admTransfer->doctor->user)->name ?? 'طبيب الطوارئ' }}</td>
+                                            <td><span class="text-muted">{{ Str::limit($admTransfer->description ?: $admTransfer->symptoms, 50) }}</span></td>
+                                            <td>
+                                                <a href="{{ route('bed-reservations.create', ['patient_id' => $admTransfer->patient_id, 'doctor_id' => $admTransfer->doctor_id]) }}" class="btn btn-sm btn-warning text-dark fw-bold">
+                                                    <i class="fas fa-bed me-1"></i> حجز رقود وسرير
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- قائمة الزيارات -->
     <div class="row">
         <div class="col-12">

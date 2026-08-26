@@ -40,7 +40,7 @@
                             <i class="fas fa-box text-primary fa-2x"></i>
                         </div>
                         <div>
-                            <h4 class="mb-1 fw-bold">{{ $products->total() }}</h4>
+                            <h4 class="mb-1 fw-bold">{{ $totalProducts ?? $products->total() }}</h4>
                             <p class="text-muted mb-0">إجمالي المنتجات</p>
                         </div>
                     </div>
@@ -55,7 +55,7 @@
                             <i class="fas fa-check-circle text-success fa-2x"></i>
                         </div>
                         <div>
-                            <h4 class="mb-1 fw-bold">{{ $products->where('is_perishable', 0)->count() }}</h4>
+                            <h4 class="mb-1 fw-bold">{{ $nonPerishableCount ?? $products->where('is_perishable', 0)->count() }}</h4>
                             <p class="text-muted mb-0">منتجات غير قابلة للتلف</p>
                         </div>
                     </div>
@@ -70,7 +70,7 @@
                             <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
                         </div>
                         <div>
-                            <h4 class="mb-1 fw-bold">{{ $products->where('is_perishable', 1)->count() }}</h4>
+                            <h4 class="mb-1 fw-bold">{{ $perishableCount ?? $products->where('is_perishable', 1)->count() }}</h4>
                             <p class="text-muted mb-0">منتجات قابلة للتلف</p>
                         </div>
                     </div>
@@ -84,13 +84,34 @@
         <div class="col-12">
             <div class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
                 <div class="card-header bg-white border-0 py-4">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                         <h4 class="mb-0 fw-bold text-dark">
-                            <i class="fas fa-list me-2"></i>قائمة المنتجات
+                            <i class="fas fa-list me-2"></i>قائمة المنتجات 
+                            @if(request('search') || request('category'))
+                                <span class="badge bg-primary fs-6">{{ $products->total() }} نتيجة</span>
+                            @endif
                         </h4>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="البحث في المنتجات..." style="border-radius: 25px; border: 2px solid #e9ecef;">
-                        </div>
+                        <form action="{{ route('products.index') }}" method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+                            @if(isset($categories) && count($categories) > 0)
+                                <select name="category" class="form-select form-select-lg" style="border-radius: 25px; border: 2px solid #e9ecef; width: auto;" onchange="this.form.submit()">
+                                    <option value="">كل الأصناف</option>
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat }}" {{ request('category') == $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
+                            <div class="input-group" style="min-width: 320px;">
+                                <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-lg" placeholder="البحث بالاسم، الباركود، الصنف..." style="border-radius: 0 25px 25px 0; border: 2px solid #e9ecef;">
+                                <button class="btn btn-primary px-4" type="submit" style="border-radius: 25px 0 0 25px;">
+                                    <i class="fas fa-search me-1"></i> بحث
+                                </button>
+                            </div>
+                            @if(request('search') || request('category') || request()->filled('is_perishable'))
+                                <a href="{{ route('products.index') }}" class="btn btn-outline-danger btn-lg px-3" style="border-radius: 25px;" title="إلغاء الفلتر والبحث">
+                                    <i class="fas fa-times me-1"></i> مسح
+                                </a>
+                            @endif
+                        </form>
                     </div>
                 </div>
 
@@ -228,26 +249,7 @@
             });
         });
 
-        // Search functionality
-        const searchInput = document.getElementById('searchInput');
         const tableRows = document.querySelectorAll('.product-row');
-
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-
-            tableRows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                if (text.includes(searchTerm)) {
-                    row.style.display = '';
-                    row.style.transform = 'scale(1)';
-                    row.style.opacity = '1';
-                } else {
-                    row.style.display = 'none';
-                    row.style.transform = 'scale(0.95)';
-                    row.style.opacity = '0.5';
-                }
-            });
-        });
 
         // Row hover effects
         tableRows.forEach(row => {
