@@ -7,7 +7,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
-                    <i class="fas fa-ambulance me-2"></i>
+                    <i class="fas fa-ambulance me-2 text-danger"></i>
                     إدارة الطوارئ
                 </h2>
                 <div>
@@ -15,14 +15,6 @@
                         <i class="fas fa-circle fa-xs"></i> مباشر
                     </span>
                     <small class="text-muted ms-2" id="emergency-last-update">آخر تحديث: الآن</small>
-                </div>
-                <div>
-                    <a href="{{ route('emergency.dashboard') }}" class="btn btn-info me-2">
-                        <i class="fas fa-chart-line me-2"></i>لوحة التحكم
-                    </a>
-                    <a href="{{ route('emergency.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>حالة طوارئ جديدة
-                    </a>
                 </div>
             </div>
         </div>
@@ -42,47 +34,79 @@
         </div>
     @endif
 
-    <!-- فلاتر البحث والتصفية -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <form action="{{ route('emergency.index') }}" method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="ابحث باسم المريض أو رقم الطوارئ..." value="{{ request('search') }}">
-                </div>
-                <div class="col-md-3">
-                    <select name="priority" class="form-select">
-                        <option value="">جميع الأولويات</option>
-                        <option value="critical" @selected(request('priority') == 'critical')>حرجة</option>
-                        <option value="high" @selected(request('priority') == 'high')>عالية</option>
-                        <option value="medium" @selected(request('priority') == 'medium')>متوسطة</option>
-                        <option value="low" @selected(request('priority') == 'low')>منخفضة</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="status" class="form-select">
-                        <option value="">جميع الحالات</option>
-                        <option value="waiting" @selected(request('status') == 'waiting')>في الانتظار</option>
-                        <option value="in_triage" @selected(request('status') == 'in_triage')>في التفريغ</option>
-                        <option value="in_treatment" @selected(request('status') == 'in_treatment')>في العلاج</option>
-                        <option value="discharged" @selected(request('status') == 'discharged')>مغادر</option>
-                        <option value="transferred" @selected(request('status') == 'transferred')>محول</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary w-100">
-                        <i class="fas fa-filter"></i> فلترة
-                    </button>
-                </div>
-            </form>
+    <!-- تبويبات الفلترة السريعة وفلتر التاريخ -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+        <div class="card-body p-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <!-- التبويبات -->
+                <ul class="nav nav-pills gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link {{ (request('filter', 'today') === 'today' && !request('date')) ? 'active bg-primary' : 'bg-light text-dark' }} fw-bold" href="{{ route('emergency.index', ['filter' => 'today']) }}">
+                            <i class="fas fa-calendar-day me-1"></i> حالات اليوم 
+                            <span class="badge bg-white text-primary ms-1">{{ $stats['today'] ?? 0 }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ (request('filter') === 'active' && !request('date')) ? 'active bg-success' : 'bg-light text-dark' }} fw-bold" href="{{ route('emergency.index', ['filter' => 'active']) }}">
+                            <i class="fas fa-heartbeat me-1"></i> النشطة حالياً
+                            <span class="badge bg-white text-success ms-1">{{ $stats['active'] ?? 0 }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ (request('filter') === 'discharged' && !request('date')) ? 'active bg-secondary' : 'bg-light text-dark' }} fw-bold" href="{{ route('emergency.index', ['filter' => 'discharged']) }}">
+                            <i class="fas fa-user-check me-1"></i> المغادرين
+                            <span class="badge bg-white text-secondary ms-1">{{ $stats['discharged'] ?? 0 }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ (request('filter') === 'transferred' && !request('date')) ? 'active bg-info text-dark' : 'bg-light text-dark' }} fw-bold" href="{{ route('emergency.index', ['filter' => 'transferred']) }}">
+                            <i class="fas fa-exchange-alt me-1"></i> المحولين
+                            <span class="badge bg-white text-dark ms-1">{{ $stats['transferred'] ?? 0 }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ (request('filter') === 'all' && !request('date')) ? 'active bg-dark' : 'bg-light text-dark' }} fw-bold" href="{{ route('emergency.index', ['filter' => 'all']) }}">
+                            <i class="fas fa-archive me-1"></i> السجل الكامل
+                            <span class="badge bg-white text-dark ms-1">{{ $stats['total'] ?? 0 }}</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- نموذج البحث والتاريخ -->
+                <form action="{{ route('emergency.index') }}" method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+                    @if(request('filter') && !request('date'))
+                        <input type="hidden" name="filter" value="{{ request('filter') }}">
+                    @endif
+                    <div class="input-group" style="min-width: 170px;">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-calendar-alt text-primary"></i></span>
+                        <input type="date" name="date" class="form-control border-start-0" value="{{ request('date') }}" title="تاريخ الحالات" onchange="this.form.submit()">
+                    </div>
+                    <div class="input-group" style="min-width: 220px;">
+                        <input type="text" name="search" class="form-control" placeholder="بحث باسم أو رقم المريض..." value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    @if(request('date') || request('search') || (request('filter') && request('filter') !== 'today'))
+                        <a href="{{ route('emergency.index') }}" class="btn btn-outline-danger" title="إعادة تعيين">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    @endif
+                </form>
+            </div>
         </div>
     </div>
 
-    @if($emergencies->where('payment_status', 'pending')->count() > 0)
+    @php
+        $actualUnpaidCount = $emergencies->filter(fn($e) => $e->hasUnpaidDues())->count();
+    @endphp
+
+    @if($actualUnpaidCount > 0)
         <div class="row mb-3">
             <div class="col-12">
-                <div class="alert alert-danger">
+                <div class="alert alert-danger border-0 shadow-sm" style="border-radius: 12px;">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    يوجد {{ $emergencies->where('payment_status', 'pending')->count() }} حالة طوارئ لم تُدفع بعد في الكاشير. .
+                    يوجد {{ $actualUnpaidCount }} حالة طوارئ عليها خدمات مستحقة لم تُسدد بعد في الكاشير.
                 </div>
             </div>
         </div>
@@ -107,7 +131,7 @@
                             </thead>
                             <tbody>
                                 @forelse($emergencies as $emergency)
-                                <tr class="{{ $emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : ''))) }}">
+                                <tr class="{{ $emergency->status === 'discharged' ? ($emergency->discharge_type === 'against_medical_advice' ? 'table-secondary opacity-75' : 'table-light') : ($emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : '')))) }}">
                                     <td>{{ $loop->iteration }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -251,6 +275,26 @@
                                                     </small>
                                                 </div>
                                             </div>
+                                        @elseif($emergency->status === 'discharged')
+                                            <div class="d-flex flex-column align-items-center">
+                                                @if($emergency->discharge_type === 'recovered')
+                                                    <span class="badge bg-success text-white px-2 py-1 shadow-sm" title="خرج متعافي">
+                                                        <i class="fas fa-check-circle me-1"></i> خرج متعافي
+                                                    </span>
+                                                @elseif($emergency->discharge_type === 'against_medical_advice')
+                                                    <span class="badge bg-warning text-dark px-2 py-1 shadow-sm fw-bold" title="خرج على مسؤوليته">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i> خرج على مسؤوليته
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-secondary text-white px-2 py-1 shadow-sm">
+                                                        <i class="fas fa-sign-out-alt me-1"></i> تم الخروج
+                                                    </span>
+                                                @endif
+                                                <small class="text-muted mt-1" style="font-size: 0.75rem;">
+                                                    <i class="fas fa-clock text-secondary me-1"></i>
+                                                    {{ $emergency->discharge_time ? $emergency->discharge_time->format('H:i') : '' }}
+                                                </small>
+                                            </div>
                                         @else
                                             <div class="dropdown">
                                                 <button class="btn btn-sm {{ $emergency->status === 'transferred' ? 'btn-info text-dark' : 'btn-outline-secondary' }} dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -329,6 +373,27 @@
                                                             <button type="submit" class="dropdown-item d-flex align-items-center text-start text-primary">
                                                                 <i class="fas fa-bed me-2"></i>
                                                                 <span>تحويل رقود</span>
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض بحالة (خرج متعافي)؟')">
+                                                            @csrf
+                                                            <input type="hidden" name="discharge_type" value="recovered">
+                                                            <button type="submit" class="dropdown-item d-flex align-items-center text-start text-success">
+                                                                <i class="fas fa-user-check me-2"></i>
+                                                                <span>خرج متعافي</span>
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
+                                                            @csrf
+                                                            <input type="hidden" name="discharge_type" value="against_medical_advice">
+                                                            <button type="submit" class="dropdown-item d-flex align-items-center text-start text-warning">
+                                                                <i class="fas fa-user-shield me-2"></i>
+                                                                <span>خرج على مسؤوليته</span>
                                                             </button>
                                                         </form>
                                                     </li>

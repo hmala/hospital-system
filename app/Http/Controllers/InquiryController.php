@@ -50,8 +50,11 @@ class InquiryController extends Controller
         ->latest()
         ->paginate(15);
 
+        // موظف استعلامات الاستشارية فقط لا تظهر له تحويلات الطوارئ للعمليات أو الرقود
+        $isConsultationReceptionistOnly = $user->hasRole('consultation_receptionist') && !$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff']);
+
         // جلب المرضى المحولين من الطوارئ بانتظار حجز العمليات الجراحية
-        $pendingTransfers = \App\Models\Emergency::with(['patient.user', 'doctor.user'])
+        $pendingTransfers = $isConsultationReceptionistOnly ? collect() : \App\Models\Emergency::with(['patient.user', 'doctor.user'])
             ->where('status', 'transferred')
             ->where('requires_surgery', true)
             ->whereNotNull('patient_id')
@@ -64,7 +67,7 @@ class InquiryController extends Controller
             ->get();
 
         // جلب المرضى المحولين من الطوارئ بانتظار حجز الرقود
-        $pendingAdmissionTransfers = \App\Models\Emergency::with(['patient.user', 'doctor.user'])
+        $pendingAdmissionTransfers = $isConsultationReceptionistOnly ? collect() : \App\Models\Emergency::with(['patient.user', 'doctor.user'])
             ->where('status', 'transferred')
             ->where('requires_admission', true)
             ->whereNotNull('patient_id')

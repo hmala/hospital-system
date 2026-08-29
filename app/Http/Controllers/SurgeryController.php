@@ -322,14 +322,8 @@ class SurgeryController extends Controller
     public function edit(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff', 'doctor', 'الجراح', 'التخدير']) && 
-            !$user->hasAnyPermission(['edit surgeries', 'view surgeon station'])) {
-            abort(403, 'غير مصرح لك بتعديل العمليات الجراحية');
-        }
-
-        // منع الأطباء الاستشاريين من تعديل العمليات
-        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
-            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتعديل العمليات الجراحية');
+        if (!$user->hasRole(['admin', 'receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room']);
@@ -375,20 +369,15 @@ class SurgeryController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بطباعة تفاصيل العملية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation']);
+        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room']);
         return view('surgeries.print', compact('surgery'));
     }
 
     public function update(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff', 'doctor', 'الجراح']) && 
-            !$user->hasAnyPermission(['edit surgeries', 'view surgeon station'])) {
-            abort(403, 'غير مصرح لك بتعديل العمليات الجراحية');
-        }
-
-        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
-            abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتعديل العمليات الجراحية');
+        if (!$user->hasRole(['admin', 'receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
         if ($request->filled('custom_surgery_fee')) {

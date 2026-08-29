@@ -24,6 +24,8 @@ class Emergency extends Model
         'vital_signs',
         'admission_time',
         'discharge_time',
+        'discharge_type',
+        'discharge_notes',
         'room_assigned',
         'requires_surgery',
         'requires_admission',
@@ -176,6 +178,54 @@ class Emergency extends Model
     public function getStatusBadgeClassAttribute()
     {
         return 'bg-' . $this->status_color;
+    }
+
+    /**
+     * حساب إجمالي مستحقات الطوارئ غير المدفوعة
+     */
+    public function getUnpaidAmount(): float
+    {
+        if ($this->payment_status === 'paid' || $this->payment_status === 'waived' || $this->payment_status === 'cancelled') {
+            return 0.0;
+        }
+
+        $unpaidServiceIds = \DB::table('emergency_emergency_service')
+            ->where('emergency_id', $this->id)
+            ->whereNull('payment_id')
+            ->pluck('emergency_service_id');
+        
+        $servicesAmount = $this->services()->whereIn('emergency_services.id', $unpaidServiceIds)->sum('price');
+        
+        $labAmount = $this->labRequests()
+            ->whereNull('payment_id')
+            ->with('labTests')
+            ->get()
+            ->sum(fn($r) => $r->labTests->sum('price'));
+            
+        $radiologyAmount = $this->radiologyRequests()
+            ->whereNull('payment_id')
+            ->with('radiologyTypes')
+            ->get()
+            ->sum(fn($r) => $r->radiologyTypes->sum('base_price'));
+
+        $consultationAmount = $this->appointments()
+            ->where('payment_status', 'pending')
+            ->where('status', '<>', 'cancelled')
+            ->sum('consultation_fee');
+
+        $followUpFee = ($this->doctor_follow_up_fee > 0 && !$this->follow_up_payment_id) 
+            ? $this->doctor_follow_up_fee 
+            : 0;
+
+        return (float) ($servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee);
+    }
+
+    /**
+     * هل توجد خدمات مستحقة غير مدفوعة فعلياً؟
+     */
+    public function hasUnpaidDues(): bool
+    {
+        return $this->getUnpaidAmount() > 0;
     }
 
     public function getBloodPressureAttribute()

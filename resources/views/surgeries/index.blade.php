@@ -284,7 +284,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                 </a>
                                                             @else
                                                                 <div class="btn-group btn-group-sm">
-                                                                    @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
+                                                                    @if(auth()->user()->hasRole('admin'))
                                                                         <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning" title="تعديل الحجز">
                                                                             <i class="fas fa-edit me-1"></i> تعديل الحجز
                                                                         </a>
@@ -712,7 +712,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                         <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary me-1" title="تفاصيل العملية">
                                                             <i class="fas fa-eye me-1"></i> تفاصيل العملية
                                                         </a>
-                                                        @if(auth()->user()->hasRole(['admin', 'surgery_staff']))
+                                                        @if(auth()->user()->hasRole('admin'))
                                                             <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning" title="تعديل الحجز">
                                                                 <i class="fas fa-edit me-1"></i> تعديل الحجز
                                                             </a>

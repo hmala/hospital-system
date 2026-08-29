@@ -230,14 +230,14 @@
                                                 </small>
                                             </td>
                                             <td>
-                                                <strong>{{ optional($transfer->patient->user)->name }}</strong>
-                                                <br><small class="text-muted">{{ optional($transfer->patient->user)->phone }}</small>
+                                                <strong>{{ $transfer->patient?->user?->name ?? ($transfer->emergencyPatient?->name ?? 'مريض غير محدد') }}</strong>
+                                                <br><small class="text-muted">{{ $transfer->patient?->user?->phone ?? ($transfer->emergencyPatient?->phone ?? '-') }}</small>
                                             </td>
                                             <td><code>#{{ $transfer->patient_id }}</code></td>
-                                            <td>د. {{ optional($transfer->doctor->user)->name ?? 'طبيب الطوارئ' }}</td>
+                                            <td>د. {{ $transfer->doctor?->user?->name ?? 'طبيب الطوارئ' }}</td>
                                             <td><span class="text-muted">{{ Str::limit($transfer->description ?: $transfer->symptoms, 50) }}</span></td>
                                             <td>
-                                                <a href="{{ route('surgeries.create', ['patient_id' => $transfer->patient_id, 'referring_doctor_name' => optional($transfer->doctor->user)->name ?? 'طبيب الطوارئ']) }}" class="btn btn-sm btn-danger fw-bold">
+                                                <a href="{{ route('surgeries.create', ['patient_id' => $transfer->patient_id, 'referring_doctor_name' => $transfer->doctor?->user?->name ?? 'طبيب الطوارئ']) }}" class="btn btn-sm btn-danger fw-bold">
                                                     <i class="fas fa-plus me-1"></i> حجز عملية جراحية
                                                 </a>
                                             </td>
@@ -287,11 +287,11 @@
                                                 </small>
                                             </td>
                                             <td>
-                                                <strong>{{ optional($admTransfer->patient->user)->name }}</strong>
-                                                <br><small class="text-muted">{{ optional($admTransfer->patient->user)->phone }}</small>
+                                                <strong>{{ $admTransfer->patient?->user?->name ?? ($admTransfer->emergencyPatient?->name ?? 'مريض غير محدد') }}</strong>
+                                                <br><small class="text-muted">{{ $admTransfer->patient?->user?->phone ?? ($admTransfer->emergencyPatient?->phone ?? '-') }}</small>
                                             </td>
                                             <td><code>#{{ $admTransfer->patient_id }}</code></td>
-                                            <td>د. {{ optional($admTransfer->doctor->user)->name ?? 'طبيب الطوارئ' }}</td>
+                                            <td>د. {{ $admTransfer->doctor?->user?->name ?? 'طبيب الطوارئ' }}</td>
                                             <td><span class="text-muted">{{ Str::limit($admTransfer->description ?: $admTransfer->symptoms, 50) }}</span></td>
                                             <td>
                                                 <a href="{{ route('bed-reservations.create', ['patient_id' => $admTransfer->patient_id, 'doctor_id' => $admTransfer->doctor_id]) }}" class="btn btn-sm btn-warning text-dark fw-bold">

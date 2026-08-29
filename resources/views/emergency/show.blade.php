@@ -32,6 +32,30 @@
                                 <i class="fas fa-bed me-2"></i>تحويل رقود
                             </button>
                         </form>
+                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" class="d-inline me-2" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
+                            @csrf
+                            <input type="hidden" name="discharge_type" value="recovered">
+                            <button type="submit" class="btn btn-success fw-bold">
+                                <i class="fas fa-user-check me-2"></i>خرج متعافي
+                            </button>
+                        </form>
+                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" class="d-inline me-2" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
+                            @csrf
+                            <input type="hidden" name="discharge_type" value="against_medical_advice">
+                            <button type="submit" class="btn btn-outline-warning text-dark fw-bold">
+                                <i class="fas fa-user-shield me-2"></i>خرج على مسؤوليته
+                            </button>
+                        </form>
+                    @elseif($emergency->status === 'discharged')
+                        @if($emergency->discharge_type === 'recovered')
+                            <span class="badge bg-success fs-6 p-2 me-2">
+                                <i class="fas fa-check-circle me-1"></i> خرج متعافي ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @elseif($emergency->discharge_type === 'against_medical_advice')
+                            <span class="badge bg-warning text-dark fs-6 p-2 me-2">
+                                <i class="fas fa-exclamation-triangle me-1"></i> خرج على مسؤوليته ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @endif
                     @endif
                     @if($emergency->payment && $emergency->payment->paid_at)
                         <button onclick="window.print()" class="btn btn-primary me-2">

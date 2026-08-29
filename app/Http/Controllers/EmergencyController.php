@@ -51,8 +51,25 @@ class EmergencyController extends Controller
             'vitalSignReadings' => function($query) {
                 $query->latest()->with('recordedBy')->limit(5);
             }
-        ])
-            ->where('is_active', true);
+        ]);
+
+        $filter = request('filter', 'today');
+        $date = request('date');
+
+        if ($date) {
+            $query->whereDate('admission_time', $date);
+        } else {
+            if ($filter === 'today') {
+                $query->whereDate('admission_time', today());
+            } elseif ($filter === 'active') {
+                $query->whereIn('status', ['waiting', 'in_progress']);
+            } elseif ($filter === 'discharged') {
+                $query->where('status', 'discharged');
+            } elseif ($filter === 'transferred') {
+                $query->where('status', 'transferred');
+            }
+            // if filter == 'all', no status/date restriction applied
+        }
 
         if ($search = request('search')) {
             $query->where(function($q) use ($search) {
@@ -77,7 +94,16 @@ class EmergencyController extends Controller
                 END
             ")
             ->orderBy('admission_time', 'desc')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
+
+        $stats = [
+            'today' => Emergency::where('is_active', true)->whereDate('admission_time', today())->count(),
+            'active' => Emergency::where('is_active', true)->whereIn('status', ['waiting', 'in_progress'])->count(),
+            'discharged' => Emergency::where('is_active', true)->where('status', 'discharged')->count(),
+            'transferred' => Emergency::where('is_active', true)->where('status', 'transferred')->count(),
+            'total' => Emergency::where('is_active', true)->count(),
+        ];
 
         $emergencyServices = EmergencyService::where('is_active', true)
             ->orderBy('name')
@@ -101,7 +127,7 @@ class EmergencyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'icd10Codes'));
+        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'icd10Codes', 'stats', 'filter', 'date'));
     }
 
     /**
@@ -1091,6 +1117,14 @@ class EmergencyController extends Controller
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
 
+        // 0. التحقق من وجود مستحقات مالية غير مسددة في الطوارئ
+        $this->upsertUnifiedEmergencyPayment($emergency);
+        $unpaidAmount = $emergency->getUnpaidAmount();
+        if ($unpaidAmount > 0) {
+            $formattedAmount = number_format($unpaidAmount, 0);
+            return redirect()->back()->with('error', "لا يمكن تحويل المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
+        }
+
         // 1. ترحيل المريض إلى الجدول الرئيسي إذا لم يكن مرحلاً
         if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
@@ -1142,6 +1176,14 @@ class EmergencyController extends Controller
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
 
+        // 0. التحقق من وجود مستحقات مالية غير مسددة في الطوارئ
+        $this->upsertUnifiedEmergencyPayment($emergency);
+        $unpaidAmount = $emergency->getUnpaidAmount();
+        if ($unpaidAmount > 0) {
+            $formattedAmount = number_format($unpaidAmount, 0);
+            return redirect()->back()->with('error', "لا يمكن تحويل المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
+        }
+
         // 1. ترحيل المريض إلى الجدول الرئيسي إذا لم يكن مرحلاً
         if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
@@ -1179,5 +1221,43 @@ class EmergencyController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'تم تحويل المريض بنجاح إلى الاستعلامات لتهيئة حجز الرقود.');
+    }
+
+    /**
+     * تسجيل خروج المريض من الطوارئ (متعافي أو على مسؤوليته)
+     */
+    public function discharge(Request $request, Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff']) && 
+            !$user->isDoctor() && !$user->isNurse()) {
+            abort(403, 'غير مصرح لك بتسجيل خروج المريض');
+        }
+
+        $request->validate([
+            'discharge_type' => 'required|in:recovered,against_medical_advice',
+            'discharge_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $updateData = [
+            'status' => 'discharged',
+            'discharge_type' => $request->discharge_type,
+            'discharge_time' => now(),
+            'discharge_notes' => $request->discharge_notes,
+        ];
+
+        if ($emergency->total_due_amount == 0 || $request->discharge_type === 'against_medical_advice') {
+            if ($emergency->payment_status !== 'paid') {
+                $updateData['payment_status'] = 'waived';
+                if ($emergency->payment && $emergency->payment->paid_at === null) {
+                    $emergency->payment->delete();
+                }
+            }
+        }
+
+        $emergency->update($updateData);
+
+        $typeLabel = $request->discharge_type === 'recovered' ? 'خرج متعافي' : 'خرج على مسؤوليته';
+        return redirect()->back()->with('success', "تم تسجيل خروج المريض بنجاح ({$typeLabel}).");
     }
 }
