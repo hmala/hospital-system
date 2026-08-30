@@ -75,7 +75,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:products,name,' . $product->id,
             'category' => 'nullable|string|max:255',
             'category_custom' => 'required_if:category,__other__|nullable|string|max:255',
             'unit' => 'required|string|max:100',
@@ -84,6 +84,8 @@ class ProductController extends Controller
             'description' => 'nullable|string|max:1000',
             'reorder_level' => 'nullable|integer|min:0',
             'storage_conditions' => 'nullable|string|max:255',
+        ], [
+            'name.unique' => 'اسم هذه المادة مسجل مسبقاً في النظام. يرجى استخدام اسم مختلف لمنع التكرار.',
         ]);
 
         $category = $request->category;
@@ -114,7 +116,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:products,name',
             'category' => 'nullable|string|max:255',
             'category_custom' => 'required_if:category,__other__|nullable|string|max:255',
             'unit' => 'required|string|max:100',
@@ -123,6 +125,8 @@ class ProductController extends Controller
             'description' => 'nullable|string|max:1000',
             'reorder_level' => 'nullable|integer|min:0',
             'storage_conditions' => 'nullable|string|max:255',
+        ], [
+            'name.unique' => 'اسم هذه المادة مسجل مسبقاً في النظام. يرجى اختيار اسم آخر لمنع التكرار.',
         ]);
 
         $code = $request->input('code');
