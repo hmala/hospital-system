@@ -161,44 +161,4 @@ class Doctor extends Model
 
         return $fees[$this->specialization] ?? 30000; // أجر افتراضي 30,000 IQD
     }
-
-    /**
-     * Scope to filter doctors working on a specific Arabic day name.
-     */
-    public function scopeWorkingOnDay($query, $day)
-    {
-        $unicodeEscaped = trim(json_encode($day), '"');
-        return $query->where(function ($q) use ($day, $unicodeEscaped) {
-            $q->whereJsonContains('working_days', $day)
-              ->orWhereJsonContains('working_days', [$day])
-              ->orWhere('working_days', 'like', '%"' . $day . '"%')
-              ->orWhere('working_days', 'like', '%' . $unicodeEscaped . '%');
-        });
-    }
-
-    /**
-     * Set working days attribute with explicit UTF-8 unescaped unicode JSON encoding.
-     */
-    public function setWorkingDaysAttribute($value)
-    {
-        if (is_array($value)) {
-            $this->attributes['working_days'] = json_encode(array_values($value), JSON_UNESCAPED_UNICODE);
-        } elseif (is_string($value)) {
-            $this->attributes['working_days'] = $value;
-        } else {
-            $this->attributes['working_days'] = null;
-        }
-    }
-
-    /**
-     * Encode the given value to JSON with unescaped unicode so Arabic characters are saved clearly.
-     *
-     * @param  mixed  $value
-     * @param  int  $flags
-     * @return string|false
-     */
-    protected function asJson($value, $flags = 0)
-    {
-        return json_encode($value, $flags | JSON_UNESCAPED_UNICODE);
-    }
 }
