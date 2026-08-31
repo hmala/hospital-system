@@ -220,9 +220,9 @@
                                 <span class="badge {{ $typeBadge['class'] }} border mb-1">
                                     <i class="{{ $typeBadge['icon'] }} me-1"></i>{{ $typeBadge['label'] }}
                                 </span>
-                                @if($payment->description)
-                                    <br><small class="text-muted text-truncate d-inline-block" style="max-width: 180px;" title="{{ $payment->description }}">{{ $payment->description }}</small>
-                                @endif
+                                <div class="fw-semibold text-dark small text-truncate" style="max-width: 220px;" title="{{ $payment->service_name }}">
+                                    {{ $payment->service_name }}
+                                </div>
                             </td>
                             <td>
                                 <strong class="text-success fs-6">{{ number_format($payment->amount, 0) }}</strong>

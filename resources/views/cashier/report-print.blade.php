@@ -156,7 +156,7 @@
                 <th class="col-header" style="width: 130px;">التاريخ والوقت</th>
                 <th class="col-header" style="text-align: right; width: 22%;">اسم المريض</th>
                 <th class="col-header" style="width: 130px;">المستخدم (الكاشير)</th>
-                <th class="col-header">القسم / نوع الخدمة</th>
+                <th class="col-header" style="text-align: right; width: 25%;">الخدمة المقدمة / القسم</th>
                 <th class="col-header" style="width: 120px;">المبلغ المدفوع</th>
                 <th class="col-header" style="width: 90px;">طريقة الدفع</th>
             </tr>
@@ -174,11 +174,10 @@
                     @endif
                 </td>
                 <td>{{ optional($payment->cashier)->name ?? 'النظام' }}</td>
-                <td>
-                    <span class="fw-semibold">{{ \App\Models\Payment::PAYMENT_TYPES[$payment->payment_type] ?? $payment->payment_type }}</span>
-                    @if($payment->description)
-                        <br><small class="text-muted">{{ $payment->description }}</small>
-                    @endif
+                <td style="text-align: right;">
+                    <strong style="color: #0f172a; font-size: 12px;">{{ $payment->service_name }}</strong>
+                    <br>
+                    <span style="color: #64748b; font-size: 10.5px;"><i class="fas fa-tag me-1"></i>قسم: {{ $payment->payment_type_name }}</span>
                 </td>
                 <td class="fw-bold text-dark">{{ number_format($payment->amount, 0) }} د.ع</td>
                 <td>{{ $payment->payment_method_name }}</td>

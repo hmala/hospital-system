@@ -153,4 +153,67 @@ class Payment extends Model
     {
         return self::PAYMENT_TYPES[$this->payment_type] ?? $this->payment_type;
     }
+
+    /**
+     * الحصول على اسم الخدمة التفصيلية المقدمة
+     */
+    public function getServiceNameAttribute()
+    {
+        // 1. كشفية عيادة / استشارية
+        if ($this->payment_type === 'appointment' || $this->appointment_id) {
+            $dept = optional(optional($this->appointment)->department)->name;
+            $doc = optional(optional(optional($this->appointment)->doctor)->user)->name;
+            $items = [];
+            if ($dept) $items[] = $dept;
+            if ($doc) $items[] = 'د. ' . $doc;
+            return !empty($items) ? implode(' - ', $items) : 'كشفية عيادة استشارية';
+        }
+
+        // 2. تحاليل المختبر أو الأشعة من جدول requests
+        if ($this->request_id && $this->request) {
+            $req = $this->request;
+            $details = is_array($req->details) ? $req->details : json_decode($req->details, true);
+            if ($req->type === 'lab') {
+                if (!empty($details['lab_test_ids'])) {
+                    $names = \App\Models\LabTest::whereIn('id', $details['lab_test_ids'])->pluck('name')->toArray();
+                    if (!empty($names)) return implode('، ', $names);
+                } elseif (!empty($details['tests'])) {
+                    return is_array($details['tests']) ? implode('، ', $details['tests']) : (string)$details['tests'];
+                }
+                return 'تحاليل مختبرية';
+            } elseif ($req->type === 'radiology') {
+                if (!empty($details['radiology_type_ids'])) {
+                    $names = \App\Models\RadiologyType::whereIn('id', $details['radiology_type_ids'])->pluck('name')->toArray();
+                    if (!empty($names)) return implode('، ', $names);
+                } elseif (!empty($details['radiology_types'])) {
+                    $names = \App\Models\RadiologyType::whereIn('id', $details['radiology_types'])->pluck('name')->toArray();
+                    if (!empty($names)) return implode('، ', $names);
+                }
+                return 'فحص أشعة وتصوير';
+            }
+        }
+
+        // 3. طوارئ
+        if ($this->payment_type === 'emergency' || $this->emergency_id) {
+            if ($this->description && (str_contains($this->description, 'خدمات') || str_contains($this->description, 'تحاليل'))) {
+                return $this->description;
+            }
+            if ($this->emergency && $this->emergency->services->isNotEmpty()) {
+                return $this->emergency->services->pluck('name')->implode('، ');
+            }
+            return $this->description ?: 'خدمات ومعاينة طوارئ';
+        }
+
+        // 4. عمليات جراحية
+        if ($this->payment_type === 'surgery' || $this->surgery_id) {
+            $surgeryType = optional($this->surgery)->surgery_type;
+            if ($surgeryType) {
+                return $surgeryType;
+            }
+            return $this->description ?: 'عملية جراحية';
+        }
+
+        // 5. الوصف الافتراضي
+        return $this->description ?: $this->payment_type_name;
+    }
 }
