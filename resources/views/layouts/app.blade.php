@@ -993,7 +993,7 @@
                         @endcanany
 
                         <!-- قسم المختبر والأشعة -->
-                        @canany(['view radiology', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests', 'view lab test groups'])
+                        @canany(['view radiology', 'manage radiology types', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests', 'view lab test groups'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#labSection" aria-expanded="false">
                             <span><i class="fas fa-microscope"></i> المختبر والأشعة</span>
@@ -1003,7 +1003,7 @@
 
                         @can('view radiology')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('radiology.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
+                            <a class="nav-link {{ request()->routeIs('radiology.*') && !request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
                                 <i class="fas fa-x-ray"></i><span> الإشعة</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
                             </a>
@@ -1014,6 +1014,8 @@
                                 <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
                             </a>
                         </li>
+                        @endcan
+                        @can('manage radiology types')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.types.index') }}">
                                 <i class="fas fa-file-medical-alt"></i><span> أنواع الأشعة</span>

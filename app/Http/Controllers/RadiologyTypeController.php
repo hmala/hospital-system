@@ -11,6 +11,13 @@ class RadiologyTypeController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
+        $this->middleware(function ($request, $next) {
+            $user = auth()->user();
+            if (!$user || (!$user->can('manage radiology types') && !$user->hasRole('admin'))) {
+                abort(403, 'غير مصرح لك بالوصول إلى إدارة أنواع الأشعة');
+            }
+            return $next($request);
+        });
     }
 
     /**

@@ -28,13 +28,52 @@ class Doctor extends Model
 
     protected $casts = [
         'schedule' => 'array',
-        'working_days' => 'array',
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
         'is_active' => 'boolean',
         'is_available_today' => 'boolean',
         'available_date' => 'date'
     ];
+
+    protected function workingDays(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function ($value) {
+                if (is_array($value)) {
+                    return $value;
+                }
+                if (empty($value)) {
+                    return [];
+                }
+                $decoded = json_decode($value, true);
+                return is_array($decoded) ? $decoded : [];
+            },
+            set: function ($value) {
+                if (is_string($value)) {
+                    $decoded = json_decode($value, true);
+                    if (is_array($decoded)) {
+                        return json_encode(array_values($decoded), JSON_UNESCAPED_UNICODE);
+                    }
+                    return $value;
+                }
+                if (is_array($value)) {
+                    return json_encode(array_values($value), JSON_UNESCAPED_UNICODE);
+                }
+                return json_encode([], JSON_UNESCAPED_UNICODE);
+            }
+        );
+    }
+
+    public function scopeWorkingOnDay($query, $day)
+    {
+        $unicodeEscaped = trim(json_encode($day), '"');
+        return $query->where(function ($q) use ($day, $unicodeEscaped) {
+            $q->whereJsonContains('working_days', $day)
+              ->orWhereJsonContains('working_days', [$day])
+              ->orWhere('working_days', 'like', '%"' . $day . '"%')
+              ->orWhere('working_days', 'like', '%' . $unicodeEscaped . '%');
+        });
+    }
 
     public function user()
     {

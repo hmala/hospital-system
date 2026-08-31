@@ -36,7 +36,7 @@ class DoctorController extends Controller
 
         if ($request->filled('workdays')) {
             $day = $request->workdays;
-            $query->whereJsonContains('working_days', $day);
+            $query->workingOnDay($day);
         }
 
         if ($request->filled('is_active')) {

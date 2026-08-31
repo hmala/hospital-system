@@ -402,7 +402,7 @@ class DoctorVisitController extends Controller
         $availableDoctors = Doctor::with('user')
             ->where('type', 'consultant')
             ->where('is_active', true)
-            ->whereJsonContains('working_days', [$currentDay])
+            ->workingOnDay($currentDay)
             ->where('id', '<>', $visit->doctor_id)
             ->orderBy('specialization')
             ->orderBy('id')

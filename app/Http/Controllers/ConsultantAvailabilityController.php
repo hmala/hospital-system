@@ -60,7 +60,7 @@ class ConsultantAvailabilityController extends Controller
             ->join('users', 'doctors.user_id', '=', 'users.id')
             ->where('doctors.type', 'consultant')
             ->where('doctors.is_active', true)
-            ->whereJsonContains('doctors.working_days', [$selectedDay])
+            ->workingOnDay($selectedDay)
             ->orderBy('doctors.specialization')
             ->orderBy('users.name')
             ->select('doctors.*')

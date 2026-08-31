@@ -476,44 +476,110 @@ class CashierController extends Controller
     }
 
     /**
-     * عرض تقرير المدفوعات
+     * تقرير كشف مدفوعات الكاشير وحركات الصندوق
      */
     public function paymentsReport(Request $request)
     {
         $user = Auth::user();
-
-        // التحقق من صلاحية عرض التقارير
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+        if (!$user->can('view cashier reports') && !$user->can('view cashier') && !$user->hasRole(['admin', 'cashier', 'accountant'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $query = Payment::with(['patient.user', 'cashier', 'appointment']);
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+        $paymentType = $request->query('payment_type');
+        $paymentMethod = $request->query('payment_method');
+        $cashierId = $request->query('cashier_id');
+        $search = $request->query('search');
 
-        // فلترة حسب التاريخ
-        if ($request->filled('from_date')) {
-            $query->whereDate('paid_at', '>=', $request->from_date);
+        // إذا لم يتم تحديد تاريخ افتراضياً، نحدد اليوم
+        if (!$request->has('from_date') && !$request->has('to_date') && !$request->has('search') && !$request->has('payment_type')) {
+            $fromDate = now()->startOfDay()->format('Y-m-d');
+            $toDate = now()->endOfDay()->format('Y-m-d');
         }
 
-        if ($request->filled('to_date')) {
-            $query->whereDate('paid_at', '<=', $request->to_date);
+        $query = \App\Models\Payment::with([
+            'patient.user',
+            'cashier',
+            'appointment.doctor.user',
+            'appointment.department',
+            'emergency.patient.user',
+            'emergency.emergencyPatient',
+            'surgery.doctor.user',
+            'request.visit.doctor.user'
+        ]);
+
+        if ($fromDate) {
+            $query->whereDate('paid_at', '>=', $fromDate);
         }
 
-        // فلترة حسب طريقة الدفع
-        if ($request->filled('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
+        if ($toDate) {
+            $query->whereDate('paid_at', '<=', $toDate);
         }
 
-        // فلترة حسب الكاشير
-        if ($request->filled('cashier_id')) {
-            $query->where('cashier_id', $request->cashier_id);
+        if ($paymentType) {
+            $query->where('payment_type', $paymentType);
         }
 
-        $payments = $query->orderBy('paid_at', 'desc')->paginate(20);
+        if ($paymentMethod) {
+            $query->where('payment_method', $paymentMethod);
+        }
 
-        $totalAmount = $query->sum('amount');
+        // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً أو محاسباً)
+        if (!$user->hasRole(['admin', 'accountant', 'super_admin'])) {
+            $query->where('cashier_id', $user->id);
+        }
 
-        // استعلام من أجل صفحة السجل العامة
-        return view('cashier.payments', compact('payments', 'totalAmount'));
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('receipt_number', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('patient.user', function($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('emergency.emergencyPatient', function($eq) use ($search) {
+                      $eq->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('emergency.patient.user', function($epq) use ($search) {
+                      $epq->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // حساب الإحصائيات قبل التقسيم للصفحات
+        $statsQuery = clone $query;
+        $allPayments = $statsQuery->get();
+
+        $totalAmount = $allPayments->sum('amount');
+        $totalCount = $allPayments->count();
+
+        // إحصائيات حسب الأقسام
+        $typeBreakdown = $allPayments->groupBy('payment_type')->map(function($items, $type) {
+            return [
+                'count' => $items->count(),
+                'total' => $items->sum('amount'),
+                'label' => \App\Models\Payment::PAYMENT_TYPES[$type] ?? $type
+            ];
+        });
+
+        // إذا كان الطلب طباعة
+        if ($request->query('print') == '1') {
+            $payments = $query->orderBy('paid_at', 'desc')->get();
+            return view('cashier.report-print', compact(
+                'payments', 'totalAmount', 'totalCount', 'typeBreakdown',
+                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search'
+            ));
+        }
+
+        $payments = $query->orderBy('paid_at', 'desc')->paginate(25)->withQueryString();
+
+        return view('cashier.report', compact(
+            'payments', 'totalAmount', 'totalCount', 'typeBreakdown',
+            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search'
+        ));
     }
 
     /**

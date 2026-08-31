@@ -41,9 +41,10 @@ class RadiologyStaffController extends Controller
             } elseif ($category === 'mri') {
                 $query->where('subtype', 'mri');
             } elseif ($category === 'radiology') {
-                // الأشعة العامة تشمل: general أو null
+                // الأشعة العامة تشمل: general أو radiology أو null
                 $query->where(function($q) {
                     $q->where('subtype', 'general')
+                      ->orWhere('subtype', 'radiology')
                       ->orWhereNull('subtype');
                 });
             }
@@ -146,7 +147,7 @@ class RadiologyStaffController extends Controller
         $requestSubtype = $request->subtype;
 
         if ($category === 'radiology') {
-            if (!in_array($requestSubtype, ['general', null], true)) {
+            if (!in_array($requestSubtype, ['general', 'radiology', null], true)) {
                 abort(403, 'هذا الطلب خارج نطاق صلاحياتك');
             }
         } elseif ($category === 'echo') {
