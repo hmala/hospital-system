@@ -59,7 +59,7 @@
                                             @foreach($bedReservations as $reservation)
                                                 @php $record = $reservation['data']; @endphp
                                                 <tr>
-                                                    <td>{{ optional($record->patient->user)->name ?? 'غير معروف' }}</td>
+                                                    <td>{{ $record->patient?->user?->name ?? 'غير معروف' }}</td>
                                                     <td>{{ $record->room?->room_number ?? '-' }}</td>
                                                     <td>
                                                         @if($record->room && $record->room->room_type === 'vip')
@@ -70,10 +70,10 @@
                                                             -
                                                         @endif
                                                     </td>
-                                                    <td>{{ $record->scheduled_date->format('Y-m-d') }}</td>
-                                                    <td>{{ $record->scheduled_time->format('H:i') }}</td>
-                                                    <td>{{ optional($record->doctor->user)->name ?? '-' }}</td>
-                                                    <td>{{ optional($record->department)->name ?? '-' }}</td>
+                                                    <td>{{ $record->scheduled_date ? $record->scheduled_date->format('Y-m-d') : '-' }}</td>
+                                                    <td>{{ $record->scheduled_time ? $record->scheduled_time->format('H:i') : '-' }}</td>
+                                                    <td>{{ $record->doctor?->user?->name ?? '-' }}</td>
+                                                    <td>{{ $record->department?->name ?? '-' }}</td>
                                                     <td>
                                                         @if($record->status === 'pending')
                                                             <span class="badge bg-warning">قيد الانتظار</span>
@@ -122,7 +122,7 @@
                                             @foreach($surgeries as $surgery)
                                                 @php $record = $surgery['data']; @endphp
                                                 <tr>
-                                                    <td>{{ optional($record->patient->user)->name ?? 'غير معروف' }}</td>
+                                                    <td>{{ $record->patient?->user?->name ?? 'غير معروف' }}</td>
                                                     <td>{{ $record->room?->room_number ?? '-' }}</td>
                                                     <td>
                                                         @if($record->room && $record->room->room_type === 'vip')
@@ -133,10 +133,10 @@
                                                             -
                                                         @endif
                                                     </td>
-                                                    <td>{{ $record->scheduled_date->format('Y-m-d') }}</td>
-                                                    <td>{{ $record->scheduled_time->format('H:i') }}</td>
-                                                    <td>{{ optional($record->doctor->user)->name ?? '-' }}</td>
-                                                    <td>{{ optional($record->department)->name ?? '-' }}</td>
+                                                    <td>{{ $record->scheduled_date ? $record->scheduled_date->format('Y-m-d') : '-' }}</td>
+                                                    <td>{{ $record->scheduled_time ? $record->scheduled_time->format('H:i') : '-' }}</td>
+                                                    <td>{{ $record->doctor?->user?->name ?? '-' }}</td>
+                                                    <td>{{ $record->department?->name ?? '-' }}</td>
                                                     <td>{{ $record->surgery_type ?? '-' }}</td>
                                                     <td>
                                                         @if($record->status === 'scheduled')
