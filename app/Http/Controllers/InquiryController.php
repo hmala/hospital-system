@@ -975,30 +975,75 @@ class InquiryController extends Controller
     /**
      * عرض المرضى المقيمين في المستشفى والغرف المحجوزة
      */
-    public function occupancy()
+    public function occupancy(HttpRequest $request)
     {
         $user = Auth::user();
 
-        // التحقق من الصلاحيات - يمكن للموظفين المختصين بالاستعلامات الوصول
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor', 'surgery_staff'])) {
+        // التحقق من الصلاحيات
+        if (!$user->can('view occupancy') && !$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
+        $search = $request->query('search');
+        $roomType = $request->query('room_type');
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+
         // جلب حجوزات الرقود (المؤكدة أو في الانتظار) مع المرضى والغرف
-        $bedReservations = \App\Models\BedReservation::with(['patient.user', 'room', 'doctor.user', 'department'])
+        $bedQuery = \App\Models\BedReservation::with(['patient.user', 'room', 'doctor.user', 'department'])
             ->whereIn('status', ['pending', 'confirmed'])
-            ->whereNotNull('room_id')
-            ->orderBy('scheduled_date', 'desc')
-            ->orderBy('scheduled_time', 'desc')
-            ->get();
+            ->whereNotNull('room_id');
 
         // جلب العمليات الجراحية التي لها غرف محجوزة
-        $surgeries = \App\Models\Surgery::with(['patient.user', 'room', 'doctor.user', 'department'])
+        $surgeryQuery = \App\Models\Surgery::with(['patient.user', 'room', 'doctor.user', 'department'])
             ->whereNotNull('room_id')
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-            ->whereNull('discharged_at') // لم يخرج المريض بعد
-            ->orderBy('scheduled_date', 'desc')
-            ->get();
+            ->whereNull('discharged_at');
+
+        // تطبيق الفلاتر المشتركة
+        if ($search) {
+            $bedQuery->where(function($q) use ($search) {
+                $q->whereHas('patient.user', function($pq) use ($search) {
+                    $pq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%");
+                })->orWhereHas('doctor.user', function($dq) use ($search) {
+                    $dq->where('name', 'like', "%{$search}%");
+                })->orWhereHas('room', function($rq) use ($search) {
+                    $rq->where('room_number', 'like', "%{$search}%");
+                })->orWhere('notes', 'like', "%{$search}%");
+            });
+
+            $surgeryQuery->where(function($q) use ($search) {
+                $q->whereHas('patient.user', function($pq) use ($search) {
+                    $pq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%");
+                })->orWhereHas('doctor.user', function($dq) use ($search) {
+                    $dq->where('name', 'like', "%{$search}%");
+                })->orWhereHas('room', function($rq) use ($search) {
+                    $rq->where('room_number', 'like', "%{$search}%");
+                })->orWhere('surgery_type', 'like', "%{$search}%");
+            });
+        }
+
+        if ($roomType) {
+            $bedQuery->whereHas('room', function($rq) use ($roomType) {
+                $rq->where('room_type', $roomType);
+            });
+            $surgeryQuery->whereHas('room', function($rq) use ($roomType) {
+                $rq->where('room_type', $roomType);
+            });
+        }
+
+        if ($fromDate) {
+            $bedQuery->whereDate('scheduled_date', '>=', $fromDate);
+            $surgeryQuery->whereDate('scheduled_date', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $bedQuery->whereDate('scheduled_date', '<=', $toDate);
+            $surgeryQuery->whereDate('scheduled_date', '<=', $toDate);
+        }
+
+        $bedReservations = $bedQuery->orderBy('scheduled_date', 'desc')->orderBy('scheduled_time', 'desc')->get();
+        $surgeries = $surgeryQuery->orderBy('scheduled_date', 'desc')->get();
 
         // تجميع البيانات حسب الغرفة
         $roomsData = [];
@@ -1044,7 +1089,7 @@ class InquiryController extends Controller
             $allOccupancies[] = $occupancyData;
         }
 
-        return view('inquiry.occupancy', compact('roomsData', 'allOccupancies'));
+        return view('inquiry.occupancy', compact('roomsData', 'allOccupancies', 'search', 'roomType', 'fromDate', 'toDate'));
     }
 
     /**
