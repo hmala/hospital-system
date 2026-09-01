@@ -907,10 +907,11 @@ class CashierController extends Controller
                 ->with('warning', 'لا يمكن دفع عملية ملغاة');
         }
 
-        // التحقق من أن العملية لم يتم دفعها
-        if ($surgery->payment_status === 'paid') {
+        // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
+        $hasRemainingRoomFee = (($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
+        if ($surgery->payment_status === 'paid' && !$hasRemainingRoomFee) {
             return redirect()->route('cashier.surgeries.index')
-                ->with('warning', 'هذه العملية تم دفعها مسبقاً');
+                ->with('warning', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
 
         $surgery->load([
@@ -976,8 +977,9 @@ class CashierController extends Controller
             'pay_radiology_tests' => 'nullable|array',
         ]);
 
-        // التحقق من أن العملية لم يتم دفعها بالكامل
-        if ($surgery->payment_status === 'paid') {
+        // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
+        $hasRemainingRoomFee = (($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
+        if ($surgery->payment_status === 'paid' && !$hasRemainingRoomFee) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('error', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
