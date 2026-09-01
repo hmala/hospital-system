@@ -222,6 +222,17 @@ class RoomController extends Controller
             'status' => 'required|in:available,occupied,maintenance',
         ]);
 
+        // منع جعل الغرفة متاحة إذا كان هناك مريض مقيم فعلياً
+        if ($validated['status'] === 'available') {
+            $occupant = $room->current_occupant;
+            if ($occupant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "لا يمكن جعل الغرفة متاحة لوجود مريض مقيم بها حالياً ({$occupant->patient_name} - {$occupant->type}). يجب تسجيل خروجه أو نقله لغرفة أخرى أولاً.",
+                ], 422);
+            }
+        }
+
         $room->update(['status' => $validated['status']]);
 
         return response()->json([
