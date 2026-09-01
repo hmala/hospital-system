@@ -529,6 +529,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\SurgicalOperationController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\SurgicalOperationController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\SurgicalOperationController::class, 'store'])->name('store');
+        Route::get('/{surgicalOperation}/edit', [\App\Http\Controllers\SurgicalOperationController::class, 'edit'])->name('edit');
+        Route::put('/{surgicalOperation}', [\App\Http\Controllers\SurgicalOperationController::class, 'update'])->name('update');
+        Route::post('/rename-category', [\App\Http\Controllers\SurgicalOperationController::class, 'renameCategory'])->name('rename-category');
         Route::get('/trashed', [\App\Http\Controllers\SurgicalOperationController::class, 'trashed'])->name('trashed');
         Route::patch('/{surgicalOperation}/restore', [\App\Http\Controllers\SurgicalOperationController::class, 'restore'])->name('restore');
         Route::delete('/{surgicalOperation}', [\App\Http\Controllers\SurgicalOperationController::class, 'destroy'])->name('destroy');

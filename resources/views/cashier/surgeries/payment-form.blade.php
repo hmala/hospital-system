@@ -16,7 +16,9 @@
     $roomFee = $surgery->room_fee ?? 0;
     $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
     $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
-    $roomFeePaid = $remainingRoomFee <= 0;
+    $excessRoomFee = $roomFeePaidAmount > $roomFee ? ($roomFeePaidAmount - $roomFee) : 0;
+    $roomFeePaid = $remainingRoomFee <= 0 && $excessRoomFee <= 0;
+    $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
     // تحاليل معلقة ومدفوعة
     $pendingLabTests = $surgery->labTests->where('payment_status', '!=', 'paid');
@@ -245,7 +247,7 @@
                     </div>
                     @endif
 
-                    @if($excessSurgeryFee > 0)
+                    @if($totalExcess > 0)
                     <!-- نموذج إرجاع المبلغ الزائد -->
                     <div class="alert alert-info border-info shadow-sm mb-4">
                         <div class="d-flex align-items-center">
@@ -253,9 +255,12 @@
                             <div>
                                 <h5 class="alert-heading fw-bold mb-1">مسترجع مالي معلق للمريض</h5>
                                 <p class="mb-0">
-                                    بعد تعديل سعر العملية، أصبح إجمالي السعر المطلوب ({{ number_format($totalSurgeryFee, 0) }} د.ع) 
-                                    أقل من المبلغ المدفوع سابقاً ({{ number_format($surgeryFeePaidAmount, 0) }} د.ع).
-                                    يجب إرجاع الفارق المالي للمريض البالغ <strong>{{ number_format($excessSurgeryFee, 0) }} د.ع</strong>.
+                                    يوجد مبلغ مدفوع فائض للمريض يستوجب الاسترجاع بمقدار: <strong>{{ number_format($totalExcess, 0) }} د.ع</strong>
+                                    @if($excessRoomFee > 0 && $excessSurgeryFee > 0)
+                                        (فارق تخفيض الغرفة: {{ number_format($excessRoomFee, 0) }} د.ع + فارق العملية: {{ number_format($excessSurgeryFee, 0) }} د.ع)
+                                    @elseif($excessRoomFee > 0)
+                                        (بسبب تخفيض أجور الغرفة من {{ number_format($roomFeePaidAmount, 0) }} إلى {{ number_format($roomFee, 0) }} د.ع)
+                                    @endif
                                 </p>
                             </div>
                         </div>
@@ -293,7 +298,7 @@
                                 </div>
                                 <div class="text-end">
                                     <button type="submit" class="btn btn-info btn-lg text-white fw-bold px-4">
-                                        <i class="fas fa-check me-2"></i> تأكيد إرجاع {{ number_format($excessSurgeryFee, 0) }} د.ع
+                                        <i class="fas fa-check me-2"></i> تأكيد إرجاع {{ number_format($totalExcess, 0) }} د.ع
                                     </button>
                                 </div>
                             </form>
@@ -664,7 +669,7 @@
                             </div>
                         </div>
                     </form>
-                    @elseif($excessSurgeryFee <= 0)
+                    @elseif($totalExcess <= 0)
                     <!-- لا توجد عناصر معلقة -->
                     <div class="alert alert-success text-center">
                         <i class="fas fa-check-circle fa-3x mb-3"></i>

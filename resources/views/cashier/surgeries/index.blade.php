@@ -280,7 +280,9 @@
                                                         $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
                                                         $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
                                                         $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
-                                                        $excessAmount = $surgeryFeePaidAmount > $surgeryFee ? ($surgeryFeePaidAmount - $surgeryFee) : 0;
+                                                        $excessSurgeryFee = $surgeryFeePaidAmount > $surgeryFee ? ($surgeryFeePaidAmount - $surgeryFee) : 0;
+                                                        $excessRoomFee = $roomFeePaidAmount > $roomFee ? ($roomFeePaidAmount - $roomFee) : 0;
+                                                        $excessAmount = $excessSurgeryFee + $excessRoomFee;
                                                     @endphp
                                                     <tr>
                                                         <td><span class="badge bg-secondary">#{{ $surgery->id }}</span></td>

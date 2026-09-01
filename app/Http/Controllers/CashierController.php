@@ -802,8 +802,9 @@ class CashierController extends Controller
         ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
         ->where('billing_status', '!=', 'pending_review')
         ->where(function($query) {
-            $query->whereIn('payment_status', ['pending', 'partial'])
-                  ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))');
+            $query->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
+                  ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
+                  ->orWhereRaw('room_fee_paid_amount > room_fee');
         })
         ->orderBy('scheduled_date')
         ->get();
@@ -816,8 +817,9 @@ class CashierController extends Controller
         $surgeryStats = [
             'pending_count' => Surgery::where('billing_status', '!=', 'pending_review')
                 ->where(function($query) {
-                    $query->whereIn('payment_status', ['pending', 'partial'])
-                          ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))');
+                    $query->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
+                          ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
+                          ->orWhereRaw('room_fee_paid_amount > room_fee');
                 })->count(),
             'patients_count' => $surgeriesByPatient->count(),
             'today_paid' => Payment::whereDate('paid_at', $today)
@@ -907,9 +909,13 @@ class CashierController extends Controller
                 ->with('warning', 'لا يمكن دفع عملية ملغاة');
         }
 
-        // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
+        // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية/تخفيض الغرفة ويوجد فرق مالي معلق أو مستحق استرجاع)
         $hasRemainingRoomFee = (($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
-        if ($surgery->payment_status === 'paid' && !$hasRemainingRoomFee) {
+        $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($surgery->room_fee ?? 0)) > 0;
+        $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
+        $hasExcessSurgeryFee = (($surgery->surgery_fee_paid_amount ?? 0) - $totalSurgeryFee) > 0;
+        
+        if ($surgery->payment_status === 'paid' && !$hasRemainingRoomFee && !$hasExcessRoomFee && !$hasExcessSurgeryFee) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('warning', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
@@ -1224,9 +1230,15 @@ class CashierController extends Controller
 
         $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
         $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
-        $excessAmount = $surgeryFeePaidAmount - $totalSurgeryFee;
+        $excessSurgeryFee = max(0, $surgeryFeePaidAmount - $totalSurgeryFee);
 
-        if ($excessAmount <= 0) {
+        $roomFee = $surgery->room_fee ?? 0;
+        $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
+        $excessRoomFee = max(0, $roomFeePaidAmount - $roomFee);
+
+        $totalExcessAmount = $excessSurgeryFee + $excessRoomFee;
+
+        if ($totalExcessAmount <= 0) {
             return redirect()->back()->with('error', 'لا يوجد مبلغ زائد للاسترجاع.');
         }
 
@@ -1239,7 +1251,8 @@ class CashierController extends Controller
         try {
             // إنشاء وصف الاسترجاع
             $description = 'إرجاع مبلغ زائد مدفوع للعملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ")\n" .
-                           'المبلغ المعاد: ' . number_format($excessAmount, 0) . ' د.ع بعد تعديل سعر العملية من قبل المحاسب.';
+                           'المبلغ المعاد: ' . number_format($totalExcessAmount, 0) . ' د.ع' . 
+                           ($excessRoomFee > 0 ? " (يشمل استرجاع فرق تخفيض الغرفة: " . number_format($excessRoomFee, 0) . " د.ع)" : "");
 
             // إنشاء سجل الدفع بقيمة سالبة
             $payment = Payment::create([
@@ -1247,7 +1260,7 @@ class CashierController extends Controller
                 'cashier_id' => $user->id,
                 'surgery_id' => $surgery->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => -$excessAmount,
+                'amount' => -$totalExcessAmount,
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'surgery',
                 'description' => $description,
@@ -1257,11 +1270,10 @@ class CashierController extends Controller
             ]);
 
             // تحديث مبالغ الدفع وحالتها في الجراحة
-            $newPaidAmount = $totalSurgeryFee; // بما أننا أرجعنا الفارق، فالمدفوع الفعلي يساوي المطلوب
-            
             $surgery->update([
-                'surgery_fee_paid_amount' => $newPaidAmount,
-                'surgery_fee_paid' => 'paid'
+                'surgery_fee_paid_amount' => $totalSurgeryFee,
+                'surgery_fee_paid' => 'paid',
+                'room_fee_paid_amount' => $roomFee
             ]);
 
             // التحقق من الدفع الكامل لكامل البنود (الغرفة، التحاليل، الأشعة)

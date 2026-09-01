@@ -78,6 +78,79 @@ class SurgicalOperationController extends Controller
     }
 
     /**
+     * عرض نموذج تعديل العملية
+     */
+    public function edit(SurgicalOperation $surgicalOperation)
+    {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $categories = SurgicalOperation::distinct()->pluck('category')->filter()->sort();
+
+        return view('surgical-operations.edit', compact('surgicalOperation', 'categories'));
+    }
+
+    /**
+     * تحديث بيانات العملية والصنف
+     */
+    public function update(Request $request, SurgicalOperation $surgicalOperation)
+    {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'new_category' => 'nullable|string|max:255',
+            'is_active' => 'boolean'
+        ]);
+
+        $category = $request->category;
+        if ($category === 'new') {
+            $category = $request->new_category;
+            if (empty($category)) {
+                return back()->withInput()->withErrors(['new_category' => 'يجب إدخال اسم الصنف الجديد']);
+            }
+        }
+
+        $surgicalOperation->update([
+            'name' => $request->name,
+            'category' => $category,
+            'is_active' => $request->has('is_active') ? $request->is_active : true
+        ]);
+
+        return redirect()->route('surgical-operations.index')->with('success', 'تم تحديث بيانات العملية بنجاح: ' . $request->name);
+    }
+
+    /**
+     * تعديل اسم صنف/قسم عمليات بالكامل
+     */
+    public function renameCategory(Request $request)
+    {
+        if (!auth()->user()->can('manage surgical operations')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $request->validate([
+            'old_category' => 'required|string|max:255',
+            'new_category' => 'required|string|max:255',
+        ]);
+
+        $oldCat = trim($request->old_category);
+        $newCat = trim($request->new_category);
+
+        if ($oldCat === $newCat) {
+            return redirect()->back()->with('warning', 'الاسم الجديد مطابق للاسم الحالي');
+        }
+
+        $count = SurgicalOperation::where('category', $oldCat)->update(['category' => $newCat]);
+
+        return redirect()->route('surgical-operations.index')->with('success', "تم تعديل اسم القسم/الصنف من '{$oldCat}' إلى '{$newCat}' بنجاح لـ {$count} عملية.");
+    }
+
+    /**
      * حذف عملية جراحية (soft delete)
      */
     public function destroy(SurgicalOperation $surgicalOperation)

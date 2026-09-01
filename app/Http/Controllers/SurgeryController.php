@@ -448,11 +448,11 @@ class SurgeryController extends Controller
             $surgeryData['referral_letter_path'] = $path;
         }
 
-        // إذا تغيرت أجور الغرفة وزادت عن المبلغ المدفوع مسبقاً، نحول الحالة لجزئي لتحصيل الفرق في الكاشير
+        // إذا تغيرت أجور الغرفة وزادت عن المبلغ المدفوع مسبقاً، نحول الحالة لـ pending لتحصيل الفرق في الكاشير
         $newRoomFee = $surgeryData['room_fee'] ?? $surgery->room_fee ?? 0;
         $paidRoomFee = $surgery->room_fee_paid_amount ?? 0;
         if ($newRoomFee > $paidRoomFee && $surgery->payment_status === 'paid') {
-            $surgeryData['payment_status'] = 'partial';
+            $surgeryData['payment_status'] = 'pending';
         }
 
         $surgery->update($surgeryData);
