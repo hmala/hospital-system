@@ -268,6 +268,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         pill.innerText = data.status_name;
                     });
 
+                    // تحديث تظليل الصف باللون الأحمر للمحجوزة
+                    const rows = document.querySelectorAll(`.row-room-${roomId}`);
+                    rows.forEach(row => {
+                        row.classList.remove('table-danger', 'bg-danger', 'bg-opacity-10', 'table-warning', 'bg-warning');
+                        if (newStatus === 'occupied') {
+                            row.classList.add('table-danger', 'bg-danger', 'bg-opacity-10');
+                        } else if (newStatus === 'maintenance') {
+                            row.classList.add('table-warning', 'bg-warning', 'bg-opacity-10');
+                        }
+                    });
+
                     toastMessage.innerText = data.message;
                     toastEl.className = 'toast align-items-center text-white bg-success border-0';
                     toast.show();

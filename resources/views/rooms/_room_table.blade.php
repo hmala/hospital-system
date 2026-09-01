@@ -22,8 +22,13 @@
                     'maintenance' => ['class' => 'bg-warning text-dark', 'text' => 'قيد الصيانة'],
                     default => ['class' => 'bg-secondary', 'text' => $room->status_name]
                 };
+                $rowClass = match($room->status) {
+                    'occupied' => 'table-danger bg-danger bg-opacity-10',
+                    'maintenance' => 'table-warning bg-warning bg-opacity-10',
+                    default => ''
+                };
             @endphp
-            <tr class="room-table-row" data-number="{{ $room->room_number }}" data-floor="{{ $room->floor }}">
+            <tr class="room-table-row row-room-{{ $room->id }} {{ $rowClass }}" data-number="{{ $room->room_number }}" data-floor="{{ $room->floor }}">
                 <td>{{ $loop->iteration }}</td>
                 <td>
                     <a href="{{ route('rooms.show', $room) }}" class="fw-bold text-primary text-decoration-none fs-6">
