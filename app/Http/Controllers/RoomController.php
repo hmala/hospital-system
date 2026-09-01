@@ -263,4 +263,31 @@ class RoomController extends Controller
 
         return response()->json($rooms);
     }
+
+    /**
+     * مزامنة وتحرير الغرف التي تم تعليمها كمشغولة ولكن لا يوجد بها مريض فعلي
+     */
+    public function syncOccupancy(Request $request)
+    {
+        $user = Auth::user();
+        
+        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff'])) {
+            return response()->json(['error' => 'غير مصرح لك بالوصول'], 403);
+        }
+
+        $occupiedRooms = Room::where('status', 'occupied')->get();
+        $releasedCount = 0;
+
+        foreach ($occupiedRooms as $room) {
+            // فحص هل يوجد مريض مقيم فعلي
+            if (!$room->current_occupant) {
+                $room->status = 'available';
+                $room->save();
+                $releasedCount++;
+            }
+        }
+
+        return redirect()->route('rooms.index')
+            ->with('success', "تم فحص الغرف بنجاح وتحرير {$releasedCount} غرفة شاغرة كانت بدون مريض فعلي!");
+    }
 }

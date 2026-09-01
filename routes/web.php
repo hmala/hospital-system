@@ -502,6 +502,7 @@ Route::middleware(['auth'])->group(function () {
 
     // إدارة الغرف
     Route::resource('rooms', \App\Http\Controllers\RoomController::class);
+    Route::post('/rooms/sync-occupancy', [\App\Http\Controllers\RoomController::class, 'syncOccupancy'])->name('rooms.sync-occupancy');
     Route::post('/rooms/{room}/change-status', [\App\Http\Controllers\RoomController::class, 'changeStatus'])->name('rooms.change-status');
     Route::get('/api/rooms/available', [\App\Http\Controllers\RoomController::class, 'getAvailable'])->name('api.rooms.available');
 

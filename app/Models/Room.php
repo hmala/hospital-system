@@ -53,11 +53,66 @@ class Room extends Model
     }
 
     /**
+     * حجوزات الرقود المرتبطة بهذه الغرفة
+     */
+    public function bedReservations()
+    {
+        return $this->hasMany(BedReservation::class);
+    }
+
+    /**
      * الحاضنات المرتبطة بهذه الغرفة
      */
     public function incubators()
     {
         return $this->hasMany(Incubator::class);
+    }
+
+    /**
+     * جلب المريض المقيم حالياً في الغرفة إن وجد
+     */
+    public function getCurrentOccupantAttribute()
+    {
+        // 1. فحص العمليات الجراحية النشطة (لم يخرج المريض بعد)
+        $activeSurgery = $this->surgeries()
+            ->with(['patient.user', 'doctor.user'])
+            ->whereNull('discharged_at')
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+            ->latest('scheduled_date')
+            ->first();
+
+        if ($activeSurgery && $activeSurgery->patient) {
+            return (object)[
+                'type' => 'عملية جراحية',
+                'patient_name' => $activeSurgery->patient?->user?->name ?? 'غير معروف',
+                'patient_phone' => $activeSurgery->patient?->user?->phone ?? '-',
+                'doctor_name' => $activeSurgery->doctor?->user?->name ?? '-',
+                'date' => $activeSurgery->scheduled_date,
+                'status' => $activeSurgery->status,
+                'type_color' => 'danger'
+            ];
+        }
+
+        // 2. فحص حجوزات الرقود المؤكدة
+        $activeBed = $this->bedReservations()
+            ->with(['patient.user', 'doctor.user'])
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->latest('scheduled_date')
+            ->first();
+
+        if ($activeBed && $activeBed->patient) {
+            return (object)[
+                'type' => 'رقود',
+                'patient_name' => $activeBed->patient?->user?->name ?? 'غير معروف',
+                'patient_phone' => $activeBed->patient?->user?->phone ?? '-',
+                'doctor_name' => $activeBed->doctor?->user?->name ?? '-',
+                'date' => $activeBed->scheduled_date,
+                'status' => $activeBed->status,
+                'type_color' => 'info'
+            ];
+        }
+
+        return null;
     }
 
     /**
