@@ -250,58 +250,66 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. تغيير حالة الغرفة عبر AJAX
     const toastEl = document.getElementById('statusToast');
     const toastMessage = document.getElementById('toastMessage');
-    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    const toast = toastEl ? new bootstrap.Toast(toastEl, { delay: 3000 }) : null;
 
-    document.querySelectorAll('.change-room-status').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const roomId = this.dataset.id;
-            const newStatus = this.dataset.status;
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.change-room-status');
+        if (!btn) return;
 
-            fetch(`/rooms/${roomId}/change-status`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ status: newStatus })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // تحديث البادجات في جميع جداول الطوابق لنفس الغرفة
-                    const pills = document.querySelectorAll(`.status-pill-${roomId}`);
-                    pills.forEach(pill => {
-                        pill.className = `badge bg-${data.status_color} status-pill-${roomId} px-2 py-1`;
-                        pill.innerText = data.status_name;
-                    });
+        e.preventDefault();
+        const roomId = btn.dataset.id;
+        const newStatus = btn.dataset.status;
 
-                    // تحديث تظليل الصف باللون الأحمر للمحجوزة
-                    const rows = document.querySelectorAll(`.row-room-${roomId}`);
-                    rows.forEach(row => {
-                        row.classList.remove('table-danger', 'bg-danger', 'bg-opacity-10', 'table-warning', 'bg-warning');
-                        if (newStatus === 'occupied') {
-                            row.classList.add('table-danger', 'bg-danger', 'bg-opacity-10');
-                        } else if (newStatus === 'maintenance') {
-                            row.classList.add('table-warning', 'bg-warning', 'bg-opacity-10');
-                        }
-                    });
+        fetch(`{{ url('/rooms') }}/${roomId}/change-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث البادجات في جميع جداول الطوابق لنفس الغرفة
+                const pills = document.querySelectorAll(`.status-pill-${roomId}`);
+                pills.forEach(pill => {
+                    pill.className = `badge bg-${data.status_color} status-pill-${roomId} px-2 py-1`;
+                    pill.innerText = data.status_name;
+                });
 
+                // تحديث تظليل الصف باللون الأحمر للمحجوزة
+                const rows = document.querySelectorAll(`.row-room-${roomId}`);
+                rows.forEach(row => {
+                    row.classList.remove('table-danger', 'bg-danger', 'bg-opacity-10', 'table-warning', 'bg-warning');
+                    if (newStatus === 'occupied') {
+                        row.classList.add('table-danger', 'bg-danger', 'bg-opacity-10');
+                    } else if (newStatus === 'maintenance') {
+                        row.classList.add('table-warning', 'bg-warning', 'bg-opacity-10');
+                    }
+                });
+
+                if (toast && toastMessage) {
                     toastMessage.innerText = data.message;
                     toastEl.className = 'toast align-items-center text-white bg-success border-0';
                     toast.show();
-                } else {
-                    toastMessage.innerText = 'فشل تغيير الحالة';
+                }
+            } else {
+                if (toast && toastMessage) {
+                    toastMessage.innerText = data.message || 'فشل تغيير الحالة';
                     toastEl.className = 'toast align-items-center text-white bg-danger border-0';
                     toast.show();
                 }
-            })
-            .catch(err => {
-                console.error(err);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            if (toast && toastMessage) {
                 toastMessage.innerText = 'حدث خطأ في الاتصال بالسيرفر';
                 toastEl.className = 'toast align-items-center text-white bg-danger border-0';
                 toast.show();
-            });
+            }
         });
     });
 });

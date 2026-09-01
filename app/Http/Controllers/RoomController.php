@@ -214,8 +214,8 @@ class RoomController extends Controller
     {
         $user = Auth::user();
         
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->can('view occupancy') && !$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff', 'inquiry_staff', 'consultation_receptionist', 'doctor'])) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتغيير حالة الغرفة'], 403);
         }
 
         $validated = $request->validate([
