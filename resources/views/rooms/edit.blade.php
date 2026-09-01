@@ -174,14 +174,9 @@
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <form action="{{ route('rooms.destroy', $room) }}" method="POST" class="d-inline" 
-                                  onsubmit="return confirm('هل أنت متأكد من حذف هذه الغرفة؟')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-outline-danger">
-                                    <i class="fas fa-trash me-1"></i> حذف الغرفة
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-outline-danger" onclick="if(confirm('هل أنت متأكد من حذف هذه الغرفة؟')) { document.getElementById('delete-room-form').submit(); }">
+                                <i class="fas fa-trash me-1"></i> حذف الغرفة
+                            </button>
                             <div class="d-flex gap-2">
                                 <a href="{{ route('rooms.index') }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-times me-1"></i> إلغاء
@@ -191,6 +186,12 @@
                                 </button>
                             </div>
                         </div>
+                    </form>
+
+                    <!-- نموذج الحذف المنفصل خارج نموذج التعديل -->
+                    <form id="delete-room-form" action="{{ route('rooms.destroy', $room) }}" method="POST" class="d-none">
+                        @csrf
+                        @method('DELETE')
                     </form>
                 </div>
             </div>

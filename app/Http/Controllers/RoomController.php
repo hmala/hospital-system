@@ -176,7 +176,7 @@ class RoomController extends Controller
         $validated['has_bathroom'] = $request->boolean('has_bathroom');
         $validated['has_tv'] = $request->boolean('has_tv');
         $validated['has_ac'] = $request->boolean('has_ac');
-        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['is_active'] = $request->boolean('is_active');
 
         $room->update($validated);
 
