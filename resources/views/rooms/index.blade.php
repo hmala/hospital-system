@@ -13,7 +13,7 @@
                         <i class="fas fa-hospital-alt text-primary me-2"></i>
                         لوحة إدارة ومتابعة الغرف
                     </h2>
-                    <p class="text-muted mb-0">نظام إدارة وتخصيص غرف الرقود ومتابعة نسبة الإشغال</p>
+                    <p class="text-muted mb-0">متابعة وتخصيص غرف الرقود مقسمة حسب الطوابق ونسبة الإشغال</p>
                 </div>
                 <div class="d-flex gap-2">
                     <button onclick="window.print()" class="btn btn-outline-secondary shadow-sm">
@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <!-- شريط البحث والتصفية المتطور -->
+    <!-- شريط البحث والتصفية -->
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
         <div class="card-body p-3">
             <div class="row g-2 align-items-center">
@@ -108,7 +108,7 @@
                 </div>
 
                 <!-- تصفية الحالة -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-5 col-md-6">
                     <div class="d-flex flex-wrap gap-1" role="group">
                         <a href="{{ route('rooms.index', request()->except('status')) }}" 
                            class="btn btn-sm {{ !request('status') ? 'btn-primary' : 'btn-outline-secondary' }}">
@@ -130,10 +130,10 @@
                 </div>
 
                 <!-- تصفية النوع والتبديل -->
-                <div class="col-lg-4 col-md-12 d-flex justify-content-lg-end gap-2 flex-wrap">
+                <div class="col-lg-3 col-md-12 d-flex justify-content-lg-end gap-2 flex-wrap">
                     <!-- نوع الغرفة -->
                     <div class="btn-group btn-group-sm">
-                        <a href="{{ route('rooms.index', request()->except('type')) }}" class="btn {{ !request('type') ? 'btn-dark' : 'btn-outline-dark' }}">كافة الأنواع</a>
+                        <a href="{{ route('rooms.index', request()->except('type')) }}" class="btn {{ !request('type') ? 'btn-dark' : 'btn-outline-dark' }}">الكل</a>
                         <a href="{{ route('rooms.index', array_merge(request()->except('type'), ['type' => 'regular'])) }}" class="btn {{ request('type') == 'regular' ? 'btn-secondary' : 'btn-outline-secondary' }}">عادية</a>
                         <a href="{{ route('rooms.index', array_merge(request()->except('type'), ['type' => 'vip'])) }}" class="btn {{ request('type') == 'vip' ? 'btn-warning text-dark fw-bold' : 'btn-outline-warning' }}">⭐ VIP</a>
                     </div>
@@ -152,159 +152,97 @@
         </div>
     </div>
 
-    <!-- عرض الكروت الشبكية (Grid View) -->
-    <div id="viewGridContainer">
-        @php
-            $roomsByFloor = $rooms->groupBy('floor');
-        @endphp
+    @php
+        $roomsByFloor = $rooms->groupBy(function($r) {
+            return $r->floor ?: 'بدون طابق';
+        });
+    @endphp
 
-        @forelse($roomsByFloor as $floor => $floorRooms)
-        <div class="card border-0 shadow-sm mb-4 floor-section" style="border-radius: 12px;">
-            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold text-dark">
-                    <i class="fas fa-layer-group text-primary me-2"></i>
-                    {{ $floor ?: 'الطابق الرئيسي / عام' }}
-                </h5>
-                <span class="badge bg-light text-primary border border-primary px-3 py-1 fs-6">
-                    {{ $floorRooms->count() }} غرفة
-                </span>
-            </div>
-            <div class="card-body p-3">
-                <div class="row g-3">
-                    @foreach($floorRooms as $room)
+    <!-- تبويبات الطوابق الرئيسية (Floor Tabs) -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <div class="card-header bg-white p-3 border-bottom">
+            <ul class="nav nav-pills card-header-pills flex-wrap gap-2" id="floorTabs" role="tablist">
+                <!-- تبويب جميع الطوابق -->
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold px-3 py-2" id="tab-floor-all" data-bs-toggle="pill" data-bs-target="#floor-all" type="button" role="tab" aria-controls="floor-all" aria-selected="true">
+                        <i class="fas fa-layer-group me-1 text-primary"></i>
+                        كافة الطوابق
+                        <span class="badge bg-light text-primary border border-primary ms-1">{{ $rooms->count() }}</span>
+                    </button>
+                </li>
+
+                <!-- تبويبات كل طابق مستقل -->
+                @foreach($roomsByFloor as $floorName => $floorRooms)
+                @php
+                    $tabSlug = 'floor-' . \Illuminate\Support\Str::slug($floorName, '-');
+                    if (empty($tabSlug) || $tabSlug === 'floor-') {
+                        $tabSlug = 'floor-item-' . $loop->iteration;
+                    }
+                    $availCount = $floorRooms->where('status', 'available')->count();
+                    $occCount = $floorRooms->where('status', 'occupied')->count();
+                @endphp
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold px-3 py-2 text-dark bg-light border" id="tab-{{ $tabSlug }}" data-bs-toggle="pill" data-bs-target="#{{ $tabSlug }}" type="button" role="tab" aria-controls="{{ $tabSlug }}" aria-selected="false">
+                        <i class="fas fa-building me-1 text-secondary"></i>
+                        {{ $floorName }}
+                        <span class="badge bg-secondary ms-1">{{ $floorRooms->count() }}</span>
+                        @if($availCount > 0)
+                            <span class="badge bg-success bg-opacity-25 text-success ms-1" title="متاحة">🟢 {{ $availCount }}</span>
+                        @endif
+                    </button>
+                </li>
+                @endforeach
+            </ul>
+        </div>
+
+        <div class="card-body p-3">
+            <!-- عرض الكروت الشبكية (Grid View) -->
+            <div id="viewGridContainer">
+                <div class="tab-content" id="floorTabsContent">
+                    <!-- محتوى كافة الطوابق -->
+                    <div class="tab-pane fade show active" id="floor-all" role="tabpanel" aria-labelledby="tab-floor-all">
+                        <div class="row g-3">
+                            @forelse($rooms as $room)
+                                @include('rooms._room_card', ['room' => $room])
+                            @empty
+                                <div class="col-12 text-center py-5 text-muted">
+                                    <i class="fas fa-door-closed fa-3x mb-3 text-secondary opacity-50"></i>
+                                    <h5 class="fw-bold">لا توجد غرف مسجلة</h5>
+                                    <p class="small text-muted">أضف غرف جديدة أو عدل خيارات الفلترة</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <!-- محتوى كل طابق مستقل -->
+                    @foreach($roomsByFloor as $floorName => $floorRooms)
                     @php
-                        $statusBadge = match($room->status) {
-                            'available' => ['class' => 'bg-success', 'text' => 'متاحة للحجز', 'icon' => 'fa-check'],
-                            'occupied' => ['class' => 'bg-danger', 'text' => 'مشغولة', 'icon' => 'fa-user-check'],
-                            'maintenance' => ['class' => 'bg-warning text-dark', 'text' => 'قيد الصيانة', 'icon' => 'fa-tools'],
-                            default => ['class' => 'bg-secondary', 'text' => $room->status_name, 'icon' => 'fa-info']
-                        };
-                        $isVip = $room->room_type === 'vip';
+                        $tabSlug = 'floor-' . \Illuminate\Support\Str::slug($floorName, '-');
+                        if (empty($tabSlug) || $tabSlug === 'floor-') {
+                            $tabSlug = 'floor-item-' . $loop->iteration;
+                        }
                     @endphp
-                    <div class="col-xxl-3 col-xl-4 col-md-6 room-card-item" 
-                         data-number="{{ $room->room_number }}" 
-                         data-floor="{{ $room->floor }}" 
-                         data-type="{{ $room->room_type }}" 
-                         data-status="{{ $room->status }}">
-                        
-                        <div class="card h-100 border room-card shadow-sm {{ $isVip ? 'border-warning border-opacity-50 bg-warning bg-opacity-10' : 'bg-white' }}" 
-                             style="border-radius: 10px; transition: transform 0.2s, box-shadow 0.2s;">
-                            
-                            <div class="card-body p-3">
-                                <!-- الترويسة العلوية للكارت -->
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <h4 class="mb-0 fw-bold {{ $isVip ? 'text-warning text-dark' : 'text-primary' }}">
-                                            غرفة {{ $room->room_number }}
-                                        </h4>
-                                        <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>{{ $room->floor ?: 'بدون طابق' }}</small>
-                                    </div>
-                                    <div class="text-end">
-                                        @if($isVip)
-                                            <span class="badge bg-warning text-dark border border-warning px-2 py-1 mb-1">
-                                                <i class="fas fa-crown me-1"></i>VIP
-                                            </span>
-                                        @else
-                                            <span class="badge bg-light text-secondary border px-2 py-1 mb-1">عادية</span>
-                                        @endif
-                                        <br>
-                                        <span class="badge {{ $statusBadge['class'] }} status-pill-{{ $room->id }} px-2 py-1">
-                                            <i class="fas {{ $statusBadge['icon'] }} me-1"></i><span class="status-text-{{ $room->id }}">{{ $statusBadge['text'] }}</span>
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <hr class="my-2 opacity-25">
-
-                                <!-- تفاصيل الغرفة والسعر -->
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <div class="p-2 rounded bg-light border text-center">
-                                            <small class="text-muted d-block" style="font-size: 0.75rem;">الأجرة اليومية</small>
-                                            <strong class="text-success fs-6">{{ number_format($room->daily_fee, 0) }}</strong>
-                                            <small class="text-muted" style="font-size: 0.7rem;">د.ع</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="p-2 rounded bg-light border text-center">
-                                            <small class="text-muted d-block" style="font-size: 0.75rem;">عدد الأسرّة</small>
-                                            <strong class="text-dark fs-6">{{ $room->beds_count }}</strong>
-                                            <small class="text-muted" style="font-size: 0.7rem;">أسرّة</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- المزايا والخدمات -->
-                                <div class="d-flex gap-2 mb-3">
-                                    <span class="badge {{ $room->has_bathroom ? 'bg-info bg-opacity-10 text-info border border-info' : 'bg-light text-muted opacity-50 border' }}" title="حمام خاص">
-                                        <i class="fas fa-bath me-1"></i>حمام
-                                    </span>
-                                    <span class="badge {{ $room->has_ac ? 'bg-primary bg-opacity-10 text-primary border border-primary' : 'bg-light text-muted opacity-50 border' }}" title="تكييف">
-                                        <i class="fas fa-snowflake me-1"></i>AC
-                                    </span>
-                                    <span class="badge {{ $room->has_tv ? 'bg-secondary bg-opacity-10 text-secondary border border-secondary' : 'bg-light text-muted opacity-50 border' }}" title="تلفاز">
-                                        <i class="fas fa-tv me-1"></i>TV
-                                    </span>
-                                </div>
-
-                                <!-- أزرار التحكم -->
-                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('rooms.show', $room) }}" class="btn btn-outline-primary" title="عرض السجل والنزلاء">
-                                            <i class="fas fa-eye me-1"></i> تفاصيل
-                                        </a>
-                                        @if(auth()->user()->hasRole('admin'))
-                                        <a href="{{ route('rooms.edit', $room) }}" class="btn btn-outline-secondary" title="تعديل الغرفة">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        @endif
-                                    </div>
-
-                                    @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'receptionist']))
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-sync-alt me-1"></i> الحالة
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                            <li>
-                                                <button type="button" class="dropdown-item py-1 text-success change-room-status" data-id="{{ $room->id }}" data-status="available">
-                                                    <i class="fas fa-check-circle me-2"></i> متاحة للحجز
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button type="button" class="dropdown-item py-1 text-danger change-room-status" data-id="{{ $room->id }}" data-status="occupied">
-                                                    <i class="fas fa-bed me-2"></i> مشغولة بمريض
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button type="button" class="dropdown-item py-1 text-warning change-room-status" data-id="{{ $room->id }}" data-status="maintenance">
-                                                    <i class="fas fa-tools me-2"></i> صيانة مؤقتة
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    @endif
-                                </div>
+                    <div class="tab-pane fade" id="{{ $tabSlug }}" role="tabpanel" aria-labelledby="tab-{{ $tabSlug }}">
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded border">
+                            <span class="fw-bold text-dark"><i class="fas fa-layer-group text-primary me-2"></i>غرف {{ $floorName }}</span>
+                            <div class="small">
+                                <span class="badge bg-success me-1">متاحة: {{ $floorRooms->where('status', 'available')->count() }}</span>
+                                <span class="badge bg-danger me-1">مشغولة: {{ $floorRooms->where('status', 'occupied')->count() }}</span>
+                                <span class="badge bg-warning text-dark">صيانة: {{ $floorRooms->where('status', 'maintenance')->count() }}</span>
                             </div>
+                        </div>
+                        <div class="row g-3">
+                            @foreach($floorRooms as $room)
+                                @include('rooms._room_card', ['room' => $room])
+                            @endforeach
                         </div>
                     </div>
                     @endforeach
                 </div>
             </div>
-        </div>
-        @empty
-        <div class="alert alert-info text-center py-5 border-0 shadow-sm" style="border-radius: 12px;">
-            <i class="fas fa-door-closed fa-3x mb-3 text-secondary opacity-50"></i>
-            <h5 class="fw-bold">لا توجد غرف مطابقة</h5>
-            <p class="text-muted mb-0">جرب تغيير معايير التصفية أو أضف غرف جديدة للنظام</p>
-        </div>
-        @endforelse
-    </div>
 
-    <!-- عرض الجدول المفصل (Table View) -->
-    <div id="viewTableContainer" class="d-none">
-        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
-            <div class="card-body p-0">
+            <!-- عرض الجدول المفصل (Table View) -->
+            <div id="viewTableContainer" class="d-none">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle text-center mb-0">
                         <thead class="table-light">
@@ -455,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    // تحديث البادج في الكارت
+                    // تحديث البادج في كل الكروت لنفس الغرفة
                     const pills = document.querySelectorAll(`.status-pill-${roomId}`);
                     pills.forEach(pill => {
                         pill.className = `badge bg-${data.status_color} status-pill-${roomId} px-2 py-1`;
@@ -487,12 +425,25 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+.nav-pills .nav-link {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+.nav-pills .nav-link.active {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+}
+.nav-pills .nav-link.active .badge {
+    background-color: #fff !important;
+    color: #0d6efd !important;
+}
 .room-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
 }
 @media print {
-    .btn, .dropdown, #btnViewGrid, #btnViewTable, .input-group, form {
+    .btn, .dropdown, #btnViewGrid, #btnViewTable, .input-group, form, #floorTabs {
         display: none !important;
     }
 }
