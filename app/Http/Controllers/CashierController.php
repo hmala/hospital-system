@@ -485,17 +485,38 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $fromDate = $request->query('from_date');
-        $toDate = $request->query('to_date');
+        $range = $request->query('range');
         $paymentType = $request->query('payment_type');
         $paymentMethod = $request->query('payment_method');
         $cashierId = $request->query('cashier_id');
         $search = $request->query('search');
 
-        // إذا لم يتم تحديد تاريخ افتراضياً، نحدد اليوم
-        if (!$request->has('from_date') && !$request->has('to_date') && !$request->has('search') && !$request->has('payment_type')) {
+        // تحديد التواريخ بمرونة مع الحفاظ على الفلاتر أثناء التنقل بين الصفحات
+        if ($range === 'all') {
+            $fromDate = null;
+            $toDate = null;
+        } elseif ($range === 'today') {
             $fromDate = now()->startOfDay()->format('Y-m-d');
             $toDate = now()->endOfDay()->format('Y-m-d');
+        } elseif ($range === 'yesterday') {
+            $fromDate = now()->subDay()->startOfDay()->format('Y-m-d');
+            $toDate = now()->subDay()->endOfDay()->format('Y-m-d');
+        } elseif ($range === 'this_week') {
+            $fromDate = now()->startOfWeek()->format('Y-m-d');
+            $toDate = now()->format('Y-m-d');
+        } elseif ($range === 'this_month') {
+            $fromDate = now()->startOfMonth()->format('Y-m-d');
+            $toDate = now()->format('Y-m-d');
+        } else {
+            // إذا كانت الزيارة الأولى تماماً (بدون أي معايير GET إطلاقاً ولا حتى page)
+            if (!$request->has('from_date') && !$request->has('to_date') && !$request->has('search') && !$request->has('payment_type') && !$request->has('page') && !$request->has('range')) {
+                $fromDate = now()->startOfDay()->format('Y-m-d');
+                $toDate = now()->endOfDay()->format('Y-m-d');
+                $range = 'today';
+            } else {
+                $fromDate = $request->query('from_date');
+                $toDate = $request->query('to_date');
+            }
         }
 
         $query = \App\Models\Payment::with([
@@ -570,7 +591,7 @@ class CashierController extends Controller
             $payments = $query->orderBy('paid_at', 'desc')->get();
             return view('cashier.report-print', compact(
                 'payments', 'totalAmount', 'totalCount', 'typeBreakdown',
-                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search'
+                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search', 'range'
             ));
         }
 
@@ -578,7 +599,7 @@ class CashierController extends Controller
 
         return view('cashier.report', compact(
             'payments', 'totalAmount', 'totalCount', 'typeBreakdown',
-            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search'
+            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search', 'range'
         ));
     }
 

@@ -92,6 +92,7 @@
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
         <div class="card-body p-3">
             <form method="GET" action="{{ route('cashier.report') }}" id="reportFilterForm">
+                <input type="hidden" name="range" id="rangeInput" value="{{ $range ?? request('range', '') }}">
                 <div class="row g-2 align-items-end">
                     <!-- من تاريخ -->
                     <div class="col-lg-3 col-md-3 col-sm-6">
@@ -136,11 +137,11 @@
                 <!-- أزرار التاريخ السريعة -->
                 <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top">
                     <span class="small text-muted align-self-center"><i class="fas fa-bolt text-warning me-1"></i>فترات سريعة:</span>
-                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 quick-date" data-range="today">اليوم</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 quick-date" data-range="yesterday">أمس</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 quick-date" data-range="this_week">هذا الأسبوع</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 quick-date" data-range="this_month">هذا الشهر</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 quick-date" data-range="all">الكل</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'today' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="today">اليوم</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'yesterday' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="yesterday">أمس</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'this_week' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="this_week">هذا الأسبوع</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'this_month' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="this_month">هذا الشهر</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'all' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="all">الكل (كافة السجلات)</button>
                 </div>
             </form>
         </div>
@@ -283,6 +284,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const fromInput = document.getElementById('fromDateInput');
     const toInput = document.getElementById('toDateInput');
+    const rangeInput = document.getElementById('rangeInput');
     const form = document.getElementById('reportFilterForm');
 
     function formatDate(d) {
@@ -292,10 +294,19 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${year}-${month}-${day}`;
     }
 
+    if (fromInput && toInput) {
+        fromInput.addEventListener('change', function() { if (rangeInput) rangeInput.value = ''; });
+        toInput.addEventListener('change', function() { if (rangeInput) rangeInput.value = ''; });
+    }
+
     document.querySelectorAll('.quick-date').forEach(btn => {
         btn.addEventListener('click', function() {
             const range = this.dataset.range;
             const now = new Date();
+
+            if (rangeInput) {
+                rangeInput.value = range;
+            }
 
             if (range === 'today') {
                 fromInput.value = formatDate(now);
