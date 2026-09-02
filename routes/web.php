@@ -183,6 +183,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [\App\Http\Controllers\PurchaseController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\PurchaseController::class, 'store'])->name('store');
         Route::get('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'show'])->name('show');
+        Route::get('/{purchase}/edit', [\App\Http\Controllers\PurchaseController::class, 'edit'])->name('edit');
+        Route::put('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'update'])->name('update');
+        Route::delete('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('barcodes')->name('barcodes.')->group(function () {

@@ -168,9 +168,21 @@
                                         </td>
                                         <td class="text-end fw-bold text-primary">{{ number_format($purchase->total_amount, 2) }}</td>
                                         <td class="text-center">
-                                            <a href="{{ route('purchases.show', $purchase) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                                <i class="fas fa-eye me-1"></i>عرض
-                                            </a>
+                                            <div class="d-flex gap-1 justify-content-center align-items-center">
+                                                <a href="{{ route('purchases.show', $purchase) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2" title="عرض الفاتورة">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-2" title="تعديل الفاتورة">
+                                                    <i class="fas fa-edit text-warning"></i>
+                                                </a>
+                                                <form action="{{ route('purchases.destroy', $purchase) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف فاتورة المشتريات رقم {{ $purchase->invoice_number }}؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2" title="حذف الفاتورة">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty

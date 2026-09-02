@@ -9,8 +9,14 @@
                 <p class="text-muted mb-0">عرض بيانات الفاتورة والمحتويات المرتبطة بها.</p>
             </div>
             <div class="d-flex flex-column flex-sm-row gap-2 text-md-end">
+                <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-warning text-dark fw-semibold">
+                    <i class="fas fa-edit me-1"></i>تعديل الفاتورة
+                </a>
+                <a href="{{ route('barcodes.purchase', $purchase) }}" class="btn btn-outline-info">
+                    <i class="fas fa-barcode me-1"></i>طباعة الباركودات
+                </a>
                 <a href="{{ route('stock-transfers.returns.create', ['purchase_id' => $purchase->id]) }}" class="btn btn-outline-primary">
-                    <i class="fas fa-undo-alt me-2"></i>إرجاع للمخزن الرئيسي
+                    <i class="fas fa-undo-alt me-1"></i>إرجاع للمخزن الرئيسي
                 </a>
                 <a href="{{ route('purchases.index') }}" class="btn btn-outline-secondary">رجوع إلى القائمة</a>
             </div>
