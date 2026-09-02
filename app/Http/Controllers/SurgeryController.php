@@ -1056,33 +1056,54 @@ class SurgeryController extends Controller
             return redirect()->back()->with('error', 'عذراً، لا يمكن حذف هذه العملية لوجود مبالغ مالية مدفوعة ومسجلة في الكاشير. يرجى التوجه للكاشير لعمل استرجاع مالي (Refund) للمريض أولاً لضبط جرد الصندوق.');
         }
 
-        // تحرير الغرفة المرتبطة إن وجدت
-        if ($surgery->room_id) {
-            Room::where('id', $surgery->room_id)->update(['status' => 'available']);
-        }
+        try {
+            DB::beginTransaction();
 
-        // تنظيف المحطات المرتبطة
-        if ($surgery->operationTheaterStation) {
-            $surgery->operationTheaterStation()->delete();
-        }
-        if ($surgery->surgeonStation) {
-            $surgery->surgeonStation()->delete();
-        }
-        if ($surgery->anesthesiaStation) {
-            $surgery->anesthesiaStation()->delete();
-        }
-        if ($surgery->nursingStation) {
-            $surgery->nursingStation()->delete();
-        }
+            // تحرير الغرفة المرتبطة إن وجدت
+            if ($surgery->room_id) {
+                Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+            }
 
-        // حذف الفحوصات غير المدفوعة التابعة للعملية
-        $surgery->labTests()->delete();
-        $surgery->radiologyTests()->delete();
+            // تنظيف المحطات المرتبطة
+            if ($surgery->operationTheaterStation) {
+                $surgery->operationTheaterStation()->delete();
+            }
+            if ($surgery->surgeonStation) {
+                $surgery->surgeonStation()->delete();
+            }
+            if ($surgery->anesthesiaStation) {
+                $surgery->anesthesiaStation()->delete();
+            }
+            if ($surgery->nursingStation) {
+                $surgery->nursingStation()->delete();
+            }
 
-        $surgeryName = $surgery->surgery_type;
-        $surgery->delete();
+            // فك ارتباط وحذف الجداول التابعة
+            $surgery->medicalDevices()->detach();
+            $surgery->additionalOperations()->delete();
+            $surgery->typeChanges()->delete();
+            $surgery->surgeryTreatments()->delete();
+            $surgery->labTests()->delete();
+            $surgery->radiologyTests()->delete();
 
-        return redirect()->route('surgeries.index')
-            ->with('success', 'تم حذف حجز العملية (' . $surgeryName . ') بنجاح وتحرير الغرفة');
+            // حذف الزيارة التابعة للعملية إن وجدت
+            $visit = $surgery->visit;
+            if ($visit) {
+                $visit->requests()->delete();
+                $visit->delete();
+            }
+
+            $surgeryName = $surgery->surgery_type;
+            $surgery->delete();
+
+            DB::commit();
+
+            return redirect()->route('surgeries.index')
+                ->with('success', 'تم حذف حجز العملية (' . $surgeryName . ') بنجاح وتحرير الغرفة');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حذف العملية: ' . $e->getMessage());
+        }
     }
 }
