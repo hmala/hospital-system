@@ -626,7 +626,7 @@ class SurgeryController extends Controller
     public function cancel(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist'])) {
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff'])) {
             abort(403, 'غير مصرح لك بإلغاء العملية');
         }
 
@@ -640,6 +640,11 @@ class SurgeryController extends Controller
             $surgery->payment_status = 'cancelled';
             $surgery->surgery_fee_paid = 'cancelled';
             $surgery->save();
+
+            // تحرير الغرفة المرتبطة إن وجدت
+            if ($surgery->room_id) {
+                Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+            }
 
             $surgery->labTests()->update([
                 'status' => 'cancelled',
@@ -655,7 +660,7 @@ class SurgeryController extends Controller
         $surgery->refresh();
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->back()->with('success', 'تم إلغاء العملية وإيقاف التحاليل والأشعة المرتبطة بها');
+        return redirect()->back()->with('success', 'تم إلغاء العملية وتحرير الغرفة وإيقاف الفحوصات المرتبطة بها بنجاح');
     }
 
     public function returnToWaiting(Surgery $surgery)
@@ -1030,5 +1035,32 @@ class SurgeryController extends Controller
         $surgery->save();
 
         return redirect()->back()->with('success', 'تم إزالة الجهاز الطبي من العملية بنجاح');
+    }
+
+    /**
+     * حذف حجز العملية الجراحية نهائياً وتحرير الغرفة
+     */
+    public function destroy(Surgery $surgery)
+    {
+        $user = auth()->user();
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بحذف العملية');
+        }
+
+        // تحرير الغرفة المرتبطة إن وجدت
+        if ($surgery->room_id) {
+            Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+        }
+
+        // حذف محطة صالة العمليات المرتبطة إن وجدت
+        if ($surgery->operationTheaterStation) {
+            $surgery->operationTheaterStation()->delete();
+        }
+
+        $surgeryName = $surgery->surgery_type;
+        $surgery->delete();
+
+        return redirect()->route('surgeries.index')
+            ->with('success', 'تم حذف حجز العملية (' . $surgeryName . ') بنجاح وتحرير الغرفة');
     }
 }

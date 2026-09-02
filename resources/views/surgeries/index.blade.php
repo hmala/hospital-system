@@ -278,22 +278,30 @@ input[type="radio"]:checked + .frequency-btn {
                                                         </td>
                                                         @endif
                                                         <td>
-                                                            @if(auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                                <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning fw-bold text-dark" title="تعديل الحجز">
-                                                                    <i class="fas fa-edit me-1"></i> تعديل الحجز
-                                                                </a>
-                                                            @else
-                                                                <div class="btn-group btn-group-sm">
-                                                                    @if(auth()->user()->hasRole('admin'))
-                                                                        <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning" title="تعديل الحجز">
-                                                                            <i class="fas fa-edit me-1"></i> تعديل الحجز
-                                                                        </a>
-                                                                    @endif
-                                                                    <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
-                                                                        <i class="fas fa-print"></i>
+                                                            <div class="btn-group btn-group-sm">
+                                                                @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                                    <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary" title="تفاصيل العملية">
+                                                                        <i class="fas fa-eye me-1"></i> التفاصيل
                                                                     </a>
-                                                                </div>
-                                                            @endif
+                                                                @endif
+                                                                @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff']))
+                                                                    <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning text-dark fw-bold" title="تعديل الحجز">
+                                                                        <i class="fas fa-edit me-1"></i> تعديل
+                                                                    </a>
+                                                                @endif
+                                                                @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff']))
+                                                                    <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز هذه العملية نهائياً للمريض وتحرير الغرفة؟');">
+                                                                        @csrf
+                                                                        @method('DELETE')
+                                                                        <button type="submit" class="btn btn-sm btn-danger" title="حذف العملية">
+                                                                            <i class="fas fa-trash-alt me-1"></i> حذف
+                                                                        </button>
+                                                                    </form>
+                                                                @endif
+                                                                <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
+                                                                    <i class="fas fa-print"></i>
+                                                                </a>
+                                                            </div>
                                                         </td>
                                                 </tr>
                                                 <tr class="bg-light">
@@ -703,25 +711,30 @@ input[type="radio"]:checked + .frequency-btn {
                                                 @endif
                                             </td>
                                             <td>
-                                                @if(auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                    <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning fw-bold text-dark" title="تعديل الحجز">
-                                                        <i class="fas fa-edit me-1"></i> تعديل الحجز
-                                                    </a>
-                                                @else
-                                                    <div class="btn-group btn-group-sm">
+                                                <div class="btn-group btn-group-sm">
+                                                    @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
                                                         <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary me-1" title="تفاصيل العملية">
-                                                            <i class="fas fa-eye me-1"></i> تفاصيل العملية
+                                                            <i class="fas fa-eye me-1"></i> التفاصيل
                                                         </a>
-                                                        @if(auth()->user()->hasRole('admin'))
-                                                            <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning" title="تعديل الحجز">
-                                                                <i class="fas fa-edit me-1"></i> تعديل الحجز
-                                                            </a>
-                                                        @endif
-                                                        <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
-                                                            <i class="fas fa-print"></i>
+                                                    @endif
+                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff']))
+                                                        <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-warning text-dark fw-bold" title="تعديل الحجز">
+                                                            <i class="fas fa-edit me-1"></i> تعديل
                                                         </a>
-                                                    </div>
-                                                @endif
+                                                    @endif
+                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff']))
+                                                        <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-danger" title="حذف السجل">
+                                                                <i class="fas fa-trash-alt me-1"></i> حذف
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                    <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
                                         @endforeach
