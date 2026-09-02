@@ -499,27 +499,29 @@ body {
             </div>
             <div id="collapseRoomStay" class="collapse show">
                 <div class="compact-card-body">
+                    <input type="hidden" name="expected_stay_days" id="expected_stay_days" value="1">
                     <div class="row g-2 mb-2 align-items-center">
-                        <div class="col-md-3">
-                            <label for="expected_stay_days" class="form-label">مدة الإقامة (أيام) <span class="text-danger">*</span></label>
-                            <input type="number" name="expected_stay_days" id="expected_stay_days" 
-                                   class="form-control @error('expected_stay_days') is-invalid @enderror"
-                                   value="{{ $selectedStayDays }}" min="1" max="365" required>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="px-2 py-1 bg-light rounded border d-flex justify-content-between align-items-center small" style="font-size:0.82rem; height:34px;">
+                        <div class="col-md-9">
+                            <div class="px-3 py-2 bg-light rounded border d-flex justify-content-between align-items-center small flex-wrap gap-2">
                                 <div>
-                                    <span class="text-muted">الغرفة:</span> <b id="selected_room_name" class="text-dark">{{ $currentRoom ? 'غرفة ' . $currentRoom->room_number . ($currentRoom->room_type === 'vip' ? ' (VIP)' : '') : 'لم يتم الاختيار' }}</b>
+                                    <span class="text-muted">الغرفة:</span> <b id="selected_room_name" class="text-dark">{{ $currentRoom ? 'غرفة ' . $currentRoom->room_number . ($currentRoom->room_type === 'vvip' ? ' (💎 VVIP)' : ($currentRoom->room_type === 'vip' ? ' (⭐ VIP)' : ' (عادية)')) : 'لم يتم الاختيار' }}</b>
                                     <span class="mx-2 text-muted">|</span>
                                     <span class="text-muted">الحالة:</span> <b id="selected_room_status" class="text-success">{{ $currentRoom ? 'محددة' : '-' }}</b>
                                 </div>
                                 <div>
-                                    <span class="text-muted">الأجرة:</span> <b id="room_total_fee" class="text-success fs-6">{{ number_format($currentTotalRoomFee) }} د.ع</b>
+                                    <span class="text-muted">أجرة الليلة الأولى:</span> 
+                                    <b id="room_total_fee" class="badge {{ $currentRoom && $currentRoom->room_type === 'vvip' ? 'bg-dark text-white' : ($currentRoom && $currentRoom->room_type === 'vip' ? 'bg-warning text-dark' : 'bg-success text-white') }} fs-6 ms-1">
+                                        {{ $currentRoom && $currentRoom->room_type === 'vvip' ? '200,000 د.ع (VVIP)' : ($currentRoom && $currentRoom->room_type === 'vip' ? '100,000 د.ع (VIP)' : '0 د.ع (مجانية أول ليلة)') }}
+                                    </b>
                                 </div>
+                            </div>
+                            <div class="mt-1 text-muted small" style="font-size: 0.76rem;">
+                                <i class="fas fa-info-circle text-primary me-1"></i>
+                                <strong>النظام الفندقي:</strong> الليلة الأولى تغطي حتى <strong>12:00 ظهراً</strong> من اليوم التالي. أي ليالٍ إضافية تُحسب تلقائياً عند إجراء الخروج (عادية: مجانية أول ليلة | VIP: 100,000 د.ع | VVIP: 200,000 د.ع).
                             </div>
                         </div>
                         <div class="col-md-3 text-end" id="clear_room_section" style="{{ $currentRoom ? '' : 'display: none;' }}">
-                            <button type="button" class="btn btn-sm btn-outline-danger w-100" id="clear_room_btn" style="height:34px;">
+                            <button type="button" class="btn btn-sm btn-outline-danger w-100" id="clear_room_btn" style="height:38px;">
                                 <i class="fas fa-times me-1"></i> إلغاء اختيار الغرفة
                             </button>
                         </div>
@@ -998,10 +1000,26 @@ document.addEventListener('DOMContentLoaded', function() {
         t.dataset.origWidth  = '2px';
     });
 
+    let selectedRoomType = '{{ $currentRoom ? $currentRoom->room_type : "regular" }}';
+
     function calculateRoomFee() {
-        if (!stayDaysInput || !roomTotalFeeEl) return;
-        const days = parseInt(stayDaysInput.value) || 0;
-        roomTotalFeeEl.textContent = new Intl.NumberFormat('ar-IQ').format(selectedRoomFee * days) + ' د.ع';
+        if (!roomTotalFeeEl) return;
+        if (!roomIdInput || !roomIdInput.value) {
+            roomTotalFeeEl.textContent = '0 د.ع';
+            roomTotalFeeEl.className = 'badge bg-secondary fs-6 ms-1';
+            return;
+        }
+
+        if (selectedRoomType === 'vvip') {
+            roomTotalFeeEl.textContent = '200,000 د.ع (VVIP)';
+            roomTotalFeeEl.className = 'badge bg-dark text-white fs-6 ms-1';
+        } else if (selectedRoomType === 'vip') {
+            roomTotalFeeEl.textContent = '100,000 د.ع (VIP)';
+            roomTotalFeeEl.className = 'badge bg-warning text-dark fs-6 ms-1';
+        } else {
+            roomTotalFeeEl.textContent = '0 د.ع (مجانية أول ليلة)';
+            roomTotalFeeEl.className = 'badge bg-success text-white fs-6 ms-1';
+        }
     }
 
     function selectRoom(tile) {
@@ -1026,11 +1044,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (roomIdInput) roomIdInput.value = tile.dataset.roomId;
         selectedRoomFee  = parseFloat(tile.dataset.roomFee) || 0;
-        const roomName = 'غرفة ' + tile.dataset.roomNumber + (tile.dataset.roomType === 'vip' ? ' (VIP)' : '');
+        selectedRoomType = tile.dataset.roomType || 'regular';
+
+        const typeLabel = selectedRoomType === 'vvip' ? ' (💎 VVIP)' : (selectedRoomType === 'vip' ? ' (⭐ VIP)' : ' (عادية)');
+        const roomName = 'غرفة ' + tile.dataset.roomNumber + typeLabel;
         if (selectedRoomNameEl) selectedRoomNameEl.textContent = roomName;
         if (headerRoomBadge) {
             headerRoomBadge.textContent = roomName;
-            headerRoomBadge.className = 'badge bg-success text-white';
+            headerRoomBadge.className = selectedRoomType === 'vvip' ? 'badge bg-dark text-white' : (selectedRoomType === 'vip' ? 'badge bg-warning text-dark' : 'badge bg-success text-white');
         }
 
         const statusSpan = document.getElementById('selected_room_status');

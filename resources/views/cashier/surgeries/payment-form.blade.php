@@ -12,11 +12,12 @@
     $excessSurgeryFee = $surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0;
     $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0);
     
-    // رسوم الغرفة (أول ليلة مجانية)
-    $roomFee = $surgery->room_fee ?? 0;
-    $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
+    // رسوم الغرفة الفندقية (الليلة الأولى + الليالي الإضافية بعد 12 ظهراً)
+    $stayDetails = $surgery->calculateStayDetails();
+    $roomFee = $stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0);
+    $roomFeePaidAmount = (float)($surgery->room_fee_paid_amount ?? 0);
     $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
-    $excessRoomFee = $roomFeePaidAmount > $roomFee ? ($roomFeePaidAmount - $roomFee) : 0;
+    $excessRoomFee = max(0, $roomFeePaidAmount - $roomFee);
     $roomFeePaid = $remainingRoomFee <= 0 && $excessRoomFee <= 0;
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
@@ -433,19 +434,24 @@
                                             <td>
                                                 <div class="mb-2">
                                                     <strong>{{ $surgery->room->room_number ?? 'غير محدد' }}</strong>
-                                                    @if($surgery->room && $surgery->room->room_type === 'vip')
+                                                    @if($surgery->room && $surgery->room->room_type === 'vvip')
+                                                        <span class="badge bg-dark text-white ms-1">
+                                                            <i class="fas fa-gem text-warning me-1"></i> VVIP
+                                                        </span>
+                                                    @elseif($surgery->room && $surgery->room->room_type === 'vip')
                                                         <span class="badge bg-warning text-dark ms-1">
-                                                            <i class="fas fa-star"></i> VIP
+                                                            <i class="fas fa-crown text-dark me-1"></i> VIP
                                                         </span>
                                                     @else
-                                                        <span class="badge bg-secondary ms-1">عادية</span>
+                                                        <span class="badge bg-light text-secondary border ms-1">عادية</span>
                                                     @endif
-                                                    @if($surgery->expected_stay_days)
-                                                        <br><small class="text-muted">
-                                                            {{ $surgery->expected_stay_days }} يوم × {{ number_format($surgery->room->daily_fee ?? 0, 0) }} د.ع
-                                                        </small>
-                                                        <br><small class="text-muted">(أول ليلة مجانية)</small>
-                                                    @endif
+                                                    <br><small class="text-muted">
+                                                        أجرة الليلة الأولى: {{ number_format($stayDetails['initial_fee'], 0) }} د.ع
+                                                        @if($stayDetails['extra_nights'] > 0)
+                                                            + {{ $stayDetails['extra_nights'] }} ليلة إضافية ({{ number_format($stayDetails['extra_nights_fee'], 0) }} د.ع)
+                                                        @endif
+                                                    </small>
+                                                    <br><small class="text-primary" style="font-size:0.75rem;">(نظام فندقي 12:00 ظهراً)</small>
                                                 </div>
                                                 <div class="room-payment-options" id="room_payment_options_container">
                                                     <div class="form-check form-check-inline">

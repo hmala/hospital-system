@@ -211,11 +211,11 @@ class SurgeryController extends Controller
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
 
-        // حساب أجرة الغرفة
-        if ($request->room_id && $request->expected_stay_days) {
+        // حساب أجرة الغرفة المبدئية عند الحجز (الليلة الأولى: عادية=0, VIP=100,000, VVIP=200,000)
+        if ($request->room_id) {
             $room = Room::find($request->room_id);
             if ($room) {
-                $surgeryData['room_fee'] = $room->daily_fee * $request->expected_stay_days;
+                $surgeryData['room_fee'] = Surgery::getInitialRoomFeeForType($room->room_type);
                 // تحديث حالة الغرفة لمحجوزة
                 $room->update(['status' => 'occupied']);
             }
@@ -423,7 +423,7 @@ class SurgeryController extends Controller
             }
         }
 
-        // معالجة تغيير الغرفة
+        // معالجة تغيير الغرفة وإعادة احتساب الأجرة الفندقية
         if ($surgery->room_id != $request->room_id) {
             if ($surgery->room_id) {
                 Room::where('id', $surgery->room_id)->update(['status' => 'available']);
@@ -432,14 +432,15 @@ class SurgeryController extends Controller
                 $newRoom = Room::find($request->room_id);
                 if ($newRoom) {
                     $newRoom->update(['status' => 'occupied']);
-                    $surgeryData['room_fee'] = $newRoom->daily_fee * $request->expected_stay_days;
+                    $surgeryData['room_fee'] = Surgery::getInitialRoomFeeForType($newRoom->room_type);
                 }
+            } else {
+                $surgeryData['room_fee'] = 0;
             }
-        } elseif ($request->room_id && $request->expected_stay_days) {
-            $currentRoom = Room::find($request->room_id);
-            if ($currentRoom) {
-                $surgeryData['room_fee'] = $currentRoom->daily_fee * $request->expected_stay_days;
-            }
+        } elseif ($request->room_id && $surgery->room) {
+            // إعادة احتساب تفاصيل الإقامة الفندقية الحالية
+            $stayDetails = $surgery->calculateStayDetails();
+            $surgeryData['room_fee'] = $stayDetails['total_fee'];
         }
 
         if ($request->hasFile('referral_letter')) {
