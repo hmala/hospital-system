@@ -1038,7 +1038,7 @@ class SurgeryController extends Controller
     }
 
     /**
-     * حذف حجز العملية الجراحية نهائياً وتحرير الغرفة
+     * حذف حجز العملية الجراحية نهائياً وتحرير الغرفة (مع الحماية المالية للكاشير)
      */
     public function destroy(Surgery $surgery)
     {
@@ -1047,15 +1047,36 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بحذف العملية');
         }
 
+        // الحماية المالية: منع حذف العملية إذا كان لها مدفوعات مسجلة في الكاشير
+        $totalPaid = ($surgery->surgery_fee_paid_amount ?? 0) + ($surgery->room_fee_paid_amount ?? 0);
+        $hasPaidRecord = $totalPaid > 0 || $surgery->payment_status === 'paid' || $surgery->payments()->where('amount', '>', 0)->exists();
+
+        if ($hasPaidRecord) {
+            return redirect()->back()->with('error', 'عذراً، لا يمكن حذف هذه العملية لوجود مبالغ مالية مدفوعة ومسجلة في الكاشير. يرجى التوجه للكاشير لعمل استرجاع مالي (Refund) للمريض أولاً لضبط جرد الصندوق.');
+        }
+
         // تحرير الغرفة المرتبطة إن وجدت
         if ($surgery->room_id) {
             Room::where('id', $surgery->room_id)->update(['status' => 'available']);
         }
 
-        // حذف محطة صالة العمليات المرتبطة إن وجدت
+        // تنظيف المحطات المرتبطة
         if ($surgery->operationTheaterStation) {
             $surgery->operationTheaterStation()->delete();
         }
+        if ($surgery->surgeonStation) {
+            $surgery->surgeonStation()->delete();
+        }
+        if ($surgery->anesthesiaStation) {
+            $surgery->anesthesiaStation()->delete();
+        }
+        if ($surgery->nursingStation) {
+            $surgery->nursingStation()->delete();
+        }
+
+        // حذف الفحوصات غير المدفوعة التابعة للعملية
+        $surgery->labTests()->delete();
+        $surgery->radiologyTests()->delete();
 
         $surgeryName = $surgery->surgery_type;
         $surgery->delete();
