@@ -391,46 +391,32 @@ input[type="radio"]:checked + .frequency-btn {
                                             </td>
                                             @endif
                                             <td class="text-center">
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-light border dropdown-toggle px-3 py-1 shadow-sm rounded-pill fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="fas fa-ellipsis-v me-1"></i> الإجراءات
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2 text-end" style="min-width: 180px;">
-                                                        @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                        <li>
-                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.show', $surgery) }}">
-                                                                <i class="fas fa-eye text-primary me-2"></i> تفاصيل العملية
-                                                            </a>
-                                                        </li>
-                                                        @endif
-                                                        
-                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
-                                                        <li>
-                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.edit', $surgery) }}">
-                                                                <i class="fas fa-edit text-warning me-2"></i> تعديل الحجز
-                                                            </a>
-                                                        </li>
-                                                        @endif
+                                                <div class="d-flex gap-1 justify-content-center align-items-center">
+                                                    @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2" title="تفاصيل العملية">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    @endif
 
-                                                        <li>
-                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.print', $surgery) }}" target="_blank">
-                                                                <i class="fas fa-print text-secondary me-2"></i> طباعة الوصل
-                                                            </a>
-                                                        </li>
+                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
+                                                        <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2" title="تعديل الحجز">
+                                                            <i class="fas fa-edit text-warning"></i>
+                                                        </a>
+                                                    @endif
 
-                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
-                                                        <li><hr class="dropdown-divider my-1"></li>
-                                                        <li>
-                                                            <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="dropdown-item text-danger rounded-2 py-2 fw-semibold">
-                                                                    <i class="fas fa-trash-alt me-2"></i> حذف / إلغاء الحجز
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        @endif
-                                                    </ul>
+                                                    <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="طباعة الوصل">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+
+                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
+                                                        <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger px-2" title="حذف / إلغاء الحجز">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -866,46 +852,32 @@ input[type="radio"]:checked + .frequency-btn {
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-light border dropdown-toggle px-3 py-1 shadow-sm rounded-pill fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="fas fa-ellipsis-v me-1"></i> الإجراءات
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2 text-end" style="min-width: 180px;">
-                                                        @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                        <li>
-                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.show', $surgery) }}">
-                                                                <i class="fas fa-eye text-primary me-2"></i> تفاصيل العملية
-                                                            </a>
-                                                        </li>
-                                                        @endif
-                                                        
-                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
-                                                        <li>
-                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.edit', $surgery) }}">
-                                                                <i class="fas fa-edit text-warning me-2"></i> تعديل الحجز
-                                                            </a>
-                                                        </li>
-                                                        @endif
+                                                <div class="d-flex gap-1 justify-content-center align-items-center">
+                                                    @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2" title="تفاصيل العملية">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    @endif
 
-                                                        <li>
-                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.print', $surgery) }}" target="_blank">
-                                                                <i class="fas fa-print text-secondary me-2"></i> طباعة الوصل
-                                                            </a>
-                                                        </li>
+                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
+                                                        <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2" title="تعديل الحجز">
+                                                            <i class="fas fa-edit text-warning"></i>
+                                                        </a>
+                                                    @endif
 
-                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
-                                                        <li><hr class="dropdown-divider my-1"></li>
-                                                        <li>
-                                                            <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="dropdown-item text-danger rounded-2 py-2 fw-semibold">
-                                                                    <i class="fas fa-trash-alt me-2"></i> حذف السجل
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        @endif
-                                                    </ul>
+                                                    <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="طباعة الوصل">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+
+                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
+                                                        <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger px-2" title="حذف السجل">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
