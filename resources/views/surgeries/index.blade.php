@@ -7,6 +7,92 @@
     background-color: #f8f9fa;
 }
 
+/* تنسيقات الجدول الواسع والأنيق للعمليات */
+.table-surgeries {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-surgeries thead th {
+    background-color: #f8fafc !important;
+    color: #334155 !important;
+    font-weight: 700 !important;
+    font-size: 0.84rem !important;
+    padding: 12px 14px !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    white-space: nowrap !important;
+}
+
+.table-surgeries tbody td {
+    padding: 12px 14px !important;
+    vertical-align: middle !important;
+    font-size: 0.88rem !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    color: #1e293b !important;
+}
+
+.table-surgeries tbody tr:hover td {
+    background-color: #f8fafc !important;
+}
+
+.patient-title-btn {
+    font-weight: 700;
+    color: #1e293b;
+    text-decoration: none;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+.patient-title-btn:hover {
+    color: #2563eb;
+}
+
+.room-badge-pill {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.room-badge-regular {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+.room-badge-vip {
+    background: #fefce8;
+    color: #854d0e;
+    border: 1px solid #fef08a;
+}
+.room-badge-vvip {
+    background: #0f172a;
+    color: #fef08a;
+    border: 1px solid #334155;
+}
+
+.status-badge-pill {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: inline-block;
+    white-space: nowrap;
+}
+.status-scheduled { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.status-waiting { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.status-in_progress { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.status-completed { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.status-cancelled { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
 .frequency-btn {
     padding: 6px 10px;
     border: 2px solid #e9ecef;
@@ -207,120 +293,147 @@ input[type="radio"]:checked + .frequency-btn {
                         <div class="card-body">
                             @if($activeSurgeries->count() > 0)
                             <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead class="table-light">
+                                <table class="table table-hover table-surgeries align-middle">
+                                    <thead>
                                         <tr>
+                                            <th style="width: 50px;">#</th>
                                             <th>المريض</th>
-                                            <th>الطبيب</th>
                                             <th>نوع العملية</th>
-                                            <th>التاريخ</th>
-                                            <th>الوقت</th>
+                                            <th>الطبيب الجراح</th>
+                                            <th>تاريخ وموعد العملية</th>
                                             <th>الغرفة</th>
-                                            <th>الحالة</th>
+                                            <th>حالة العملية</th>
                                             @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
                                                 <th>تشخيص / علاج</th>
                                             @endif
-                                            <th>الإجراءات</th>
+                                            <th class="text-center" style="width: 140px;">الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($activeSurgeries as $surgery)
                                         <tr>
+                                            <td class="text-muted fw-bold">#{{ $surgery->id }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-link text-start p-0 m-0 w-100" data-bs-toggle="collapse" data-bs-target="#detailsRow{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRow{{ $surgery->id }}">
-                                                    <i class="fas fa-user-injured text-primary me-1"></i>
-                                                    {{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}
+                                                <button type="button" class="patient-title-btn" data-bs-toggle="collapse" data-bs-target="#detailsRow{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRow{{ $surgery->id }}">
+                                                    <i class="fas fa-user-circle text-primary fs-5"></i>
+                                                    <span>{{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}</span>
                                                 </button>
+                                                @if($surgery->patient && $surgery->patient->user && $surgery->patient->user->phone)
+                                                    <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
+                                                        <i class="fas fa-phone-alt me-1"></i>{{ $surgery->patient->user->phone }}
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>
-                                                <i class="fas fa-user-md text-success me-1"></i>
-                                                                @if($surgery->doctor && $surgery->doctor->user)
-                                                                    د. {{ $surgery->doctor->user->name }}
-                                                                @elseif($surgery->surgeon_name)
-                                                                    {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
-                                                                @else
-                                                                    <span class="text-muted">غير محدد</span>
-                                                                @endif
-                                                        </td>
-                                                        <td>{{ $surgery->surgery_type }}</td>
-                                                        <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
-                                                        <td>{{ $surgery->scheduled_time }}</td>
-                                                        <td>
-                                                            @if($surgery->room)
-                                                                <span class="badge bg-primary">
-                                                                    <i class="fas fa-bed me-1"></i>
-                                                                    {{ $surgery->room->room_number }}
-                                                                </span>
-                                                                <br>
-                                                                <small class="text-muted">{{ $surgery->room->room_type_name }}</small>
-                                                            @else
-                                                                <span class="badge bg-secondary">غير محدد</span>
-                                                            @endif
-                                                        </td>
-                                                        <td>
-                                                                @if($surgery->status == 'scheduled')
-                                                                        <span class="badge bg-secondary">مجدولة</span>
-                                                                @elseif($surgery->status == 'waiting')
-                                                                        <span class="badge bg-info text-dark">في الانتظار</span>
-                                                                @elseif($surgery->status == 'in_progress')
-                                                                        <span class="badge bg-warning">جارية</span>
-                                                                @elseif($surgery->status == 'completed')
-                                                                        <span class="badge bg-success">مكتملة</span>
-                                                                @else
-                                                                        <span class="badge bg-danger">ملغاة</span>
-                                                                @endif
-                                                        </td>
-                                                        @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                        <td>
-                                                            <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-primary" title="تفاصيل العملية">
-                                                                <i class="fas fa-eye me-1"></i> تفاصيل العملية
-                                                            </a>
-                                                        </td>
+                                                <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
+                                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
+                                                    <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fas fa-user-md text-success"></i>
+                                                    <span class="fw-semibold">
+                                                        @if($surgery->doctor && $surgery->doctor->user)
+                                                            د. {{ $surgery->doctor->user->name }}
+                                                        @elseif($surgery->surgeon_name)
+                                                            {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">خارجي</span>
+                                                        @else
+                                                            <span class="text-muted">غير محدد</span>
                                                         @endif
-                                                        <td>
-                                                            <div class="dropdown">
-                                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle px-2 py-1 shadow-sm rounded-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i class="fas fa-ellipsis-v me-1"></i> الإجراءات
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark">
+                                                    <i class="fas fa-calendar-day text-secondary me-1"></i>
+                                                    {{ $surgery->scheduled_date->format('Y-m-d') }}
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock text-secondary me-1"></i>
+                                                    {{ is_object($surgery->scheduled_time) ? $surgery->scheduled_time->format('H:i') : substr($surgery->scheduled_time, 0, 5) }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                @if($surgery->room)
+                                                    @php $rtype = $surgery->room->room_type; @endphp
+                                                    <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
+                                                        @if($rtype === 'vvip')
+                                                            <i class="fas fa-gem text-warning"></i> VVIP {{ $surgery->room->room_number }}
+                                                        @elseif($rtype === 'vip')
+                                                            <i class="fas fa-crown text-warning"></i> VIP {{ $surgery->room->room_number }}
+                                                        @else
+                                                            <i class="fas fa-bed text-primary"></i> {{ $surgery->room->room_number }}
+                                                        @endif
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-light text-muted border">بدون غرفة</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($surgery->status == 'scheduled')
+                                                    <span class="status-badge-pill status-scheduled"><i class="fas fa-calendar-check me-1"></i>مجدولة</span>
+                                                @elseif($surgery->status == 'waiting')
+                                                    <span class="status-badge-pill status-waiting"><i class="fas fa-clock me-1"></i>في الانتظار</span>
+                                                @elseif($surgery->status == 'in_progress')
+                                                    <span class="status-badge-pill status-in_progress"><i class="fas fa-procedures me-1"></i>جارية</span>
+                                                @elseif($surgery->status == 'completed')
+                                                    <span class="status-badge-pill status-completed"><i class="fas fa-check me-1"></i>مكتملة</span>
+                                                @else
+                                                    <span class="status-badge-pill status-cancelled"><i class="fas fa-times me-1"></i>ملغاة</span>
+                                                @endif
+                                            </td>
+                                            @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                            <td>
+                                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary shadow-sm" title="تفاصيل العملية">
+                                                    <i class="fas fa-eye me-1"></i> تفاصيل
+                                                </a>
+                                            </td>
+                                            @endif
+                                            <td class="text-center">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-light border dropdown-toggle px-3 py-1 shadow-sm rounded-pill fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="fas fa-ellipsis-v me-1"></i> الإجراءات
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2 text-end" style="min-width: 180px;">
+                                                        @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
+                                                        <li>
+                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.show', $surgery) }}">
+                                                                <i class="fas fa-eye text-primary me-2"></i> تفاصيل العملية
+                                                            </a>
+                                                        </li>
+                                                        @endif
+                                                        
+                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
+                                                        <li>
+                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.edit', $surgery) }}">
+                                                                <i class="fas fa-edit text-warning me-2"></i> تعديل الحجز
+                                                            </a>
+                                                        </li>
+                                                        @endif
+
+                                                        <li>
+                                                            <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.print', $surgery) }}" target="_blank">
+                                                                <i class="fas fa-print text-secondary me-2"></i> طباعة الوصل
+                                                            </a>
+                                                        </li>
+
+                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
+                                                        <li><hr class="dropdown-divider my-1"></li>
+                                                        <li>
+                                                            <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="dropdown-item text-danger rounded-2 py-2 fw-semibold">
+                                                                    <i class="fas fa-trash-alt me-2"></i> حذف / إلغاء الحجز
                                                                 </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 p-2 text-end" style="min-width: 175px;">
-                                                                    @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                                    <li>
-                                                                        <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.show', $surgery) }}">
-                                                                            <i class="fas fa-eye text-primary me-2"></i> تفاصيل العملية
-                                                                        </a>
-                                                                    </li>
-                                                                    @endif
-                                                                    
-                                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
-                                                                    <li>
-                                                                        <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.edit', $surgery) }}">
-                                                                            <i class="fas fa-edit text-warning me-2"></i> تعديل الحجز
-                                                                        </a>
-                                                                    </li>
-                                                                    @endif
-
-                                                                    <li>
-                                                                        <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.print', $surgery) }}" target="_blank">
-                                                                            <i class="fas fa-print text-secondary me-2"></i> طباعة الوصل
-                                                                        </a>
-                                                                    </li>
-
-                                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
-                                                                    <li><hr class="dropdown-divider my-1"></li>
-                                                                    <li>
-                                                                        <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
-                                                                            @csrf
-                                                                            @method('DELETE')
-                                                                            <button type="submit" class="dropdown-item text-danger rounded-2 py-2">
-                                                                                <i class="fas fa-trash-alt me-2"></i> حذف / إلغاء الحجز
-                                                                            </button>
-                                                                        </form>
-                                                                    </li>
-                                                                    @endif
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                </tr>
+                                                            </form>
+                                                        </li>
+                                                        @endif
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
                                                 <tr class="bg-light">
                                                     <td colspan="{{ auth()->user()->hasRole(['receptionist', 'inquiry_staff']) ? '8' : '9' }}">
                                                         <div class="collapse" id="detailsRow{{ $surgery->id }}">
@@ -647,68 +760,94 @@ input[type="radio"]:checked + .frequency-btn {
                         <div class="card-body">
                             @if($completedSurgeries->count() > 0)
                             <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead class="table-light">
+                                <table class="table table-hover table-surgeries align-middle">
+                                    <thead>
                                         <tr>
+                                            <th style="width: 50px;">#</th>
                                             <th>المريض</th>
-                                            <th>الطبيب</th>
                                             <th>نوع العملية</th>
-                                            <th>التاريخ</th>
-                                            <th>الوقت</th>
+                                            <th>الطبيب الجراح</th>
+                                            <th>تاريخ وموعد العملية</th>
                                             <th>الغرفة</th>
                                             <th>الحالة</th>
                                             <th>تاريخ الخروج</th>
-                                            <th>الإجراءات</th>
+                                            <th class="text-center" style="width: 140px;">الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($completedSurgeries as $surgery)
                                         <tr>
+                                            <td class="text-muted fw-bold">#{{ $surgery->id }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-link text-start p-0 m-0 w-100" data-bs-toggle="collapse" data-bs-target="#detailsRowCompleted{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRowCompleted{{ $surgery->id }}">
-                                                    <i class="fas fa-user-injured text-primary me-1"></i>
-                                                    {{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}
+                                                <button type="button" class="patient-title-btn" data-bs-toggle="collapse" data-bs-target="#detailsRowCompleted{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRowCompleted{{ $surgery->id }}">
+                                                    <i class="fas fa-user-circle text-secondary fs-5"></i>
+                                                    <span>{{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}</span>
                                                 </button>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-user-md text-success me-1"></i>
-                                                @if($surgery->doctor && $surgery->doctor->user)
-                                                    د. {{ $surgery->doctor->user->name }}
-                                                @elseif($surgery->surgeon_name)
-                                                    {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
-                                                @else
-                                                    <span class="text-muted">غير محدد</span>
+                                                @if($surgery->patient && $surgery->patient->user && $surgery->patient->user->phone)
+                                                    <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
+                                                        <i class="fas fa-phone-alt me-1"></i>{{ $surgery->patient->user->phone }}
+                                                    </div>
                                                 @endif
                                             </td>
-                                            <td>{{ $surgery->surgery_type }}</td>
-                                            <td>{{ $surgery->scheduled_date->format('Y-m-d') }}</td>
-                                            <td>{{ $surgery->scheduled_time }}</td>
+                                            <td>
+                                                <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
+                                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
+                                                    <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fas fa-user-md text-success"></i>
+                                                    <span class="fw-semibold">
+                                                        @if($surgery->doctor && $surgery->doctor->user)
+                                                            د. {{ $surgery->doctor->user->name }}
+                                                        @elseif($surgery->surgeon_name)
+                                                            {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">خارجي</span>
+                                                        @else
+                                                            <span class="text-muted">غير محدد</span>
+                                                        @endif
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark">
+                                                    <i class="fas fa-calendar-day text-secondary me-1"></i>
+                                                    {{ $surgery->scheduled_date->format('Y-m-d') }}
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock text-secondary me-1"></i>
+                                                    {{ is_object($surgery->scheduled_time) ? $surgery->scheduled_time->format('H:i') : substr($surgery->scheduled_time, 0, 5) }}
+                                                </small>
+                                            </td>
                                             <td>
                                                 @if($surgery->room)
-                                                    <span class="badge bg-primary">
-                                                        <i class="fas fa-bed me-1"></i>
-                                                        {{ $surgery->room->room_number }}
+                                                    @php $rtype = $surgery->room->room_type; @endphp
+                                                    <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
+                                                        @if($rtype === 'vvip')
+                                                            <i class="fas fa-gem text-warning"></i> VVIP {{ $surgery->room->room_number }}
+                                                        @elseif($rtype === 'vip')
+                                                            <i class="fas fa-crown text-warning"></i> VIP {{ $surgery->room->room_number }}
+                                                        @else
+                                                            <i class="fas fa-bed text-primary"></i> {{ $surgery->room->room_number }}
+                                                        @endif
                                                     </span>
-                                                    <br>
-                                                    <small class="text-muted">{{ $surgery->room->room_type_name }}</small>
                                                 @else
-                                                    <span class="badge bg-secondary">غير محدد</span>
+                                                    <span class="badge bg-light text-muted border">بدون غرفة</span>
                                                 @endif
                                             </td>
                                             <td>
                                                 @if($surgery->status == 'completed')
-                                                    <span class="badge bg-success">مكتملة</span>
+                                                    <span class="status-badge-pill status-completed"><i class="fas fa-check-circle me-1"></i>مكتملة</span>
                                                 @else
-                                                    <span class="badge bg-danger">ملغاة</span>
+                                                    <span class="status-badge-pill status-cancelled"><i class="fas fa-times-circle me-1"></i>ملغاة</span>
                                                 @endif
                                             </td>
                                             <td>
                                                 @if($surgery->discharged_at)
-                                                    <span class="text-success fw-bold">
+                                                    <span class="text-success fw-bold d-block">
                                                         <i class="fas fa-calendar-check me-1"></i>
                                                         {{ $surgery->discharged_at->format('Y-m-d') }}
                                                     </span>
-                                                    <br>
                                                     <small class="text-muted">
                                                         <i class="fas fa-clock me-1"></i>
                                                         {{ $surgery->discharged_at->format('H:i') }}
@@ -721,18 +860,17 @@ input[type="radio"]:checked + .frequency-btn {
                                                         </small>
                                                     @endif
                                                 @else
-                                                    <span class="text-muted">
-                                                        <i class="fas fa-minus-circle me-1"></i>
+                                                    <span class="badge bg-light text-secondary border">
                                                         لم يخرج بعد
                                                     </span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td class="text-center">
                                                 <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle px-2 py-1 shadow-sm rounded-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <button class="btn btn-sm btn-light border dropdown-toggle px-3 py-1 shadow-sm rounded-pill fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                         <i class="fas fa-ellipsis-v me-1"></i> الإجراءات
                                                     </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 p-2 text-end" style="min-width: 175px;">
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2 text-end" style="min-width: 180px;">
                                                         @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
                                                         <li>
                                                             <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.show', $surgery) }}">
@@ -761,7 +899,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                             <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
                                                                 @csrf
                                                                 @method('DELETE')
-                                                                <button type="submit" class="dropdown-item text-danger rounded-2 py-2">
+                                                                <button type="submit" class="dropdown-item text-danger rounded-2 py-2 fw-semibold">
                                                                     <i class="fas fa-trash-alt me-2"></i> حذف السجل
                                                                 </button>
                                                             </form>
