@@ -45,7 +45,7 @@
                     <div>
                         <span class="small opacity-75 d-block mb-1">إجمالي الغرف</span>
                         <h3 class="mb-0 fw-bold">{{ $stats['total'] }}</h3>
-                        <small class="opacity-75">{{ $stats['regular'] }} عادية | {{ $stats['vip'] }} VIP</small>
+                        <small class="opacity-75">{{ $stats['regular'] }} عادية | {{ $stats['vip'] }} VIP | {{ $stats['vvip'] }} VVIP</small>
                     </div>
                     <div class="p-3 bg-white bg-opacity-20 rounded-circle">
                         <i class="fas fa-door-open fa-2x"></i>
@@ -141,6 +141,7 @@
                         <a href="{{ route('rooms.index', request()->except('type')) }}" class="btn {{ !request('type') ? 'btn-dark' : 'btn-outline-dark' }}">كافة الأنواع</a>
                         <a href="{{ route('rooms.index', array_merge(request()->except('type'), ['type' => 'regular'])) }}" class="btn {{ request('type') == 'regular' ? 'btn-secondary' : 'btn-outline-secondary' }}">عادية</a>
                         <a href="{{ route('rooms.index', array_merge(request()->except('type'), ['type' => 'vip'])) }}" class="btn {{ request('type') == 'vip' ? 'btn-warning text-dark fw-bold' : 'btn-outline-warning' }}">⭐ VIP</a>
+                        <a href="{{ route('rooms.index', array_merge(request()->except('type'), ['type' => 'vvip'])) }}" class="btn {{ request('type') == 'vvip' ? 'btn-dark fw-bold text-white' : 'btn-outline-dark' }}">💎 VVIP</a>
                     </div>
                 </div>
             </div>

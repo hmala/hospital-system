@@ -546,7 +546,7 @@ body {
                                         'maintenance' => '#d97706',
                                         default       => '#64748b'
                                     };
-                                    $typeBg = $room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '';
+                                    $typeBg = $room->room_type === 'vvip' ? 'bg-dark bg-opacity-10 border-dark' : ($room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '');
                                     $isAvailable = $room->status === 'available';
                                 @endphp
                                 <div class="room-tile room-selectable {{ $typeBg }} {{ !$room->is_active ? 'opacity-50' : '' }}"
@@ -562,7 +562,9 @@ body {
 
                                     <div class="room-number" style="color: {{ $borderHex }};">{{ $room->room_number }}</div>
                                     <div class="room-badges">
-                                        @if($room->room_type === 'vip')
+                                        @if($room->room_type === 'vvip')
+                                            <span class="badge bg-dark text-white" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VVIP</span>
+                                        @elseif($room->room_type === 'vip')
                                             <span class="badge bg-warning text-dark" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VIP</span>
                                         @endif
                                     </div>

@@ -55,6 +55,7 @@ class RoomController extends Controller
             'maintenance' => Room::where('status', 'maintenance')->count(),
             'regular' => Room::where('room_type', 'regular')->where('is_active', true)->count(),
             'vip' => Room::where('room_type', 'vip')->where('is_active', true)->count(),
+            'vvip' => Room::where('room_type', 'vvip')->where('is_active', true)->count(),
         ];
 
         // قائمة الطوابق للتصفية
@@ -90,7 +91,7 @@ class RoomController extends Controller
 
         $validated = $request->validate([
             'room_number' => 'required|string|max:50|unique:rooms,room_number',
-            'room_type' => 'required|in:regular,vip',
+            'room_type' => 'required|in:regular,vip,vvip',
             'floor' => 'nullable|string|max:50',
             'daily_fee' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:500',
@@ -161,7 +162,7 @@ class RoomController extends Controller
 
         $validated = $request->validate([
             'room_number' => 'required|string|max:50|unique:rooms,room_number,' . $room->id,
-            'room_type' => 'required|in:regular,vip',
+            'room_type' => 'required|in:regular,vip,vvip',
             'floor' => 'nullable|string|max:50',
             'daily_fee' => 'required|numeric|min:0',
             'status' => 'required|in:available,occupied,maintenance',

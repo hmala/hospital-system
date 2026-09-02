@@ -56,7 +56,8 @@
                                 <select class="form-select @error('room_type') is-invalid @enderror" 
                                         id="room_type" name="room_type" required>
                                     <option value="regular" {{ old('room_type', $room->room_type) == 'regular' ? 'selected' : '' }}>عادية</option>
-                                    <option value="vip" {{ old('room_type', $room->room_type) == 'vip' ? 'selected' : '' }}>VIP</option>
+                                    <option value="vip" {{ old('room_type', $room->room_type) == 'vip' ? 'selected' : '' }}>VIP (ممتازة)</option>
+                                    <option value="vvip" {{ old('room_type', $room->room_type) == 'vvip' ? 'selected' : '' }}>💎 VVIP (جناح خاص / ملكي)</option>
                                 </select>
                                 @error('room_type')
                                     <div class="invalid-feedback">{{ $message }}</div>

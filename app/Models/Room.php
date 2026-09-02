@@ -36,6 +36,7 @@ class Room extends Model
      */
     const TYPE_REGULAR = 'regular';
     const TYPE_VIP = 'vip';
+    const TYPE_VVIP = 'vvip';
 
     /**
      * حالات الغرفة
@@ -121,6 +122,7 @@ class Room extends Model
     public function getRoomTypeNameAttribute()
     {
         return match($this->room_type) {
+            self::TYPE_VVIP => 'VVIP',
             self::TYPE_VIP => 'VIP',
             default => 'عادية',
         };
@@ -158,6 +160,7 @@ class Room extends Model
     public function getRoomTypeColorAttribute()
     {
         return match($this->room_type) {
+            self::TYPE_VVIP => 'dark',
             self::TYPE_VIP => 'warning',
             default => 'primary',
         };

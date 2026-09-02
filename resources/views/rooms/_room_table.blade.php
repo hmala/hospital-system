@@ -41,7 +41,11 @@
                 </td>
                 <td class="text-muted">{{ $room->floor ?: 'بدون طابق' }}</td>
                 <td>
-                    @if($room->room_type === 'vip')
+                    @if($room->room_type === 'vvip')
+                        <span class="badge bg-dark text-white border border-secondary px-2 py-1 shadow-sm">
+                            <i class="fas fa-gem text-warning me-1"></i>VVIP
+                        </span>
+                    @elseif($room->room_type === 'vip')
                         <span class="badge bg-warning text-dark border border-warning px-2 py-1">
                             <i class="fas fa-crown me-1"></i>VIP
                         </span>

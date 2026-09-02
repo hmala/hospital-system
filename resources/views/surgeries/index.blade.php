@@ -252,7 +252,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                     {{ $surgery->room->room_number }}
                                                                 </span>
                                                                 <br>
-                                                                <small class="text-muted">{{ $surgery->room->room_type == 'vip' ? 'VIP' : 'عادية' }}</small>
+                                                                <small class="text-muted">{{ $surgery->room->room_type_name }}</small>
                                                             @else
                                                                 <span class="badge bg-secondary">غير محدد</span>
                                                             @endif
@@ -690,7 +690,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                         {{ $surgery->room->room_number }}
                                                     </span>
                                                     <br>
-                                                    <small class="text-muted">{{ $surgery->room->room_type == 'vip' ? 'VIP' : 'عادية' }}</small>
+                                                    <small class="text-muted">{{ $surgery->room->room_type_name }}</small>
                                                 @else
                                                     <span class="badge bg-secondary">غير محدد</span>
                                                 @endif
