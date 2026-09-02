@@ -1162,67 +1162,7 @@ window.removeTreatment = function(button) {
         };
     });
 </script>
-<datalist id="commonMedications{{ $surgery->id }}">
-    <option value="أموكسيكلاف (Amoxicillin-Clavulanate)">
-    <option value="سيفالكسين (Cephalexin)">
-    <option value="سيفازولين (Cefazolin)">
-    <option value="ميترونيدازول (Metronidazole)">
-    <option value="سيبروفلوكساسين (Ciprofloxacin)">
-    <option value="تريميثوبريم-سلفاميثوكسازول (Trimethoprim-Sulfamethoxazole)">
-    <option value="إيبوبروفين (Ibuprofen)">
-    <option value="باراسيتامول (Paracetamol)">
-    <option value="ديكلوفيناك (Diclofenac)">
-    <option value="ترامادول (Tramadol)">
-    <option value="مورفين (Morphine)">
-    <option value="أسبرين (Aspirin)">
-    <option value="وارفارين (Warfarin)">
-    <option value="إنسولين (Insulin)">
-    <option value="ميتفورمين (Metformin)">
-    <option value="أتورفاستاتين (Atorvastatin)">
-    <option value="لوسارتان (Losartan)">
-    <option value="أملوديبين (Amlodipine)">
-    <option value="فوروسيميد (Furosemide)">
-    <option value="ديجوكسين (Digoxin)">
-    <option value="بريدنيزون (Prednisone)">
-    <option value="أوميبرازول (Omeprazole)">
-    <option value="رانيتيدين (Ranitidine)">
-    <option value="ألبرازولام (Alprazolam)">
-    <option value="ديازيبام (Diazepam)">
-    <option value="فلوكسيتين (Fluoxetine)">
-    <option value="سيرترالين (Sertraline)">
-    <option value="أميتريبتيلين (Amitriptyline)">
-    <option value="كلونازيبام (Clonazepam)">
-    <option value="فينيتوين (Phenytoin)">
-    <option value="كاربامازيبين (Carbamazepine)">
-    <option value="فالبروات (Valproate)">
-    <option value="ليفوثيروكسين (Levothyroxine)">
-    <option value="بروبيل ثيوراسيل (Propylthiouracil)">
-    <option value="ميثيمازول (Methimazole)">
-    <option value="هيبارين (Heparin)">
-    <option value="إينوكسابارين (Enoxaparin)">
-    <option value="كلوبيدوغريل (Clopidogrel)">
-    <option value="تيكاغريلور (Ticagrelor)">
-    <option value="ريفامبيسين (Rifampicin)">
-    <option value="إيزونيازيد (Isoniazid)">
-    <option value="إيثامبوتول (Ethambutol)">
-    <option value="بيرازيناميد (Pyrazinamide)">
-    <option value="فيتامين D">
-    <option value="كالسيوم">
-    <option value="حديد">
-    <option value="فيتامين B12">
-    <option value="فولات">
-    <option value="زنك">
-    <option value="مغنيسيوم">
-    <option value="بوتاسيوم">
-    <option value="صوديوم">
-    <option value="كلوريد">
-    <option value="بيكربونات">
-</datalist>
-
-<!-- Common Medications DataList for Completed Surgeries -->
-@foreach($completedSurgeries as $surgery)
-@if($surgery->status == 'completed')
-<datalist id="commonMedications{{ $surgery->id }}">
+<datalist id="commonMedications">
     <option value="أموكسيسيلين (Amoxicillin)">
     <option value="أزيثروميسين (Azithromycin)">
     <option value="أموكسيكلاف (Amoxicillin-Clavulanate)">
@@ -1280,8 +1220,6 @@ window.removeTreatment = function(button) {
     <option value="كلوريد">
     <option value="بيكربونات">
 </datalist>
-@endif
-@endforeach
 
 @endsection
 
