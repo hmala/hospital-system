@@ -206,19 +206,20 @@ class DoctorController extends Controller
         ]);
 
         try {
-            // إنشاء بريد إلكتروني فريد وصالح من الاسم
-            $slugName = strtolower(trim($request->name));
-            $slugName = preg_replace('/[^a-z0-9]+/i', '_', $slugName); // يلتقط أحرف إنجليزية وأرقام فقط
-            $slugName = trim($slugName, '_');
-            if (empty($slugName)) {
-                $slugName = 'doctor';
+            // توليد بريد إلكتروني تسلسلي موحد للأطباء الخارجيين (ext101@hospital.com, ext102@hospital.com...)
+            $lastExtUser = User::where('email', 'like', 'ext%@hospital.com')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $nextNumber = 101;
+            if ($lastExtUser && preg_match('/^ext(\d+)@hospital\.com$/', $lastExtUser->email, $matches)) {
+                $nextNumber = max($nextNumber, ((int)$matches[1]) + 1);
             }
 
-            $email = 'external_' . $slugName . '_' . uniqid() . '@external.local';
-
-            // ضمان عدم تكرار البريد
+            $email = 'ext' . $nextNumber . '@hospital.com';
             while (User::where('email', $email)->exists()) {
-                $email = 'external_' . $slugName . '_' . uniqid() . '@external.local';
+                $nextNumber++;
+                $email = 'ext' . $nextNumber . '@hospital.com';
             }
 
             // التحقق من وجود طبيب بنفس الاسم
@@ -233,11 +234,11 @@ class DoctorController extends Controller
                 ], 422);
             }
 
-            // إنشاء مستخدم للطبيب الخارجي
+            // إنشاء مستخدم للطبيب الخارجي ببريد تسلسلي وكلمة مرور موحدة
             $user = User::create([
                 'name' => $request->name,
                 'email' => $email,
-                'password' => Hash::make(uniqid()), // كلمة مرور عشوائية
+                'password' => Hash::make('Doctor@123'), // كلمة مرور موحدة وقياسية
                 'role' => 'doctor', // دور طبيب عادي (التمييز يتم عبر is_active في جدول doctors)
             ]);
             
