@@ -108,6 +108,32 @@ body {
     z-index: 1060 !important;
 }
 
+.select2-results__options {
+    max-height: 200px !important;
+    overflow-y: auto !important;
+}
+
+.select2-results__options::-webkit-scrollbar {
+    width: 6px;
+}
+.select2-results__options::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+.select2-results__options::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+.select2-results__group {
+    padding: 4px 10px !important;
+    font-size: 0.74rem !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
 .select2-results__option {
     padding: 6px 8px !important;
     font-weight: 600 !important;
