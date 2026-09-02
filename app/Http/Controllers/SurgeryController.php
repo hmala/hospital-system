@@ -215,7 +215,7 @@ class SurgeryController extends Controller
         if ($request->room_id) {
             $room = Room::find($request->room_id);
             if ($room) {
-                $surgeryData['room_fee'] = Surgery::getInitialRoomFeeForType($room->room_type);
+                $surgeryData['room_fee'] = Room::getInitialFeeForType($room->room_type);
                 // تحديث حالة الغرفة لمحجوزة
                 $room->update(['status' => 'occupied']);
             }
@@ -432,7 +432,7 @@ class SurgeryController extends Controller
                 $newRoom = Room::find($request->room_id);
                 if ($newRoom) {
                     $newRoom->update(['status' => 'occupied']);
-                    $surgeryData['room_fee'] = Surgery::getInitialRoomFeeForType($newRoom->room_type);
+                    $surgeryData['room_fee'] = Room::getInitialFeeForType($newRoom->room_type);
                 }
             } else {
                 $surgeryData['room_fee'] = 0;

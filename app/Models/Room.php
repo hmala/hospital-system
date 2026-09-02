@@ -39,6 +39,18 @@ class Room extends Model
     const TYPE_VVIP = 'vvip';
 
     /**
+     * احتساب أجرة الليلة الأولى حسب نوع الغرفة (عادية: 0 | VIP: 100,000 | VVIP: 200,000)
+     */
+    public static function getInitialFeeForType(?string $roomType): float
+    {
+        return match($roomType) {
+            'vvip' => 200000.0,
+            'vip' => 100000.0,
+            default => 0.0,
+        };
+    }
+
+    /**
      * حالات الغرفة
      */
     const STATUS_AVAILABLE = 'available';
