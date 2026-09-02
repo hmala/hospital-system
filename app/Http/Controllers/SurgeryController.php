@@ -1044,7 +1044,7 @@ class SurgeryController extends Controller
     public function destroy(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff'])) {
+        if (!$user->hasRole(['admin', 'surgery_staff', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist'])) {
             abort(403, 'غير مصرح لك بحذف العملية');
         }
 

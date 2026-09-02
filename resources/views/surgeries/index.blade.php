@@ -291,7 +291,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                     </li>
                                                                     @endif
                                                                     
-                                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff']))
+                                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
                                                                     <li>
                                                                         <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.edit', $surgery) }}">
                                                                             <i class="fas fa-edit text-warning me-2"></i> تعديل الحجز
@@ -305,7 +305,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                         </a>
                                                                     </li>
 
-                                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff']))
+                                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
                                                                     <li><hr class="dropdown-divider my-1"></li>
                                                                     <li>
                                                                         <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
@@ -741,7 +741,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                         </li>
                                                         @endif
                                                         
-                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff']))
+                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
                                                         <li>
                                                             <a class="dropdown-item rounded-2 py-2" href="{{ route('surgeries.edit', $surgery) }}">
                                                                 <i class="fas fa-edit text-warning me-2"></i> تعديل الحجز
@@ -755,7 +755,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                             </a>
                                                         </li>
 
-                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff']))
+                                                        @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
                                                         <li><hr class="dropdown-divider my-1"></li>
                                                         <li>
                                                             <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
