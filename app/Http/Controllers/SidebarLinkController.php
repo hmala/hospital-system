@@ -9,7 +9,7 @@ class SidebarLinkController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth','role:admin']);
+        $this->middleware(['auth','role:admin|admin-hsop|hospital_admin']);
     }
 
     /**
