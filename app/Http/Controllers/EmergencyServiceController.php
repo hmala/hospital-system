@@ -7,6 +7,16 @@ use Illuminate\Http\Request;
 
 class EmergencyServiceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (!auth()->user() || (!auth()->user()->hasRole(['admin', 'accountant']) && !auth()->user()->can('manage emergency services'))) {
+                abort(403, 'غير مصرح لك بالوصول إلى إدارة خدمات وأسعار الطوارئ.');
+            }
+            return $next($request);
+        });
+    }
+
     public function index(Request $request)
     {
         $query = EmergencyService::query();

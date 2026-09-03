@@ -787,13 +787,13 @@
                         </li>
                         @endcan
 
-                        @canany(['view emergencies', 'manage emergency services', 'admin'])
+                        @if(auth()->user()->hasRole(['admin', 'accountant']) || auth()->user()->can('manage emergency services'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency-services.*') ? 'active' : '' }}" href="{{ route('emergency-services.index') }}">
                                 <i class="fas fa-hand-holding-medical"></i><span> خدمات الطوارئ</span>
                             </a>
                         </li>
-                        @endcanany
+                        @endif
                         </div>
                         @endcanany
 
