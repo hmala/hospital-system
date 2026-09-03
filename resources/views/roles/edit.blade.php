@@ -271,6 +271,8 @@
                                                         'inquiry.create.radiology.ultrasound' => ['label' => 'حجز سونار', 'icon' => 'fa-wave-square', 'color' => 'cyan'],
                                                         'inquiry.create.radiology.mri' => ['label' => 'حجز رنين مغناطيسي', 'icon' => 'fa-magnet', 'color' => 'cyan'],
                                                         'inquiry.create.radiology.echo' => ['label' => 'حجز إيكو (فحص قلب)', 'icon' => 'fa-heartbeat', 'color' => 'cyan'],
+                                                        // خدمات الطوارئ
+                                                        'manage emergency services' => ['label' => 'إدارة خدمات وأسعار الطوارئ', 'icon' => 'fa-hand-holding-medical', 'color' => 'danger'],
                                                     ];
                                                     
                                                     if (isset($sectionPermissions[$permission->name])) {
