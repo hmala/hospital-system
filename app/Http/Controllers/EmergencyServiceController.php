@@ -10,9 +10,23 @@ class EmergencyServiceController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (!auth()->user() || (!auth()->user()->hasRole(['admin', 'accountant']) && !auth()->user()->can('manage emergency services'))) {
+            $user = auth()->user();
+            if (!$user) {
+                abort(403);
+            }
+
+            $isAdminOrAccountant = $user->hasRole(['admin', 'accountant']);
+            $hasPerm = false;
+            try {
+                $hasPerm = $user->hasPermissionTo('manage emergency services');
+            } catch (\Throwable $e) {
+                $hasPerm = false;
+            }
+
+            if (!$isAdminOrAccountant && !$hasPerm) {
                 abort(403, 'غير مصرح لك بالوصول إلى إدارة خدمات وأسعار الطوارئ.');
             }
+
             return $next($request);
         });
     }

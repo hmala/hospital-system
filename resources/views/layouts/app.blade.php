@@ -787,7 +787,20 @@
                         </li>
                         @endcan
 
-                        @if(auth()->user()->hasRole(['admin', 'accountant']) || auth()->user()->can('manage emergency services'))
+                        @php
+                            $canSeeEmergencyServices = false;
+                            if (Auth::check()) {
+                                $canSeeEmergencyServices = Auth::user()->hasRole(['admin', 'accountant']);
+                                if (!$canSeeEmergencyServices) {
+                                    try {
+                                        $canSeeEmergencyServices = Auth::user()->hasPermissionTo('manage emergency services');
+                                    } catch (\Throwable $e) {
+                                        $canSeeEmergencyServices = false;
+                                    }
+                                }
+                            }
+                        @endphp
+                        @if($canSeeEmergencyServices)
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency-services.*') ? 'active' : '' }}" href="{{ route('emergency-services.index') }}">
                                 <i class="fas fa-hand-holding-medical"></i><span> خدمات الطوارئ</span>
