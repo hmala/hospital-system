@@ -248,46 +248,6 @@
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Edit Service Modal -->
-                        <div class="modal fade" id="editServiceModal{{ $service->id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content border-0 shadow rounded-4">
-                                    <form action="{{ route('emergency-services.update', $service) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                        <div class="modal-header bg-warning bg-opacity-10 border-0 py-3 px-4">
-                                            <h5 class="modal-title fw-bold text-dark">
-                                                <i class="fas fa-edit text-warning me-2"></i>تعديل خدمة الطوارئ
-                                            </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body p-4">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">اسم الخدمة <span class="text-danger">*</span></label>
-                                                <input type="text" name="name" class="form-control rounded-3" value="{{ $service->name }}" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">السعر (د.ع) <span class="text-danger">*</span></label>
-                                                <input type="number" step="1000" name="price" class="form-control rounded-3" value="{{ (int)$service->price }}" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">التصنيف (اختياري)</label>
-                                                <input type="text" name="category" class="form-control rounded-3" value="{{ $service->category }}" placeholder="مثال: تمريض، جراحة صغرى، تنفسية...">
-                                            </div>
-                                            <div class="form-check form-switch mt-3">
-                                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveSwitch{{ $service->id }}" {{ $service->is_active ? 'checked' : '' }}>
-                                                <label class="form-check-label fw-semibold" for="isActiveSwitch{{ $service->id }}">تفعيل الخدمة</label>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer border-0 p-4 pt-0">
-                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-                                            <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">حفظ التعديلات</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
                         @endforeach
                     </tbody>
                 </table>
@@ -311,15 +271,17 @@
         </div>
     </div>
 </div>
+@endsection
 
+@push('modals')
 <!-- Create Service Modal -->
-<div class="modal fade" id="createServiceModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="createServiceModal" tabindex="-1" aria-labelledby="createServiceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content border-0 shadow-lg rounded-4">
             <form action="{{ route('emergency-services.store') }}" method="POST">
                 @csrf
-                <div class="modal-header bg-danger text-white border-0 py-3 px-4">
-                    <h5 class="modal-title fw-bold">
+                <div class="modal-header bg-danger text-white border-0 py-3 px-4 rounded-top-4">
+                    <h5 class="modal-title fw-bold" id="createServiceModalLabel">
                         <i class="fas fa-plus-circle me-2"></i>إضافة خدمة طوارئ جديدة
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -350,4 +312,46 @@
         </div>
     </div>
 </div>
-@endsection
+
+<!-- Edit Modals -->
+@foreach($services as $service)
+<div class="modal fade" id="editServiceModal{{ $service->id }}" tabindex="-1" aria-labelledby="editServiceModalLabel{{ $service->id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="{{ route('emergency-services.update', $service) }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-header bg-warning text-dark border-0 py-3 px-4 rounded-top-4">
+                    <h5 class="modal-title fw-bold" id="editServiceModalLabel{{ $service->id }}">
+                        <i class="fas fa-edit me-2"></i>تعديل خدمة الطوارئ
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">اسم الخدمة <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control rounded-3" value="{{ $service->name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">السعر (د.ع) <span class="text-danger">*</span></label>
+                        <input type="number" step="1000" name="price" class="form-control rounded-3" value="{{ (int)$service->price }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">التصنيف (اختياري)</label>
+                        <input type="text" name="category" class="form-control rounded-3" value="{{ $service->category }}" placeholder="مثال: تمريض، جراحة صغرى، تنفسية...">
+                    </div>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveSwitch{{ $service->id }}" {{ $service->is_active ? 'checked' : '' }}>
+                        <label class="form-check-label fw-semibold" for="isActiveSwitch{{ $service->id }}">تفعيل الخدمة</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endforeach
+@endpush
