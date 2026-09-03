@@ -63,6 +63,8 @@ Route::middleware(['auth'])->group(function () {
     // إدارة العيادات (استثناء index لأنه متاح للجميع)
     Route::get('/departments/admin', [DepartmentController::class, 'index'])
         ->name('departments.admin');
+    Route::get('/departments/list', [DepartmentController::class, 'index'])
+        ->name('departments.index');
     Route::resource('departments', DepartmentController::class)->except(['index']);
     
     // إدارة الأطباء

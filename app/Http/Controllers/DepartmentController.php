@@ -64,7 +64,7 @@ class DepartmentController extends Controller
             'is_active' => $request->has('is_active')
         ]);
 
-        return redirect()->route('departments.index')
+        return redirect()->route('departments.admin')
             ->with('success', 'تم إضافة العيادة بنجاح');
     }
 
@@ -97,7 +97,7 @@ class DepartmentController extends Controller
 
         $department->update($request->all());
 
-        return redirect()->route('departments.index')
+        return redirect()->route('departments.admin')
             ->with('success', 'تم تحديث العيادة بنجاح');
     }
 
@@ -105,7 +105,7 @@ class DepartmentController extends Controller
     {
         $department->delete();
 
-        return redirect()->route('departments.index')
+        return redirect()->route('departments.admin')
             ->with('success', 'تم حذف العيادة بنجاح');
     }
 }

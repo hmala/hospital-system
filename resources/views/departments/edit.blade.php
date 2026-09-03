@@ -9,7 +9,7 @@
                     <h5 class="mb-0 fw-bold text-dark">
                         <i class="fas fa-edit text-warning me-2"></i>تعديل بيانات العيادة: {{ $department->name }}
                     </h5>
-                    <a href="{{ route('departments.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <a href="{{ route('departments.admin') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                         <i class="fas fa-arrow-right me-1"></i>رجوع للعيادات
                     </a>
                 </div>
@@ -125,7 +125,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <a href="{{ route('departments.index') }}" class="btn btn-light rounded-pill px-4">إلغاء</a>
+                            <a href="{{ route('departments.admin') }}" class="btn btn-light rounded-pill px-4">إلغاء</a>
                             <button type="submit" class="btn btn-warning rounded-pill px-5 fw-bold">
                                 <i class="fas fa-save me-2"></i>حفظ التعديلات
                             </button>

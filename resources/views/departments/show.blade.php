@@ -14,7 +14,7 @@
                         <a href="{{ route('departments.edit', $department) }}" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">
                             <i class="fas fa-edit me-1"></i>تعديل
                         </a>
-                        <a href="{{ route('departments.index') }}" class="btn btn-light btn-sm rounded-pill px-3">
+                        <a href="{{ route('departments.admin') }}" class="btn btn-light btn-sm rounded-pill px-3">
                             <i class="fas fa-arrow-right me-1"></i>رجوع
                         </a>
                     </div>
