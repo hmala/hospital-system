@@ -786,6 +786,14 @@
                             </a>
                         </li>
                         @endcan
+
+                        @canany(['view emergencies', 'manage emergency services', 'admin'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('emergency-services.*') ? 'active' : '' }}" href="{{ route('emergency-services.index') }}">
+                                <i class="fas fa-hand-holding-medical"></i><span> خدمات الطوارئ</span>
+                            </a>
+                        </li>
+                        @endcanany
                         </div>
                         @endcanany
 
