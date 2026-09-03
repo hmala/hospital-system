@@ -47,7 +47,10 @@ class RoleManagementController extends Controller
             'guard_name' => 'web',
         ]);
 
-        if ($request->has('permissions')) {
+        if ($request->has('permissions') && is_array($request->permissions)) {
+            foreach ($request->permissions as $permName) {
+                Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+            }
             $role->syncPermissions($request->permissions);
         }
 
@@ -57,6 +60,8 @@ class RoleManagementController extends Controller
 
     public function rolesEdit(Role $role)
     {
+        Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
+
         $permissions = Permission::all()->groupBy(function($permission) {
             return $this->permissionGroup($permission->name);
         });
@@ -72,6 +77,12 @@ class RoleManagementController extends Controller
         ], [
             'display_name.required' => 'الاسم المعروض مطلوب',
         ]);
+
+        if ($request->has('permissions') && is_array($request->permissions)) {
+            foreach ($request->permissions as $permName) {
+                Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+            }
+        }
 
         $role->syncPermissions($request->permissions ?? []);
 
