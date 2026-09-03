@@ -47,12 +47,17 @@ class RoleManagementController extends Controller
             'guard_name' => 'web',
         ]);
 
+        $permissionModels = [];
         if ($request->has('permissions') && is_array($request->permissions)) {
             foreach ($request->permissions as $permName) {
-                Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                if (!empty($permName)) {
+                    $permissionModels[] = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                }
             }
-            $role->syncPermissions($request->permissions);
         }
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        $role->syncPermissions($permissionModels);
 
         return redirect()->route('roles.index')
             ->with('success', 'تم إضافة الدور بنجاح');
@@ -61,6 +66,7 @@ class RoleManagementController extends Controller
     public function rolesEdit(Role $role)
     {
         Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = Permission::all()->groupBy(function($permission) {
             return $this->permissionGroup($permission->name);
@@ -78,13 +84,17 @@ class RoleManagementController extends Controller
             'display_name.required' => 'الاسم المعروض مطلوب',
         ]);
 
+        $permissionModels = [];
         if ($request->has('permissions') && is_array($request->permissions)) {
             foreach ($request->permissions as $permName) {
-                Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                if (!empty($permName)) {
+                    $permissionModels[] = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                }
             }
         }
 
-        $role->syncPermissions($request->permissions ?? []);
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        $role->syncPermissions($permissionModels);
 
         return redirect()->route('roles.index')
             ->with('success', 'تم تحديث الدور بنجاح');
