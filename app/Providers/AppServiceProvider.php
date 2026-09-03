@@ -65,9 +65,9 @@ class AppServiceProvider extends ServiceProvider
             return auth()->check() && auth()->user()->can($permission);
         });
 
-        // الأدمن لديه صلاحيات كاملة لكل شيء تلقائياً
+        // الأدمن ومدير المستشفى لديهم صلاحيات كاملة لكل شيء تلقائياً
         Gate::before(function ($user, $ability) {
-            if ($user->hasRole('admin')) {
+            if ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin'])) {
                 return true;
             }
         });

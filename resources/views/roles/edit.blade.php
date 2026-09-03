@@ -16,6 +16,8 @@
                         <i class="fas fa-edit"></i> تعديل صلاحيات: 
                         @switch($role->name)
                             @case('admin') مدير النظام @break
+                            @case('admin-hsop') مدير المستشفى @break
+                            @case('hospital_admin') مدير المستشفى @break
                             @case('doctor') طبيب @break
                             @case('patient') مريض @break
                             @case('receptionist') موظف استقبال @break

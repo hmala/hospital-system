@@ -790,7 +790,7 @@
                         @php
                             $canSeeEmergencyServices = false;
                             if (Auth::check()) {
-                                $canSeeEmergencyServices = Auth::user()->hasRole(['admin', 'accountant']);
+                                $canSeeEmergencyServices = Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'accountant']);
                                 if (!$canSeeEmergencyServices) {
                                     try {
                                         $canSeeEmergencyServices = Auth::user()->hasPermissionTo('manage emergency services');
