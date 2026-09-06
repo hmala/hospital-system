@@ -82,7 +82,7 @@ class User extends Authenticatable
     // مساعدات الأدوار - متوافقة مع Spatie Permission
     public function isAdmin()
     {
-        return $this->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin']);
+        return $this->hasRole('admin');
     }
 
     public function isDoctor()

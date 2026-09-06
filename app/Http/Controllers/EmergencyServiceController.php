@@ -15,15 +15,14 @@ class EmergencyServiceController extends Controller
                 abort(403);
             }
 
-            $isAdminOrAccountant = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'accountant']);
             $hasPerm = false;
             try {
-                $hasPerm = $user->hasPermissionTo('manage emergency services');
+                $hasPerm = $user->can('manage emergency services');
             } catch (\Throwable $e) {
                 $hasPerm = false;
             }
 
-            if (!$isAdminOrAccountant && !$hasPerm) {
+            if (!$hasPerm) {
                 abort(403, 'غير مصرح لك بالوصول إلى إدارة خدمات وأسعار الطوارئ.');
             }
 

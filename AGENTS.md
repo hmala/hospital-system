@@ -58,26 +58,17 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
-## Session log (2026-09-03 — واجهة خدمات الطوارئ، الصلاحيات، وإدارة العيادات)
+## Session log (2026-09-06 — ضبط صلاحيات الأدوار والقائمة الجانبية لدور admin-hsop)
 
 ### Done
-- **نظام إدارة خدمات وأسعار الطوارئ (`emergency-services`)**:
-  * إضافة كونترولر `EmergencyServiceController` مع عمليات الإضافة والتعديل والتعطيل/التفعيل والحذف مع حماية العلاقات.
-  * تصميم واجهة `resources/views/emergency-services/index.blade.php` بإحصائيات وبحث ومودلات خارج الجدول لتفادي تظليل `backdrop`.
-  * إضافة الرابط في القائمة الجانبية تحت قسم الطوارئ.
-- **إدارة وتكامل الصلاحيات (`manage emergency services` و `admin-hsop`)**:
-  * إضافة ميجريشن الصلاحية `2026_09_03_100000_add_manage_emergency_services_permission.php`.
-  * ربط الصلاحية في شاشة تعديل الأدوار (`roles/edit`) تحت تصنيف الطوارئ.
-  * حماية الكود من أخطاء `PermissionDoesNotExist` عبر التحقق الآمن وتمرير كائنات الـ Models ومسح الكاش فورياً.
-  * اعتماد دور مدير المستشفى **`admin-hsop`** و **`hospital_admin`** في `Gate::before` و `User::isAdmin()` والكونترولرات لتجاوز حظر 403.
-- **واجهات إدارة العيادات (`departments`)**:
-  * إنشاء واجهتي التعديل `departments/edit.blade.php` والعرض `departments/show.blade.php`.
-  * تصحيح مسارات العيادات وإضافة الاسم البديل `departments.index` و `departments.admin`.
-- **تحديث المخطط المعرفي للمشروع (`graphify`)**:
-  * تشغيل `graphify update .` وتحديث شبكة الـ AST والتقارير بنسبة 100%.
+- **إصلاح عرض القائمة الجانبية لدور `admin-hsop`**:
+  * قصر التجاوز الشامل في `Gate::before` بـ `AppServiceProvider.php` على دور `admin` الرئيسي فقط، لتمكين Spatie Permissions من التحكم الفعلي في إظهار وإخفاء القوائم والأزرار لدور `admin-hsop` وبقية الأدوار.
+  * تحديث دالة `User::isAdmin()` لتقتصر على `admin` لمنع أي تجاوز غير مقصود لشروط الصلاحيات.
+  * تعديل تحقق الصلاحيات في القائمة الجانبية `layouts/app.blade.php` وكونترولر `EmergencyServiceController` لاستخدام `@can('manage emergency services')` بدلاً من فحص الأدوار الصلب.
+  * مسح وتحديث كاش الصلاحيات والإعدادات والـ Views بنجاح.
 
 ### Next Steps / Pending
-- المتابعة مع المستخدم لأي تحسينات إضافية على صلاحيات الأدوار أو العيادات.
+- المتابعة مع المستخدم لأي تعديلات إضافية على صلاحيات الأدوار.
 
 ### Issues known
 - لا يوجد حالياً.

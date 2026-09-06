@@ -756,7 +756,7 @@
                 
 
                         <!-- قسم الطوارئ -->
-                        @canany(['view emergencies', 'create emergencies', 'edit emergencies', 'manage emergency vitals'])
+                        @canany(['view emergencies', 'create emergencies', 'edit emergencies', 'manage emergency vitals', 'manage emergency services'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#emergencySection" aria-expanded="false">
                             <span><i class="fas fa-ambulance"></i> الطوارئ</span>
@@ -787,26 +787,13 @@
                         </li>
                         @endcan
 
-                        @php
-                            $canSeeEmergencyServices = false;
-                            if (Auth::check()) {
-                                $canSeeEmergencyServices = Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'accountant']);
-                                if (!$canSeeEmergencyServices) {
-                                    try {
-                                        $canSeeEmergencyServices = Auth::user()->hasPermissionTo('manage emergency services');
-                                    } catch (\Throwable $e) {
-                                        $canSeeEmergencyServices = false;
-                                    }
-                                }
-                            }
-                        @endphp
-                        @if($canSeeEmergencyServices)
+                        @can('manage emergency services')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency-services.*') ? 'active' : '' }}" href="{{ route('emergency-services.index') }}">
                                 <i class="fas fa-hand-holding-medical"></i><span> خدمات الطوارئ</span>
                             </a>
                         </li>
-                        @endif
+                        @endcan
                         </div>
                         @endcanany
 
