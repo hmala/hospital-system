@@ -160,6 +160,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inquiry/search', [InquiryController::class, 'search'])->name('inquiry.search');
     Route::get('/inquiry/search/patients', [InquiryController::class, 'searchPatients'])->name('inquiry.search.patients');
     Route::get('/inquiry/occupancy', [InquiryController::class, 'occupancy'])->name('inquiry.occupancy');
+    Route::get('/inquiry/patients/history/{patient?}', [InquiryController::class, 'patientHistory'])->name('inquiry.patients.history');
+    Route::post('/inquiry/patients/{patient}/documents', [InquiryController::class, 'uploadPatientDocument'])->name('inquiry.patients.documents.upload');
+    Route::delete('/inquiry/documents/{document}', [InquiryController::class, 'deletePatientDocument'])->name('inquiry.documents.delete');
+    Route::get('/inquiry/patients/{patient}/dossier/print', [InquiryController::class, 'printPatientDossier'])->name('inquiry.patients.dossier.print');
     Route::resource('inquiry', InquiryController::class);
     
     // إدارة المشتريات والمستودع
@@ -206,6 +210,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(['auth'])
         ->name('inventory.low_stock');
 
+    Route::get('/inventory/expiring', [\App\Http\Controllers\InventoryController::class, 'expiring'])
+        ->middleware(['auth'])
+        ->name('inventory.expiring');
+
     Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
         Route::get('/create', [\App\Http\Controllers\StockTransferController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
@@ -223,6 +231,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [\App\Http\Controllers\LocationController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\LocationController::class, 'store'])->name('store');
         Route::get('/{location}', [\App\Http\Controllers\LocationController::class, 'show'])->name('show');
+        Route::get('/{location}/edit', [\App\Http\Controllers\LocationController::class, 'edit'])->name('edit');
+        Route::put('/{location}', [\App\Http\Controllers\LocationController::class, 'update'])->name('update');
+        Route::delete('/{location}', [\App\Http\Controllers\LocationController::class, 'destroy'])->name('destroy');
     });
 
     // مسارات الكاشير (Cashier Routes)

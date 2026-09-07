@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('content')
 <div class="container-fluid py-4">
@@ -81,6 +81,7 @@
                             <table class="table table-hover align-middle mb-0" id="itemsTable">
                                 <thead class="table-light">
                                     <tr>
+                                        <th class="text-center" style="width: 50px;">#</th>
                                         <th>المادة</th>
                                         <th>الكمية</th>
                                         <th>سعر التكلفة</th>
@@ -115,9 +116,19 @@ let rowIdx = 0;
 const addRowButton = document.getElementById('addRow');
 const itemsTableBody = document.querySelector('#itemsTable tbody');
 
+function updateRowIndices() {
+    document.querySelectorAll('#itemsTable tbody tr').forEach((tr, i) => {
+        const indexCell = tr.querySelector('.row-index');
+        if (indexCell) {
+            indexCell.textContent = i + 1;
+        }
+    });
+}
+
 function createRow(index) {
     return `
         <tr id="row${index}">
+            <td class="text-center fw-bold row-index"></td>
             <td>
                 <select name="items[${index}][product_id]" class="form-control item-product" required>
                     <option value="" data-is-perishable="0">اختر المادة...</option>
@@ -158,11 +169,13 @@ addRowButton.addEventListener('click', function() {
     itemsTableBody.insertAdjacentHTML('beforeend', createRow(rowIdx));
     setExpiryValidation(rowIdx);
     rowIdx++;
+    updateRowIndices();
 });
 
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('remove-row')) {
         e.target.closest('tr').remove();
+        updateRowIndices();
     }
 });
 </script>

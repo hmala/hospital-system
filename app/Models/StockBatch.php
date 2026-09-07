@@ -68,6 +68,11 @@ class StockBatch extends Model
         return $query->where('current_qty', '>', 0);
     }
 
+    public function scopeFefo(Builder $query)
+    {
+        return $query->orderByRaw('expiry_date IS NULL, expiry_date ASC, COALESCE(original_received_at, received_at) ASC');
+    }
+
     public function movements()
     {
         return $this->hasMany(StockMovement::class, 'batch_id');

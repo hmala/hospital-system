@@ -148,9 +148,15 @@
                                 <span class="badge bg-info rounded-pill">{{ $role->permissions_count }}</span>
                             </li>
                         </ul>
-                        <a href="{{ route('roles.edit', $role) }}" class="btn btn-outline-primary btn-sm w-100">
-                            <i class="fas fa-edit"></i> تعديل الصلاحيات
-                        </a>
+                        @if($role->name === 'admin' && !auth()->user()->hasRole('admin'))
+                            <button type="button" class="btn btn-secondary btn-sm w-100" disabled title="هذا الدور محمي لمدير النظام العام فقط">
+                                <i class="fas fa-lock me-1"></i> دور نظام محمي
+                            </button>
+                        @else
+                            <a href="{{ route('roles.edit', $role) }}" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-edit"></i> تعديل الصلاحيات
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>

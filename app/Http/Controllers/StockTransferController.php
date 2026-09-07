@@ -125,7 +125,7 @@ class StockTransferController extends Controller
         $batches = StockBatch::where('product_id', $productId)
             ->where('location_id', $fromLocationId)
             ->where('current_qty', '>', 0)
-            ->orderByRaw('COALESCE(original_received_at, received_at)')
+            ->fefo()
             ->get();
 
         $availableQty = $batches->sum('current_qty');
@@ -175,7 +175,7 @@ class StockTransferController extends Controller
                 $batches = StockBatch::where('product_id', $productId)
                     ->where('location_id', $fromLocationId)
                     ->where('current_qty', '>', 0)
-                    ->orderByRaw('COALESCE(original_received_at, received_at)')
+                    ->fefo()
                     ->get();
 
                 $availableQty = $batches->sum('current_qty');
@@ -253,7 +253,7 @@ class StockTransferController extends Controller
         $productIds = collect($request->items)->pluck('product_id')->unique();
         $subLocationBatches = StockBatch::where('location_id', $request->to_location_id)
             ->whereIn('product_id', $productIds)
-            ->orderByRaw('COALESCE(original_received_at, received_at)')
+            ->fefo()
             ->get();
 
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
@@ -280,7 +280,7 @@ class StockTransferController extends Controller
                 $batches = StockBatch::where('product_id', $productId)
                     ->where('location_id', $fromLocationId)
                     ->where('current_qty', '>', 0)
-                    ->orderByRaw('COALESCE(original_received_at, received_at)')
+                    ->fefo()
                     ->get();
 
                 $availableQty = $batches->sum('current_qty');

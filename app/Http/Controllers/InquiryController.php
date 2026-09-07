@@ -13,8 +13,10 @@ use App\Models\RadiologyType;
 use App\Models\Emergency;
 use App\Models\ServiceType;
 use App\Models\User;
+use App\Models\PatientDocument;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 /**
@@ -1115,5 +1117,188 @@ class InquiryController extends Controller
             default:
                 return collect(); // مجموعة فارغة إذا لم يكن نوع معروف
         }
+    }
+
+    /**
+     * عرض السجل الطبي الشامل والأرشيف للمريض
+     */
+    public function patientHistory(HttpRequest $request, Patient $patient = null)
+    {
+        $search = $request->input('search');
+        $searchPatients = collect();
+
+        if ($search) {
+            $searchPatients = Patient::with('user')
+                ->where('national_id', 'LIKE', "%{$search}%")
+                ->orWhereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                      ->orWhere('phone', 'LIKE', "%{$search}%")
+                      ->orWhere('email', 'LIKE', "%{$search}%");
+                })
+                ->take(15)
+                ->get();
+
+            // إذا لم يتم تحديد مريض ووجدنا مريضاً مطابقاً تماماً
+            if (!$patient && $searchPatients->count() === 1 && !$request->has('list')) {
+                $patient = $searchPatients->first();
+            }
+        }
+
+        if ($patient && $patient->exists) {
+            // مزامنة تلقائية لأي أوراق تحويل عمليات سابقة لم يتم إدراجها في جدول المستندات
+            foreach ($patient->surgeries as $surgery) {
+                if ($surgery->referral_letter_path && !PatientDocument::where('file_path', $surgery->referral_letter_path)->exists()) {
+                    PatientDocument::create([
+                        'patient_id'  => $patient->id,
+                        'title'       => 'ورقة تحويل / مستند عملية: ' . ($surgery->surgery_type ?? 'عملية جراحية'),
+                        'category'    => 'surgery_consent',
+                        'file_path'   => $surgery->referral_letter_path,
+                        'file_name'   => basename($surgery->referral_letter_path),
+                        'file_type'   => 'image/jpeg',
+                        'notes'       => 'مرفق من حجز العملية #' . $surgery->id,
+                        'uploaded_by' => $surgery->created_by ?? null,
+                    ]);
+                }
+            }
+
+            $patient->load([
+                'user',
+                'visits' => function ($q) {
+                    $q->with(['department', 'doctor.user'])->latest();
+                },
+                'emergencies' => function ($q) {
+                    $q->with(['doctor.user', 'nurse.user'])->latest();
+                },
+                'surgeries' => function ($q) {
+                    $q->with(['doctor.user', 'room', 'anesthesiologist.user'])->latest();
+                },
+                'requests' => function ($q) {
+                    $q->with(['visit.doctor.user'])->latest();
+                },
+                'radiologyRequests' => function ($q) {
+                    $q->with(['radiologyType', 'doctor.user', 'performer', 'result'])->latest();
+                },
+                'documents' => function ($q) {
+                    $q->with('uploader')->latest();
+                },
+            ]);
+        }
+
+        $categories = PatientDocument::categories();
+
+        return view('inquiry.patient_history', compact('patient', 'search', 'searchPatients', 'categories'));
+    }
+
+    /**
+     * رفع أو أرشفة مستند للمريض (ملف عادي أو سحب ماسح ضوئي)
+     */
+    public function uploadPatientDocument(HttpRequest $request, Patient $patient)
+    {
+        $request->validate([
+            'title'                 => 'required|string|max:255',
+            'category'              => 'required|string|max:50',
+            'notes'                 => 'nullable|string|max:1000',
+            'document_file'         => 'nullable|file|mimes:jpeg,png,jpg,gif,webp,pdf,doc,docx|max:20480',
+            'scanned_image_base64'  => 'nullable|string',
+        ]);
+
+        $filePath = null;
+        $fileName = null;
+        $fileType = null;
+        $fileSize = null;
+
+        // الحالة 1: تم رفع ملف عادي من النموذج
+        if ($request->hasFile('document_file')) {
+            $file = $request->file('document_file');
+            $fileName = $file->getClientOriginalName();
+            $fileType = $file->getClientMimeType();
+            $fileSize = $file->getSize();
+            $storedName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $filePath = $file->storeAs('patient_documents/' . $patient->id, $storedName, 'public');
+        }
+        // الحالة 2: تم إرسال صورة مسحوبة مباشرة من الماسح الضوئي عبر Base64
+        elseif ($request->filled('scanned_image_base64')) {
+            $base64Data = $request->input('scanned_image_base64');
+            // تنظيف رأس Base64 إن وجد
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                $ext = strtolower($type[1]);
+            } else {
+                $ext = 'jpg';
+            }
+            $base64Data = base64_decode($base64Data);
+
+            if ($base64Data !== false) {
+                $storedName = 'scan_' . time() . '_' . uniqid() . '.' . $ext;
+                $relativePath = 'patient_documents/' . $patient->id . '/' . $storedName;
+                Storage::disk('public')->put($relativePath, $base64Data);
+
+                $filePath = $relativePath;
+                $fileName = 'سحب_سكنر_' . date('Y-m-d_H-i') . '.' . $ext;
+                $fileType = 'image/' . $ext;
+                $fileSize = strlen($base64Data);
+            }
+        }
+
+        if (!$filePath) {
+            return back()->with('error', 'يرجى اختيار ملف لرفعه أو سحب مستند من الماسح الضوئي.');
+        }
+
+        PatientDocument::create([
+            'patient_id'  => $patient->id,
+            'title'       => $request->input('title'),
+            'category'    => $request->input('category'),
+            'file_path'   => $filePath,
+            'file_name'   => $fileName,
+            'file_type'   => $fileType,
+            'file_size'   => $fileSize,
+            'notes'       => $request->input('notes'),
+            'uploaded_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('inquiry.patients.history', $patient->id)
+            ->with('success', 'تم حفظ المستند في أرشيف المريض بنجاح.');
+    }
+
+    /**
+     * حذف مستند من أرشيف المريض
+     */
+    public function deletePatientDocument(PatientDocument $document)
+    {
+        $patientId = $document->patient_id;
+
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        return redirect()->route('inquiry.patients.history', $patientId)
+            ->with('success', 'تم حذف المستند من الأرشيف بنجاح.');
+    }
+
+    /**
+     * طباعة الإضبارة والملف الطبي الشامل للمريض
+     */
+    public function printPatientDossier(Patient $patient)
+    {
+        $patient->load([
+            'user',
+            'visits.department',
+            'visits.doctor.user',
+            'emergencies.doctor.user',
+            'emergencies.nurse.user',
+            'surgeries.doctor.user',
+            'surgeries.room',
+            'surgeries.anesthesiologist.user',
+            'requests.visit.doctor.user',
+            'radiologyRequests.radiologyType',
+            'radiologyRequests.doctor.user',
+            'radiologyRequests.performer',
+            'radiologyRequests.result',
+            'documents.uploader',
+        ]);
+
+        return view('inquiry.patient_dossier_print', compact('patient'));
     }
 }

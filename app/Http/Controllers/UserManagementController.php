@@ -60,13 +60,17 @@ class UserManagementController extends Controller
 
     public function create()
     {
-        $roles = Role::all();
+        $roles = auth()->user()->hasRole('admin') ? Role::all() : Role::where('name', '!=', 'admin')->get();
         $locations = Location::orderBy('name')->get();
         return view('users.create', compact('roles', 'locations'));
     }
 
     public function store(Request $request)
     {
+        if (!auth()->user()->hasRole('admin') && in_array('admin', (array)$request->roles)) {
+            abort(403, 'غير مصرح لك بمنح صلاحية مدير النظام الرئيسي (Admin).');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -100,13 +104,25 @@ class UserManagementController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::all();
+        if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('users.index')->with('error', 'غير مصرح لك بتعديل حساب مدير النظام الرئيسي.');
+        }
+
+        $roles = auth()->user()->hasRole('admin') ? Role::all() : Role::where('name', '!=', 'admin')->get();
         $locations = Location::orderBy('name')->get();
         return view('users.edit', compact('user', 'roles', 'locations'));
     }
 
     public function update(Request $request, User $user)
     {
+        if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('users.index')->with('error', 'غير مصرح لك بتعديل حساب مدير النظام الرئيسي.');
+        }
+
+        if (!auth()->user()->hasRole('admin') && in_array('admin', (array)$request->roles)) {
+            abort(403, 'غير مصرح لك بمنح صلاحية مدير النظام الرئيسي (Admin).');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
@@ -142,6 +158,10 @@ class UserManagementController extends Controller
 
     public function destroy(User $user)
     {
+        if ($user->hasRole('admin') || $user->email === 'admin@hospital.com' || $user->id === 1) {
+            return back()->with('error', 'لا يمكن حذف حساب مدير النظام الرئيسي نهائياً.');
+        }
+
         if ($user->id === auth()->id()) {
             return back()->with('error', 'لا يمكنك حذف حسابك الخاص');
         }
@@ -154,6 +174,10 @@ class UserManagementController extends Controller
 
     public function toggleStatus(User $user)
     {
+        if ($user->hasRole('admin') || $user->email === 'admin@hospital.com' || $user->id === 1) {
+            return back()->with('error', 'لا يمكن تعطيل حساب مدير النظام الرئيسي.');
+        }
+
         $user->update([
             'is_active' => !$user->is_active
         ]);

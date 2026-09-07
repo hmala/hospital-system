@@ -65,6 +65,10 @@ class RoleManagementController extends Controller
 
     public function rolesEdit(Role $role)
     {
+        if ($role->name === 'admin' && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('roles.index')->with('error', 'دور مدير النظام الرئيسي (Admin) محمي بالكامل ولا يمكن التعديل عليه من قبل المشرفين.');
+        }
+
         Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
@@ -77,6 +81,10 @@ class RoleManagementController extends Controller
 
     public function rolesUpdate(Request $request, Role $role)
     {
+        if ($role->name === 'admin' && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('roles.index')->with('error', 'دور مدير النظام الرئيسي (Admin) محمي بالكامل ولا يمكن التعديل عليه.');
+        }
+
         $request->validate([
             'display_name' => 'required|string',
             'permissions' => 'array',
@@ -102,6 +110,10 @@ class RoleManagementController extends Controller
 
     public function rolesDestroy(Role $role)
     {
+        if (in_array($role->name, ['admin', 'admin-hsop'])) {
+            return back()->with('error', 'لا يمكن حذف هذا الدور لأنه من أدوار النظام الأساسية والمحمية.');
+        }
+
         if ($role->users()->count() > 0) {
             return back()->with('error', 'لا يمكن حذف دور مرتبط بمستخدمين');
         }

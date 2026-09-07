@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Location;
 use App\Models\Product;
+use App\Models\StockBatch;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -93,5 +94,98 @@ class InventoryController extends Controller
             'locationId' => $locationId,
             'selectedLocation' => $selectedLocation,
         ]);
+    }
+
+    /**
+     * شاشة تقرير وتنبيهات صلاحية المواد والوجبات المخزنية (FEFO Tracking)
+     */
+    public function expiring(Request $request)
+    {
+        $locations = Location::orderBy('name')->get();
+        $locationId = $request->get('location_id');
+        $selectedLocation = $locationId ? Location::find($locationId) : null;
+
+        $userLocationId = auth()->user()->location_id;
+        if (!$locationId && $userLocationId) {
+            $locationId = $userLocationId;
+            $selectedLocation = Location::find($userLocationId);
+        }
+
+        $status = $request->get('status', 'all');
+        $search = $request->get('search');
+
+        $query = StockBatch::with(['product', 'location', 'purchaseItem.purchase'])
+            ->where('current_qty', '>', 0)
+            ->whereNotNull('expiry_date');
+
+        if ($locationId) {
+            $query->where('location_id', $locationId);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('internal_barcode', 'like', "%{$search}%")
+                  ->orWhere('original_barcode', 'like', "%{$search}%")
+                  ->orWhereHas('product', function ($p) use ($search) {
+                      $p->where('name', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('purchaseItem.purchase', function ($pr) use ($search) {
+                      $pr->where('invoice_number', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // حساب الإحصائيات الشاملة قبل تطبيق فلتر الحالة
+        $statsQuery = clone $query;
+        $allBatches = $statsQuery->get();
+
+        $today = now()->startOfDay();
+        $in30Days = now()->addDays(30)->endOfDay();
+        $in90Days = now()->addDays(90)->endOfDay();
+
+        $expiredBatches = $allBatches->where('expiry_date', '<=', $today);
+        $expiredCount = $expiredBatches->count();
+        $expiredValue = $expiredBatches->sum(fn($b) => $b->current_qty * $b->cost_price);
+
+        $criticalBatches = $allBatches->filter(fn($b) => $b->expiry_date > $today && $b->expiry_date <= $in30Days);
+        $criticalCount = $criticalBatches->count();
+        $criticalValue = $criticalBatches->sum(fn($b) => $b->current_qty * $b->cost_price);
+
+        $warningBatches = $allBatches->filter(fn($b) => $b->expiry_date > $in30Days && $b->expiry_date <= $in90Days);
+        $warningCount = $warningBatches->count();
+        $warningValue = $warningBatches->sum(fn($b) => $b->current_qty * $b->cost_price);
+
+        $validBatches = $allBatches->where('expiry_date', '>', $in90Days);
+        $validCount = $validBatches->count();
+
+        // تطبيق فلتر الحالة المحددة
+        if ($status === 'expired') {
+            $query->where('expiry_date', '<=', $today);
+        } elseif ($status === 'critical_30') {
+            $query->where('expiry_date', '>', $today)->where('expiry_date', '<=', $in30Days);
+        } elseif ($status === 'warning_90') {
+            $query->where('expiry_date', '>', $in30Days)->where('expiry_date', '<=', $in90Days);
+        } elseif ($status === 'valid') {
+            $query->where('expiry_date', '>', $in90Days);
+        }
+
+        $batches = $query->orderBy('expiry_date', 'asc')->paginate(25)->withQueryString();
+
+        return view('inventory.expiring', compact(
+            'batches',
+            'locations',
+            'locationId',
+            'selectedLocation',
+            'status',
+            'search',
+            'expiredCount',
+            'expiredValue',
+            'criticalCount',
+            'criticalValue',
+            'warningCount',
+            'warningValue',
+            'validCount'
+        ));
     }
 }

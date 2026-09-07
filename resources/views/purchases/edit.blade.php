@@ -99,6 +99,7 @@
                             <table class="table table-hover align-middle mb-0" id="itemsTable">
                                 <thead class="table-light">
                                     <tr>
+                                        <th class="text-center" style="width: 50px;">#</th>
                                         <th>المادة</th>
                                         <th style="width: 130px;">الكمية</th>
                                         <th style="width: 160px;">سعر التكلفة (د.ع)</th>
@@ -109,6 +110,7 @@
                                 <tbody>
                                     @foreach($purchase->items as $idx => $item)
                                     <tr id="row{{ $idx }}">
+                                        <td class="text-center fw-bold row-index">{{ $idx + 1 }}</td>
                                         <td>
                                             <input type="hidden" name="items[{{ $idx }}][item_id]" value="{{ $item->id }}">
                                             <select name="items[{{ $idx }}][product_id]" class="form-control item-product" required>
@@ -168,9 +170,19 @@ let rowIdx = {{ $purchase->items->count() }};
 const addRowButton = document.getElementById('addRow');
 const itemsTableBody = document.querySelector('#itemsTable tbody');
 
+function updateRowIndices() {
+    document.querySelectorAll('#itemsTable tbody tr').forEach((tr, i) => {
+        const indexCell = tr.querySelector('.row-index');
+        if (indexCell) {
+            indexCell.textContent = i + 1;
+        }
+    });
+}
+
 function createRow(index) {
     return `
         <tr id="row${index}">
+            <td class="text-center fw-bold row-index"></td>
             <td>
                 <select name="items[${index}][product_id]" class="form-control item-product" required>
                     <option value="" data-is-perishable="0">اختر المادة...</option>
@@ -220,12 +232,14 @@ addRowButton.addEventListener('click', function() {
     itemsTableBody.insertAdjacentHTML('beforeend', createRow(rowIdx));
     setExpiryValidation(rowIdx);
     rowIdx++;
+    updateRowIndices();
 });
 
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('.remove-row');
     if (btn) {
         btn.closest('tr').remove();
+        updateRowIndices();
     }
 });
 </script>

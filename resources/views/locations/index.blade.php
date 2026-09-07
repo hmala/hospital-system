@@ -84,20 +84,36 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show border-0 rounded-3 mb-4" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show border-0 rounded-3 mb-4" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0" id="locationsTable">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="text-center" style="width: 50px;">#</th>
                                     <th class="border-0 fw-bold">اسم المخزن</th>
                                     <th class="border-0 fw-bold">النوع</th>
                                     <th class="border-0 fw-bold">عدد الدفعات</th>
                                     <th class="border-0 fw-bold">الرصيد الكلي</th>
-                                    <th class="border-0 fw-bold text-center">عرض</th>
+                                    <th class="border-0 fw-bold text-center" style="width: 180px;">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($locations as $location)
+                                @foreach($locations as $idx => $location)
                                     <tr class="location-row" style="transition: all 0.2s ease;">
+                                        <td class="text-center fw-bold">{{ $idx + 1 }}</td>
                                         <td class="fw-semibold">{{ $location->name }}</td>
                                         <td>
                                             <span class="badge {{ $location->type === 'main' ? 'bg-success' : 'bg-secondary' }} rounded-pill px-3 py-2">
@@ -105,11 +121,27 @@
                                             </span>
                                         </td>
                                         <td>{{ $location->stockBatches->count() }}</td>
-                                        <td>{{ $location->stockBatches->sum('current_qty') }}</td>
+                                        <td>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary fs-6 px-3 py-1 rounded-pill">
+                                                {{ $location->stockBatches->sum('current_qty') }}
+                                            </span>
+                                        </td>
                                         <td class="text-center">
-                                            <a href="{{ route('locations.show', $location) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                                <i class="fas fa-eye me-1"></i>عرض
-                                            </a>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ route('locations.show', $location) }}" class="btn btn-outline-primary" title="عرض المواد">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{{ route('locations.edit', $location) }}" class="btn btn-outline-warning text-dark" title="تعديل">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <form action="{{ route('locations.destroy', $location) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف المخزن ({{ $location->name }})؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline-danger" title="حذف المخزن">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach

@@ -38,6 +38,31 @@ class Patient extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function documents()
+    {
+        return $this->hasMany(PatientDocument::class);
+    }
+
+    public function emergencies()
+    {
+        return $this->hasMany(Emergency::class);
+    }
+
+    public function surgeries()
+    {
+        return $this->hasMany(Surgery::class);
+    }
+
+    public function requests()
+    {
+        return $this->hasManyThrough(Request::class, Visit::class, 'patient_id', 'visit_id', 'id', 'id');
+    }
+
+    public function radiologyRequests()
+    {
+        return $this->hasMany(\App\Models\RadiologyRequest::class);
+    }
+
     public function getFileNumberAttribute()
     {
         return $this->national_id ?? $this->id;

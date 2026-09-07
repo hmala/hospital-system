@@ -67,6 +67,7 @@
                 <table class="table table-bordered table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th class="text-center" style="width: 50px;">#</th>
                             <th>المادة</th>
                             <th>الكمية</th>
                             <th>سعر التكلفة للوحدة</th>
@@ -76,8 +77,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($purchase->items as $item)
+                        @foreach($purchase->items as $idx => $item)
                             <tr>
+                                <td class="text-center fw-bold">{{ $idx + 1 }}</td>
                                 <td>{{ $item->product->name ?? '-' }}</td>
                                 <td>{{ $item->qty }}</td>
                                 <td>{{ number_format($item->unit_cost, 2) }}</td>

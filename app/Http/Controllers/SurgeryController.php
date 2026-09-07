@@ -11,10 +11,13 @@ use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\SurgicalOperation;
 use App\Models\Room;
+use App\Models\PatientDocument;
 use App\Events\SurgeryUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class SurgeryController extends Controller
 {
@@ -168,7 +171,8 @@ class SurgeryController extends Controller
             'scheduled_date' => 'required|date',
             'scheduled_time' => 'nullable',
             'referring_doctor_name' => 'required|string|max:255',
-            'referral_letter' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'referral_letter' => 'nullable|file|max:25600',
+            'scanned_referral_letter' => 'nullable|string',
             'custom_surgery_fee' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
@@ -192,7 +196,7 @@ class SurgeryController extends Controller
         }
         $request->merge(['department_id' => $doctor->department_id]);
 
-        $surgeryData = $request->except([]);
+        $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter']);
         
         // استخراج اسم العملية من الجدول
         $operation = SurgicalOperation::find($request->surgical_operation_id);
@@ -221,14 +225,46 @@ class SurgeryController extends Controller
             }
         }
 
-        // handle referral letter upload if present
+        // handle referral letter upload or direct scanner capture
+        $path = null;
         if ($request->hasFile('referral_letter')) {
             $file = $request->file('referral_letter');
             $path = $file->store('referrals', 'public');
             $surgeryData['referral_letter_path'] = $path;
+        } elseif ($request->filled('scanned_referral_letter')) {
+            $base64Data = $request->input('scanned_referral_letter');
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                $ext = strtolower($type[1]);
+            } else {
+                $ext = 'jpg';
+            }
+            $base64Data = base64_decode($base64Data);
+            if ($base64Data !== false) {
+                $storedName = 'referral_scan_' . time() . '_' . uniqid() . '.' . $ext;
+                $relativePath = 'referrals/' . $storedName;
+                Storage::disk('public')->put($relativePath, $base64Data);
+                $path = $relativePath;
+                $surgeryData['referral_letter_path'] = $path;
+            }
         }
 
         $surgery = Surgery::create($surgeryData);
+
+        // أرشفة الوثيقة تلقائياً في سجل وأرشيف المريض
+        if ($path && $surgery->patient_id) {
+            PatientDocument::create([
+                'patient_id'  => $surgery->patient_id,
+                'title'       => 'ورقة تحويل / مستند عملية: ' . ($surgery->surgery_type ?? 'عملية جراحية'),
+                'category'    => 'surgery_consent',
+                'file_path'   => $path,
+                'file_name'   => basename($path),
+                'file_type'   => 'image/jpeg',
+                'file_size'   => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
+                'notes'       => 'مرفق تلقائي من حجز العملية #' . $surgery->id,
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
 
         // إنشاء زيارة للعملية إذا لم تكن موجودة
         if (!$surgery->visit_id) {
@@ -395,7 +431,8 @@ class SurgeryController extends Controller
             'scheduled_date' => 'required|date',
             'scheduled_time' => 'nullable',
             'referring_doctor_name' => 'required|string|max:255',
-            'referral_letter' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'referral_letter' => 'nullable|file|max:25600',
+            'scanned_referral_letter' => 'nullable|string',
             'custom_surgery_fee' => 'required|numeric|min:0',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
@@ -409,7 +446,7 @@ class SurgeryController extends Controller
             $request->merge(['department_id' => $doctor->department_id]);
         }
 
-        $surgeryData = $request->except(['referral_letter']);
+        $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter']);
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
 
@@ -443,10 +480,27 @@ class SurgeryController extends Controller
             $surgeryData['room_fee'] = $stayDetails['total_fee'];
         }
 
+        $path = null;
         if ($request->hasFile('referral_letter')) {
             $file = $request->file('referral_letter');
             $path = $file->store('referrals', 'public');
             $surgeryData['referral_letter_path'] = $path;
+        } elseif ($request->filled('scanned_referral_letter')) {
+            $base64Data = $request->input('scanned_referral_letter');
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                $ext = strtolower($type[1]);
+            } else {
+                $ext = 'jpg';
+            }
+            $base64Data = base64_decode($base64Data);
+            if ($base64Data !== false) {
+                $storedName = 'referral_scan_' . time() . '_' . uniqid() . '.' . $ext;
+                $relativePath = 'referrals/' . $storedName;
+                Storage::disk('public')->put($relativePath, $base64Data);
+                $path = $relativePath;
+                $surgeryData['referral_letter_path'] = $path;
+            }
         }
 
         // إذا تغيرت أجور الغرفة وزادت عن المبلغ المدفوع مسبقاً، نحول الحالة لـ pending لتحصيل الفرق في الكاشير
@@ -457,6 +511,21 @@ class SurgeryController extends Controller
         }
 
         $surgery->update($surgeryData);
+
+        // أرشفة الوثيقة في سجل المريض إن وجدت
+        if ($path && $surgery->patient_id) {
+            PatientDocument::create([
+                'patient_id'  => $surgery->patient_id,
+                'title'       => 'ورقة تحويل / مستند عملية: ' . ($surgery->surgery_type ?? 'عملية جراحية'),
+                'category'    => 'surgery_consent',
+                'file_path'   => $path,
+                'file_name'   => basename($path),
+                'file_type'   => 'image/jpeg',
+                'file_size'   => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
+                'notes'       => 'مرفق محدث للعملية الجراحية #' . $surgery->id,
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
 
         // إنشاء طلبات الأشعة - فقط إذا تم تحديد أشعة معينة
         $radiologyTypeIds = $request->input('radiology_tests', []);

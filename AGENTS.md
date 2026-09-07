@@ -58,17 +58,21 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
-## Session log (2026-09-06 — ضبط صلاحيات الأدوار والقائمة الجانبية لدور admin-hsop)
+## Session log (2026-09-07 — سجل وأرشيف المريض الشامل للاستعلامات والماسح الضوئي)
 
 ### Done
-- **إصلاح عرض القائمة الجانبية لدور `admin-hsop`**:
-  * قصر التجاوز الشامل في `Gate::before` بـ `AppServiceProvider.php` على دور `admin` الرئيسي فقط، لتمكين Spatie Permissions من التحكم الفعلي في إظهار وإخفاء القوائم والأزرار لدور `admin-hsop` وبقية الأدوار.
-  * تحديث دالة `User::isAdmin()` لتقتصر على `admin` لمنع أي تجاوز غير مقصود لشروط الصلاحيات.
-  * تعديل تحقق الصلاحيات في القائمة الجانبية `layouts/app.blade.php` وكونترولر `EmergencyServiceController` لاستخدام `@can('manage emergency services')` بدلاً من فحص الأدوار الصلب.
-  * مسح وتحديث كاش الصلاحيات والإعدادات والـ Views بنجاح.
+- **تنفيذ واجهة سجل وأرشيف المريض الشامل للاستعلامات**:
+  * إنشاء موديل [PatientDocument.php](file:///c:/wamp64/www/hospital-system/app/Models/PatientDocument.php) وهجرة جدول `patient_documents` لدعم أرشفة وثائق المرضى (هويات، تقارير، موافقات، نتائج، سكنر).
+  * ربط علاقات المريض الشاملة في [Patient.php](file:///c:/wamp64/www/hospital-system/app/Models/Patient.php) مع (`documents`, `emergencies`, `surgeries`, `radiologyRequests`, `requests`).
+  * برمجة دوال العرض والرفع والحذف والطباعة في [InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php).
+  * تسجيل المسارات في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php).
+  * إنشاء واجهة السجل والأرشيف التفاعلية [patient_history.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/patient_history.blade.php) المزودة بربط مباشر مع الماسح الضوئي (Scanner Bridge) على `localhost:5000`.
+  * إنشاء نموذج طباعة إضبارة المريض الشاملة [patient_dossier_print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/patient_dossier_print.blade.php).
+  * إضافة رابط «سجل وأرشيف المرضى» في القائمة الجانبية بـ [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php) تحت قسم «إدارة المرضى» بالصلاحية `@can('view inquiries')`.
+  * مسح وتحديث كاش الـ Routes والـ Views والإعدادات.
 
 ### Next Steps / Pending
-- المتابعة مع المستخدم لأي تعديلات إضافية على صلاحيات الأدوار.
+- تجربة سحب المستندات عبر السكنر المباشر والتحقق من سير العمل مع موظفي الاستعلامات.
 
 ### Issues known
 - لا يوجد حالياً.

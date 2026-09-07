@@ -235,6 +235,18 @@ body {
         </div>
     </div>
 
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show mb-2 py-2" role="alert">
+            <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i> تعذر حفظ العملية بسبب الأخطاء التالية:</div>
+            <ul class="mb-0 ps-3 small">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <!-- نموذج العملية المدمج كلياً في كارتين -->
     <form action="{{ route('surgeries.store') }}" method="POST" id="surgeryForm" enctype="multipart/form-data">
         @csrf
@@ -464,7 +476,7 @@ body {
                                     <i class="fas fa-upload me-1"></i> رفع ملف
                                 </button>
                                 <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
-                                <textarea id="scan_data_receiver" style="display:none;"></textarea>
+                                <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
                             </div>
                         </div>
                     </div>
@@ -472,7 +484,7 @@ body {
                     <!-- معاينة الوثيقة الممسوحة -->
                     <div id="referral_letter_preview" class="mt-2" style="display: none;">
                         <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
-                            <span><i class="fas fa-check-circle me-1"></i> تم مسح/رفع ورقة التحويل بنجاح</span>
+                            <span id="preview_text"><i class="fas fa-check-circle me-1"></i> تم مسح/رفع ورقة التحويل بنجاح</span>
                             <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
                                 <i class="fas fa-times me-1"></i> إلغاء
                             </button>
@@ -1109,30 +1121,35 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => console.log('Scanner check offline'));
     }
 
-    window.scanFromDevice = function() {
+    window.scanFromDevice = async function() {
         const btn = document.getElementById('scan_btn');
         const origText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
 
-        fetch('http://127.0.0.1:5000/scan', { method: 'POST', mode: 'cors' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.image) {
-                if (previewContainer) previewContainer.style.display = 'block';
-                const hiddenInput = document.getElementById('scan_data_receiver');
-                if (hiddenInput) hiddenInput.value = data.image;
-            } else {
-                alert(data.message || 'تعذر إتمام المسح من السكانر');
+        try {
+            const response = await fetch('http://127.0.0.1:5000/scan', { method: 'POST', mode: 'cors' });
+            if (!response.ok) {
+                throw new Error('فشل المسح من السكانر');
             }
-        })
-        .catch(err => {
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                const base64data = reader.result;
+                const hiddenInput = document.getElementById('scan_data_receiver');
+                if (hiddenInput) hiddenInput.value = base64data;
+                const previewTxt = document.getElementById('preview_text');
+                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-camera me-1"></i> تم سحب الصورة من السكانر بنجاح';
+                if (previewContainer) previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(blob);
+        } catch (err) {
+            console.error(err);
             alert('برنامج السكانر غير مشغل أو غير متصل. يمكنك استخدام زر "رفع ملف" بدلاً منه.');
-        })
-        .finally(() => {
+        } finally {
             btn.disabled = false;
             btn.innerHTML = origText;
-        });
+        }
     };
 
     window.clearScannedDoc = function() {
@@ -1145,6 +1162,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (referralInput) {
         referralInput.addEventListener('change', function(e) {
             if (this.files && this.files[0]) {
+                const previewTxt = document.getElementById('preview_text');
+                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-file-alt me-1"></i> تم اختيار الملف: ' + this.files[0].name;
                 if (previewContainer) previewContainer.style.display = 'block';
             }
         });

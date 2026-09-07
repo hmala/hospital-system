@@ -685,9 +685,14 @@
                         @endcan
                         @can('view inquiries')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('inquiry.*') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
+                            <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.create') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
                                 <i class="fas fa-concierge-bell"></i><span> الاستعلامات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRequestsCount }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('inquiry.patients.history') ? 'active' : '' }}" href="{{ route('inquiry.patients.history') }}">
+                                <i class="fas fa-folder-open"></i><span> سجل وأرشيف المرضى</span>
                             </a>
                         </li>
                         @endcan
@@ -1274,6 +1279,11 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inventory.index') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
                                 <i class="fas fa-warehouse"></i><span> المخزون</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('inventory.expiring') ? 'active' : '' }}" href="{{ route('inventory.expiring') }}">
+                                <i class="fas fa-calendar-times text-warning"></i><span> تنبيهات الصلاحية</span>
                             </a>
                         </li>
                         @endcanany

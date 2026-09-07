@@ -89,6 +89,9 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
+                            <a href="{{ route('inventory.expiring') }}" class="btn btn-outline-danger px-4 py-2 rounded-pill fw-bold">
+                                <i class="fas fa-calendar-times me-2"></i>تنبيهات الصلاحية
+                            </a>
                             <a href="{{ route('inventory.low_stock') }}" class="btn btn-outline-warning px-4 py-2 rounded-pill">
                                 <i class="fas fa-chart-line me-2"></i>تقرير المنخفض
                             </a>

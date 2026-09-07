@@ -175,6 +175,11 @@
                             </td>
                             <td>{{ $user->created_at->format('Y-m-d') }}</td>
                             <td>
+                                @if($user->hasRole('admin') && !auth()->user()->hasRole('admin'))
+                                    <span class="badge bg-secondary py-1 px-2">
+                                        <i class="fas fa-shield-alt me-1"></i> حساب محمي
+                                    </span>
+                                @else
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('users.edit', $user) }}" 
                                        class="btn btn-sm btn-outline-primary" 
@@ -182,7 +187,7 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     
-                                    @if($user->id !== auth()->id())
+                                    @if($user->id !== auth()->id() && !$user->hasRole('admin'))
                                     <form action="{{ route('users.toggle-status', $user) }}" 
                                           method="POST" 
                                           class="d-inline">
@@ -209,6 +214,7 @@
                                     </form>
                                     @endif
                                 </div>
+                                @endif
                             </td>
                         </tr>
                         @empty
