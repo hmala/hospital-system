@@ -56,6 +56,19 @@ class Doctor extends Model
         return $this->hasMany(RadiologyRequest::class);
     }
 
+    public function scopeWorkingOnDay($query, $day)
+    {
+        if (empty($day)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($day) {
+            $q->whereNull('working_days')
+              ->orWhereJsonContains('working_days', $day)
+              ->orWhere('working_days', 'like', '%' . $day . '%');
+        });
+    }
+
     public function scopeAnesthesia($query)
     {
         return $query->where('is_active', true)
