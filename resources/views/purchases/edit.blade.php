@@ -196,13 +196,36 @@ function filterItemsTable(query) {
     const term = (query || '').toLowerCase().trim();
     const rows = document.querySelectorAll('#itemsTable tbody tr');
     let visibleCount = 0;
+
     rows.forEach(function(row) {
-        const productNameSelect = row.querySelector('.item-product');
-        const selectedText = productNameSelect ? (productNameSelect.options[productNameSelect.selectedIndex]?.text || '') : '';
-        const barcodeText = row.querySelector('code') ? row.querySelector('code').textContent : '';
-        const rowText = (row.textContent + ' ' + selectedText + ' ' + barcodeText).toLowerCase();
-        
-        if (term === '' || rowText.includes(term)) {
+        let textParts = [];
+
+        // 1. Text inside inputs
+        row.querySelectorAll('input').forEach(function(input) {
+            if (input.value) textParts.push(input.value);
+        });
+
+        // 2. Text of selected option AND option list in selects
+        row.querySelectorAll('select').forEach(function(select) {
+            if (select.options && select.selectedIndex >= 0) {
+                textParts.push(select.options[select.selectedIndex].text);
+            }
+            Array.from(select.options || []).forEach(function(opt) {
+                if (opt.text && opt.value) textParts.push(opt.text);
+            });
+        });
+
+        // 3. Rendered Select2 text
+        row.querySelectorAll('.select2-selection__rendered').forEach(function(s2) {
+            if (s2.textContent) textParts.push(s2.textContent);
+        });
+
+        // 4. Cell innerText
+        textParts.push(row.innerText || row.textContent || '');
+
+        const combinedText = textParts.join(' ').toLowerCase();
+
+        if (term === '' || combinedText.includes(term)) {
             row.style.display = '';
             visibleCount++;
         } else {
@@ -212,11 +235,7 @@ function filterItemsTable(query) {
 
     const countElem = document.getElementById('filteredRowCount');
     if (countElem) {
-        if (term !== '') {
-            countElem.textContent = `عناصر معروضة: ${visibleCount} من ${rows.length}`;
-        } else {
-            countElem.textContent = '';
-        }
+        countElem.textContent = term !== '' ? `عناصر معروضة: ${visibleCount} من ${rows.length}` : '';
     }
 }
 
@@ -248,17 +267,8 @@ function initSelect2OnRow(rowElement) {
         select.select2({
             dir: 'rtl',
             width: '100%',
-            placeholder: 'اكتب اسم المادة للبحث...',
-            allowClear: true,
-            minimumInputLength: 1,
-            language: {
-                inputTooShort: function() {
-                    return "يرجى كتابة اسم المادة للبحث...";
-                },
-                noResults: function() {
-                    return "لا توجد نتائج مطابقة";
-                }
-            }
+            placeholder: 'اختر أو ابحث عن المادة...',
+            allowClear: true
         });
         select.on('select2:select select2:clear change', function() {
             const tr = $(this).closest('tr');
@@ -267,6 +277,12 @@ function initSelect2OnRow(rowElement) {
             const isPerishable = selectedOpt ? selectedOpt.dataset.isPerishable === '1' : false;
             expiryInput.prop('required', isPerishable);
             if (!isPerishable) expiryInput.val('');
+
+            // إعادة تفعيل الفلترة الفورية
+            const searchInput = document.getElementById('tableItemSearch');
+            if (searchInput && searchInput.value) {
+                filterItemsTable(searchInput.value);
+            }
         });
     }
 }
@@ -276,17 +292,17 @@ $(document).ready(function() {
         $('#supplierSelect').select2({
             dir: 'rtl',
             width: '100%',
-            placeholder: 'اكتب اسم المورد للبحث...',
-            allowClear: true,
-            minimumInputLength: 1,
-            language: {
-                inputTooShort: function() {
-                    return "يرجى كتابة اسم المورد للبحث...";
-                },
-                noResults: function() {
-                    return "لا توجد نتائج مطابقة";
-                }
-            }
+            placeholder: 'اختر أو ابحث عن المورد...',
+            allowClear: true
+        });
+    }
+
+    const searchInput = document.getElementById('tableItemSearch');
+    if (searchInput) {
+        ['input', 'keyup', 'change', 'paste'].forEach(function(evt) {
+            searchInput.addEventListener(evt, function() {
+                filterItemsTable(this.value);
+            });
         });
     }
 
