@@ -1125,7 +1125,7 @@ class InquiryController extends Controller
     public function patientHistory(HttpRequest $request, Patient $patient = null)
     {
         $user = Auth::user();
-        if ($user && !$user->hasRole(['admin', 'admin-hsop']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
+        if ($user && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
             abort(403, 'غير مصرح لك بالوصول إلى سجل وأرشيف المرضى الشامل');
         }
 
