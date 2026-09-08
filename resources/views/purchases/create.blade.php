@@ -77,25 +77,27 @@
                         </div>
                     </div>
                     <div class="card-body p-4">
-                        <div class="row mb-3 align-items-center">
-                            <div class="col-md-6">
+                        <div class="row mb-3 align-items-center g-2">
+                            <div class="col-md-7">
+                                <label class="form-label text-muted small fw-bold mb-1"><i class="fas fa-plus-circle text-success me-1"></i>إضافة مادة سريعة إلى الفاتورة</label>
+                                <select id="quickProductAdd" class="form-control">
+                                    <option value=""></option>
+                                    {!! $optionsBuffer !!}
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label text-muted small fw-bold mb-0"><i class="fas fa-filter text-primary me-1"></i>فلترة الأسطر المعروضة</label>
+                                    <small class="text-muted fw-bold" id="filteredRowCount"></small>
+                                </div>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white border-end-0 text-primary" style="border-radius: 10px 0 0 10px;"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="tableItemSearch" class="form-control border-start-0" placeholder="بحث سريع في أسطر الفاتورة (اسم المادة)..." onkeyup="filterItemsTable(this.value)" style="border-radius: 0 10px 10px 0;">
+                                    <input type="text" id="tableItemSearch" class="form-control border-start-0" placeholder="بحث باسم المادة، السعر، الكمية..." style="border-radius: 0 10px 10px 0;">
                                 </div>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <small class="text-muted fw-bold" id="filteredRowCount"></small>
                             </div>
                         </div>
 
                         <div class="table-responsive mb-3">
-                            @php
-                                $optionsBuffer = '';
-                                foreach ($products as $p) {
-                                    $optionsBuffer .= '<option value="' . $p->id . '" data-is-perishable="' . ($p->is_perishable ? '1' : '0') . '">' . e($p->name) . '</option>';
-                                }
-                            @endphp
                             <table class="table table-hover align-middle mb-0" id="itemsTable">
                                 <thead class="table-light">
                                     <tr>
@@ -113,7 +115,7 @@
 
                         <div class="d-flex flex-column flex-sm-row gap-2 justify-content-between">
                             <button type="button" class="btn btn-outline-secondary" id="addRow">
-                                <i class="fas fa-plus me-2"></i>إضافة مادة للفاتورة
+                                <i class="fas fa-plus me-2"></i>إضافة مادة فارغة
                             </button>
                             <button type="submit" class="btn btn-primary px-5">
                                 <i class="fas fa-save me-2"></i>حفظ وتوليد الباركودات
@@ -150,34 +152,45 @@ function filterItemsTable(query) {
     let visibleCount = 0;
 
     rows.forEach(function(row) {
+        if (!term) {
+            row.style.display = '';
+            visibleCount++;
+            return;
+        }
+
         let textParts = [];
 
-        // 1. Text inside inputs
+        // 1. Text inside inputs (qty, cost_price, expiry_date)
         row.querySelectorAll('input').forEach(function(input) {
             if (input.value) textParts.push(input.value);
         });
 
-        // 2. Text of selected option AND option list in selects
-        row.querySelectorAll('select').forEach(function(select) {
-            if (select.options && select.selectedIndex >= 0) {
-                textParts.push(select.options[select.selectedIndex].text);
+        // 2. Selected option text ONLY
+        row.querySelectorAll('select.item-product').forEach(function(select) {
+            if (select.value && select.selectedIndex >= 0) {
+                const opt = select.options[select.selectedIndex];
+                if (opt && opt.text && opt.value) {
+                    textParts.push(opt.text);
+                }
             }
-            Array.from(select.options || []).forEach(function(opt) {
-                if (opt.text && opt.value) textParts.push(opt.text);
-            });
         });
 
-        // 3. Rendered Select2 text
+        // 3. Rendered Select2 text label
         row.querySelectorAll('.select2-selection__rendered').forEach(function(s2) {
-            if (s2.textContent) textParts.push(s2.textContent);
+            const title = s2.getAttribute('title') || s2.textContent;
+            if (title && !title.includes('اختر')) {
+                textParts.push(title);
+            }
         });
 
-        // 4. Cell innerText
-        textParts.push(row.innerText || row.textContent || '');
+        // 4. Badges / codes inside cells
+        row.querySelectorAll('code, small, .badge').forEach(function(el) {
+            if (el.textContent) textParts.push(el.textContent);
+        });
 
         const combinedText = textParts.join(' ').toLowerCase();
 
-        if (term === '' || combinedText.includes(term)) {
+        if (combinedText.includes(term)) {
             row.style.display = '';
             visibleCount++;
         } else {
@@ -243,6 +256,23 @@ $(document).ready(function() {
             placeholder: 'اختر أو ابحث عن المورد...',
             allowClear: true
         });
+
+        $('#quickProductAdd').select2({
+            dir: 'rtl',
+            width: '100%',
+            placeholder: '🔍 ابحث عن مادة واضغط لإضافتها فوراً...',
+            allowClear: true
+        }).on('select2:select', function(e) {
+            const productId = $(this).val();
+            if (productId) {
+                addRowButton.click();
+                const newRow = $('#itemsTable tbody tr').last();
+                const select = newRow.find('.item-product');
+                select.val(productId).trigger('change');
+                newRow.find('input[name*="[qty]"]').focus();
+                $(this).val('').trigger('change.select2');
+            }
+        });
     }
 
     const searchInput = document.getElementById('tableItemSearch');
@@ -266,6 +296,9 @@ $(document).ready(function() {
         if (e.target.classList.contains('remove-row')) {
             e.target.closest('tr').remove();
             updateRowIndices();
+            if (searchInput && searchInput.value) {
+                filterItemsTable(searchInput.value);
+            }
         }
     });
 
