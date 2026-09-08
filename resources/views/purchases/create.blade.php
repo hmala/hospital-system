@@ -138,7 +138,7 @@ function createRow(index) {
             <td class="text-center fw-bold row-index"></td>
             <td>
                 <select name="items[${index}][product_id]" class="form-control item-product" required>
-                    <option value="" data-is-perishable="0">اختر المادة...</option>
+                    <option value=""></option>
                     ${productOptionsTemplate}
                 </select>
             </td>
@@ -155,7 +155,9 @@ function initSelect2OnRow(rowElement) {
     if (select.length && typeof $.fn.select2 !== 'undefined') {
         select.select2({
             dir: 'rtl',
-            width: '100%'
+            width: '100%',
+            placeholder: 'ابحث عن المادة...',
+            allowClear: true
         });
         select.on('select2:select select2:clear change', function() {
             const tr = $(this).closest('tr');
@@ -172,7 +174,9 @@ $(document).ready(function() {
     if (typeof $.fn.select2 !== 'undefined') {
         $('#supplierSelect').select2({
             dir: 'rtl',
-            width: '100%'
+            width: '100%',
+            placeholder: 'ابحث عن المورد...',
+            allowClear: true
         });
     }
 
