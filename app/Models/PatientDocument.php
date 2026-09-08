@@ -48,7 +48,14 @@ class PatientDocument extends Model
         if (!$this->file_path) {
             return '';
         }
-        return Storage::disk('public')->url($this->file_path);
+        $cleanPath = ltrim($this->file_path, '/');
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+        if (str_starts_with($cleanPath, 'public/')) {
+            $cleanPath = substr($cleanPath, 7);
+        }
+        return asset('storage/' . $cleanPath);
     }
 
     public function getIsImageAttribute(): bool
