@@ -168,7 +168,7 @@ class RoleManagementController extends Controller
             'view nursing station' => 'surgeries',
             // صلاحيات خدمات الطوارئ
             'manage emergency services' => 'emergencies',
-            'view patient history' => 'inquiries',
+            'view patient history' => 'patients',
         ];
 
         if (isset($specialGroups[$permissionName])) {

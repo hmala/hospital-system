@@ -56,35 +56,43 @@
                             <td>
                                 <i class="fas fa-shield-alt text-primary"></i>
                                 @php
-                                    // translate English permission name into Arabic label
-                                    $parts = explode(' ', $permission->name);
-                                    $verb = $parts[0] ?? '';
-                                    $resource = $parts[1] ?? '';
-                                    $verbMap = [
-                                        'view' => 'عرض',
-                                        'create' => 'إنشاء',
-                                        'edit' => 'تعديل',
-                                        'delete' => 'حذف',
-                                        'manage' => 'إدارة',
-                                        'cancel' => 'إلغاء',
-                                        'process' => 'معالجة',
+                                    $customLabels = [
+                                        'view patient history' => 'عرض سجل وأرشيف المرضى الشامل',
+                                        'manage emergency services' => 'إدارة خدمات وأسعار الطوارئ',
                                     ];
-                                    $resourceMap = [
-                                        'patients' => 'المرضى',
-                                        'doctors' => 'الأطباء',
-                                        'departments' => 'العيادات',
-                                        'appointments' => 'المواعيد',
-                                        'visits' => 'الزيارات',
-                                        'surgeries' => 'العمليات',
-                                        'radiology' => 'الأشعة',
-                                        'tests' => 'التحاليل',
-                                        'inquiries' => 'الاستعلامات',
-                                        'pharmacy' => 'الصيدلية',
-                                        'referrals' => 'التحويلات',
-                                        'consultant' => 'الاستشاريين',
-                                        'rooms' => 'الغرف',
-                                    ];
-                                    $label = ($verbMap[$verb] ?? $verb) . ' ' . ($resourceMap[$resource] ?? $resource);
+                                    if (isset($customLabels[$permission->name])) {
+                                        $label = $customLabels[$permission->name];
+                                    } else {
+                                        // translate English permission name into Arabic label
+                                        $parts = explode(' ', $permission->name);
+                                        $verb = $parts[0] ?? '';
+                                        $resource = $parts[1] ?? '';
+                                        $verbMap = [
+                                            'view' => 'عرض',
+                                            'create' => 'إنشاء',
+                                            'edit' => 'تعديل',
+                                            'delete' => 'حذف',
+                                            'manage' => 'إدارة',
+                                            'cancel' => 'إلغاء',
+                                            'process' => 'معالجة',
+                                        ];
+                                        $resourceMap = [
+                                            'patients' => 'المرضى',
+                                            'doctors' => 'الأطباء',
+                                            'departments' => 'العيادات',
+                                            'appointments' => 'المواعيد',
+                                            'visits' => 'الزيارات',
+                                            'surgeries' => 'العمليات',
+                                            'radiology' => 'الأشعة',
+                                            'tests' => 'التحاليل',
+                                            'inquiries' => 'الاستعلامات',
+                                            'pharmacy' => 'الصيدلية',
+                                            'referrals' => 'التحويلات',
+                                            'consultant' => 'الاستشاريين',
+                                            'rooms' => 'الغرف',
+                                        ];
+                                        $label = ($verbMap[$verb] ?? $verb) . ' ' . ($resourceMap[$resource] ?? $resource);
+                                    }
                                 @endphp
                                 <span>{{ $label }}</span>
                             </td>
