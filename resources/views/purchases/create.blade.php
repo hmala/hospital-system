@@ -156,8 +156,17 @@ function initSelect2OnRow(rowElement) {
         select.select2({
             dir: 'rtl',
             width: '100%',
-            placeholder: 'ابحث عن المادة...',
-            allowClear: true
+            placeholder: 'اكتب اسم المادة للبحث...',
+            allowClear: true,
+            minimumInputLength: 1,
+            language: {
+                inputTooShort: function() {
+                    return "يرجى كتابة اسم المادة للبحث...";
+                },
+                noResults: function() {
+                    return "لا توجد نتائج مطابقة";
+                }
+            }
         });
         select.on('select2:select select2:clear change', function() {
             const tr = $(this).closest('tr');
@@ -175,8 +184,17 @@ $(document).ready(function() {
         $('#supplierSelect').select2({
             dir: 'rtl',
             width: '100%',
-            placeholder: 'ابحث عن المورد...',
-            allowClear: true
+            placeholder: 'اكتب اسم المورد للبحث...',
+            allowClear: true,
+            minimumInputLength: 1,
+            language: {
+                inputTooShort: function() {
+                    return "يرجى كتابة اسم المورد للبحث...";
+                },
+                noResults: function() {
+                    return "لا توجد نتائج مطابقة";
+                }
+            }
         });
     }
 
