@@ -95,6 +95,18 @@
                         </div>
                     </div>
                     <div class="card-body p-4">
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-primary" style="border-radius: 10px 0 0 10px;"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="tableItemSearch" class="form-control border-start-0" placeholder="بحث سريع في أسطر الفاتورة (اسم المادة، الباركود)..." onkeyup="filterItemsTable(this.value)" style="border-radius: 0 10px 10px 0;">
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small class="text-muted fw-bold" id="filteredRowCount"></small>
+                            </div>
+                        </div>
+
                         <div class="table-responsive mb-3">
                             @php
                                 $optionsBuffer = '';
@@ -178,6 +190,34 @@ function updateRowIndices() {
             indexCell.textContent = i + 1;
         }
     });
+}
+
+function filterItemsTable(query) {
+    const term = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#itemsTable tbody tr');
+    let visibleCount = 0;
+    rows.forEach(function(row) {
+        const productNameSelect = row.querySelector('.item-product');
+        const selectedText = productNameSelect ? (productNameSelect.options[productNameSelect.selectedIndex]?.text || '') : '';
+        const barcodeText = row.querySelector('code') ? row.querySelector('code').textContent : '';
+        const rowText = (row.textContent + ' ' + selectedText + ' ' + barcodeText).toLowerCase();
+        
+        if (term === '' || rowText.includes(term)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const countElem = document.getElementById('filteredRowCount');
+    if (countElem) {
+        if (term !== '') {
+            countElem.textContent = `عناصر معروضة: ${visibleCount} من ${rows.length}`;
+        } else {
+            countElem.textContent = '';
+        }
+    }
 }
 
 function createRow(index) {
