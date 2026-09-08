@@ -1340,7 +1340,19 @@ class InquiryController extends Controller
         }
 
         if (!file_exists($fullPath)) {
-            abort(404, 'الملف غير موجود على السيرفر');
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="350" viewBox="0 0 600 350">
+                <rect width="100%" height="100%" fill="#f8fafc" rx="15"/>
+                <rect x="1" y="1" width="598" height="348" fill="none" stroke="#e2e8f0" stroke-width="2" rx="15"/>
+                <circle cx="300" cy="130" r="35" fill="#fee2e2"/>
+                <path d="M300 110 v25 M300 148 v4" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+                <text x="300" y="200" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">الملف الأصلي غير موجود على التخزين</text>
+                <text x="300" y="235" font-family="Arial, sans-serif" font-size="14" fill="#64748b" text-anchor="middle">الملف غير موجود في قرص السيرفر (قد يكون بيانات تجريبية أو تم حذفه)</text>
+                <text x="300" y="265" font-family="Arial, sans-serif" font-size="13" fill="#3b82f6" text-anchor="middle">يرجى إعـادة رفع المستنـد أو سحبه بالماسح الضوئي (Scanner)</text>
+            </svg>';
+            return response($svg, 200, [
+                'Content-Type' => 'image/svg+xml',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
         }
 
         $mimeType = $document->file_type;
