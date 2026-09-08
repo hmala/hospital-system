@@ -683,19 +683,20 @@
                             </a>
                         </li>
                         @endcan
-                        @can('view inquiries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.create') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
                                 <i class="fas fa-concierge-bell"></i><span> الاستعلامات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRequestsCount }}</span>
                             </a>
                         </li>
+                        @endcan
+                        @canany(['view patient history', 'view inquiries'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.patients.history') ? 'active' : '' }}" href="{{ route('inquiry.patients.history') }}">
                                 <i class="fas fa-folder-open"></i><span> سجل وأرشيف المرضى</span>
                             </a>
                         </li>
-                        @endcan
+                        @endcanany
 
                         @can('view occupancy')
                         <li class="nav-item">

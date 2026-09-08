@@ -264,6 +264,7 @@
                                                         'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار العمليات الجراحية', 'icon' => 'fa-calculator', 'color' => 'danger'],
                                                         
                                                         // صلاحيات حجز الاستعلامات
+                                                        'view patient history' => ['label' => 'عرض سجل وأرشيف المرضى الشامل', 'icon' => 'fa-folder-open', 'color' => 'info'],
                                                         'inquiry.create.lab' => ['label' => 'حجز استعلامات مختبر', 'icon' => 'fa-vial', 'color' => 'secondary'],
                                                         'inquiry.create.radiology' => ['label' => 'حجز استعلامات أشعة', 'icon' => 'fa-x-ray', 'color' => 'secondary'],
                                                         'inquiry.create.pharmacy' => ['label' => 'حجز استعلامات صيدلية', 'icon' => 'fa-pills', 'color' => 'secondary'],

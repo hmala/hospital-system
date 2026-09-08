@@ -70,6 +70,7 @@ class RoleManagementController extends Controller
         }
 
         Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = Permission::all()->groupBy(function($permission) {
@@ -167,6 +168,7 @@ class RoleManagementController extends Controller
             'view nursing station' => 'surgeries',
             // صلاحيات خدمات الطوارئ
             'manage emergency services' => 'emergencies',
+            'view patient history' => 'inquiries',
         ];
 
         if (isset($specialGroups[$permissionName])) {
