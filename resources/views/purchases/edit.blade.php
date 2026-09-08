@@ -202,44 +202,54 @@ function createRow(index) {
     `;
 }
 
-function setExpiryValidation(index) {
-    const row = document.getElementById(`row${index}`);
-    if (!row) return;
-
-    const productSelect = row.querySelector('.item-product');
-    const expiryInput = row.querySelector('.expiry-date');
-
-    const updateExpiry = () => {
-        const selectedOption = productSelect.options[productSelect.selectedIndex];
-        const isPerishable = selectedOption?.dataset?.isPerishable === '1';
-        expiryInput.required = isPerishable;
-        if (!isPerishable) {
-            expiryInput.value = '';
-        }
-    };
-
-    productSelect.addEventListener('change', updateExpiry);
-    updateExpiry();
+function initSelect2OnRow(rowElement) {
+    const select = $(rowElement).find('.item-product');
+    if (select.length && typeof $.fn.select2 !== 'undefined') {
+        select.select2({
+            dir: 'rtl',
+            width: '100%',
+            placeholder: 'بحث في المواد...'
+        });
+        select.on('select2:select select2:clear change', function() {
+            const tr = $(this).closest('tr');
+            const expiryInput = tr.find('.expiry-date');
+            const selectedOpt = this.options[this.selectedIndex];
+            const isPerishable = selectedOpt ? selectedOpt.dataset.isPerishable === '1' : false;
+            expiryInput.prop('required', isPerishable);
+            if (!isPerishable) expiryInput.val('');
+        });
+    }
 }
 
-// تفعيل التحقق من الصلاحية للأسطر الموجودة
-document.querySelectorAll('#itemsTable tbody tr').forEach((tr, i) => {
-    setExpiryValidation(i);
-});
-
-addRowButton.addEventListener('click', function() {
-    itemsTableBody.insertAdjacentHTML('beforeend', createRow(rowIdx));
-    setExpiryValidation(rowIdx);
-    rowIdx++;
-    updateRowIndices();
-});
-
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.remove-row');
-    if (btn) {
-        btn.closest('tr').remove();
-        updateRowIndices();
+$(document).ready(function() {
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('#supplierSelect').select2({
+            dir: 'rtl',
+            width: '100%',
+            placeholder: 'ابحث عن المورد...'
+        });
     }
+
+    // تفعيل البحث والتحقق للأسطر الموجودة مسبقاً
+    document.querySelectorAll('#itemsTable tbody tr').forEach((tr) => {
+        initSelect2OnRow(tr);
+    });
+
+    addRowButton.addEventListener('click', function() {
+        itemsTableBody.insertAdjacentHTML('beforeend', createRow(rowIdx));
+        const newRow = itemsTableBody.lastElementChild;
+        initSelect2OnRow(newRow);
+        rowIdx++;
+        updateRowIndices();
+    });
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.remove-row');
+        if (btn) {
+            btn.closest('tr').remove();
+            updateRowIndices();
+        }
+    });
 });
 </script>
 
@@ -249,6 +259,16 @@ document.addEventListener('click', function(e) {
     }
     .form-control, .form-select {
         border-radius: 10px;
+    }
+    .select2-container--default .select2-selection--single {
+        height: 48px;
+        border-radius: 10px;
+        border: 1px solid #ced4da;
+        display: flex;
+        align-items: center;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 46px;
     }
 </style>
 @endsection
