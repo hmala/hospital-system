@@ -207,8 +207,7 @@ function initSelect2OnRow(rowElement) {
     if (select.length && typeof $.fn.select2 !== 'undefined') {
         select.select2({
             dir: 'rtl',
-            width: '100%',
-            placeholder: 'بحث في المواد...'
+            width: '100%'
         });
         select.on('select2:select select2:clear change', function() {
             const tr = $(this).closest('tr');
@@ -225,8 +224,7 @@ $(document).ready(function() {
     if (typeof $.fn.select2 !== 'undefined') {
         $('#supplierSelect').select2({
             dir: 'rtl',
-            width: '100%',
-            placeholder: 'ابحث عن المورد...'
+            width: '100%'
         });
     }
 
