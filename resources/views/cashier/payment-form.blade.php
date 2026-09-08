@@ -24,6 +24,23 @@
         </div>
     @endif
 
+    @if(!$appointment->doctor || $appointment->consultation_fee <= 0)
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-radius: 12px; background-color: #fff3cd;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fs-3 text-warning me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">تنبيه: أجور الكشف لهذا الطبيب غير محددة (0 د.ع)</h6>
+                        <small class="text-secondary">يمكنك تعديل أجور الطبيب من قسم الأطباء، أو إدخال المبلغ المستحق يدوياً في حقل "المبلغ".</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-auto fw-bold" data-bs-toggle="modal" data-bs-target="#doctorFeeErrorModal">
+                    <i class="fas fa-exclamation-circle me-1"></i>عرض سبب التنبيه
+                </button>
+            </div>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-md-8">
             <div class="card border-0 shadow-sm">
@@ -189,4 +206,102 @@
         </div>
     </div>
 </div>
+
+<!-- Modal تنبيه خطأ أجور الطبيب / الدفع -->
+<div class="modal fade" id="doctorFeeErrorModal" tabindex="-1" aria-labelledby="doctorFeeErrorModalLabel" aria-hidden="true" style="z-index: 1060 !important;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header bg-danger text-white" style="border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold" id="doctorFeeErrorModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>تنبيه: خطأ في أجور الكشف للطبيب
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 75px; height: 75px; background-color: #fee2e2;">
+                    <i class="fas fa-user-md text-danger fs-1"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2" id="modalErrorTitle">لم يتم تحديد أجور الكشف لهذا الطبيب!</h5>
+                <p class="text-muted mb-3" id="modalErrorMessage">
+                    تنبيه: أجور الكشف المسجلة لهذا الموعد غير محددة أو تساوي <strong>0 د.ع</strong>. يرجى التأكد من المبلغ وتحديده يدوياً في الخانة المخصصة قبل إتمام العملية.
+                </p>
+                
+                <div class="card bg-light border-0 p-3 text-start mb-3" style="border-radius: 12px;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted fs-7">الطبيب المعالج:</span>
+                        <span class="fw-bold fs-7">د. {{ optional(optional($appointment->doctor)->user)->name ?? 'غير محدد' }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted fs-7">أجر الكشف المسجل:</span>
+                        <span class="badge bg-danger fs-7">{{ number_format($appointment->consultation_fee ?? 0) }} د.ع</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted fs-7">اسم المريض:</span>
+                        <span class="fw-bold fs-7">{{ optional(optional($appointment->patient)->user)->name ?? 'غير محدد' }}</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning text-start fs-7 mb-0">
+                    <i class="fas fa-lightbulb me-1"></i> <strong>تلميح:</strong> يمكنك إدخال المبلغ يدويًا في حقل "المبلغ (IQD)" في نموذج الدفع، أو تعديل الأجر الثابت للطبيب من صفحة الأطباء.
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-between p-3" style="border-radius: 0 0 20px 20px;">
+                @if($appointment->doctor)
+                    <a href="{{ route('doctors.edit', $appointment->doctor->id) }}" target="_blank" class="btn btn-outline-danger rounded-pill px-3">
+                        <i class="fas fa-user-edit me-1"></i>تعديل بيانات الطبيب
+                    </a>
+                @else
+                    <div></div>
+                @endif
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-dismiss="modal" onclick="focusAmountInput()">
+                    <i class="fas fa-pen me-1"></i>إدخال المبلغ يدوياً
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+function focusAmountInput() {
+    const amountInput = document.querySelector('input[name="amount"]');
+    if (amountInput) {
+        amountInput.focus();
+        amountInput.select();
+    }
+}
+
+function showDoctorFeeModal() {
+    const modalElement = document.getElementById('doctorFeeErrorModal');
+    if (modalElement && typeof bootstrap !== 'undefined') {
+        if (modalElement.parentElement !== document.body) {
+            document.body.appendChild(modalElement);
+        }
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const shouldShowModal = @json(!$appointment->doctor || $appointment->consultation_fee <= 0 || session('error') ? true : false);
+    if (shouldShowModal) {
+        showDoctorFeeModal();
+    }
+
+    const form = document.querySelector('form[action*="cashier.payment.process"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const amountInput = form.querySelector('input[name="amount"]');
+            const val = parseFloat(amountInput?.value || 0);
+            if (val <= 0) {
+                e.preventDefault();
+                document.getElementById('modalErrorTitle').textContent = 'مبلغ الدفع غير صحيح (0 د.ع)';
+                document.getElementById('modalErrorMessage').innerHTML = 'لا يمكن تأكيد الدفع بمبلغ <strong>0 د.ع</strong>. يرجى كتابة المبلغ المستحق أولاً.';
+                showDoctorFeeModal();
+            }
+        });
+    }
+});
+</script>
 @endsection

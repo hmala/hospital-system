@@ -37,12 +37,42 @@ class InventoryController extends Controller
                 },
             ]);
         } else {
-            $query = $query->with('stockBatches');
+            $query = $query->with(['stockBatches', 'locationThresholds']);
         }
+
+        // حساب الإحصائيات الشاملة لجميع المواد عبر الاستعلام الكامل وليس الصفحة الأولى فقط
+        $allProductsForStats = (clone $query)->get();
+
+        $totalProductsCount = $allProductsForStats->count();
+
+        $availableProductsCount = $allProductsForStats->filter(function ($product) {
+            return $product->stockBatches->sum('current_qty') > 0;
+        })->count();
+
+        $lowStockCount = $allProductsForStats->filter(function ($product) use ($locationId) {
+            $alertQty = $product->getAlertQuantityForLocation($locationId);
+            $totalQty = $product->stockBatches->sum('current_qty');
+            return $alertQty > 0 && $totalQty <= $alertQty;
+        })->count();
+
+        $criticalStockCount = $allProductsForStats->filter(function ($product) use ($locationId) {
+            $reorderQty = $product->getReorderLevelForLocation($locationId);
+            $totalQty = $product->stockBatches->sum('current_qty');
+            return $reorderQty > 0 && $totalQty <= $reorderQty;
+        })->count();
 
         $products = $query->paginate(25)->withQueryString();
 
-        return view('inventory.index', compact('products', 'locations', 'locationId', 'selectedLocation'));
+        return view('inventory.index', compact(
+            'products',
+            'locations',
+            'locationId',
+            'selectedLocation',
+            'totalProductsCount',
+            'availableProductsCount',
+            'lowStockCount',
+            'criticalStockCount'
+        ));
     }
 
     public function lowStock(Request $request)

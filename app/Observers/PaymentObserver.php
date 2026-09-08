@@ -45,7 +45,7 @@ class PaymentObserver
 
         $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting);
         $hospitalShare = round($amount - $doctorShare, 2);
-        $percentage = $baseAmount !== 0 ? round((abs($doctorShare) / $baseAmount) * 100, 2) : null;
+        $percentage = ((float)$baseAmount != 0.0) ? round((abs($doctorShare) / $baseAmount) * 100, 2) : null;
 
         if ($amount < 0) {
             $hospitalShare = round($amount - $doctorShare, 2);
@@ -134,11 +134,15 @@ class PaymentObserver
 
     protected function getCommissionBaseAmount(Payment $payment, $appointment): float
     {
-        if ($appointment->consultation_fee) {
-            return abs($appointment->consultation_fee);
+        if ($appointment->consultation_fee && (float)$appointment->consultation_fee > 0) {
+            return abs((float)$appointment->consultation_fee);
         }
 
-        return abs($payment->amount);
+        if ($appointment->doctor && $appointment->doctor->consultation_fee && (float)$appointment->doctor->consultation_fee > 0) {
+            return abs((float)$appointment->doctor->consultation_fee);
+        }
+
+        return abs((float)$payment->amount);
     }
 
     protected function calculateDoctorShare(float $amount, float $baseAmount, $appointment, $setting): float
@@ -147,24 +151,31 @@ class PaymentObserver
         $absBaseAmount = abs($baseAmount);
 
         if ($setting) {
-            if ($setting->fixed_amount !== null) {
-                $doctorShare = (float) $setting->fixed_amount;
-            } elseif ($setting->commission_type === 'fixed') {
-                $doctorShare = (float) $setting->fixed_amount;
-            } elseif ($setting->commission_type === 'custom') {
-                $doctorShare = $setting->fixed_amount !== null
-                    ? (float) $setting->fixed_amount
-                    : (float) $setting->commission_value;
+            $type = $setting->commission_type ?? 'percentage';
+
+            if ($type === 'fixed') {
+                $fixedVal = (float) ($setting->fixed_amount ?? 0);
+                $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
+            } elseif ($type === 'custom') {
+                $fixedVal = (float) ($setting->fixed_amount ?? 0);
+                $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
             } else {
-                $doctorShare = round($absBaseAmount * ((float) $setting->commission_value / 100), 2);
+                // percentage
+                $perc = (float) ($setting->commission_value ?? 0);
+                if ($perc <= 0 && (float)($setting->fixed_amount ?? 0) > 0) {
+                    $doctorShare = (float) $setting->fixed_amount;
+                } else {
+                    $doctorShare = round($absBaseAmount * ($perc / 100), 2);
+                }
             }
 
             $doctorShare = min($absBaseAmount, abs($doctorShare));
             return $amount < 0 ? -$doctorShare : $doctorShare;
         }
 
-        if ($appointment->consultation_fee) {
-            $doctorShare = min(abs($appointment->consultation_fee), $absAmount);
+        if ($appointment->consultation_fee && (float)$appointment->consultation_fee > 0) {
+            $defaultShare = round(abs($appointment->consultation_fee) * 0.7, 2);
+            $doctorShare = min($defaultShare, $absAmount);
             return $amount < 0 ? -$doctorShare : $doctorShare;
         }
 

@@ -16,7 +16,7 @@
                         </div>
                         <div class="text-end">
                             <div class="badge bg-white text-primary fs-6 px-3 py-2 rounded-pill">
-                                <i class="fas fa-boxes me-1"></i>{{ $products->count() }} مادة
+                                <i class="fas fa-boxes me-1"></i>{{ $totalProductsCount }} مادة
                             </div>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                     <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-boxes text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-primary">{{ $products->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-primary">{{ $totalProductsCount }}</h3>
                     <p class="text-muted mb-0">إجمالي المواد</p>
                 </div>
             </div>
@@ -44,7 +44,7 @@
                     <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-check-circle text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-success">{{ $products->where('stockBatches')->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-success">{{ $availableProductsCount }}</h3>
                     <p class="text-muted mb-0">مواد متوفرة</p>
                 </div>
             </div>
@@ -55,7 +55,7 @@
                     <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-exclamation-triangle text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-warning">{{ $products->filter(function($product) use ($locationId) { return $product->getAlertQuantityForLocation($locationId) > 0 && $product->stockBatches->sum('current_qty') <= $product->getAlertQuantityForLocation($locationId); })->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-warning">{{ $lowStockCount }}</h3>
                     <p class="text-muted mb-0">تحت التنبيه</p>
                 </div>
             </div>
@@ -66,7 +66,7 @@
                     <div class="bg-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-times-circle text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-danger">{{ $products->filter(function($product) use ($locationId) { return $product->getReorderLevelForLocation($locationId) > 0 && $product->stockBatches->sum('current_qty') <= $product->getReorderLevelForLocation($locationId); })->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-danger">{{ $criticalStockCount }}</h3>
                     <p class="text-muted mb-0">نقص حاد</p>
                 </div>
             </div>
