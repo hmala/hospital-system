@@ -669,7 +669,7 @@
 
                     <!-- روابط ثابتة حسب الصلاحيات -->
                         
-                        @canany(['view patients', 'view inquiries', 'view cashier'])
+                        @canany(['view patients', 'view inquiries', 'view cashier', 'view patient history'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#patientMgmtSection" aria-expanded="false">
                             <span><i class="fas fa-user-injured"></i> إدارة المرضى</span>
@@ -683,6 +683,7 @@
                             </a>
                         </li>
                         @endcan
+                        @can('view inquiries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.create') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
                                 <i class="fas fa-concierge-bell"></i><span> الاستعلامات</span>
