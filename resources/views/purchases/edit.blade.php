@@ -96,6 +96,12 @@
                     </div>
                     <div class="card-body p-4">
                         <div class="table-responsive mb-3">
+                            @php
+                                $optionsBuffer = '';
+                                foreach ($products as $p) {
+                                    $optionsBuffer .= '<option value="' . $p->id . '" data-is-perishable="' . ($p->is_perishable ? '1' : '0') . '">' . e($p->name) . '</option>';
+                                }
+                            @endphp
                             <table class="table table-hover align-middle mb-0" id="itemsTable">
                                 <thead class="table-light">
                                     <tr>
@@ -115,13 +121,7 @@
                                             <input type="hidden" name="items[{{ $idx }}][item_id]" value="{{ $item->id }}">
                                             <select name="items[{{ $idx }}][product_id]" class="form-control item-product" required>
                                                 <option value="" data-is-perishable="0">اختر المادة...</option>
-                                                @foreach($products as $product)
-                                                    <option value="{{ $product->id }}" 
-                                                            data-is-perishable="{{ $product->is_perishable ? '1' : '0' }}"
-                                                            {{ $item->product_id == $product->id ? 'selected' : '' }}>
-                                                        {{ $product->name }}
-                                                    </option>
-                                                @endforeach
+                                                {!! str_replace('value="' . $item->product_id . '"', 'value="' . $item->product_id . '" selected', $optionsBuffer) !!}
                                             </select>
                                             @if($item->stockBatch)
                                                 <small class="text-muted d-block mt-1">الباركود: <code>{{ $item->stockBatch->internal_barcode }}</code></small>
@@ -166,6 +166,7 @@
 @section('scripts')
 <script>
 let rowIdx = {{ $purchase->items->count() }};
+const productOptionsTemplate = `{!! $optionsBuffer !!}`;
 
 const addRowButton = document.getElementById('addRow');
 const itemsTableBody = document.querySelector('#itemsTable tbody');
@@ -186,9 +187,7 @@ function createRow(index) {
             <td>
                 <select name="items[${index}][product_id]" class="form-control item-product" required>
                     <option value="" data-is-perishable="0">اختر المادة...</option>
-                    @foreach($products as $product)
-                        <option value="{{ $product->id }}" data-is-perishable="{{ $product->is_perishable ? '1' : '0' }}">{{ $product->name }}</option>
-                    @endforeach
+                    ${productOptionsTemplate}
                 </select>
             </td>
             <td><input type="number" name="items[${index}][qty]" class="form-control" min="1" required></td>
