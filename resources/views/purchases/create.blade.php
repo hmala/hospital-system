@@ -83,23 +83,15 @@
                                 $optionsBuffer .= '<option value="' . $p->id . '" data-is-perishable="' . ($p->is_perishable ? '1' : '0') . '">' . e($p->name) . '</option>';
                             }
                         @endphp
-                        <div class="row mb-3 align-items-center g-2">
-                            <div class="col-md-7">
-                                <label class="form-label text-muted small fw-bold mb-1"><i class="fas fa-plus-circle text-success me-1"></i>إضافة مادة سريعة إلى الفاتورة</label>
-                                <select id="quickProductAdd" class="form-control">
-                                    <option value=""></option>
-                                    {!! $optionsBuffer !!}
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label text-muted small fw-bold mb-0"><i class="fas fa-filter text-primary me-1"></i>فلترة الأسطر المعروضة</label>
-                                    <small class="text-muted fw-bold" id="filteredRowCount"></small>
-                                </div>
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-6">
                                 <div class="input-group">
                                     <span class="input-group-text bg-white border-end-0 text-primary" style="border-radius: 10px 0 0 10px;"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="tableItemSearch" class="form-control border-start-0" placeholder="بحث باسم المادة، السعر، الكمية..." style="border-radius: 0 10px 10px 0;">
+                                    <input type="text" id="tableItemSearch" class="form-control border-start-0" placeholder="بحث سريع في أسطر الفاتورة (اسم المادة، السعر، الكمية)..." style="border-radius: 0 10px 10px 0;">
                                 </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small class="text-muted fw-bold" id="filteredRowCount"></small>
                             </div>
                         </div>
 
@@ -261,23 +253,6 @@ $(document).ready(function() {
             width: '100%',
             placeholder: 'اختر أو ابحث عن المورد...',
             allowClear: true
-        });
-
-        $('#quickProductAdd').select2({
-            dir: 'rtl',
-            width: '100%',
-            placeholder: '🔍 ابحث عن مادة واضغط لإضافتها فوراً...',
-            allowClear: true
-        }).on('select2:select', function(e) {
-            const productId = $(this).val();
-            if (productId) {
-                addRowButton.click();
-                const newRow = $('#itemsTable tbody tr').last();
-                const select = newRow.find('.item-product');
-                select.val(productId).trigger('change');
-                newRow.find('input[name*="[qty]"]').focus();
-                $(this).val('').trigger('change.select2');
-            }
         });
     }
 
