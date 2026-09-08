@@ -226,7 +226,13 @@ function initSelect2OnRow(rowElement) {
         select.select2({
             dir: 'rtl',
             width: '100%',
-            placeholder: 'اختر أو ابحث عن المادة...',
+            placeholder: 'ادخل اسم المادة للبحث...',
+            minimumInputLength: 1,
+            language: {
+                inputTooShort: function() {
+                    return 'اكتب حرفاً أو أكثر للبحث عن المادة...';
+                }
+            },
             allowClear: true
         });
         select.on('select2:select select2:clear change', function() {
