@@ -45,17 +45,10 @@ class PatientDocument extends Model
 
     public function getFileUrlAttribute(): string
     {
-        if (!$this->file_path) {
+        if (!$this->id || !$this->file_path) {
             return '';
         }
-        $cleanPath = ltrim($this->file_path, '/');
-        if (str_starts_with($cleanPath, 'storage/')) {
-            $cleanPath = substr($cleanPath, 8);
-        }
-        if (str_starts_with($cleanPath, 'public/')) {
-            $cleanPath = substr($cleanPath, 7);
-        }
-        return asset('storage/' . $cleanPath);
+        return route('inquiry.documents.file', $this->id);
     }
 
     public function getIsImageAttribute(): bool

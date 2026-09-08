@@ -1306,4 +1306,51 @@ class InquiryController extends Controller
 
         return view('inquiry.patient_dossier_print', compact('patient'));
     }
+
+    /**
+     * عرض / تحميل ملف المستند بأمان عبر Laravel بدلاً من التوجيه المباشر
+     */
+    public function serveDocumentFile(PatientDocument $document)
+    {
+        $user = Auth::user();
+        if ($user && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذا المستند');
+        }
+
+        if (!$document->file_path) {
+            abort(404, 'مسار الملف غير مسجل');
+        }
+
+        $cleanPath = ltrim($document->file_path, '/');
+        if (str_starts_with($cleanPath, 'public/')) {
+            $cleanPath = substr($cleanPath, 7);
+        }
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+
+        $fullPath = storage_path('app/public/' . $cleanPath);
+
+        if (!file_exists($fullPath)) {
+            $fullPath = storage_path('app/' . $cleanPath);
+        }
+
+        if (!file_exists($fullPath)) {
+            $fullPath = public_path('storage/' . $cleanPath);
+        }
+
+        if (!file_exists($fullPath)) {
+            abort(404, 'الملف غير موجود على السيرفر');
+        }
+
+        $mimeType = $document->file_type;
+        if (!$mimeType || $mimeType === 'binary/octet-stream') {
+            $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+        }
+
+        return response()->file($fullPath, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . ($document->file_name ?? basename($fullPath)) . '"',
+        ]);
+    }
 }
