@@ -95,6 +95,12 @@
                         </div>
                     </div>
                     <div class="card-body p-4">
+                        @php
+                            $optionsBuffer = '';
+                            foreach ($products as $p) {
+                                $optionsBuffer .= '<option value="' . $p->id . '" data-is-perishable="' . ($p->is_perishable ? '1' : '0') . '">' . e($p->name) . '</option>';
+                            }
+                        @endphp
                         <div class="row mb-3 align-items-center g-2">
                             <div class="col-md-7">
                                 <label class="form-label text-muted small fw-bold mb-1"><i class="fas fa-plus-circle text-success me-1"></i>إضافة مادة سريعة إلى الفاتورة</label>
