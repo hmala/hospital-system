@@ -31,11 +31,13 @@ class InventoryController extends Controller
                 $q->where('name', 'LIKE', "%{$search}%")
                   ->orWhere('category', 'LIKE', "%{$search}%")
                   ->orWhere('unit', 'LIKE', "%{$search}%")
-                  ->orWhere('barcode', 'LIKE', "%{$search}%")
                   ->orWhere('code', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%")
                   ->orWhereHas('stockBatches', function ($batchQuery) use ($search) {
                       $batchQuery->where('internal_barcode', 'LIKE', "%{$search}%")
-                                 ->orWhere('batch_number', 'LIKE', "%{$search}%");
+                                 ->orWhere('original_barcode', 'LIKE', "%{$search}%")
+                                 ->orWhere('supplier_barcode', 'LIKE', "%{$search}%")
+                                 ->orWhere('manufacturer_lot_number', 'LIKE', "%{$search}%");
                   });
             });
         }
