@@ -112,49 +112,59 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
-                    <!-- Filter Section -->
-                    <div class="row mb-4">
-                        <div class="col-md-8">
-                            <form method="GET" action="{{ route('inventory.index') }}" class="d-flex gap-3 align-items-end">
-                                <div class="flex-grow-1">
-                                    <label class="form-label fw-semibold">عرض حسب المخزن</label>
-                                    <select name="location_id" class="form-select" style="border-radius: 10px;">
-                                        <option value="">جميع المخازن</option>
-                                        @foreach($locations as $location)
-                                            <option value="{{ $location->id }}" {{ $locationId == $location->id ? 'selected' : '' }}>{{ $location->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-outline-primary px-4 py-2 rounded-pill">
-                                    <i class="fas fa-filter me-2"></i>تصفية
-                                </button>
-                            </form>
-                        </div>
-                        <div class="col-md-4 text-md-end align-self-end">
-                            @if($selectedLocation)
-                                <div class="d-flex flex-column align-items-end gap-2">
-                                    <span class="badge bg-secondary px-3 py-2 rounded-pill fs-6">
-                                        {{ $selectedLocation->name }} • {{ $selectedLocation->type === 'main' ? 'مخزن رئيسي' : 'مخزن قسم' }}
-                                    </span>
-                                    @if($selectedLocation && $selectedLocation->type === 'sub')
-                                        <div class="text-muted small">التنبيه معطل للأقسام الفرعية</div>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Search Bar -->
-                    <div class="row mb-4">
-                        <div class="col-12">
+                    <!-- Search & Filter Form -->
+                    <form method="GET" action="{{ route('inventory.index') }}" class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-search me-1 text-primary"></i>البحث الشامل في المواد
+                            </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-0">
                                     <i class="fas fa-search text-muted"></i>
                                 </span>
-                                <input type="text" id="inventorySearch" class="form-control border-0 bg-light" placeholder="البحث في المواد..." style="border-radius: 0 10px 10px 0;">
+                                <input type="text" name="search" class="form-control border-0 bg-light" placeholder="ابحث باسم المادة، الباركود، رقم الدفعة، التصنيف..." value="{{ request('search') }}" style="border-radius: 0 10px 10px 0;">
                             </div>
                         </div>
-                    </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-warehouse me-1 text-primary"></i>المخزن
+                            </label>
+                            <select name="location_id" class="form-select border-0 bg-light" style="border-radius: 10px;" onchange="this.form.submit()">
+                                <option value="">جميع المخازن</option>
+                                @foreach($locations as $location)
+                                    <option value="{{ $location->id }}" {{ $locationId == $location->id ? 'selected' : '' }}>{{ $location->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill fw-bold flex-grow-1">
+                                <i class="fas fa-search me-1"></i>بحث
+                            </button>
+                            @if(request('search') || request('location_id'))
+                                <a href="{{ route('inventory.index') }}" class="btn btn-outline-secondary px-3 py-2 rounded-pill" title="إلغاء التصفية">
+                                    <i class="fas fa-undo"></i>
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+
+                    @if(request('search') || $selectedLocation)
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            <span class="text-muted small fw-semibold">الفلاتر النشطة:</span>
+                            @if(request('search'))
+                                <span class="badge bg-primary px-3 py-2 rounded-pill fs-6">
+                                    كلمة البحث: {{ request('search') }}
+                                    <a href="{{ route('inventory.index', array_merge(request()->except('search'))) }}" class="text-white ms-2 text-decoration-none">&times;</a>
+                                </span>
+                            @endif
+                            @if($selectedLocation)
+                                <span class="badge bg-secondary px-3 py-2 rounded-pill fs-6">
+                                    المخزن: {{ $selectedLocation->name }}
+                                    <a href="{{ route('inventory.index', array_merge(request()->except('location_id'))) }}" class="text-white ms-2 text-decoration-none">&times;</a>
+                                </span>
+                            @endif
+                        </div>
+                    @endif
 
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0" id="inventoryTable">
@@ -278,30 +288,7 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Search functionality
-        const searchInput = document.getElementById('inventorySearch');
         const tableRows = document.querySelectorAll('.inventory-row');
-
-        if (searchInput) {
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase().trim();
-
-                tableRows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    const shouldShow = text.includes(searchTerm);
-                    row.style.display = shouldShow ? '' : 'none';
-
-                    // Add fade effect
-                    if (shouldShow) {
-                        row.style.opacity = '1';
-                        row.style.transform = 'scale(1)';
-                    } else {
-                        row.style.opacity = '0.3';
-                        row.style.transform = 'scale(0.98)';
-                    }
-                });
-            });
-        }
 
         // Table row hover effects
         tableRows.forEach(row => {

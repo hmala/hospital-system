@@ -15,6 +15,7 @@ class InventoryController extends Controller
         $locations = Location::orderBy('name')->get();
         $locationId = $request->get('location_id');
         $selectedLocation = $locationId ? Location::find($locationId) : null;
+        $search = trim($request->get('search', ''));
 
         // إذا كان المستخدم مرتبط بمخزن معين، استخدمه كافتراضي
         $userLocationId = auth()->user()->location_id;
@@ -24,6 +25,20 @@ class InventoryController extends Controller
         }
 
         $query = Product::orderBy('name');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('category', 'LIKE', "%{$search}%")
+                  ->orWhere('unit', 'LIKE', "%{$search}%")
+                  ->orWhere('barcode', 'LIKE', "%{$search}%")
+                  ->orWhere('code', 'LIKE', "%{$search}%")
+                  ->orWhereHas('stockBatches', function ($batchQuery) use ($search) {
+                      $batchQuery->where('internal_barcode', 'LIKE', "%{$search}%")
+                                 ->orWhere('batch_number', 'LIKE', "%{$search}%");
+                  });
+            });
+        }
 
         if ($locationId) {
             $query = $query->whereHas('stockBatches', function ($q) use ($locationId) {
@@ -68,6 +83,7 @@ class InventoryController extends Controller
             'locations',
             'locationId',
             'selectedLocation',
+            'search',
             'totalProductsCount',
             'availableProductsCount',
             'lowStockCount',
