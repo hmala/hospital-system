@@ -30,7 +30,7 @@
 
                             <div class="col-md-6">
                                 <label for="code" class="form-label">الكود <small class="text-muted">(حتى 50 حرفاً)</small></label>
-                                <input type="text" id="code" name="code" class="form-control" value="{{ old('code', $type->code) }}">
+                                <input type="text" id="code" name="code" class="form-control" value="{{ old('code', $type->code) }}" placeholder="أدخل كوداً أو اتركه فارغاً للحفاظ على الحالي">
                             </div>
 
                             <div class="col-md-6">
