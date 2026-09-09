@@ -28,8 +28,8 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="code" class="form-label">الكود</label>
-                                <input type="text" id="code" name="code" class="form-control" value="{{ old('code') }}" required>
+                                <label for="code" class="form-label">الكود <small class="text-muted">(اختياري - حتى 50 حرفاً)</small></label>
+                                <input type="text" id="code" name="code" class="form-control" value="{{ old('code') }}" placeholder="أدخل كوداً أو اتركه فارغاً للتوليد التلقائي">
                             </div>
 
                             <div class="col-md-6">

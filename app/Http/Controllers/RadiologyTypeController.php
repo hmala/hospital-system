@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RadiologyType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class RadiologyTypeController extends Controller
 {
@@ -99,7 +100,7 @@ class RadiologyTypeController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:10|unique:radiology_types,code',
+            'code' => 'nullable|string|max:50|unique:radiology_types,code',
             'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
@@ -110,7 +111,12 @@ class RadiologyTypeController extends Controller
             'is_active' => 'boolean'
         ]);
 
-        RadiologyType::create($request->all());
+        $data = $request->all();
+        if (empty($data['code'])) {
+            $data['code'] = 'RAD-' . strtoupper(Str::random(6));
+        }
+
+        RadiologyType::create($data);
 
         return redirect()->route('radiology.types.index')->with('success', 'تم إضافة نوع الإشعة بنجاح');
     }
@@ -140,7 +146,7 @@ class RadiologyTypeController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:10|unique:radiology_types,code,' . $type->id,
+            'code' => 'nullable|string|max:50|unique:radiology_types,code,' . $type->id,
             'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
@@ -151,7 +157,12 @@ class RadiologyTypeController extends Controller
             'is_active' => 'boolean'
         ]);
 
-        $type->update($request->all());
+        $data = $request->all();
+        if (empty($data['code'])) {
+            $data['code'] = $type->code ?: ('RAD-' . strtoupper(Str::random(6)));
+        }
+
+        $type->update($data);
 
         return redirect()->route('radiology.types.show', $type)->with('success', 'تم تحديث نوع الإشعة بنجاح');
     }
