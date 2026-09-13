@@ -76,11 +76,17 @@ class EmergencyServiceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
             'category' => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['is_moi_active'] = $request->has('is_moi_active');
+        $validated['is_hi_active'] = $request->has('is_hi_active');
 
         EmergencyService::create($validated);
 
@@ -93,11 +99,17 @@ class EmergencyServiceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
             'category' => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['is_moi_active'] = $request->has('is_moi_active');
+        $validated['is_hi_active'] = $request->has('is_hi_active');
 
         $emergencyService->update($validated);
 

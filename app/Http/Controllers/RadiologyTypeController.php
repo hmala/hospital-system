@@ -104,6 +104,10 @@ class RadiologyTypeController extends Controller
             'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
             'estimated_duration' => 'required|integer|min:1|max:480', // max 8 hours
             'requires_contrast' => 'boolean',
             'requires_preparation' => 'boolean',
@@ -115,6 +119,11 @@ class RadiologyTypeController extends Controller
         if (empty($data['code'])) {
             $data['code'] = 'RAD-' . strtoupper(Str::random(6));
         }
+        $data['is_active'] = $request->has('is_active');
+        $data['is_moi_active'] = $request->has('is_moi_active');
+        $data['is_hi_active'] = $request->has('is_hi_active');
+        $data['requires_contrast'] = $request->has('requires_contrast');
+        $data['requires_preparation'] = $request->has('requires_preparation');
 
         RadiologyType::create($data);
 
@@ -150,6 +159,10 @@ class RadiologyTypeController extends Controller
             'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
             'estimated_duration' => 'required|integer|min:1|max:480',
             'requires_contrast' => 'boolean',
             'requires_preparation' => 'boolean',
@@ -161,6 +174,11 @@ class RadiologyTypeController extends Controller
         if (empty($data['code'])) {
             $data['code'] = $type->code ?: ('RAD-' . strtoupper(Str::random(6)));
         }
+        $data['is_active'] = $request->has('is_active');
+        $data['is_moi_active'] = $request->has('is_moi_active');
+        $data['is_hi_active'] = $request->has('is_hi_active');
+        $data['requires_contrast'] = $request->has('requires_contrast');
+        $data['requires_preparation'] = $request->has('requires_preparation');
 
         $type->update($data);
 

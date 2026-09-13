@@ -41,18 +41,105 @@
         </div>
     @endif
 
+    @php
+        $patient = $appointment->patient;
+        $doctor = $appointment->doctor;
+        $defaultInsurance = $patient->insurance_type ?? 'none';
+        $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
+        $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
+
+        $regularPrice = (float)($doctor ? $doctor->getRegularPrice() : ($appointment->consultation_fee ?? 0));
+        $moiPrice = (float)($doctor && $doctor->moi_price > 0 ? $doctor->moi_price : $regularPrice);
+        $isMoiActive = (bool)($doctor ? ($doctor->is_moi_active ?? true) : true);
+        $hiPrice = (float)($doctor && $doctor->hi_price > 0 ? $doctor->hi_price : $regularPrice);
+        $isHiActive = (bool)($doctor ? ($doctor->is_hi_active ?? true) : true);
+    @endphp
+
     <div class="row">
         <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-gradient-success text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                     <h5 class="mb-0">
                         <i class="fas fa-file-invoice-dollar me-2"></i>
-                        معلومات الدفع
+                        تسوية ودفع رسوم الاستشارية
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('cashier.payment.process', $appointment->id) }}">
+                    <form method="POST" action="{{ route('cashier.payment.process', $appointment->id) }}" id="appointmentPaymentForm">
                         @csrf
+
+                        <!-- قسم الضمان الصحي ونسبة التحمل الخماسية المباشرة للكاشير -->
+                        <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-primary mb-0">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    تغطية الضمان ونسبة التحمل (Co-payment)
+                                </h6>
+                                <span class="badge bg-secondary" id="copayBadge">تحكم مباشر للكاشير</span>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- اختيار جهة الضمان -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted">جهة الضمان / التأمين *</label>
+                                    <select class="form-select" id="insurance_type" name="insurance_type">
+                                        <option value="none" {{ old('insurance_type', $defaultInsurance) == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل 100%)</option>
+                                        <option value="moi" {{ old('insurance_type', $defaultInsurance) == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
+                                        <option value="hi" {{ old('insurance_type', $defaultInsurance) == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
+                                    </select>
+                                </div>
+
+                                <!-- رقم بطاقة الضمان -->
+                                <div class="col-md-6" id="insurance_card_col">
+                                    <label class="form-label fw-bold small text-muted">رقم بطاقة / دفتر الضمان</label>
+                                    <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
+                                           value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر">
+                                </div>
+
+                                <!-- أزرار النسب الخماسية ونسبة التحمل -->
+                                <div class="col-12" id="copay_section">
+                                    <label class="form-label fw-bold small text-muted mb-1">
+                                        نسبة التحمل على المريض (Co-payment %)
+                                    </label>
+                                    
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+                                        <span class="small text-muted me-2">خيارات خماسية سريعة:</span>
+                                        @foreach([0, 5, 10, 15, 20, 25, 30, 50, 100] as $pct)
+                                            <button type="button" class="btn btn-sm btn-outline-primary copay-btn" data-pct="{{ $pct }}">{{ $pct }}%</button>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="input-group" style="max-width: 250px;">
+                                        <span class="input-group-text bg-light fw-bold">النسبة المعتمدة:</span>
+                                        <input type="number" step="1" min="0" max="100" class="form-control text-center fw-bold" 
+                                               id="copay_percentage" name="copay_percentage" value="{{ old('copay_percentage', $defaultCopay) }}">
+                                        <span class="input-group-text bg-light fw-bold">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- بطاقة معاينة الحسبة المالية المباشرة -->
+                            <div class="row g-2 mt-3 pt-3 border-top text-center" id="live_pricing_summary">
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border">
+                                        <small class="text-muted d-block">السعر المعتمد</small>
+                                        <strong class="text-dark fs-6" id="display_approved_price">0 د.ع</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border border-success">
+                                        <small class="text-success fw-bold d-block">تحمل المريض (نقداً)</small>
+                                        <strong class="text-success fs-6" id="display_patient_share">0 د.ع</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border border-primary">
+                                        <small class="text-primary fw-bold d-block">حصة الضمان (ذمة)</small>
+                                        <strong class="text-primary fs-6" id="display_insurance_share">0 د.ع</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="row mb-4">
                             <div class="col-md-6">
@@ -63,7 +150,7 @@
                                 <div class="payment-methods-group">
                                     <div class="form-check form-check-lg mb-2">
                                         <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" 
-                                               value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
+                                               value="cash" {{ old('payment_method', ($defaultInsurance !== 'none' ? 'insurance' : 'cash')) == 'cash' ? 'checked' : '' }} required>
                                         <label class="form-check-label fw-semibold" for="payment_cash">
                                             💵 نقدي (Cash)
                                         </label>
@@ -77,9 +164,9 @@
                                     </div>
                                     <div class="form-check form-check-lg">
                                         <input class="form-check-input" type="radio" name="payment_method" id="payment_insurance" 
-                                               value="insurance" {{ old('payment_method') == 'insurance' ? 'checked' : '' }}>
+                                               value="insurance" {{ old('payment_method', ($defaultInsurance !== 'none' ? 'insurance' : 'cash')) == 'insurance' ? 'checked' : '' }}>
                                         <label class="form-check-label fw-semibold" for="payment_insurance">
-                                            🏥 تأمين صحي (Insurance)
+                                            🏥 تأمين / ضمان صحي (Insurance / Copay)
                                         </label>
                                     </div>
                                 </div>
@@ -89,14 +176,16 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">المبلغ (IQD) *</label>
+                                <label class="form-label fw-bold">المبلغ المحصّل نقداً من المريض (IQD) *</label>
                                 <input type="number" 
                                        name="amount" 
-                                       class="form-control @error('amount') is-invalid @enderror" 
-                                       value="{{ old('amount', $appointment->consultation_fee) }}"
+                                       id="amount_input"
+                                       class="form-control form-control-lg fw-bold text-success @error('amount') is-invalid @enderror" 
+                                       value="{{ old('amount', $regularPrice) }}"
                                        step="0.01"
                                        min="0"
                                        required>
+                                <small class="text-muted">المبلغ الفعلي المستلم في الصندوق من المريض.</small>
                                 @error('amount')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -289,15 +378,150 @@ document.addEventListener('DOMContentLoaded', function() {
         showDoctorFeeModal();
     }
 
+    // أسعار وبيانات الطبيب
+    const regularPrice = @json($regularPrice);
+    const moiPrice = @json($moiPrice);
+    const isMoiActive = @json($isMoiActive);
+    const hiPrice = @json($hiPrice);
+    const isHiActive = @json($isHiActive);
+
+    const insuranceTypeSelect = document.getElementById('insurance_type');
+    const copayInput = document.getElementById('copay_percentage');
+    const copayBtns = document.querySelectorAll('.copay-btn');
+    const amountInput = document.getElementById('amount_input');
+    const displayApproved = document.getElementById('display_approved_price');
+    const displayPatientShare = document.getElementById('display_patient_share');
+    const displayInsuranceShare = document.getElementById('display_insurance_share');
+    const insuranceCardCol = document.getElementById('insurance_card_col');
+    const copaySection = document.getElementById('copay_section');
+    const copayBadge = document.getElementById('copayBadge');
+    const paymentInsuranceRadio = document.getElementById('payment_insurance');
+    const paymentCashRadio = document.getElementById('payment_cash');
+
+    function formatNumber(num) {
+        return Math.round(num).toLocaleString('en-US') + ' د.ع';
+    }
+
+    function updateCopayButtonsActive(val) {
+        copayBtns.forEach(btn => {
+            const btnPct = parseFloat(btn.getAttribute('data-pct'));
+            if (btnPct === val) {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-primary', 'active');
+            } else {
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-outline-primary');
+            }
+        });
+    }
+
+    function recalculate() {
+        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        let copayPct = parseFloat(copayInput ? copayInput.value : 100);
+        if (isNaN(copayPct) || copayPct < 0) copayPct = 0;
+        if (copayPct > 100) copayPct = 100;
+
+        let approvedPrice = regularPrice;
+        let isCovered = false;
+
+        if (insType === 'moi') {
+            if (isMoiActive) {
+                approvedPrice = moiPrice > 0 ? moiPrice : regularPrice;
+                isCovered = true;
+            }
+            if (insuranceCardCol) insuranceCardCol.style.display = 'block';
+            if (copaySection) copaySection.style.display = 'block';
+            if (copayBadge) {
+                copayBadge.className = 'badge bg-primary';
+                copayBadge.textContent = 'ضمان الداخلية';
+            }
+        } else if (insType === 'hi') {
+            if (isHiActive) {
+                approvedPrice = hiPrice > 0 ? hiPrice : regularPrice;
+                isCovered = true;
+            }
+            if (insuranceCardCol) insuranceCardCol.style.display = 'block';
+            if (copaySection) copaySection.style.display = 'block';
+            if (copayBadge) {
+                copayBadge.className = 'badge bg-info text-dark';
+                copayBadge.textContent = 'الضمان الصحي الوطني';
+            }
+        } else {
+            // none
+            approvedPrice = regularPrice;
+            copayPct = 100;
+            isCovered = false;
+            if (insuranceCardCol) insuranceCardCol.style.display = 'none';
+            if (copaySection) copaySection.style.display = 'none';
+            if (copayBadge) {
+                copayBadge.className = 'badge bg-secondary';
+                copayBadge.textContent = 'دفع نقدي كامل (100%)';
+            }
+        }
+
+        let patientShare = 0;
+        let insuranceShare = 0;
+
+        if (isCovered) {
+            patientShare = Math.round(approvedPrice * (copayPct / 100));
+            insuranceShare = Math.max(0, approvedPrice - patientShare);
+        } else {
+            patientShare = approvedPrice;
+            insuranceShare = 0;
+        }
+
+        if (displayApproved) displayApproved.textContent = formatNumber(approvedPrice);
+        if (displayPatientShare) displayPatientShare.textContent = formatNumber(patientShare);
+        if (displayInsuranceShare) displayInsuranceShare.textContent = formatNumber(insuranceShare);
+
+        if (amountInput) {
+            amountInput.value = patientShare;
+        }
+
+        updateCopayButtonsActive(copayPct);
+    }
+
+    if (insuranceTypeSelect) {
+        insuranceTypeSelect.addEventListener('change', function() {
+            if (this.value !== 'none') {
+                if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
+            } else {
+                if (paymentCashRadio) paymentCashRadio.checked = true;
+            }
+            recalculate();
+        });
+    }
+
+    copayBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const pct = parseFloat(this.getAttribute('data-pct'));
+            if (copayInput) {
+                copayInput.value = pct;
+            }
+            recalculate();
+        });
+    });
+
+    if (copayInput) {
+        copayInput.addEventListener('input', recalculate);
+    }
+
+    // Initial calculation
+    recalculate();
+
     const form = document.querySelector('form[action*="cashier.payment.process"]');
     if (form) {
         form.addEventListener('submit', function(e) {
-            const amountInput = form.querySelector('input[name="amount"]');
-            const val = parseFloat(amountInput?.value || 0);
-            if (val <= 0) {
+            const amountIn = form.querySelector('input[name="amount"]');
+            const val = parseFloat(amountIn?.value || 0);
+            const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+            const copayVal = parseFloat(copayInput?.value || 0);
+
+            // السماح بـ 0 إذا كانت نسبة التحمل 0% تحت الضمان
+            if (val <= 0 && !(insType !== 'none' && copayVal === 0)) {
                 e.preventDefault();
                 document.getElementById('modalErrorTitle').textContent = 'مبلغ الدفع غير صحيح (0 د.ع)';
-                document.getElementById('modalErrorMessage').innerHTML = 'لا يمكن تأكيد الدفع بمبلغ <strong>0 د.ع</strong>. يرجى كتابة المبلغ المستحق أولاً.';
+                document.getElementById('modalErrorMessage').innerHTML = 'لا يمكن تأكيد الدفع بمبلغ <strong>0 د.ع</strong> ما لم تكن نسبة التحمل 0% تحت الضمان. يرجى كتابة المبلغ المستحق أولاً.';
                 showDoctorFeeModal();
             }
         });

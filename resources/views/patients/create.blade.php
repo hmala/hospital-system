@@ -27,10 +27,18 @@
                     <form method="POST" action="{{ route('patients.store') }}">
                         @csrf
 
-                        @if($errors->has('duplicate_patient'))
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                {{ $errors->first('duplicate_patient') }}
+                        @if($errors->any())
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <h6 class="alert-heading fw-bold mb-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    يرجى تصحيح الأخطاء التالية قبل الحفظ:
+                                </h6>
+                                <ul class="mb-0 ps-3">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
 
@@ -204,34 +212,35 @@
                                 @enderror
                             </div>
 
-                            <!-- هل مشمول بالضمان -->
+                            <!-- جهة الضمان / التأمين -->
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">هل مشمول بالضمان؟ *</label>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="covered_by_insurance" id="covered_yes" value="1" {{ old('covered_by_insurance') == '1' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="covered_yes">نعم</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="covered_by_insurance" id="covered_no" value="0" {{ old('covered_by_insurance') == '0' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="covered_no">كلا</label>
-                                </div>
-                                @error('covered_by_insurance')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                <label for="insurance_type" class="form-label fw-bold">جهة الضمان / التأمين *</label>
+                                <select class="form-select @error('insurance_type') is-invalid @enderror" id="insurance_type" name="insurance_type" required>
+                                    <option value="none" {{ old('insurance_type', 'none') == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل)</option>
+                                    <option value="moi" {{ old('insurance_type') == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
+                                    <option value="hi" {{ old('insurance_type') == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
+                                </select>
+                                @error('insurance_type')
+                                    <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
 
-                        <div class="row">
-                            <!-- رقم دفتر التأمين -->
-                            <div class="col-md-6 mb-3" id="insurance_booklet_div" style="display: none;">
-                                <label for="insurance_booklet_number" class="form-label">رقم دفتر التأمين</label>
+                        <!-- تفاصيل الضمان الصحي في حال تم اختياره -->
+                        <div class="row p-3 mb-3 bg-light rounded border" id="insurance_details_box" style="display: none;">
+                            <div class="col-12 mb-2">
+                                <span class="badge bg-primary"><i class="fas fa-shield-alt me-1"></i> بيانات بطاقة / دفتر الضمان</span>
+                            </div>
+                            <div class="col-md-12 mb-2">
+                                <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة / دفتر الضمان *</label>
                                 <input type="text" 
-                                       class="form-control @error('insurance_booklet_number') is-invalid @enderror" 
-                                       id="insurance_booklet_number" 
-                                       name="insurance_booklet_number" 
-                                       value="{{ old('insurance_booklet_number') }}"
-                                       placeholder="رقم دفتر التأمين">
-                                @error('insurance_booklet_number')
+                                       class="form-control @error('insurance_card_no') is-invalid @enderror" 
+                                       id="insurance_card_no" 
+                                       name="insurance_card_no" 
+                                       value="{{ old('insurance_card_no', old('insurance_booklet_number')) }}"
+                                       placeholder="أدخل رقم الهوية أو الدفتر التأميني">
+                                <small class="text-muted d-block mt-1">ملاحظة: نسبة التحمل (Co-payment) والخصم يتم تحديدها والتحكم بها بالخيارات الخماسية مباشرة بواسطة الكاشير عند الدفع.</small>
+                                @error('insurance_card_no')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -360,24 +369,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('العمر:', age, 'سنة');
     });
 
-    // التحكم في إظهار حقل رقم دفتر التأمين
-    const coveredYes = document.getElementById('covered_yes');
-    const coveredNo = document.getElementById('covered_no');
-    const insuranceBookletDiv = document.getElementById('insurance_booklet_div');
+    // التحكم في إظهار حقول الضمان الصحي
+    const insuranceTypeSelect = document.getElementById('insurance_type');
+    const insuranceDetailsBox = document.getElementById('insurance_details_box');
+    const insuranceCardNoInput = document.getElementById('insurance_card_no');
 
-    function toggleInsuranceBooklet() {
-        if (coveredYes.checked) {
-            insuranceBookletDiv.style.display = 'block';
+    function toggleInsuranceDetails() {
+        if (insuranceTypeSelect.value !== 'none') {
+            insuranceDetailsBox.style.display = 'flex';
+            insuranceCardNoInput.setAttribute('required', 'required');
         } else {
-            insuranceBookletDiv.style.display = 'none';
+            insuranceDetailsBox.style.display = 'none';
+            insuranceCardNoInput.removeAttribute('required');
         }
     }
 
-    coveredYes.addEventListener('change', toggleInsuranceBooklet);
-    coveredNo.addEventListener('change', toggleInsuranceBooklet);
-
-    // التحقق الأولي عند تحميل الصفحة
-    toggleInsuranceBooklet();
+    insuranceTypeSelect.addEventListener('change', toggleInsuranceDetails);
+    toggleInsuranceDetails();
 });
 </script>
 @endsection

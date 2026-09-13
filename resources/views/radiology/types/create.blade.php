@@ -49,8 +49,9 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label for="base_price" class="form-label">السعر الأساسي</label>
+                                <label for="base_price" class="form-label fw-bold">سعر الكاش العادي (د.ع) <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" id="base_price" name="base_price" class="form-control" value="{{ old('base_price', 0) }}" required>
+                                <div class="form-text small">سعر المراجع بدون ضمان</div>
                             </div>
 
                             <div class="col-md-4">
@@ -61,7 +62,61 @@
                             <div class="col-md-4 d-flex align-items-end">
                                 <div class="form-check me-4">
                                     <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_active">مُفعّل</label>
+                                    <label class="form-check-label" for="is_active">الفحص نشط</label>
+                                </div>
+                            </div>
+
+                            <!-- قسم تسعير الضمان الصحي وضمان وزارة الداخلية -->
+                            <div class="col-12">
+                                <div class="card border-primary border-opacity-25 bg-light bg-opacity-25">
+                                    <div class="card-header bg-primary bg-opacity-10 py-2">
+                                        <h6 class="mb-0 text-primary fw-bold">
+                                            <i class="fas fa-shield-alt me-1"></i> تسعير وتغطية الضمان الصحي وضمان الداخلية
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            {{-- ضمان وزارة الداخلية --}}
+                                            <div class="col-md-6 border-start">
+                                                <div class="p-2 bg-white rounded border">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <label class="form-label fw-bold text-dark mb-0">
+                                                            <i class="fas fa-id-badge text-primary me-1"></i> ضمان وزارة الداخلية (MOI)
+                                                        </label>
+                                                        <div class="form-check form-switch mb-0">
+                                                            <input class="form-check-input" type="checkbox" id="is_moi_active" name="is_moi_active" value="1"
+                                                                   {{ old('is_moi_active', true) ? 'checked' : '' }}>
+                                                            <label class="form-check-label small fw-bold" for="is_moi_active">مشمول بالضمان</label>
+                                                        </div>
+                                                    </div>
+                                                    <label for="moi_price" class="form-label small text-muted">السعر الرسمي للداخلية (د.ع)</label>
+                                                    <input type="number" step="0.01" class="form-control" id="moi_price" name="moi_price"
+                                                           value="{{ old('moi_price') }}" placeholder="اتركه فارغاً لاعتماد سعر الكاش">
+                                                    <div class="form-text small">إذا كان فارغاً، يتم اعتماد سعر الكاش الأساسي تلقائياً</div>
+                                                </div>
+                                            </div>
+
+                                            {{-- هيئة الضمان الصحي --}}
+                                            <div class="col-md-6">
+                                                <div class="p-2 bg-white rounded border">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <label class="form-label fw-bold text-dark mb-0">
+                                                            <i class="fas fa-heartbeat text-success me-1"></i> هيئة الضمان الصحي (HI)
+                                                        </label>
+                                                        <div class="form-check form-switch mb-0">
+                                                            <input class="form-check-input" type="checkbox" id="is_hi_active" name="is_hi_active" value="1"
+                                                                   {{ old('is_hi_active', true) ? 'checked' : '' }}>
+                                                            <label class="form-check-label small fw-bold" for="is_hi_active">مشمول بالضمان</label>
+                                                        </div>
+                                                    </div>
+                                                    <label for="hi_price" class="form-label small text-muted">السعر الرسمي لهيئة الضمان (د.ع)</label>
+                                                    <input type="number" step="0.01" class="form-control" id="hi_price" name="hi_price"
+                                                           value="{{ old('hi_price') }}" placeholder="اتركه فارغاً لاعتماد سعر الكاش">
+                                                    <div class="form-text small">إذا كان فارغاً، يتم اعتماد سعر الكاش الأساسي تلقائياً</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

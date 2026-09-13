@@ -33,7 +33,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">إجمالي المقبوضات</span>
+                            <span class="small opacity-75 d-block mb-1">إجمالي المقبوضات النقدية</span>
                             <h3 class="mb-0 fw-bold">{{ number_format($totalAmount, 0) }} <small style="font-size: 0.9rem;">د.ع</small></h3>
                         </div>
                         <i class="fas fa-money-bill-wave fa-2x opacity-50"></i>
@@ -46,10 +46,10 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">عدد الوصولات المصدرة</span>
-                            <h3 class="mb-0 fw-bold">{{ number_format($totalCount) }}</h3>
+                            <span class="small opacity-75 d-block mb-1">مطالبات جهات الضمان</span>
+                            <h3 class="mb-0 fw-bold">{{ number_format($totalInsuranceShare ?? 0, 0) }} <small style="font-size: 0.9rem;">د.ع</small></h3>
                         </div>
-                        <i class="fas fa-receipt fa-2x opacity-50"></i>
+                        <i class="fas fa-shield-alt fa-2x opacity-50"></i>
                     </div>
                 </div>
             </div>
@@ -59,10 +59,10 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">متوسط قيمة الوصل</span>
-                            <h3 class="mb-0 fw-bold">{{ $totalCount > 0 ? number_format($totalAmount / $totalCount, 0) : 0 }} <small style="font-size: 0.9rem;">د.ع</small></h3>
+                            <span class="small opacity-75 d-block mb-1">عدد الوصولات المصدرة</span>
+                            <h3 class="mb-0 fw-bold">{{ number_format($totalCount) }}</h3>
                         </div>
-                        <i class="fas fa-calculator fa-2x opacity-50"></i>
+                        <i class="fas fa-receipt fa-2x opacity-50"></i>
                     </div>
                 </div>
             </div>
@@ -95,13 +95,13 @@
                 <input type="hidden" name="range" id="rangeInput" value="{{ $range ?? request('range', '') }}">
                 <div class="row g-2 align-items-end">
                     <!-- من تاريخ -->
-                    <div class="col-lg-3 col-md-3 col-sm-6">
+                    <div class="col-lg-2 col-md-3 col-sm-6">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>من تاريخ</label>
                         <input type="date" name="from_date" id="fromDateInput" class="form-control form-control-sm" value="{{ $fromDate }}">
                     </div>
 
                     <!-- إلى تاريخ -->
-                    <div class="col-lg-3 col-md-3 col-sm-6">
+                    <div class="col-lg-2 col-md-3 col-sm-6">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>إلى تاريخ</label>
                         <input type="date" name="to_date" id="toDateInput" class="form-control form-control-sm" value="{{ $toDate }}">
                     </div>
@@ -114,6 +114,18 @@
                             @foreach(\App\Models\Payment::PAYMENT_TYPES as $typeKey => $typeLabel)
                                 <option value="{{ $typeKey }}" {{ $paymentType == $typeKey ? 'selected' : '' }}>{{ $typeLabel }}</option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    <!-- جهة الضمان -->
+                    <div class="col-lg-2 col-md-3 col-sm-6">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-shield-alt me-1"></i>جهة الضمان</label>
+                        <select name="insurance_type" class="form-select form-select-sm">
+                            <option value="">الكل (ضمان ونقدي)</option>
+                            <option value="insured" {{ ($insuranceType ?? '') === 'insured' ? 'selected' : '' }}>جميع المشمولين بالضمان</option>
+                            <option value="moi" {{ ($insuranceType ?? '') === 'moi' ? 'selected' : '' }}>ضمان وزارة الداخلية</option>
+                            <option value="hi" {{ ($insuranceType ?? '') === 'hi' ? 'selected' : '' }}>الضمان الصحي الوطني</option>
+                            <option value="none" {{ ($insuranceType ?? '') === 'none' ? 'selected' : '' }}>بدون ضمان (نقدي فقط)</option>
                         </select>
                     </div>
 
@@ -168,7 +180,9 @@
                             <th class="text-start">اسم المريض</th>
                             <th>المستخدم (الكاشير)</th>
                             <th>القسم / الخدمة</th>
-                            <th>المبلغ المدفوع</th>
+                            <th>تغطية الضمان</th>
+                            <th>المحصل (المريض)</th>
+                            <th>حصة الضمان</th>
                             <th>طريقة الدفع</th>
                             <th style="width: 90px;">الإجراء</th>
                         </tr>
@@ -226,8 +240,28 @@
                                 @endif
                             </td>
                             <td>
+                                @if($payment->insurance_type && $payment->insurance_type !== 'none')
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
+                                        {{ $payment->insurance_type_name }}
+                                    </span>
+                                    @if($payment->insurance_card_no)
+                                        <br><small class="text-muted">#{{ $payment->insurance_card_no }}</small>
+                                    @endif
+                                @else
+                                    <span class="badge bg-light text-muted border">نقدي</span>
+                                @endif
+                            </td>
+                            <td>
                                 <strong class="text-success fs-6">{{ number_format($payment->amount, 0) }}</strong>
                                 <small class="text-muted d-block" style="font-size: 0.75rem;">د.ع</small>
+                            </td>
+                            <td>
+                                @if($payment->insurance_share > 0)
+                                    <strong class="text-primary fs-6">{{ number_format($payment->insurance_share, 0) }}</strong>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">د.ع</small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
                             <td>
                                 <span class="badge bg-light text-secondary border">
@@ -247,7 +281,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-5">
+                            <td colspan="11" class="text-center text-muted py-5">
                                 <i class="fas fa-receipt fa-3x mb-3 text-secondary opacity-50"></i>
                                 <h5 class="fw-bold">لا توجد حركات أو وصولات مسجلة بهذه الفلاتر</h5>
                                 <p class="small text-muted">جرب تغيير نطاق التواريخ أو تصفية الأقسام</p>
@@ -258,11 +292,14 @@
                     @if($payments->count() > 0)
                     <tfoot class="table-light">
                         <tr class="fw-bold">
-                            <td colspan="6" class="text-start py-3 fs-6">
-                                <i class="fas fa-sigma me-1"></i> إجمالي المقبوضات في هذا الجدول:
+                            <td colspan="7" class="text-start py-3 fs-6">
+                                <i class="fas fa-sigma me-1"></i> إجمالي المقبوضات ومطالبات الضمان:
                             </td>
                             <td class="text-success fs-5 py-3">
                                 {{ number_format($payments->sum('amount'), 0) }} <small class="fs-6">د.ع</small>
+                            </td>
+                            <td class="text-primary fs-5 py-3">
+                                {{ number_format($payments->sum('insurance_share'), 0) }} <small class="fs-6">د.ع</small>
                             </td>
                             <td colspan="2"></td>
                         </tr>

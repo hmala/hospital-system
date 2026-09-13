@@ -11,10 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('emergencies', function (Blueprint $table) {
-            $table->enum('discharge_type', ['recovered', 'against_medical_advice'])->nullable()->after('discharge_time');
-            $table->text('discharge_notes')->nullable()->after('discharge_type');
-        });
+        if (Schema::hasTable('emergencies')) {
+            Schema::table('emergencies', function (Blueprint $table) {
+                if (!Schema::hasColumn('emergencies', 'discharge_type')) {
+                    $table->enum('discharge_type', ['recovered', 'against_medical_advice'])->nullable()->after('discharge_time');
+                }
+                if (!Schema::hasColumn('emergencies', 'discharge_notes')) {
+                    $table->text('discharge_notes')->nullable()->after('discharge_type');
+                }
+            });
+        }
     }
 
     /**

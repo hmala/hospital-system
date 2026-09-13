@@ -47,17 +47,31 @@ class DepartmentController extends Controller
             'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
             'room_number' => 'required|string|max:50',
             'consultation_fee' => 'required|numeric|min:0',
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
+            'room_number' => 'required|string|max:50',
+            'consultation_fee' => 'required|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
             'working_hours_start' => 'required|date_format:H:i',
             'working_hours_end' => 'required|date_format:H:i|after:working_hours_start',
             'max_patients_per_day' => 'required|integer|min:1',
         ]);
 
+        $hospital = Hospital::first();
         Department::create([
-            'hospital_id' => Hospital::first()->id, // نستخدم المستشفى الأول في النظام
+            'hospital_id' => $hospital ? $hospital->id : 1,
             'name' => $request->name,
             'type' => $request->type,
             'room_number' => $request->room_number,
             'consultation_fee' => $request->consultation_fee,
+            'moi_price' => $request->moi_price,
+            'is_moi_active' => $request->has('is_moi_active'),
+            'hi_price' => $request->hi_price,
+            'is_hi_active' => $request->has('is_hi_active'),
             'working_hours_start' => $request->working_hours_start,
             'working_hours_end' => $request->working_hours_end,
             'max_patients_per_day' => $request->max_patients_per_day,
@@ -90,12 +104,21 @@ class DepartmentController extends Controller
             'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
             'room_number' => 'required|string|max:50',
             'consultation_fee' => 'required|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
             'working_hours_start' => 'required|date_format:H:i',
             'working_hours_end' => 'required|date_format:H:i|after:working_hours_start',
             'max_patients_per_day' => 'required|integer|min:1',
         ]);
 
-        $department->update($request->all());
+        $data = $request->all();
+        $data['is_active'] = $request->has('is_active');
+        $data['is_moi_active'] = $request->has('is_moi_active');
+        $data['is_hi_active'] = $request->has('is_hi_active');
+
+        $department->update($data);
 
         return redirect()->route('departments.admin')
             ->with('success', 'تم تحديث العيادة بنجاح');

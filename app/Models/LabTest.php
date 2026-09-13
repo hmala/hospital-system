@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LabTest extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\HasInsurancePricing;
 
     protected $fillable = [
         'main_category',
@@ -18,10 +18,19 @@ class LabTest extends Model
         'description',
         'is_active',
         'price',
+        'moi_price',
+        'is_moi_active',
+        'hi_price',
+        'is_hi_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_moi_active' => 'boolean',
+        'is_hi_active' => 'boolean',
+        'price' => 'decimal:2',
+        'moi_price' => 'decimal:2',
+        'hi_price' => 'decimal:2',
     ];
 
     // Accessor للحصول على نص الفئة من كود الفئة الرئيسي

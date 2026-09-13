@@ -11,7 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        \DB::statement("ALTER TABLE emergencies MODIFY COLUMN payment_status ENUM('pending', 'paid', 'waived', 'cancelled') NOT NULL DEFAULT 'pending'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') {
+            \DB::statement("ALTER TABLE emergencies MODIFY COLUMN payment_status ENUM('pending', 'paid', 'waived', 'cancelled') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -19,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        \DB::statement("ALTER TABLE emergencies MODIFY COLUMN payment_status ENUM('pending', 'paid') NOT NULL DEFAULT 'pending'");
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') {
+            \DB::statement("ALTER TABLE emergencies MODIFY COLUMN payment_status ENUM('pending', 'paid') NOT NULL DEFAULT 'pending'");
+        }
     }
 };

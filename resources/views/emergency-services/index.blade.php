@@ -276,7 +276,7 @@
 @push('modals')
 <!-- Create Service Modal -->
 <div class="modal fade" id="createServiceModal" tabindex="-1" aria-labelledby="createServiceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <form action="{{ route('emergency-services.store') }}" method="POST">
                 @csrf
@@ -287,21 +287,64 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">اسم الخدمة <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control rounded-3" placeholder="مثال: غسل معدة، سحب دم..." required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">السعر (د.ع) <span class="text-danger">*</span></label>
-                        <input type="number" step="1000" name="price" class="form-control rounded-3" placeholder="مثال: 25000" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">التصنيف (اختياري)</label>
-                        <input type="text" name="category" class="form-control rounded-3" placeholder="مثال: تمريض، جراحة صغرى، تنفسية...">
-                    </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" name="is_active" value="1" id="createIsActiveSwitch" checked>
-                        <label class="form-check-label fw-semibold" for="createIsActiveSwitch">تفعيل الخدمة فوراً</label>
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold">اسم الخدمة <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control rounded-3" placeholder="مثال: غسل معدة، سحب دم..." required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">التصنيف (اختياري)</label>
+                            <input type="text" name="category" class="form-control rounded-3" placeholder="مثال: تمريض، جراحة صغرى، تنفسية...">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">سعر الكاش العادي (د.ع) <span class="text-danger">*</span></label>
+                            <input type="number" step="500" name="price" class="form-control rounded-3" placeholder="مثال: 25000" required>
+                            <div class="form-text small">السعر الافتراضي للمراجع بدون ضمان</div>
+                        </div>
+
+                        <!-- قسم تسعير الضمان الصحي وضمان الداخلية -->
+                        <div class="col-12">
+                            <div class="card border-primary border-opacity-25 bg-light bg-opacity-50 rounded-3">
+                                <div class="card-header bg-primary bg-opacity-10 py-2">
+                                    <h6 class="mb-0 text-primary fw-bold small">
+                                        <i class="fas fa-shield-alt me-1"></i> تسعير وتغطية الضمان الصحي وضمان الداخلية
+                                    </h6>
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="row g-3">
+                                        {{-- ضمان الداخلية --}}
+                                        <div class="col-md-6 border-start">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>ضمان الداخلية (MOI)</label>
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="is_moi_active" value="1" id="createIsMoiActive" checked>
+                                                    <label class="form-check-label small" for="createIsMoiActive">مشمول</label>
+                                                </div>
+                                            </div>
+                                            <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" placeholder="سعر الداخلية (اتركه فارغاً لاعتماد الكاش)">
+                                        </div>
+                                        {{-- هيئة الضمان --}}
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-heartbeat text-success me-1"></i>هيئة الضمان (HI)</label>
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="is_hi_active" value="1" id="createIsHiActive" checked>
+                                                    <label class="form-check-label small" for="createIsHiActive">مشمول</label>
+                                                </div>
+                                            </div>
+                                            <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" placeholder="سعر هيئة الضمان (اتركه فارغاً لاعتماد الكاش)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="createIsActiveSwitch" checked>
+                                <label class="form-check-label fw-semibold" for="createIsActiveSwitch">تفعيل الخدمة فوراً</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
@@ -316,7 +359,7 @@
 <!-- Edit Modals -->
 @foreach($services as $service)
 <div class="modal fade" id="editServiceModal{{ $service->id }}" tabindex="-1" aria-labelledby="editServiceModalLabel{{ $service->id }}" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <form action="{{ route('emergency-services.update', $service) }}" method="POST">
                 @csrf
@@ -328,21 +371,64 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">اسم الخدمة <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control rounded-3" value="{{ $service->name }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">السعر (د.ع) <span class="text-danger">*</span></label>
-                        <input type="number" step="1000" name="price" class="form-control rounded-3" value="{{ (int)$service->price }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">التصنيف (اختياري)</label>
-                        <input type="text" name="category" class="form-control rounded-3" value="{{ $service->category }}" placeholder="مثال: تمريض، جراحة صغرى، تنفسية...">
-                    </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveSwitch{{ $service->id }}" {{ $service->is_active ? 'checked' : '' }}>
-                        <label class="form-check-label fw-semibold" for="isActiveSwitch{{ $service->id }}">تفعيل الخدمة</label>
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold">اسم الخدمة <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control rounded-3" value="{{ $service->name }}" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">التصنيف (اختياري)</label>
+                            <input type="text" name="category" class="form-control rounded-3" value="{{ $service->category }}" placeholder="مثال: تمريض، جراحة صغرى، تنفسية...">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">سعر الكاش العادي (د.ع) <span class="text-danger">*</span></label>
+                            <input type="number" step="500" name="price" class="form-control rounded-3" value="{{ (int)$service->price }}" required>
+                            <div class="form-text small">السعر الافتراضي للمراجع بدون ضمان</div>
+                        </div>
+
+                        <!-- قسم تسعير الضمان الصحي وضمان الداخلية -->
+                        <div class="col-12">
+                            <div class="card border-primary border-opacity-25 bg-light bg-opacity-50 rounded-3">
+                                <div class="card-header bg-primary bg-opacity-10 py-2">
+                                    <h6 class="mb-0 text-primary fw-bold small">
+                                        <i class="fas fa-shield-alt me-1"></i> تسعير وتغطية الضمان الصحي وضمان الداخلية
+                                    </h6>
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="row g-3">
+                                        {{-- ضمان الداخلية --}}
+                                        <div class="col-md-6 border-start">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>ضمان الداخلية (MOI)</label>
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="is_moi_active" value="1" id="editIsMoiActive{{ $service->id }}" {{ $service->is_moi_active ? 'checked' : '' }}>
+                                                    <label class="form-check-label small" for="editIsMoiActive{{ $service->id }}">مشمول</label>
+                                                </div>
+                                            </div>
+                                            <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" value="{{ $service->moi_price ? (int)$service->moi_price : '' }}" placeholder="سعر الداخلية (اتركه فارغاً لاعتماد الكاش)">
+                                        </div>
+                                        {{-- هيئة الضمان --}}
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-heartbeat text-success me-1"></i>هيئة الضمان (HI)</label>
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="is_hi_active" value="1" id="editIsHiActive{{ $service->id }}" {{ $service->is_hi_active ? 'checked' : '' }}>
+                                                    <label class="form-check-label small" for="editIsHiActive{{ $service->id }}">مشمول</label>
+                                                </div>
+                                            </div>
+                                            <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" value="{{ $service->hi_price ? (int)$service->hi_price : '' }}" placeholder="سعر هيئة الضمان (اتركه فارغاً لاعتماد الكاش)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveSwitch{{ $service->id }}" {{ $service->is_active ? 'checked' : '' }}>
+                                <label class="form-check-label fw-semibold" for="isActiveSwitch{{ $service->id }}">تفعيل الخدمة</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">

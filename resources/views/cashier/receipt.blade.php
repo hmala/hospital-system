@@ -669,12 +669,49 @@
                     </div>
                     @endif
 
-                    <!-- ملخص الدفع -->
+                    <!-- ملخص الدفع والضمان -->
                     <div class="bg-light p-3 rounded mb-4">
                         <h6 class="mb-3">
                             <i class="fas fa-money-bill-wave me-2 text-success"></i>
-                            ملخص الدفع
+                            ملخص الدفع والتسوية المالية
                         </h6>
+
+                        @if($payment->insurance_type && $payment->insurance_type !== 'none')
+                            <div class="p-3 mb-3 bg-white border border-primary rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                    <div>
+                                        <span class="badge bg-primary fs-6"><i class="fas fa-shield-alt me-1"></i> {{ $payment->insurance_type_name }}</span>
+                                        @if($payment->insurance_card_no)
+                                            <span class="badge bg-dark ms-1">رقم البطاقة: {{ $payment->insurance_card_no }}</span>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-info text-dark">نسبة التحمل: {{ number_format($payment->copay_percentage, 0) }}%</span>
+                                    </div>
+                                </div>
+                                <div class="row text-center g-2">
+                                    <div class="col-4">
+                                        <div class="p-2 bg-light rounded">
+                                            <small class="text-muted d-block">السعر الإجمالي المعتمد</small>
+                                            <h6 class="mb-0 fw-bold text-dark">{{ number_format($payment->total_amount ?: $payment->amount, 2) }} IQD</h6>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="p-2 bg-light rounded">
+                                            <small class="text-muted d-block">المدفوع نقداً (تحمل المريض)</small>
+                                            <h6 class="mb-0 fw-bold text-success">{{ number_format($payment->patient_share ?: $payment->amount, 2) }} IQD</h6>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="p-2 bg-light rounded">
+                                            <small class="text-muted d-block">المطالبة على جهة الضمان</small>
+                                            <h6 class="mb-0 fw-bold text-primary">{{ number_format($payment->insurance_share, 2) }} IQD</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="row">
                             <div class="col-md-6 mb-2">
                                 <small class="text-muted">طريقة الدفع:</small>
@@ -683,7 +720,7 @@
                                 </div>
                             </div>
                             <div class="col-md-6 mb-2">
-                                <small class="text-muted">المبلغ المدفوع:</small>
+                                <small class="text-muted">المبلغ المحصل نقداً في الصندوق:</small>
                                 <div class="fw-bold text-success" style="font-size: 1.5rem;">{{ number_format($payment->amount, 2) }} IQD</div>
                             </div>
                         </div>

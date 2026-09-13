@@ -179,13 +179,37 @@ class CashierController extends Controller
 
         DB::beginTransaction();
         try {
-            // إنشاء سجل الدفع
+            $patient = $appointment->patient;
+            $insuranceType = $request->input('insurance_type', $patient->insurance_type ?? 'none');
+            $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
+
+            $doctorPricing = $appointment->doctor ? $appointment->doctor->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
+            $isCovered = $doctorPricing ? $doctorPricing['is_covered'] : false;
+            
+            $patientPaidAmount = (float)$request->amount;
+            $totalApproved = $isCovered ? (float)$doctorPricing['total_amount'] : ($appointment->consultation_fee ?? $patientPaidAmount);
+            if ($totalApproved <= 0) {
+                $totalApproved = $patientPaidAmount;
+            }
+            $patientShare = $patientPaidAmount;
+            $insuranceShare = $isCovered ? max(0, $totalApproved - $patientShare) : 0;
+            $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
+
+            // إنشاء سجل الدفع مع تجميد الأرقام المالية الثلاثة
             $payment = Payment::create([
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
                 'cashier_id' => $user->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => $request->amount,
+                'amount' => $patientPaidAmount,
+                'total_amount' => $totalApproved,
+                'patient_share' => $patientShare,
+                'insurance_share' => $insuranceShare,
+                'insurance_type' => $insuranceType,
+                'insurance_card_no' => $cardNo,
+                'copay_percentage' => $isCovered ? $copayPercentage : 0,
+                'claim_status' => $claimStatus,
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'appointment',
                 'description' => 'دفع رسوم موعد #' . $appointment->id,
@@ -317,16 +341,85 @@ class CashierController extends Controller
             return redirect()->route('cashier.index')
                         ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
         }
-        \Log::info('Request data: patient_id=' . $request->visit->patient_id . ', cashier_id=' . $user->id);
-            
-            // إنشاء سجل الدفع
-            \Log::info('Creating payment record...');
+            $patient = optional($request->visit)->patient;
+            $insuranceType = $httpRequest->input('insurance_type', $patient->insurance_type ?? 'none');
+            $copayPercentage = (float)$httpRequest->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $cardNo = $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
+
+            $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+            $computedTotal = 0;
+            $computedPatientShare = 0;
+            $computedInsuranceShare = 0;
+            $hasCoveredItem = false;
+
+            if ($request->type === 'lab') {
+                $labTestIds = $details['lab_test_ids'] ?? [];
+                if (empty($labTestIds) && !empty($details['package_id'])) {
+                    $package = \App\Models\Package::find($details['package_id']);
+                    if ($package) {
+                        $labTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                    }
+                }
+                if (!empty($labTestIds)) {
+                    foreach ($labTestIds as $testId) {
+                        $test = LabTest::find($testId);
+                        if ($test) {
+                            $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                            $computedTotal += $p['total_amount'];
+                            $computedPatientShare += $p['patient_share'];
+                            $computedInsuranceShare += $p['insurance_share'];
+                            if ($p['is_covered']) $hasCoveredItem = true;
+                        }
+                    }
+                } elseif (!empty($details['tests'])) {
+                    foreach ($details['tests'] as $testName) {
+                        $test = LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                        if ($test) {
+                            $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                            $computedTotal += $p['total_amount'];
+                            $computedPatientShare += $p['patient_share'];
+                            $computedInsuranceShare += $p['insurance_share'];
+                            if ($p['is_covered']) $hasCoveredItem = true;
+                        }
+                    }
+                }
+            } elseif ($request->type === 'radiology') {
+                $radTypeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
+                if (!empty($radTypeIds)) {
+                    foreach ($radTypeIds as $typeId) {
+                        $type = RadiologyType::find($typeId);
+                        if ($type) {
+                            $p = $type->calculateInsurancePricing($insuranceType, $copayPercentage);
+                            $computedTotal += $p['total_amount'];
+                            $computedPatientShare += $p['patient_share'];
+                            $computedInsuranceShare += $p['insurance_share'];
+                            if ($p['is_covered']) $hasCoveredItem = true;
+                        }
+                    }
+                }
+            }
+
+            $patientPaidAmount = (float)$httpRequest->amount;
+            $totalApproved = $computedTotal > 0 ? $computedTotal : $patientPaidAmount;
+            $patientShare = $patientPaidAmount;
+            $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
+            $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
+
+            // إنشاء سجل الدفع مع تجميد الأرقام المالية الثلاثة
+            \Log::info('Creating payment record with insurance snapshot...');
             $payment = Payment::create([
                 'request_id' => $request->id,
                 'patient_id' => $request->visit->patient_id,
                 'cashier_id' => $user->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => $httpRequest->amount,
+                'amount' => $patientPaidAmount,
+                'total_amount' => $totalApproved,
+                'patient_share' => $patientShare,
+                'insurance_share' => $insuranceShare,
+                'insurance_type' => $insuranceType,
+                'insurance_card_no' => $cardNo,
+                'copay_percentage' => $hasCoveredItem ? $copayPercentage : 0,
+                'claim_status' => $claimStatus,
                 'payment_method' => $httpRequest->payment_method,
                 'payment_type' => 'lab', // استخدام 'lab' بدلاً من 'request' لأن الـ enum لا يحتوي على 'request'
                 'description' => 'دفع رسوم طلب ' . $request->type . ' #' . $request->id,
@@ -488,6 +581,7 @@ class CashierController extends Controller
         $range = $request->query('range');
         $paymentType = $request->query('payment_type');
         $paymentMethod = $request->query('payment_method');
+        $insuranceType = $request->query('insurance_type');
         $cashierId = $request->query('cashier_id');
         $search = $request->query('search');
 
@@ -546,6 +640,14 @@ class CashierController extends Controller
             $query->where('payment_method', $paymentMethod);
         }
 
+        if ($insuranceType) {
+            if ($insuranceType === 'insured') {
+                $query->whereIn('insurance_type', ['moi', 'hi']);
+            } else {
+                $query->where('insurance_type', $insuranceType);
+            }
+        }
+
         // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً أو محاسباً)
         if (!$user->hasRole(['admin', 'accountant', 'super_admin'])) {
             $query->where('cashier_id', $user->id);
@@ -555,6 +657,7 @@ class CashierController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('receipt_number', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('insurance_card_no', 'like', "%{$search}%")
                   ->orWhereHas('patient.user', function($pq) use ($search) {
                       $pq->where('name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
@@ -575,6 +678,8 @@ class CashierController extends Controller
         $allPayments = $statsQuery->get();
 
         $totalAmount = $allPayments->sum('amount');
+        $totalInsuranceShare = $allPayments->sum('insurance_share');
+        $totalPatientShare = $allPayments->sum('patient_share');
         $totalCount = $allPayments->count();
 
         // إحصائيات حسب الأقسام
@@ -590,16 +695,16 @@ class CashierController extends Controller
         if ($request->query('print') == '1') {
             $payments = $query->orderBy('paid_at', 'desc')->get();
             return view('cashier.report-print', compact(
-                'payments', 'totalAmount', 'totalCount', 'typeBreakdown',
-                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search', 'range'
+                'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
+                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range'
             ));
         }
 
         $payments = $query->orderBy('paid_at', 'desc')->paginate(25)->withQueryString();
 
         return view('cashier.report', compact(
-            'payments', 'totalAmount', 'totalCount', 'typeBreakdown',
-            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'search', 'range'
+            'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
+            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range'
         ));
     }
 
@@ -1372,13 +1477,31 @@ class CashierController extends Controller
         DB::beginTransaction();
 
         try {
+            $patient = $payment->patient ?? optional($payment->emergency)->patient;
+            $insuranceType = $request->input('insurance_type', $patient->insurance_type ?? 'none');
+            $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
+
+            $patientPaidAmount = (float)$request->amount;
+            $totalApproved = ($payment->total_amount && $payment->total_amount > 0) ? (float)$payment->total_amount : $patientPaidAmount;
+            $patientShare = $patientPaidAmount;
+            $insuranceShare = ($insuranceType !== 'none') ? max(0, $totalApproved - $patientShare) : 0;
+            $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
+
             // تحديث الدفعة
             $payment->update([
                 'payment_method' => $request->payment_method,
-                'amount' => $request->amount,
+                'amount' => $patientPaidAmount,
+                'total_amount' => $totalApproved,
+                'patient_share' => $patientShare,
+                'insurance_share' => $insuranceShare,
+                'insurance_type' => $insuranceType,
+                'insurance_card_no' => $cardNo,
+                'copay_percentage' => ($insuranceType !== 'none') ? $copayPercentage : 0,
+                'claim_status' => $claimStatus,
                 'paid_at' => now(),
                 'cashier_id' => $user->id,
-                'receipt_number' => Payment::generateReceiptNumber(),
+                'receipt_number' => $payment->receipt_number ?: Payment::generateReceiptNumber(),
                 'notes' => $request->notes,
             ]);
 

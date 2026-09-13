@@ -19,6 +19,13 @@ class Payment extends Model
         'cashier_id',
         'receipt_number',
         'amount',
+        'total_amount',
+        'patient_share',
+        'insurance_share',
+        'insurance_type',
+        'copay_percentage',
+        'insurance_card_no',
+        'claim_status',
         'payment_method',
         'payment_type',
         'description',
@@ -30,6 +37,10 @@ class Payment extends Model
     protected $casts = [
         'paid_at' => 'datetime',
         'amount' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'patient_share' => 'decimal:2',
+        'insurance_share' => 'decimal:2',
+        'copay_percentage' => 'decimal:2',
         'is_inclusive' => 'boolean'
     ];
 

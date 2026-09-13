@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('emergencies', function (Blueprint $table) {
-            $table->boolean('requires_admission')->default(false)->after('requires_surgery');
-        });
+        if (Schema::hasTable('emergencies')) {
+            Schema::table('emergencies', function (Blueprint $table) {
+                if (!Schema::hasColumn('emergencies', 'requires_admission')) {
+                    $table->boolean('requires_admission')->default(false)->after('requires_surgery');
+                }
+            });
+        }
     }
 
     /**

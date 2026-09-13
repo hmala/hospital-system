@@ -58,6 +58,26 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-13 — طبقة تسعير الضمان الصحي وضمان وزارة الداخلية بنظام نسبة التحمل Co-payment)
+
+### Done
+- **معمارية وهيكل قاعدة البيانات**:
+  * إضافة أعمدة التسعير للخدمات الطبية (`moi_price`, `is_moi_active`, `hi_price`, `is_hi_active`) لجداول (`lab_tests`, `radiology_types`, `emergency_services`, `doctors`, `departments`).
+  * إضافة أعمدة الضمان للمرضى (`insurance_type`, `insurance_card_no`, `copay_percentage`) في جدول `patients`.
+  * إضافة أعمدة اللقطة المالية وتجميد الأرقام الثلاثة (`total_amount`, `patient_share`, `insurance_share`, `insurance_type`, `insurance_card_no`, `copay_percentage`, `claim_status`) في جدول `payments`.
+- **منطق التسعير والـ Trait**:
+  * إنشاء [HasInsurancePricing.php](file:///c:/wamp64/www/hospital-system/app/Traits/HasInsurancePricing.php) بدوال الحساب المحاسبية الدقيقة `calculateInsurancePricing($insuranceType, $copayPercent)`.
+  * ربطه مع موديلات [LabTest.php](file:///c:/wamp64/www/hospital-system/app/Models/LabTest.php), [RadiologyType.php](file:///c:/wamp64/www/hospital-system/app/Models/RadiologyType.php), [EmergencyService.php](file:///c:/wamp64/www/hospital-system/app/Models/EmergencyService.php), [Doctor.php](file:///c:/wamp64/www/hospital-system/app/Models/Doctor.php), [Department.php](file:///c:/wamp64/www/hospital-system/app/Models/Department.php).
+- **واجهات الإدارة والتحكم بالتسعير**:
+  * تحديث نماذج الإضافة والتعديل والمتحكمات لكل من التحاليل، الأشعة، خدمات الطوارئ، الأطباء، الأقسام، والمرضى.
+- **محطة الكاشير والوصولات والتقارير**:
+  * تحديث [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) لدعم استلام نسبة التحمل الخماسية والضمان مباشرة من الكاشير وتجميد الأرقام الثلاثة تلقائياً في سداد الاستشاريات، طلبات المختبر والأشعة، والطوارئ.
+  * تحديث واجهات الكاشير [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/payment-form.blade.php) و [request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php) بأزرار خماسية تفاعلية سريعة (0%, 5%, 10%, 15%, 20%, 25%, 30%, 50%, 100%) مع إعادة حساب فورية للجدول وحصة المريض والصندوق.
+  * تحديث إيصالات الدفع [receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php) وطباعة الفواتير [receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php) لعرض تفاصيل الضمان وحصة المريض والوزارة بدقة.
+  * إضافة فلاتر الضمان وإحصائيات مطالبات التأمين في تقرير الكاشير [report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report.blade.php).
+- **الاختبارات الآلية**:
+  * إنشاء [InsurancePricingTest.php](file:///c:/wamp64/www/hospital-system/tests/Unit/InsurancePricingTest.php) واجتياز جميع اختبارات التحمل والتسعير بنجاح (All 6 tests passing).
+
 ## Session log (2026-09-07 — سجل وأرشيف المريض الشامل للاستعلامات والماسح الضوئي)
 
 ### Done

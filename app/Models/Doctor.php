@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Doctor extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\HasInsurancePricing;
 
     protected $fillable = [
         'user_id',
@@ -18,6 +18,10 @@ class Doctor extends Model
         'type',
         'schedule',
         'consultation_fee',
+        'moi_price',
+        'is_moi_active',
+        'hi_price',
+        'is_hi_active',
         'start_time',
         'end_time',
         'working_days',
@@ -32,8 +36,13 @@ class Doctor extends Model
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
         'is_active' => 'boolean',
+        'is_moi_active' => 'boolean',
+        'is_hi_active' => 'boolean',
         'is_available_today' => 'boolean',
-        'available_date' => 'date'
+        'available_date' => 'date',
+        'consultation_fee' => 'decimal:2',
+        'moi_price' => 'decimal:2',
+        'hi_price' => 'decimal:2',
     ];
 
     public function user()

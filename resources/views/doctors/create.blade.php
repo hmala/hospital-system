@@ -81,9 +81,45 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="consultation_fee" class="form-label">أجر الكشف *</label>
+                                <label for="consultation_fee" class="form-label fw-bold">أجر الكشف كاش (د.ع) *</label>
                                 <input type="number" class="form-control @error('consultation_fee') is-invalid @enderror" id="consultation_fee" name="consultation_fee" value="{{ old('consultation_fee', 50000) }}" min="0" step="1000" required>
+                                <div class="form-text small">سعر الكشفية العادية للمراجع بدون ضمان</div>
                                 @error('consultation_fee')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+
+                        <!-- قسم تسعير الضمان الصحي وضمان وزارة الداخلية -->
+                        <div class="card mb-3 border-primary border-opacity-25 bg-light bg-opacity-50">
+                            <div class="card-header bg-primary bg-opacity-10 py-2">
+                                <h6 class="mb-0 text-primary fw-bold small">
+                                    <i class="fas fa-shield-alt me-1"></i> تسعير وتغطية كشفية الطبيب لجهات الضمان
+                                </h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    {{-- ضمان الداخلية --}}
+                                    <div class="col-md-6 border-start">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>ضمان الداخلية (MOI)</label>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="is_moi_active" value="1" id="createDoctorIsMoiActive" {{ old('is_moi_active', true) ? 'checked' : '' }}>
+                                                <label class="form-check-label small" for="createDoctorIsMoiActive">مشمول</label>
+                                            </div>
+                                        </div>
+                                        <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" value="{{ old('moi_price') }}" placeholder="سعر كشفية الداخلية (اتركه فارغاً لاعتماد الكاش)">
+                                    </div>
+                                    {{-- هيئة الضمان --}}
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small mb-0"><i class="fas fa-heartbeat text-success me-1"></i>هيئة الضمان (HI)</label>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="is_hi_active" value="1" id="createDoctorIsHiActive" {{ old('is_hi_active', true) ? 'checked' : '' }}>
+                                                <label class="form-check-label small" for="createDoctorIsHiActive">مشمول</label>
+                                            </div>
+                                        </div>
+                                        <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" value="{{ old('hi_price') }}" placeholder="سعر كشفية هيئة الضمان (اتركه فارغاً لاعتماد الكاش)">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

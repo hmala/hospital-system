@@ -113,7 +113,7 @@ class LabTestController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'code' => 'nullable|string|max:50|unique:lab_tests,code',
             'name' => 'required|string|max:255|unique:lab_tests,name',
             'description' => 'nullable|string|max:1000',
@@ -121,10 +121,19 @@ class LabTestController extends Controller
             'subcategory' => 'nullable|string|max:255',
             'unit' => 'nullable|string|max:50',
             'price' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean'
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean'
         ]);
 
-        LabTest::create($request->all());
+        $data = $request->all();
+        $data['is_active'] = $request->has('is_active');
+        $data['is_moi_active'] = $request->has('is_moi_active');
+        $data['is_hi_active'] = $request->has('is_hi_active');
+
+        LabTest::create($data);
 
         return redirect()->route('lab-tests.index')->with('success', 'تم إضافة الفحص المختبري بنجاح');
     }
@@ -186,7 +195,7 @@ class LabTestController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'code' => 'nullable|string|max:50|unique:lab_tests,code,' . $labTest->id,
             'name' => 'required|string|max:255|unique:lab_tests,name,' . $labTest->id,
             'description' => 'nullable|string|max:1000',
@@ -194,10 +203,19 @@ class LabTestController extends Controller
             'subcategory' => 'nullable|string|max:255',
             'unit' => 'nullable|string|max:50',
             'price' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean'
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean'
         ]);
 
-        $labTest->update($request->all());
+        $data = $request->all();
+        $data['is_active'] = $request->has('is_active');
+        $data['is_moi_active'] = $request->has('is_moi_active');
+        $data['is_hi_active'] = $request->has('is_hi_active');
+
+        $labTest->update($data);
 
         return redirect()->route('lab-tests.index')->with('success', 'تم تحديث الفحص المختبري بنجاح');
     }

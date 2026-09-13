@@ -85,7 +85,10 @@ class PatientController extends Controller
             'district' => 'nullable|string|max:255',
             'neighborhood' => 'nullable|string|max:255',
             'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
-            'covered_by_insurance' => 'required|in:0,1',
+            'covered_by_insurance' => 'nullable|in:0,1',
+            'insurance_type' => 'nullable|in:none,moi,hi',
+            'insurance_card_no' => 'nullable|string|max:255',
+            'copay_percentage' => 'nullable|numeric|min:0|max:100',
             'insurance_booklet_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
         ], [
@@ -95,7 +98,6 @@ class PatientController extends Controller
             'gender.required' => 'النوع مطلوب',
             'mother_name.required' => 'اسم الأم مطلوب',
             'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
-            'covered_by_insurance.required' => 'يجب تحديد إذا كان مشمولاً بالضمان أم لا',
             'national_id.required' => 'الرقم الوطني مطلوب',
             'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
             'national_id.unique' => 'الرقم الوطني مستخدم من قبل',
@@ -111,10 +113,10 @@ class PatientController extends Controller
                 'duplicate_patient' => 'يوجد مريض آخر بنفس الاسم واسم الأم. يرجى التأكد من صحة البيانات.'
             ])->withInput();
         }
-$email = $request->email;
-    if (!$email) {
-        $email = 'patient.' . $request->phone . '.' . time() . '@hospital.local';
-    }
+        $email = $request->email;
+        if (!$email) {
+            $email = 'patient.' . $request->phone . '.' . time() . '@hospital.local';
+        }
         // إنشاء مستخدم للمريض
         $user = User::create([
             'name' => $request->name,
@@ -126,6 +128,9 @@ $email = $request->email;
             'gender' => $request->gender,
         ]);
 
+        $insuranceType = $request->input('insurance_type', 'none');
+        $isCovered = ($insuranceType !== 'none') ? 1 : ($request->input('covered_by_insurance', 0) ? 1 : 0);
+
         // إنشاء سجل المريض
         Patient::create([
             'user_id' => $user->id,
@@ -136,6 +141,9 @@ $email = $request->email;
             'current_medications' => $request->current_medications,
             'insurance_company' => $request->insurance_company,
             'insurance_number' => $request->insurance_number,
+            'insurance_type' => $insuranceType,
+            'insurance_card_no' => $request->insurance_card_no ?: $request->insurance_booklet_number,
+            'copay_percentage' => $request->filled('copay_percentage') ? (float)$request->copay_percentage : ($insuranceType !== 'none' ? 15.00 : 0.00),
             'national_id' => $request->national_id,
             'first_visit_date' => now(),
             'notes' => $request->notes,
@@ -145,8 +153,8 @@ $email = $request->email;
             'district' => $request->district,
             'neighborhood' => $request->neighborhood,
             'marital_status' => $request->marital_status,
-            'covered_by_insurance' => $request->covered_by_insurance,
-            'insurance_booklet_number' => $request->insurance_booklet_number,
+            'covered_by_insurance' => $isCovered,
+            'insurance_booklet_number' => $request->insurance_booklet_number ?: $request->insurance_card_no,
         ]);
 
         return redirect()->route('patients.index')
@@ -157,19 +165,11 @@ $email = $request->email;
     {
         $patient->load(['user', 'appointments.doctor.user', 'appointments.department']);
         
-        // إحصائيات المريض
-        $stats = [
-            'total_appointments' => $patient->appointments->count(),
-            'completed_appointments' => $patient->appointments->where('status', 'completed')->count(),
-            'upcoming_appointments' => $patient->appointments->where('status', 'scheduled')->count(),
-        ];
-
-        return view('patients.show', compact('patient', 'stats'));
+        return view('patients.show', compact('patient'));
     }
 
     public function edit(Patient $patient)
     {
-        $patient->load('user');
         $countries = \App\Models\Country::all();
         $governorates = \App\Models\Governorate::all();
         $iraq = \App\Models\Country::where('name', 'العراق')->first();
@@ -190,17 +190,25 @@ $email = $request->email;
             'national_id' => 'required|string|unique:patients,national_id,' . $patient->id,
             'mother_name' => 'required|string|max:255',
             'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
-            'covered_by_insurance' => 'required|in:0,1',
+            'covered_by_insurance' => 'nullable|in:0,1',
+            'insurance_type' => 'nullable|in:none,moi,hi',
+            'insurance_card_no' => 'nullable|string|max:255',
+            'copay_percentage' => 'nullable|numeric|min:0|max:100',
             'insurance_booklet_number' => 'nullable|string|max:255',
             'country' => 'nullable|exists:countries,id',
             'governorate' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
             'neighborhood' => 'nullable|string|max:255',
         ], [
+            'name.required' => 'الاسم مطلوب',
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'date_of_birth.required' => 'تاريخ الميلاد مطلوب',
+            'gender.required' => 'النوع مطلوب',
             'mother_name.required' => 'اسم الأم مطلوب',
             'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
-            'covered_by_insurance.required' => 'يجب تحديد إذا كان مشمولاً بالضمان أم لا',
             'national_id.required' => 'الرقم الوطني مطلوب',
+            'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
+            'national_id.unique' => 'الرقم الوطني مستخدم من قبل',
         ]);
 
         // التحقق من عدم تكرار الاسم واسم الأم (استثناء المريض الحالي)
@@ -219,7 +227,6 @@ $email = $request->email;
         // تحديث بيانات المستخدم
         $email = $request->email;
         if (!$email) {
-            // إذا ترك الحقل فارغاً نولد بريد إلكتروني مؤقت مثل عند الإنشاء
             $email = 'patient.' . $request->phone . '.' . time() . '@hospital.local';
         }
         $patient->user->update([
@@ -230,12 +237,26 @@ $email = $request->email;
             'gender' => $request->gender,
         ]);
 
+        $insuranceType = $request->input('insurance_type', 'none');
+        $isCovered = ($insuranceType !== 'none') ? 1 : ($request->input('covered_by_insurance', 0) ? 1 : 0);
+
         // تحديث بيانات المريض
-        $patient->update($request->only([
-            'emergency_contact', 'blood_type', 'national_id', 'mother_name',
-            'marital_status', 'covered_by_insurance', 'insurance_booklet_number',
-            'country', 'governorate', 'district', 'neighborhood'
-        ]));
+        $patient->update([
+            'emergency_contact' => $request->emergency_contact,
+            'blood_type' => $request->blood_type,
+            'national_id' => $request->national_id,
+            'mother_name' => $request->mother_name,
+            'marital_status' => $request->marital_status,
+            'covered_by_insurance' => $isCovered,
+            'insurance_type' => $insuranceType,
+            'insurance_card_no' => $request->insurance_card_no ?: $request->insurance_booklet_number,
+            'copay_percentage' => $request->filled('copay_percentage') ? (float)$request->copay_percentage : ($patient->copay_percentage ?? ($insuranceType !== 'none' ? 15.00 : 0.00)),
+            'insurance_booklet_number' => $request->insurance_booklet_number ?: $request->insurance_card_no,
+            'country_id' => $request->country,
+            'governorate' => $request->governorate,
+            'district' => $request->district,
+            'neighborhood' => $request->neighborhood
+        ]);
 
         return redirect()->route('patients.show', $patient)
             ->with('success', 'تم تحديث بيانات المريض بنجاح');

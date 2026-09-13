@@ -341,20 +341,34 @@
                 <tr>
                     <td class="col-service">اجور استشارية</td>
                     <td class="col-qty">1</td>
-                    <td class="col-price">{{ number_format($consultFee, 0) }}</td>
+                    <td class="col-price">{{ number_format($payment->total_amount ?: $consultFee, 0) }}</td>
                 </tr>
-                <tr class="total-row">
-                    <td colspan="2" class="total-label">المجموع</td>
-                    <td class="total-val">{{ number_format($consultFee, 0) }}</td>
-                </tr>
+                @if($payment->insurance_type && $payment->insurance_type !== 'none')
+                    <tr>
+                        <td colspan="2" class="col-service" style="font-size: 11px; background: #fafafa;">
+                            {{ $payment->insurance_type_name }} (تحمل {{ number_format($payment->copay_percentage, 0) }}%)
+                            @if($payment->insurance_card_no)<br><small>بطاقة: {{ $payment->insurance_card_no }}</small>@endif
+                        </td>
+                        <td class="col-price" style="font-size: 11px; color: #1e40af;">حصة: {{ number_format($payment->insurance_share, 0) }}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="2" class="total-label">المدفوع نقداً (المريض)</td>
+                        <td class="total-val">{{ number_format($payment->patient_share ?: $consultFee, 0) }}</td>
+                    </tr>
+                @else
+                    <tr class="total-row">
+                        <td colspan="2" class="total-label">المجموع</td>
+                        <td class="total-val">{{ number_format($consultFee, 0) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 
         <!-- Bottom Payment / Dollar Box -->
         <table class="footer-amount-box">
             <tr>
-                <td class="box-label">مجموع الدولار المقبوض</td>
-                <td class="box-val"></td>
+                <td class="box-label">طريقة الدفع: {{ $payment->payment_method_name }}</td>
+                <td class="box-val">{{ number_format($payment->amount, 0) }} IQD</td>
             </tr>
         </table>
     </div>
@@ -1031,7 +1045,21 @@
         <!-- Payment Summary -->
         <div class="payment-info">
             <div class="mb-5">طريقة الدفع: <span class="payment-method">{{ $payment->payment_method_name }}</span></div>
-            <div style="font-size: 16px; font-weight: bold;">المبلغ المدفوع: {{ number_format($payment->amount, 0) }} IQD</div>
+            @if($payment->insurance_type && $payment->insurance_type !== 'none')
+                <div style="margin: 6px 0; font-size: 12px; color: #1e3a8a;">
+                    <strong>الضمان:</strong> {{ $payment->insurance_type_name }} | <strong>نسبة التحمل:</strong> {{ number_format($payment->copay_percentage, 0) }}%
+                    @if($payment->insurance_card_no) | <strong>بطاقة:</strong> {{ $payment->insurance_card_no }}@endif
+                </div>
+                <div style="margin: 6px 0; font-size: 13px;">
+                    <span>السعر المعتمد: <strong>{{ number_format($payment->total_amount ?: $payment->amount, 0) }} IQD</strong></span>
+                    <span style="margin-right: 15px;">حصة الضمان: <strong style="color: #2563eb;">{{ number_format($payment->insurance_share, 0) }} IQD</strong></span>
+                </div>
+                <div style="font-size: 16px; font-weight: bold; color: #047857; margin-top: 4px;">
+                    المبلغ المحصل نقداً (تحمل المريض): {{ number_format($payment->patient_share ?: $payment->amount, 0) }} IQD
+                </div>
+            @else
+                <div style="font-size: 16px; font-weight: bold;">المبلغ المدفوع: {{ number_format($payment->amount, 0) }} IQD</div>
+            @endif
         </div>
 
         @if($payment->notes)

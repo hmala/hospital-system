@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class RadiologyType extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\HasInsurancePricing;
 
     protected $fillable = [
         'main_category',
@@ -16,6 +16,10 @@ class RadiologyType extends Model
         'code',
         'description',
         'base_price',
+        'moi_price',
+        'is_moi_active',
+        'hi_price',
+        'is_hi_active',
         'estimated_duration',
         'requires_contrast',
         'requires_preparation',
@@ -26,9 +30,13 @@ class RadiologyType extends Model
 
     protected $casts = [
         'base_price' => 'decimal:2',
+        'moi_price' => 'decimal:2',
+        'hi_price' => 'decimal:2',
         'requires_contrast' => 'boolean',
         'requires_preparation' => 'boolean',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'is_moi_active' => 'boolean',
+        'is_hi_active' => 'boolean',
     ];
 
     // العلاقات

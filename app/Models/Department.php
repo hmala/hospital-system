@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\HasInsurancePricing;
 
     protected $fillable = [
         'hospital_id',
@@ -16,6 +16,10 @@ class Department extends Model
         'type',
         'room_number',
         'consultation_fee',
+        'moi_price',
+        'is_moi_active',
+        'hi_price',
+        'is_hi_active',
         'working_hours_start',
         'working_hours_end',
         'max_patients_per_day',
@@ -25,7 +29,12 @@ class Department extends Model
     protected $casts = [
         'working_hours_start' => 'datetime:H:i',
         'working_hours_end' => 'datetime:H:i',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'is_moi_active' => 'boolean',
+        'is_hi_active' => 'boolean',
+        'consultation_fee' => 'decimal:2',
+        'moi_price' => 'decimal:2',
+        'hi_price' => 'decimal:2',
     ];
 
     public function hospital()
