@@ -54,7 +54,16 @@
                             <tbody>
                                 @foreach($todayAppointments as $appointment)
                                 <tr>
-                                    <td>{{ $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'مريض غير محدد' }}</td>
+                                    <td>
+                                        <div class="fw-semibold">
+                                            {{ $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'مريض غير محدد' }}
+                                            @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                <span class="badge bg-primary fs-8 ms-1" title="ضمان قوى الأمن الداخلي"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                            @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                <span class="badge bg-info text-dark fs-8 ms-1" title="الضمان الصحي الوطني"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td>د. {{ $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'طبيب غير محدد' }}</td>
                                     <td>{{ $appointment->department ? $appointment->department->name : 'قسم غير محدد' }}</td>
                                     <td><small class="text-muted">{{ Str::limit($appointment->reason, 30) }}</small></td>
@@ -127,7 +136,16 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td><strong>{{ $appointment->appointment_date->format('Y-m-d') }}</strong></td>
-                                    <td>{{ $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'مريض غير محدد' }}</td>
+                                    <td>
+                                        <div class="fw-semibold">
+                                            {{ $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'مريض غير محدد' }}
+                                            @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                <span class="badge bg-primary fs-8 ms-1" title="ضمان قوى الأمن الداخلي"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                            @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                <span class="badge bg-info text-dark fs-8 ms-1" title="الضمان الصحي الوطني"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td>د. {{ $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'طبيب غير محدد' }}</td>
                                     <td>{{ $appointment->department ? $appointment->department->name : 'قسم غير محدد' }}</td>
                                     <td><span class="text-success fw-bold">{{ number_format($appointment->consultation_fee) }} د.ع</span></td>

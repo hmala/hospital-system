@@ -65,7 +65,8 @@ class PatientController extends Controller
         $governorates = \App\Models\Governorate::all();
         $iraq = \App\Models\Country::where('name', 'العراق')->first();
         $iraq_id = $iraq ? $iraq->id : null;
-        return view('patients.create', compact('countries', 'governorates', 'iraq_id'));
+        $healthInsuranceCategories = \App\Models\HealthInsuranceCategory::where('is_active', true)->orderBy('sort_order')->get();
+        return view('patients.create', compact('countries', 'governorates', 'iraq_id', 'healthInsuranceCategories'));
     }
 
     public function store(Request $request)
@@ -87,6 +88,7 @@ class PatientController extends Controller
             'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
             'covered_by_insurance' => 'nullable|in:0,1',
             'insurance_type' => 'nullable|in:none,moi,hi',
+            'health_insurance_category_id' => 'nullable|exists:health_insurance_categories,id',
             'insurance_card_no' => 'nullable|string|max:255',
             'copay_percentage' => 'nullable|numeric|min:0|max:100',
             'insurance_booklet_number' => 'nullable|string|max:255',
@@ -130,6 +132,7 @@ class PatientController extends Controller
 
         $insuranceType = $request->input('insurance_type', 'none');
         $isCovered = ($insuranceType !== 'none') ? 1 : ($request->input('covered_by_insurance', 0) ? 1 : 0);
+        $hiCategoryId = ($insuranceType === 'hi') ? $request->input('health_insurance_category_id') : null;
 
         // إنشاء سجل المريض
         Patient::create([
@@ -142,6 +145,7 @@ class PatientController extends Controller
             'insurance_company' => $request->insurance_company,
             'insurance_number' => $request->insurance_number,
             'insurance_type' => $insuranceType,
+            'health_insurance_category_id' => $hiCategoryId,
             'insurance_card_no' => $request->insurance_card_no ?: $request->insurance_booklet_number,
             'copay_percentage' => $request->filled('copay_percentage') ? (float)$request->copay_percentage : ($insuranceType !== 'none' ? 15.00 : 0.00),
             'national_id' => $request->national_id,
@@ -174,7 +178,8 @@ class PatientController extends Controller
         $governorates = \App\Models\Governorate::all();
         $iraq = \App\Models\Country::where('name', 'العراق')->first();
         $iraq_id = $iraq ? $iraq->id : null;
-        return view('patients.edit', compact('patient', 'countries', 'governorates', 'iraq_id'));
+        $healthInsuranceCategories = \App\Models\HealthInsuranceCategory::where('is_active', true)->orderBy('sort_order')->get();
+        return view('patients.edit', compact('patient', 'countries', 'governorates', 'iraq_id', 'healthInsuranceCategories'));
     }
 
     public function update(Request $request, Patient $patient)
@@ -239,6 +244,7 @@ class PatientController extends Controller
 
         $insuranceType = $request->input('insurance_type', 'none');
         $isCovered = ($insuranceType !== 'none') ? 1 : ($request->input('covered_by_insurance', 0) ? 1 : 0);
+        $hiCategoryId = ($insuranceType === 'hi') ? $request->input('health_insurance_category_id') : null;
 
         // تحديث بيانات المريض
         $patient->update([
@@ -249,6 +255,7 @@ class PatientController extends Controller
             'marital_status' => $request->marital_status,
             'covered_by_insurance' => $isCovered,
             'insurance_type' => $insuranceType,
+            'health_insurance_category_id' => $hiCategoryId,
             'insurance_card_no' => $request->insurance_card_no ?: $request->insurance_booklet_number,
             'copay_percentage' => $request->filled('copay_percentage') ? (float)$request->copay_percentage : ($patient->copay_percentage ?? ($insuranceType !== 'none' ? 15.00 : 0.00)),
             'insurance_booklet_number' => $request->insurance_booklet_number ?: $request->insurance_card_no,

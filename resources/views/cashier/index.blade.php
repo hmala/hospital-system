@@ -193,7 +193,14 @@
                                                                     </span>
                                                                 </td>
                                                                 <td>
-                                                                    <div>{{ $patientName }}</div>
+                                                                    <div class="fw-semibold">
+                                                                        {{ $patientName }}
+                                                                        @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                                            <span class="badge bg-primary fs-8 ms-1" title="ضمان قوى الأمن الداخلي"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                        @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                                            <span class="badge bg-info text-dark fs-8 ms-1" title="الضمان الصحي الوطني"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                        @endif
+                                                                    </div>
                                                                     <small class="text-muted">{{ $patientId }}</small>
                                                                 </td>
                                                                 <td>
@@ -242,9 +249,19 @@
                                                                         <span class="badge bg-secondary">{{ $request->type }}</span>
                                                                     @endif
                                                                 </td>
+                                                                @php
+                                                                    $reqPatient = optional(optional($request->visit)->patient);
+                                                                @endphp
                                                                 <td>
-                                                                    <div>{{ optional(optional(optional($request->visit)->patient)->user)->name ?? 'غير محدد' }}</div>
-                                                                    <small class="text-muted">{{ optional(optional($request->visit)->patient)->national_id ?? 'غير محدد' }}</small>
+                                                                    <div class="fw-semibold">
+                                                                        {{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
+                                                                        @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                            <span class="badge bg-primary fs-8 ms-1" title="ضمان قوى الأمن الداخلي"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                        @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                            <span class="badge bg-info text-dark fs-8 ms-1" title="الضمان الصحي الوطني"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                        @endif
+                                                                    </div>
+                                                                    <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
                                                                 </td>
                                                                 <td>
                                                                     @if($request->type === 'lab' && isset($details['lab_test_ids']))

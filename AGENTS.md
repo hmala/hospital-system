@@ -58,6 +58,25 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-14 — جدول فئات ونسب استقطاع هيئة الضمان الصحي الوطني للقطاع الأهلي)
+
+### Done
+- **جدول فئات الضمان الصحي وقاعدة البيانات**:
+  * إنشاء جدول `health_insurance_categories` لتخزين الفئات التسع (A إلى I) بحسب تعليمات وزارة الصحة / هيئة الضمان الصحي الوطني مع نسب الاستقطاع لكل نوع خدمة (استشارية، عمليات جراحية، مختبر، أشعة وسونار، خدمات ساندة، أدوية، طوارئ 0%، أسنان) مع دعم شرط الختم الحراري وتفعيل/تعطيل الفئات.
+  * إضافة عمود `health_insurance_category_id` لجدول المرضى `patients`.
+  * إضافة عمود `insurance_type` لجداول `appointments` و `medical_requests` و `surgeries` لتمكين حجز المريض نقدياً أو على الضمان مع إمكانية التحديد عند كل حجز.
+  * إنشاء الباذر [HealthInsuranceCategorySeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/HealthInsuranceCategorySeeder.php) لملء الفئات التسع ونسبها الرسمية للقطاع الأهلي.
+- **الموديلات ومنطق التحمل**:
+  * إنشاء [HealthInsuranceCategory.php](file:///c:/wamp64/www/hospital-system/app/Models/HealthInsuranceCategory.php) مع دالة `getCopayForService($serviceType)`.
+  * ربط العلاقة في [Patient.php](file:///c:/wamp64/www/hospital-system/app/Models/Patient.php) ودالة `getCopayPercentageFor($serviceType)` لحساب نسبة الاستقطاع تلقائياً بناءً على فئة المريض.
+- **لوحة إدارة وتعديل الفئات**:
+  * إنشاء [HealthInsuranceCategoryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HealthInsuranceCategoryController.php) وواجهة [resources/views/health-insurance-categories/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/health-insurance-categories/index.blade.php) لتعديل نسب الاستقطاع ديناميكياً في أي وقت وتفعيل/تعطيل الفئات.
+  * إضافة رابط «فئات ونسب الضمان الصحي» في القائمة الجانبية تحت قسم «الإعدادات».
+- **واجهات المرضى والاستعلامات والكاشير**:
+  * تحديث نماذج المرضى (إضافة وتعديل) لاختيار فئة الضمان الصحي (A - I) تلقائياً عند اختيار هيئة الضمان الصحي الوطني.
+  * تحديث شاشات دفع الكاشير (المواعيد، الطلبات الطبية، العمليات الجراحية) لاعتماد النسبة المحددة لفئة المريض تلقائياً مع إظهار شارة الفئة وتنبيه الختم الحراري، مع الحفاظ على صلاحية الكاشير لتغيير النسبة بالأزرار الخماسية.
+  * اجتياز جميع الاختبارات الآلية `php artisan test` بنجاح.
+
 ## Session log (2026-09-13 — طبقة تسعير الضمان الصحي وضمان وزارة الداخلية بنظام نسبة التحمل Co-payment)
 
 ### Done

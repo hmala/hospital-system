@@ -199,6 +199,16 @@
                                             </div>
                                             <div>
                                                 <strong>{{ $patient && $patient->user ? $patient->user->name : 'غير محدد' }}</strong>
+                                                @php $pIns = $patient->insurance_type ?? 'none'; @endphp
+                                                @if($pIns === 'moi')
+                                                    <span class="badge bg-success py-1 px-2 ms-1" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-shield-alt me-1"></i>داخليّة
+                                                    </span>
+                                                @elseif($pIns === 'hi')
+                                                    <span class="badge bg-info text-dark py-1 px-2 ms-1" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-shield-alt me-1"></i>ضمان صحي{{ ($patient && $patient->healthInsuranceCategory) ? ' (فئة ' . $patient->healthInsuranceCategory->code . ')' : '' }}
+                                                    </span>
+                                                @endif
                                                 <br>
                                                 <small class="text-muted">
                                                     <i class="fas fa-id-card me-1"></i>

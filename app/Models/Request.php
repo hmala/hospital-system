@@ -17,6 +17,7 @@ class Request extends Model
         'details',
         'status',
         'payment_status',
+        'insurance_type',
         'payment_id',
         'result'
     ];

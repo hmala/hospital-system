@@ -28,6 +28,7 @@ class Surgery extends Model
         'started_at',
         'status',
         'payment_status',
+        'insurance_type',
         'surgery_fee_paid',
         'payment_id',
         'surgery_fee',

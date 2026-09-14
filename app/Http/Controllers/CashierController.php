@@ -1227,6 +1227,19 @@ class CashierController extends Controller
                     ->withInput();
             }
 
+            $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
+            $copayPercentage = (float)($request->input('copay_percentage', 15.0));
+            $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
+
+            $totalApprovedPayable = $actualAmount;
+            $patientShare = $isInsurance ? round(($totalApprovedPayable * $copayPercentage) / 100, 2) : $totalApprovedPayable;
+            $insuranceShare = $isInsurance ? max(0, $totalApprovedPayable - $patientShare) : 0.00;
+
+            if ($isInsurance) {
+                $paidItems[] = 'تغطية الضمان: ' . ($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي') . ' (نسبة التحمل: ' . $copayPercentage . '%)';
+                $paidItems[] = 'حصة المريض: ' . number_format($patientShare, 0) . ' د.ع | مطالبة الضمان: ' . number_format($insuranceShare, 0) . ' د.ع';
+            }
+
             // إنشاء وصف الدفع
             $description = 'دفع رسوم العملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ')';
             if ($isInclusive) {
@@ -1240,7 +1253,14 @@ class CashierController extends Controller
                 'cashier_id' => $user->id,
                 'surgery_id' => $surgery->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => $actualAmount,
+                'amount' => $patientShare,
+                'total_amount' => $totalApprovedPayable,
+                'patient_share' => $patientShare,
+                'insurance_share' => $insuranceShare,
+                'insurance_type' => $insuranceType,
+                'insurance_card_no' => $request->insurance_card_no ?? $surgery->patient->insurance_card_no ?? null,
+                'copay_percentage' => $isInsurance ? $copayPercentage : null,
+                'claim_status' => $isInsurance ? 'pending' : null,
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'surgery',
                 'description' => $description,

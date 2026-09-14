@@ -1,0 +1,157 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\HealthInsuranceCategory;
+
+class HealthInsuranceCategorySeeder extends Seeder
+{
+    public function run(): void
+    {
+        $categories = [
+            [
+                'code' => 'A',
+                'name' => 'الفئة A',
+                'description' => 'أمراض الدم الوراثية، عجز الكلى، المعالج بالديلزة، العوق الذهني بما في ذلك التوحد وذوي الاحتياجات الخاصة (شرط ختم حراري)',
+                'requires_thermal_stamp' => true,
+                'consultation_copay' => 0.00,
+                'surgery_copay' => 0.00,
+                'lab_copay' => 0.00,
+                'radiology_copay' => 0.00,
+                'support_services_copay' => 0.00,
+                'medication_copay' => 0.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 0.00,
+                'sort_order' => 1,
+            ],
+            [
+                'code' => 'B',
+                'name' => 'الفئة B',
+                'description' => 'يتيم الأبوين (شرط ختم حراري)',
+                'requires_thermal_stamp' => true,
+                'consultation_copay' => 0.00,
+                'surgery_copay' => 0.00,
+                'lab_copay' => 0.00,
+                'radiology_copay' => 0.00,
+                'support_services_copay' => 0.00,
+                'medication_copay' => 0.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 0.00,
+                'sort_order' => 2,
+            ],
+            [
+                'code' => 'C',
+                'name' => 'الفئة C',
+                'description' => 'معاقو القوات الأمنية والعسكرية (شرط ختم حراري)',
+                'requires_thermal_stamp' => true,
+                'consultation_copay' => 0.00,
+                'surgery_copay' => 0.00,
+                'lab_copay' => 0.00,
+                'radiology_copay' => 0.00,
+                'support_services_copay' => 0.00,
+                'medication_copay' => 0.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 0.00,
+                'sort_order' => 3,
+            ],
+            [
+                'code' => 'D',
+                'name' => 'الفئة D',
+                'description' => 'المشمولين بالرعاية الاجتماعية',
+                'requires_thermal_stamp' => false,
+                'consultation_copay' => 5.00,
+                'surgery_copay' => 10.00,
+                'lab_copay' => 5.00,
+                'radiology_copay' => 5.00,
+                'support_services_copay' => 5.00,
+                'medication_copay' => 5.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 5.00,
+                'sort_order' => 4,
+            ],
+            [
+                'code' => 'E',
+                'name' => 'الفئة E',
+                'description' => 'الأطفال دون سن الخامسة',
+                'requires_thermal_stamp' => false,
+                'consultation_copay' => 10.00,
+                'surgery_copay' => 25.00,
+                'lab_copay' => 25.00,
+                'radiology_copay' => 25.00,
+                'support_services_copay' => 25.00,
+                'medication_copay' => 25.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 25.00,
+                'sort_order' => 5,
+            ],
+            [
+                'code' => 'F',
+                'name' => 'الفئة F',
+                'description' => 'الإناث من غير الموظفات المتقاعدات فوق سن الـ 55',
+                'requires_thermal_stamp' => false,
+                'consultation_copay' => 10.00,
+                'surgery_copay' => 25.00,
+                'lab_copay' => 25.00,
+                'radiology_copay' => 25.00,
+                'support_services_copay' => 25.00,
+                'medication_copay' => 25.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 25.00,
+                'sort_order' => 6,
+            ],
+            [
+                'code' => 'G',
+                'name' => 'الفئة G',
+                'description' => 'الذكور من غير الموظفين المتقاعدين فوق سن الـ 60',
+                'requires_thermal_stamp' => false,
+                'consultation_copay' => 10.00,
+                'surgery_copay' => 25.00,
+                'lab_copay' => 25.00,
+                'radiology_copay' => 25.00,
+                'support_services_copay' => 25.00,
+                'medication_copay' => 25.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 25.00,
+                'sort_order' => 7,
+            ],
+            [
+                'code' => 'H',
+                'name' => 'الفئة H',
+                'description' => 'موظفو الدولة المدنيين، العسكريين، والمتقاعدين',
+                'requires_thermal_stamp' => false,
+                'consultation_copay' => 10.00,
+                'surgery_copay' => 25.00,
+                'lab_copay' => 25.00,
+                'radiology_copay' => 25.00,
+                'support_services_copay' => 25.00,
+                'medication_copay' => 25.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 25.00,
+                'sort_order' => 8,
+            ],
+            [
+                'code' => 'I',
+                'name' => 'الفئة I',
+                'description' => 'الدرجات العليا والخاصة من مدير عام فما فوق',
+                'requires_thermal_stamp' => false,
+                'consultation_copay' => 10.00,
+                'surgery_copay' => 25.00,
+                'lab_copay' => 50.00,
+                'radiology_copay' => 50.00,
+                'support_services_copay' => 50.00,
+                'medication_copay' => 50.00,
+                'emergency_copay' => 0.00,
+                'dental_copay' => 50.00,
+                'sort_order' => 9,
+            ],
+        ];
+
+        foreach ($categories as $cat) {
+            HealthInsuranceCategory::updateOrCreate(
+                ['code' => $cat['code']],
+                $cat
+            );
+        }
+    }
+}

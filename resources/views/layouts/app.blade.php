@@ -757,6 +757,13 @@
                             </a>
                         </li>
                         @endcan
+                        @can('view cashier')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('health-insurance-categories.*') ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
+                                <i class="fas fa-shield-alt text-primary"></i><span> نسب استقطاع الضمان</span>
+                            </a>
+                        </li>
+                        @endcan
                     </div> <!-- end patientMgmtSection -->
                     @endcanany
 

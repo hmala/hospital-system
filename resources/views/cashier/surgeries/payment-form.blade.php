@@ -45,6 +45,16 @@
     $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
     $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
     $totalAmount = $totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+
+    $patient = $surgery->patient;
+    $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
+    $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
+    $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
+    if ($defaultInsurance === 'hi' && $patient) {
+        $defaultCopay = $patient->getCopayPercentageFor('surgery');
+    } else {
+        $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
+    }
 @endphp
 
 <div class="container-fluid">
@@ -311,6 +321,93 @@
                     <!-- نموذج الدفع للعناصر المعلقة -->
                     <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm">
                         @csrf
+
+                        <!-- قسم تحكم الكاشير بالضمان ونسب التحمل الخماسية -->
+                        <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-primary mb-0">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    تغطية الضمان ونسبة التحمل (Co-payment) للعملية الجراحية
+                                </h6>
+                                <span class="badge bg-secondary" id="copayBadge">تحكم مباشر للكاشير</span>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- جهة الضمان -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted">جهة الضمان / التأمين *</label>
+                                    <select class="form-select" id="insurance_type" name="insurance_type">
+                                        <option value="none" {{ old('insurance_type', $defaultInsurance) == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل 100%)</option>
+                                        <option value="moi" {{ old('insurance_type', $defaultInsurance) == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
+                                        <option value="hi" {{ old('insurance_type', $defaultInsurance) == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
+                                    </select>
+                                </div>
+
+                                <!-- رقم بطاقة الضمان -->
+                                <div class="col-md-6" id="insurance_card_col">
+                                    <label class="form-label fw-bold small text-muted">رقم بطاقة / دفتر الضمان</label>
+                                    <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
+                                           value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر">
+                                </div>
+
+                                @if($hiCategory)
+                                <div class="col-12" id="patient_hi_category_badge">
+                                    <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
+                                            <small class="text-muted">نسبة استقطاع العمليات الجراحية: <strong class="text-primary">{{ (float)$hiCategory->surgery_copay }}%</strong></small>
+                                        </div>
+                                        @if($hiCategory->requires_thermal_stamp)
+                                            <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endif
+
+                                <!-- أزرار النسب الخماسية ونسبة التحمل -->
+                                <div class="col-12" id="copay_section">
+                                    <label class="form-label fw-bold small text-muted mb-1">
+                                        نسبة التحمل على المريض (Co-payment %)
+                                    </label>
+                                    
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+                                        <span class="small text-muted me-2">خيارات خماسية سريعة:</span>
+                                        @foreach([0, 5, 10, 15, 20, 25, 30, 50, 100] as $pct)
+                                            <button type="button" class="btn btn-sm btn-outline-primary copay-btn" data-pct="{{ $pct }}">{{ $pct }}%</button>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="input-group" style="max-width: 250px;">
+                                        <span class="input-group-text bg-light fw-bold">النسبة المعتمدة:</span>
+                                        <input type="number" step="1" min="0" max="100" class="form-control text-center fw-bold" 
+                                               id="copay_percentage" name="copay_percentage" value="{{ old('copay_percentage', $defaultCopay) }}">
+                                        <span class="input-group-text bg-light fw-bold">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- بطاقة معاينة الحسبة المالية المباشرة -->
+                            <div class="row g-2 mt-3 pt-3 border-top text-center" id="live_pricing_summary">
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border">
+                                        <small class="text-muted d-block">إجمالي المبلغ المحدد</small>
+                                        <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($pendingAmount, 0) }} د.ع</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border border-success">
+                                        <small class="text-success d-block fw-bold">حصة المريض (المستلم نقداً)</small>
+                                        <strong class="text-success fs-6" id="display_patient_share">{{ number_format($pendingAmount, 0) }} د.ع</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border border-info">
+                                        <small class="text-info d-block fw-bold">حصة الضمان (مطالبة)</small>
+                                        <strong class="text-info fs-6" id="display_insurance_share">0 د.ع</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- خيار الشمولية -->
                     <div class="mb-3">
@@ -797,10 +894,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (deferredAmount < 0) deferredAmount = 0;
 
+        // حساب حصة الضمان والمريض
+        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        let copayPct = 100;
+        if (insType !== 'none') {
+            copayPct = parseFloat(copayInput ? copayInput.value : 15) || 0;
+        }
+
+        let patientShare = selectedAmount;
+        let insuranceShare = 0;
+
+        if (insType !== 'none') {
+            patientShare = Math.round(selectedAmount * (copayPct / 100));
+            insuranceShare = Math.max(0, selectedAmount - patientShare);
+        }
+
+        document.getElementById('display_approved_price').textContent = numberFormat(selectedAmount) + ' د.ع';
+        document.getElementById('display_patient_share').textContent = numberFormat(patientShare) + ' د.ع';
+        document.getElementById('display_insurance_share').textContent = numberFormat(insuranceShare) + ' د.ع';
+
         document.getElementById('selectedAmount').textContent = numberFormat(selectedAmount) + ' IQD';
         document.getElementById('deferredAmount').textContent = numberFormat(deferredAmount) + ' IQD';
-        document.getElementById('amountInput').value = selectedAmount;
-        document.getElementById('submitAmount').textContent = '(' + numberFormat(selectedAmount) + ' IQD)';
+        document.getElementById('amountInput').value = patientShare;
+        document.getElementById('submitAmount').textContent = '(' + numberFormat(patientShare) + ' IQD)';
         document.getElementById('selectedItemsCount').textContent = selectedCount;
 
         if (deferredAmount > 0) {
@@ -814,6 +930,84 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
         updateGroupCheckbox('radiology-test-item', 'selectAllRadiology');
     }
+
+    // عناصر الضمان
+    const insuranceTypeSelect = document.getElementById('insurance_type');
+    const insuranceCardCol = document.getElementById('insurance_card_col');
+    const copaySection = document.getElementById('copay_section');
+    const copayBadge = document.getElementById('copayBadge');
+    const copayInput = document.getElementById('copay_percentage');
+    const paymentInsuranceRadio = document.getElementById('surgery_payment_insurance');
+    const paymentCashRadio = document.getElementById('surgery_payment_cash');
+
+    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
+    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
+    const hiBadge = document.getElementById('patient_hi_category_badge');
+
+    function updateCopayUI() {
+        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        if (insType === 'moi') {
+            if (insuranceCardCol) insuranceCardCol.style.display = 'block';
+            if (copaySection) copaySection.style.display = 'block';
+            if (hiBadge) hiBadge.style.display = 'none';
+            if (copayBadge) {
+                copayBadge.className = 'badge bg-primary';
+                copayBadge.textContent = 'ضمان الداخلية';
+            }
+        } else if (insType === 'hi') {
+            if (insuranceCardCol) insuranceCardCol.style.display = 'block';
+            if (copaySection) copaySection.style.display = 'block';
+            if (hiBadge) hiBadge.style.display = 'block';
+            if (copayBadge) {
+                copayBadge.className = 'badge bg-info text-dark';
+                copayBadge.textContent = 'الضمان الصحي الوطني';
+            }
+        } else {
+            if (insuranceCardCol) insuranceCardCol.style.display = 'none';
+            if (copaySection) copaySection.style.display = 'none';
+            if (hiBadge) hiBadge.style.display = 'none';
+            if (copayBadge) {
+                copayBadge.className = 'badge bg-secondary';
+                copayBadge.textContent = 'دفع نقدي كامل (100%)';
+            }
+        }
+        calculateSelectedAmount();
+    }
+
+    if (insuranceTypeSelect) {
+        insuranceTypeSelect.addEventListener('change', function() {
+            if (this.value === 'hi') {
+                if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
+                if (copayInput) copayInput.value = hiCategoryCopay;
+            } else if (this.value === 'moi') {
+                if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
+                if (copayInput) copayInput.value = moiCopay;
+            } else {
+                if (paymentCashRadio) paymentCashRadio.checked = true;
+            }
+            updateCopayUI();
+        });
+    }
+
+    if (copayInput) {
+        copayInput.addEventListener('input', calculateSelectedAmount);
+    }
+
+    document.querySelectorAll('.copay-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const pct = this.getAttribute('data-pct');
+            if (copayInput) {
+                copayInput.value = pct;
+                calculateSelectedAmount();
+            }
+            document.querySelectorAll('.copay-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+            document.querySelectorAll('.copay-btn').forEach(b => b.classList.add('btn-outline-primary'));
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('active', 'btn-primary');
+        });
+    });
+
+    updateCopayUI();
 
     function toggleInclusive() {
         const isIncl = inclusiveCheckbox && inclusiveCheckbox.checked;

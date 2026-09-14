@@ -57,15 +57,15 @@
                     <div class="row">
                         <div class="col-md-3">
                             <strong>الاسم:</strong>
-                            <p class="text-muted">{{ optional($patient->user)->name ?? 'غير معروف' }}</p>
+                            <p class="text-muted mb-1">{{ optional($patient->user)->name ?? 'غير معروف' }}</p>
                         </div>
                         <div class="col-md-2">
                             <strong>العمر:</strong>
-                            <p class="text-muted">{{ $patient->age }} سنة</p>
+                            <p class="text-muted mb-1">{{ $patient->age }} سنة</p>
                         </div>
                         <div class="col-md-2">
                             <strong>الجنس:</strong>
-                            <p class="text-muted">
+                            <p class="text-muted mb-1">
                                 @if(optional($patient->user)->gender == 'male')
                                     <i class="fas fa-mars text-primary"></i> ذكر
                                 @elseif(optional($patient->user)->gender == 'female')
@@ -77,13 +77,57 @@
                         </div>
                         <div class="col-md-3">
                             <strong>رقم الهاتف:</strong>
-                            <p class="text-muted">{{ optional($patient->user)->phone ?? 'غير متوفر' }}</p>
+                            <p class="text-muted mb-1">{{ optional($patient->user)->phone ?? 'غير متوفر' }}</p>
                         </div>
                         <div class="col-md-2">
                             <strong>العنوان:</strong>
-                            <p class="text-muted">{{ optional($patient->user)->address ?? 'غير متوفر' }}</p>
+                            <p class="text-muted mb-1">{{ optional($patient->user)->address ?? 'غير متوفر' }}</p>
                         </div>
                     </div>
+
+                    @if($patient->insurance_type && $patient->insurance_type !== 'none')
+                        <div class="row mt-2 pt-2 border-top">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                    <span class="badge bg-success fs-7">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        مشمول بالضمان:
+                                        @if($patient->insurance_type === 'moi')
+                                            ضمان قوى الأمن الداخلي (وزارة الداخلية)
+                                        @elseif($patient->insurance_type === 'hi')
+                                            هيئة الضمان الصحي الوطني
+                                        @endif
+                                    </span>
+                                    @if($patient->insurance_type === 'hi' && $patient->healthInsuranceCategory)
+                                        <span class="badge bg-info text-dark fs-7">
+                                            <i class="fas fa-layer-group me-1"></i>
+                                            الفئة {{ $patient->healthInsuranceCategory->code }} - {{ $patient->healthInsuranceCategory->name }}
+                                        </span>
+                                        @if($patient->healthInsuranceCategory->requires_thermal_stamp)
+                                            <span class="badge bg-danger fs-7">
+                                                <i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)
+                                            </span>
+                                        @endif
+                                    @endif
+                                    @if($patient->insurance_card_no || $patient->insurance_booklet_number)
+                                        <span class="badge bg-secondary fs-7">
+                                            <i class="fas fa-id-card me-1"></i>
+                                            رقم الهوية / الدفتر: {{ $patient->insurance_card_no ?: $patient->insurance_booklet_number }}
+                                        </span>
+                                    @endif
+                                    <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>سيتم تحويل الحجز للكاشير بنظام التغطية والتسعير المعتمد</small>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="row mt-2 pt-2 border-top">
+                            <div class="col-12">
+                                <span class="badge bg-light text-secondary border">
+                                    <i class="fas fa-money-bill-wave me-1"></i> دفع نقدي مباشر (بدون ضمان)
+                                </span>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -467,8 +511,41 @@
                             </div>
 
 
+                            @if($patient->insurance_type && $patient->insurance_type !== 'none')
                             <div class="row mt-3">
-                                <div class="col-12" id="autoReferContainer"">
+                                <div class="col-12">
+                                    <div class="p-3 border rounded-3 bg-light">
+                                        <label class="form-label fw-bold d-flex align-items-center gap-2 mb-2">
+                                            <i class="fas fa-shield-alt text-primary"></i>
+                                            تغطية الضمان لهذا الحجز:
+                                        </label>
+                                        <div class="d-flex flex-wrap gap-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-semibold text-success" for="apply_insurance_yes">
+                                                    <i class="fas fa-check-circle me-1"></i>
+                                                    حجز تحت مظلة الضمان ({{ $patient->insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'هيئة الضمان الصحي' }})
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-semibold text-secondary" for="apply_insurance_no">
+                                                    <i class="fas fa-money-bill-wave me-1"></i>
+                                                    حجز نقدي خاص (دون استهلاك رصيد الضمان للمريض)
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            سيظهر اختيارك هذا تلقائياً في شاشة الكاشير عند المحاسبة.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+
+                            <div class="row mt-3">
+                                <div class="col-12" id="autoReferContainer">
                                     <div class="form-check">
                                         <input class="form-check-input" 
                                                type="checkbox" 

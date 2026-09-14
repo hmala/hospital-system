@@ -13,7 +13,7 @@ class Patient extends Model
     protected $fillable = [
         'user_id', 'emergency_contact', 'blood_type', 'medical_history', 'allergies',
         'current_medications', 'insurance_company', 'insurance_number',
-        'insurance_type', 'insurance_card_no', 'copay_percentage',
+        'insurance_type', 'health_insurance_category_id', 'insurance_card_no', 'copay_percentage',
         'national_id', 'first_visit_date', 'notes', 'mother_name', 'country_id',
         'governorate', 'district', 'neighborhood', 'marital_status', 'covered_by_insurance', 'insurance_booklet_number'
     ];
@@ -22,7 +22,29 @@ class Patient extends Model
         'date_of_birth' => 'date',
         'first_visit_date' => 'date',
         'copay_percentage' => 'decimal:2',
+        'health_insurance_category_id' => 'integer',
     ];
+
+    public function healthInsuranceCategory()
+    {
+        return $this->belongsTo(HealthInsuranceCategory::class, 'health_insurance_category_id');
+    }
+
+    /**
+     * الحصول على نسبة الاستقطاع المعتمدة للمريض بناءً على نوع الخدمة والضمان
+     */
+    public function getCopayPercentageFor(string $serviceType = 'consultation'): float
+    {
+        if ($this->insurance_type === 'none') {
+            return 100.00;
+        }
+
+        if ($this->insurance_type === 'hi' && $this->healthInsuranceCategory) {
+            return $this->healthInsuranceCategory->getCopayForService($serviceType);
+        }
+
+        return (float)($this->copay_percentage ?? 15.00);
+    }
 
     public function appointments()
     {

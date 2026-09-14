@@ -264,6 +264,8 @@ class InquiryController extends Controller
 
         $patient = Patient::find($httpRequest->patient_id);
         $requestTypes = $httpRequest->request_type;
+        $applyInsurance = $httpRequest->input('apply_insurance', '1') == '1';
+        $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
 
         // التحقق من الصلاحيات لكل نوع طلب
         foreach ($requestTypes as $requestType) {
@@ -353,7 +355,8 @@ class InquiryController extends Controller
                     'consultation_fee' => $doctor->consultation_fee ?? $department->consultation_fee ?? 0,
                     'duration' => 30,
                     'status' => 'scheduled',
-                    'payment_status' => 'pending' // حالة الدفع: معلق
+                    'payment_status' => 'pending', // حالة الدفع: معلق
+                    'insurance_type' => $bookingInsuranceType
                 ]);
 
                 $messages[] = "✅ تم حجز الموعد بنجاح! رقم الموعد: #" . $appointment->id . " - كشف طبي";
@@ -443,7 +446,8 @@ class InquiryController extends Controller
                 'priority' => $priorityWeight[$httpRequest->emergency_priority] ?? 4,
                 'details' => json_encode($details),
                 'requested_by' => $user->id,
-                'payment_status' => ($httpRequest->emergency_priority === 'critical') ? 'paid' : 'pending'
+                'payment_status' => ($httpRequest->emergency_priority === 'critical') ? 'paid' : 'pending',
+                'insurance_type' => $bookingInsuranceType
             ]);
 
             // للحالات الحرجة: تسجيل دخول فوري بدون انتظار دفع
@@ -527,6 +531,7 @@ class InquiryController extends Controller
                 'payment_status' => 'pending',
                 'details' => json_encode($details),
                 'requested_by' => $user->id,
+                'insurance_type' => $bookingInsuranceType
             ]);
 
             // إنشاء جدول منفصل لتفاصيل مصارف الدم (سعر وبيانات عملية)
@@ -705,7 +710,8 @@ class InquiryController extends Controller
             'description' => $description,
             'status' => $requestStatus,
             'payment_status' => $hasServices ? 'pending' : 'not_applicable',
-            'details' => json_encode($details)
+            'details' => json_encode($details),
+            'insurance_type' => $bookingInsuranceType
         ]);
 
         // رسالة نجاح مفصلة

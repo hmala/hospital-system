@@ -229,7 +229,28 @@
                             <div class="col-12 mb-2">
                                 <span class="badge bg-primary"><i class="fas fa-shield-alt me-1"></i> بيانات بطاقة / دفتر الضمان</span>
                             </div>
-                            <div class="col-md-12 mb-2">
+
+                            <!-- فئة الضمان الصحي الوطني -->
+                            <div class="col-md-6 mb-2" id="hi_category_container" style="display: none;">
+                                <label for="health_insurance_category_id" class="form-label fw-bold">فئة المشمول بالضمان الصحي *</label>
+                                <select class="form-select @error('health_insurance_category_id') is-invalid @enderror" id="health_insurance_category_id" name="health_insurance_category_id">
+                                    <option value="">-- اختر فئة الضمان (A - I) --</option>
+                                    @foreach($healthInsuranceCategories as $cat)
+                                        <option value="{{ $cat->id }}" 
+                                                data-code="{{ $cat->code }}"
+                                                data-stamp="{{ $cat->requires_thermal_stamp ? 1 : 0 }}"
+                                                {{ old('health_insurance_category_id', $patient->health_insurance_category_id) == $cat->id ? 'selected' : '' }}>
+                                            {{ $cat->name }} ({{ $cat->code }}) - {{ Str::limit($cat->description, 50) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted d-block mt-1">تُحدد نسب الاستقطاع للخدمات تلقائياً بحسب الفئة المختارة.</small>
+                                @error('health_insurance_category_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 mb-2" id="insurance_card_container">
                                 <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة / دفتر الضمان *</label>
                                 <input type="text" 
                                        class="form-control @error('insurance_card_no') is-invalid @enderror" 
@@ -237,7 +258,7 @@
                                        name="insurance_card_no" 
                                        value="{{ old('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number) }}"
                                        placeholder="أدخل رقم الهوية أو الدفتر التأميني">
-                                <small class="text-muted d-block mt-1">ملاحظة: نسبة التحمل (Co-payment) والخصم يتم تحديدها والتحكم بها بالخيارات الخماسية مباشرة بواسطة الكاشير عند الدفع.</small>
+                                <small class="text-muted d-block mt-1">رقم الهوية أو الدفتر الصادر من هيئة الضمان أو وزارة الداخلية.</small>
                                 @error('insurance_card_no')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -342,15 +363,28 @@
         // التحكم في إظهار حقول الضمان الصحي
         const insuranceTypeSelect = document.getElementById('insurance_type');
         const insuranceDetailsBox = document.getElementById('insurance_details_box');
+        const hiCategoryContainer = document.getElementById('hi_category_container');
+        const hiCategorySelect = document.getElementById('health_insurance_category_id');
         const insuranceCardNoInput = document.getElementById('insurance_card_no');
 
         function toggleInsuranceDetails() {
-            if (insuranceTypeSelect.value !== 'none') {
+            const val = insuranceTypeSelect.value;
+            if (val !== 'none') {
                 insuranceDetailsBox.style.display = 'flex';
                 insuranceCardNoInput.setAttribute('required', 'required');
+
+                if (val === 'hi') {
+                    if (hiCategoryContainer) hiCategoryContainer.style.display = 'block';
+                    if (hiCategorySelect) hiCategorySelect.setAttribute('required', 'required');
+                } else {
+                    if (hiCategoryContainer) hiCategoryContainer.style.display = 'none';
+                    if (hiCategorySelect) hiCategorySelect.removeAttribute('required');
+                }
             } else {
                 insuranceDetailsBox.style.display = 'none';
                 insuranceCardNoInput.removeAttribute('required');
+                if (hiCategoryContainer) hiCategoryContainer.style.display = 'none';
+                if (hiCategorySelect) hiCategorySelect.removeAttribute('required');
             }
         }
 

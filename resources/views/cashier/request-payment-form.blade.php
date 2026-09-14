@@ -19,8 +19,13 @@
                 <div class="card-body p-4">
                     @php
                         $patient = optional($request->visit)->patient;
-                        $defaultInsurance = $patient->insurance_type ?? 'none';
-                        $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
+                        $defaultInsurance = $request->insurance_type ?? $patient->insurance_type ?? 'none';
+                        $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
+                        if ($defaultInsurance === 'hi' && $patient) {
+                            $defaultCopay = $patient->getCopayPercentageFor($request->type);
+                        } else {
+                            $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
+                        }
                         $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
                     @endphp
 
@@ -109,6 +114,20 @@
                                     <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
                                            value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر">
                                 </div>
+
+                                @if($hiCategory)
+                                <div class="col-12" id="patient_hi_category_badge">
+                                    <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
+                                            <small class="text-muted">نسبة استقطاع هذه الخدمة ({{ $request->type }}): <strong class="text-primary">{{ (float)$hiCategory->getCopayForService($request->type) }}%</strong></small>
+                                        </div>
+                                        @if($hiCategory->requires_thermal_stamp)
+                                            <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endif
 
                                 <!-- أزرار النسب الخماسية ونسبة التحمل -->
                                 <div class="col-12" id="copay_section">
@@ -507,12 +526,23 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCopayButtonsActive(copayPct);
     }
 
+    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor($request->type) : 15.0);
+    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
+    const hiBadge = document.getElementById('patient_hi_category_badge');
+
     if (insuranceTypeSelect) {
         insuranceTypeSelect.addEventListener('change', function() {
-            if (this.value !== 'none') {
+            if (this.value === 'hi') {
                 if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
+                if (copayInput) copayInput.value = hiCategoryCopay;
+                if (hiBadge) hiBadge.style.display = 'block';
+            } else if (this.value === 'moi') {
+                if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
+                if (copayInput) copayInput.value = moiCopay;
+                if (hiBadge) hiBadge.style.display = 'none';
             } else {
                 if (paymentCashRadio) paymentCashRadio.checked = true;
+                if (hiBadge) hiBadge.style.display = 'none';
             }
             recalculate();
         });

@@ -237,6 +237,13 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{location}', [\App\Http\Controllers\LocationController::class, 'destroy'])->name('destroy');
     });
 
+    // مسارات فئات ونسب الضمان الصحي الوطني
+    Route::prefix('health-insurance-categories')->name('health-insurance-categories.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'index'])->name('index');
+        Route::put('/{category}', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'update'])->name('update');
+        Route::get('/api/all', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'getCategoriesJson'])->name('api.all');
+    });
+
     // مسارات الكاشير (Cashier Routes)
     Route::prefix('cashier')->name('cashier.')->group(function () {
         Route::get('/', [\App\Http\Controllers\CashierController::class, 'index'])->name('index');

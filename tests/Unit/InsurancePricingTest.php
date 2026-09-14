@@ -72,4 +72,47 @@ class InsurancePricingTest extends TestCase
         $this->assertEquals(25000, $hiPricing['patient_share']);
         $this->assertEquals(0, $hiPricing['insurance_share']);
     }
+
+    /**
+     * Test HealthInsuranceCategory model and service copays
+     */
+    public function test_health_insurance_categories_matrix(): void
+    {
+        // Category A (0% copay across all, requires thermal stamp)
+        $catA = new \App\Models\HealthInsuranceCategory([
+            'code' => 'A',
+            'name' => 'الفئة A - المشمولون بشبكة الحماية الاجتماعية',
+            'requires_thermal_stamp' => true,
+            'consultation_copay' => 0.00,
+            'surgery_copay' => 0.00,
+            'lab_copay' => 0.00,
+            'radiology_copay' => 0.00,
+            'emergency_copay' => 0.00,
+            'is_active' => true,
+        ]);
+
+        $this->assertEquals(0.00, $catA->getCopayForService('consultation'));
+        $this->assertEquals(0.00, $catA->getCopayForService('surgery'));
+        $this->assertEquals(0.00, $catA->getCopayForService('lab'));
+        $this->assertTrue($catA->requires_thermal_stamp);
+
+        // Category H (25% consultation, 25% surgery, 25% lab, 0% emergency)
+        $catH = new \App\Models\HealthInsuranceCategory([
+            'code' => 'H',
+            'name' => 'الفئة H - الموظفون والمتقاعدون',
+            'requires_thermal_stamp' => false,
+            'consultation_copay' => 25.00,
+            'surgery_copay' => 25.00,
+            'lab_copay' => 25.00,
+            'radiology_copay' => 25.00,
+            'emergency_copay' => 0.00,
+            'is_active' => true,
+        ]);
+
+        $this->assertEquals(25.00, $catH->getCopayForService('consultation'));
+        $this->assertEquals(25.00, $catH->getCopayForService('surgery'));
+        $this->assertEquals(25.00, $catH->getCopayForService('lab'));
+        $this->assertEquals(0.00, $catH->getCopayForService('emergency'));
+        $this->assertFalse($catH->requires_thermal_stamp);
+    }
 }

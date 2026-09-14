@@ -198,6 +198,14 @@ class SurgeryController extends Controller
 
         $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter']);
         
+        $patient = Patient::find($request->patient_id);
+        $applyInsurance = $request->input('apply_insurance', '1') == '1';
+        $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
+        if ($request->filled('insurance_type')) {
+            $bookingInsuranceType = $request->insurance_type;
+        }
+        $surgeryData['insurance_type'] = $bookingInsuranceType;
+
         // استخراج اسم العملية من الجدول
         $operation = SurgicalOperation::find($request->surgical_operation_id);
         if ($operation) {

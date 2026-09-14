@@ -21,6 +21,7 @@ class Appointment extends Model
         'appointment_date',
         'status',
         'payment_status',
+        'insurance_type',
         'payment_id',
         'reason',
         'notes',
