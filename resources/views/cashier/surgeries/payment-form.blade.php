@@ -71,6 +71,39 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if(session('warning'))
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('warning') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if($errors->any())
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <h6 class="alert-heading mb-1"><i class="fas fa-times-circle me-1"></i> تعذر الدفع بسبب أخطاء في المدخلات:</h6>
+                            <ul class="mb-0 ps-3">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
                     <!-- معلومات العملية -->
                     <div class="row mb-4">
                         <div class="col-md-6">
@@ -590,27 +623,39 @@
                                                 </td>
                                             </tr>
                                             @foreach($pendingLabTests as $labTest)
+                                                @php
+                                                    $lModel = $labTest->labTest;
+                                                    $lBase = (float)($lModel ? $lModel->getRegularPrice() : 0);
+                                                    $lMoi = (float)($lModel && $lModel->moi_price > 0 ? $lModel->moi_price : $lBase);
+                                                    $lHi = (float)($lModel && $lModel->hi_price > 0 ? $lModel->hi_price : $lBase);
+                                                    $lMoiActive = (bool)($lModel ? ($lModel->is_moi_active ?? true) : true);
+                                                    $lHiActive = (bool)($lModel ? ($lModel->is_hi_active ?? true) : true);
+                                                @endphp
                                                 <tr>
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item lab-test-item" 
                                                                name="pay_lab_tests[]" 
                                                                value="{{ $labTest->id }}"
-                                                               data-amount="{{ $labTest->labTest->price ?? 0 }}"
+                                                               data-base-price="{{ $lBase }}"
+                                                               data-moi-price="{{ $lMoi }}"
+                                                               data-hi-price="{{ $lHi }}"
+                                                               data-is-moi-active="{{ $lMoiActive ? '1' : '0' }}"
+                                                               data-is-hi-active="{{ $lHiActive ? '1' : '0' }}"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-vial text-primary me-2"></i>
                                                         تحليل
                                                     </td>
-                                                    <td>{{ $labTest->labTest->name ?? 'غير محدد' }} ({{ $labTest->labTest->code ?? '-' }})</td>
-                                                    <td class="text-end">{{ number_format($labTest->labTest->price ?? 0, 0) }}</td>
+                                                    <td>{{ $lModel->name ?? 'غير محدد' }} ({{ $lModel->code ?? '-' }})</td>
+                                                    <td class="text-end item-price-display">{{ number_format($lBase, 0) }}</td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع التحاليل المعلقة:</strong></td>
-                                                <td class="text-end"><strong>{{ number_format($pendingLabFee, 0) }}</strong></td>
+                                                <td class="text-end"><strong id="pending_lab_fee_display">{{ number_format($pendingLabFee, 0) }}</strong></td>
                                             </tr>
                                         @endif
 
@@ -630,27 +675,39 @@
                                                 </td>
                                             </tr>
                                             @foreach($pendingRadiologyTests as $radiologyTest)
+                                                @php
+                                                    $rModel = $radiologyTest->radiologyType;
+                                                    $rBase = (float)($rModel ? $rModel->getRegularPrice() : 0);
+                                                    $rMoi = (float)($rModel && $rModel->moi_price > 0 ? $rModel->moi_price : $rBase);
+                                                    $rHi = (float)($rModel && $rModel->hi_price > 0 ? $rModel->hi_price : $rBase);
+                                                    $rMoiActive = (bool)($rModel ? ($rModel->is_moi_active ?? true) : true);
+                                                    $rHiActive = (bool)($rModel ? ($rModel->is_hi_active ?? true) : true);
+                                                @endphp
                                                 <tr>
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item radiology-test-item" 
                                                                name="pay_radiology_tests[]" 
                                                                value="{{ $radiologyTest->id }}"
-                                                               data-amount="{{ $radiologyTest->radiologyType->base_price ?? 0 }}"
+                                                               data-base-price="{{ $rBase }}"
+                                                               data-moi-price="{{ $rMoi }}"
+                                                               data-hi-price="{{ $rHi }}"
+                                                               data-is-moi-active="{{ $rMoiActive ? '1' : '0' }}"
+                                                               data-is-hi-active="{{ $rHiActive ? '1' : '0' }}"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-radiation text-info me-2"></i>
                                                         أشعة
                                                     </td>
-                                                    <td>{{ $radiologyTest->radiologyType->name ?? 'غير محدد' }}</td>
-                                                    <td class="text-end">{{ number_format($radiologyTest->radiologyType->base_price ?? 0, 0) }}</td>
+                                                    <td>{{ $rModel->name ?? 'غير محدد' }}</td>
+                                                    <td class="text-end item-price-display">{{ number_format($rBase, 0) }}</td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع الأشعة المعلقة:</strong></td>
-                                                <td class="text-end"><strong>{{ number_format($pendingRadiologyFee, 0) }}</strong></td>
+                                                <td class="text-end"><strong id="pending_radiology_fee_display">{{ number_format($pendingRadiologyFee, 0) }}</strong></td>
                                             </tr>
                                         @endif
                                     </tbody>
@@ -798,6 +855,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const remainingRoomFee = {{ $remainingRoomFee }};
     const inclusiveCheckbox = document.getElementById('inclusive');
 
+    // عناصر الضمان
+    const insuranceTypeSelect = document.getElementById('insurance_type');
+    const insuranceCardCol = document.getElementById('insurance_card_col');
+    const copaySection = document.getElementById('copay_section');
+    const copayBadge = document.getElementById('copayBadge');
+    const copayInput = document.getElementById('copay_percentage');
+    const paymentInsuranceRadio = document.getElementById('surgery_payment_insurance');
+    const paymentCashRadio = document.getElementById('surgery_payment_cash');
+
+    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
+    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
+    const hiBadge = document.getElementById('patient_hi_category_badge');
+
     function calculateSelectedAmount() {
         let selectedAmount = 0;
         let selectedCount = 0;
@@ -808,21 +878,27 @@ document.addEventListener('DOMContentLoaded', function() {
             // 1. Surgery Fee portion
             const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
             if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-                const payFull = document.getElementById('surgery_pay_full').checked;
+                const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
                 if (payFull) {
                     selectedAmount += remainingSurgeryFee;
-                    document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(remainingSurgeryFee);
+                    const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                    const custInput = document.getElementById('surgery_custom_amount');
+                    const feeDisp = document.getElementById('surgery_fee_display');
+                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
+                    if (custWrapper) custWrapper.style.display = 'none';
+                    if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
                 } else {
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'block';
-                    let customVal = parseFloat(document.getElementById('surgery_custom_amount').value) || 0;
+                    const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                    const custInput = document.getElementById('surgery_custom_amount');
+                    const feeDisp = document.getElementById('surgery_fee_display');
+                    if (custWrapper) custWrapper.style.display = 'block';
+                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
                     if (customVal > remainingSurgeryFee) {
                         customVal = remainingSurgeryFee;
-                        document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                        if (custInput) custInput.value = Math.round(remainingSurgeryFee);
                     }
                     selectedAmount += customVal;
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(customVal);
+                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
                 }
                 selectedCount++;
             }
@@ -831,61 +907,122 @@ document.addEventListener('DOMContentLoaded', function() {
             // 1. Surgery Fee
             const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
             if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-                const payFull = document.getElementById('surgery_pay_full').checked;
+                const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
+                const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                const custInput = document.getElementById('surgery_custom_amount');
+                const feeDisp = document.getElementById('surgery_fee_display');
                 if (payFull) {
                     selectedAmount += remainingSurgeryFee;
-                    document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(remainingSurgeryFee);
+                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
+                    if (custWrapper) custWrapper.style.display = 'none';
+                    if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
                 } else {
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'block';
-                    let customVal = parseFloat(document.getElementById('surgery_custom_amount').value) || 0;
+                    if (custWrapper) custWrapper.style.display = 'block';
+                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
                     if (customVal > remainingSurgeryFee) {
                         customVal = remainingSurgeryFee;
-                        document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                        if (custInput) custInput.value = Math.round(remainingSurgeryFee);
                     }
                     selectedAmount += customVal;
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(customVal);
+                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
                 }
                 selectedCount++;
             } else if (paySurgeryCheckbox) {
-                document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
-                document.getElementById('surgery_fee_display').textContent = '0';
+                const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                const feeDisp = document.getElementById('surgery_fee_display');
+                if (custWrapper) custWrapper.style.display = 'none';
+                if (feeDisp) feeDisp.textContent = '0';
             }
 
             // 2. Room Fee
             const payRoomCheckbox = document.getElementById('pay_room_checkbox');
             if (payRoomCheckbox && payRoomCheckbox.checked) {
-                const payFull = document.getElementById('room_pay_full').checked;
+                const payFull = document.getElementById('room_pay_full') ? document.getElementById('room_pay_full').checked : true;
+                const custWrapper = document.getElementById('room_custom_amount_wrapper');
+                const custInput = document.getElementById('room_custom_amount');
+                const feeDisp = document.getElementById('room_fee_display');
                 if (payFull) {
                     selectedAmount += remainingRoomFee;
-                    document.getElementById('room_custom_amount').value = Math.round(remainingRoomFee);
-                    document.getElementById('room_custom_amount_wrapper').style.display = 'none';
-                    document.getElementById('room_fee_display').textContent = numberFormat(remainingRoomFee);
+                    if (custInput) custInput.value = Math.round(remainingRoomFee);
+                    if (custWrapper) custWrapper.style.display = 'none';
+                    if (feeDisp) feeDisp.textContent = numberFormat(remainingRoomFee);
                 } else {
-                    document.getElementById('room_custom_amount_wrapper').style.display = 'block';
-                    let customVal = parseFloat(document.getElementById('room_custom_amount').value) || 0;
+                    if (custWrapper) custWrapper.style.display = 'block';
+                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
                     if (customVal > remainingRoomFee) {
                         customVal = remainingRoomFee;
-                        document.getElementById('room_custom_amount').value = Math.round(remainingRoomFee);
+                        if (custInput) custInput.value = Math.round(remainingRoomFee);
                     }
                     selectedAmount += customVal;
-                    document.getElementById('room_fee_display').textContent = numberFormat(customVal);
+                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
                 }
                 selectedCount++;
             } else if (payRoomCheckbox) {
-                document.getElementById('room_custom_amount_wrapper').style.display = 'none';
-                document.getElementById('room_fee_display').textContent = '0';
+                const custWrapper = document.getElementById('room_custom_amount_wrapper');
+                const feeDisp = document.getElementById('room_fee_display');
+                if (custWrapper) custWrapper.style.display = 'none';
+                if (feeDisp) feeDisp.textContent = '0';
             }
 
             // 3. Lab and Radiology tests
+            const currentInsType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
             document.querySelectorAll('.payment-item:checked').forEach(function(item) {
                 if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
-                    selectedAmount += parseFloat(item.dataset.amount) || 0;
+                    const basePrice = parseFloat(item.dataset.basePrice) || 0;
+                    const moiPrice = parseFloat(item.dataset.moiPrice) || basePrice;
+                    const hiPrice = parseFloat(item.dataset.hiPrice) || basePrice;
+                    const isMoiActive = item.dataset.isMoiActive === '1';
+                    const isHiActive = item.dataset.isHiActive === '1';
+
+                    let itemApproved = basePrice;
+                    if (currentInsType === 'moi' && isMoiActive) {
+                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                    } else if (currentInsType === 'hi' && isHiActive) {
+                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                    }
+
+                    selectedAmount += itemApproved;
                     selectedCount++;
                 }
             });
         }
+
+        // Update row price displays for all items
+        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        let currentLabTotal = 0;
+        let currentRadTotal = 0;
+        document.querySelectorAll('.payment-item').forEach(function(item) {
+            if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
+                const basePrice = parseFloat(item.dataset.basePrice) || 0;
+                const moiPrice = parseFloat(item.dataset.moiPrice) || basePrice;
+                const hiPrice = parseFloat(item.dataset.hiPrice) || basePrice;
+                const isMoiActive = item.dataset.isMoiActive === '1';
+                const isHiActive = item.dataset.isHiActive === '1';
+
+                let itemApproved = basePrice;
+                if (insType === 'moi' && isMoiActive) {
+                    itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                } else if (insType === 'hi' && isHiActive) {
+                    itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                }
+
+                const priceCell = item.closest('tr')?.querySelector('.item-price-display');
+                if (priceCell) {
+                    priceCell.textContent = numberFormat(itemApproved);
+                }
+
+                if (item.classList.contains('lab-test-item')) {
+                    currentLabTotal += itemApproved;
+                } else if (item.classList.contains('radiology-test-item')) {
+                    currentRadTotal += itemApproved;
+                }
+            }
+        });
+
+        const labTotalDisplay = document.getElementById('pending_lab_fee_display');
+        if (labTotalDisplay) labTotalDisplay.textContent = numberFormat(currentLabTotal);
+        const radTotalDisplay = document.getElementById('pending_radiology_fee_display');
+        if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal);
 
         let deferredAmount = pendingAmount - selectedAmount;
         if (isIncl) {
@@ -895,7 +1032,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (deferredAmount < 0) deferredAmount = 0;
 
         // حساب حصة الضمان والمريض
-        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
         let copayPct = 100;
         if (insType !== 'none') {
             copayPct = parseFloat(copayInput ? copayInput.value : 15) || 0;
@@ -909,40 +1045,37 @@ document.addEventListener('DOMContentLoaded', function() {
             insuranceShare = Math.max(0, selectedAmount - patientShare);
         }
 
-        document.getElementById('display_approved_price').textContent = numberFormat(selectedAmount) + ' د.ع';
-        document.getElementById('display_patient_share').textContent = numberFormat(patientShare) + ' د.ع';
-        document.getElementById('display_insurance_share').textContent = numberFormat(insuranceShare) + ' د.ع';
+        const dispApproved = document.getElementById('display_approved_price');
+        const dispPatient = document.getElementById('display_patient_share');
+        const dispInsurance = document.getElementById('display_insurance_share');
+        const dispSelected = document.getElementById('selectedAmount');
+        const dispDeferred = document.getElementById('deferredAmount');
+        const inputAmount = document.getElementById('amountInput');
+        const submitAmountSpan = document.getElementById('submitAmount');
+        const selectedCountSpan = document.getElementById('selectedItemsCount');
+        const submitBtn = document.getElementById('submitBtn');
+        const deferredRow = document.getElementById('deferredRow');
 
-        document.getElementById('selectedAmount').textContent = numberFormat(selectedAmount) + ' IQD';
-        document.getElementById('deferredAmount').textContent = numberFormat(deferredAmount) + ' IQD';
-        document.getElementById('amountInput').value = patientShare;
-        document.getElementById('submitAmount').textContent = '(' + numberFormat(patientShare) + ' IQD)';
-        document.getElementById('selectedItemsCount').textContent = selectedCount;
+        if (dispApproved) dispApproved.textContent = numberFormat(selectedAmount) + ' د.ع';
+        if (dispPatient) dispPatient.textContent = numberFormat(patientShare) + ' د.ع';
+        if (dispInsurance) dispInsurance.textContent = numberFormat(insuranceShare) + ' د.ع';
+        if (dispSelected) dispSelected.textContent = numberFormat(selectedAmount) + ' IQD';
+        if (dispDeferred) dispDeferred.textContent = numberFormat(deferredAmount) + ' IQD';
+        if (inputAmount) inputAmount.value = patientShare;
+        if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(patientShare) + ' IQD)';
+        if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
 
-        if (deferredAmount > 0) {
-            document.getElementById('deferredRow').style.display = '';
-        } else {
-            document.getElementById('deferredRow').style.display = 'none';
+        if (deferredRow) {
+            deferredRow.style.display = deferredAmount > 0 ? '' : 'none';
         }
 
-        document.getElementById('submitBtn').disabled = selectedCount === 0;
+        if (submitBtn) {
+            submitBtn.disabled = selectedCount === 0;
+        }
 
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
         updateGroupCheckbox('radiology-test-item', 'selectAllRadiology');
     }
-
-    // عناصر الضمان
-    const insuranceTypeSelect = document.getElementById('insurance_type');
-    const insuranceCardCol = document.getElementById('insurance_card_col');
-    const copaySection = document.getElementById('copay_section');
-    const copayBadge = document.getElementById('copayBadge');
-    const copayInput = document.getElementById('copay_percentage');
-    const paymentInsuranceRadio = document.getElementById('surgery_payment_insurance');
-    const paymentCashRadio = document.getElementById('surgery_payment_cash');
-
-    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
-    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
-    const hiBadge = document.getElementById('patient_hi_category_badge');
 
     function updateCopayUI() {
         const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';

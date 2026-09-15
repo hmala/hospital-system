@@ -247,7 +247,20 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'request.visit.patient.user', 'request.visit.doctor.user', 'cashier']);
+        $payment->load([
+            'patient.user',
+            'appointment.doctor.user',
+            'appointment.department',
+            'request.visit.patient.user',
+            'request.visit.doctor.user',
+            'surgery.room',
+            'surgery.patient.user',
+            'surgery.doctor.user',
+            'surgery.department',
+            'surgery.labTests.labTest',
+            'surgery.radiologyTests.radiologyType',
+            'cashier'
+        ]);
 
         return view('cashier.receipt', compact('payment'));
     }
@@ -257,21 +270,21 @@ class CashierController extends Controller
      */
     public function printReceipt(Request $request, Payment $payment)
     {
-        $payment->load(['patient.user', 'appointment.doctor.user', 'appointment.department', 'request.visit.patient.user', 'request.visit.doctor.user', 'cashier']);
+        $payment->load([
+            'patient.user',
+            'appointment.doctor.user',
+            'appointment.department',
+            'request.visit.patient.user',
+            'request.visit.doctor.user',
+            'surgery.room',
+            'surgery.patient.user',
+            'surgery.doctor.user',
+            'surgery.department',
+            'surgery.labTests.labTest',
+            'surgery.radiologyTests.radiologyType',
+            'cashier'
+        ]);
 
-        // إذا تم طلب النسخة HTML (مثل "طباعة" أساسي)
-        if ($request->query('html')) {
-            return view('cashier.receipt-print', compact('payment'));
-        }
-
-        // التحقق من وجود حزمة dompdf
-        if (class_exists('Barryvdh\DomPDF\Facade\Pdf')) {
-            $pdf = Pdf::loadView('cashier.receipt-pdf', compact('payment'));
-            // افتح المستند في المتصفح بدل تنزيله
-            return $pdf->stream('receipt-' . $payment->receipt_number . '.pdf');
-        }
-
-        // بديل: عرض صفحة للطباعة عبر المتصفح
         return view('cashier.receipt-print', compact('payment'));
     }
 
@@ -1190,6 +1203,10 @@ class CashierController extends Controller
                 }
             }
 
+            $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
+            $copayPercentage = (float)($request->input('copay_percentage', 15.0));
+            $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
+
             // 3. Lab Tests
             if (!empty($payLabTests)) {
                 foreach ($surgery->labTests as $labTest) {
@@ -1197,7 +1214,8 @@ class CashierController extends Controller
                         if ($isInclusive) {
                             $paidItems[] = 'تحليل: ' . ($labTest->labTest->name ?? 'غير محدد') . ' (مشمول)';
                         } else {
-                            $labTestPrice = $labTest->labTest->price ?? 0;
+                            $pricing = $labTest->labTest ? $labTest->labTest->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
+                            $labTestPrice = $pricing ? (float)$pricing['approved_price'] : (float)($labTest->labTest->price ?? 0);
                             $actualAmount += $labTestPrice;
                             $paidItems[] = 'تحليل: ' . ($labTest->labTest->name ?? 'غير محدد') . ' (' . number_format($labTestPrice, 0) . ' د.ع)';
                         }
@@ -1212,24 +1230,14 @@ class CashierController extends Controller
                         if ($isInclusive) {
                             $paidItems[] = 'أشعة: ' . ($radiologyTest->radiologyType->name ?? 'غير محدد') . ' (مشمولة)';
                         } else {
-                            $radiologyPrice = $radiologyTest->radiologyType->base_price ?? 0;
+                            $pricing = $radiologyTest->radiologyType ? $radiologyTest->radiologyType->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
+                            $radiologyPrice = $pricing ? (float)$pricing['approved_price'] : (float)($radiologyTest->radiologyType->base_price ?? 0);
                             $actualAmount += $radiologyPrice;
                             $paidItems[] = 'أشعة: ' . ($radiologyTest->radiologyType->name ?? 'غير محدد') . ' (' . number_format($radiologyPrice, 0) . ' د.ع)';
                         }
                     }
                 }
             }
-
-            // التحقق من وجود مبلغ للدفع
-            if ($actualAmount <= 0 && !$isInclusive) {
-                return redirect()->back()
-                    ->with('error', 'لا توجد عناصر معلقة لدفعها')
-                    ->withInput();
-            }
-
-            $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
-            $copayPercentage = (float)($request->input('copay_percentage', 15.0));
-            $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
             $totalApprovedPayable = $actualAmount;
             $patientShare = $isInsurance ? round(($totalApprovedPayable * $copayPercentage) / 100, 2) : $totalApprovedPayable;
@@ -1259,8 +1267,8 @@ class CashierController extends Controller
                 'insurance_share' => $insuranceShare,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $request->insurance_card_no ?? $surgery->patient->insurance_card_no ?? null,
-                'copay_percentage' => $isInsurance ? $copayPercentage : null,
-                'claim_status' => $isInsurance ? 'pending' : null,
+                'copay_percentage' => $isInsurance ? $copayPercentage : 0.00,
+                'claim_status' => $isInsurance ? 'pending' : 'none',
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'surgery',
                 'description' => $description,

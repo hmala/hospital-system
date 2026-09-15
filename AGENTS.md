@@ -58,6 +58,16 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-15 — تصحيح دفع العمليات الجراحية نقداً وتوحيد وصل الطباعة الحراري 80mm)
+
+### Done
+- **تصحيح الدفع النقدي للعمليات الجراحية في الكاشير**:
+  * معالجة مشكلة عدم إمكانية سداد العملية نقداً للمرضى الذين لديهم ملف ضمان (`insurance_type = 'none'`) بسبب إرسال `null` لأعمدة `copay_percentage` و `claim_status`، وتعيين القيم الافتراضية `0.00` و `'none'` في [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php).
+  * تعديل هجرة جدول `payments` لجعل أعمدة الحصة والنسبة تقبل `nullable()->default(0.00)`.
+  * إضافة عرض رسائل التنبيه والخطأ في واجهة دفع العمليات [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php) ورفع تعريفات عناصر الجافاسكريبت للأعلى.
+- **توحيد إيصالات الطباعة بقياس 80mm حراري**:
+  * قفل أبعاد الطباعة في [receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php) بعرض 78mm ممركز على ورق A4 والورق العادي.
+
 ## Session log (2026-09-14 — جدول فئات ونسب استقطاع هيئة الضمان الصحي الوطني للقطاع الأهلي)
 
 ### Done
