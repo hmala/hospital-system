@@ -153,19 +153,21 @@
                             $patientTotalAmount = 0;
                             $patientPendingAmount = 0;
                             $patientPaidAmount = 0;
+                            $patientRefundAmount = 0;
                             foreach($surgeries as $surgery) {
-                                $additionalOpsFee = $surgery->additionalOperations->sum('fee');
-                                $surgeryFee = ($surgery->surgery_fee ?? 0) + $additionalOpsFee;
+                                $isCancelled = $surgery->status === 'cancelled';
+                                $additionalOpsFee = $isCancelled ? 0 : $surgery->additionalOperations->sum('fee');
+                                $surgeryFee = $isCancelled ? 0 : (($surgery->surgery_fee ?? 0) + $additionalOpsFee);
                                 $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                 $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
                                 
                                 // رسوم الغرفة
-                                $roomFee = $surgery->room_fee ?? 0;
+                                $roomFee = $isCancelled ? 0 : ($surgery->room_fee ?? 0);
                                 $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                 $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
                                 
                                 // تحاليل
-                                $pendingLabFee = $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
+                                $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
                                     return $test->labTest ? ($test->labTest->price ?? 0) : 0;
                                 });
                                 $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
@@ -173,15 +175,21 @@
                                 });
                                 
                                 // أشعة
-                                $pendingRadiologyFee = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
+                                $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
                                     return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
                                 });
                                 $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
                                     return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
                                 });
                                 
-                                $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
-                                $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
+                                $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
+                                if ($isCancelled) {
+                                    $patientRefundAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
+                                    $patientPaidAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
+                                } else {
+                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
+                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
+                                }
                                 $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
                             }
                         @endphp
@@ -226,14 +234,19 @@
                                                 <i class="fas fa-procedures me-1"></i>
                                                 {{ $surgeries->count() }} عملية
                                             </span>
-                                            @if($patientPaidAmount > 0)
+                                            @if($patientRefundAmount > 0)
+                                            <span class="badge bg-danger me-1">
+                                                <i class="fas fa-undo me-1"></i>
+                                                مستحق استرجاع: {{ number_format($patientRefundAmount, 0) }} IQD
+                                            </span>
+                                            @elseif($patientPaidAmount > 0)
                                             <span class="badge bg-success me-1">
                                                 <i class="fas fa-check me-1"></i>
                                                 مدفوع: {{ number_format($patientPaidAmount, 0) }}
                                             </span>
                                             @endif
                                             @if($patientPendingAmount > 0)
-                                            <span class="badge bg-danger">
+                                            <span class="badge bg-warning text-dark">
                                                 <i class="fas fa-clock me-1"></i>
                                                 معلق: {{ number_format($patientPendingAmount, 0) }} IQD
                                             </span>
@@ -264,41 +277,52 @@
                                             <tbody>
                                                 @foreach($surgeries as $surgery)
                                                     @php
-                                                        $additionalOpsFee = $surgery->additionalOperations->sum('fee');
-                                                        $surgeryFee = ($surgery->surgery_fee ?? 0) + $additionalOpsFee;
+                                                        $isCancelled = $surgery->status === 'cancelled';
+                                                        $additionalOpsFee = $isCancelled ? 0 : $surgery->additionalOperations->sum('fee');
+                                                        $surgeryFee = $isCancelled ? 0 : (($surgery->surgery_fee ?? 0) + $additionalOpsFee);
                                                         $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                                         $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
 
-                                                        $roomFee = $surgery->room_fee ?? 0;
+                                                        $roomFee = $isCancelled ? 0 : ($surgery->room_fee ?? 0);
                                                         $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                                         $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
 
-                                                        $pendingLabFee = $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
+                                                        $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
                                                             return $test->labTest ? ($test->labTest->price ?? 0) : 0;
                                                         });
                                                         $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
                                                             return $test->labTest ? ($test->labTest->price ?? 0) : 0;
                                                         });
 
-                                                        $pendingRadiologyFee = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
+                                                        $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
                                                             return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
                                                         });
                                                         $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
                                                             return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
                                                         });
 
-                                                        $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
-                                                        $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
+                                                        $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
+                                                        $paidAmount = $isCancelled 
+                                                            ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount))
+                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee);
+                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee);
                                                         $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
-                                                        $excessSurgeryFee = $surgeryFeePaidAmount > $surgeryFee ? ($surgeryFeePaidAmount - $surgeryFee) : 0;
-                                                        $excessRoomFee = $roomFeePaidAmount > $roomFee ? ($roomFeePaidAmount - $roomFee) : 0;
-                                                        $excessAmount = $excessSurgeryFee + $excessRoomFee;
+                                                        
+                                                        if ($isCancelled) {
+                                                            $excessAmount = $paidAmount;
+                                                        } else {
+                                                            $excessSurgeryFee = $surgeryFeePaidAmount > $surgeryFee ? ($surgeryFeePaidAmount - $surgeryFee) : 0;
+                                                            $excessRoomFee = $roomFeePaidAmount > $roomFee ? ($roomFeePaidAmount - $roomFee) : 0;
+                                                            $excessAmount = $excessSurgeryFee + $excessRoomFee;
+                                                        }
                                                     @endphp
-                                                    <tr>
+                                                    <tr class="{{ $isCancelled ? 'table-danger bg-opacity-25' : '' }}">
                                                         <td><span class="badge bg-secondary">#{{ $surgery->id }}</span></td>
                                                         <td>
                                                             <div class="fw-bold">{{ $surgery->surgery_type }}</div>
-                                                            @if($surgery->payment_status === 'partial')
+                                                            @if($isCancelled)
+                                                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> ملغاة (مستحق استرجاع)</span>
+                                                            @elseif($surgery->payment_status === 'partial')
                                                                 <small class="text-warning"><i class="fas fa-adjust"></i> دفع جزئي</small>
                                                             @endif
                                                         </td>
@@ -308,7 +332,11 @@
                                                         <td class="text-success">{{ number_format($paidAmount, 0) }} IQD</td>
                                                         <td class="text-danger fw-bold">{{ number_format($pendingAmount, 0) }} IQD</td>
                                                         <td class="text-center">
-                                                            @if($pendingAmount > 0)
+                                                            @if($isCancelled && $excessAmount > 0)
+                                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-danger btn-sm px-3 fw-bold shadow-sm">
+                                                                    <i class="fas fa-undo me-1"></i> إرجاع المبلغ للمريض ({{ number_format($excessAmount, 0) }} د.ع)
+                                                                </a>
+                                                            @elseif($pendingAmount > 0)
                                                                 <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-success btn-sm px-3">
                                                                     <i class="fas fa-money-bill-wave me-1"></i> تسديد الرسوم
                                                                 </a>

@@ -2,29 +2,34 @@
 
 @section('content')
 @php
+    $isCancelled = $surgery->status === 'cancelled';
+    $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
+
     // حساب التكاليف مع تتبع حالة الدفع
-    $surgeryFee = $surgery->surgery_fee ?? 0;
-    $additionalOpsFee = $surgery->additionalOperations->sum('fee');
-    $devicesFee = $surgery->medicalDevices->sum('pivot.price');
-    $totalSurgeryFee = $surgeryFee + $additionalOpsFee + $devicesFee;
+    $surgeryFee = $isCancelled ? 0 : ($surgery->surgery_fee ?? 0);
+    $additionalOpsFee = $isCancelled ? 0 : $surgery->additionalOperations->sum('fee');
+    $devicesFee = $isCancelled ? 0 : $surgery->medicalDevices->sum('pivot.price');
+    $totalSurgeryFee = $isCancelled ? 0 : ($surgeryFee + $additionalOpsFee + $devicesFee);
     $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
-    $remainingSurgeryFee = max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
-    $excessSurgeryFee = $surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0;
-    $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0);
+    $remainingSurgeryFee = $isCancelled ? 0 : max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
+    $excessSurgeryFee = $isCancelled ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : $surgeryFeePaidAmount) : ($surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0);
+    $surgeryFeePaid = $isCancelled ? ($surgeryFeePaidAmount <= 0) : ($surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0));
     
     // رسوم الغرفة الفندقية (الليلة الأولى + الليالي الإضافية بعد 12 ظهراً)
     $stayDetails = $surgery->calculateStayDetails();
-    $roomFee = $stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0);
+    $roomFee = $isCancelled ? 0 : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
     $roomFeePaidAmount = (float)($surgery->room_fee_paid_amount ?? 0);
-    $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
-    $excessRoomFee = max(0, $roomFeePaidAmount - $roomFee);
-    $roomFeePaid = $remainingRoomFee <= 0 && $excessRoomFee <= 0;
+    $remainingRoomFee = $isCancelled ? 0 : max(0, $roomFee - $roomFeePaidAmount);
+    $excessRoomFee = $isCancelled ? 0 : max(0, $roomFeePaidAmount - $roomFee);
+    $roomFeePaid = $isCancelled ? ($roomFeePaidAmount <= 0) : ($remainingRoomFee <= 0 && $excessRoomFee <= 0);
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
     // تحاليل معلقة ومدفوعة
-    $pendingLabTests = $surgery->labTests->where('payment_status', '!=', 'paid');
-    $paidLabTests = $surgery->labTests->where('payment_status', 'paid');
-    $pendingLabFee = $pendingLabTests->sum(function($test) {
+    $pendingLabTests = $isCancelled ? collect() : $surgery->labTests->where('payment_status', '!=', 'paid');
+    $paidLabTests = $surgery->labTests->filter(function($test) use ($isCancelled) {
+        return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->labTest);
+    });
+    $pendingLabFee = $isCancelled ? 0 : $pendingLabTests->sum(function($test) {
         return $test->labTest->price ?? 0;
     });
     $paidLabFee = $paidLabTests->sum(function($test) {
@@ -32,9 +37,11 @@
     });
     
     // أشعة معلقة ومدفوعة
-    $pendingRadiologyTests = $surgery->radiologyTests->where('payment_status', '!=', 'paid');
-    $paidRadiologyTests = $surgery->radiologyTests->where('payment_status', 'paid');
-    $pendingRadiologyFee = $pendingRadiologyTests->sum(function($test) {
+    $pendingRadiologyTests = $isCancelled ? collect() : $surgery->radiologyTests->where('payment_status', '!=', 'paid');
+    $paidRadiologyTests = $surgery->radiologyTests->filter(function($test) use ($isCancelled) {
+        return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->radiologyType);
+    });
+    $pendingRadiologyFee = $isCancelled ? 0 : $pendingRadiologyTests->sum(function($test) {
         return $test->radiologyType->base_price ?? 0;
     });
     $paidRadiologyFee = $paidRadiologyTests->sum(function($test) {
@@ -42,9 +49,9 @@
     });
     
     // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً)
-    $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
+    $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee);
     $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
-    $totalAmount = $totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+    $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee);
 
     $patient = $surgery->patient;
     $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
@@ -61,12 +68,18 @@
     <div class="row justify-content-center">
         <div class="col-md-11">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-danger text-white">
+                <div class="card-header {{ $isCancelled ? 'bg-danger text-white' : 'bg-primary text-white' }}">
                     <h5 class="mb-0">
-                        <i class="fas fa-money-bill-wave me-2"></i>
-                        دفع رسوم العملية الجراحية
-                        @if($surgery->payment_status === 'partial')
-                            <span class="badge bg-warning ms-2">دفع جزئي سابق</span>
+                        @if($isCancelled)
+                            <i class="fas fa-undo me-2"></i>
+                            استرجاع رسوم العملية الجراحية (Refund)
+                            <span class="badge bg-white text-danger ms-2">عملية ملغاة</span>
+                        @else
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            دفع رسوم العملية الجراحية
+                            @if($surgery->payment_status === 'partial')
+                                <span class="badge bg-warning text-dark ms-2">دفع جزئي سابق</span>
+                            @endif
                         @endif
                     </h5>
                 </div>
@@ -292,57 +305,68 @@
                     @endif
 
                     @if($totalExcess > 0)
-                    <!-- نموذج إرجاع المبلغ الزائد -->
-                    <div class="alert alert-info border-info shadow-sm mb-4">
+                    <!-- نموذج إرجاع المبلغ (Refund) -->
+                    <div class="alert {{ $isCancelled ? 'alert-danger border-danger' : 'alert-info border-info' }} shadow-sm mb-4">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-info-circle fa-2x text-info me-3"></i>
+                            <i class="fas {{ $isCancelled ? 'fa-ban text-danger' : 'fa-info-circle text-info' }} fa-2x me-3"></i>
                             <div>
-                                <h5 class="alert-heading fw-bold mb-1">مسترجع مالي معلق للمريض</h5>
+                                <h5 class="alert-heading fw-bold mb-1">
+                                    {{ $isCancelled ? 'العملية ملغاة - مستحق استرجاع مالي للمريض' : 'مسترجع مالي معلق للمريض' }}
+                                </h5>
                                 <p class="mb-0">
-                                    يوجد مبلغ مدفوع فائض للمريض يستوجب الاسترجاع بمقدار: <strong>{{ number_format($totalExcess, 0) }} د.ع</strong>
-                                    @if($excessRoomFee > 0 && $excessSurgeryFee > 0)
-                                        (فارق تخفيض الغرفة: {{ number_format($excessRoomFee, 0) }} د.ع + فارق العملية: {{ number_format($excessSurgeryFee, 0) }} د.ع)
-                                    @elseif($excessRoomFee > 0)
-                                        (بسبب تخفيض أجور الغرفة من {{ number_format($roomFeePaidAmount, 0) }} إلى {{ number_format($roomFee, 0) }} د.ع)
+                                    @if($isCancelled)
+                                        تم إلغاء حجز العملية. المبلغ النقدي الفعلي المسدد من قبل المريض والمستحق إرجاعه هو: 
+                                        <strong class="text-danger fs-5">{{ number_format($totalExcess, 0) }} د.ع</strong>
+                                        @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                                            <span class="badge bg-secondary ms-2">تم إلغاء مطالبة التأمين تلقائياً</span>
+                                        @endif
+                                    @else
+                                        يوجد مبلغ مدفوع فائض للمريض يستوجب الاسترجاع بمقدار: <strong>{{ number_format($totalExcess, 0) }} د.ع</strong>
+                                        @if($excessRoomFee > 0 && $excessSurgeryFee > 0)
+                                            (فارق تخفيض الغرفة: {{ number_format($excessRoomFee, 0) }} د.ع + فارق العملية: {{ number_format($excessSurgeryFee, 0) }} د.ع)
+                                        @elseif($excessRoomFee > 0)
+                                            (بسبب تخفيض أجور الغرفة من {{ number_format($roomFeePaidAmount, 0) }} إلى {{ number_format($roomFee, 0) }} د.ع)
+                                        @endif
                                     @endif
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card border-info mb-4">
-                        <div class="card-header bg-info text-white fw-bold">
-                            <i class="fas fa-undo me-2"></i> معالجة إرجاع المبلغ الزائد (Refund)
+                    <div class="card {{ $isCancelled ? 'border-danger' : 'border-info' }} mb-4 shadow-sm">
+                        <div class="card-header {{ $isCancelled ? 'bg-danger' : 'bg-info' }} text-white fw-bold d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-undo me-2"></i> معالجة إرجاع المبلغ (Refund)</span>
+                            <span class="badge bg-white {{ $isCancelled ? 'text-danger' : 'text-info' }} fs-6">{{ number_format($totalExcess, 0) }} د.ع</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body bg-white">
                             <form action="{{ route('cashier.surgeries.payment.refund', $surgery->id) }}" method="POST">
                                 @csrf
-                                <div class="row">
+                                <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="mb-3">
+                                        <div class="p-3 border rounded bg-light">
                                             <label class="form-label fw-bold">طريقة إرجاع المبلغ <span class="text-danger">*</span></label>
-                                            <div class="d-flex gap-4">
+                                            <div class="d-flex gap-4 mt-2">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="payment_method" id="refund_cash" value="cash" checked required>
-                                                    <label class="form-check-label fw-semibold" for="refund_cash">💵 نقداً (Cash)</label>
+                                                    <label class="form-check-label fw-bold" for="refund_cash">💵 نقداً (Cash)</label>
                                                 </div>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="payment_method" id="refund_card" value="card">
-                                                    <label class="form-check-label fw-semibold" for="refund_card">💳 بطاقة (Card)</label>
+                                                    <label class="form-check-label fw-bold" for="refund_card">💳 بطاقة (Card)</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
+                                        <div class="p-3 border rounded bg-light">
                                             <label for="refund_notes" class="form-label fw-bold">ملاحظات الاسترجاع</label>
                                             <textarea class="form-control" id="refund_notes" name="notes" rows="2" placeholder="ملاحظات حول سبب الاسترجاع..."></textarea>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <button type="submit" class="btn btn-info btn-lg text-white fw-bold px-4">
-                                        <i class="fas fa-check me-2"></i> تأكيد إرجاع {{ number_format($totalExcess, 0) }} د.ع
+                                <div class="text-end mt-3">
+                                    <button type="submit" class="btn {{ $isCancelled ? 'btn-danger' : 'btn-info text-white' }} btn-lg fw-bold px-5 shadow">
+                                        <i class="fas fa-check-circle me-2"></i> تأكيد استرجاع {{ number_format($totalExcess, 0) }} د.ع للمريض
                                     </button>
                                 </div>
                             </form>
@@ -350,7 +374,7 @@
                     </div>
                     @endif
 
-                    @if($pendingAmount > 0)
+                    @if(!$isCancelled && $pendingAmount > 0)
                     <!-- نموذج الدفع للعناصر المعلقة -->
                     <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm">
                         @csrf

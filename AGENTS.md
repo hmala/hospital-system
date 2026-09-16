@@ -58,6 +58,17 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-16 — نظام إلغاء العمليات الجراحية والاسترجاع المالي للكاشير للضمان والنقدي)
+
+### Done
+- **نظام إلغاء العمليات والاسترجاع المالي (Surgery Cancellation & Refund Workflow)**:
+  * تحديث `SurgeryController::destroy` و `SurgeryController::cancel` لتحرير الغرفة وإيقاف الفحوصات وتوجيه المبالغ المسددة إلى الكاشير كـ (مستحق استرجاع Refund) مع الحفاظ على سجل المدفوعات.
+  * إنشاء ميغريشن `2026_09_16_090500_update_payment_status_in_surgeries_table.php` لتوسيع `payment_status` لدعم `refunded` و `partial` وتجنب خطأ MySQL 1265.
+  * تحديث استعلام وقائمة الكاشير `CashierController::surgeriesIndex` و [index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/index.blade.php) لإظهار العمليات الملغاة بشارة حمراء مميزة وزر استرجاع مباشر.
+  * تحديث `CashierController::processSurgeryRefund` لاحتساب الاسترجاع النقدي الفعلي الدقيق لحصة المريض (Co-payment) وإلغاء مطالبات التأمين للضمان تلقائياً، وإنشاء سندات استرجاع سالبة، وتصفير المبالغ بعد الاسترجاع.
+  * تنظيف واجهة الدفع [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php) وإخفاء نموذج الدفع المعلق كلياً للعمليات الملغاة، وتخصيص بطاقة استرجاع مالي أنيقة، وعرض تفاصيل التحاليل والأشعة المدفوعة.
+  * تحديث [MODIFIED_FILES.md](file:///c:/wamp64/www/hospital-system/MODIFIED_FILES.md) وقاعدة المعرفة [graphify](file:///c:/wamp64/www/hospital-system/graphify-out).
+
 ## Session log (2026-09-15 — تصحيح دفع العمليات الجراحية نقداً وتوحيد وصل الطباعة الحراري 80mm)
 
 ### Done

@@ -724,21 +724,36 @@ class SurgeryController extends Controller
                 Room::where('id', $surgery->room_id)->update(['status' => 'available']);
             }
 
-            $surgery->labTests()->update([
+            // إلغاء الفحوصات وإيقافها مع الحفاظ على سجل المدفوع منها
+            $surgery->labTests()->where('payment_status', '!=', 'paid')->update([
                 'status' => 'cancelled',
                 'payment_status' => 'cancelled',
             ]);
+            $surgery->labTests()->where('payment_status', 'paid')->update([
+                'status' => 'cancelled',
+            ]);
 
-            $surgery->radiologyTests()->update([
+            $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->update([
                 'status' => 'cancelled',
                 'payment_status' => 'cancelled',
+            ]);
+            $surgery->radiologyTests()->where('payment_status', 'paid')->update([
+                'status' => 'cancelled',
             ]);
         });
 
         $surgery->refresh();
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->back()->with('success', 'تم إلغاء العملية وتحرير الغرفة وإيقاف الفحوصات المرتبطة بها بنجاح');
+        $totalPaid = ($surgery->surgery_fee_paid_amount ?? 0) + ($surgery->room_fee_paid_amount ?? 0);
+        $hasPaidRecord = $totalPaid > 0 || $surgery->payments()->where('amount', '>', 0)->exists();
+
+        $successMsg = 'تم إلغاء العملية وتحرير الغرفة وإيقاف الفحوصات المرتبطة بها بنجاح.';
+        if ($hasPaidRecord) {
+            $successMsg .= ' المبالغ المسددة مسبقاً (' . number_format($totalPaid, 0) . ' د.ع) أصبحت جاهزة الآن في شاشة الكاشير لعمل استرجاع مالي (Refund) للمريض.';
+        }
+
+        return redirect()->back()->with('success', $successMsg);
     }
 
     public function returnToWaiting(Surgery $surgery)
@@ -1125,12 +1140,46 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بحذف العملية');
         }
 
-        // الحماية المالية: منع حذف العملية إذا كان لها مدفوعات مسجلة في الكاشير
+        // الحماية المالية: إذا كان للعملية مبالغ مدفوعة، يتم إلغاؤها وتحرير الغرفة ونقل المبالغ للكاشير كاسترجاع
         $totalPaid = ($surgery->surgery_fee_paid_amount ?? 0) + ($surgery->room_fee_paid_amount ?? 0);
         $hasPaidRecord = $totalPaid > 0 || $surgery->payment_status === 'paid' || $surgery->payments()->where('amount', '>', 0)->exists();
 
         if ($hasPaidRecord) {
-            return redirect()->back()->with('error', 'عذراً، لا يمكن حذف هذه العملية لوجود مبالغ مالية مدفوعة ومسجلة في الكاشير. يرجى التوجه للكاشير لعمل استرجاع مالي (Refund) للمريض أولاً لضبط جرد الصندوق.');
+            DB::transaction(function () use ($surgery) {
+                $surgery->status = 'cancelled';
+                $surgery->cancellation_reason = 'تم إلغاء الحجز بناءً على طلب المستخدم وتحويل المبالغ للاسترجاع المالي';
+                $surgery->payment_status = 'cancelled';
+                $surgery->surgery_fee_paid = 'cancelled';
+                $surgery->save();
+
+                // تحرير الغرفة المرتبطة إن وجدت
+                if ($surgery->room_id) {
+                    Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+                }
+
+                // إلغاء الفحوصات وإيقافها مع الحفاظ على سجل المدفوع منها
+                $surgery->labTests()->where('payment_status', '!=', 'paid')->update([
+                    'status' => 'cancelled',
+                    'payment_status' => 'cancelled',
+                ]);
+                $surgery->labTests()->where('payment_status', 'paid')->update([
+                    'status' => 'cancelled',
+                ]);
+
+                $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->update([
+                    'status' => 'cancelled',
+                    'payment_status' => 'cancelled',
+                ]);
+                $surgery->radiologyTests()->where('payment_status', 'paid')->update([
+                    'status' => 'cancelled',
+                ]);
+            });
+
+            $surgery->refresh();
+            broadcast(new SurgeryUpdated($surgery));
+
+            return redirect()->route('surgeries.index')
+                ->with('warning', 'تم إلغاء حجز العملية (' . $surgery->surgery_type . ') وتحرير الغرفة بنجاح. نظراً لوجود مبالغ مدفوعة مسبقاً (' . number_format($totalPaid, 0) . ' د.ع)، تم توجيه العملية إلى الكاشير كـ (مستحق استرجاع Refund) لتسليم المبلغ للمريض.');
         }
 
         try {
@@ -1158,7 +1207,7 @@ class SurgeryController extends Controller
             // فك ارتباط وحذف الجداول التابعة
             $surgery->medicalDevices()->detach();
             $surgery->additionalOperations()->delete();
-            $surgery->typeChanges()->delete();
+            $surgery->surgeryTypeChanges()->delete();
             $surgery->surgeryTreatments()->delete();
             $surgery->labTests()->delete();
             $surgery->radiologyTests()->delete();

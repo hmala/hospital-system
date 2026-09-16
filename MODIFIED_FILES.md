@@ -83,6 +83,7 @@
 - `database/migrations/2026_09_13_084700_add_insurance_and_financial_snapshot_to_payments_table.php`
 - `database/migrations/2026_09_14_130000_create_health_insurance_categories_table.php`
 - `database/migrations/2026_09_15_094054_make_copay_percentage_nullable_in_payments_table.php`
+- `database/migrations/2026_09_16_090500_update_payment_status_in_surgeries_table.php`
 - `database/seeders/HealthInsuranceCategorySeeder.php`
 
 ---
@@ -105,4 +106,5 @@ php artisan db:seed --class=HealthInsuranceCategorySeeder --force
 
 # 3. مسح وتحديث كاش النظام والواجهات
 php artisan optimize:clear
+```
 ```

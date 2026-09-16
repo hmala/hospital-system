@@ -118,6 +118,11 @@ class Surgery extends Model
         return $this->hasMany(SurgeryTypeChange::class);
     }
 
+    public function typeChanges()
+    {
+        return $this->surgeryTypeChanges();
+    }
+
     public function additionalOperations()
     {
         return $this->hasMany(SurgeryAdditionalOperation::class);
