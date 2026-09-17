@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\Doctor::class);
     }
 
+    public function employee()
+    {
+        return $this->hasOne(\App\Models\Employee::class);
+    }
+
     public function visits()
     {
         return $this->hasMany(\App\Models\Visit::class, 'doctor_id');

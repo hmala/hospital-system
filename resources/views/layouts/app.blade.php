@@ -424,6 +424,27 @@
             .sidebar-section-title { display: none; }
             .main-content { margin-right: 70px; }
         }
+
+        /* حل جذري لمشكلة تجميد وحجب نوافذ المودل في Bootstrap بسبب backdrop-filter */
+        .modal-backdrop {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+        }
+        .modal {
+            background: rgba(15, 23, 42, 0.55) !important;
+            z-index: 10000 !important;
+        }
+        .modal-dialog {
+            z-index: 10001 !important;
+        }
+        .modal-content {
+            position: relative;
+            z-index: 10002 !important;
+            pointer-events: auto !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
     </style>
     <style>
         /* Loader Overlay Ultra Premium */
@@ -1165,6 +1186,37 @@
                         </li>
                         @endhasrole
 
+                        </div>
+                        @endcanany
+
+                        <!-- قسم الموارد البشرية (HR) -->
+                        @canany(['view hr', 'view employees'])
+                        @php
+                            $isHrActive = request()->routeIs('hr.*');
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isHrActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#hrSection" aria-expanded="{{ $isHrActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-users-cog"></i> الموارد البشرية</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isHrActive ? 'show' : '' }}" id="hrSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.employees.index') || request()->routeIs('hr.employees.show') ? 'active' : '' }}" href="{{ route('hr.employees.index') }}">
+                                    <i class="fas fa-id-card"></i><span> سجل الموظفين</span>
+                                </a>
+                            </li>
+                            @can('create employees')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.employees.create') ? 'active' : '' }}" href="{{ route('hr.employees.create') }}">
+                                    <i class="fas fa-user-plus"></i><span> إضافة موظف جديد</span>
+                                </a>
+                            </li>
+                            @endcan
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.settings.*') ? 'active' : '' }}" href="{{ route('hr.settings.index') }}">
+                                    <i class="fas fa-sliders-h"></i><span> إعدادات وقوائم HR</span>
+                                </a>
+                            </li>
                         </div>
                         @endcanany
 

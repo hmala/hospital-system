@@ -47,11 +47,6 @@ class DepartmentController extends Controller
             'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
             'room_number' => 'required|string|max:50',
             'consultation_fee' => 'required|numeric|min:0',
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
-            'room_number' => 'required|string|max:50',
-            'consultation_fee' => 'required|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',
             'is_moi_active' => 'nullable|boolean',
             'hi_price' => 'nullable|numeric|min:0',

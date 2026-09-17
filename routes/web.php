@@ -599,5 +599,27 @@ Route::middleware(['auth'])->group(function () {
     // تحليلات الطوارئ للمحاسب
     Route::get('/accountant/emergency-analytics', [\App\Http\Controllers\AccountantController::class, 'emergencyAnalytics'])->name('accountant.emergency.analytics');
     Route::get('/accountant/diagnostic-analytics', [\App\Http\Controllers\AccountantController::class, 'diagnosticAnalytics'])->name('accountant.diagnostics.analytics');
+
+    // إدارة الموارد البشرية (HR Management)
+    Route::prefix('hr')->name('hr.')->middleware(['permission:view hr'])->group(function () {
+        // إدارة المستمسكات
+        Route::post('employees/{employee}/documents', [\App\Http\Controllers\HR\EmployeeController::class, 'uploadDocument'])->name('employees.documents.upload');
+        Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\EmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
+        Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\EmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
+
+        // إدارة الموظفين
+        Route::resource('employees', \App\Http\Controllers\HR\EmployeeController::class);
+
+        // إعدادات وقوائم الموارد البشرية والحقول
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\HR\HrSettingsController::class, 'index'])->name('index');
+            Route::post('/fields', [\App\Http\Controllers\HR\HrSettingsController::class, 'updateFieldRequirements'])->name('update-fields');
+            Route::put('/fields/{field}', [\App\Http\Controllers\HR\HrSettingsController::class, 'updateField'])->name('update-field');
+            Route::post('/options', [\App\Http\Controllers\HR\HrSettingsController::class, 'storeLookupOption'])->name('store-option');
+            Route::put('/options/{option}', [\App\Http\Controllers\HR\HrSettingsController::class, 'updateLookupOption'])->name('update-option');
+            Route::patch('/options/{option}/toggle', [\App\Http\Controllers\HR\HrSettingsController::class, 'toggleLookupOption'])->name('toggle-option');
+            Route::delete('/options/{option}', [\App\Http\Controllers\HR\HrSettingsController::class, 'destroyLookupOption'])->name('destroy-option');
+        });
+    });
 });
 

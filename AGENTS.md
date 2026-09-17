@@ -58,6 +58,38 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-16 — نظام إدارة الموارد البشرية HR: سجل وإضبارة الموظفين والكوادر الطبية)
+
+### Done
+- **قاعدة البيانات وهيكل الموظفين**:
+  * إنشاء جدول `employees` متكامل لدعم جميع تصنيفات الكوادر (طبي، تمريضي، فني، إداري، خدمات) مع الحقول الخاصة بتراخيص مزاولة المهنة وتواريخ الانتهاء ورقم هوية النقابة والمؤهل العلمي، ونوع التعاقد، والراتب الأساسي، والصورة الشخصية، والربط الاختياري مع حسابات `users`.
+  * إنشاء موديل [Employee.php](file:///d:/ali%20altimimi/hospital-system/app/Models/Employee.php) مع دوال فحص الكادر الطبي، فحص انتهاء الترخيص، والـ Accessors للتسميات العربية.
+  * ربط العلاقات مع `User` و `Department`.
+- **الصلاحيات والأدوار (Spatie)**:
+  * إضافة صلاحيات الموارد البشرية: `view hr`, `view employees`, `create employees`, `edit employees`, `delete employees`.
+  * إنشاء دور `hr_manager` وتعيين الصلاحيات له في `RolesAndPermissionsSeeder.php`.
+- **الواجهات والتحكم**:
+  * إنشاء [EmployeeController.php](file:///d:/ali%20altimimi/hospital-system/app/Http/Controllers/HR/EmployeeController.php) مع البحث المتقدم، الفلاتر (نوع الكادر، القسم، الحالة، وتراخيص الممارسة)، وبطاقات الإحصائيات الفورية.
+  * واجهة القائمة [index.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/index.blade.php).
+  * واجهة التسجيل الذكية [create.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/create.blade.php) المزودة بـ Dynamic UI لإظهار قسم التراخيص الطبية تلقائياً عند اختيار الكادر الطبي/التمريضي/الفني وإخفائه للإداريين والخدمات.
+  * واجهة التعديل [edit.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/edit.blade.php).
+  * واجهة الإضبارة الشاملة [show.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/show.blade.php) مع تنبيهات صلاحية التراخيص ودعم الطباعة المباشرة.
+  * إضافة قسم «الموارد البشرية» في القائمة الجانبية بـ [resources/views/layouts/app.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/layouts/app.blade.php).
+- **نظام المستمسكات والوثائق الرسمية المورثة للرمز الوظيفي**:
+  * إنشاء جدول `employee_documents` وموديل [EmployeeDocument.php](file:///d:/ali%20altimimi/hospital-system/app/Models/EmployeeDocument.php) لتخزين كافة أنواع المستمسكات (بطاقة موحدة، بطاقة سكن، عقد عمل، وثيقة تخرج، ترخيص مهنة، وغيرها).
+  * خوارزمية تسمية وتخزين منظمة تتبع الرمز الوظيفي ونوع المستمسك: `{$employee_code}_{$document_type}_{$timestamp}.{$ext}` في مجلدات مفهرسة بالرمز الوظيفي لكل موظف.
+  * واجهة ديناميكية تفاعلية في شاشتي التسجيل والتعديل تتيح رفع عدة مستمسكات معاً مع فتح سطر جديد تلقائياً عند اختيار أي ملف أو بالضغط على إضافة مستمسك.
+  * إضافة جدول المستمسكات المؤرشفة في الإضبارة [show.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/show.blade.php) مع نافذة Modal للرفع السريع في أي وقت لاحق من قبل مسؤول الـ HR حصراً، ودعم التحميل والمعاينة والحذف الآمن.
+- **شاشة إعدادات الموارد البشرية والتحكم بالحقول الإجبارية والقوائم**:
+  * إنشاء جداول وموديلات [HrFieldRequirement.php](file:///d:/ali%20altimimi/hospital-system/app/Models/HrFieldRequirement.php) و [HrLookupOption.php](file:///d:/ali%20altimimi/hospital-system/app/Models/HrLookupOption.php) مع الباذر [HrSettingsSeeder.php](file:///d:/ali%20altimimi/hospital-system/database/seeders/HrSettingsSeeder.php).
+  * لوحة تحكم متكاملة [resources/views/hr/settings/index.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/settings/index.blade.php) تتيح لمسؤول الموارد البشرية:
+    1. تحديد أي حقل ليكون (إجبارياً مطلوباً * أو اختيارياً) ديناميكياً مع انعكاس ذلك فورياً على شاشات الإدخال وقواعد التحقق (Validation).
+    2. إدارة أنواع التعيين والتعاقد (إضافة، تعديل، تفعيل، وتعطيل).
+    3. إدارة أنواع المستمسكات الرسمية (إضافة، تفعيل، وتعطيل).
+  * ربط شاشة الإعدادات بالقائمة الجانبية بالصلاحية `@can('view hr')`.
+- **الاختبارات الآلية**:
+  * تحديث وتوسيع [HREmployeeTest.php](file:///d:/ali%20altimimi/hospital-system/tests/Feature/HREmployeeTest.php) للتحقق من رفع المستمسكات، وراثة التسمية، التحقق الديناميكي للحقول الإجبارية، وإدارة القوائم بنجاح تام (12 passed, 62 assertions).
+
 ## Session log (2026-09-14 — جدول فئات ونسب استقطاع هيئة الضمان الصحي الوطني للقطاع الأهلي)
 
 ### Done
