@@ -2,29 +2,34 @@
 
 @section('content')
 @php
+    $isCancelled = $surgery->status === 'cancelled';
+    $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
+
     // حساب التكاليف مع تتبع حالة الدفع
-    $surgeryFee = $surgery->surgery_fee ?? 0;
-    $additionalOpsFee = $surgery->additionalOperations->sum('fee');
-    $devicesFee = $surgery->medicalDevices->sum('pivot.price');
-    $totalSurgeryFee = $surgeryFee + $additionalOpsFee + $devicesFee;
+    $surgeryFee = $isCancelled ? 0 : ($surgery->surgery_fee ?? 0);
+    $additionalOpsFee = $isCancelled ? 0 : $surgery->additionalOperations->sum('fee');
+    $devicesFee = $isCancelled ? 0 : $surgery->medicalDevices->sum('pivot.price');
+    $totalSurgeryFee = $isCancelled ? 0 : ($surgeryFee + $additionalOpsFee + $devicesFee);
     $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
-    $remainingSurgeryFee = max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
-    $excessSurgeryFee = $surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0;
-    $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0);
+    $remainingSurgeryFee = $isCancelled ? 0 : max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
+    $excessSurgeryFee = $isCancelled ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : $surgeryFeePaidAmount) : ($surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0);
+    $surgeryFeePaid = $isCancelled ? ($surgeryFeePaidAmount <= 0) : ($surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0));
     
     // رسوم الغرفة الفندقية (الليلة الأولى + الليالي الإضافية بعد 12 ظهراً)
     $stayDetails = $surgery->calculateStayDetails();
-    $roomFee = $stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0);
+    $roomFee = $isCancelled ? 0 : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
     $roomFeePaidAmount = (float)($surgery->room_fee_paid_amount ?? 0);
-    $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
-    $excessRoomFee = max(0, $roomFeePaidAmount - $roomFee);
-    $roomFeePaid = $remainingRoomFee <= 0 && $excessRoomFee <= 0;
+    $remainingRoomFee = $isCancelled ? 0 : max(0, $roomFee - $roomFeePaidAmount);
+    $excessRoomFee = $isCancelled ? 0 : max(0, $roomFeePaidAmount - $roomFee);
+    $roomFeePaid = $isCancelled ? ($roomFeePaidAmount <= 0) : ($remainingRoomFee <= 0 && $excessRoomFee <= 0);
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
     // تحاليل معلقة ومدفوعة
-    $pendingLabTests = $surgery->labTests->where('payment_status', '!=', 'paid');
-    $paidLabTests = $surgery->labTests->where('payment_status', 'paid');
-    $pendingLabFee = $pendingLabTests->sum(function($test) {
+    $pendingLabTests = $isCancelled ? collect() : $surgery->labTests->where('payment_status', '!=', 'paid');
+    $paidLabTests = $surgery->labTests->filter(function($test) use ($isCancelled) {
+        return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->labTest);
+    });
+    $pendingLabFee = $isCancelled ? 0 : $pendingLabTests->sum(function($test) {
         return $test->labTest->price ?? 0;
     });
     $paidLabFee = $paidLabTests->sum(function($test) {
@@ -32,9 +37,11 @@
     });
     
     // أشعة معلقة ومدفوعة
-    $pendingRadiologyTests = $surgery->radiologyTests->where('payment_status', '!=', 'paid');
-    $paidRadiologyTests = $surgery->radiologyTests->where('payment_status', 'paid');
-    $pendingRadiologyFee = $pendingRadiologyTests->sum(function($test) {
+    $pendingRadiologyTests = $isCancelled ? collect() : $surgery->radiologyTests->where('payment_status', '!=', 'paid');
+    $paidRadiologyTests = $surgery->radiologyTests->filter(function($test) use ($isCancelled) {
+        return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->radiologyType);
+    });
+    $pendingRadiologyFee = $isCancelled ? 0 : $pendingRadiologyTests->sum(function($test) {
         return $test->radiologyType->base_price ?? 0;
     });
     $paidRadiologyFee = $paidRadiologyTests->sum(function($test) {
@@ -42,9 +49,9 @@
     });
     
     // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً)
-    $pendingAmount = $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
+    $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee);
     $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
-    $totalAmount = $totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+    $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee);
 
     $patient = $surgery->patient;
     $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
@@ -61,16 +68,55 @@
     <div class="row justify-content-center">
         <div class="col-md-11">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-danger text-white">
+                <div class="card-header {{ $isCancelled ? 'bg-danger text-white' : 'bg-primary text-white' }}">
                     <h5 class="mb-0">
-                        <i class="fas fa-money-bill-wave me-2"></i>
-                        دفع رسوم العملية الجراحية
-                        @if($surgery->payment_status === 'partial')
-                            <span class="badge bg-warning ms-2">دفع جزئي سابق</span>
+                        @if($isCancelled)
+                            <i class="fas fa-undo me-2"></i>
+                            استرجاع رسوم العملية الجراحية (Refund)
+                            <span class="badge bg-white text-danger ms-2">عملية ملغاة</span>
+                        @else
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            دفع رسوم العملية الجراحية
+                            @if($surgery->payment_status === 'partial')
+                                <span class="badge bg-warning text-dark ms-2">دفع جزئي سابق</span>
+                            @endif
                         @endif
                     </h5>
                 </div>
                 <div class="card-body">
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if(session('warning'))
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('warning') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if($errors->any())
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <h6 class="alert-heading mb-1"><i class="fas fa-times-circle me-1"></i> تعذر الدفع بسبب أخطاء في المدخلات:</h6>
+                            <ul class="mb-0 ps-3">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
                     <!-- معلومات العملية -->
                     <div class="row mb-4">
                         <div class="col-md-6">
@@ -259,57 +305,68 @@
                     @endif
 
                     @if($totalExcess > 0)
-                    <!-- نموذج إرجاع المبلغ الزائد -->
-                    <div class="alert alert-info border-info shadow-sm mb-4">
+                    <!-- نموذج إرجاع المبلغ (Refund) -->
+                    <div class="alert {{ $isCancelled ? 'alert-danger border-danger' : 'alert-info border-info' }} shadow-sm mb-4">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-info-circle fa-2x text-info me-3"></i>
+                            <i class="fas {{ $isCancelled ? 'fa-ban text-danger' : 'fa-info-circle text-info' }} fa-2x me-3"></i>
                             <div>
-                                <h5 class="alert-heading fw-bold mb-1">مسترجع مالي معلق للمريض</h5>
+                                <h5 class="alert-heading fw-bold mb-1">
+                                    {{ $isCancelled ? 'العملية ملغاة - مستحق استرجاع مالي للمريض' : 'مسترجع مالي معلق للمريض' }}
+                                </h5>
                                 <p class="mb-0">
-                                    يوجد مبلغ مدفوع فائض للمريض يستوجب الاسترجاع بمقدار: <strong>{{ number_format($totalExcess, 0) }} د.ع</strong>
-                                    @if($excessRoomFee > 0 && $excessSurgeryFee > 0)
-                                        (فارق تخفيض الغرفة: {{ number_format($excessRoomFee, 0) }} د.ع + فارق العملية: {{ number_format($excessSurgeryFee, 0) }} د.ع)
-                                    @elseif($excessRoomFee > 0)
-                                        (بسبب تخفيض أجور الغرفة من {{ number_format($roomFeePaidAmount, 0) }} إلى {{ number_format($roomFee, 0) }} د.ع)
+                                    @if($isCancelled)
+                                        تم إلغاء حجز العملية. المبلغ النقدي الفعلي المسدد من قبل المريض والمستحق إرجاعه هو: 
+                                        <strong class="text-danger fs-5">{{ number_format($totalExcess, 0) }} د.ع</strong>
+                                        @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                                            <span class="badge bg-secondary ms-2">تم إلغاء مطالبة التأمين تلقائياً</span>
+                                        @endif
+                                    @else
+                                        يوجد مبلغ مدفوع فائض للمريض يستوجب الاسترجاع بمقدار: <strong>{{ number_format($totalExcess, 0) }} د.ع</strong>
+                                        @if($excessRoomFee > 0 && $excessSurgeryFee > 0)
+                                            (فارق تخفيض الغرفة: {{ number_format($excessRoomFee, 0) }} د.ع + فارق العملية: {{ number_format($excessSurgeryFee, 0) }} د.ع)
+                                        @elseif($excessRoomFee > 0)
+                                            (بسبب تخفيض أجور الغرفة من {{ number_format($roomFeePaidAmount, 0) }} إلى {{ number_format($roomFee, 0) }} د.ع)
+                                        @endif
                                     @endif
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card border-info mb-4">
-                        <div class="card-header bg-info text-white fw-bold">
-                            <i class="fas fa-undo me-2"></i> معالجة إرجاع المبلغ الزائد (Refund)
+                    <div class="card {{ $isCancelled ? 'border-danger' : 'border-info' }} mb-4 shadow-sm">
+                        <div class="card-header {{ $isCancelled ? 'bg-danger' : 'bg-info' }} text-white fw-bold d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-undo me-2"></i> معالجة إرجاع المبلغ (Refund)</span>
+                            <span class="badge bg-white {{ $isCancelled ? 'text-danger' : 'text-info' }} fs-6">{{ number_format($totalExcess, 0) }} د.ع</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body bg-white">
                             <form action="{{ route('cashier.surgeries.payment.refund', $surgery->id) }}" method="POST">
                                 @csrf
-                                <div class="row">
+                                <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="mb-3">
+                                        <div class="p-3 border rounded bg-light">
                                             <label class="form-label fw-bold">طريقة إرجاع المبلغ <span class="text-danger">*</span></label>
-                                            <div class="d-flex gap-4">
+                                            <div class="d-flex gap-4 mt-2">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="payment_method" id="refund_cash" value="cash" checked required>
-                                                    <label class="form-check-label fw-semibold" for="refund_cash">💵 نقداً (Cash)</label>
+                                                    <label class="form-check-label fw-bold" for="refund_cash">💵 نقداً (Cash)</label>
                                                 </div>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="payment_method" id="refund_card" value="card">
-                                                    <label class="form-check-label fw-semibold" for="refund_card">💳 بطاقة (Card)</label>
+                                                    <label class="form-check-label fw-bold" for="refund_card">💳 بطاقة (Card)</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
+                                        <div class="p-3 border rounded bg-light">
                                             <label for="refund_notes" class="form-label fw-bold">ملاحظات الاسترجاع</label>
                                             <textarea class="form-control" id="refund_notes" name="notes" rows="2" placeholder="ملاحظات حول سبب الاسترجاع..."></textarea>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <button type="submit" class="btn btn-info btn-lg text-white fw-bold px-4">
-                                        <i class="fas fa-check me-2"></i> تأكيد إرجاع {{ number_format($totalExcess, 0) }} د.ع
+                                <div class="text-end mt-3">
+                                    <button type="submit" class="btn {{ $isCancelled ? 'btn-danger' : 'btn-info text-white' }} btn-lg fw-bold px-5 shadow">
+                                        <i class="fas fa-check-circle me-2"></i> تأكيد استرجاع {{ number_format($totalExcess, 0) }} د.ع للمريض
                                     </button>
                                 </div>
                             </form>
@@ -317,7 +374,7 @@
                     </div>
                     @endif
 
-                    @if($pendingAmount > 0)
+                    @if(!$isCancelled && $pendingAmount > 0)
                     <!-- نموذج الدفع للعناصر المعلقة -->
                     <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm">
                         @csrf
@@ -590,27 +647,39 @@
                                                 </td>
                                             </tr>
                                             @foreach($pendingLabTests as $labTest)
+                                                @php
+                                                    $lModel = $labTest->labTest;
+                                                    $lBase = (float)($lModel ? $lModel->getRegularPrice() : 0);
+                                                    $lMoi = (float)($lModel && $lModel->moi_price > 0 ? $lModel->moi_price : $lBase);
+                                                    $lHi = (float)($lModel && $lModel->hi_price > 0 ? $lModel->hi_price : $lBase);
+                                                    $lMoiActive = (bool)($lModel ? ($lModel->is_moi_active ?? true) : true);
+                                                    $lHiActive = (bool)($lModel ? ($lModel->is_hi_active ?? true) : true);
+                                                @endphp
                                                 <tr>
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item lab-test-item" 
                                                                name="pay_lab_tests[]" 
                                                                value="{{ $labTest->id }}"
-                                                               data-amount="{{ $labTest->labTest->price ?? 0 }}"
+                                                               data-base-price="{{ $lBase }}"
+                                                               data-moi-price="{{ $lMoi }}"
+                                                               data-hi-price="{{ $lHi }}"
+                                                               data-is-moi-active="{{ $lMoiActive ? '1' : '0' }}"
+                                                               data-is-hi-active="{{ $lHiActive ? '1' : '0' }}"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-vial text-primary me-2"></i>
                                                         تحليل
                                                     </td>
-                                                    <td>{{ $labTest->labTest->name ?? 'غير محدد' }} ({{ $labTest->labTest->code ?? '-' }})</td>
-                                                    <td class="text-end">{{ number_format($labTest->labTest->price ?? 0, 0) }}</td>
+                                                    <td>{{ $lModel->name ?? 'غير محدد' }} ({{ $lModel->code ?? '-' }})</td>
+                                                    <td class="text-end item-price-display">{{ number_format($lBase, 0) }}</td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع التحاليل المعلقة:</strong></td>
-                                                <td class="text-end"><strong>{{ number_format($pendingLabFee, 0) }}</strong></td>
+                                                <td class="text-end"><strong id="pending_lab_fee_display">{{ number_format($pendingLabFee, 0) }}</strong></td>
                                             </tr>
                                         @endif
 
@@ -630,27 +699,39 @@
                                                 </td>
                                             </tr>
                                             @foreach($pendingRadiologyTests as $radiologyTest)
+                                                @php
+                                                    $rModel = $radiologyTest->radiologyType;
+                                                    $rBase = (float)($rModel ? $rModel->getRegularPrice() : 0);
+                                                    $rMoi = (float)($rModel && $rModel->moi_price > 0 ? $rModel->moi_price : $rBase);
+                                                    $rHi = (float)($rModel && $rModel->hi_price > 0 ? $rModel->hi_price : $rBase);
+                                                    $rMoiActive = (bool)($rModel ? ($rModel->is_moi_active ?? true) : true);
+                                                    $rHiActive = (bool)($rModel ? ($rModel->is_hi_active ?? true) : true);
+                                                @endphp
                                                 <tr>
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item radiology-test-item" 
                                                                name="pay_radiology_tests[]" 
                                                                value="{{ $radiologyTest->id }}"
-                                                               data-amount="{{ $radiologyTest->radiologyType->base_price ?? 0 }}"
+                                                               data-base-price="{{ $rBase }}"
+                                                               data-moi-price="{{ $rMoi }}"
+                                                               data-hi-price="{{ $rHi }}"
+                                                               data-is-moi-active="{{ $rMoiActive ? '1' : '0' }}"
+                                                               data-is-hi-active="{{ $rHiActive ? '1' : '0' }}"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-radiation text-info me-2"></i>
                                                         أشعة
                                                     </td>
-                                                    <td>{{ $radiologyTest->radiologyType->name ?? 'غير محدد' }}</td>
-                                                    <td class="text-end">{{ number_format($radiologyTest->radiologyType->base_price ?? 0, 0) }}</td>
+                                                    <td>{{ $rModel->name ?? 'غير محدد' }}</td>
+                                                    <td class="text-end item-price-display">{{ number_format($rBase, 0) }}</td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع الأشعة المعلقة:</strong></td>
-                                                <td class="text-end"><strong>{{ number_format($pendingRadiologyFee, 0) }}</strong></td>
+                                                <td class="text-end"><strong id="pending_radiology_fee_display">{{ number_format($pendingRadiologyFee, 0) }}</strong></td>
                                             </tr>
                                         @endif
                                     </tbody>
@@ -798,6 +879,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const remainingRoomFee = {{ $remainingRoomFee }};
     const inclusiveCheckbox = document.getElementById('inclusive');
 
+    // عناصر الضمان
+    const insuranceTypeSelect = document.getElementById('insurance_type');
+    const insuranceCardCol = document.getElementById('insurance_card_col');
+    const copaySection = document.getElementById('copay_section');
+    const copayBadge = document.getElementById('copayBadge');
+    const copayInput = document.getElementById('copay_percentage');
+    const paymentInsuranceRadio = document.getElementById('surgery_payment_insurance');
+    const paymentCashRadio = document.getElementById('surgery_payment_cash');
+
+    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
+    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
+    const hiBadge = document.getElementById('patient_hi_category_badge');
+
     function calculateSelectedAmount() {
         let selectedAmount = 0;
         let selectedCount = 0;
@@ -808,21 +902,27 @@ document.addEventListener('DOMContentLoaded', function() {
             // 1. Surgery Fee portion
             const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
             if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-                const payFull = document.getElementById('surgery_pay_full').checked;
+                const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
                 if (payFull) {
                     selectedAmount += remainingSurgeryFee;
-                    document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(remainingSurgeryFee);
+                    const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                    const custInput = document.getElementById('surgery_custom_amount');
+                    const feeDisp = document.getElementById('surgery_fee_display');
+                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
+                    if (custWrapper) custWrapper.style.display = 'none';
+                    if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
                 } else {
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'block';
-                    let customVal = parseFloat(document.getElementById('surgery_custom_amount').value) || 0;
+                    const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                    const custInput = document.getElementById('surgery_custom_amount');
+                    const feeDisp = document.getElementById('surgery_fee_display');
+                    if (custWrapper) custWrapper.style.display = 'block';
+                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
                     if (customVal > remainingSurgeryFee) {
                         customVal = remainingSurgeryFee;
-                        document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                        if (custInput) custInput.value = Math.round(remainingSurgeryFee);
                     }
                     selectedAmount += customVal;
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(customVal);
+                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
                 }
                 selectedCount++;
             }
@@ -831,61 +931,122 @@ document.addEventListener('DOMContentLoaded', function() {
             // 1. Surgery Fee
             const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
             if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-                const payFull = document.getElementById('surgery_pay_full').checked;
+                const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
+                const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                const custInput = document.getElementById('surgery_custom_amount');
+                const feeDisp = document.getElementById('surgery_fee_display');
                 if (payFull) {
                     selectedAmount += remainingSurgeryFee;
-                    document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(remainingSurgeryFee);
+                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
+                    if (custWrapper) custWrapper.style.display = 'none';
+                    if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
                 } else {
-                    document.getElementById('surgery_custom_amount_wrapper').style.display = 'block';
-                    let customVal = parseFloat(document.getElementById('surgery_custom_amount').value) || 0;
+                    if (custWrapper) custWrapper.style.display = 'block';
+                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
                     if (customVal > remainingSurgeryFee) {
                         customVal = remainingSurgeryFee;
-                        document.getElementById('surgery_custom_amount').value = Math.round(remainingSurgeryFee);
+                        if (custInput) custInput.value = Math.round(remainingSurgeryFee);
                     }
                     selectedAmount += customVal;
-                    document.getElementById('surgery_fee_display').textContent = numberFormat(customVal);
+                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
                 }
                 selectedCount++;
             } else if (paySurgeryCheckbox) {
-                document.getElementById('surgery_custom_amount_wrapper').style.display = 'none';
-                document.getElementById('surgery_fee_display').textContent = '0';
+                const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+                const feeDisp = document.getElementById('surgery_fee_display');
+                if (custWrapper) custWrapper.style.display = 'none';
+                if (feeDisp) feeDisp.textContent = '0';
             }
 
             // 2. Room Fee
             const payRoomCheckbox = document.getElementById('pay_room_checkbox');
             if (payRoomCheckbox && payRoomCheckbox.checked) {
-                const payFull = document.getElementById('room_pay_full').checked;
+                const payFull = document.getElementById('room_pay_full') ? document.getElementById('room_pay_full').checked : true;
+                const custWrapper = document.getElementById('room_custom_amount_wrapper');
+                const custInput = document.getElementById('room_custom_amount');
+                const feeDisp = document.getElementById('room_fee_display');
                 if (payFull) {
                     selectedAmount += remainingRoomFee;
-                    document.getElementById('room_custom_amount').value = Math.round(remainingRoomFee);
-                    document.getElementById('room_custom_amount_wrapper').style.display = 'none';
-                    document.getElementById('room_fee_display').textContent = numberFormat(remainingRoomFee);
+                    if (custInput) custInput.value = Math.round(remainingRoomFee);
+                    if (custWrapper) custWrapper.style.display = 'none';
+                    if (feeDisp) feeDisp.textContent = numberFormat(remainingRoomFee);
                 } else {
-                    document.getElementById('room_custom_amount_wrapper').style.display = 'block';
-                    let customVal = parseFloat(document.getElementById('room_custom_amount').value) || 0;
+                    if (custWrapper) custWrapper.style.display = 'block';
+                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
                     if (customVal > remainingRoomFee) {
                         customVal = remainingRoomFee;
-                        document.getElementById('room_custom_amount').value = Math.round(remainingRoomFee);
+                        if (custInput) custInput.value = Math.round(remainingRoomFee);
                     }
                     selectedAmount += customVal;
-                    document.getElementById('room_fee_display').textContent = numberFormat(customVal);
+                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
                 }
                 selectedCount++;
             } else if (payRoomCheckbox) {
-                document.getElementById('room_custom_amount_wrapper').style.display = 'none';
-                document.getElementById('room_fee_display').textContent = '0';
+                const custWrapper = document.getElementById('room_custom_amount_wrapper');
+                const feeDisp = document.getElementById('room_fee_display');
+                if (custWrapper) custWrapper.style.display = 'none';
+                if (feeDisp) feeDisp.textContent = '0';
             }
 
             // 3. Lab and Radiology tests
+            const currentInsType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
             document.querySelectorAll('.payment-item:checked').forEach(function(item) {
                 if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
-                    selectedAmount += parseFloat(item.dataset.amount) || 0;
+                    const basePrice = parseFloat(item.dataset.basePrice) || 0;
+                    const moiPrice = parseFloat(item.dataset.moiPrice) || basePrice;
+                    const hiPrice = parseFloat(item.dataset.hiPrice) || basePrice;
+                    const isMoiActive = item.dataset.isMoiActive === '1';
+                    const isHiActive = item.dataset.isHiActive === '1';
+
+                    let itemApproved = basePrice;
+                    if (currentInsType === 'moi' && isMoiActive) {
+                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                    } else if (currentInsType === 'hi' && isHiActive) {
+                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                    }
+
+                    selectedAmount += itemApproved;
                     selectedCount++;
                 }
             });
         }
+
+        // Update row price displays for all items
+        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        let currentLabTotal = 0;
+        let currentRadTotal = 0;
+        document.querySelectorAll('.payment-item').forEach(function(item) {
+            if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
+                const basePrice = parseFloat(item.dataset.basePrice) || 0;
+                const moiPrice = parseFloat(item.dataset.moiPrice) || basePrice;
+                const hiPrice = parseFloat(item.dataset.hiPrice) || basePrice;
+                const isMoiActive = item.dataset.isMoiActive === '1';
+                const isHiActive = item.dataset.isHiActive === '1';
+
+                let itemApproved = basePrice;
+                if (insType === 'moi' && isMoiActive) {
+                    itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                } else if (insType === 'hi' && isHiActive) {
+                    itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                }
+
+                const priceCell = item.closest('tr')?.querySelector('.item-price-display');
+                if (priceCell) {
+                    priceCell.textContent = numberFormat(itemApproved);
+                }
+
+                if (item.classList.contains('lab-test-item')) {
+                    currentLabTotal += itemApproved;
+                } else if (item.classList.contains('radiology-test-item')) {
+                    currentRadTotal += itemApproved;
+                }
+            }
+        });
+
+        const labTotalDisplay = document.getElementById('pending_lab_fee_display');
+        if (labTotalDisplay) labTotalDisplay.textContent = numberFormat(currentLabTotal);
+        const radTotalDisplay = document.getElementById('pending_radiology_fee_display');
+        if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal);
 
         let deferredAmount = pendingAmount - selectedAmount;
         if (isIncl) {
@@ -895,7 +1056,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (deferredAmount < 0) deferredAmount = 0;
 
         // حساب حصة الضمان والمريض
-        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
         let copayPct = 100;
         if (insType !== 'none') {
             copayPct = parseFloat(copayInput ? copayInput.value : 15) || 0;
@@ -909,40 +1069,37 @@ document.addEventListener('DOMContentLoaded', function() {
             insuranceShare = Math.max(0, selectedAmount - patientShare);
         }
 
-        document.getElementById('display_approved_price').textContent = numberFormat(selectedAmount) + ' د.ع';
-        document.getElementById('display_patient_share').textContent = numberFormat(patientShare) + ' د.ع';
-        document.getElementById('display_insurance_share').textContent = numberFormat(insuranceShare) + ' د.ع';
+        const dispApproved = document.getElementById('display_approved_price');
+        const dispPatient = document.getElementById('display_patient_share');
+        const dispInsurance = document.getElementById('display_insurance_share');
+        const dispSelected = document.getElementById('selectedAmount');
+        const dispDeferred = document.getElementById('deferredAmount');
+        const inputAmount = document.getElementById('amountInput');
+        const submitAmountSpan = document.getElementById('submitAmount');
+        const selectedCountSpan = document.getElementById('selectedItemsCount');
+        const submitBtn = document.getElementById('submitBtn');
+        const deferredRow = document.getElementById('deferredRow');
 
-        document.getElementById('selectedAmount').textContent = numberFormat(selectedAmount) + ' IQD';
-        document.getElementById('deferredAmount').textContent = numberFormat(deferredAmount) + ' IQD';
-        document.getElementById('amountInput').value = patientShare;
-        document.getElementById('submitAmount').textContent = '(' + numberFormat(patientShare) + ' IQD)';
-        document.getElementById('selectedItemsCount').textContent = selectedCount;
+        if (dispApproved) dispApproved.textContent = numberFormat(selectedAmount) + ' د.ع';
+        if (dispPatient) dispPatient.textContent = numberFormat(patientShare) + ' د.ع';
+        if (dispInsurance) dispInsurance.textContent = numberFormat(insuranceShare) + ' د.ع';
+        if (dispSelected) dispSelected.textContent = numberFormat(selectedAmount) + ' IQD';
+        if (dispDeferred) dispDeferred.textContent = numberFormat(deferredAmount) + ' IQD';
+        if (inputAmount) inputAmount.value = patientShare;
+        if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(patientShare) + ' IQD)';
+        if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
 
-        if (deferredAmount > 0) {
-            document.getElementById('deferredRow').style.display = '';
-        } else {
-            document.getElementById('deferredRow').style.display = 'none';
+        if (deferredRow) {
+            deferredRow.style.display = deferredAmount > 0 ? '' : 'none';
         }
 
-        document.getElementById('submitBtn').disabled = selectedCount === 0;
+        if (submitBtn) {
+            submitBtn.disabled = selectedCount === 0;
+        }
 
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
         updateGroupCheckbox('radiology-test-item', 'selectAllRadiology');
     }
-
-    // عناصر الضمان
-    const insuranceTypeSelect = document.getElementById('insurance_type');
-    const insuranceCardCol = document.getElementById('insurance_card_col');
-    const copaySection = document.getElementById('copay_section');
-    const copayBadge = document.getElementById('copayBadge');
-    const copayInput = document.getElementById('copay_percentage');
-    const paymentInsuranceRadio = document.getElementById('surgery_payment_insurance');
-    const paymentCashRadio = document.getElementById('surgery_payment_cash');
-
-    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
-    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
-    const hiBadge = document.getElementById('patient_hi_category_badge');
 
     function updateCopayUI() {
         const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';

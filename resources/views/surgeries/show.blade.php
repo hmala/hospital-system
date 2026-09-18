@@ -168,6 +168,13 @@
                     </button>
                 </form>
                 @endif
+
+                <!-- Cancel Surgery Button -->
+                @if($surgery->status != 'cancelled' && $surgery->status != 'completed')
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
+                    <i class="fas fa-times-circle me-1"></i>إلغاء العملية
+                </button>
+                @endif
             @endif
 
             <a href="{{ url()->previous() ?? route('surgeries.index') }}" class="btn btn-secondary">

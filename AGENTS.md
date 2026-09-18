@@ -91,6 +91,27 @@ Consult these files before making changes or proposing fixes:
 - **الاختبارات الآلية**:
   * تحديث وتوسيع [HREmployeeTest.php](file:///d:/ali%20altimimi/hospital-system/tests/Feature/HREmployeeTest.php) للتحقق من رفع المستمسكات، وراثة التسمية، التحقق الديناميكي للحقول الإجبارية، وإدارة القوائم بنجاح تام (12 passed, 62 assertions).
 
+## Session log (2026-09-16 — نظام إلغاء العمليات الجراحية والاسترجاع المالي للكاشير للضمان والنقدي)
+
+### Done
+- **نظام إلغاء العمليات والاسترجاع المالي (Surgery Cancellation & Refund Workflow)**:
+  * تحديث `SurgeryController::destroy` و `SurgeryController::cancel` لتحرير الغرفة وإيقاف الفحوصات وتوجيه المبالغ المسددة إلى الكاشير كـ (مستحق استرجاع Refund) مع الحفاظ على سجل المدفوعات.
+  * إنشاء ميغريشن `2026_09_16_090500_update_payment_status_in_surgeries_table.php` لتوسيع `payment_status` لدعم `refunded` و `partial` وتجنب خطأ MySQL 1265.
+  * تحديث استعلام وقائمة الكاشير `CashierController::surgeriesIndex` و [index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/index.blade.php) لإظهار العمليات الملغاة بشارة حمراء مميزة وزر استرجاع مباشر.
+  * تحديث `CashierController::processSurgeryRefund` لاحتساب الاسترجاع النقدي الفعلي الدقيق لحصة المريض (Co-payment) وإلغاء مطالبات التأمين للضمان تلقائياً، وإنشاء سندات استرجاع سالبة، وتصفير المبالغ بعد الاسترجاع.
+  * تنظيف واجهة الدفع [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php) وإخفاء نموذج الدفع المعلق كلياً للعمليات الملغاة، وتخصيص بطاقة استرجاع مالي أنيقة، وعرض تفاصيل التحاليل والأشعة المدفوعة.
+  * تحديث [MODIFIED_FILES.md](file:///c:/wamp64/www/hospital-system/MODIFIED_FILES.md) وقاعدة المعرفة [graphify](file:///c:/wamp64/www/hospital-system/graphify-out).
+
+## Session log (2026-09-15 — تصحيح دفع العمليات الجراحية نقداً وتوحيد وصل الطباعة الحراري 80mm)
+
+### Done
+- **تصحيح الدفع النقدي للعمليات الجراحية في الكاشير**:
+  * معالجة مشكلة عدم إمكانية سداد العملية نقداً للمرضى الذين لديهم ملف ضمان (`insurance_type = 'none'`) بسبب إرسال `null` لأعمدة `copay_percentage` و `claim_status`، وتعيين القيم الافتراضية `0.00` و `'none'` في [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php).
+  * تعديل هجرة جدول `payments` لجعل أعمدة الحصة والنسبة تقبل `nullable()->default(0.00)`.
+  * إضافة عرض رسائل التنبيه والخطأ في واجهة دفع العمليات [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php) ورفع تعريفات عناصر الجافاسكريبت للأعلى.
+- **توحيد إيصالات الطباعة بقياس 80mm حراري**:
+  * قفل أبعاد الطباعة في [receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php) بعرض 78mm ممركز على ورق A4 والورق العادي.
+
 ## Session log (2026-09-14 — جدول فئات ونسب استقطاع هيئة الضمان الصحي الوطني للقطاع الأهلي)
 
 ### Done

@@ -197,35 +197,68 @@
                         }
 
                         // 3. عمليات جراحية
-                        if ($payment->payment_type === 'surgery' && isset($surgery) && $surgery) {
-                            $paidItemsFromDesc = [];
-                            if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description, $descMatches)) {
-                                $itemLines = explode("\n", trim($descMatches[1]));
-                                foreach ($itemLines as $line) {
-                                    $line = trim(str_replace('- ', '', $line));
-                                    if (!empty($line)) {
-                                        // حاول تقدير السعر كما كان في الكود السابق
+                        if ($payment->payment_type === 'surgery') {
+                            $surgery = $payment->surgery;
+                            if (!$surgery && preg_match('/ID: #(\d+)/', $payment->description, $matches)) {
+                                $surgery = \App\Models\Surgery::with(['room', 'patient.user', 'doctor.user', 'department', 'labTests.labTest', 'radiologyTests.radiologyType'])->find($matches[1]);
+                            }
+                            if ($surgery) {
+                                if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description, $descMatches)) {
+                                    $itemLines = explode("\n", trim($descMatches[1]));
+                                    foreach ($itemLines as $line) {
+                                        $line = trim(str_replace('- ', '', $line));
+                                        if (empty($line) || str_starts_with($line, 'تغطية الضمان:') || str_starts_with($line, 'حصة المريض:')) {
+                                            continue;
+                                        }
+
                                         $price = 0;
+                                        $serviceName = $line;
+
                                         if (str_contains($line, 'رسوم العملية')) {
-                                            $price = $surgery->surgery_fee ?? 0;
+                                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
+                                                $price = (float)str_replace(',', '', $pm[1]);
+                                            } else {
+                                                $price = $surgery->surgery_fee ?? 0;
+                                            }
+                                            $serviceName = 'رسوم العملية الجراحية: ' . $surgery->surgery_type;
+                                        } elseif (str_contains($line, 'أجور الغرفة')) {
+                                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
+                                                $price = (float)str_replace(',', '', $pm[1]);
+                                            } else {
+                                                $price = $surgery->room_fee ?? 0;
+                                            }
+                                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
+                                            $serviceName = 'أجور الغرفة' . $roomInfo;
                                         } elseif (str_contains($line, 'تحليل:')) {
-                                            $name = trim(str_replace('تحليل:', '', $line));
-                                            foreach ($surgery->labTests as $labTest) {
-                                                if ($labTest->labTest && $labTest->labTest->name === $name) {
-                                                    $price = $labTest->labTest->price ?? 0;
-                                                    break;
+                                            if (preg_match('/تحليل:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $lm)) {
+                                                $serviceName = 'تحليل: ' . trim($lm[1]);
+                                                $price = (float)str_replace(',', '', $lm[2]);
+                                            } else {
+                                                $name = trim(str_replace('تحليل:', '', $line));
+                                                $serviceName = 'تحليل: ' . $name;
+                                                foreach ($surgery->labTests as $labTest) {
+                                                    if ($labTest->labTest && (str_contains($name, $labTest->labTest->name) || $labTest->labTest->name === $name)) {
+                                                        $price = $labTest->labTest->price ?? 0;
+                                                        break;
+                                                    }
                                                 }
                                             }
                                         } elseif (str_contains($line, 'أشعة:')) {
-                                            $name = trim(str_replace('أشعة:', '', $line));
-                                            foreach ($surgery->radiologyTests as $rad) {
-                                                if ($rad->radiologyType && $rad->radiologyType->name === $name) {
-                                                    $price = $rad->radiologyType->base_price ?? 0;
-                                                    break;
+                                            if (preg_match('/أشعة:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $rm)) {
+                                                $serviceName = 'أشعة: ' . trim($rm[1]);
+                                                $price = (float)str_replace(',', '', $rm[2]);
+                                            } else {
+                                                $name = trim(str_replace('أشعة:', '', $line));
+                                                $serviceName = 'أشعة: ' . $name;
+                                                foreach ($surgery->radiologyTests as $rad) {
+                                                    if ($rad->radiologyType && (str_contains($name, $rad->radiologyType->name) || $rad->radiologyType->name === $name)) {
+                                                        $price = $rad->radiologyType->base_price ?? 0;
+                                                        break;
+                                                    }
                                                 }
                                             }
                                         }
-                                        $lineItems[] = ['الخدمة' => $line, 'السعر' => $price];
+                                        $lineItems[] = ['الخدمة' => $serviceName, 'السعر' => $price];
                                     }
                                 }
                             }
@@ -518,7 +551,7 @@
                                             $itemLines = explode("\n", trim($descMatches[1]));
                                             foreach ($itemLines as $line) {
                                                 $line = trim(str_replace('- ', '', $line));
-                                                if (!empty($line)) {
+                                                if (!empty($line) && !str_starts_with($line, 'تغطية الضمان:') && !str_starts_with($line, 'حصة المريض:')) {
                                                     $paidItemsFromDesc[] = $line;
                                                 }
                                             }
@@ -532,34 +565,63 @@
                                             $itemType = 'other';
                                             $itemIcon = 'fas fa-circle';
                                             $itemClass = 'text-secondary';
+                                            $itemTitle = 'خدمة طبية';
+                                            $itemDetails = $item;
                                             
                                             if (str_contains($item, 'رسوم العملية')) {
-                                                $itemPrice = $surgery->surgery_fee ?? 0;
+                                                if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $item, $pm)) {
+                                                    $itemPrice = (float)str_replace(',', '', $pm[1]);
+                                                } else {
+                                                    $itemPrice = $surgery->surgery_fee ?? 0;
+                                                }
                                                 $itemType = 'surgery';
                                                 $itemIcon = 'fas fa-procedures';
                                                 $itemClass = 'text-danger';
+                                                $itemTitle = 'رسوم العملية الجراحية';
+                                                $itemDetails = $surgery->surgery_type;
+                                            } elseif (str_contains($item, 'أجور الغرفة')) {
+                                                if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $item, $pm)) {
+                                                    $itemPrice = (float)str_replace(',', '', $pm[1]);
+                                                } else {
+                                                    $itemPrice = $surgery->room_fee ?? 0;
+                                                }
+                                                $itemType = 'room';
+                                                $itemIcon = 'fas fa-bed';
+                                                $itemClass = 'text-warning';
+                                                $itemTitle = 'أجور الغرفة والإقامة';
+                                                $itemDetails = $surgery->room ? ($surgery->room->room_type_name . ' (رقم ' . $surgery->room->room_number . ')') : 'إقامة فندقية';
                                             } elseif (str_contains($item, 'تحليل:')) {
                                                 $itemType = 'lab';
                                                 $itemIcon = 'fas fa-vial';
                                                 $itemClass = 'text-primary';
-                                                // البحث عن التحليل بالاسم
-                                                $labName = trim(str_replace('تحليل:', '', $item));
-                                                foreach ($surgery->labTests as $labTest) {
-                                                    if ($labTest->labTest && $labTest->labTest->name === $labName) {
-                                                        $itemPrice = $labTest->labTest->price ?? 0;
-                                                        break;
+                                                $itemTitle = 'تحليل مخبري';
+                                                if (preg_match('/تحليل:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $item, $lm)) {
+                                                    $itemDetails = trim($lm[1]);
+                                                    $itemPrice = (float)str_replace(',', '', $lm[2]);
+                                                } else {
+                                                    $itemDetails = trim(str_replace('تحليل:', '', $item));
+                                                    foreach ($surgery->labTests as $labTest) {
+                                                        if ($labTest->labTest && (str_contains($itemDetails, $labTest->labTest->name) || $labTest->labTest->name === $itemDetails)) {
+                                                            $itemPrice = $labTest->labTest->price ?? 0;
+                                                            break;
+                                                        }
                                                     }
                                                 }
                                             } elseif (str_contains($item, 'أشعة:')) {
                                                 $itemType = 'radiology';
                                                 $itemIcon = 'fas fa-x-ray';
                                                 $itemClass = 'text-info';
-                                                // البحث عن الأشعة بالاسم
-                                                $radName = trim(str_replace('أشعة:', '', $item));
-                                                foreach ($surgery->radiologyTests as $radTest) {
-                                                    if ($radTest->radiologyType && $radTest->radiologyType->name === $radName) {
-                                                        $itemPrice = $radTest->radiologyType->base_price ?? 0;
-                                                        break;
+                                                $itemTitle = 'فحص إشعاعي';
+                                                if (preg_match('/أشعة:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $item, $rm)) {
+                                                    $itemDetails = trim($rm[1]);
+                                                    $itemPrice = (float)str_replace(',', '', $rm[2]);
+                                                } else {
+                                                    $itemDetails = trim(str_replace('أشعة:', '', $item));
+                                                    foreach ($surgery->radiologyTests as $radTest) {
+                                                        if ($radTest->radiologyType && (str_contains($itemDetails, $radTest->radiologyType->name) || $radTest->radiologyType->name === $itemDetails)) {
+                                                            $itemPrice = $radTest->radiologyType->base_price ?? 0;
+                                                            break;
+                                                        }
                                                     }
                                                 }
                                             }
@@ -569,22 +631,10 @@
                                             <td>{{ $itemIndex }}</td>
                                             <td>
                                                 <i class="{{ $itemIcon }} {{ $itemClass }} me-2"></i>
-                                                @if($itemType === 'surgery')
-                                                    رسوم العملية الجراحية
-                                                @elseif($itemType === 'lab')
-                                                    تحليل مخبري
-                                                @elseif($itemType === 'radiology')
-                                                    فحص إشعاعي
-                                                @else
-                                                    {{ $item }}
-                                                @endif
+                                                {{ $itemTitle }}
                                             </td>
                                             <td>
-                                                @if($itemType === 'surgery')
-                                                    {{ $surgery->surgery_type }}
-                                                @else
-                                                    {{ str_replace(['تحليل:', 'أشعة:'], '', $item) }}
-                                                @endif
+                                                {{ $itemDetails }}
                                             </td>
                                             <td class="text-end fw-bold">{{ number_format($itemPrice, 0) }}</td>
                                         </tr>
