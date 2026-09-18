@@ -91,6 +91,30 @@ Consult these files before making changes or proposing fixes:
 - **الاختبارات الآلية**:
   * تحديث وتوسيع [HREmployeeTest.php](file:///d:/ali%20altimimi/hospital-system/tests/Feature/HREmployeeTest.php) للتحقق من رفع المستمسكات، وراثة التسمية، التحقق الديناميكي للحقول الإجبارية، وإدارة القوائم بنجاح تام (12 passed, 62 assertions).
 
+## Session log (2026-09-18 — منظومة شاشات الطابور والاستدعاء الذكي للعيادات الاستشارية)
+
+### Done
+- **قاعدة البيانات وهيكل الطابور (Queue Architecture & Database Migration)**:
+  * إنشاء ميغريشن `2026_09_18_143000_add_queue_fields_to_appointments_table.php` لإضافة `queue_number` متسلسل لكل طبيب يومياً، و `called_at` لمتابعة توقيت الاستدعاء، ودعم حالات `calling` و `in_consultation`.
+  * تحديث [Appointment.php](file:///c:/wamp64/www/hospital-system/app/Models/Appointment.php) بإضافة الحقول للدوال المساعدة `$fillable` و `$casts` وتسميات الحالات وألوانها.
+- **متحكم شاشات الطابور والـ API اللحظي**:
+  * إنشاء [DoctorQueueController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorQueueController.php) بدوال: `display` (شاشة العيادة)، `allClinicsDisplay` (شاشة الصالة المركزية)، `queueData` (بيانات JSON اللحظية)، `allClinicsData`، ودوال التحكم المشترك (`callNext`, `recall`, `startConsultation`, `skip`).
+  * تسجيل المسارات العامة والمحمية في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) تحت البادئة `/queue`.
+- **شاشات العرض التلفزيونية (TV Displays & Audio Chime)**:
+  * إنشاء واجهة شاشة عيادة الطبيب [doctor-display.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/queue/doctor-display.blade.php) المزودة بتصميم داكن فاخر عالي التباين، وساعة رقمية، ونغمة جرس نقية (Web Audio API Chime)، ونداء صوتي عربي ذكي (Text-to-Speech)، مع وميض الاستدعاء وتحديث تلقائي كل 3 ثوانٍ.
+  * إنشاء واجهة شاشة الصالة العامة [all-clinics-display.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/queue/all-clinics-display.blade.php) لشبكة عيادات المستشفى.
+- **التحكم المزدوج (Dual Control) للاستقبال والطبيب**:
+  * تحديث واجهة الاستشارية [consultant-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/index.blade.php) بإضافة عمود `# الدور` وزر `[ 📢 استدعاء ]` وزر `[ 🖥️ شاشة العيادة ]` ورابط شاشة الصالة العامة.
+  * تحديث واجهة الطبيب [doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php) بمحطة استدعاء علوية متزامنة لحظياً للتحكم بالطابور والمناداة وبدء الكشف وفتح شاشة التلفاز.
+  * إضافة رابط «شاشة طابور الانتظار» في القائمة الجانبية [layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php).
+- **فصل الطابور الأولي ولوحة متابعة الفحوصات الذكية (Queue Separation & Results Workflow)**:
+  * استبعاد المرضى الذين تم تحويلهم لزيارة فعلية من قائمة الانتظار الأولية (`whereDoesntHave('visit')`) لمنع عودة المريض للطابور الأولي عند طلب أشعة أو تحاليل.
+  * إضافة لوحة مخصصة في محطة الطبيب `مراجعو الفحوصات الطبية (الأشعة والمختبر)` مع شارات الجاهزية (`🟢 النتائج جاهزة للمراجعة` مقابل `🟡 قيد الفحص`).
+  * قفل ذكي (Smart Lock) لزر استدعاء نتائج الفحص (`[ ⏳ بانتظار صدور النتائج ]` باللون الرمادي غير القابل للضغط) حتى يكتمل الفحص من فني المختبر/الأشعة، ثم يتحول تلقائياً للأخضر المفعّل `[ 🔬 استدعاء لمتابعة النتائج ]`.
+  * حماية برمجية في `DoctorQueueController::callForResults` تمنع استدعاء المريض للفحوصات غير المكتملة.
+  * تحويل واجهة الطبيب [doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php) إلى نظام 4 تبويبات ذكية (محطة العيادة والمناداة، زيارات اليوم، زيارات معلقة، أرشيف الزيارات).
+  * تجميع قوالب Blade وتأكيد اجتياز جميع الاختبارات الآلية `php artisan test` (7 passed / 40 assertions) بنجاح.
+
 ## Session log (2026-09-16 — نظام إلغاء العمليات الجراحية والاسترجاع المالي للكاشير للضمان والنقدي)
 
 ### Done

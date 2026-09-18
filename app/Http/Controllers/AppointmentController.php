@@ -60,9 +60,9 @@ class AppointmentController extends Controller
                 ->latest('created_at')
                 ->get();
 
-            // المواعيد النشطة (المجدولة والمؤكدة) - فقط القادمة أو اليوم
+            // المواعيد النشطة (المجدولة والمؤكدة والاستدعاء) - فقط القادمة أو اليوم
             $activeAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
-                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->whereIn('status', ['scheduled', 'confirmed', 'calling'])
                 ->whereDate('appointment_date', '>=', today())
                 ->latest('appointment_date')
                 ->paginate(20);
@@ -75,7 +75,7 @@ class AppointmentController extends Controller
                 ->get();
 
             $todayAppointments = Appointment::with(['patient.user', 'doctor.user'])
-                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->whereIn('status', ['scheduled', 'confirmed', 'calling'])
                 ->today()
                 ->orderBy('appointment_date')
                 ->get();

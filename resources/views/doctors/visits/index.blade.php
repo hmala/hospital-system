@@ -2,8 +2,7 @@
 
 @section('content')
 <style>
-/* Beautiful Unified Table Styles */
-
+/* Beautiful Unified Table Styles - Original Hospital System Design */
 .unified-table {
     border-radius: 10px;
     background: #fff;
@@ -11,7 +10,6 @@
     margin-bottom: 2rem;
     box-shadow: none;
 }
-
 
 .unified-table thead th {
     background: #f3f4f6;
@@ -32,7 +30,6 @@
 }
 
 /* Row color coding based on type and status - Professional Medical Colors */
-
 .unified-table tbody tr.today-visit {
     background: #f0f9ff;
     border-left: 3px solid #60a5fa;
@@ -53,6 +50,26 @@
 .unified-table tbody tr.scheduled-appointment {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.08) 100%);
     border-left: 4px solid #3b82f6;
+    border-right: 4px solid #3b82f6;
+}
+
+/* Distinct highlights for Test Results Queue */
+.unified-table tbody tr.ready-test-visit {
+    background: #dcfce7 !important;
+    border-right: 5px solid #16a34a !important;
+    border-left: 1px solid #86efac !important;
+}
+.unified-table tbody tr.ready-test-visit td {
+    background: #dcfce7 !important;
+}
+
+.unified-table tbody tr.pending-test-visit {
+    background: #fefce8 !important;
+    border-right: 5px solid #eab308 !important;
+    border-left: 1px solid #fde047 !important;
+}
+.unified-table tbody tr.pending-test-visit td {
+    background: #fefce8 !important;
 }
 
 .unified-table tbody tr:hover {
@@ -69,7 +86,6 @@
     font-size: 0.85rem;
 }
 
-
 .unified-table .type-badge {
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
@@ -84,7 +100,6 @@
     letter-spacing: 0.1px;
     border: none;
 }
-
 
 .unified-table .status-badge {
     padding: 0.4rem 0.8rem;
@@ -137,7 +152,6 @@
 }
 
 /* Avatar circles */
-
 .avatar-circle {
     width: 32px;
     height: 32px;
@@ -153,16 +167,7 @@
     border: 1px solid #c7d2fe;
 }
 
-/* Enhanced hover effects */
-.unified-table tbody tr:hover {
-    transform: translateX(5px) scale(1.01);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    z-index: 1;
-    position: relative;
-}
-
 /* Beautiful type badges with professional medical colors */
-
 .unified-table .type-badge.today-visit {
     background: #e0f2fe;
     color: #2563eb;
@@ -200,22 +205,43 @@
     }
 }
 
-/* Type indicators */
-.type-indicator {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    border-radius: 0 4px 4px 0;
+/* Tabs Styling */
+#doctorTabs .nav-link {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4b5563;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    background: transparent;
+}
+#doctorTabs .nav-link:hover {
+    color: #2563eb;
+    border-bottom-color: #93c5fd;
+}
+#doctorTabs .nav-link.active {
+    color: #2563eb !important;
+    background: transparent !important;
+    border-bottom: 3px solid #2563eb !important;
+}
+
+/* Calling Station Control Bar (No Cards, Pure Unified System) */
+.queue-control-bar {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
 }
 </style>
+
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
-                    <i class="fas fa-stethoscope me-2"></i>
+                    <i class="fas fa-stethoscope me-2 text-primary"></i>
                     لوحة تحكم الطبيب
                 </h2>
                 <small class="text-muted">مرحباً د. {{ auth()->user()->name }}</small>
@@ -237,216 +263,685 @@
         </div>
     @endif
 
-    @if(auth()->user()->isDoctor())
-    
-    <!-- تنبيه الزيارات غير المكتملة -->
-    @if(isset($incompleteVisits) && is_countable($incompleteVisits) && $incompleteVisits->count() > 0)
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-warning border-warning shadow-sm" role="alert" style="border-left: 4px solid #f59e0b;">
+    @if(auth()->user()->isDoctor() && isset($doctor))
+    <!-- Doctor Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4 border-bottom" id="doctorTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active d-flex align-items-center gap-2" id="station-tab" data-bs-toggle="tab" data-bs-target="#station-pane" type="button" role="tab" aria-controls="station-pane" aria-selected="true">
+                <i class="fas fa-bullhorn text-primary"></i>
+                <span>محطة العيادة والمناداة الحية</span>
+                <span class="badge bg-primary text-white rounded-pill px-2 py-1" id="badge-tab-waiting-count">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" id="today-tab" data-bs-toggle="tab" data-bs-target="#today-pane" type="button" role="tab" aria-controls="today-pane" aria-selected="false">
+                <i class="fas fa-calendar-day text-info"></i>
+                <span>زيارات اليوم</span>
+                <span class="badge bg-info text-white rounded-pill px-2 py-1">{{ isset($todayVisits) && is_countable($todayVisits) ? $todayVisits->count() : 0 }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" id="incomplete-tab" data-bs-toggle="tab" data-bs-target="#incomplete-pane" type="button" role="tab" aria-controls="incomplete-pane" aria-selected="false">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+                <span>زيارات معلقة</span>
+                @if(isset($incompleteVisits) && is_countable($incompleteVisits) && $incompleteVisits->count() > 0)
+                    <span class="badge bg-danger rounded-pill px-2 py-1">{{ $incompleteVisits->count() }}</span>
+                @else
+                    <span class="badge bg-light text-muted rounded-pill px-2 py-1">0</span>
+                @endif
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-pane" type="button" role="tab" aria-controls="archive-pane" aria-selected="false">
+                <i class="fas fa-archive text-secondary"></i>
+                <span>أرشيف جميع الزيارات</span>
+                <span class="badge bg-secondary rounded-pill px-2 py-1">{{ isset($allVisits) && is_countable($allVisits) ? $allVisits->count() : 0 }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content Panels -->
+    <div class="tab-content" id="doctorTabsContent">
+        <!-- 1. LIVE STATION TAB (جدول موحد وبدون كارتات) -->
+        <div class="tab-pane fade show active" id="station-pane" role="tabpanel" aria-labelledby="station-tab">
+            <!-- Calling Control Bar (شريط تحكم موحد خفيف) -->
+            <div class="queue-control-bar">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <!-- Serving Status -->
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-circle fs-6" style="width: 42px; height: 42px;">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary text-white px-2 py-1" id="doctor-station-current-num">الدور: -</span>
+                                <strong class="text-dark fs-6" id="doctor-station-current-name">لا يوجد مريض مستدعى</strong>
+                                <span class="status-badge status-pending" id="doctor-station-status-badge">العيادة جاهزة</span>
+                            </div>
+                            <small class="text-muted" id="doctor-station-current-status">اضغط "استدعاء التالي" لمناداة أول مريض في الانتظار</small>
+                        </div>
+                    </div>
+
+                    <!-- Actions & Screen Link -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button" class="btn btn-success fw-bold px-3 py-2" onclick="doctorCallNext()" id="btn-call-next">
+                            <i class="fas fa-bullhorn me-1"></i> استدعاء التالي
+                        </button>
+                        <button type="button" class="btn btn-warning fw-bold px-3 py-2" onclick="doctorRecall()" id="btn-recall" style="display: none;">
+                            <i class="fas fa-redo me-1"></i> إعادة المناداة
+                        </button>
+                        <button type="button" class="btn btn-primary fw-bold px-3 py-2" onclick="doctorStartConsultation()" id="btn-start-consult" style="display: none;">
+                            <i class="fas fa-sign-in-alt me-1"></i> بدء الكشف
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2" onclick="doctorSkip()" id="btn-skip" style="display: none;">
+                            <i class="fas fa-forward me-1"></i> تخطي
+                        </button>
+                        <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-outline-primary px-3 py-2">
+                            <i class="fas fa-tv me-1"></i> شاشة العرض
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. جدول طابور الانتظار الأولي (المرضى الجدد) -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-users-line me-2 text-primary"></i>
+                    طابور الانتظار الأولي (المرضى الجدد)
+                </h5>
+                <span class="badge bg-primary text-white" id="badge-live-waiting-count">0 منتظر</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table unified-table mb-4">
+                    <thead>
+                        <tr>
+                            <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-tag me-2"></i>نوع الحجز</th>
+                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
+                            <th class="text-end" style="width: 140px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="doctor-station-waiting-list">
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 2. جدول مراجعي الفحوصات والنتائج (الأشعة والمختبر) -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-microscope me-2 text-info"></i>
+                    مراجعو الفحوصات الطبية (الأشعة والمختبر)
+                </h5>
+                <span class="badge bg-info text-white" id="badge-pending-tests-count">0 مراجع</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table unified-table mb-4">
+                    <thead>
+                        <tr>
+                            <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-vial me-2"></i>الفحوصات المطلوبة</th>
+                            <th><i class="fas fa-tasks me-2"></i>حالة النتائج</th>
+                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="doctor-station-pending-tests">
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات حالياً
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. TODAY'S VISITS TAB (التصميم الأصلي المعتمد) -->
+        <div class="tab-pane fade" id="today-pane" role="tabpanel" aria-labelledby="today-tab">
+            <div class="table-responsive">
+                <table class="table unified-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-clock me-2"></i>التوقيت</th>
+                            <th><i class="fas fa-tag me-2"></i>نوع الزيارة</th>
+                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
+                            <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(isset($todayVisits) && is_countable($todayVisits) && $todayVisits->count() > 0)
+                            @foreach($todayVisits as $visit)
+                            @php
+                                $isCompleted = $visit->status == 'completed';
+                                $isCancelled = $visit->status == 'cancelled';
+                                $isInProgress = $visit->status == 'in_progress';
+                            @endphp
+                            <tr class="today-visit">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle">
+                                            {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                            @if($visit->appointment && $visit->appointment->emergency_id)
+                                                <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> طوارئ</span>
+                                            @endif
+                                            <br>
+                                            <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted small">
+                                        <i class="fas fa-clock me-1 text-primary"></i>
+                                        {{ $visit->visit_time ? \Carbon\Carbon::parse($visit->visit_time)->format('h:i A') : '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="type-badge today-visit">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</span>
+                                </td>
+                                <td>
+                                    @if($isCompleted)
+                                        <span class="status-badge status-completed"><i class="fas fa-check-circle"></i> مكتملة</span>
+                                    @elseif($isCancelled)
+                                        <span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i> ملغية</span>
+                                    @elseif($isInProgress)
+                                        <span class="status-badge" style="background: #e0f2fe; color: #0369a1; border-color: #7dd3fc;"><i class="fas fa-spinner fa-spin"></i> قيد الفحص</span>
+                                    @else
+                                        <span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> في الانتظار</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($isCompleted)
+                                        <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i> عرض الملف
+                                        </a>
+                                    @else
+                                        <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
+                                            <i class="fas fa-clipboard-check"></i> متابعة الكشف
+                                        </a>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        @else
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fas fa-calendar-day fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-muted">لا توجد زيارات مسجلة لليوم حتى الآن</h5>
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. INCOMPLETE VISITS TAB (الزيارات المعلقة بالتصميم الأصلي) -->
+        <div class="tab-pane fade" id="incomplete-pane" role="tabpanel" aria-labelledby="incomplete-tab">
+            @if(isset($incompleteVisits) && is_countable($incompleteVisits) && $incompleteVisits->count() > 0)
+            <div class="alert alert-warning border-warning shadow-sm mb-4" role="alert" style="border-left: 4px solid #f59e0b;">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h5 class="alert-heading mb-1">
-                            <i class="fas fa-clipboard-list me-2"></i>
-                            لديك {{ $incompleteVisits->count() }} زيارة غير مكتملة تحتاج متابعة
+                        <h5 class="alert-heading mb-1 fw-bold">
+                            لديك {{ $incompleteVisits->count() }} زيارة غير مكتملة من أيام سابقة
                         </h5>
-                        <p class="mb-0">
-                            <small>هذه الزيارات من أيام سابقة ولم يتم إكمالها بعد. يرجى المتابعة وإنهاء الفحوصات المطلوبة.</small>
-                        </p>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <a href="#incomplete-visits-section" class="btn btn-warning btn-sm">
-                            <i class="fas fa-arrow-down me-1"></i>
-                            عرض الزيارات
-                        </a>
+                        <p class="mb-0 small">يرجى المتابعة وإنهاء الفحوصات والوصفات الطبية لغلق ملف الزيارة.</p>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    @endif
-    
-    <!-- زيارات مختبرية سريعة -->
-    @if(auth()->user()->hasRole('receptionist') || auth()->user()->hasRole('admin'))
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-info">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-flask me-2"></i>
-                        زيارات مختبرية سريعة
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <p class="mb-0">للمرضى الذين يحتاجون تحاليل فقط دون زيارة طبية كاملة</p>
-                            <small class="text-white-50">سيتم تحديد التحاليل المطلوبة من قبل فني المختبر</small>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <a href="{{ route('staff.lab-visits.create') }}" class="btn btn-light">
-                                <i class="fas fa-plus me-1"></i>
-                                إنشاء زيارة مختبرية
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+            @endif
 
-    <!-- جدول جميع الزيارات -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-clipboard-list me-3"></i>
-                        جميع الزيارات - الحالية والسابقة
-                        <span class="badge bg-light text-primary ms-2">
-                            {{ isset($allVisits) && is_countable($allVisits) ? $allVisits->count() : 0 }}
-                        </span>
-                    </h4>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table unified-table">
-                            <thead>
-                                <tr>
-                                    <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                                    <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                                    <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @if(isset($allVisits) && is_countable($allVisits) && $allVisits->count() > 0)
-                                    @foreach($allVisits as $index => $visit)
-                                    @php
-                                        $isPast = $visit->visit_date && $visit->visit_date->isPast();
-                                        $isToday = $visit->visit_date && $visit->visit_date->isToday();
-                                        $isIncomplete = $visit->status != 'completed' && $visit->status != 'cancelled';
-                                        $isCompleted = $visit->status == 'completed';
-                                        $isCancelled = $visit->status == 'cancelled';
-                                        
-                                        // التحقق من حالة الدفع للزيارات من الطوارئ
-                                        $isEmergencyVisit = $visit->appointment && $visit->appointment->emergency_id;
-                                        $isPaid = true; // افتراضي
-                                        if ($isEmergencyVisit) {
-                                            $payment = \App\Models\Payment::where('appointment_id', $visit->appointment_id)->first();
-                                            $isPaid = $payment && $payment->payment_method !== 'pending';
-                                        }
-                                        
-                                        // تحديد نوع الصف
-                                        if ($isIncomplete && $isPast) {
-                                            $rowClass = 'incomplete-visit';
-                                            $rowStyle = 'background: #fef3c7; border-left: 5px solid #f59e0b;';
-                                        } elseif ($isToday) {
-                                            $rowClass = 'today-visit';
-                                            $rowStyle = 'background: #f0f9ff; border-left: 3px solid #60a5fa;';
-                                        } elseif ($isCompleted) {
-                                            $rowClass = 'completed-visit';
-                                            $rowStyle = 'background: #f0fdf4; border-left: 3px solid #34d399;';
-                                        } elseif ($isCancelled) {
-                                            $rowClass = 'cancelled-visit';
-                                            $rowStyle = 'background: #fef2f2; border-left: 3px solid #ef4444;';
-                                        } else {
-                                            $rowClass = '';
-                                            $rowStyle = '';
-                                        }
-                                    @endphp
-                                    <tr class="{{ $rowClass }}" style="{{ $rowStyle }}">
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar-circle">
-                                                    {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
-                                                </div>
-                                                <div class="ms-2">
-                                                    <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
-                                                    @if($visit->appointment && $visit->appointment->emergency_id)
-                                                        <span class="badge bg-danger ms-2">
-                                                            <i class="fas fa-ambulance"></i>
-                                                            طوارئ
-                                                        </span>
-                                                    @endif
-                                                    <br>
-                                                    <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
-                                                </div>
+            <div class="table-responsive">
+                <table class="table unified-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-calendar me-2"></i>تاريخ الزيارة</th>
+                            <th><i class="fas fa-tag me-2"></i>نوع الزيارة</th>
+                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
+                            <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(isset($incompleteVisits) && is_countable($incompleteVisits) && $incompleteVisits->count() > 0)
+                            @foreach($incompleteVisits as $visit)
+                            <tr class="incomplete-visit" style="background: #fff7ed; border-left: 4px solid #fbbf24;">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle">
+                                            {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted small">
+                                        <i class="fas fa-calendar-alt me-1 text-warning"></i>
+                                        {{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="type-badge incomplete-visit">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-pending"><i class="fas fa-clock"></i> غير مكتملة</span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
+                                        <i class="fas fa-clipboard-check"></i> إكمال الفحص
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        @else
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3 d-block"></i>
+                                <h5 class="text-muted">ممتاز! لا توجد أي زيارات معلقة من أيام سابقة</h5>
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. ALL VISITS ARCHIVE TAB (أرشيف الزيارات بالتصميم الأصلي) -->
+        <div class="tab-pane fade" id="archive-pane" role="tabpanel" aria-labelledby="archive-tab">
+            <div class="table-responsive">
+                <table class="table unified-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-calendar-alt me-2"></i>التاريخ</th>
+                            <th><i class="fas fa-tag me-2"></i>نوع الزيارة</th>
+                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
+                            <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(isset($allVisits) && is_countable($allVisits) && $allVisits->count() > 0)
+                            @foreach($allVisits as $visit)
+                            @php
+                                $isCompleted = $visit->status == 'completed';
+                                $isCancelled = $visit->status == 'cancelled';
+                                $isIncomplete = in_array($visit->status, ['in_progress', 'waiting']);
+                                $rowClass = $isCompleted ? 'completed-visit' : ($isCancelled ? '' : 'incomplete-visit');
+                            @endphp
+                            <tr class="{{ $rowClass }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle">
+                                            {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                            @if($visit->appointment && $visit->appointment->emergency_id)
+                                                <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> طوارئ</span>
+                                            @endif
+                                            <br>
+                                            <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted small">
+                                        <i class="fas fa-calendar-alt me-1 text-primary"></i>
+                                        {{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="type-badge">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</span>
+                                </td>
+                                <td>
+                                    @if($isCompleted)
+                                        <span class="status-badge status-completed"><i class="fas fa-check-circle"></i> مكتملة</span>
+                                    @elseif($isCancelled)
+                                        <span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i> ملغية</span>
+                                    @else
+                                        <span class="status-badge status-pending"><i class="fas fa-clock"></i> {{ $visit->status_text ?? $visit->status }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i> عرض الملف
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        @else
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fas fa-archive fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-muted">لا توجد زيارات مسجلة في الأرشيف</h5>
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+</div>
+
+@if(auth()->user()->isDoctor() && isset($doctor))
+<script>
+    const currentDoctorId = {{ $doctor->id }};
+    let currentAppointmentId = null;
+
+    async function syncDoctorQueue() {
+        try {
+            const res = await fetch(`/queue/doctor/${currentDoctorId}/data`);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (data.success) {
+                const cur = data.current_patient;
+                const stats = data.stats || {};
+                
+                // 1. Current Station State
+                const waitCount = stats.waiting_count || 0;
+                const badgeTabEl = document.getElementById('badge-tab-waiting-count');
+                if (badgeTabEl) badgeTabEl.textContent = `${waitCount}`;
+
+                const btnRecall = document.getElementById('btn-recall');
+                const btnStartConsult = document.getElementById('btn-start-consult');
+                const btnSkip = document.getElementById('btn-skip');
+
+                if (cur) {
+                    currentAppointmentId = cur.id;
+                    document.getElementById('doctor-station-current-num').textContent = `الدور: #${cur.queue_number}`;
+                    document.getElementById('doctor-station-current-name').textContent = cur.name;
+                    document.getElementById('doctor-station-current-status').textContent = cur.status_text;
+
+                    const statusBadge = document.getElementById('doctor-station-status-badge');
+                    if (cur.status === 'calling') {
+                        statusBadge.className = 'status-badge status-cancelled';
+                        statusBadge.innerHTML = '<i class="fas fa-bullhorn"></i> يتم الاستدعاء الآن';
+                    } else {
+                        statusBadge.className = 'status-badge status-completed';
+                        statusBadge.innerHTML = '<i class="fas fa-user-check"></i> المريض بالداخل';
+                    }
+
+                    btnRecall.style.display = 'inline-block';
+                    btnStartConsult.style.display = 'inline-block';
+                    btnSkip.style.display = 'inline-block';
+                } else {
+                    currentAppointmentId = null;
+                    document.getElementById('doctor-station-current-num').textContent = 'الدور: -';
+                    document.getElementById('doctor-station-current-name').textContent = 'لا يوجد مريض مستدعى';
+                    document.getElementById('doctor-station-current-status').textContent = 'اضغط "استدعاء التالي" لمناداة أول مريض في الانتظار';
+                    
+                    const statusBadge = document.getElementById('doctor-station-status-badge');
+                    statusBadge.className = 'status-badge status-pending';
+                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> العيادة جاهزة';
+
+                    btnRecall.style.display = 'none';
+                    btnStartConsult.style.display = 'none';
+                    btnSkip.style.display = 'none';
+                }
+
+                // 2. Render Waiting Queue Table Rows (طابور الانتظار الأولي)
+                const waitingList = data.waiting_list || [];
+                const badgeWaitCount = document.getElementById('badge-live-waiting-count');
+                if (badgeWaitCount) badgeWaitCount.textContent = `${waitCount} منتظر`;
+
+                const waitingTbody = document.getElementById('doctor-station-waiting-list');
+                if (waitingTbody) {
+                    if (waitingList.length === 0) {
+                        waitingTbody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        waitingTbody.innerHTML = waitingList.map((item, idx) => {
+                            const isEmergency = item.is_emergency;
+                            return `
+                                <tr class="scheduled-appointment">
+                                    <td>
+                                        <span class="badge bg-primary text-white fw-bold fs-6">#${item.queue_number}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle">
+                                                ${item.name.charAt(0)}
                                             </div>
-                                        </td>
-                                        <td>
-                                            @if($isCompleted)
-                                                <span class="status-badge status-completed">
-                                                    <i class="fas fa-check-circle"></i>
-                                                    مكتملة
-                                                </span>
-                                            @elseif($isCancelled)
-                                                <span class="status-badge status-cancelled">
-                                                    <i class="fas fa-times-circle"></i>
-                                                    ملغية
-                                                </span>
-                                            @elseif($visit->status == 'in_progress')
-                                                <span class="status-badge" style="background: #e0f2fe; color: #0369a1; border-color: #7dd3fc;">
-                                                    <i class="fas fa-spinner fa-spin"></i>
-                                                    قيد الفحص
-                                                </span>
-                                            @elseif($visit->status == 'waiting')
-                                                <span class="status-badge status-pending">
-                                                    <i class="fas fa-hourglass-half"></i>
-                                                    في الانتظار
-                                                </span>
-                                            @else
-                                                <span class="status-badge">
-                                                    <i class="fas fa-question-circle"></i>
-                                                    {{ $visit->status }}
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($isEmergencyVisit)
-                                                @if(!$isPaid)
-                                                    <button class="btn btn-sm btn-secondary" disabled title="في انتظار الدفع">
-                                                        <i class="fas fa-lock me-1"></i>
-                                                        بانتظار الدفع
-                                                    </button>
-                                                @else
-                                                    <span class="badge bg-success p-2">
-                                                        <i class="fas fa-check-circle me-1"></i>
-                                                        تم متابعة الحالة
-                                                    </span>
-                                                @endif
-                                            @elseif($isIncomplete)
-                                                <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
-                                                    <i class="fas fa-clipboard-check"></i>
-                                                    إكمال الفحص
-                                                </a>
-                                            @else
-                                                <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-outline-primary">
-                                                    <i class="fas fa-eye"></i>
-                                                    عرض
-                                                </a>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                @else
-                                <tr>
-                                    <td colspan="3" class="text-center py-5">
-                                        <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
-                                        <h5 class="text-muted">لا توجد زيارات</h5>
+                                            <div class="ms-2">
+                                                <strong>${item.name}</strong>
+                                                ${isEmergency ? '<span class="badge bg-danger ms-1"><i class="fas fa-ambulance"></i> طوارئ</span>' : ''}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="type-badge scheduled-appointment">${isEmergency ? 'طوارئ' : 'كشف استشاري'}</span>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-pending"><i class="fas fa-clock"></i> ${item.status_text || 'في الانتظار'}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        ${idx === 0 ? `
+                                            <button type="button" class="action-btn btn-success" onclick="doctorCallNext()">
+                                                <i class="fas fa-bullhorn"></i> استدعاء
+                                            </button>
+                                        ` : `
+                                            <span class="badge bg-light text-secondary border px-2 py-1">دور #${idx + 1}</span>
+                                        `}
                                     </td>
                                 </tr>
-                                @endif
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 3. Render Pending / Ready Test Results Table Rows (مراجعو الفحوصات والنتائج)
+                const pendingTestsList = data.pending_tests_list || [];
+                const pendingTestsCount = (stats.pending_tests_count !== undefined) ? stats.pending_tests_count : pendingTestsList.length;
+                const badgePendingCount = document.getElementById('badge-pending-tests-count');
+                if (badgePendingCount) badgePendingCount.textContent = `${pendingTestsCount} مراجع`;
+
+                const pendingTbody = document.getElementById('doctor-station-pending-tests');
+                if (pendingTbody) {
+                    if (pendingTestsList.length === 0) {
+                        pendingTbody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات حالياً
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        pendingTbody.innerHTML = pendingTestsList.map(item => {
+                            const isReady = item.all_ready;
+                            const readyBadge = isReady 
+                                ? '<span class="status-badge status-completed fw-bold" style="background: #bbf7d0; color: #14532d; border-color: #86efac;"><i class="fas fa-check-double text-success me-1"></i> النتائج جاهزة للمراجعة</span>'
+                                : `<span class="status-badge status-pending fw-semibold" style="background: #fef08a; color: #854d0e; border-color: #fde047;"><i class="fas fa-hourglass-half me-1"></i> قيد الفحص (${item.completed_tests}/${item.total_tests})</span>`;
+                            
+                            const testsBadges = (item.tests || []).map(t => {
+                                const icon = t.type === 'radiology' ? 'fa-x-ray' : 'fa-vial';
+                                const badgeClass = t.is_ready ? 'bg-success text-white' : 'bg-white text-dark border border-warning';
+                                return `<span class="badge ${badgeClass} small me-1 px-2 py-1"><i class="fas ${icon} me-1"></i>${t.name}</span>`;
+                            }).join(' ');
+
+                            return `
+                                <tr class="${isReady ? 'ready-test-visit' : 'pending-test-visit'}">
+                                    <td>
+                                        <span class="badge ${isReady ? 'bg-success' : 'bg-secondary'} text-white fw-bold fs-6">#${item.queue_number}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle" style="${isReady ? 'background: #bbf7d0; color: #166534; border-color: #86efac;' : ''}">
+                                                ${item.patient_name.charAt(0)}
+                                            </div>
+                                            <div class="ms-2">
+                                                <strong class="text-dark fs-6">${item.patient_name}</strong>
+                                                ${isReady ? '<span class="badge bg-success ms-1 small">جاهز</span>' : ''}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>${testsBadges}</div>
+                                    </td>
+                                    <td>
+                                        ${readyBadge}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex gap-1 justify-content-end align-items-center">
+                                            ${isReady ? `
+                                                <button type="button" class="action-btn btn-success fw-bold shadow-sm" onclick="doctorCallResults(${item.visit_id})">
+                                                    <i class="fas fa-bullhorn"></i> استدعاء
+                                                </button>
+                                            ` : `
+                                                <button type="button" class="action-btn btn-secondary" disabled title="لا يمكن الاستدعاء حتى تكتمل جميع الفحوصات من المختبر أو الأشعة" style="cursor: not-allowed; opacity: 0.65;">
+                                                    <i class="fas fa-hourglass-half"></i> بالانتظار
+                                                </button>
+                                            `}
+                                            <a href="/doctor/visits/${item.visit_id}" class="action-btn btn-outline-primary" title="عرض ملف الزيارة">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Queue sync error:', e);
+        }
+    }
+
+    async function doctorCallResults(visitId) {
+        try {
+            const res = await fetch(`/queue/visit/${visitId}/call-results`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                syncDoctorQueue();
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
+            } else {
+                alert(data.message || 'حدث خطأ أثناء استدعاء المراجع');
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    async function doctorCallNext() {
+        try {
+            const res = await fetch(`/queue/doctor/${currentDoctorId}/call-next`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                syncDoctorQueue();
+            } else {
+                alert(data.message || 'لا يوجد مرضى في الانتظار');
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    async function doctorRecall() {
+        if (!currentAppointmentId) return;
+        try {
+            const res = await fetch(`/queue/appointment/${currentAppointmentId}/recall`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                syncDoctorQueue();
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    async function doctorStartConsultation() {
+        if (!currentAppointmentId) return;
+        try {
+            const res = await fetch(`/queue/appointment/${currentAppointmentId}/start-consultation`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success && data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                alert(data.message || 'حدث خطأ أثناء بدء الكشف');
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    async function doctorSkip() {
+        if (!currentAppointmentId) return;
+        if (!confirm('هل تريد تأخير دور هذا المريض ونقله لآخر الطابور؟')) return;
+        try {
+            const res = await fetch(`/queue/appointment/${currentAppointmentId}/skip`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                syncDoctorQueue();
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    // Auto poll doctor station every 4s
+    setInterval(syncDoctorQueue, 4000);
+    syncDoctorQueue();
+</script>
 @endif
 @endsection

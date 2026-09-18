@@ -862,6 +862,11 @@
                                 <i class="fas fa-calendar-check"></i><span> توفر الأطباء الاستشاريين</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('queue.all.display') ? 'active' : '' }}" href="{{ route('queue.all.display') }}" target="_blank">
+                                <i class="fas fa-tv"></i><span> شاشة طابور الانتظار</span>
+                            </a>
+                        </li>
                         @endcan
 
                         @can('view departments')

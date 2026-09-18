@@ -86,7 +86,7 @@ class DoctorVisitController extends Controller
         ->limit(50)
         ->get();
 
-        return view('doctors.visits.index', compact('allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits'));
+        return view('doctors.visits.index', compact('doctor', 'allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits'));
     }
     public function convertAppointmentToVisit(Appointment $appointment)
     {
