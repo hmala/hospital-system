@@ -52,6 +52,23 @@ require __DIR__.'/auth.php';
 Route::get('/departments', [DepartmentController::class, 'publicIndex'])
     ->name('departments.public');
 
+// مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
+Route::prefix('queue')->name('queue.')->group(function () {
+    Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
+    Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');
+    Route::get('/all', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all.display');
+    Route::get('/all/data', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsData'])->name('all.data');
+    Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');
+
+    // إجراءات التحكم بالطابور (للأطباء وموظفي الاستقبال)
+    Route::middleware(['auth'])->group(function () {
+        Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('call-next');
+        Route::post('/appointment/{appointment}/recall', [\App\Http\Controllers\DoctorQueueController::class, 'recall'])->name('recall');
+        Route::post('/appointment/{appointment}/start-consultation', [\App\Http\Controllers\DoctorQueueController::class, 'startConsultation'])->name('start-consultation');
+        Route::post('/appointment/{appointment}/skip', [\App\Http\Controllers\DoctorQueueController::class, 'skip'])->name('skip');
+    });
+});
+
 // API routes بدون أي middleware
 Route::withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class, \Illuminate\Auth\Middleware\Authenticate::class])->group(function () {
     Route::post('/api/consultant-availability/bulk-update', [ConsultantAvailabilityController::class, 'bulkUpdate'])->name('api.consultant-availability.bulk-update');
@@ -599,5 +616,23 @@ Route::middleware(['auth'])->group(function () {
     // تحليلات الطوارئ للمحاسب
     Route::get('/accountant/emergency-analytics', [\App\Http\Controllers\AccountantController::class, 'emergencyAnalytics'])->name('accountant.emergency.analytics');
     Route::get('/accountant/diagnostic-analytics', [\App\Http\Controllers\AccountantController::class, 'diagnosticAnalytics'])->name('accountant.diagnostics.analytics');
+
+    // مسارات التحكم بالطابور والاستدعاء (تحتاج تسجيل دخول)
+    Route::prefix('queue')->name('queue.')->group(function () {
+        Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('doctor.call-next');
+        Route::post('/appointment/{appointment}/recall', [\App\Http\Controllers\DoctorQueueController::class, 'recall'])->name('appointment.recall');
+        Route::post('/appointment/{appointment}/start-consultation', [\App\Http\Controllers\DoctorQueueController::class, 'startConsultation'])->name('appointment.start-consultation');
+        Route::post('/appointment/{appointment}/skip', [\App\Http\Controllers\DoctorQueueController::class, 'skip'])->name('appointment.skip');
+        Route::post('/visit/{visit}/call-results', [\App\Http\Controllers\DoctorQueueController::class, 'callForResults'])->name('visit.call-results');
+    });
+});
+
+// مسارات شاشات الطابور العامة والصوت (يمكن فتحها على التلفاز دون جلسة كاشير)
+Route::prefix('queue')->name('queue.')->group(function () {
+    Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
+    Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');
+    Route::get('/all-clinics', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all-clinics.display');
+    Route::get('/all-clinics/data', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsData'])->name('all-clinics.data');
+    Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');
 });
 

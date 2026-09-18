@@ -1,4 +1,4 @@
-﻿<!-- resources/views/consultant-availability/index.blade.php -->
+<!-- resources/views/consultant-availability/index.blade.php -->
 @extends('layouts.app')
 
 @section('content')
@@ -92,6 +92,13 @@
                         <small>عرض سجل الحركات المالية</small>
                     </div>
                 </a>
+                <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-outline-info btn-lg px-4 py-3">
+                    <i class="fas fa-tv fa-2x me-2"></i>
+                    <div>
+                        <div class="fw-bold">شاشة الصالة العامة</div>
+                        <small>عرض طابور كافة العيادات</small>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
@@ -115,10 +122,10 @@
     <div class="row mb-5">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
                         <i class="fas fa-calendar-day me-2"></i>
-                        المواعيد المحجوزة اليوم
+                        المواعيد وطابور اليوم
                         <span class="badge bg-light text-primary ms-2">{{ $todayAppointments->count() }}</span>
                     </h4>
                 </div>
@@ -127,58 +134,64 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
+                                    <th style="width: 60px;"># الدور</th>
                                     <th>الوقت</th>
                                     <th>المريض</th>
                                     <th>الطبيب</th>
                                     <th>المصدر</th>
                                     <th>السبب</th>
                                     <th>حالة الدفع</th>
-                                    <th>الحالة</th>
+                                    <th>حالة الطابور</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($todayAppointments as $appointment)
-                                <tr>
-                                    <td>
-                                        <strong class="text-primary">{{ $appointment->appointment_date->format('H:i') }}</strong>
+                                <tr class="{{ $appointment->status === 'calling' ? 'table-primary' : '' }}">
+                                    <td class="text-center">
+                                        <span class="badge bg-dark fs-6">{{ $appointment->queue_number ?: $appointment->id }}</span>
                                     </td>
                                     <td>
-                                        <div>
-                                            <strong>{{ optional($appointment->patient)->user->name ?? 'غير محدد' }}</strong>
-                                            <br>
-                                            <small class="text-muted">{{ optional($appointment->patient)->user->phone ?? '-' }}</small>
-                                        </div>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-clock me-1 text-primary"></i>
+                                            {{ $appointment->appointment_date ? $appointment->appointment_date->format('H:i') : '-' }}
+                                        </span>
                                     </td>
                                     <td>
-                                        <div>
-                                            د. {{ $appointment->doctor->user->name ?? 'غير محدد' }}
-                                            <br>
-                                            <small class="text-muted">{{ $appointment->doctor->specialization }}</small>
-                                        </div>
+                                        @if($appointment->patient && $appointment->patient->user)
+                                            <div class="fw-bold">{{ $appointment->patient->user->name }}</div>
+                                            <small class="text-muted">{{ $appointment->patient->user->phone ?? '' }}</small>
+                                        @elseif($appointment->emergency && $appointment->emergency->emergencyPatient)
+                                            <div class="fw-bold text-danger">{{ $appointment->emergency->emergencyPatient->name }}</div>
+                                            <small class="text-muted">(طوارئ)</small>
+                                        @else
+                                            <span class="text-muted">مريض غير محدد</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">د. {{ $appointment->doctor->user->name ?? 'غير محدد' }}</div>
+                                        <small class="text-muted">{{ $appointment->doctor->specialization ?? '' }}</small>
+                                        @if($appointment->doctor_id)
+                                            <div>
+                                                <a href="{{ route('queue.doctor.display', $appointment->doctor_id) }}" target="_blank" class="badge bg-light text-primary border text-decoration-none mt-1" title="فتح شاشة التلفاز الخاصة بهذا الطبيب">
+                                                    <i class="fas fa-tv me-1"></i> شاشة العيادة
+                                                </a>
+                                            </div>
+                                        @endif
                                     </td>
                                     <td>
                                         @if($appointment->emergency_id)
                                             <span class="badge bg-danger">
-                                                <i class="fas fa-ambulance me-1"></i>
-                                                طوارئ
+                                                <i class="fas fa-ambulance me-1"></i> استشارة طوارئ
                                             </span>
                                         @else
-                                            <span class="badge bg-info">
-                                                <i class="fas fa-desktop me-1"></i>
-                                                استعلامات
+                                            <span class="badge bg-info text-dark">
+                                                <i class="fas fa-calendar-check me-1"></i> حجز استشارية
                                             </span>
                                         @endif
                                     </td>
                                     <td>
                                         <small>{{ $appointment->reason ?? '-' }}</small>
-                                    </td>
-                                    <td>
-                                        @if($appointment->status == 'scheduled')
-                                            <span class="badge bg-warning">محجوز</span>
-                                        @elseif($appointment->status == 'confirmed')
-                                            <span class="badge bg-success">مؤكد</span>
-                                        @endif
                                     </td>
                                     <td>
                                         @if($appointment->payment_status === 'paid')
@@ -190,8 +203,27 @@
                                         @endif
                                     </td>
                                     <td>
+                                        <span class="badge bg-{{ $appointment->status_color }}">
+                                            {{ $appointment->status_text }}
+                                        </span>
+                                    </td>
+                                    <td>
                                         <div class="d-flex gap-2 flex-wrap">
-                                            @if($appointment->payment_status === 'paid')
+                                            @if($appointment->payment_status === 'paid' || $appointment->emergency_id)
+                                                <!-- Call / Recall Button -->
+                                                @if($appointment->status === 'calling')
+                                                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" onclick="callPatient({{ $appointment->id }}, this)" title="إعادة مناداة المريض للشاشة الخارجية">
+                                                        <i class="fas fa-redo me-1"></i>
+                                                        إعادة استدعاء 📢
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="callPatient({{ $appointment->id }}, this)" title="استدعاء المريض للشاشة الخارجية">
+                                                        <i class="fas fa-bullhorn me-1"></i>
+                                                        استدعاء
+                                                    </button>
+                                                @endif
+
+                                                <!-- Convert / Admit Button -->
                                                 <form method="POST" action="{{ route('appointments.convert', $appointment) }}" class="d-inline">
                                                     @csrf
                                                     @method('PUT')
@@ -215,6 +247,13 @@
                                                         إلغاء
                                                     </button>
                                                 </form>
+                                            @endif
+
+                                            @if($appointment->doctor_id)
+                                                <a href="{{ route('queue.doctor.display', $appointment->doctor_id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="فتح شاشة التلفاز الخاصة بهذا الطبيب">
+                                                    <i class="fas fa-tv me-1"></i>
+                                                    الشاشة
+                                                </a>
                                             @endif
                                         </div>
                                     </td>
@@ -251,6 +290,7 @@
                             <tr class="text-muted small text-uppercase">
                                 <th>الطبيب</th>
                                 <th style="width: 8rem;">الحالة</th>
+                                <th style="width: 10rem;">شاشة الانتظار</th>
                                 <th style="width: 7rem;">تعديل</th>
                             </tr>
                         </thead>
@@ -275,6 +315,12 @@
                                         <div class="small text-muted mt-1">
                                             أيام العمل: {{ is_array($doctor->working_days) && count($doctor->working_days) ? implode('، ', $doctor->working_days) : 'لم يتم التحديد' }}
                                         </div>
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="فتح شاشة الانتظار المخصصة للتلفاز">
+                                            <i class="fas fa-tv me-1"></i>
+                                            شاشة العيادة
+                                        </a>
                                     </td>
                                     <td>
                                         <form method="POST" action="{{ route('consultant-availability.update', $doctor->id) }}" style="display: inline;">
@@ -401,6 +447,133 @@ body {
     }
 }
 </style>
+
+<script>
+let globalAudioCtx = null;
+
+function getAudioContext() {
+    if (!globalAudioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) {
+            globalAudioCtx = new AudioCtxClass();
+        }
+    }
+    if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+        globalAudioCtx.resume();
+    }
+    return globalAudioCtx;
+}
+
+function playDeskChime() {
+    try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, now);
+        gain1.gain.setValueAtTime(0.35, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.75);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(587.33, now + 0.3);
+        gain2.gain.setValueAtTime(0.4, now + 0.3);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.3);
+        osc2.stop(now + 1.3);
+    } catch(e) {}
+}
+
+async function playDeskVoice(text) {
+    try {
+        const res = await fetch(`/queue/tts?text=${encodeURIComponent(text)}`);
+        if (res.ok) {
+            const blob = await res.blob();
+            if (blob && blob.size > 500) {
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.play().catch(() => {});
+                audio.onended = () => URL.revokeObjectURL(url);
+                return;
+            }
+        }
+    } catch(e) {}
+
+    // Fallback to browser SpeechSynthesis
+    if ('speechSynthesis' in window) {
+        try {
+            if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ar-SA';
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        } catch(e) {}
+    }
+}
+
+function callPatient(appointmentId, btnElement) {
+    const btn = btnElement || (window.event ? window.event.target.closest('button') : null);
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري النداء...';
+    }
+
+    fetch(`/queue/appointment/${appointmentId}/recall`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(async data => {
+        if (data.success) {
+            // تشغيل الجرس والنداء الصوتي فوراً على جهاز الاستقبال أيضاً
+            playDeskChime();
+            setTimeout(() => {
+                const text = data.queue_number
+                    ? `المراجع ${data.patient_name}، دورك رقم ${data.queue_number}، تفضل لعيادة دكتور ${data.doctor_name || ''}.`
+                    : `المراجع ${data.patient_name}، تفضل لعيادة دكتور ${data.doctor_name || ''}.`;
+                playDeskVoice(text);
+            }, 850);
+
+            if (btn) {
+                btn.className = 'btn btn-sm btn-warning text-dark fw-bold';
+                btn.innerHTML = '<i class="fas fa-redo me-1"></i> إعادة استدعاء 📢';
+                btn.disabled = false;
+                btn.title = 'إعادة مناداة المريض للشاشة الخارجية';
+            }
+        } else {
+            alert(data.message || 'حدث خطأ أثناء الاستدعاء');
+            if (btn) {
+                btn.className = 'btn btn-sm btn-primary';
+                btn.innerHTML = '<i class="fas fa-bullhorn me-1"></i> استدعاء';
+                btn.disabled = false;
+            }
+        }
+    })
+    .catch(err => {
+        alert('حدث خطأ في الاتصال بالخادم');
+        if (btn) {
+            btn.className = 'btn btn-sm btn-primary';
+            btn.innerHTML = '<i class="fas fa-bullhorn me-1"></i> استدعاء';
+            btn.disabled = false;
+        }
+    });
+}
+</script>
 @endsection
 
 @push('scripts')

@@ -21,6 +21,7 @@ class Appointment extends Model
         'appointment_date',
         'status',
         'payment_status',
+        'queue_number',
         'insurance_type',
         'payment_id',
         'reason',
@@ -29,6 +30,7 @@ class Appointment extends Model
         'duration',
         'cancellation_reason',
         'cancelled_by',
+        'called_at',
         'confirmed_at',
         'completed_at',
         'cancelled_at'
@@ -51,6 +53,7 @@ class Appointment extends Model
 
     protected $casts = [
         'appointment_date' => 'datetime',
+        'called_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime'
@@ -96,7 +99,7 @@ class Appointment extends Model
     public function scopeUpcoming($query)
     {
         return $query->whereDate('appointment_date', '>=', today())
-                    ->whereIn('status', ['scheduled', 'confirmed']);
+                    ->whereIn('status', ['scheduled', 'confirmed', 'calling']);
     }
 
     public function scopeCompleted($query)
@@ -114,7 +117,9 @@ class Appointment extends Model
     {
         $statuses = [
             'scheduled' => 'مجدول',
-            'confirmed' => 'مؤكد',
+            'confirmed' => 'في الانتظار',
+            'calling' => 'يتم الاستدعاء',
+            'in_consultation' => 'بالداخل (قيد الكشف)',
             'completed' => 'مكتمل', 
             'cancelled' => 'ملغى',
             'no_show' => 'لم يحضر'
@@ -128,6 +133,8 @@ class Appointment extends Model
         $colors = [
             'scheduled' => 'warning',
             'confirmed' => 'info',
+            'calling' => 'primary',
+            'in_consultation' => 'success',
             'completed' => 'success',
             'cancelled' => 'danger',
             'no_show' => 'secondary'
@@ -143,7 +150,7 @@ class Appointment extends Model
 
     public function isUpcoming()
     {
-        return $this->appointment_date->gte(now()->startOfDay()) && in_array($this->status, ['scheduled', 'confirmed']);
+        return $this->appointment_date->gte(now()->startOfDay()) && in_array($this->status, ['scheduled', 'confirmed', 'calling']);
     }
 
     public function isPast()
@@ -153,7 +160,7 @@ class Appointment extends Model
 
     public function canBeCancelled()
     {
-        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed']) && !$this->visit;
+        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed', 'calling']) && !$this->visit;
     }
 
     protected function cancellationSourceLabel($user)
