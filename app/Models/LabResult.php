@@ -11,6 +11,7 @@ class LabResult extends Model
         'visit_id',
         'request_id',
         'test_name',
+        'parent_test_name',
         'value',
         'unit',
         'status',
@@ -18,7 +19,8 @@ class LabResult extends Model
         'notes',
         'source_type',
         'package_id',
-        'lab_test_id'
+        'lab_test_id',
+        'sub_test_id'
     ];
 
     /**
@@ -35,6 +37,22 @@ class LabResult extends Model
     public function request(): BelongsTo
     {
         return $this->belongsTo(Request::class);
+    }
+
+    /**
+     * العلاقة مع الفحص الرئيسي
+     */
+    public function labTest(): BelongsTo
+    {
+        return $this->belongsTo(LabTest::class);
+    }
+
+    /**
+     * العلاقة مع الفحص الفرعي
+     */
+    public function subTest(): BelongsTo
+    {
+        return $this->belongsTo(LabTestSubTest::class, 'sub_test_id');
     }
 
     /**

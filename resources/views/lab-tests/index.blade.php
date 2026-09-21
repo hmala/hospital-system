@@ -171,6 +171,10 @@
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if(Auth::user()->hasRole(['admin', 'lab_staff']))
+                                                    <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}"
+                                                       class="btn btn-sm btn-outline-success" title="الفحوصات الفرعية (Sub-Tests)">
+                                                        <i class="fas fa-list-check"></i>
+                                                    </a>
                                                     <a href="{{ route('lab-tests.references.index', $labTest) }}"
                                                        class="btn btn-sm btn-outline-primary" title="القيم المرجعية">
                                                         <i class="fas fa-ruler-combined"></i>

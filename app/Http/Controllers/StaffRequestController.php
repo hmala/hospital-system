@@ -441,14 +441,26 @@ class StaffRequestController extends Controller
                 $packageId = $details['package_id'];
             }
 
-            foreach ($httpRequest->test_results as $testName => $data) {
+            foreach ($httpRequest->test_results as $key => $data) {
                 if (!empty($data['value'])) {
                     try {
-                        $labTestId = null;
-                        if (isset($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
-                            // ربما لريب، إذا كانت values بإندكس رقمية، لا يوجد رابط مباشر بالاسم؛ يمكن تحسين لاحقاً
+                        $testName = $data['test_name'] ?? $key;
+                        $parentTestName = $data['parent_test_name'] ?? null;
+                        $subTestId = $data['sub_test_id'] ?? null;
+                        $labTestId = $data['lab_test_id'] ?? null;
+                        $unit = $data['unit'] ?? '';
+                        $refRange = $data['reference_range'] ?? ((new LabResult)->getReferenceRange($testName));
+                        $status = $data['status'] ?? ((new LabResult)->determineStatus($data['value'], $testName));
+
+                        if (!$labTestId && $parentTestName) {
+                            $parentTest = \App\Models\LabTest::where('name', $parentTestName)->first();
+                            $labTestId = $parentTest?->id;
+                        } elseif (!$labTestId) {
                             if (isset($details['lab_test_ids'][$testName])) {
                                 $labTestId = $details['lab_test_ids'][$testName];
+                            } else {
+                                $directTest = \App\Models\LabTest::where('name', $testName)->first();
+                                $labTestId = $directTest?->id;
                             }
                         }
 
@@ -456,14 +468,16 @@ class StaffRequestController extends Controller
                             'visit_id' => $request->visit_id,
                             'request_id' => $request->id,
                             'test_name' => $testName,
+                            'parent_test_name' => $parentTestName,
                             'value' => $data['value'],
-                            'unit' => $data['unit'] ?? '',
-                            'status' => (new LabResult)->determineStatus($data['value'], $testName),
-                            'reference_range' => (new LabResult)->getReferenceRange($testName),
+                            'unit' => $unit,
+                            'status' => $status,
+                            'reference_range' => $refRange,
                             'notes' => $data['notes'] ?? null,
                             'source_type' => $sourceType,
                             'package_id' => $packageId,
                             'lab_test_id' => $labTestId,
+                            'sub_test_id' => $subTestId,
                         ]);
 
                         Log::info("تم حفظ نتيجة التحليل: {$testName}", [

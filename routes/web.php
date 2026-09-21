@@ -462,6 +462,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{labTest}/references', [\App\Http\Controllers\LabTestReferenceController::class, 'store'])->name('references.store');
         Route::put('/{labTest}/references/{reference}', [\App\Http\Controllers\LabTestReferenceController::class, 'update'])->name('references.update');
         Route::delete('/{labTest}/references/{reference}', [\App\Http\Controllers\LabTestReferenceController::class, 'destroy'])->name('references.destroy');
+
+        // إدارة الفحوصات والمعايير الفرعية (Sub-Tests)
+        Route::get('/{labTest}/sub-tests', [\App\Http\Controllers\LabTestSubTestController::class, 'index'])->name('sub-tests.index');
+        Route::post('/{labTest}/sub-tests', [\App\Http\Controllers\LabTestSubTestController::class, 'store'])->name('sub-tests.store');
+        Route::put('/{labTest}/sub-tests/{subTest}', [\App\Http\Controllers\LabTestSubTestController::class, 'update'])->name('sub-tests.update');
+        Route::delete('/{labTest}/sub-tests/{subTest}', [\App\Http\Controllers\LabTestSubTestController::class, 'destroy'])->name('sub-tests.destroy');
     });
 
     // إدارة باقات المختبر (Admin)

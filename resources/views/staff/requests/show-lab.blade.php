@@ -518,6 +518,13 @@ function getTestUnit($testName, $labTests) {
                         if (!isset($savedTestResults) || !is_array($savedTestResults)) {
                             $savedTestResults = [];
                         }
+
+                        $patientGender = $request->visit->patient?->gender ?? 'both';
+                        $patientAge    = (int) ($request->visit->patient?->age ?? 0);
+                        $labTestMap = \App\Models\LabTest::with(['subTests' => function($q) {
+                            $q->orderBy('sort_order')->orderBy('id');
+                        }, 'references'])->whereIn('name', $testsList)->get()->keyBy('name');
+                        $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
                     @endphp
                     <div class="row mb-4">
                         <div class="col-12">
@@ -551,33 +558,130 @@ function getTestUnit($testName, $labTests) {
                                                 <tr>
                                                     <th class="text-center" style="width: 50px;">#</th>
                                                     <th>التحليل</th>
-                                                    <th>القيمة</th>
-                                                    <th>الوحدة</th>
-                                                    <th>الحالة</th>
+                                                    <th style="width: 180px;">القيمة</th>
+                                                    <th style="width: 90px;">الوحدة</th>
+                                                    <th style="width: 140px;">المرجع</th>
+                                                    <th style="width: 90px;" class="text-center">الحالة</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach($testsList as $index => $test)
                                                     @php
-                                                        $existingValue = (is_array($savedTestResults) && isset($savedTestResults[$test]) && is_array($savedTestResults[$test])) ? $savedTestResults[$test]['value'] : '';
-                                                        $existingStatus = (is_array($savedTestResults) && isset($savedTestResults[$test]) && is_array($savedTestResults[$test])) ? ($savedTestResults[$test]['status'] ?? '') : '';
+                                                        $labTestObj = $labTestMap[$test] ?? null;
+                                                        $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                     @endphp
-                                                    <tr>
-                                                        <td class="text-center">{{ $index + 1 }}</td>
-                                                        <td>{{ $test }}</td>
-                                                        <td>
-                                                            <input type="text" class="form-control form-control-sm" name="test_results[{{ $test }}][value]" value="{{ old('test_results.' . $test . '.value', $existingValue) }}" placeholder="أدخل القيمة">
-                                                        </td>
-                                                        <td>{{ getTestUnit($test, $labTests) }}</td>
-                                                        <td>
-                                                            <select class="form-select form-select-sm" name="test_results[{{ $test }}][status]">
-                                                                <option value="" {{ $existingStatus === '' ? 'selected' : '' }}>اختيار</option>
-                                                                <option value="normal" {{ $existingStatus === 'normal' ? 'selected' : '' }}>طبيعي</option>
-                                                                <option value="high" {{ $existingStatus === 'high' ? 'selected' : '' }}>مرتفع</option>
-                                                                <option value="low" {{ $existingStatus === 'low' ? 'selected' : '' }}>منخفض</option>
-                                                            </select>
-                                                        </td>
-                                                    </tr>
+
+                                                    @if($hasSubTests)
+                                                        {{-- ترويسة الفحص المركب --}}
+                                                        <tr class="table-light">
+                                                            <td colspan="6" class="fw-bold py-2 bg-primary bg-opacity-10 text-primary border-primary">
+                                                                <div class="d-flex align-items-center justify-content-between">
+                                                                    <div>
+                                                                        <i class="fas fa-layer-group me-2"></i>
+                                                                        <span class="fs-6">{{ $test }}</span>
+                                                                        <span class="badge bg-primary ms-2">{{ $labTestObj->subTests->count() }} معايير فرعية</span>
+                                                                    </div>
+                                                                    <small class="text-muted">{{ $labTestObj->main_category }}</small>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+
+                                                        @foreach($labTestObj->subTests as $sIdx => $subTest)
+                                                            @php
+                                                                $subSavedVal = $dbResults[$subTest->name]->value ?? ($savedTestResults[$subTest->name]['value'] ?? '');
+                                                                $subSavedStatus = $dbResults[$subTest->name]->status ?? ($savedTestResults[$subTest->name]['status'] ?? '');
+                                                            @endphp
+                                                            <tr class="test-row subtest-row" data-test="{{ $subTest->name }}"
+                                                                data-ref-min="{{ $subTest->ref_min ?? '' }}"
+                                                                data-ref-max="{{ $subTest->ref_max ?? '' }}">
+                                                                <td class="text-center text-muted small">{{ $index + 1 }}.{{ $sIdx + 1 }}</td>
+                                                                <td class="ps-4">
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <i class="fas fa-level-down-alt text-primary opacity-50 ms-2"></i>
+                                                                        <strong>{{ $subTest->name }}</strong>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text"
+                                                                           class="form-control form-control-sm test-value"
+                                                                           name="test_results[{{ $subTest->name }}][value]"
+                                                                           value="{{ old('test_results.' . $subTest->name . '.value', $subSavedVal) }}"
+                                                                           placeholder="أدخل النتيجة"
+                                                                           data-test="{{ $subTest->name }}">
+                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
+                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
+                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
+                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
+                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
+                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
+                                                                </td>
+                                                                <td class="text-muted small">{{ $subTest->unit ?: '—' }}</td>
+                                                                <td>
+                                                                    @if($subTest->reference_range)
+                                                                        <span class="badge bg-light text-dark border">{{ $subTest->reference_range }}</span>
+                                                                    @else
+                                                                        <span class="text-muted small">—</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <span class="result-flag" id="flag-{{ $index }}-{{ $sIdx }}">
+                                                                        <i class="fas fa-circle text-muted small"></i>
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    @else
+                                                        {{-- فحص فردي مباشر --}}
+                                                        @php
+                                                            $refObj = $labTestObj
+                                                                ? \App\Models\LabTestReference::forPatient($labTestObj->id, $patientGender, $patientAge)
+                                                                : null;
+                                                            $refDisplay  = $refObj ? $refObj->range_display : '—';
+                                                            $refMin      = $refObj?->ref_min;
+                                                            $refMax      = $refObj?->ref_max;
+                                                            $unitDisplay = $refObj?->unit ?? getTestUnit($test, $labTests);
+                                                            $savedVal    = $dbResults[$test]->value ?? ((is_array($savedTestResults) && isset($savedTestResults[$test]) && is_array($savedTestResults[$test]))
+                                                                            ? $savedTestResults[$test]['value'] : '');
+                                                            $savedStatus = $dbResults[$test]->status ?? ($savedTestResults[$test]['status'] ?? '');
+                                                        @endphp
+                                                        <tr class="test-row" data-test="{{ $test }}"
+                                                            data-ref-min="{{ $refMin }}"
+                                                            data-ref-max="{{ $refMax }}">
+                                                            <td class="text-center text-muted small">{{ $index + 1 }}</td>
+                                                            <td>
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <i class="{{ getTestIcon($test) }}"></i>
+                                                                    <strong>{{ $test }}</strong>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <input type="text"
+                                                                       class="form-control form-control-sm test-value"
+                                                                       name="test_results[{{ $test }}][value]"
+                                                                       value="{{ old('test_results.' . $test . '.value', $savedVal) }}"
+                                                                       placeholder="أدخل القيمة"
+                                                                       tabindex="{{ $index + 1 }}"
+                                                                       data-test="{{ $test }}">
+                                                                <input type="hidden" name="test_results[{{ $test }}][test_name]" value="{{ $test }}">
+                                                                <input type="hidden" name="test_results[{{ $test }}][lab_test_id]" value="{{ $labTestObj?->id }}">
+                                                                <input type="hidden" name="test_results[{{ $test }}][unit]" value="{{ $unitDisplay }}">
+                                                                <input type="hidden" name="test_results[{{ $test }}][reference_range]" value="{{ $refDisplay }}">
+                                                            </td>
+                                                            <td class="text-muted small">{{ $unitDisplay }}</td>
+                                                            <td>
+                                                                @if($refObj)
+                                                                    <span class="badge bg-light text-dark border">{{ $refDisplay }}</span>
+                                                                @else
+                                                                    <span class="text-muted small">غير محدد</span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <span class="result-flag" id="flag-{{ $index }}">
+                                                                    <i class="fas fa-circle text-muted small"></i>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
                                                 @endforeach
                                             </tbody>
                                         </table>
@@ -1170,6 +1274,136 @@ function getTestUnit($testName, $labTests) {
 function startProcessing() {
     document.getElementById('status').value = 'in_progress';
     document.querySelector('form').submit();
+}
+
+// ──────────────── تلوين وتحديد نتائج التحاليل تلقائياً ────────────────
+function parseRangeValues(row) {
+    let min = null;
+    let max = null;
+
+    if (row.dataset.refMin && row.dataset.refMin.trim() !== '') {
+        min = parseFloat(row.dataset.refMin);
+        if (isNaN(min)) min = null;
+    }
+    if (row.dataset.refMax && row.dataset.refMax.trim() !== '') {
+        max = parseFloat(row.dataset.refMax);
+        if (isNaN(max)) max = null;
+    }
+
+    if (min === null && max === null) {
+        // محاولة استخراج المدى من النص المكتوب في خانة المرجع
+        const refCell = row.querySelector('td:nth-child(5)');
+        const refText = refCell ? refCell.textContent.replace(/,/g, '').trim() : '';
+        if (refText) {
+            let m = refText.match(/([\d\.]+)\s*-\s*([\d\.]+)/);
+            if (m) {
+                min = parseFloat(m[1]);
+                max = parseFloat(m[2]);
+            } else {
+                m = refText.match(/<\s*=?\s*([\d\.]+)/);
+                if (m) max = parseFloat(m[1]);
+                m = refText.match(/>\s*=?\s*([\d\.]+)/);
+                if (m) min = parseFloat(m[1]);
+            }
+        }
+    }
+    return { min, max };
+}
+
+function evaluateRow(row) {
+    const input = row.querySelector('.test-value');
+    if (!input) return null;
+
+    const flag   = row.querySelector('.result-flag');
+    const select = row.querySelector('select');
+    const val    = input.value.trim();
+
+    row.style.backgroundColor = '';
+    row.classList.remove('table-success', 'table-danger', 'table-warning', 'result-normal', 'result-high', 'result-low');
+    row.querySelectorAll('td').forEach(td => td.style.backgroundColor = '');
+    if (flag) flag.innerHTML = '<i class="fas fa-circle text-muted small"></i>';
+
+    if (val === '') {
+        if (select && select.value === '') {
+            select.style.backgroundColor = '';
+            select.style.color = '';
+        }
+        return null;
+    }
+
+    // فحص الحالات النصية الشائعة (موجب / سالب)
+    const lower = val.toLowerCase();
+    if (lower === 'positive' || lower === 'موجب' || lower === 'pos' || lower === '+') {
+        row.classList.add('table-danger', 'result-high');
+        row.querySelectorAll('td').forEach(td => td.style.backgroundColor = '#f8d7da');
+        if (flag) flag.innerHTML = '<span class="badge bg-danger">↑ موجب (غير طبيعي)</span>';
+        return 'high';
+    }
+    if (lower === 'negative' || lower === 'سالب' || lower === 'neg' || lower === '-' || lower === 'normal' || lower === 'طبيعي') {
+        row.classList.add('table-success', 'result-normal');
+        row.querySelectorAll('td').forEach(td => td.style.backgroundColor = '#d1e7dd');
+        if (flag) flag.innerHTML = '<span class="badge bg-success">✓ سالب (طبيعي)</span>';
+        return 'normal';
+    }
+
+    const numeric = parseFloat(val.replace(/,/g, ''));
+    const { min: refMin, max: refMax } = parseRangeValues(row);
+
+    if (isNaN(numeric) || (refMin === null && refMax === null)) {
+        return 'unknown';
+    }
+
+    if (refMin !== null && numeric < refMin) {
+        row.classList.add('table-warning', 'result-low');
+        row.querySelectorAll('td').forEach(td => td.style.backgroundColor = '#fff3cd');
+        if (flag) flag.innerHTML = '<span class="badge bg-warning text-dark">↓ منخفض</span>';
+        if (select) {
+            select.value = 'low';
+            select.style.backgroundColor = '#ffc107';
+            select.style.color = '#000';
+            select.style.fontWeight = 'bold';
+        }
+        return 'low';
+    }
+    if (refMax !== null && numeric > refMax) {
+        row.classList.add('table-danger', 'result-high');
+        row.querySelectorAll('td').forEach(td => td.style.backgroundColor = '#f8d7da');
+        if (flag) flag.innerHTML = '<span class="badge bg-danger">↑ مرتفع</span>';
+        if (select) {
+            select.value = 'high';
+            select.style.backgroundColor = '#dc3545';
+            select.style.color = '#fff';
+            select.style.fontWeight = 'bold';
+        }
+        return 'high';
+    }
+    row.classList.add('table-success', 'result-normal');
+    row.querySelectorAll('td').forEach(td => td.style.backgroundColor = '#d1e7dd');
+    if (flag) flag.innerHTML = '<span class="badge bg-success">✓ طبيعي</span>';
+    if (select) {
+        select.value = 'normal';
+        select.style.backgroundColor = '#198754';
+        select.style.color = '#fff';
+        select.style.fontWeight = 'bold';
+    }
+    return 'normal';
+}
+
+function initializeLabResults() {
+    document.querySelectorAll('.test-row .test-value').forEach((input) => {
+        input.addEventListener('input', function () {
+            evaluateRow(this.closest('.test-row'));
+        });
+        input.addEventListener('change', function () {
+            evaluateRow(this.closest('.test-row'));
+        });
+        input.addEventListener('keyup', function () {
+            evaluateRow(this.closest('.test-row'));
+        });
+        if (input.value.trim() !== '') {
+            evaluateRow(input.closest('.test-row'));
+        }
+    });
 }
 
 // وظائف تحليل النتائج المخبرية
@@ -1944,16 +2178,43 @@ details ul li {
     border-color: #80bdff;
 }
 
-.test-row.result-normal {
-    background-color: rgba(40, 167, 69, 0.05);
+.test-row.result-normal,
+.test-row.table-success {
+    --bs-table-bg: #d1e7dd !important;
+}
+.test-row.result-normal td,
+.test-row.table-success td {
+    background-color: #d1e7dd !important;
+}
+.test-row.result-normal .test-value,
+.test-row.table-success .test-value {
+    border-color: #198754 !important;
 }
 
-.test-row.result-high {
-    background-color: rgba(220, 53, 69, 0.05);
+.test-row.result-high,
+.test-row.table-danger {
+    --bs-table-bg: #f8d7da !important;
+}
+.test-row.result-high td,
+.test-row.table-danger td {
+    background-color: #f8d7da !important;
+}
+.test-row.result-high .test-value,
+.test-row.table-danger .test-value {
+    border-color: #dc3545 !important;
 }
 
-.test-row.result-low {
-    background-color: rgba(255, 193, 7, 0.05);
+.test-row.result-low,
+.test-row.table-warning {
+    --bs-table-bg: #fff3cd !important;
+}
+.test-row.result-low td,
+.test-row.table-warning td {
+    background-color: #fff3cd !important;
+}
+.test-row.result-low .test-value,
+.test-row.table-warning .test-value {
+    border-color: #ffc107 !important;
 }
 
 /* تحسينات للأجهزة المحمولة */

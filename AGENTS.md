@@ -58,6 +58,19 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-21 — منظومة الفحوصات الفرعية Sub-Tests وإصلاح طلبات الاستعلامات)
+
+### Done
+- **إصلاح حقل الضمان في طلبات الاستعلامات (Insurance Type in Requests)**:
+  * إنشاء ميغريشن `2026_09_21_210000_add_insurance_type_to_requests_table.php` لإضافة `insurance_type` لجدول `requests`.
+- **معمارية الفحوصات الفرعية التلقائية (Multi-Parameter / Sub-Tests Architecture)**:
+  * إنشاء موديل [LabTestSubTest.php](file:///c:/wamp64/www/hospital-system/app/Models/LabTestSubTest.php) ومتحكم [LabTestSubTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestSubTestController.php) وإضافة واجهة [sub-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/sub-tests/index.blade.php).
+  * إنشاء ميغريشن `2026_09_21_211500_enhance_lab_results_for_sub_tests.php` لإضافة `sub_test_id` و `parent_test_name` وتعديل نوع `value` إلى نص.
+  * تحديث [LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) و [StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php) لحفظ وتخزين المعايير الفرعية مع المدى المرجعي والوحدة.
+  * تحديث واجهات إدخال نتائج المختبر [lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) و [staff/requests/show-lab.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/show-lab.blade.php) للتوسع التلقائي للفحوصات المركبة (مثل CBC و Lipid Profile) وإظهار المدى والوحدات.
+  * تحديث شاشة الطباعة [staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php) لتجميع المعايير الفرعية بتنسيق مخبري احترافي تحت الفحص الأب.
+  * اجتياز جميع الاختبارات الآلية `php artisan test` (7 passed / 40 assertions) بنجاح.
+
 ## Session log (2026-09-18 — منظومة شاشات الطابور والاستدعاء الذكي للعيادات الاستشارية)
 
 ### Done

@@ -545,7 +545,7 @@
         @else
             <!-- نتائج التحاليل -->
             @php
-                $labResults = \App\Models\LabResult::where('request_id', $request->id)->get();
+                $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
             @endphp
 
             @if($labResults->count() > 0)
@@ -554,8 +554,8 @@
                 <table class="results-table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>اسم الفحص</th>
+                            <th style="width: 50px;">#</th>
+                            <th style="text-align: right; padding-right: 15px;">اسم الفحص / المعيار</th>
                             <th>النتيجة</th>
                             <th>الوحدة</th>
                             <th>المدى الطبيعي</th>
@@ -563,19 +563,39 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($labResults as $index => $result)
-                        <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td><strong>{{ $result->test_name }}</strong></td>
-                            <td>{{ $result->value }}</td>
-                            <td>{{ $result->unit }}</td>
-                            <td>{{ $result->reference_range }}</td>
-                            <td>
-                                <span class="status-{{ $result->status }}">
-                                    {{ $result->status == 'normal' ? '✓ طبيعي' : ($result->status == 'high' ? '↑ مرتفع' : '↓ منخفض') }}
-                                </span>
-                            </td>
-                        </tr>
+                        @php 
+                            $currentParent = null; 
+                            $counter = 1;
+                        @endphp
+                        @foreach($labResults as $result)
+                            @if($result->parent_test_name && $result->parent_test_name !== $currentParent)
+                                @php $currentParent = $result->parent_test_name; @endphp
+                                <tr style="background: #e8f4f6; font-weight: bold; text-align: right;">
+                                    <td colspan="6" style="text-align: right; padding: 8px 15px; color: #1e7e8f; border-top: 2px solid #1e7e8f;">
+                                        🔬 <strong>{{ $currentParent }}</strong>
+                                    </td>
+                                </tr>
+                            @elseif(!$result->parent_test_name)
+                                @php $currentParent = null; @endphp
+                            @endif
+
+                            <tr>
+                                <td>{{ $counter++ }}</td>
+                                <td style="text-align: right; padding-right: {{ $result->parent_test_name ? '30px' : '15px' }};">
+                                    @if($result->parent_test_name)
+                                        <span style="color: #666; margin-left: 5px;">↳</span>
+                                    @endif
+                                    <strong>{{ $result->test_name }}</strong>
+                                </td>
+                                <td><strong style="font-size: 15px;">{{ $result->value }}</strong></td>
+                                <td>{{ $result->unit ?: '—' }}</td>
+                                <td>{{ $result->reference_range ?: '—' }}</td>
+                                <td>
+                                    <span class="status-{{ $result->status }}">
+                                        {{ $result->status == 'normal' ? '✓ طبيعي' : ($result->status == 'high' ? '↑ مرتفع' : ($result->status == 'low' ? '↓ منخفض' : ($result->status ?: '—'))) }}
+                                    </span>
+                                </td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>

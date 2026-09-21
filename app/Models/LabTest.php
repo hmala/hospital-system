@@ -93,6 +93,22 @@ class LabTest extends Model
     }
 
     /**
+     * المعايير والفحوصات الفرعية للتحليل
+     */
+    public function subTests()
+    {
+        return $this->hasMany(LabTestSubTest::class, 'lab_test_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * هل التحليل يحتوي على فحوصات فرعية؟
+     */
+    public function hasSubTests(): bool
+    {
+        return $this->subTests()->exists();
+    }
+
+    /**
      * جلب المرجع المناسب لمريض
      */
     public function referenceForPatient(string $gender, int $age): ?LabTestReference

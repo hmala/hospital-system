@@ -180,19 +180,38 @@ class LabStaffController extends Controller
             $packageId = $details['package_id'] ?? null;
             $savedResults = 0;
 
-            foreach ($httpRequest->test_results as $testName => $data) {
+            foreach ($httpRequest->test_results as $key => $data) {
                 if (!empty($data['value'])) {
+                    $testName = $data['test_name'] ?? $key;
+                    $parentTestName = $data['parent_test_name'] ?? null;
+                    $subTestId = $data['sub_test_id'] ?? null;
+                    $labTestId = $data['lab_test_id'] ?? null;
+                    $unit = $data['unit'] ?? '';
+                    $refRange = $data['reference_range'] ?? ((new LabResult)->getReferenceRange($testName));
+                    $status = $data['status'] ?? ((new LabResult)->determineStatus($data['value'], $testName));
+
+                    if (!$labTestId && $parentTestName) {
+                        $parentTest = \App\Models\LabTest::where('name', $parentTestName)->first();
+                        $labTestId = $parentTest?->id;
+                    } elseif (!$labTestId) {
+                        $directTest = \App\Models\LabTest::where('name', $testName)->first();
+                        $labTestId = $directTest?->id;
+                    }
+
                     LabResult::create([
                         'visit_id' => $request->visit_id,
                         'request_id' => $request->id,
                         'test_name' => $testName,
+                        'parent_test_name' => $parentTestName,
                         'value' => $data['value'],
-                        'unit' => $data['unit'] ?? '',
-                        'status' => (new LabResult)->determineStatus($data['value'], $testName),
-                        'reference_range' => (new LabResult)->getReferenceRange($testName),
+                        'unit' => $unit,
+                        'status' => $status,
+                        'reference_range' => $refRange,
                         'notes' => $data['notes'] ?? null,
                         'source_type' => $sourceType,
                         'package_id' => $packageId,
+                        'lab_test_id' => $labTestId,
+                        'sub_test_id' => $subTestId,
                     ]);
                     $savedResults++;
                 }

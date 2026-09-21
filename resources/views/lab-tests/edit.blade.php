@@ -10,6 +10,13 @@
                     تعديل الفحص المختبري
                 </h2>
                 <div>
+                    <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}" class="btn btn-success me-2">
+                        <i class="fas fa-list-check me-1"></i>
+                        الفحوصات الفرعية
+                        @if($labTest->subTests()->count() > 0)
+                            <span class="badge bg-light text-success ms-1">{{ $labTest->subTests()->count() }}</span>
+                        @endif
+                    </a>
                     <a href="{{ route('lab-tests.references.index', $labTest) }}" class="btn btn-primary me-2">
                         <i class="fas fa-ruler-combined me-1"></i>
                         القيم المرجعية
