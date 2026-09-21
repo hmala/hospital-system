@@ -639,6 +639,43 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    // إدارة الصيدلية (Pharmacy Management)
+    Route::prefix('pharmacy')->name('pharmacy.')->middleware(['permission:view pharmacy'])->group(function () {
+        // إدارة الخدمات الصيدلانية غير المخزنية
+        Route::resource('services', \App\Http\Controllers\Pharmacy\PharmacyServiceController::class)->except(['create', 'show', 'edit']);
+        Route::post('services/{service}/toggle', [\App\Http\Controllers\Pharmacy\PharmacyServiceController::class, 'toggleStatus'])->name('services.toggle');
+
+        // استيراد الأدوية ونموذج الإكسل
+        Route::get('medicines/import', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'showImport'])->name('medicines.import');
+        Route::post('medicines/import', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'import'])->name('medicines.import.process');
+        Route::get('medicines/template', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'downloadTemplate'])->name('medicines.template');
+
+        // ربط وإلغاء ربط البدائل الدوائية
+        Route::post('medicines/{medicine}/alternatives', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'addAlternative'])->name('medicines.alternatives.add');
+        Route::delete('medicines/{medicine}/alternatives/{alternative}', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'removeAlternative'])->name('medicines.alternatives.remove');
+
+        // البحث السريع عبر الباركود والاسم
+        Route::get('medicines/search', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'searchApi'])->name('medicines.search');
+
+        // إدارة الأدوية والمستلزمات
+        Route::resource('medicines', \App\Http\Controllers\Pharmacy\MedicineController::class);
+
+        // إدارة الشحنات وتنبيهات الصلاحية (FEFO Dashboard)
+        Route::post('batches/{batch}/status', [\App\Http\Controllers\Pharmacy\MedicineBatchController::class, 'changeStatus'])->name('batches.status');
+        Route::resource('batches', \App\Http\Controllers\Pharmacy\MedicineBatchController::class);
+
+        // نقطة البيع السريعة والصرف (POS)
+        Route::get('pos', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'index'])->name('pos.index');
+        Route::get('pos/search', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'search'])->name('pos.search');
+        Route::post('pos/store', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'store'])->name('pos.store');
+        Route::get('pos/held', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'heldBills'])->name('pos.held');
+        Route::get('pos/held/{sale}/resume', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'resumeHeldBill'])->name('pos.held.resume');
+        Route::delete('pos/held/{sale}', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'deleteHeldBill'])->name('pos.held.delete');
+        Route::get('pos/sales/{sale}/print', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'printReceipt'])->name('pos.sales.print');
+        Route::get('pos/sales', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'history'])->name('pos.sales.history');
+        Route::get('pos/sales/{sale}', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'showSale'])->name('pos.sales.show');
+    });
+
     // مسارات التحكم بالطابور والاستدعاء (تحتاج تسجيل دخول)
     Route::prefix('queue')->name('queue.')->group(function () {
         Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('doctor.call-next');

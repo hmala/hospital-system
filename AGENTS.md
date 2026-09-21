@@ -59,6 +59,37 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git صارمة)**: فرع `main` لا يتم الرفع (`git push`) عليه نهائياً، بل يُستخدم فقط لاستلام وسحب التحديثات (`pull / fetch`). كل تطوير أو ميزة تُدار وتُرفع حصراً عبر فرعها الخاص (مثل فرع `hr`).
 
+## Session log (2026-09-20 — منظومة إدارة الصيدلية ونقطة البيع POS وتتبع الصلاحيات FEFO: الخطوات 1 إلى 4)
+
+### Done
+- **الخطوة 1: قاعدة البيانات والموديلات (Database Schema & Eloquent Models)**:
+  * إنشاء ميغريشن `2026_09_20_230000_create_pharmacy_system_tables.php` المتضمن 6 جداول:
+    - `medicines`: دليل الأصناف مع دعم الرمز الوطني الرسمي (`national_code` e.g. `01-C00-038`)، الباركود المزدوج للعلبة والشريط، الوحدات المتعددة (`main_unit` و `sub_unit`) مع معامل التحويل الديناميكي (`sub_units_count`)، التسعير المرن الثلاثي (نقدي، ضمان صحي، وزارة الداخلية)، والاشتراطات الرقابية (وصفة إجبارية، أدوية رقابية).
+    - `medicine_alternatives`: جدول التكافؤ الحيوي وربط البدائل الدوائية العلمية والتجارية.
+    - `pharmacy_services`: جدول الخدمات الصيدلانية غير المخزنية (حقن، قياس ضغط، سكر، غيار).
+    - `medicine_batches`: جدول تتبع الشحنات والتشغيلات بنظام FEFO (الأقرب انتهاءً أولاً).
+    - `pharmacy_sales`: فواتير المبيعات مع فصل حصة المريض عن التأمين وتعليق الفواتير (Hold).
+    - `pharmacy_sale_items`: بنود الفاتورة وتفاصيل الوحدات والجرعات.
+  * إنشاء موديلات Eloquent: [Medicine.php](file:///e:/hospital-system/app/Models/Medicine.php)، [MedicineAlternative.php](file:///e:/hospital-system/app/Models/MedicineAlternative.php)، [MedicineBatch.php](file:///e:/hospital-system/app/Models/MedicineBatch.php)، [PharmacyService.php](file:///e:/hospital-system/app/Models/PharmacyService.php)، [PharmacySale.php](file:///e:/hospital-system/app/Models/PharmacySale.php)، [PharmacySaleItem.php](file:///e:/hospital-system/app/Models/PharmacySaleItem.php).
+  * خوارزمية الخصم الذكي `MedicineBatch::deductStock` مع فتح العلب المغلقة تلقائياً عند بيع الأشرطة المفردة.
+- **الخطوة 2: لوحة التحكم ودليل الأدوية والخدمات والاستيراد (Catalog & Services & Excel Import)**:
+  * الصلاحيات: تحديث `RolesAndPermissionsSeeder.php` بإضافة صلاحيات الصيدلية (`view pharmacy`, `manage medicines`, `create medicines`, `edit medicines`, `delete medicines`, `manage pharmacy services`, `import medicines`, `dispense medications`, `process pharmacy requests`) ومنحها لـ `pharmacy_staff` و `admin`.
+  * المتحكمات: [MedicineController.php](file:///e:/hospital-system/app/Http/Controllers/Pharmacy/MedicineController.php) و [PharmacyServiceController.php](file:///e:/hospital-system/app/Http/Controllers/Pharmacy/PharmacyServiceController.php).
+  * الواجهات: [index.blade.php](file:///e:/hospital-system/resources/views/pharmacy/medicines/index.blade.php)، [create.blade.php](file:///e:/hospital-system/resources/views/pharmacy/medicines/create.blade.php)، [edit.blade.php](file:///e:/hospital-system/resources/views/pharmacy/medicines/edit.blade.php)، [show.blade.php](file:///e:/hospital-system/resources/views/pharmacy/medicines/show.blade.php)، [import.blade.php](file:///e:/hospital-system/resources/views/pharmacy/medicines/import.blade.php)، و [services/index.blade.php](file:///e:/hospital-system/resources/views/pharmacy/services/index.blade.php).
+- **الخطوة 3: إدارة الشحنات وتنبيهات الصلاحية (FEFO Dashboard)**:
+  * المتحكم: [MedicineBatchController.php](file:///e:/hospital-system/app/Http/Controllers/Pharmacy/MedicineBatchController.php) لتتبع الوجبات، احتساب قيمة المخزون المعرض للتلف (< 90 يوم)، توريد شحنات جديدة، تعديل الأرصدة، والحجر الاحترازي `quarantined`.
+  * الواجهات: [batches/index.blade.php](file:///e:/hospital-system/resources/views/pharmacy/batches/index.blade.php)، [batches/create.blade.php](file:///e:/hospital-system/resources/views/pharmacy/batches/create.blade.php)، [batches/edit.blade.php](file:///e:/hospital-system/resources/views/pharmacy/batches/edit.blade.php).
+- **الخطوة 4: واجهة نقطة البيع السريعة والصرف (Dynamic POS)**:
+  * المتحكم: [PharmacyPosController.php](file:///e:/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php) مع بحث فوري بالباركود والاسم، التبديل بين بيع العلبة والشريط، اقتراح البدائل بضغطة زر، احتساب استقطاع الضمان (الفئات A إلى I)، تعليق واستئناف الفواتير (Hold & Resume)، ودعم مساري الدفع (كاشير صيدلية أو كاشير مركزي).
+  * الواجهات: [pos/index.blade.php](file:///e:/hospital-system/resources/views/pharmacy/pos/index.blade.php)، [pos/receipt.blade.php](file:///e:/hospital-system/resources/views/pharmacy/pos/receipt.blade.php) (وصل حراري 80mm)، [pos/history.blade.php](file:///e:/hospital-system/resources/views/pharmacy/pos/history.blade.php)، [pos/show.blade.php](file:///e:/hospital-system/resources/views/pharmacy/pos/show.blade.php).
+- **تحسينات الواجهة العامة (UI Fixes)**:
+  * تصحيح انطواء القائمة الجانبية بإغلاق وسم `</div>` الخاص بكتلة الموارد البشرية في [resources/views/layouts/app.blade.php](file:///e:/hospital-system/resources/views/layouts/app.blade.php).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء [PharmacyCoreTest.php](file:///e:/hospital-system/tests/Unit/PharmacyCoreTest.php)، [PharmacyCatalogTest.php](file:///e:/hospital-system/tests/Feature/PharmacyCatalogTest.php)، [PharmacyBatchTest.php](file:///e:/hospital-system/tests/Feature/PharmacyBatchTest.php)، و [PharmacyPosTest.php](file:///e:/hospital-system/tests/Feature/PharmacyPosTest.php) واجتياز جميع اختبارات النظام: **32 passed (144 assertions)** بنجاح 100%.
+
+### Next Step
+- **الخطوة 5**: الربط مع عيادات الاستشارية (استيراد وصفات المرضى مباشرة من شاشات الأطباء إلى نقطة البيع) والربط مع الكاشير المركزي لتحصيل المبالغ المحولة.
+
 ## Session log (2026-09-16 — نظام إدارة الموارد البشرية HR: سجل وإضبارة الموظفين والكوادر الطبية)
 
 ### Done

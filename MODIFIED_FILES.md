@@ -107,4 +107,97 @@ php artisan db:seed --class=HealthInsuranceCategorySeeder --force
 # 3. مسح وتحديث كاش النظام والواجهات
 php artisan optimize:clear
 ```
+
+---
+
+# 💊 الدليل الشامل لملفات منظومة الصيدلية ونقطة البيع (Pharmacy POS & FEFO System)
+
+> **هذا القسم يحتوي على جميع الملفات التي تم إنشاؤها وتعديلها لتنفيذ منظومة الصيدلية (الخطوات 1 إلى 4): دليل الأدوية، الخدمات، إدارة الوجبات والصلاحيات FEFO، ونقطة البيع السريعة POS.**
+
+## 📂 1. ملفات المعمارية والموديلات (Models & Traits)
+تُرفع إلى المسار `app/`:
+
+| الملف | المسار | الوصف |
+|---|---|---|
+| `Medicine.php` | `app/Models/Medicine.php` | موديل الدواء، الباركود، الوحدات (باكيت/شريط)، التسعير، والبدائل |
+| `MedicineAlternative.php` | `app/Models/MedicineAlternative.php` | موديل ربط الأدوية البديلة ثنائية الاتجاه |
+| `MedicineBatch.php` | `app/Models/MedicineBatch.php` | موديل وجبات الأدوية، تاريخ الصلاحية، العزل، وخوارزمية فك الباكيتات |
+| `PharmacyService.php` | `app/Models/PharmacyService.php` | موديل الخدمات الصيدلانية السريرية |
+| `PharmacySale.php` | `app/Models/PharmacySale.php` | موديل فواتير مبيعات الصيدلية النقدية والضمان والتعليق |
+| `PharmacySaleItem.php` | `app/Models/PharmacySaleItem.php` | موديل تفاصيل بنود الفاتورة وحساب الوحدات والربح |
+| `HasInsurancePricing.php` | `app/Traits/HasInsurancePricing.php` | دعم مسميات الضمان الصحي ووزارة الداخلية للأدوية |
+
+---
+
+## 🎮 2. ملفات المتحكمات (Controllers)
+تُرفع إلى المسار `app/Http/Controllers/Pharmacy/`:
+
+| الملف | المسار | الوصف |
+|---|---|---|
+| `MedicineController.php` | `app/Http/Controllers/Pharmacy/MedicineController.php` | إدارة دليل الأدوية، البحث، البدائل، واستيراد Excel/CSV |
+| `PharmacyServiceController.php` | `app/Http/Controllers/Pharmacy/PharmacyServiceController.php` | إدارة الخدمات الصيدلانية وتفعيلها |
+| `MedicineBatchController.php` | `app/Http/Controllers/Pharmacy/MedicineBatchController.php` | إدارة وجبات الأدوية، ترتيب FEFO، تتبع المخزون المعرض للتلف، والعزل |
+| `PharmacyPosController.php` | `app/Http/Controllers/Pharmacy/PharmacyPosController.php` | نقطة البيع السريعة POS، الفحص بالباركود، التبديل الذكي، تعليق الفواتير، وطباعة الوصولات |
+
+---
+
+## 🖥️ 3. ملفات الواجهات (Blade Views)
+تُرفع إلى المسار `resources/views/pharmacy/`:
+
+### أ. دليل الأدوية والخدمات:
+- `resources/views/pharmacy/medicines/index.blade.php` (قائمة الأدوية والبحث السريع)
+- `resources/views/pharmacy/medicines/create.blade.php` (إضافة دواء مع البدائل والتسعير)
+- `resources/views/pharmacy/medicines/edit.blade.php` (تعديل بيانات الدواء والبدائل)
+- `resources/views/pharmacy/medicines/show.blade.php` (بطاقة الدواء الشاملة وسجل الوجبات)
+- `resources/views/pharmacy/medicines/import.blade.php` (استيراد الأدوية عبر ملف Excel/CSV)
+- `resources/views/pharmacy/services/index.blade.php` (إدارة الخدمات الصيدلانية السريرية)
+
+### ب. وجبات الأدوية والصلاحيات FEFO:
+- `resources/views/pharmacy/batches/index.blade.php` (لوحة متابعة الصلاحيات والوجبات وإحصائيات التلف)
+- `resources/views/pharmacy/batches/create.blade.php` (إدخال وجبة دواء جديدة وتاريخ النفاذ)
+- `resources/views/pharmacy/batches/edit.blade.php` (تعديل الوجبة أو عزلها / الحجر الصحي)
+
+### جـ. نقطة البيع السريعة (POS) والوصولات:
+- `resources/views/pharmacy/pos/index.blade.php` (شاشة الكاشير السريعة للبيع والاختصارات والتعليق والبدائل)
+- `resources/views/pharmacy/pos/receipt.blade.php` (وصل الطباعة الحراري 80mm مع QR Code)
+- `resources/views/pharmacy/pos/history.blade.php` (سجل مبيعات الصيدلية والفواتير المعلقة)
+- `resources/views/pharmacy/pos/show.blade.php` (عرض تفاصيل الفاتورة ومراجعتها)
+
+### د. القالب الرئيسي:
+- `resources/views/layouts/app.blade.php` (روابط الصيدلية في القائمة الجانبية وإصلاح تداخل القوائم)
+
+---
+
+## 🗄️ 4. ملفات قاعدة البيانات والصلاحيات (Migrations & Seeders)
+- `database/migrations/2026_09_20_230000_create_pharmacy_system_tables.php`
+- `database/seeders/RolesAndPermissionsSeeder.php`
+
+---
+
+## 🛣️ 5. ملفات التوجيه (Routes)
+- `routes/web.php` (مسارات الصيدلية تحت البادئة `/pharmacy`)
+
+---
+
+## 🧪 6. الاختبارات الآلية (Automated Tests)
+- `tests/Unit/PharmacyCoreTest.php`
+- `tests/Feature/PharmacyCatalogTest.php`
+- `tests/Feature/PharmacyBatchTest.php`
+- `tests/Feature/PharmacyPosTest.php`
+
+---
+
+## ⚙️ 7. الأوامر المطلوب تنفيذها على السيرفر لتفعيل الصيدلية
+
+```bash
+# 1. تنفيذ هجرات جداول الصيدلية
+php artisan migrate --force
+
+# 2. تحديث صلاحيات وأدوار الصيدلية
+php artisan db:seed --class=RolesAndPermissionsSeeder --force
+php artisan permission:cache-reset
+
+# 3. مسح وتحديث كاش النظام
+php artisan optimize:clear
 ```
+

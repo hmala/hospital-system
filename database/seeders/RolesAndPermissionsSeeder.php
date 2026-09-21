@@ -125,6 +125,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // صلاحيات الصيدلية
             'view pharmacy',
+            'manage medicines',
+            'create medicines',
+            'edit medicines',
+            'delete medicines',
+            'manage pharmacy services',
+            'import medicines',
+            'dispense medications',
             'process pharmacy requests',
 
             // صلاحيات المخزن والمشتريات
@@ -387,6 +394,13 @@ class RolesAndPermissionsSeeder extends Seeder
         $pharmacyStaffRole->givePermissionTo([
             'view patients',
             'view pharmacy',
+            'manage medicines',
+            'create medicines',
+            'edit medicines',
+            'delete medicines',
+            'manage pharmacy services',
+            'import medicines',
+            'dispense medications',
             'process pharmacy requests',
         ]);
 

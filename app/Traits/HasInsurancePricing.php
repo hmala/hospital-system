@@ -38,7 +38,7 @@ trait HasInsurancePricing
         $regularPrice  = $this->getRegularPrice();
 
         // 1. حالة ضمان وزارة الداخلية (MOI)
-        if ($insuranceType === 'moi') {
+        if (in_array($insuranceType, ['moi', 'interior_ministry'])) {
             $isCovered = (bool) ($this->is_moi_active ?? true);
 
             if ($isCovered) {
@@ -64,7 +64,7 @@ trait HasInsurancePricing
         }
 
         // 2. حالة هيئة الضمان الصحي (Health Insurance - HI)
-        if ($insuranceType === 'hi') {
+        if (in_array($insuranceType, ['hi', 'health_insurance'])) {
             $isCovered = (bool) ($this->is_hi_active ?? true);
 
             if ($isCovered) {
