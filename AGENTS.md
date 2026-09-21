@@ -58,18 +58,27 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
-## Session log (2026-09-21 — منظومة الفحوصات الفرعية Sub-Tests وإصلاح طلبات الاستعلامات)
+## Session log (2026-09-21 — منظومة الفحوصات الفرعية Sub-Tests وإصلاح طلبات الاستعلامات ومزامنة هوستنجر)
 
 ### Done
 - **إصلاح حقل الضمان في طلبات الاستعلامات (Insurance Type in Requests)**:
   * إنشاء ميغريشن `2026_09_21_210000_add_insurance_type_to_requests_table.php` لإضافة `insurance_type` لجدول `requests`.
 - **معمارية الفحوصات الفرعية التلقائية (Multi-Parameter / Sub-Tests Architecture)**:
-  * إنشاء موديل [LabTestSubTest.php](file:///c:/wamp64/www/hospital-system/app/Models/LabTestSubTest.php) ومتحكم [LabTestSubTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestSubTestController.php) وإضافة واجهة [sub-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/sub-tests/index.blade.php).
+  * إنشاء موديل [LabTestSubTest.php](file:///c:/wamp64/www/hospital-system/app/Models/LabTestSubTest.php) ومتحكم [LabTestSubTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestSubTestController.php).
+  * توحيد واجهة [sub-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/sub-tests/index.blade.php) لتطابق 100% تصميم واجهة القيم المرجعية [references.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/references.blade.php) بنظام التقسيم المزدوج (Two-Column Layout) ونموذج التعديل الجانبي الفوري بدون نوافذ منبثقة (Modals).
   * إنشاء ميغريشن `2026_09_21_211500_enhance_lab_results_for_sub_tests.php` لإضافة `sub_test_id` و `parent_test_name` وتعديل نوع `value` إلى نص.
-  * تحديث [LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) و [StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php) لحفظ وتخزين المعايير الفرعية مع المدى المرجعي والوحدة.
-  * تحديث واجهات إدخال نتائج المختبر [lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) و [staff/requests/show-lab.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/show-lab.blade.php) للتوسع التلقائي للفحوصات المركبة (مثل CBC و Lipid Profile) وإظهار المدى والوحدات.
+  * تحديث [LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) و [StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php) لحفظ وتخزين المعايير الفرعية مع المدى المرجعي والوحدة في جدول `lab_results` وربطها بالزيارة والمريض مباشرة.
+  * تحديث واجهات إدخال نتائج المختبر [lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) و [staff/requests/show-lab.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/show-lab.blade.php) لتلوين كامل خلايا الصف فورياً (`table-success`, `table-danger`, `table-warning`) مع إطارات الحقول وعداد النتائج الحي.
   * تحديث شاشة الطباعة [staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php) لتجميع المعايير الفرعية بتنسيق مخبري احترافي تحت الفحص الأب.
   * اجتياز جميع الاختبارات الآلية `php artisan test` (7 passed / 40 assertions) بنجاح.
+- **المزامنة مع GitHub وسيرفر هوستنجر (Hostinger SSH Deployment)**:
+  * رفع التحديثات إلى المستودع الرسمي `https://github.com/hmala/hospital-system.git` على الفرع `main`.
+  * مزامنة وتحديث سيرفر هوستنجر بنجاح إلى أحدث Commit (`6e171f5`) عبر `git reset --hard origin/main`.
+  * تحديث شجرة المعرفة البرمجية Graphify (2,841 عقدة و 4,118 علاقة).
+
+### Next Steps (لحاسبة العمل غداً)
+1. تشغيل `git pull origin main` على حاسبة العمل.
+2. تشغيل `php artisan migrate --force` و `php artisan db:seed --class=HealthInsuranceCategorySeeder --force` على سيرفر الأونلاين (Hostinger) لتفعيل الجداول وفئات الضمان.
 
 ## Session log (2026-09-18 — منظومة شاشات الطابور والاستدعاء الذكي للعيادات الاستشارية)
 
