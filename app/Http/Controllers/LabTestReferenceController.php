@@ -68,8 +68,9 @@ class LabTestReferenceController extends Controller
 
     private function authorizeAdmin(): void
     {
-        if (!auth()->user()->hasAnyRole(['admin', 'lab_staff'])) {
-            abort(403);
+        $user = auth()->user();
+        if (!$user || (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole('lab_staff'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى إدارة القيم المرجعية');
         }
     }
 }

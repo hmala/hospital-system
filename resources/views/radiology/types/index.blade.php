@@ -7,9 +7,11 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="fas fa-cogs me-2"></i>إدارة أنواع الإشعة</h2>
+                @if(Auth::user()->hasRole('admin') || Auth::user()->can('manage radiology types') || Auth::user()->can('create radiology types') || Auth::user()->hasRole('radiology_staff'))
                 <a href="{{ route('radiology.types.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>إضافة نوع جديد
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -232,6 +234,7 @@
                                             <a href="{{ route('radiology.types.show', $type) }}" class="btn btn-info" title="عرض">
                                                 <i class="fas fa-eye"></i>
                                             </a>
+                                            @if(Auth::user()->hasRole('admin') || Auth::user()->can('manage radiology types') || Auth::user()->can('edit radiology types') || Auth::user()->hasRole('radiology_staff'))
                                             <a href="{{ route('radiology.types.edit', $type) }}" class="btn btn-warning" title="تعديل">
                                                 <i class="fas fa-edit"></i>
                                             </a>
@@ -241,7 +244,8 @@
                                                     <i class="fas {{ $type->is_active ? 'fa-ban' : 'fa-check' }}"></i>
                                                 </button>
                                             </form>
-                                            @if($type->requests()->count() == 0)
+                                            @endif
+                                            @if((Auth::user()->hasRole('admin') || Auth::user()->can('manage radiology types') || Auth::user()->can('delete radiology types')) && $type->requests()->count() == 0)
                                             <form action="{{ route('radiology.types.destroy', $type) }}" method="POST" class="d-inline">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="btn btn-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف هذا النوع؟')">

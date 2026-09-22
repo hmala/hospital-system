@@ -268,38 +268,29 @@
     </div>
     @endif
 
-    <!-- Doctors Grid -->
+    <!-- Unified Doctors Table -->
     <div class="row g-4">
-        @forelse($groupedDoctors as $specialization => $doctors)
-            <!-- Specialization Header -->
-            <div class="col-12">
-                <div class="text-center mb-4">
-                    <h3 class="text-primary fw-bold">
-                        <i class="fas fa-stethoscope me-2"></i>
-                        {{ $specialization }}
-                        <span class="badge bg-primary ms-2 fs-6">{{ count($doctors) }}</span>
-                    </h3>
-                </div>
-            </div>
-
-            <!-- Doctors Table -->
-            <div class="col-12">
+        <div class="col-12">
+            @if($consultantDoctors->count() > 0)
                 <div class="table-responsive shadow-sm rounded-3 bg-white">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr class="text-muted small text-uppercase">
+                                <th style="width: 4rem;">#</th>
                                 <th>الطبيب</th>
-                                <th style="width: 8rem;">الحالة</th>
-                                <th style="width: 10rem;">شاشة الانتظار</th>
-                                <th style="width: 7rem;">تعديل</th>
+                                <th>التخصص / القسم</th>
+                                <th style="width: 9rem;" class="text-center">الحالة</th>
+                                <th style="width: 10rem;" class="text-center">شاشة الانتظار</th>
+                                <th style="width: 7rem;" class="text-center">تعديل</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($doctors as $doctor)
+                            @foreach($consultantDoctors as $index => $doctor)
                                 <tr>
+                                    <td class="text-muted small fw-bold">{{ $index + 1 }}</td>
                                     <td>
                                         <div class="d-flex align-items-center gap-3">
-                                            <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                            <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0;">
                                                 {{ mb_substr($doctor->user->name, 0, 1) }}
                                             </span>
                                             <div>
@@ -309,20 +300,22 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="availability-text fw-semibold {{ $doctor->is_available_today ? 'text-success' : 'text-danger' }}">
+                                        <span class="badge bg-light text-primary border px-2 py-1 fs-6">
+                                            {{ $doctor->specialization ?: ($doctor->department->name ?? 'استشاري') }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {{ $doctor->is_available_today ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2">
                                             {{ $doctor->is_available_today ? 'متاح' : 'غير متاح' }}
                                         </span>
-                                        <div class="small text-muted mt-1">
-                                            أيام العمل: {{ is_array($doctor->working_days) && count($doctor->working_days) ? implode('، ', $doctor->working_days) : 'لم يتم التحديد' }}
-                                        </div>
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="فتح شاشة الانتظار المخصصة للتلفاز">
                                             <i class="fas fa-tv me-1"></i>
                                             شاشة العيادة
                                         </a>
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         <form method="POST" action="{{ route('consultant-availability.update', $doctor->id) }}" style="display: inline;">
                                             @csrf
                                             @method('PATCH')
@@ -338,16 +331,14 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-        @empty
-            <div class="col-12">
-                <div class="text-center py-5">
+            @else
+                <div class="text-center py-5 bg-white rounded-3 shadow-sm">
                     <i class="fas fa-user-md fa-4x text-muted mb-4"></i>
                     <h4 class="text-muted mb-3">لا توجد أطباء استشاريين</h4>
-                    <p class="text-muted">لم يتم العثور على أطباء استشاريين نشطين في النظام</p>
+                    <p class="text-muted">لم يتم العثور على أطباء استشاريين نشطين في النظام لهذا اليوم</p>
                 </div>
-            </div>
-        @endforelse
+            @endif
+        </div>
     </div>
 </div>
 
@@ -496,7 +487,8 @@ function playDeskChime() {
 
 async function playDeskVoice(text) {
     try {
-        const res = await fetch(`/queue/tts?text=${encodeURIComponent(text)}`);
+        const baseUrl = "{{ url('/') }}";
+        const res = await fetch(`${baseUrl}/queue/tts?text=${encodeURIComponent(text)}`);
         if (res.ok) {
             const blob = await res.blob();
             if (blob && blob.size > 500) {
@@ -529,7 +521,8 @@ function callPatient(appointmentId, btnElement) {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري النداء...';
     }
 
-    fetch(`/queue/appointment/${appointmentId}/recall`, {
+    const baseUrl = "{{ url('/') }}";
+    fetch(`${baseUrl}/queue/appointment/${appointmentId}/recall`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -537,7 +530,12 @@ function callPatient(appointmentId, btnElement) {
             'Accept': 'application/json'
         }
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
     .then(async data => {
         if (data.success) {
             // تشغيل الجرس والنداء الصوتي فوراً على جهاز الاستقبال أيضاً

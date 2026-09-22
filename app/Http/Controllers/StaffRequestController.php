@@ -69,8 +69,8 @@ class StaffRequestController extends Controller
             $allowedTypes[] = 'nursing';
         }
 
-        // السماح للموظفين الآخرين برؤية جميع الأنواع بما في ذلك مصرف الدم والتمريض
-        if ($user->hasRole(['receptionist', 'admin', 'doctor'])) {
+        // السماح للموظفين الآخرين والإداريين برؤية جميع الأنواع بما في ذلك مصرف الدم والتمريض
+        if ($user->hasRole('admin') || $user->can('view medical requests') || $user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff'])) {
             $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank', 'nursing'];
         }
 
@@ -506,8 +506,9 @@ class StaffRequestController extends Controller
             $request->refresh();
             $request->load('visit');
 
-            // تحديث حالة الزيارة إلى completed إذا كانت جميع الطلبات مكتملة
-            if ($request->visit) {
+            // تحديث حالة الزيارة إلى completed فقط للزيارات المباشرة للمختبر التي ليس لها طبيب استشاري
+            $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
+            if ($request->visit && !$isDoctorVisit) {
                 $allRequestsCompleted = $request->visit->requests()
                     ->where('id', '!=', $request->id)
                     ->where('status', '!=', 'completed')
@@ -516,7 +517,7 @@ class StaffRequestController extends Controller
                 if ($allRequestsCompleted) {
                     $request->visit->status = 'completed';
                     $request->visit->save();
-                    Log::info('تم تحديث حالة الزيارة إلى completed', [
+                    Log::info('تم تحديث حالة الزيارة المباشرة إلى completed', [
                         'visit_id' => $request->visit->id
                     ]);
                 } else {

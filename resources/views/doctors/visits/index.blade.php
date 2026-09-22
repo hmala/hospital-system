@@ -644,11 +644,12 @@
 @if(auth()->user()->isDoctor() && isset($doctor))
 <script>
     const currentDoctorId = {{ $doctor->id }};
+    const baseUrl = "{{ url('/') }}";
     let currentAppointmentId = null;
 
     async function syncDoctorQueue() {
         try {
-            const res = await fetch(`/queue/doctor/${currentDoctorId}/data`);
+            const res = await fetch(`${baseUrl}/queue/doctor/${currentDoctorId}/data`);
             if (!res.ok) return;
             const data = await res.json();
 
@@ -815,7 +816,7 @@
                                                     <i class="fas fa-hourglass-half"></i> بالانتظار
                                                 </button>
                                             `}
-                                            <a href="/doctor/visits/${item.visit_id}" class="action-btn btn-outline-primary" title="عرض ملف الزيارة">
+                                            <a href="{{ url('/doctor/visits') }}/${item.visit_id}" class="action-btn btn-outline-primary" title="عرض ملف الزيارة">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                         </div>
@@ -833,7 +834,7 @@
 
     async function doctorCallResults(visitId) {
         try {
-            const res = await fetch(`/queue/visit/${visitId}/call-results`, {
+            const res = await fetch(`${baseUrl}/queue/visit/${visitId}/call-results`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -857,7 +858,7 @@
 
     async function doctorCallNext() {
         try {
-            const res = await fetch(`/queue/doctor/${currentDoctorId}/call-next`, {
+            const res = await fetch(`${baseUrl}/queue/doctor/${currentDoctorId}/call-next`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -879,7 +880,7 @@
     async function doctorRecall() {
         if (!currentAppointmentId) return;
         try {
-            const res = await fetch(`/queue/appointment/${currentAppointmentId}/recall`, {
+            const res = await fetch(`${baseUrl}/queue/appointment/${currentAppointmentId}/recall`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -899,7 +900,7 @@
     async function doctorStartConsultation() {
         if (!currentAppointmentId) return;
         try {
-            const res = await fetch(`/queue/appointment/${currentAppointmentId}/start-consultation`, {
+            const res = await fetch(`${baseUrl}/queue/appointment/${currentAppointmentId}/start-consultation`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -922,7 +923,7 @@
         if (!currentAppointmentId) return;
         if (!confirm('هل تريد تأخير دور هذا المريض ونقله لآخر الطابور؟')) return;
         try {
-            const res = await fetch(`/queue/appointment/${currentAppointmentId}/skip`, {
+            const res = await fetch(`${baseUrl}/queue/appointment/${currentAppointmentId}/skip`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',

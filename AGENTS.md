@@ -58,6 +58,29 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 
+## Session log (2026-09-22 — معالجة اختفاء أزرار كشف الطبيب الاستشاري عند عودة نتائج الفحوصات وتوحيد واجهة توفر الأطباء)
+
+### Done
+- **معالجة اختفاء أزرار كشف الطبيب (Doctor Consultation Buttons & Auto-Complete Fix)**:
+  * منع التحديث التلقائي لحالة زيارات الاستشارية إلى `completed` في `app/Models/Request.php` و `LabStaffController.php` و `RadiologyStaffController.php` و `StaffRequestController.php` و `RadiologyController.php` عند اكتمال نتائج المختبر أو الأشعة؛ حيث تم قصر الإكمال التلقائي حصراً على الزيارات المباشرة للمختبر/الأشعة التي ليس لها طبيب استشاري، وترك إغلاق الزيارة بيد الطبيب حصراً.
+  * تحديث واجهة كشف الطبيب [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) بإضافة زر `[ 🔄 إعادة فتح الزيارة للمتابعة ]` وشارة `الزيارة مكتملة`، وإتاحة زر `[ تحويل لحجز عملية ]` أثناء الكشف (`in_progress`) وبعد الإكمال دون قيود.
+  * تحديث `DoctorVisitController::showSurgeryForm` و `markNeedsSurgery` لقبول التحويل للعمليات أثناء الكشف وإكمال الزيارة والموعد تلقائياً عند التحويل.
+  * تصحيح حالة الزيارة الحالية 161 وإعادتها فورياً إلى `in_progress`.
+  * استبعاد الزيارات المكتملة (`completed`) والملغاة تلقائياً من جدول «مراجعو الفحوصات الطبية (الأشعة والمختبر)» في [DoctorQueueController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorQueueController.php) فور قيام الطبيب بإنهاء الزيارة.
+- **واجهة طلبات المختبر**:
+  * إزالة زر «زيارة مختبرية مباشرة» من شاشة طلبات المختبر [lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php).
+  * إضافة ميزة البحث المباشر باسم المريض، رقم الهاتف، الطبيب، أو رقم الطلب في [LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) و [lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php).
+- **ربط تحويلات العمليات من العيادات الاستشارية بالاستعلامات (Inquiry Surgery Referrals)**:
+  * تحديث [InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php) و [inquiry/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/index.blade.php) لعرض جدول خاص بـ «مرضى العيادات الاستشارية المحولين للعمليات الجراحية» ببيانات المريض والطبيب وملاحظات العملية وزر مباشر لحجز العملية.
+- **تبسيط واجهة حجز العمليات الجراحية (Surgery Booking Simplification)**:
+  * إزالة حقول أطباء التخدير (المخدر الأول والثاني) من واجهة حجز العملية [surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php)؛ حيث أن تفاصيل وأطباء التخدير يتم تحديدها وتعبئتها حصراً داخل صالة العمليات ومحطة التخدير.
+- **توحيد وتبسيط واجهة توفر الأطباء الاستشاريين**:
+  * توحيد جداول الأطباء في جدول مركزي أنيق وموحد، وحذف عمود أيام العمل وتفعيل البحث والفرز في [consultant-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/index.blade.php).
+  * تصحيح مسارات الاستدعاء المباشر على خادم هوستنجر الأونلاين.
+
+### Next Steps
+1. مراجعة كشف الزيارة 161 من قبل الطبيب والتأكد من إمكانية إنهاء الزيارة أو التحويل للعملية.
+
 ## Session log (2026-09-21 — منظومة الفحوصات الفرعية Sub-Tests وإصلاح طلبات الاستعلامات ومزامنة هوستنجر)
 
 ### Done
@@ -103,6 +126,19 @@ Consult these files before making changes or proposing fixes:
   * حماية برمجية في `DoctorQueueController::callForResults` تمنع استدعاء المريض للفحوصات غير المكتملة.
   * تحويل واجهة الطبيب [doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php) إلى نظام 4 تبويبات ذكية (محطة العيادة والمناداة، زيارات اليوم، زيارات معلقة، أرشيف الزيارات).
   * تجميع قوالب Blade وتأكيد اجتياز جميع الاختبارات الآلية `php artisan test` (7 passed / 40 assertions) بنجاح.
+
+## Session log (2026-09-17 — توحيد معمارية الصلاحيات والأدوار وإصلاح 403 وأزرار الواجهات للـ Roles & Permissions)
+
+### Done
+- **توحيد معمارية الصلاحيات والأدوار (Roles & Permissions Architecture Standardization)**:
+  * قصر التخطي الشامل في `Gate::before` بـ [AppServiceProvider.php](file:///c:/wamp64/www/hospital-system/app/Providers/AppServiceProvider.php) على مدير النظام الرئيسي المطلق `admin` فقط، وإلزام كافة الأدوار الأخرى (بما فيها `admin-hsop`) بالصلاحيات الدقيقة المحددة لها عبر مصفوفة الصلاحيات.
+  * تحديث وتوحيد فحوصات الصلاحيات `$user->can(...)` في كافة المتحكمات الرئيسية:
+    - المختبر والأشعة: [LabTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestController.php), [LabTestReferenceController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestReferenceController.php), [RadiologyTypeController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyTypeController.php), [StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php).
+    - المرضى والمواعيد والزيارات: [PatientController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/PatientController.php), [AppointmentController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AppointmentController.php), [VisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/VisitController.php).
+    - العمليات الجراحية والطوارئ: [SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php).
+    - الكاشير والمدفوعات: [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php).
+  * تحديث واجهات Blade لربط أزرار الإضافة والتعديل والحذف والتفعيل بالصلاحيات `@can(...)` بدلاً من التحقق الجامد من الدور فقط.
+  * تحديث [RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php) وربط كافة الصلاحيات المستحدثة والتحقق من اجتياز كامل الاختبارات الآلية (7/7 tests passing).
 
 ## Session log (2026-09-16 — نظام إلغاء العمليات الجراحية والاسترجاع المالي للكاشير للضمان والنقدي)
 

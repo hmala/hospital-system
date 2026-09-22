@@ -264,7 +264,8 @@ class RadiologyStaffController extends Controller
             $request->status = 'completed';
             $request->save();
 
-            if ($request->visit) {
+            $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
+            if ($request->visit && !$isDoctorVisit) {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();
                 if ($pending === 0) {
                     $request->visit->status = 'completed';

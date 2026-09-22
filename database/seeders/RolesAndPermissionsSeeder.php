@@ -41,6 +41,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit appointments',
             'delete appointments',
             'cancel appointments',
+            'change appointment status',
+
             // صلاحيات الكاشير - منفصلة لكل قسم
             'view cashier',
             'view cashier appointments',      // عرض مواعيد الاستشارية
@@ -51,7 +53,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'process emergency payments',     // معالجة دفع الطوارئ
             'view cashier surgeries',         // عرض عمليات الكاشير
             'process surgery payments',       // معالجة دفع العمليات
+            'process refunds',                // معالجة الاسترجاع المالي
+            'process payments',               // معالجة المدفوعات العامة
             'view cashier reports',           // عرض تقارير المدفوعات
+            'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
             
             // صلاحيات الزيارات
@@ -66,6 +71,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'create surgeries',
             'edit surgeries',
             'delete surgeries',
+            'cancel surgeries',
+            'manage surgeries',
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
@@ -83,6 +90,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit radiology',
             'delete radiology',
             'manage radiology types',
+            'create radiology types',
+            'edit radiology types',
+            'delete radiology types',
             'process radiology requests',
             
             // صلاحيات المختبر
@@ -90,8 +100,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'create lab tests',
             'edit lab tests',
             'delete lab tests',
+            'toggle lab tests',
             'process lab requests',
             'manage surgery lab tests',
+            
+            // صلاحيات الطلبات الطبية العامة
+            'view medical requests',
+            'create medical requests',
+            'edit medical requests',
+            'delete medical requests',
             // صلاحيات مجموعات المفضلات للتحاليل
             'view lab test groups',
             'create lab test groups',
@@ -126,17 +143,6 @@ class RolesAndPermissionsSeeder extends Seeder
             // صلاحيات الصيدلية
             'view pharmacy',
             'process pharmacy requests',
-
-            // صلاحيات المخزن والمشتريات
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'delete suppliers',
-            'view purchases',
-            'create purchases',
-            'edit purchases',
-            'delete purchases',
-            'manage inventory',
             
             // صلاحيات الاستعلامات
             'view inquiries',
@@ -144,18 +150,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage inquiries',
             'view patient history',
             'inquiry.create.lab',
-            'inquiry.create.radiology',            'inquiry.create.radiology.general',
+            'inquiry.create.radiology',
+            'inquiry.create.radiology.general',
             'inquiry.create.radiology.ultrasound',
             'inquiry.create.radiology.mri',
-            'inquiry.create.radiology.echo',            'inquiry.create.pharmacy',
+            'inquiry.create.radiology.echo',
+            'inquiry.create.pharmacy',
             'inquiry.create.checkup',
             'inquiry.create.blood_bank',
-            
-            // صلاحيات حجز الأشعة - حسب النوع (للتحكم المرن)
-            'inquiry.create.radiology.general',     // حجز أشعة عامة
-            'inquiry.create.radiology.ultrasound',  // حجز سونار
-            'inquiry.create.radiology.mri',         // حجز رنين مغناطيسي
-            'inquiry.create.radiology.echo',        // حجز إيكو
             
             // صلاحيات توفر الأطباء الاستشاريين
             'manage consultant availability',
@@ -170,7 +172,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'create emergencies',
             'edit emergencies',
             'delete emergencies',
+            'manage emergencies',
             'manage emergency vitals',
+            'manage emergency services',
 
             // صلاحيات عرض المرضى المقيمين
             'view occupancy',

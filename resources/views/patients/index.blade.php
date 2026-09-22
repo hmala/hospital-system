@@ -10,9 +10,11 @@
                     <i class="fas fa-user-injured me-2"></i>
                     إدارة المرضى
                 </h2>
+                @if(Auth::user()->hasRole('admin') || Auth::user()->can('create patients') || Auth::user()->hasRole(['receptionist', 'inquiry_staff']))
                 <a href="{{ route('patients.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>إضافة مريض جديد
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -119,10 +121,13 @@
                                         @endif
                                     </td>
                                     <td>
+                                        @if(Auth::user()->hasRole('admin') || Auth::user()->can('edit patients') || Auth::user()->hasRole(['receptionist', 'inquiry_staff']))
                                         <a href="{{ route('patients.edit', $patient) }}" 
                                            class="btn btn-warning btn-sm rounded-3 me-1" title="تعديل">
                                             <i class="fas fa-user-edit me-1"></i>تعديل
                                         </a>
+                                        @endif
+                                        @if(Auth::user()->hasRole('admin') || Auth::user()->can('delete patients'))
                                         <form action="{{ route('patients.destroy', $patient) }}" 
                                               method="POST" class="d-inline">
                                             @csrf
@@ -132,6 +137,7 @@
                                                 <i class="fas fa-user-times me-1"></i>حذف
                                             </button>
                                         </form>
+                                        @endif
                                     </td>
                                 </tr>
                                 @empty

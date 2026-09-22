@@ -33,7 +33,7 @@ class EmergencyController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى قسم الطوارئ');
         }
 
@@ -137,7 +137,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('create emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء حالات طوارئ');
         }
 
@@ -189,7 +189,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('create emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء حالات طوارئ');
         }
 
@@ -281,7 +281,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بعرض حالات الطوارئ');
         }
 
@@ -309,7 +309,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -335,7 +335,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -379,7 +379,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin'])) {
+        if (!$user->hasRole('admin') && !$user->can('delete emergencies')) {
             abort(403, 'غير مصرح لك بحذف حالات الطوارئ');
         }
 
@@ -396,7 +396,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتحديث علامات الحياة');
         }
 
@@ -430,7 +430,7 @@ class EmergencyController extends Controller
     public function updateMedical(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتحديث معلومات الطوارئ');
         }
         $request->validate([
@@ -468,7 +468,7 @@ class EmergencyController extends Controller
     public function storeTreatment(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتسجيل علاج الطوارئ');
         }
 
@@ -511,7 +511,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى لوحة تحكم الطوارئ');
         }
 
@@ -576,7 +576,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -599,7 +599,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -623,7 +623,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('create appointments') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء مواعيد استشارية');
         }
 
@@ -760,7 +760,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('create medical requests') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بطلب تحاليل');
         }
 
@@ -828,7 +828,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('create medical requests') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بطلب أشعة');
         }
 
@@ -1085,7 +1085,7 @@ class EmergencyController extends Controller
     {
         // التحقق من الصلاحيات
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'nurse', 'emergency_staff'])) {
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
@@ -1112,7 +1112,7 @@ class EmergencyController extends Controller
     public function transferToSurgery(Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
+        if (!$user->hasRole('admin') && !$user->can('manage emergencies') && !$user->can('create surgeries') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
             !$user->isDoctor() && !$user->isNurse()) {
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
@@ -1171,7 +1171,7 @@ class EmergencyController extends Controller
     public function transferToAdmission(Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
+        if (!$user->hasRole('admin') && !$user->can('manage emergencies') && !$user->can('create surgeries') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
             !$user->isDoctor() && !$user->isNurse()) {
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
@@ -1229,7 +1229,7 @@ class EmergencyController extends Controller
     public function discharge(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff']) && 
+        if (!$user->hasRole('admin') && !$user->can('manage emergencies') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff']) && 
             !$user->isDoctor() && !$user->isNurse()) {
             abort(403, 'غير مصرح لك بتسجيل خروج المريض');
         }

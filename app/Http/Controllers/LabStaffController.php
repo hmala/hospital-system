@@ -18,7 +18,7 @@ class LabStaffController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $requests = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
+        $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where(function ($q) {
                 $q->whereIn('type', ['lab', 'blood_bank'])
                   ->orWhere(function ($inner) {
@@ -26,9 +26,25 @@ class LabStaffController extends Controller
                             ->whereJsonContains('details->blood_bank', true);
                   });
             })
-            ->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
+
+        if (request()->filled('search')) {
+            $s = trim(request('search'));
+            $query->where(function($q) use ($s) {
+                $q->where('id', $s)
+                  ->orWhereHas('visit.patient.user', function($pq) use ($s) {
+                      $pq->where('name', 'like', "%{$s}%")
+                         ->orWhere('phone', 'like', "%{$s}%");
+                  })
+                  ->orWhereHas('visit.doctor.user', function($dq) use ($s) {
+                      $dq->where('name', 'like', "%{$s}%");
+                  });
+            });
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
 
         $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
             ->whereIn('status', ['pending', 'in_progress', 'completed'])
@@ -224,7 +240,8 @@ class LabStaffController extends Controller
             ]);
             $request->save();
 
-            if ($request->visit) {
+            $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
+            if ($request->visit && !$isDoctorVisit) {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();
                 if ($pending === 0) {
                     $request->visit->status = 'completed';

@@ -22,7 +22,7 @@ class UserLabTestGroupController extends Controller
             ->with('user')
             ->orderBy('updated_at', 'desc');
 
-        if (!$user->hasRole('admin')) {
+        if (!$user->isAdmin()) {
             $groupsQuery->where('user_id', $user->id);
         }
 
@@ -57,7 +57,7 @@ class UserLabTestGroupController extends Controller
         
         $user = Auth::user();
 
-        if ($group->user_id !== $user->id && !$user->hasRole('admin')) {
+        if ($group->user_id !== $user->id && !$user->isAdmin()) {
             abort(403, 'غير مصرح لك بتحرير هذه المجموعة');
         }
 
@@ -76,7 +76,7 @@ class UserLabTestGroupController extends Controller
     {
         $user = Auth::user();
 
-        if ($group->user_id !== $user->id && !$user->hasRole('admin')) {
+        if ($group->user_id !== $user->id && !$user->isAdmin()) {
             abort(403, 'غير مصرح لك بتحرير هذه المجموعة');
         }
 
@@ -94,7 +94,7 @@ class UserLabTestGroupController extends Controller
     {
         $user = Auth::user();
 
-        if ($group->user_id !== $user->id && !$user->hasRole('admin')) {
+        if ($group->user_id !== $user->id && !$user->isAdmin()) {
             abort(403, 'غير مصرح لك بحذف هذه المجموعة');
         }
 

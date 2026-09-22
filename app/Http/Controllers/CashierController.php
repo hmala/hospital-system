@@ -22,7 +22,7 @@ class CashierController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'permission:view cashier|view cashier reports']);
+        $this->middleware('auth');
     }
 
     /**
@@ -33,7 +33,7 @@ class CashierController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->can('view cashier appointments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('view cashier') && !$user->can('view cashier appointments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -139,7 +139,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('process consultation payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process consultation payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -161,7 +161,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('process consultation payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process consultation payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -243,7 +243,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('view cashier') && !$user->can('view cashier reports') && !$user->hasRole(['admin', 'patient'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant', 'patient']) && !$user->can('view cashier') && !$user->can('view cashier reports') && !$user->can('process payments')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -295,7 +295,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('process medical requests payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process medical requests payments') && !$user->can('process medical request payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -327,7 +327,7 @@ class CashierController extends Controller
         
         $user = Auth::user();
 
-        if (!$user->can('process medical requests payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process medical requests payments') && !$user->can('process medical request payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -587,7 +587,7 @@ class CashierController extends Controller
     public function paymentsReport(Request $request)
     {
         $user = Auth::user();
-        if (!$user->can('view cashier reports') && !$user->can('view cashier') && !$user->hasRole(['admin', 'cashier', 'accountant'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view cashier reports') && !$user->can('view cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -922,7 +922,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('view cashier surgeries') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('view cashier surgeries') && !$user->can('view cashier') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1003,7 +1003,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('view cashier surgeries') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('view cashier surgeries') && !$user->can('view cashier') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1063,7 +1063,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process surgery payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1125,7 +1125,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process surgery payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1400,7 +1400,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('process surgery payments') && !$user->hasRole('admin')) {
+        if (!$user->hasRole('admin') && !$user->can('process surgery payments') && !$user->can('process refunds') && !$user->can('process payments') && !$user->hasRole('cashier')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1516,7 +1516,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist']) && !$user->can('process emergency payments') && !$user->can('process payments')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1544,7 +1544,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'receptionist']) && !$user->can('process emergency payments') && !$user->can('process payments')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1670,7 +1670,7 @@ class CashierController extends Controller
     public function emergencyFinancialMovements(Request $request)
     {
         $user = Auth::user();
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1718,7 +1718,7 @@ class CashierController extends Controller
     public function emergencyStatements(Request $request)
     {
         $user = Auth::user();
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2089,7 +2089,7 @@ class CashierController extends Controller
     public function emergencyReferrals(Request $request)
     {
         $user = Auth::user();
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2217,7 +2217,7 @@ class CashierController extends Controller
     public function emergencyDoctorAccounts(Request $request)
     {
         $user = Auth::user();
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2266,7 +2266,7 @@ class CashierController extends Controller
     public function emergencyDoctorAccount(Request $request, \App\Models\Doctor $doctor)
     {
         $user = Auth::user();
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2318,7 +2318,7 @@ class CashierController extends Controller
     public function emergencyDoctorPayout(Request $request, \App\Models\Doctor $doctor)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant'])) {
+        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

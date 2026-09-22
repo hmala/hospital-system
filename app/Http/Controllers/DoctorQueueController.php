@@ -75,6 +75,7 @@ class DoctorQueueController extends Controller
         ])
         ->where('doctor_id', $doctor->id)
         ->whereDate('visit_date', $today)
+        ->whereNotIn('status', ['completed', 'cancelled'])
         ->where(function($q) {
             $q->whereHas('radiologyRequests')
               ->orWhereHas('requests', function($rq) {
@@ -244,13 +245,8 @@ class DoctorQueueController extends Controller
         $doctors = Doctor::with(['user', 'department'])
             ->where('type', 'consultant')
             ->where('is_active', true)
+            ->workingOnDay($todayArabicDay)
             ->where('is_available_today', true)
-            ->where(function($q) use ($today, $todayArabicDay) {
-                $q->workingOnDay($todayArabicDay)
-                  ->orWhereHas('appointments', function($aq) use ($today) {
-                      $aq->whereDate('appointment_date', $today);
-                  });
-            })
             ->get();
 
         $clinics = [];

@@ -13,6 +13,11 @@ class PatientController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('view patients') && !$user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse'])) {
+            abort(403, 'غير مصرح لك بعرض المرضى');
+        }
+
         $search = trim($request->get('search', ''));
 
         $query = Patient::with('user')
@@ -61,6 +66,11 @@ class PatientController extends Controller
 
     public function create()
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('create patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بإضافة مريض');
+        }
+
         $countries = \App\Models\Country::all();
         $governorates = \App\Models\Governorate::all();
         $iraq = \App\Models\Country::where('name', 'العراق')->first();
@@ -71,6 +81,11 @@ class PatientController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('create patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بإضافة مريض');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email',
@@ -167,6 +182,11 @@ class PatientController extends Controller
 
     public function show(Patient $patient)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('view patients') && !$user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse'])) {
+            abort(403, 'غير مصرح لك بعرض بيانات المريض');
+        }
+
         $patient->load(['user', 'appointments.doctor.user', 'appointments.department']);
         
         return view('patients.show', compact('patient'));
@@ -174,6 +194,11 @@ class PatientController extends Controller
 
     public function edit(Patient $patient)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('edit patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بتعديل بيانات المريض');
+        }
+
         $countries = \App\Models\Country::all();
         $governorates = \App\Models\Governorate::all();
         $iraq = \App\Models\Country::where('name', 'العراق')->first();
@@ -184,6 +209,11 @@ class PatientController extends Controller
 
     public function update(Request $request, Patient $patient)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('edit patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
+            abort(403, 'غير مصرح لك بتعديل بيانات المريض');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email,' . $patient->user_id,
@@ -271,6 +301,11 @@ class PatientController extends Controller
 
     public function destroy(Patient $patient)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('delete patients')) {
+            abort(403, 'غير مصرح لك بحذف المريض');
+        }
+
         $patient->delete();
         // يمكنك اختيار حذف المستخدم أيضاً أو تركه
         // $patient->user->delete();

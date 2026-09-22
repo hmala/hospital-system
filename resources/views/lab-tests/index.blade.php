@@ -9,7 +9,7 @@
                     <i class="fas fa-flask me-2"></i>
                     إدارة الفحوصات المختبرية
                 </h2>
-                @if(Auth::user()->hasRole(['admin', 'lab_staff']))
+                @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('create lab tests'))
                     <a href="{{ route('lab-tests.create') }}" class="btn btn-success">
                         <i class="fas fa-plus me-1"></i>
                         إضافة فحص جديد
@@ -170,7 +170,7 @@
                                                    class="btn btn-sm btn-outline-primary" title="عرض">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                @if(Auth::user()->hasRole(['admin', 'lab_staff']))
+                                                @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('edit lab tests'))
                                                     <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}"
                                                        class="btn btn-sm btn-outline-success" title="الفحوصات الفرعية (Sub-Tests)">
                                                         <i class="fas fa-list-check"></i>
@@ -193,7 +193,7 @@
                                                         </button>
                                                     </form>
                                                 @endif
-                                                @if(Auth::user()->isAdmin())
+                                                @if(Auth::user()->isAdmin() || Auth::user()->can('delete lab tests'))
                                                     <form action="{{ route('lab-tests.destroy', $labTest) }}"
                                                           method="POST" class="d-inline"
                                                           onsubmit="return confirm('هل أنت متأكد من حذف هذا الفحص؟')">

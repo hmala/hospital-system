@@ -18,11 +18,6 @@
                         <small id="last-update">آخر تحديث: الآن</small>
                     </p>
                 </div>
-                <div>
-                    <a href="{{ route('staff.lab-visits.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> زيارة مختبرية مباشرة
-                    </a>
-                </div>
             </div>
         </div>
     </div>
@@ -36,12 +31,27 @@
 
     <!-- الطلبات العادية -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-primary text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="mb-0">
                 <i class="fas fa-list me-2"></i>
                 الطلبات العادية
                 <span class="badge bg-light text-primary ms-2">{{ $requests->total() }}</span>
             </h5>
+            <form method="GET" action="{{ route('lab.index') }}" class="d-flex align-items-center gap-2" style="min-width: 320px;">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="search" id="lab-search-input" class="form-control" 
+                           placeholder="بحث باسم المريض، الهاتف، الطبيب، رقم الطلب..." 
+                           value="{{ request('search') }}">
+                    <button class="btn btn-light text-primary fw-bold" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    @if(request('search'))
+                        <a href="{{ route('lab.index') }}" class="btn btn-outline-light" title="إلغاء تصفية البحث">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    @endif
+                </div>
+            </form>
         </div>
         <div class="card-body p-0">
             @if($requests->count() > 0)

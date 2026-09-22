@@ -155,11 +155,25 @@ class RoleManagementController extends Controller
             'create products' => 'products',
             'edit products' => 'products',
             'delete products' => 'products',
+            // صلاحيات الأشعة وأنواعها
+            'manage radiology types' => 'radiology',
+            'create radiology types' => 'radiology',
+            'edit radiology types' => 'radiology',
+            'delete radiology types' => 'radiology',
+            'process radiology requests' => 'radiology',
             // صلاحيات حجز الأشعة
             'inquiry.create.radiology.general' => 'radiology_inquiry',
             'inquiry.create.radiology.ultrasound' => 'radiology_inquiry',
             'inquiry.create.radiology.mri' => 'radiology_inquiry',
             'inquiry.create.radiology.echo' => 'radiology_inquiry',
+            // صلاحيات المختبر
+            'view lab tests' => 'tests',
+            'create lab tests' => 'tests',
+            'edit lab tests' => 'tests',
+            'delete lab tests' => 'tests',
+            'toggle lab tests' => 'tests',
+            'manage surgery lab tests' => 'tests',
+            'process lab requests' => 'tests',
             // صلاحيات محطات العمليات الجراحية
             'view resident station' => 'surgeries',
             'view operation theater station' => 'surgeries',

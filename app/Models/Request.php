@@ -179,19 +179,25 @@ class Request extends Model
     }
 
     /**
-     * Ensure visit status updates when all related requests complete.
+     * Ensure visit status updates when all related requests complete (only for direct/standalone requests without a doctor consultation).
      */
     protected static function booted()
     {
         static::saved(function ($request) {
             if ($request->isCompleted() && $request->visit) {
-                $remaining = $request->visit->requests()
-                    ->where('status', '!=', 'completed')
-                    ->count();
+                // زيارات الطبيب الاستشارية لا تكتمل تلقائياً من قبل المختبر أو الأشعة
+                // لأن الطبيب هو صاحب القرار في مراجعة النتائج مع المريض وإنهاء الزيارة
+                $isDoctorVisit = !empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup';
 
-                if ($remaining === 0 && $request->visit->status !== 'completed') {
-                    $request->visit->status = 'completed';
-                    $request->visit->save();
+                if (!$isDoctorVisit) {
+                    $remaining = $request->visit->requests()
+                        ->where('status', '!=', 'completed')
+                        ->count();
+
+                    if ($remaining === 0 && $request->visit->status !== 'completed') {
+                        $request->visit->status = 'completed';
+                        $request->visit->save();
+                    }
                 }
             }
         });

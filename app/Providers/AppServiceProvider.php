@@ -65,7 +65,7 @@ class AppServiceProvider extends ServiceProvider
             return auth()->check() && auth()->user()->can($permission);
         });
 
-        // الأدمن فقط لديه تجاوز تلقائي لكافة الصلاحيات
+        // الأدمن الأساسي فقط لديه تجاوز تلقائي لكافة الصلاحيات
         Gate::before(function ($user, $ability) {
             if ($user->hasRole('admin')) {
                 return true;

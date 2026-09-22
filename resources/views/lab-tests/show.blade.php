@@ -10,21 +10,23 @@
                     تفاصيل الفحص المختبري
                 </h2>
                 <div>
-                    <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}" class="btn btn-success me-2">
-                        <i class="fas fa-list-check me-1"></i>
-                        الفحوصات الفرعية
-                        @if($labTest->subTests()->count() > 0)
-                            <span class="badge bg-light text-success ms-1">{{ $labTest->subTests()->count() }}</span>
-                        @endif
-                    </a>
-                    <a href="{{ route('lab-tests.references.index', $labTest) }}" class="btn btn-primary me-2">
-                        <i class="fas fa-ruler-combined me-1"></i>
-                        القيم المرجعية
-                    </a>
-                    <a href="{{ route('lab-tests.edit', $labTest) }}" class="btn btn-warning me-2">
-                        <i class="fas fa-edit me-1"></i>
-                        تعديل
-                    </a>
+                    @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('edit lab tests'))
+                        <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}" class="btn btn-success me-2">
+                            <i class="fas fa-list-check me-1"></i>
+                            الفحوصات الفرعية
+                            @if($labTest->subTests()->count() > 0)
+                                <span class="badge bg-light text-success ms-1">{{ $labTest->subTests()->count() }}</span>
+                            @endif
+                        </a>
+                        <a href="{{ route('lab-tests.references.index', $labTest) }}" class="btn btn-primary me-2">
+                            <i class="fas fa-ruler-combined me-1"></i>
+                            القيم المرجعية
+                        </a>
+                        <a href="{{ route('lab-tests.edit', $labTest) }}" class="btn btn-warning me-2">
+                            <i class="fas fa-edit me-1"></i>
+                            تعديل
+                        </a>
+                    @endif
                     <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i>
                         العودة للقائمة
@@ -97,6 +99,7 @@
             </div>
 
             <!-- إجراءات إضافية -->
+            @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('edit lab tests') || Auth::user()->can('delete lab tests'))
             <div class="card shadow-sm mt-4">
                 <div class="card-header bg-warning text-dark">
                     <h6 class="mb-0">
@@ -106,6 +109,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
+                        @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('edit lab tests'))
                         <div class="col-md-6">
                             <form action="{{ route('lab-tests.toggle-status', $labTest) }}" method="POST" class="d-inline">
                                 @csrf
@@ -116,22 +120,24 @@
                                 </button>
                             </form>
                         </div>
+                        @endif
+                        @if(Auth::user()->isAdmin() || Auth::user()->can('delete lab tests'))
                         <div class="col-md-6">
-                            @if(Auth::user()->isAdmin())
-                                <form action="{{ route('lab-tests.destroy', $labTest) }}" method="POST"
-                                      onsubmit="return confirm('هل أنت متأكد من حذف هذا الفحص؟ هذا الإجراء لا يمكن التراجع عنه.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger w-100">
-                                        <i class="fas fa-trash me-1"></i>
-                                        حذف الفحص
-                                    </button>
-                                </form>
-                            @endif
+                            <form action="{{ route('lab-tests.destroy', $labTest) }}" method="POST"
+                                  onsubmit="return confirm('هل أنت متأكد من حذف هذا الفحص؟ هذا الإجراء لا يمكن التراجع عنه.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger w-100">
+                                    <i class="fas fa-trash me-1"></i>
+                                    حذف الفحص
+                                </button>
+                            </form>
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </div>

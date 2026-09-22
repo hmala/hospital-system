@@ -15,6 +15,11 @@ class VisitController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('view visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
+            abort(403, 'غير مصرح لك بعرض الزيارات');
+        }
+
         $visits = Visit::with(['patient', 'doctor.user', 'department', 'appointment'])
             ->latest('visit_date')
             ->orderBy('visit_time', 'desc')
@@ -32,6 +37,11 @@ class VisitController extends Controller
 
     public function create($patientId = null, $appointmentId = null)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('create visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'consultation_receptionist'])) {
+            abort(403, 'غير مصرح لك بإنشاء زيارة');
+        }
+
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with('user')
             ->where('is_active', true)
@@ -71,6 +81,11 @@ class VisitController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('create visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'consultation_receptionist'])) {
+            abort(403, 'غير مصرح لك بإنشاء زيارة');
+        }
+
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
@@ -119,12 +134,22 @@ class VisitController extends Controller
 
     public function show(Visit $visit)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('view visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
+            abort(403, 'غير مصرح لك بعرض بيانات الزيارة');
+        }
+
         $visit->load(['patient', 'doctor.user', 'department', 'appointment']);
         return view('visits.show', compact('visit'));
     }
 
     public function edit(Visit $visit)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('edit visits') && !$user->hasRole(['doctor', 'nurse'])) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الزيارة');
+        }
+
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with('user')->where('is_active', true)->get();
         $departments = Department::where('is_active', true)->orderBy('name')->get();
@@ -134,6 +159,11 @@ class VisitController extends Controller
 
     public function update(Request $request, Visit $visit)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('edit visits') && !$user->hasRole(['doctor', 'nurse'])) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الزيارة');
+        }
+
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
@@ -181,6 +211,11 @@ class VisitController extends Controller
 
     public function destroy(Visit $visit)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('delete visits')) {
+            abort(403, 'غير مصرح لك بحذف الزيارة');
+        }
+
         $visit->delete();
 
         return redirect()->route('visits.index')
@@ -189,6 +224,11 @@ class VisitController extends Controller
 
     public function createFromAppointment(Appointment $appointment)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('create visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'consultation_receptionist'])) {
+            abort(403, 'غير مصرح لك بإنشاء زيارة من موعد');
+        }
+
         // التحقق من أن الموعد مدفوع
         if ($appointment->payment_status !== 'paid') {
             return redirect()->back()->with('error', 'لا يمكن تحويل الموعد إلى زيارة قبل الدفع');

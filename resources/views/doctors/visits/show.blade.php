@@ -390,7 +390,22 @@ datalist option:hover {
                             </button>
                         </form>
                     @endif
-                    @if($visit->status == 'completed' && !$visit->needs_surgery)
+                    @if($visit->status == 'completed')
+                        <span class="badge bg-success p-2 d-inline-flex align-items-center">
+                            <i class="fas fa-check-circle me-1"></i>
+                            الزيارة مكتملة
+                        </span>
+                        <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" class="d-inline">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="status" value="in_progress">
+                            <button type="submit" class="btn btn-outline-primary" onclick="return confirm('هل تريد إعادة فتح هذه الزيارة لاستكمال الإجراءات والكشف؟')">
+                                <i class="fas fa-redo me-1"></i>
+                                إعادة فتح الزيارة للمتابعة
+                            </button>
+                        </form>
+                    @endif
+                    @if(!$visit->needs_surgery && $visit->status != 'cancelled')
                         <a href="{{ route('doctor.visits.show-surgery-form', $visit) }}" class="btn btn-warning">
                             <i class="fas fa-procedures me-1"></i>
                             تحويل لحجز عملية

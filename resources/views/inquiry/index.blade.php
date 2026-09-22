@@ -195,6 +195,73 @@
         </div>
     </div>
 
+    @if(isset($consultantSurgeryTransfers) && count($consultantSurgeryTransfers) > 0)
+        <!-- مرضى العيادات الاستشارية المحولين للعمليات -->
+        <div class="row mb-4 animate__animated animate__fadeIn">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
+                            مرضى العيادات الاستشارية المحولين للعمليات الجراحية
+                        </h5>
+                        <span class="badge bg-dark text-white fw-bold fs-6">{{ count($consultantSurgeryTransfers) }} مرضى بانتظار حجز العملية</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>وقت التحويل</th>
+                                        <th>اسم المريض</th>
+                                        <th>رقم المريض</th>
+                                        <th>الطبيب الاستشاري</th>
+                                        <th>العيادة</th>
+                                        <th>ملاحظات العملية</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($consultantSurgeryTransfers as $cTransfer)
+                                        <tr>
+                                            <td>
+                                                <small class="text-dark fw-bold">
+                                                    <i class="fas fa-clock me-1 text-warning"></i>
+                                                    {{ $cTransfer->updated_at ? $cTransfer->updated_at->format('Y-m-d H:i') : $cTransfer->visit_date->format('Y-m-d') }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <strong>{{ optional($cTransfer->patient)->user->name ?? 'مريض غير محدد' }}</strong>
+                                                <br><small class="text-muted">{{ optional($cTransfer->patient)->user->phone ?? '-' }}</small>
+                                            </td>
+                                            <td><code>#{{ $cTransfer->patient_id }}</code></td>
+                                            <td>د. {{ optional($cTransfer->doctor)->user->name ?? 'طبيب استشاري' }}</td>
+                                            <td><span class="badge bg-info text-white">{{ optional($cTransfer->department)->name ?? 'الاستشارية' }}</span></td>
+                                            <td class="text-start">
+                                                <small class="text-dark fw-semibold">{{ Str::limit($cTransfer->surgery_notes, 80) }}</small>
+                                            </td>
+                                            <td>
+                                                <a href="{{ route('surgeries.create', [
+                                                    'patient_id' => $cTransfer->patient_id,
+                                                    'visit_id' => $cTransfer->id,
+                                                    'doctor_id' => $cTransfer->doctor_id,
+                                                    'department_id' => $cTransfer->department_id,
+                                                    'referring_doctor_name' => optional($cTransfer->doctor)->user->name ?? 'طبيب استشاري'
+                                                ]) }}" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm">
+                                                    <i class="fas fa-procedures me-1"></i> حجز عملية جراحية
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if(isset($pendingTransfers) && count($pendingTransfers) > 0)
         <!-- مرضى محولون للعمليات من الطوارئ -->
         <div class="row mb-4 animate__animated animate__fadeIn">

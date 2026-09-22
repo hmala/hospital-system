@@ -12,8 +12,8 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        // السماح بالمشاهدة للأطباء والموظفين، لكن التحرير محدود للمسؤولين وموظفي المختبر
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
+        // السماح بالمشاهدة للأدمن أو حاملي صلاحية view lab tests أو الكادر المخول
+        if (!$user->isAdmin() && !$user->can('view lab tests') && !$user->hasRole(['lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -72,7 +72,7 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        if (!$user->isAdmin() && !$user->can('create lab tests') && !$user->hasRole('lab_staff')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -109,7 +109,7 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        if (!$user->isAdmin() && !$user->can('create lab tests') && !$user->hasRole('lab_staff')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -142,8 +142,8 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        // السماح بمشاهدة تفاصيل الفحص للأطباء والموظفين
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
+        // السماح بمشاهدة تفاصيل الفحص
+        if (!$user->isAdmin() && !$user->can('view lab tests') && !$user->hasRole(['lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -154,7 +154,7 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole('lab_staff')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -191,7 +191,7 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole('lab_staff')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -224,7 +224,7 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin')) {
+        if (!$user->isAdmin() && !$user->can('delete lab tests')) {
             abort(403, 'غير مصرح لك بحذف الفحوصات المختبرية');
         }
 
@@ -237,7 +237,7 @@ class LabTestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'lab_staff'])) {
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole('lab_staff')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

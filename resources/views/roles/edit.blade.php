@@ -250,6 +250,30 @@
                                                         'view anesthesia station' => ['label' => 'عرض محطة التخدير', 'icon' => 'fa-syringe', 'color' => 'warning'],
                                                         'view nursing station' => ['label' => 'عرض محطة التمريض', 'icon' => 'fa-user-nurse', 'color' => 'success'],
                                                         
+                                                        // صلاحيات المختبر
+                                                        'view lab tests' => ['label' => 'عرض قائمة الفحوصات المختبرية', 'icon' => 'fa-eye', 'color' => 'pink'],
+                                                        'create lab tests' => ['label' => 'إضافة فحص مختبري جديد', 'icon' => 'fa-plus-circle', 'color' => 'success'],
+                                                        'edit lab tests' => ['label' => 'تعديل بيانات وأسعار الفحوصات', 'icon' => 'fa-edit', 'color' => 'warning'],
+                                                        'delete lab tests' => ['label' => 'حذف فحص مختبري', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
+                                                        'toggle lab tests' => ['label' => 'تفعيل / إلغاء تفعيل الفحوصات', 'icon' => 'fa-toggle-on', 'color' => 'info'],
+                                                        'process lab requests' => ['label' => 'معالجة طلبات المختبر وإدخال النتائج', 'icon' => 'fa-vial', 'color' => 'primary'],
+                                                        'manage surgery lab tests' => ['label' => 'إدارة تحاليل العمليات الجراحية', 'icon' => 'fa-procedures', 'color' => 'purple'],
+                                                        'view lab test groups' => ['label' => 'عرض مجموعات التحاليل المفضلة', 'icon' => 'fa-folder', 'color' => 'pink'],
+                                                        'create lab test groups' => ['label' => 'إنشاء مجموعة تحاليل مفضلة', 'icon' => 'fa-plus-circle', 'color' => 'success'],
+                                                        'edit lab test groups' => ['label' => 'تعديل مجموعة تحاليل مفضلة', 'icon' => 'fa-edit', 'color' => 'warning'],
+                                                        'delete lab test groups' => ['label' => 'حذف مجموعة تحاليل مفضلة', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
+
+                                                        // صلاحيات الأشعة
+                                                        'view radiology' => ['label' => 'عرض قسم الأشعة والسونار', 'icon' => 'fa-eye', 'color' => 'cyan'],
+                                                        'create radiology' => ['label' => 'إنشاء طلب أشعة جديد', 'icon' => 'fa-plus-circle', 'color' => 'success'],
+                                                        'edit radiology' => ['label' => 'تعديل طلبات الأشعة', 'icon' => 'fa-edit', 'color' => 'warning'],
+                                                        'delete radiology' => ['label' => 'حذف طلبات الأشعة', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
+                                                        'manage radiology types' => ['label' => 'إدارة أنواع وخدمات الأشعة والسونار', 'icon' => 'fa-cogs', 'color' => 'primary'],
+                                                        'create radiology types' => ['label' => 'إضافة نوع خدمة إشعاعية جديدة', 'icon' => 'fa-plus-circle', 'color' => 'success'],
+                                                        'edit radiology types' => ['label' => 'تعديل نوع وسعر الخدمة الإشعاعية', 'icon' => 'fa-edit', 'color' => 'warning'],
+                                                        'delete radiology types' => ['label' => 'حذف نوع خدمة إشعاعية', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
+                                                        'process radiology requests' => ['label' => 'معالجة وكتابة تقارير الأشعة', 'icon' => 'fa-x-ray', 'color' => 'info'],
+
                                                         // صلاحيات الكاشير والحسابات
                                                         'view cashier' => ['label' => 'عرض لوحة الكاشير العامة', 'icon' => 'fa-wallet', 'color' => 'danger'],
                                                         'view cashier appointments' => ['label' => 'عرض مواعيد الاستشارية (كاشير)', 'icon' => 'fa-calendar-alt', 'color' => 'danger'],
@@ -260,7 +284,10 @@
                                                         'process emergency payments' => ['label' => 'معالجة دفع الطوارئ', 'icon' => 'fa-check-circle', 'color' => 'danger'],
                                                         'view cashier surgeries' => ['label' => 'عرض كاشير العمليات', 'icon' => 'fa-procedures', 'color' => 'danger'],
                                                         'process surgery payments' => ['label' => 'معالجة دفع العمليات الجراحية', 'icon' => 'fa-check-circle', 'color' => 'danger'],
+                                                        'process refunds' => ['label' => 'معالجة الاسترجاع المالي (Refund)', 'icon' => 'fa-undo', 'color' => 'danger'],
+                                                        'process payments' => ['label' => 'معالجة المدفوعات العامة', 'icon' => 'fa-money-bill-wave', 'color' => 'danger'],
                                                         'view cashier reports' => ['label' => 'عرض تقارير الحسابات والمدفوعات', 'icon' => 'fa-chart-line', 'color' => 'danger'],
+                                                        'view doctor profits' => ['label' => 'عرض أرباح وحسابات الأطباء', 'icon' => 'fa-user-md', 'color' => 'success'],
                                                         'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار العمليات الجراحية', 'icon' => 'fa-calculator', 'color' => 'danger'],
                                                         
                                                         // صلاحيات حجز الاستعلامات

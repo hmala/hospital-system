@@ -925,8 +925,8 @@ class DoctorVisitController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الزيارة');
         }
 
-        if ($visit->status !== 'completed') {
-            return redirect()->back()->with('error', 'يجب إنهاء الزيارة أولاً');
+        if ($visit->status === 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن تحويل زيارة ملغاة لحجز عملية');
         }
 
         $visit->load('patient.user');
@@ -954,9 +954,14 @@ class DoctorVisitController extends Controller
         ]);
 
         $visit->update([
+            'status' => 'completed',
             'needs_surgery' => true,
             'surgery_notes' => $request->surgery_notes
         ]);
+
+        if ($visit->appointment) {
+            $visit->appointment->complete();
+        }
 
         return redirect()->route('doctor.visits.show', $visit)->with('success', 'تم تحويل المريض للاستعلامات لحجز العملية بنجاح');
     }

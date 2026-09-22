@@ -474,37 +474,9 @@ body {
                         </div>
                     </div>
 
-                    <!-- السطر 3: أطباء التخدير وورقة التحويل بالسكانر -->
+                    <!-- السطر 3: ورقة التحويل الطبي بالسكانر -->
                     <div class="row g-2 align-items-end pt-1 border-top mt-2">
-                        @if(Auth::user()->hasRole(['admin', 'surgery_staff', 'doctor']))
-                        <div class="col-md-4">
-                            <label for="anesthesiologist_id" class="form-label text-muted">المخدر الأول (اختياري)</label>
-                            <select name="anesthesiologist_id" id="anesthesiologist_id" class="form-select @error('anesthesiologist_id') is-invalid @enderror">
-                                <option value="">اختر الطبيب المخدر</option>
-                                @foreach($doctors as $doctor)
-                                    @php $anesthesiologistName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                    <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_id') == $doctor->id) ? 'selected' : '' }}>
-                                        د. {{ $anesthesiologistName }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="anesthesiologist_2_id" class="form-label text-muted">المخدر الثاني (اختياري)</label>
-                            <select name="anesthesiologist_2_id" id="anesthesiologist_2_id" class="form-select @error('anesthesiologist_2_id') is-invalid @enderror">
-                                <option value="">اختر الطبيب المخدر الثاني</option>
-                                @foreach($doctors as $doctor)
-                                    @php $anesthesiologist2Name = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                    <option value="{{ $doctor->id }}" {{ (old('anesthesiologist_2_id') == $doctor->id) ? 'selected' : '' }}>
-                                        د. {{ $anesthesiologist2Name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                        @else
                         <div class="col-md-12">
-                        @endif
                             <label class="form-label text-muted">ورقة التحويل الطبي (سكانر / ملف)</label>
                             <div class="d-flex gap-1" id="referral_letter_container">
                                 <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
@@ -741,7 +713,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // تهيئة Select2
     if (typeof $.fn.select2 !== 'undefined') {
-        $('#doctor_id, #department_id, #patient_id, #anesthesiologist_id, #anesthesiologist_2_id, #surgery_category').select2({
+        $('#doctor_id, #department_id, #patient_id, #surgery_category').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
             width: '100%',

@@ -14,7 +14,7 @@ class RadiologyTypeController extends Controller
         $this->middleware('auth');
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
-            if (!$user || (!$user->can('manage radiology types') && !$user->hasRole('admin'))) {
+            if (!$user || (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('view radiology types') && !$user->hasRole('radiology_staff'))) {
                 abort(403, 'غير مصرح لك بالوصول إلى إدارة أنواع الأشعة');
             }
             return $next($request);
@@ -90,6 +90,10 @@ class RadiologyTypeController extends Controller
      */
     public function create()
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('create radiology types') && !$user->hasRole('radiology_staff')) {
+            abort(403, 'غير مصرح لك بإضافة أنواع الأشعة');
+        }
         return view('radiology.types.create');
     }
 
@@ -98,6 +102,11 @@ class RadiologyTypeController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('create radiology types') && !$user->hasRole('radiology_staff')) {
+            abort(403, 'غير مصرح لك بإضافة أنواع الأشعة');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:radiology_types,code',
@@ -145,6 +154,11 @@ class RadiologyTypeController extends Controller
      */
     public function edit(RadiologyType $type)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('edit radiology types') && !$user->hasRole('radiology_staff')) {
+            abort(403, 'غير مصرح لك بتعديل أنواع الأشعة');
+        }
+
         return view('radiology.types.edit', compact('type'));
     }
 
@@ -153,6 +167,11 @@ class RadiologyTypeController extends Controller
      */
     public function update(Request $request, RadiologyType $type)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('edit radiology types') && !$user->hasRole('radiology_staff')) {
+            abort(403, 'غير مصرح لك بتعديل أنواع الأشعة');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:radiology_types,code,' . $type->id,
@@ -190,6 +209,11 @@ class RadiologyTypeController extends Controller
      */
     public function destroy(RadiologyType $type)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('delete radiology types')) {
+            abort(403, 'غير مصرح لك بحذف أنواع الأشعة');
+        }
+
         // التحقق من عدم وجود طلبات مرتبطة
         if ($type->requests()->count() > 0) {
             return redirect()->route('radiology.types.show', $type)->with('error', 'لا يمكن حذف نوع الإشعة لأنه مرتبط بطلبات موجودة');
@@ -205,6 +229,11 @@ class RadiologyTypeController extends Controller
      */
     public function toggleStatus(RadiologyType $type)
     {
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('edit radiology types') && !$user->hasRole('radiology_staff')) {
+            abort(403, 'غير مصرح لك بتعديل حالة أنواع الأشعة');
+        }
+
         $type->update(['is_active' => !$type->is_active]);
 
         $status = $type->is_active ? 'تفعيل' : 'إلغاء تفعيل';

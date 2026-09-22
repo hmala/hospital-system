@@ -81,7 +81,14 @@ class InquiryController extends Controller
             ->latest()
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers'));
+        // جلب المرضى المحولين من العيادات الاستشارية بانتظار حجز العمليات الجراحية
+        $consultantSurgeryTransfers = Visit::with(['patient.user', 'doctor.user', 'department'])
+            ->where('needs_surgery', true)
+            ->whereDoesntHave('surgery')
+            ->latest('updated_at')
+            ->get();
+
+        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers'));
     }
 
     /**
