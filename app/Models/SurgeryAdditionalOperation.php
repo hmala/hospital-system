@@ -11,6 +11,7 @@ class SurgeryAdditionalOperation extends Model
         'surgery_id',
         'surgical_operation_id',
         'notes',
+        'fee',
         'added_by',
     ];
 

@@ -404,6 +404,45 @@ body {
                         </div>
                     </div>
 
+                    <!-- العمليات الجراحية الإضافية / المرافقة (Secondary / Additional Operations) -->
+                    <div class="card mb-3 border-0 rounded-3 shadow-none" style="border: 1.5px dashed #0284c7 !important; background-color: #f0f9ff;">
+                        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2 py-1" style="font-size: 0.78rem;">
+                                    <i class="fas fa-layer-group me-1"></i>عمليات متعددة
+                                </span>
+                                <span class="fw-bold text-dark" style="font-size: 0.85rem;">
+                                    العمليات الجراحية المرافقة / الثانوية (في نفس جلسة صالة العمليات)
+                                </span>
+                                <small class="text-muted d-none d-md-inline" style="font-size: 0.75rem;">(اختياري - عند إجراء أكثر من تداخل جراحي في نفس وقت التخدير والدخول)</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="addAdditionalOpBtn">
+                                <i class="fas fa-plus-circle me-1"></i> إضافة عملية مرافقة
+                            </button>
+                        </div>
+                        <div class="card-body p-2" id="additionalOpsContainer">
+                            <div id="noAdditionalOpsNotice" class="text-center text-muted py-2 small">
+                                <i class="fas fa-info-circle me-1 text-info"></i> لا توجد عمليات مرافقة مضافة حالياً. إذا كان المريض سيخضع لأكثر من عملية اضغط <strong>«إضافة عملية مرافقة»</strong>.
+                            </div>
+                        </div>
+                        <!-- شريط الحساب المالي المجمع -->
+                        <div class="card-footer bg-white py-2 px-3 border-top" id="totalOpsCalculationFooter" style="display: none !important;">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div class="small">
+                                    <span class="text-muted">العملية الرئيسية:</span>
+                                    <strong id="summaryPrimaryFee" class="text-dark">0</strong> د.ع
+                                    <span class="mx-2 text-muted">+</span>
+                                    <span class="text-muted">العمليات المرافقة:</span>
+                                    <strong id="summaryAdditionalFee" class="text-primary">0</strong> د.ع
+                                </div>
+                                <div class="fw-bold fs-7">
+                                    <span class="text-dark">إجمالي أجور العمليات: </span>
+                                    <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 د.ع</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- السطر 2: الفريق الطبي والتاريخ -->
                     <div class="row g-2 mb-2">
                         <!-- الطبيب المرسل -->
@@ -691,8 +730,26 @@ body {
 @endsection
 
 @section('scripts')
+@php
+    $categoriesList = $surgicalOperations->pluck('category')->filter()->unique()->values();
+    $opsData = $surgicalOperations->map(function($op) {
+        return [
+            'id' => (string) $op->id,
+            'text' => $op->name,
+            'category' => $op->category ?? '',
+            'fee' => $op->fee,
+        ];
+    })->values();
+@endphp
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // قائمة جميع العمليات والأصناف المتاحة بالنظام
+    const allCategories = {!! json_encode($categoriesList) !!};
+    const allOperations = {!! json_encode($opsData) !!};
+    allOperations.sort(function(a, b) {
+        return a.text.localeCompare(b.text, 'ar');
+    });
+
     // زر طي/توسيع كل الأقسام
     const toggleAllBtn = document.getElementById('toggleAllSectionsBtn');
     if (toggleAllBtn) {
@@ -830,23 +887,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // فلترة وترتيب العمليات الجراحية أبجدياً
-        let allOperations = [];
-        $('#surgical_operation_id option').each(function() {
-            const $option = $(this);
-            if ($option.val()) {
-                allOperations.push({
-                    id: $option.val(),
-                    text: $option.text().trim(),
-                    category: $option.data('category'),
-                    fee: $option.data('fee')
-                });
-            }
-        });
-
-        allOperations.sort(function(a, b) {
-            return a.text.localeCompare(b.text, 'ar');
-        });
-
         function initOperationSelect2() {
             const selectedCategory = $('#surgery_category').val();
             $('#surgical_operation_id option:not(:first)').remove();
@@ -951,6 +991,194 @@ document.addEventListener('DOMContentLoaded', function() {
             customFeeInput.value = formatWithCommas(customFeeInput.value);
             const diff = customFeeInput.value.length - len;
             customFeeInput.setSelectionRange(pos + diff, pos + diff);
+            updateOpsFinancialSummary();
+        });
+    }
+
+    // إدارة العمليات الجراحية الإضافية / المرافقة
+    let addOpIndex = 0;
+
+    function updateOpsFinancialSummary() {
+        const primaryVal = $('#custom_surgery_fee').val() || '0';
+        const primaryFee = parseInt(primaryVal.replace(/[^0-9]/g, ''), 10) || 0;
+        
+        let additionalTotal = 0;
+        let count = 0;
+        $('.add-op-fee').each(function() {
+            const rowFeeVal = $(this).val() || '0';
+            const rowFee = parseInt(rowFeeVal.replace(/[^0-9]/g, ''), 10) || 0;
+            additionalTotal += rowFee;
+            count++;
+        });
+
+        if (count > 0) {
+            $('#noAdditionalOpsNotice').hide();
+            $('#totalOpsCalculationFooter').removeAttr('style').css('display', 'block');
+            $('#summaryPrimaryFee').text(primaryFee.toLocaleString('en-US'));
+            $('#summaryAdditionalFee').text(additionalTotal.toLocaleString('en-US'));
+            $('#summaryTotalFee').text((primaryFee + additionalTotal).toLocaleString('en-US') + ' د.ع');
+        } else {
+            $('#noAdditionalOpsNotice').show();
+            $('#totalOpsCalculationFooter').attr('style', 'display:none !important;');
+        }
+    }
+
+    function addAdditionalOpRow(selectedOpId = null, initialFee = null, initialNotes = '', selectedCategory = null) {
+        const idx = addOpIndex++;
+
+        // تحديد الصنف تلقائياً من العملية إن لم يكن محدداً مسبقاً
+        if (selectedOpId && !selectedCategory) {
+            const found = allOperations.find(o => o.id == selectedOpId);
+            if (found) selectedCategory = found.category;
+        }
+
+        let catOptions = '<option value="">-- كل الأصناف --</option>';
+        allCategories.forEach(function(cat) {
+            const isCatSelected = selectedCategory && selectedCategory === cat ? 'selected' : '';
+            catOptions += `<option value="${cat}" ${isCatSelected}>${cat}</option>`;
+        });
+
+        let opOptions = '<option value="">-- اختر العملية --</option>';
+        allOperations.forEach(function(op) {
+            if (!selectedCategory || op.category === selectedCategory) {
+                const isSelected = selectedOpId && op.id == selectedOpId ? 'selected' : '';
+                opOptions += `<option value="${op.id}" data-category="${op.category || ''}" data-fee="${op.fee || 0}" ${isSelected}>${op.text}</option>`;
+            }
+        });
+
+        let feeValue = '';
+        if (initialFee !== null && initialFee !== undefined && initialFee !== '') {
+            feeValue = formatWithCommas(initialFee.toString());
+        }
+
+        const rowHtml = `
+            <div class="additional-op-row p-2 mb-2 bg-white rounded border border-info-subtle shadow-sm" id="add_op_row_${idx}">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1 fw-bold text-dark">
+                            صنف العملية
+                        </label>
+                        <select class="form-select form-select-sm add-op-category" style="width: 100%;">
+                            ${catOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1 fw-bold text-dark">
+                            نوع العملية <span class="text-danger">*</span>
+                        </label>
+                        <select name="additional_operations[${idx}][surgical_operation_id]" class="form-select form-select-sm select2-add-op" required style="width: 100%;">
+                            ${opOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1 fw-bold text-dark">
+                            سعر العملية (د.ع) <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="additional_operations[${idx}][fee]" class="form-control form-control-sm add-op-fee" value="${feeValue}" placeholder="0" inputmode="numeric" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1 text-muted">
+                            توصيف / ملاحظة
+                        </label>
+                        <input type="text" name="additional_operations[${idx}][notes]" class="form-control form-control-sm" value="${initialNotes || ''}" placeholder="تكميلية، جهة يسرى...">
+                    </div>
+                    <div class="col-md-1 text-center pt-3">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-add-op-btn" title="حذف العملية المرافقة">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        $('#additionalOpsContainer').append(rowHtml);
+
+        const $row = $(`#add_op_row_${idx}`);
+        const $catSelect = $row.find('.add-op-category');
+        const $opSelect = $row.find('.select2-add-op');
+
+        if (typeof $.fn.select2 !== 'undefined') {
+            $opSelect.select2({
+                theme: 'bootstrap-5',
+                dir: 'rtl',
+                width: '100%',
+                placeholder: 'اختر نوع العملية',
+                allowClear: true
+            });
+        }
+
+        // عند تغيير صنف العملية، يتم تصفية قائمة نوع العملية التابعة لهذا الصنف
+        $catSelect.on('change', function() {
+            const cat = $(this).val();
+            let newOpOptions = '<option value="">-- اختر العملية --</option>';
+            allOperations.forEach(function(op) {
+                if (!cat || op.category === cat) {
+                    newOpOptions += `<option value="${op.id}" data-category="${op.category || ''}" data-fee="${op.fee || 0}">${op.text}</option>`;
+                }
+            });
+
+            if (typeof $.fn.select2 !== 'undefined') {
+                $opSelect.select2('destroy');
+            }
+            $opSelect.html(newOpOptions);
+            if (typeof $.fn.select2 !== 'undefined') {
+                $opSelect.select2({
+                    theme: 'bootstrap-5',
+                    dir: 'rtl',
+                    width: '100%',
+                    placeholder: 'اختر نوع العملية',
+                    allowClear: true
+                });
+            }
+            $opSelect.val('').trigger('change');
+        });
+
+        // عند اختيار نوع العملية، يتم تعبئة السعر الافتراضي وتحديث الحسابات
+        $opSelect.on('change', function() {
+            const selected = $(this).find(':selected');
+            const fee = selected.data('fee');
+            const opCat = selected.data('category');
+            const $feeInput = $row.find('.add-op-fee');
+            
+            // إذا لم يكن الصنف محدداً، نحدد الصنف تلقائياً
+            if (opCat && !$catSelect.val()) {
+                $catSelect.val(opCat);
+            }
+
+            if (!$feeInput.val() && fee !== undefined && fee !== null) {
+                $feeInput.val(parseInt(fee, 10).toLocaleString('en-US'));
+            }
+            updateOpsFinancialSummary();
+        });
+
+        const $feeInput = $row.find('.add-op-fee');
+        $feeInput.on('input', function() {
+            const formatted = formatWithCommas($(this).val());
+            $(this).val(formatted);
+            updateOpsFinancialSummary();
+        });
+
+        updateOpsFinancialSummary();
+    }
+
+    $(document).on('click', '#addAdditionalOpBtn', function(e) {
+        e.preventDefault();
+        addAdditionalOpRow();
+    });
+
+    $(document).on('click', '.remove-add-op-btn', function(e) {
+        e.preventDefault();
+        $(this).closest('.additional-op-row').remove();
+        updateOpsFinancialSummary();
+    });
+
+    // استرجاع المدخلات السابقة إن وجدت
+    const oldAdditionalOps = @json(old('additional_operations', []));
+    if (Array.isArray(oldAdditionalOps) && oldAdditionalOps.length > 0) {
+        oldAdditionalOps.forEach(function(item) {
+            if (item && item.surgical_operation_id) {
+                addAdditionalOpRow(item.surgical_operation_id, item.fee, item.notes);
+            }
         });
     }
 

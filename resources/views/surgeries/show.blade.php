@@ -640,6 +640,7 @@
                                                         <thead class="table-light">
                                                             <tr>
                                                                 <th>العملية</th>
+                                                                <th>السعر</th>
                                                                 <th>ملاحظات</th>
                                                                 <th>تاريخ الإضافة</th>
                                                                 @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor']))
@@ -651,6 +652,7 @@
                                                             @foreach($surgery->additionalOperations as $addOp)
                                                             <tr>
                                                                 <td>{{ $addOp->surgicalOperation?->name ?? 'غير محدد' }}</td>
+                                                                <td class="fw-bold text-success">{{ number_format($addOp->fee ?? 0) }} د.ع</td>
                                                                 <td>{{ $addOp->notes ?? '-' }}</td>
                                                                 <td class="text-muted small">{{ $addOp->created_at->format('Y-m-d H:i') }}</td>
                                                                 @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor']))

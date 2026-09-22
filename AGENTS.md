@@ -142,6 +142,18 @@ Consult these files before making changes or proposing fixes:
   * توحيد جداول الأطباء في جدول مركزي أنيق وموحد، وحذف عمود أيام العمل وتفعيل البحث والفرز في [consultant-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/index.blade.php).
   * تصحيح مسارات الاستدعاء المباشر على خادم هوستنجر الأونلاين.
 
+- **منظومة العمليات المتعددة في جلسة واحدة (Multiple Operations per Surgery Session)**:
+  * دعم إضافة أكثر من نوع عملية للمريض في نفس جلسة صالة العمليات كعمليات مرافقة/تكميلية (`additional_operations`).
+  * تحديث واجهة الحجز [surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php) بإضافة بطاقة تفاعلية ديناميكية تسمح باختيار أي عدد من العمليات الثانوية مع أسعارها وملاحظاتها، مع شريط حساب مالي حي يجمع كلفة العملية الرئيسية + العمليات المرافقة = الإجمالي.
+  * تحديث [SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php) لحفظ وتخزين العمليات الإضافية تلقائياً في جدول `surgery_additional_operations` واستبعادها من الحقول المباشرة لجدول `surgeries`.
+  * إضافة `fee` إلى `$fillable` في موديل [SurgeryAdditionalOperation.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryAdditionalOperation.php).
+  * تحديث واجهة تفاصيل العملية [surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php) لعرض سعر كل عملية إضافية بدقة في جدول العمليات الإضافية.
+  * إضافة اختبار `test_can_book_surgery_with_multiple_operations_and_verify_fees` في [SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php) واجتياز جميع الاختبارات الآلية (33 passed, 154 assertions) بنجاح 100%.
+- **دمج منظومة الموارد البشرية والصيدلية مع الفرع الرئيسي ومزامنة GitHub**:
+  * حفظ التعديلات المحلية ودمج فرع `origin/hr` مع `main` بسلام وبدون أي تعارضات (58 ملفاً جديداً).
+  * تشغيل ميغريشن وباذر الموارد البشرية والصيدلية.
+  * رفع أحدث كود مدمج إلى GitHub على فرع `main` (`77a6e16`).
+
 ### Next Steps
 1. مراجعة كشف الزيارة 161 من قبل الطبيب والتأكد من إمكانية إنهاء الزيارة أو التحويل للعملية.
 

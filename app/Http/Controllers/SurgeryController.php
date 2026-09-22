@@ -188,6 +188,10 @@ class SurgeryController extends Controller
             'lab_tests.*' => 'exists:lab_tests,id',
             'radiology_tests' => 'nullable|array',
             'radiology_tests.*' => 'exists:radiology_types,id',
+            'additional_operations' => 'nullable|array',
+            'additional_operations.*.surgical_operation_id' => 'nullable|exists:surgical_operations,id',
+            'additional_operations.*.fee' => 'nullable',
+            'additional_operations.*.notes' => 'nullable|string|max:500',
         ]);
 
         $doctor = Doctor::find($request->doctor_id);
@@ -196,7 +200,7 @@ class SurgeryController extends Controller
         }
         $request->merge(['department_id' => $doctor->department_id]);
 
-        $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter']);
+        $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter', 'additional_operations']);
         
         $patient = Patient::find($request->patient_id);
         $applyInsurance = $request->input('apply_insurance', '1') == '1';
@@ -258,6 +262,23 @@ class SurgeryController extends Controller
         }
 
         $surgery = Surgery::create($surgeryData);
+
+        // حفظ العمليات الجراحية المرافقة / الإضافية إن وجدت
+        if ($request->filled('additional_operations') && is_array($request->additional_operations)) {
+            foreach ($request->additional_operations as $addOp) {
+                if (!empty($addOp['surgical_operation_id'])) {
+                    $rawFee = $addOp['fee'] ?? 0;
+                    $normalizedAddFee = is_numeric($rawFee) ? (float)$rawFee : (float)str_replace([',', ' '], ['', ''], $rawFee);
+                    
+                    $surgery->additionalOperations()->create([
+                        'surgical_operation_id' => $addOp['surgical_operation_id'],
+                        'fee' => $normalizedAddFee,
+                        'notes' => $addOp['notes'] ?? null,
+                        'added_by' => Auth::id(),
+                    ]);
+                }
+            }
+        }
 
         // أرشفة الوثيقة تلقائياً في سجل وأرشيف المريض
         if ($path && $surgery->patient_id) {
@@ -458,7 +479,7 @@ class SurgeryController extends Controller
             $request->merge(['department_id' => $doctor->department_id]);
         }
 
-        $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter']);
+        $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter', 'additional_operations']);
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
 

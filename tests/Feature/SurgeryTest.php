@@ -8,6 +8,8 @@ use App\Models\Patient;
 use App\Models\Doctor;
 use App\Models\Department;
 use App\Models\Visit;
+use App\Models\Room;
+use App\Models\SurgicalOperation;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -210,5 +212,121 @@ class SurgeryTest extends TestCase
         $this->assertEquals(90, $surgery->estimated_duration);
         $this->assertCount(1, $surgery->surgeryTreatments);
         $this->assertEquals('Paracetamol', $surgery->surgeryTreatments->first()->description);
+    }
+
+    public function test_can_book_surgery_with_multiple_operations_and_verify_fees(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(\Database\Seeders\HospitalSeeder::class);
+        $this->seed(\Database\Seeders\DepartmentSeeder::class);
+        $department = Department::where('type', 'surgery')->first();
+
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin_multi_ops@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+        ]);
+        $admin->assignRole('admin');
+
+        $doctorUser = User::create([
+            'name' => 'Dr. Ali',
+            'email' => 'ali@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'doctor',
+        ]);
+        $doctorUser->assignRole('doctor');
+
+        $doctor = new Doctor();
+        $doctor->user_id = $doctorUser->id;
+        $doctor->department_id = $department->id;
+        $doctor->phone = '12345678';
+        $doctor->specialization = 'General Surgery';
+        $doctor->qualification = 'Board';
+        $doctor->license_number = 'LIC456';
+        $doctor->experience_years = 12;
+        $doctor->is_active = true;
+        $doctor->save();
+
+        $patientUser = User::create([
+            'name' => 'Patient Multi Ops',
+            'email' => 'multi_ops@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'patient',
+        ]);
+
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'age' => 45,
+            'gender' => 'female',
+            'blood_group' => 'B+',
+        ]);
+
+        $room = Room::create([
+            'room_number' => 'OP-101',
+            'room_type' => 'regular',
+            'department_id' => $department->id,
+            'status' => 'available',
+        ]);
+
+        $primaryOp = SurgicalOperation::create([
+            'name' => 'Cholecystectomy',
+            'category' => 'General Surgery',
+            'fee' => 500000,
+        ]);
+
+        $secondaryOp = SurgicalOperation::create([
+            'name' => 'Hernia Repair',
+            'category' => 'General Surgery',
+            'fee' => 250000,
+        ]);
+
+        // اختبار عرض صفحة حجز العملية والتحقق من عدم وجود أي خطأ بليد أو جافاسكربت
+        $createPageResponse = $this->actingAs($admin)->get(route('surgeries.create', [
+            'department_id' => $department->id,
+            'doctor_id' => $doctor->id,
+            'patient_id' => $patient->id,
+            'referring_doctor_name' => 'د. قمر سعد',
+            'visit_id' => 161,
+        ]));
+        $createPageResponse->assertStatus(200);
+        $createPageResponse->assertSee('إضافة عملية مرافقة');
+
+        $response = $this->actingAs($admin)->post(route('surgeries.store'), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'room_id' => $room->id,
+            'expected_stay_days' => 2,
+            'surgery_category' => 'General Surgery',
+            'surgical_operation_id' => $primaryOp->id,
+            'custom_surgery_fee' => '500,000',
+            'scheduled_date' => now()->addDays(2)->toDateString(),
+            'scheduled_time' => '10:00',
+            'referring_doctor_name' => 'د. أحمد الاستشاري',
+            'additional_operations' => [
+                [
+                    'surgical_operation_id' => $secondaryOp->id,
+                    'fee' => '250,000',
+                    'notes' => 'تداخل جراحي تكميلي في نفس الجلسة',
+                ]
+            ]
+        ]);
+
+        $response->assertRedirect(route('surgeries.index'));
+
+        $surgery = Surgery::where('patient_id', $patient->id)->first();
+        $this->assertNotNull($surgery);
+        $this->assertEquals('Cholecystectomy', $surgery->surgery_type);
+        $this->assertEquals(500000, $surgery->surgery_fee);
+
+        $this->assertCount(1, $surgery->additionalOperations);
+        $addOp = $surgery->additionalOperations->first();
+        $this->assertEquals($secondaryOp->id, $addOp->surgical_operation_id);
+        $this->assertEquals(250000, $addOp->fee);
+        $this->assertEquals('تداخل جراحي تكميلي في نفس الجلسة', $addOp->notes);
+
+        // فحص احتساب الكاشير وإجمالي العمليات
+        $totalCombinedFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
+        $this->assertEquals(750000, $totalCombinedFee);
     }
 }
