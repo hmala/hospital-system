@@ -142,6 +142,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // صلاحيات الصيدلية
             'view pharmacy',
+            'manage medicines',
+            'create medicines',
+            'edit medicines',
+            'delete medicines',
+            'manage pharmacy services',
+            'import medicines',
+            'dispense medications',
             'process pharmacy requests',
             
             // صلاحيات الاستعلامات
@@ -178,6 +185,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // صلاحيات عرض المرضى المقيمين
             'view occupancy',
+
+            // صلاحيات الموارد البشرية (HR)
+            'view hr',
+            'view employees',
+            'create employees',
+            'edit employees',
+            'delete employees',
         ];
 
         foreach ($permissions as $permission) {
@@ -384,6 +398,13 @@ class RolesAndPermissionsSeeder extends Seeder
         $pharmacyStaffRole->givePermissionTo([
             'view patients',
             'view pharmacy',
+            'manage medicines',
+            'create medicines',
+            'edit medicines',
+            'delete medicines',
+            'manage pharmacy services',
+            'import medicines',
+            'dispense medications',
             'process pharmacy requests',
         ]);
 
@@ -518,6 +539,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'view lab tests',
             // السماح للطاقم بعرض الباقات
             'view packages',
+        ]);
+
+        // دور مدير الموارد البشرية (HR Manager)
+        $hrManagerRole = Role::firstOrCreate(['name' => 'hr_manager']);
+        $hrManagerRole->givePermissionTo([
+            'view hr',
+            'view employees',
+            'create employees',
+            'edit employees',
+            'delete employees',
+            'view departments',
         ]);
 
         // تعيين الأدوار للمستخدمين الحاليين بناءً على حقل role

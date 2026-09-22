@@ -424,6 +424,27 @@
             .sidebar-section-title { display: none; }
             .main-content { margin-right: 70px; }
         }
+
+        /* حل جذري لمشكلة تجميد وحجب نوافذ المودل في Bootstrap بسبب backdrop-filter */
+        .modal-backdrop {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+        }
+        .modal {
+            background: rgba(15, 23, 42, 0.55) !important;
+            z-index: 10000 !important;
+        }
+        .modal-dialog {
+            z-index: 10001 !important;
+        }
+        .modal-content {
+            position: relative;
+            z-index: 10002 !important;
+            pointer-events: auto !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
     </style>
     <style>
         /* Loader Overlay Ultra Premium */
@@ -1170,6 +1191,90 @@
                         </li>
                         @endhasrole
 
+                        </div>
+                        @endcanany
+
+                        <!-- قسم الموارد البشرية (HR) -->
+                        @canany(['view hr', 'view employees'])
+                        @php
+                            $isHrActive = request()->routeIs('hr.*');
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isHrActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#hrSection" aria-expanded="{{ $isHrActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-users-cog"></i> الموارد البشرية</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isHrActive ? 'show' : '' }}" id="hrSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.employees.index') || request()->routeIs('hr.employees.show') ? 'active' : '' }}" href="{{ route('hr.employees.index') }}">
+                                    <i class="fas fa-id-card"></i><span> سجل الموظفين</span>
+                                </a>
+                            </li>
+                            @can('create employees')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.employees.create') ? 'active' : '' }}" href="{{ route('hr.employees.create') }}">
+                                    <i class="fas fa-user-plus"></i><span> إضافة موظف جديد</span>
+                                </a>
+                            </li>
+                            @endcan
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.settings.*') ? 'active' : '' }}" href="{{ route('hr.settings.index') }}">
+                                    <i class="fas fa-sliders-h"></i><span> إعدادات وقوائم HR</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcanany
+
+                        <!-- قسم الصيدلية (Pharmacy) -->
+                        @canany(['view pharmacy', 'manage medicines'])
+                        @php
+                            $isPharmacyActive = request()->routeIs('pharmacy.*');
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isPharmacyActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#pharmacySection" aria-expanded="{{ $isPharmacyActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-pills"></i> الصيدلية</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isPharmacyActive ? 'show' : '' }}" id="pharmacySection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.pos.index') ? 'active' : '' }}" href="{{ route('pharmacy.pos.index') }}">
+                                    <i class="fas fa-cash-register"></i><span> نقطة البيع والصرف (POS)</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.pos.sales.*') ? 'active' : '' }}" href="{{ route('pharmacy.pos.sales.history') }}">
+                                    <i class="fas fa-history"></i><span> سجل مبيعات الصيدلية</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.medicines.index') || request()->routeIs('pharmacy.medicines.show') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.index') }}">
+                                    <i class="fas fa-capsules"></i><span> دليل الأدوية والمستلزمات</span>
+                                </a>
+                            </li>
+                            @can('create medicines')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.medicines.create') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.create') }}">
+                                    <i class="fas fa-plus-circle"></i><span> إضافة دواء / مستلزم جديد</span>
+                                </a>
+                            </li>
+                            @endcan
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.services.*') ? 'active' : '' }}" href="{{ route('pharmacy.services.index') }}">
+                                    <i class="fas fa-syringe"></i><span> الخدمات الصيدلانية</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.batches.*') ? 'active' : '' }}" href="{{ route('pharmacy.batches.index') }}">
+                                    <i class="fas fa-boxes"></i><span> شحنات وتنبيهات الصلاحية (FEFO)</span>
+                                </a>
+                            </li>
+                            @can('import medicines')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.medicines.import') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.import') }}">
+                                    <i class="fas fa-file-excel"></i><span> استيراد وتحديث الأدوية</span>
+                                </a>
+                            </li>
+                            @endcan
                         </div>
                         @endcanany
 
