@@ -1143,8 +1143,13 @@
 
                         @can('view lab tests')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('lab-tests.*') ? 'active' : '' }}" href="{{ route('lab-tests.index') }}">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.index') || request()->routeIs('lab-tests.show') || request()->routeIs('lab-tests.edit') ? 'active' : '' }}" href="{{ route('lab-tests.index') }}">
                                 <i class="fas fa-flask"></i><span> أنواع التحاليل</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.pricing-settings.*') ? 'active' : '' }}" href="{{ route('lab-tests.pricing-settings.index') }}">
+                                <i class="fas fa-tags text-success"></i><span> تسعير وتصنيف التحاليل</span>
                             </a>
                         </li>
                         @endcan
@@ -1187,6 +1192,11 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
                                 <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.pricing-settings.*') ? 'active' : '' }}" href="{{ route('lab-tests.pricing-settings.index') }}">
+                                <i class="fas fa-tags"></i><span> تسعير وتصنيف التحاليل</span>
                             </a>
                         </li>
                         @endhasrole

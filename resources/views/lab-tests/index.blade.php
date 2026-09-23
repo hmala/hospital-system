@@ -9,12 +9,18 @@
                     <i class="fas fa-flask me-2"></i>
                     إدارة الفحوصات المختبرية
                 </h2>
-                @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('create lab tests'))
-                    <a href="{{ route('lab-tests.create') }}" class="btn btn-success">
-                        <i class="fas fa-plus me-1"></i>
-                        إضافة فحص جديد
+                <div class="d-flex gap-2">
+                    <a href="{{ route('lab-tests.pricing-settings.index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-tags me-1"></i>
+                        إعدادات الأسعار والتصنيفات
                     </a>
-                @endif
+                    @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('create lab tests'))
+                        <a href="{{ route('lab-tests.create') }}" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            إضافة فحص جديد
+                        </a>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

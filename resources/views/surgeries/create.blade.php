@@ -214,10 +214,50 @@ body {
 .collapsed .accordion-toggle-icon {
     transform: rotate(-90deg);
 }
+
+/* جدول العمليات الجراحية الموحد */
+#surgicalOperationsTable {
+    table-layout: fixed;
+    width: 100%;
+}
+#surgicalOperationsTable th {
+    vertical-align: middle;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 8px 10px;
+    background-color: #f1f5f9;
+    border-bottom: 2px solid #cbd5e1;
+}
+#surgicalOperationsTable td {
+    vertical-align: middle;
+    padding: 6px 8px;
+}
+#surgicalOperationsTable .select2-container {
+    width: 100% !important;
+}
+#surgicalOperationsTable .select2-selection--single {
+    height: 31px !important;
+    padding: 2px 8px !important;
+    font-size: 0.85rem !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+#surgicalOperationsTable .select2-selection__rendered {
+    line-height: 27px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+#surgicalOperationsTable .select2-selection__arrow {
+    height: 29px !important;
+}
 </style>
 @endsection
 
 @section('content')
+@php
+    $categoriesList = $surgicalOperations->pluck('category')->filter()->unique()->values();
+@endphp
 <div class="container-fluid py-2">
     <!-- ترويسة مدمجة -->
     <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
@@ -312,10 +352,10 @@ body {
                         </div>
                     </div>
 
-                    <!-- السطر 1: تفاصيل العملية -->
+                    <!-- السطر 1: البيانات الأساسية (المريض، الجراح، المرسل) -->
                     <div class="row g-2 mb-2">
                         <!-- المريض -->
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label for="patient_id" class="form-label">
                                 المريض <span class="text-danger">*</span>
                             </label>
@@ -351,100 +391,23 @@ body {
                             @error('patient_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <!-- صنف العملية -->
-                        <div class="col-md-3">
-                            <label for="surgery_category" class="form-label">
-                                صنف العملية <span class="text-danger">*</span>
+                        <!-- الطبيب الجراح -->
+                        <div class="col-md-4">
+                            <label for="doctor_id" class="form-label">
+                                الطبيب الجراح <span class="text-danger">*</span>
                             </label>
-                            <select name="surgery_category" id="surgery_category" class="form-select @error('surgery_category') is-invalid @enderror" required>
-                                <option value="">-- اختر الصنف --</option>
-                                @foreach($surgicalOperations->unique('category')->pluck('category') as $category)
-                                    <option value="{{ $category }}" {{ old('surgery_category') == $category ? 'selected' : '' }}>
-                                        {{ $category }}
+                            <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
+                                <option value="">اختر الجراح</option>
+                                @foreach($doctors as $doctor)
+                                    @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
+                                    <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
+                                        د. {{ $doctorName }}
                                     </option>
                                 @endforeach
                             </select>
-                            @error('surgery_category') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <!-- نوع العملية -->
-                        <div class="col-md-3">
-                            <label for="surgical_operation_id" class="form-label">
-                                نوع العملية <span class="text-danger">*</span>
-                            </label>
-                            <select name="surgical_operation_id" id="surgical_operation_id" class="form-select @error('surgical_operation_id') is-invalid @enderror" required>
-                                <option value="">-- اختر العملية --</option>
-                                @foreach($surgicalOperations as $operation)
-                                    <option value="{{ $operation->id }}" 
-                                            data-category="{{ $operation->category }}"
-                                            data-fee="{{ $operation->fee }}"
-                                            {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
-                                        {{ $operation->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('surgical_operation_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        <!-- سعر العملية -->
-                        <div class="col-md-3" id="custom_fee_container">
-                            <label for="custom_surgery_fee" class="form-label d-flex justify-content-between">
-                                <span>سعر العملية (د.ع) <span class="text-danger">*</span></span>
-                                <span id="surgery_fee_hint" class="text-primary small fw-normal" style="display:none; font-size:0.75rem;"></span>
-                            </label>
-                            <input type="text" 
-                                   name="custom_surgery_fee" 
-                                   id="custom_surgery_fee" 
-                                   class="form-control @error('custom_surgery_fee') is-invalid @enderror" 
-                                   value="{{ old('custom_surgery_fee') }}"
-                                   placeholder="مثال: 1,000,000"
-                                   inputmode="numeric"
-                                   required>
-                            @error('custom_surgery_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-                    </div>
-
-                    <!-- العمليات الجراحية الإضافية / المرافقة (Secondary / Additional Operations) -->
-                    <div class="card mb-3 border-0 rounded-3 shadow-none" style="border: 1.5px dashed #0284c7 !important; background-color: #f0f9ff;">
-                        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2 py-1" style="font-size: 0.78rem;">
-                                    <i class="fas fa-layer-group me-1"></i>عمليات متعددة
-                                </span>
-                                <span class="fw-bold text-dark" style="font-size: 0.85rem;">
-                                    العمليات الجراحية المرافقة / الثانوية (في نفس جلسة صالة العمليات)
-                                </span>
-                                <small class="text-muted d-none d-md-inline" style="font-size: 0.75rem;">(اختياري - عند إجراء أكثر من تداخل جراحي في نفس وقت التخدير والدخول)</small>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="addAdditionalOpBtn">
-                                <i class="fas fa-plus-circle me-1"></i> إضافة عملية مرافقة
-                            </button>
-                        </div>
-                        <div class="card-body p-2" id="additionalOpsContainer">
-                            <div id="noAdditionalOpsNotice" class="text-center text-muted py-2 small">
-                                <i class="fas fa-info-circle me-1 text-info"></i> لا توجد عمليات مرافقة مضافة حالياً. إذا كان المريض سيخضع لأكثر من عملية اضغط <strong>«إضافة عملية مرافقة»</strong>.
-                            </div>
-                        </div>
-                        <!-- شريط الحساب المالي المجمع -->
-                        <div class="card-footer bg-white py-2 px-3 border-top" id="totalOpsCalculationFooter" style="display: none !important;">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <div class="small">
-                                    <span class="text-muted">العملية الرئيسية:</span>
-                                    <strong id="summaryPrimaryFee" class="text-dark">0</strong> د.ع
-                                    <span class="mx-2 text-muted">+</span>
-                                    <span class="text-muted">العمليات المرافقة:</span>
-                                    <strong id="summaryAdditionalFee" class="text-primary">0</strong> د.ع
-                                </div>
-                                <div class="fw-bold fs-7">
-                                    <span class="text-dark">إجمالي أجور العمليات: </span>
-                                    <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 د.ع</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- السطر 2: الفريق الطبي والتاريخ -->
-                    <div class="row g-2 mb-2">
                         <!-- الطبيب المرسل -->
                         <div class="col-md-4">
                             <label class="form-label">
@@ -483,24 +446,10 @@ body {
                             </select>
                             @error('referring_doctor_name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                         </div>
+                    </div>
 
-                        <!-- الطبيب الجراح -->
-                        <div class="col-md-4">
-                            <label for="doctor_id" class="form-label">
-                                الطبيب الجراح <span class="text-danger">*</span>
-                            </label>
-                            <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
-                                <option value="">اختر الجراح</option>
-                                @foreach($doctors as $doctor)
-                                    @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                    <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
-                                        د. {{ $doctorName }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
+                    <!-- السطر 2: تاريخ ومستند العملية -->
+                    <div class="row g-2 mb-3 align-items-center">
                         <!-- تاريخ العملية -->
                         <div class="col-md-4">
                             <label for="scheduled_date" class="form-label">
@@ -511,12 +460,10 @@ body {
                                    value="{{ old('scheduled_date', date('Y-m-d')) }}" required>
                             @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
-                    </div>
 
-                    <!-- السطر 3: ورقة التحويل الطبي بالسكانر -->
-                    <div class="row g-2 align-items-end pt-1 border-top mt-2">
-                        <div class="col-md-12">
-                            <label class="form-label text-muted">ورقة التحويل الطبي (سكانر / ملف)</label>
+                        <!-- ورقة التحويل الطبي بالسكانر -->
+                        <div class="col-md-8">
+                            <label class="form-label text-muted">ورقة التحويل الطبي (سكانر / رفع ملف)</label>
                             <div class="d-flex gap-1" id="referral_letter_container">
                                 <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
                                     <i class="fas fa-print me-1"></i> مسح بالسكانر
@@ -527,16 +474,123 @@ body {
                                 <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
                                 <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
                             </div>
+                            <!-- معاينة الوثيقة الممسوحة -->
+                            <div id="referral_letter_preview" class="mt-2" style="display: none;">
+                                <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                                    <span id="preview_text"><i class="fas fa-check-circle me-1"></i> تم مسح/رفع ورقة التحويل بنجاح</span>
+                                    <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
+                                        <i class="fas fa-times me-1"></i> إلغاء
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- معاينة الوثيقة الممسوحة -->
-                    <div id="referral_letter_preview" class="mt-2" style="display: none;">
-                        <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
-                            <span id="preview_text"><i class="fas fa-check-circle me-1"></i> تم مسح/رفع ورقة التحويل بنجاح</span>
-                            <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
-                                <i class="fas fa-times me-1"></i> إلغاء
-                            </button>
+                    <!-- السطر 3: بطاقة العمليات الجراحية الموحدة بالكامل -->
+                    <div class="card mb-3 border-0 rounded-3 shadow-none overflow-hidden" style="border: 1.5px solid #0284c7 !important; background-color: #f8fafc;">
+                        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary text-white rounded-pill px-2 py-1" style="font-size: 0.8rem;">
+                                    <i class="fas fa-procedures me-1"></i>العمليات
+                                </span>
+                                <span class="fw-bold text-dark" style="font-size: 0.9rem;">
+                                    جدول العمليات الجراحية المطلوبة
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small">عدد العمليات: <strong id="totalOpsCount" class="text-primary">1</strong></span>
+                                <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 د.ع</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover align-middle mb-0" id="surgicalOperationsTable" style="min-width: 860px;">
+                                    <thead>
+                                        <tr class="text-secondary text-center small">
+                                            <th style="width: 100px;">العملية</th>
+                                            <th style="width: 23%;">صنف العملية <span class="text-danger">*</span></th>
+                                            <th style="width: 27%;">نوع العملية <span class="text-danger">*</span></th>
+                                            <th style="width: 160px;">السعر (د.ع) <span class="text-danger">*</span></th>
+                                            <th>ملاحظات / توصيف</th>
+                                            <th style="width: 75px;">إجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="operationsTableBody">
+                                        <!-- العملية (1) - العملية الأولى الأساسية -->
+                                        <tr id="op_row_primary" class="align-middle bg-white">
+                                            <td class="text-center bg-light">
+                                                <span class="badge bg-primary text-white px-2 py-1" style="font-size: 0.8rem;">العملية (1)</span>
+                                            </td>
+                                            <td>
+                                                <select name="surgery_category" id="surgery_category" class="form-select form-select-sm op-category-select @error('surgery_category') is-invalid @enderror" required style="width: 100%;">
+                                                    <option value="">-- اختر الصنف --</option>
+                                                    @foreach($categoriesList as $category)
+                                                        <option value="{{ $category }}" {{ old('surgery_category') == $category ? 'selected' : '' }}>
+                                                            {{ $category }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                @error('surgery_category') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </td>
+                                            <td>
+                                                <select name="surgical_operation_id" id="surgical_operation_id" class="form-select form-select-sm op-name-select @error('surgical_operation_id') is-invalid @enderror" required style="width: 100%;">
+                                                    <option value="">-- اختر العملية --</option>
+                                                    @foreach($surgicalOperations as $operation)
+                                                        <option value="{{ $operation->id }}" 
+                                                                data-category="{{ $operation->category }}"
+                                                                data-fee="{{ $operation->fee }}"
+                                                                {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
+                                                            {{ $operation->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                @error('surgical_operation_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" 
+                                                           name="custom_surgery_fee" 
+                                                           id="custom_surgery_fee" 
+                                                           class="form-control form-control-sm op-fee-input text-end fw-bold @error('custom_surgery_fee') is-invalid @enderror" 
+                                                           value="{{ old('custom_surgery_fee') }}"
+                                                           placeholder="0"
+                                                           inputmode="numeric"
+                                                           required>
+                                                    <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">د.ع</span>
+                                                </div>
+                                                @error('custom_surgery_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </td>
+                                            <td>
+                                                <input type="text" 
+                                                       name="description" 
+                                                       id="description" 
+                                                       class="form-control form-control-sm" 
+                                                       value="{{ old('description') }}"
+                                                       placeholder="ملاحظات العملية الأولى...">
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" title="العملية (1) أساسية مطلوبة">
+                                                    <i class="fas fa-lock me-1"></i> أساسية
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- زر الإضافة المباشر أسفل الجدول مع الملخص المالي -->
+                            <div class="p-2 px-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-xs" id="addAnotherOpBtn">
+                                    <i class="fas fa-plus-circle me-1"></i> ➕ إضافة عملية أخرى
+                                </button>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="text-muted small">عدد العمليات: <strong id="totalOpsCountBottom" class="text-primary">1</strong></span>
+                                    <div class="d-flex align-items-center">
+                                        <span class="text-dark small me-2 fw-bold">إجمالي سعر العمليات:</span>
+                                        <span id="summaryTotalFeeBottom" class="badge bg-success fs-7 px-3 py-1">0 د.ع</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -961,13 +1015,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (opId && fee !== undefined && fee !== null) {
                 const formattedFee = new Intl.NumberFormat('en-US').format(fee);
-                $('#surgery_fee_hint').text('السعر الافتراضي: ' + formattedFee + ' د.ع').show();
+                $('#custom_surgery_fee').attr('title', 'السعر الافتراضي: ' + formattedFee + ' د.ع');
                 if (!$('#custom_surgery_fee').val()) {
                     $('#custom_surgery_fee').val(formattedFee);
                 }
             } else {
-                $('#surgery_fee_hint').hide();
+                $('#custom_surgery_fee').removeAttr('title');
             }
+            updateOpsFinancialSummary();
         });
 
         if ($('#surgical_operation_id').val()) {
@@ -978,8 +1033,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // تنسيق فواصل الآلاف
     const customFeeInput = document.getElementById('custom_surgery_fee');
     function formatWithCommas(val) {
-        if (!val) return '';
-        const digits = val.toString().replace(/[^0-9]/g, '');
+        if (!val && val !== 0) return '';
+        let str = val.toString().trim();
+        if (str.includes('.')) {
+            str = str.split('.')[0];
+        }
+        const digits = str.replace(/[^0-9]/g, '');
         if (!digits) return '';
         return parseInt(digits, 10).toLocaleString('en-US');
     }
@@ -995,32 +1054,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // إدارة العمليات الجراحية الإضافية / المرافقة
+    // إدارة العمليات الجراحية الموحدة والمتعددة
     let addOpIndex = 0;
+
+    function renumberAllOpRows() {
+        let currentNumber = 2;
+        $('#operationsTableBody .additional-op-row').each(function() {
+            $(this).find('.op-number-badge').text('العملية (' + currentNumber + ')');
+            currentNumber++;
+        });
+        const totalCount = 1 + $('#operationsTableBody .additional-op-row').length;
+        $('#totalOpsCount').text(totalCount);
+        $('#totalOpsCountBottom').text(totalCount);
+    }
 
     function updateOpsFinancialSummary() {
         const primaryVal = $('#custom_surgery_fee').val() || '0';
         const primaryFee = parseInt(primaryVal.replace(/[^0-9]/g, ''), 10) || 0;
         
         let additionalTotal = 0;
-        let count = 0;
         $('.add-op-fee').each(function() {
             const rowFeeVal = $(this).val() || '0';
             const rowFee = parseInt(rowFeeVal.replace(/[^0-9]/g, ''), 10) || 0;
             additionalTotal += rowFee;
-            count++;
         });
 
-        if (count > 0) {
-            $('#noAdditionalOpsNotice').hide();
-            $('#totalOpsCalculationFooter').removeAttr('style').css('display', 'block');
-            $('#summaryPrimaryFee').text(primaryFee.toLocaleString('en-US'));
-            $('#summaryAdditionalFee').text(additionalTotal.toLocaleString('en-US'));
-            $('#summaryTotalFee').text((primaryFee + additionalTotal).toLocaleString('en-US') + ' د.ع');
-        } else {
-            $('#noAdditionalOpsNotice').show();
-            $('#totalOpsCalculationFooter').attr('style', 'display:none !important;');
-        }
+        renumberAllOpRows();
+        const formattedTotal = (primaryFee + additionalTotal).toLocaleString('en-US') + ' د.ع';
+        $('#summaryTotalFee').text(formattedTotal);
+        $('#summaryTotalFeeBottom').text(formattedTotal);
     }
 
     function addAdditionalOpRow(selectedOpId = null, initialFee = null, initialNotes = '', selectedCategory = null) {
@@ -1051,47 +1113,41 @@ document.addEventListener('DOMContentLoaded', function() {
             feeValue = formatWithCommas(initialFee.toString());
         }
 
+        const nextNumber = 2 + $('#operationsTableBody .additional-op-row').length;
+
         const rowHtml = `
-            <div class="additional-op-row p-2 mb-2 bg-white rounded border border-info-subtle shadow-sm" id="add_op_row_${idx}">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1 fw-bold text-dark">
-                            صنف العملية
-                        </label>
-                        <select class="form-select form-select-sm add-op-category" style="width: 100%;">
-                            ${catOptions}
-                        </select>
+            <tr class="additional-op-row align-middle bg-white" id="add_op_row_${idx}">
+                <td class="text-center bg-light">
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1 op-number-badge" style="font-size: 0.8rem;">العملية (${nextNumber})</span>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm add-op-category" style="width: 100%;">
+                        ${catOptions}
+                    </select>
+                </td>
+                <td>
+                    <select name="additional_operations[${idx}][surgical_operation_id]" class="form-select form-select-sm select2-add-op" required style="width: 100%;">
+                        ${opOptions}
+                    </select>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="additional_operations[${idx}][fee]" class="form-control form-control-sm add-op-fee text-end fw-bold" value="${feeValue}" placeholder="0" inputmode="numeric" required>
+                        <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">د.ع</span>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1 fw-bold text-dark">
-                            نوع العملية <span class="text-danger">*</span>
-                        </label>
-                        <select name="additional_operations[${idx}][surgical_operation_id]" class="form-select form-select-sm select2-add-op" required style="width: 100%;">
-                            ${opOptions}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small mb-1 fw-bold text-dark">
-                            سعر العملية (د.ع) <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" name="additional_operations[${idx}][fee]" class="form-control form-control-sm add-op-fee" value="${feeValue}" placeholder="0" inputmode="numeric" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1 text-muted">
-                            توصيف / ملاحظة
-                        </label>
-                        <input type="text" name="additional_operations[${idx}][notes]" class="form-control form-control-sm" value="${initialNotes || ''}" placeholder="تكميلية، جهة يسرى...">
-                    </div>
-                    <div class="col-md-1 text-center pt-3">
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-add-op-btn" title="حذف العملية المرافقة">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                </td>
+                <td>
+                    <input type="text" name="additional_operations[${idx}][notes]" class="form-control form-control-sm" value="${initialNotes || ''}" placeholder="تكميلية، جهة يسرى...">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-add-op-btn py-1 px-2" title="حذف هذه العملية">
+                        <i class="fas fa-trash-alt me-1"></i> حذف
+                    </button>
+                </td>
+            </tr>
         `;
 
-        $('#additionalOpsContainer').append(rowHtml);
+        $('#operationsTableBody').append(rowHtml);
 
         const $row = $(`#add_op_row_${idx}`);
         const $catSelect = $row.find('.add-op-category');
@@ -1161,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateOpsFinancialSummary();
     }
 
-    $(document).on('click', '#addAdditionalOpBtn', function(e) {
+    $(document).on('click', '#addAnotherOpBtn, #addAnotherOpBtnBottom', function(e) {
         e.preventDefault();
         addAdditionalOpRow();
     });
@@ -1169,6 +1225,7 @@ document.addEventListener('DOMContentLoaded', function() {
     $(document).on('click', '.remove-add-op-btn', function(e) {
         e.preventDefault();
         $(this).closest('.additional-op-row').remove();
+        renumberAllOpRows();
         updateOpsFinancialSummary();
     });
 

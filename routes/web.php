@@ -450,6 +450,11 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/groups/{group}', [UserLabTestGroupController::class, 'destroy'])->name('groups.destroy')->middleware('can:delete lab test groups');
         });
 
+        // جدول تسعير وتصنيف الفحوصات المختبرية السريع
+        Route::get('/pricing-settings', [\App\Http\Controllers\LabTestPricingController::class, 'index'])->name('pricing-settings.index');
+        Route::post('/pricing-settings/save', [\App\Http\Controllers\LabTestPricingController::class, 'save'])->name('pricing-settings.save');
+        Route::post('/pricing-settings/rename-category', [\App\Http\Controllers\LabTestPricingController::class, 'renameCategory'])->name('pricing-settings.rename-category');
+
         Route::get('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'show'])->name('show');
         Route::get('/{labTest}/edit', [\App\Http\Controllers\LabTestController::class, 'edit'])->name('edit');
         Route::put('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'update'])->name('update');

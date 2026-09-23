@@ -290,7 +290,7 @@ class SurgeryTest extends TestCase
             'visit_id' => 161,
         ]));
         $createPageResponse->assertStatus(200);
-        $createPageResponse->assertSee('إضافة عملية مرافقة');
+        $createPageResponse->assertSee('إضافة عملية أخرى');
 
         $response = $this->actingAs($admin)->post(route('surgeries.store'), [
             'patient_id' => $patient->id,
@@ -328,5 +328,49 @@ class SurgeryTest extends TestCase
         // فحص احتساب الكاشير وإجمالي العمليات
         $totalCombinedFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee');
         $this->assertEquals(750000, $totalCombinedFee);
+
+        // فحص فتح شاشة التعديل واسترجاع العمليات المتعددة
+        $editResponse = $this->actingAs($admin)->get(route('surgeries.edit', $surgery));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('surgicalOperationsTable');
+        $editResponse->assertSee('جدول العمليات الجراحية المطلوبة');
+
+        // فحص تعديل وتحديث العمليات المتعددة
+        $thirdOp = \App\Models\SurgicalOperation::create([
+            'name' => 'Hernioplasty',
+            'category' => 'General Surgery',
+            'fee' => 150000,
+            'is_active' => true,
+        ]);
+
+        $updateResponse = $this->actingAs($admin)->put(route('surgeries.update', $surgery), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'room_id' => $room->id,
+            'expected_stay_days' => 1,
+            'surgery_category' => 'General Surgery',
+            'surgical_operation_id' => $primaryOp->id,
+            'custom_surgery_fee' => '600,000',
+            'scheduled_date' => now()->addDays(3)->toDateString(),
+            'scheduled_time' => '11:00',
+            'referring_doctor_name' => 'د. أحمد الاستشاري',
+            'additional_operations' => [
+                [
+                    'surgical_operation_id' => $thirdOp->id,
+                    'fee' => '180,000',
+                    'notes' => 'تم استبدال العملية التكميلية',
+                ]
+            ]
+        ]);
+
+        $updateResponse->assertRedirect(route('surgeries.index'));
+
+        $surgery->refresh();
+        $this->assertEquals(600000, $surgery->surgery_fee);
+        $this->assertCount(1, $surgery->additionalOperations);
+        $this->assertEquals($thirdOp->id, $surgery->additionalOperations->first()->surgical_operation_id);
+        $this->assertEquals(180000, $surgery->additionalOperations->first()->fee);
+        $this->assertEquals('تم استبدال العملية التكميلية', $surgery->additionalOperations->first()->notes);
     }
 }
+

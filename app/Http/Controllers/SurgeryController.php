@@ -393,7 +393,7 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room']);
+        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room', 'additionalOperations.surgicalOperation']);
         $patients = Patient::with('user')->get()->sortBy(function($p) {
             return optional($p->user)->name ?? '';
         });
@@ -466,9 +466,13 @@ class SurgeryController extends Controller
             'referring_doctor_name' => 'required|string|max:255',
             'referral_letter' => 'nullable|file|max:25600',
             'scanned_referral_letter' => 'nullable|string',
-            'custom_surgery_fee' => 'required|numeric|min:0',
+            'custom_surgery_fee' => 'required',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
+            'additional_operations' => 'nullable|array',
+            'additional_operations.*.surgical_operation_id' => 'nullable|exists:surgical_operations,id',
+            'additional_operations.*.fee' => 'nullable',
+            'additional_operations.*.notes' => 'nullable|string',
         ], [
             'room_id.required' => 'يرجى اختيار غرفة للمريض قبل تأكيد الحجز.',
             'expected_stay_days.required' => 'يرجى تحديد عدد أيام الإقامة المتوقعة.',
@@ -544,6 +548,24 @@ class SurgeryController extends Controller
         }
 
         $surgery->update($surgeryData);
+
+        // تحديث العمليات الإضافية / المرافقة
+        $surgery->additionalOperations()->delete();
+        if ($request->has('additional_operations') && is_array($request->additional_operations)) {
+            foreach ($request->additional_operations as $addOp) {
+                if (!empty($addOp['surgical_operation_id'])) {
+                    $rawFee = $addOp['fee'] ?? 0;
+                    $normalizedAddFee = is_numeric($rawFee) ? (float)$rawFee : (float)str_replace([',', ' '], ['', ''], $rawFee);
+                    
+                    $surgery->additionalOperations()->create([
+                        'surgical_operation_id' => $addOp['surgical_operation_id'],
+                        'fee' => $normalizedAddFee,
+                        'notes' => $addOp['notes'] ?? null,
+                        'added_by' => Auth::id(),
+                    ]);
+                }
+            }
+        }
 
         // أرشفة الوثيقة في سجل المريض إن وجدت
         if ($path && $surgery->patient_id) {
