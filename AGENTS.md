@@ -59,6 +59,16 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git صارمة)**: فرع `main` لا يتم الرفع (`git push`) عليه نهائياً، بل يُستخدم فقط لاستلام وسحب التحديثات (`pull / fetch`). كل تطوير أو ميزة تُدار وتُرفع حصراً عبر فرعها الخاص (مثل فرع `hr`).
 
+## Session log (2026-09-23 — مطابقة وتحديث أسعار وتصنيفات تحاليل المختبر وفقاً لجدول الضمان الصحي 2025)
+
+### Done
+- **مطابقة تحاليل المختبر مع جدول الضمان الصحي الرسمي (PDF)**:
+  * مطابقة 150 تحليلاً في قاعدة البيانات مع قائمة الـ PDF (381 تحليلاً).
+  * تحديث وتصحيح تصنيفات 91 تحليلاً لاعتماد تصنيف الـ PDF (`Group`): نقل الهرمونات إلى `Hormone`، مؤشرات الأورام إلى `Immunity`، الفيروسات إلى `Infectious disease`، فحص السائل المنوي إلى `Microbiology`، وفصائل الدم إلى `Hematology`.
+  * إدخال وتفعيل أسعار الضمان الصحي (`hi_price` و `is_hi_active`) لـ 134 تحليلاً مطابقاً.
+  * إنشاء ميغريشن رسمي `2026_09_23_180000_update_lab_tests_pricing_and_categories_from_pdf.php` لضمان سريان التحديثات تلقائياً عند النشر على خادم هوستنجر (Hostinger).
+
+
 ## Session log (2026-09-20 — منظومة إدارة الصيدلية ونقطة البيع POS وتتبع الصلاحيات FEFO: الخطوات 1 إلى 4)
 
 ### Done
