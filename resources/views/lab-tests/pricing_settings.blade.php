@@ -20,7 +20,7 @@
             <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-list me-1"></i> دليل الفحوصات
             </a>
-            <button type="button" id="saveAllTopBtn" class="btn btn-success fw-bold shadow-sm">
+            <button type="submit" form="labPricingForm" id="saveAllTopBtn" class="btn btn-success fw-bold shadow-sm">
                 <i class="fas fa-save me-1"></i> حفظ جميع التعديلات
             </button>
         </div>
@@ -202,16 +202,21 @@
                     </tbody>
                 </table>
             </div>
-            @if($labTests->hasPages())
-                <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
-                    <div class="small text-muted">
-                        عرض {{ $labTests->firstItem() }} إلى {{ $labTests->lastItem() }} من أصل {{ $labTests->total() }}
-                    </div>
-                    <div>
-                        {{ $labTests->links('pagination::bootstrap-5') }}
-                    </div>
+            <div class="card-footer bg-white py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="small text-muted">
+                    عرض {{ $labTests->firstItem() ?? 0 }} إلى {{ $labTests->lastItem() ?? 0 }} من أصل {{ $labTests->total() }} تحليل
                 </div>
-            @endif
+                <div class="d-flex align-items-center gap-2">
+                    <button type="submit" form="labPricingForm" id="saveAllBottomBtn" class="btn btn-success btn-sm fw-bold shadow-sm px-3">
+                        <i class="fas fa-save me-1"></i> حفظ جميع التعديلات
+                    </button>
+                    @if($labTests->hasPages())
+                        <div>
+                            {{ $labTests->links('pagination::bootstrap-5') }}
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -418,13 +423,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // حفظ الكل
-    $('#saveAllTopBtn').on('click', function() {
+    $('#saveAllTopBtn, #saveAllBottomBtn').on('click', function(e) {
         if (!confirm('هل تريد بالتأكيد حفظ جميع تعديلات الأسعار والتصنيفات في هذه الصفحة؟')) {
-            return;
+            e.preventDefault();
+            return false;
         }
         $('#saveModeInput').val('all');
         $('#targetIdInput').val('');
-        $('#labPricingForm').submit();
     });
 });
 </script>

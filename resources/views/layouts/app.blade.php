@@ -588,6 +588,7 @@
         }
     </style>
     @yield('styles')
+    @stack('styles')
 </head>
 <body>
     {{-- Global Page Loader Ultra --}}
@@ -1488,6 +1489,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
     @yield('scripts')
+    @stack('scripts')
     <script>
         // تحديث أيقونات القوائم المنسدلة
         document.addEventListener('DOMContentLoaded', function() {

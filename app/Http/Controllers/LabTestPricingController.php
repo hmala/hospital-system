@@ -112,12 +112,16 @@ class LabTestPricingController extends Controller
             $hiPrice = $cleanNumber($request->input("hi_price.{$index}"));
             $moiPrice = $cleanNumber($request->input("moi_price.{$index}"));
             $subcategory = trim((string) $request->input("subcategory.{$index}"));
+            $isHiActive = ($hiPrice !== null && $hiPrice > 0);
+            $isMoiActive = ($moiPrice !== null && $moiPrice > 0);
             $isActive = $request->has("is_active.{$index}") ? (bool) $request->input("is_active.{$index}") : false;
 
             $updateData = [
                 'price' => $price,
                 'hi_price' => $hiPrice,
+                'is_hi_active' => $isHiActive,
                 'moi_price' => $moiPrice,
+                'is_moi_active' => $isMoiActive,
                 'is_active' => $isActive,
             ];
 

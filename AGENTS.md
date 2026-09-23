@@ -59,6 +59,15 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git صارمة)**: فرع `main` لا يتم الرفع (`git push`) عليه نهائياً، بل يُستخدم فقط لاستلام وسحب التحديثات (`pull / fetch`). كل تطوير أو ميزة تُدار وتُرفع حصراً عبر فرعها الخاص (مثل فرع `hr`).
 
+## Session log (2026-09-23 — إصلاح وتفعيل أزرار حفظ إعدادات أسعار وتصنيفات المختبر ودعم stack scripts)
+
+### Done
+- **إصلاح أزرار حفظ أسعار التحاليل (الكلي والفردي)**:
+  * إضافة `@stack('scripts')` و `@stack('styles')` في القالب العام [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php) لتمكين تشغيل كافة السكربتات المحقونة في جميع الواجهات.
+  * ربط زر الحفظ الكلي العلوي والسفلي بـ `form="labPricingForm"` وإتاحة زر حفظ إضافي بأسفل الجدول لتسهيل الحفظ السريع.
+  * تحديث [LabTestPricingController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestPricingController.php) لضبط `is_hi_active` و `is_moi_active` تلقائياً بحسب وجود أسعار الضمان والداخلية.
+  * اجتياز كامل اختبارات `LabTestPricingSettingsTest` بنجاح (4 passed, 18 assertions).
+
 ## Session log (2026-09-23 — مطابقة وتحديث أسعار وتصنيفات تحاليل المختبر وفقاً لجدول الضمان الصحي 2025)
 
 ### Done
