@@ -57,7 +57,7 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
-- **CRITICAL GIT RULE (قاعدة Git صارمة)**: فرع `main` لا يتم الرفع (`git push`) عليه نهائياً، بل يُستخدم فقط لاستلام وسحب التحديثات (`pull / fetch`). كل تطوير أو ميزة تُدار وتُرفع حصراً عبر فرعها الخاص (مثل فرع `hr`).
+- **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 ## Session log (2026-09-23 — إصلاح وتفعيل أزرار حفظ إعدادات أسعار وتصنيفات المختبر ودعم stack scripts)
 
