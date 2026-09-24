@@ -205,11 +205,13 @@ class PharmacyPosController extends Controller
                 $q->orderBy('expiry_date', 'asc');
             },
             'items.medicine.alternatives',
+            'items.suggestedMedicine',
             'visit'
         ]);
 
         $itemsData = $prescription->items->map(function ($item) {
             $med = $item->medicine;
+            $suggested = $item->suggestedMedicine;
             $alternatives = collect();
             if ($med) {
                 $alternatives = $med->alternatives;
@@ -261,6 +263,12 @@ class PharmacyPosController extends Controller
                 'total_open_sub_units' => $med?->total_open_sub_units ?? 0,
                 'is_in_stock' => $med && ($med->total_stock > 0 || $med->total_open_sub_units > 0),
                 'alternatives' => $altFormatted,
+                'suggested_medicine_id' => $item->suggested_medicine_id,
+                'suggested_medicine_name' => $suggested?->name,
+                'substitution_status' => $item->substitution_status ?? 'none',
+                'substitution_reason' => $item->substitution_reason,
+                'substitution_response_notes' => $item->substitution_response_notes,
+                'substitution_responded_at' => $item->substitution_responded_at?->format('H:i'),
             ];
         });
 
@@ -277,6 +285,36 @@ class PharmacyPosController extends Controller
                 'notes' => $prescription->notes,
                 'items' => $itemsData,
             ]
+        ]);
+    }
+
+    /**
+     * إرسال طلب اقتراح بديل دوائي من الصيدلية إلى الطبيب المعالج
+     */
+    public function suggestAlternative(Request $request, PrescriptionItem $item)
+    {
+        $validated = $request->validate([
+            'suggested_medicine_id' => 'required|exists:medicines,id',
+            'substitution_reason' => 'nullable|string|max:255',
+        ]);
+
+        $suggestedMed = Medicine::findOrFail($validated['suggested_medicine_id']);
+
+        $item->update([
+            'suggested_medicine_id' => $suggestedMed->id,
+            'substitution_status' => 'pending_approval',
+            'substitution_reason' => $validated['substitution_reason'] ?? 'عدم توفر الصنف الأصلي في الصيدلية - مقترح البديل المكافئ حيوياً',
+            'substitution_response_notes' => null,
+            'substitution_responded_at' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم إرسال طلب اقتراح البديل ({$suggestedMed->name}) إلى شاشة الطبيب بنجاح. بانتظار الموافقة...",
+            'item_id' => $item->id,
+            'suggested_medicine_id' => $suggestedMed->id,
+            'suggested_medicine_name' => $suggestedMed->name,
+            'substitution_status' => 'pending_approval',
         ]);
     }
 

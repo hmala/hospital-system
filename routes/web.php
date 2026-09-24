@@ -335,6 +335,8 @@ Route::middleware(['auth'])->group(function () {
         // Patient Medical History Timeline
         Route::get('/patient/{patient}/history', [DoctorVisitController::class, 'showPatientHistory'])->name('patient.history');
         Route::get('/visits/{visit}/prescription/print', [DoctorVisitController::class, 'printPrescription'])->name('visits.prescription.print');
+        Route::get('/visits/{visit}/substitution-requests', [DoctorVisitController::class, 'getSubstitutionRequests'])->name('visits.substitution-requests');
+        Route::post('/prescriptions/items/{item}/respond-substitution', [DoctorVisitController::class, 'respondToSubstitution'])->name('prescriptions.items.respond-substitution');
     });
     
     // مسارات المريض للزيارات
@@ -682,6 +684,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('pos/pending-prescriptions', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'pendingPrescriptions'])->name('pos.pending-prescriptions');
         Route::get('pos/prescriptions/{prescription}', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'getPrescriptionDetails'])->name('pos.prescriptions.show');
         Route::post('pos/prescriptions/{prescription}/dispense', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'dispensePrescription'])->name('pos.prescriptions.dispense');
+        Route::post('pos/prescription-items/{item}/suggest-alternative', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'suggestAlternative'])->name('pos.items.suggest-alternative');
         Route::post('pos/store', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'store'])->name('pos.store');
         Route::get('pos/held', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'heldBills'])->name('pos.held');
         Route::get('pos/held/{sale}/resume', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'resumeHeldBill'])->name('pos.held.resume');

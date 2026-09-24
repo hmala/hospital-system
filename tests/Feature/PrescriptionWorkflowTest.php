@@ -398,5 +398,126 @@ class PrescriptionWorkflowTest extends TestCase
         $this->assertDatabaseCount('prescription_items', 0);
         $this->assertDatabaseCount('prescribed_medications', 0);
     }
+
+    public function test_pharmacy_can_suggest_alternative_to_doctor()
+    {
+        $visit = $this->createVisit();
+
+        $prescription = Prescription::create([
+            'visit_id' => $visit->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'status' => 'pending',
+            'diagnosis' => 'نزلة معوية',
+        ]);
+
+        $item = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $this->medicine->id,
+            'quantity' => 1,
+            'status' => 'pending',
+        ]);
+
+        $altMedicine = Medicine::create([
+            'name' => 'Amoxil 500mg (Alternative)',
+            'generic_name' => 'Amoxicillin',
+            'dosage_form' => 'Capsule',
+            'strength' => '500mg',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('pharmacy.pos.items.suggest-alternative', $item), [
+            'suggested_medicine_id' => $altMedicine->id,
+            'substitution_reason' => 'غير متوفر بالصيدلية - مقترح البديل',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertEquals('pending_approval', $item->fresh()->substitution_status);
+        $this->assertEquals($altMedicine->id, $item->fresh()->suggested_medicine_id);
+    }
+
+    public function test_doctor_can_approve_alternative_suggestion()
+    {
+        $visit = $this->createVisit();
+
+        $prescription = Prescription::create([
+            'visit_id' => $visit->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'status' => 'pending',
+            'diagnosis' => 'التهاب حاد',
+        ]);
+
+        $altMedicine = Medicine::create([
+            'name' => 'Cefixime 400mg (Alternative)',
+            'generic_name' => 'Cefixime',
+            'dosage_form' => 'Tablet',
+            'strength' => '400mg',
+            'is_active' => true,
+        ]);
+
+        $item = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $this->medicine->id,
+            'suggested_medicine_id' => $altMedicine->id,
+            'substitution_status' => 'pending_approval',
+            'substitution_reason' => 'مقترح بديل',
+            'quantity' => 1,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->doctorUser)->postJson(route('doctor.prescriptions.items.respond-substitution', $item), [
+            'action' => 'approve',
+            'response_notes' => 'موافق على البديل',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertEquals('approved', $item->fresh()->substitution_status);
+        $this->assertEquals($altMedicine->id, $item->fresh()->medicine_id);
+        $this->assertEquals($altMedicine->id, $item->fresh()->dispensed_medicine_id);
+        $this->assertNotNull($item->fresh()->substitution_responded_at);
+    }
+
+    public function test_doctor_can_reject_alternative_suggestion()
+    {
+        $visit = $this->createVisit();
+
+        $prescription = Prescription::create([
+            'visit_id' => $visit->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'status' => 'pending',
+            'diagnosis' => 'فحص',
+        ]);
+
+        $altMedicine = Medicine::create([
+            'name' => 'Alt Med',
+            'is_active' => true,
+        ]);
+
+        $item = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $this->medicine->id,
+            'suggested_medicine_id' => $altMedicine->id,
+            'substitution_status' => 'pending_approval',
+            'quantity' => 1,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->doctorUser)->postJson(route('doctor.prescriptions.items.respond-substitution', $item), [
+            'action' => 'reject',
+            'response_notes' => 'مرفوض يرجى إحضار الأصلي',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertEquals('rejected', $item->fresh()->substitution_status);
+        $this->assertEquals($this->medicine->id, $item->fresh()->medicine_id);
+    }
 }
 

@@ -415,7 +415,14 @@ class DoctorVisitController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'sale_price', 'sub_unit_sale_price', 'main_unit', 'sub_unit']);
 
-        $latestPrescription = $visit->prescriptions()->with('items.medicine')->latest()->first();
+        $latestPrescription = $visit->prescriptions()
+            ->with(['items.medicine', 'items.suggestedMedicine', 'items.dispensedMedicine'])
+            ->latest()
+            ->first();
+
+        $pendingSubstitutionRequests = $latestPrescription 
+            ? $latestPrescription->items->where('substitution_status', 'pending_approval')
+            : collect();
 
         return view('doctors.visits.show', compact(
             'visit',
@@ -431,7 +438,8 @@ class DoctorVisitController extends Controller
             'availableDoctors',
             'emergencyServices',
             'availableMedicines',
-            'latestPrescription'
+            'latestPrescription',
+            'pendingSubstitutionRequests'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -1193,5 +1201,116 @@ class DoctorVisitController extends Controller
         $prescription = $visit->prescriptions()->latest()->first();
 
         return view('doctors.visits.prescription-print', compact('visit', 'prescription'));
+    }
+
+    /**
+     * استرجاع طلبات استبدال الأدوية الواردة من الصيدلية لهذه الزيارة لحظياً
+     */
+    public function getSubstitutionRequests(Visit $visit)
+    {
+        $prescription = $visit->prescriptions()->latest()->first();
+        if (!$prescription) {
+            return response()->json(['success' => true, 'count' => 0, 'requests' => []]);
+        }
+
+        $pendingRequests = $prescription->items()
+            ->where('substitution_status', 'pending_approval')
+            ->with(['medicine', 'suggestedMedicine'])
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'original_medicine_id' => $item->medicine_id,
+                    'original_medicine_name' => $item->medicine?->name ?? $item->medicine_name,
+                    'suggested_medicine_id' => $item->suggested_medicine_id,
+                    'suggested_medicine_name' => $item->suggestedMedicine?->name ?? 'بديل غير محدد',
+                    'suggested_generic' => $item->suggestedMedicine?->generic_name ?? '',
+                    'suggested_form' => $item->suggestedMedicine?->dosage_form ?? '',
+                    'suggested_strength' => $item->suggestedMedicine?->strength ?? '',
+                    'quantity' => $item->quantity,
+                    'unit_type' => $item->unit_type,
+                    'substitution_reason' => $item->substitution_reason ?? 'عدم توفر الصنف الأصلي في الصيدلية',
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'count' => $pendingRequests->count(),
+            'requests' => $pendingRequests,
+        ]);
+    }
+
+    /**
+     * رد الطبيب على طلب استبدال الدواء (موافقة أو رفض)
+     */
+    public function respondToSubstitution(HttpRequest $request, PrescriptionItem $item)
+    {
+        $request->validate([
+            'action' => 'required|in:approve,reject',
+            'response_notes' => 'nullable|string|max:255',
+        ]);
+
+        $item->load(['prescription.visit', 'medicine', 'suggestedMedicine']);
+
+        $action = $request->input('action');
+        $notes = $request->input('response_notes');
+
+        if ($action === 'approve') {
+            $suggestedMed = $item->suggestedMedicine;
+            if (!$suggestedMed) {
+                return response()->json(['success' => false, 'message' => 'لم يتم العثور على الدواء البديل المقترح.'], 422);
+            }
+
+            // تحديث بند الوصفة ليصبح الدواء المعتمد هو البديل المقترح
+            $item->update([
+                'medicine_id' => $suggestedMed->id,
+                'dispensed_medicine_id' => $suggestedMed->id,
+                'substitution_status' => 'approved',
+                'substitution_response_notes' => $notes ?? 'تمت موافقة الطبيب المعالج على البديل',
+                'substitution_responded_at' => now(),
+            ]);
+
+            // تحديث السجل في prescribed_medications المرتبط بالزيارة إن وجد
+            if ($item->prescription && $item->prescription->visit_id) {
+                $visitId = $item->prescription->visit_id;
+                $origName = $item->medicine?->name ?? $item->medicine_name;
+                $medRecord = \App\Models\PrescribedMedication::where('visit_id', $visitId)
+                    ->where('name', $origName)
+                    ->first();
+                if ($medRecord) {
+                    $medRecord->update([
+                        'name' => $suggestedMed->name,
+                        'instructions' => trim(($medRecord->instructions ?? '') . ' [تم اعتماد البديل بناءً على اقتراح الصيدلية]'),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "تمت الموافقة على استبدال الدواء بـ ({$suggestedMed->name}) واعتماده بالوصفة.",
+                'item' => [
+                    'id' => $item->id,
+                    'medicine_id' => $item->medicine_id,
+                    'medicine_name' => $suggestedMed->name,
+                    'substitution_status' => 'approved'
+                ],
+            ]);
+        } else {
+            // رفض البديل
+            $item->update([
+                'substitution_status' => 'rejected',
+                'substitution_response_notes' => $notes ?? 'تم رفض البديل من قبل الطبيب المعالج',
+                'substitution_responded_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم رفض البديل وإشعار الصيدلية بالبحث عن الصنف الأصلي أو الاعتذار.',
+                'item' => [
+                    'id' => $item->id,
+                    'substitution_status' => 'rejected'
+                ],
+            ]);
+        }
     }
 }

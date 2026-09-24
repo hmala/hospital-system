@@ -471,7 +471,7 @@
 
         // رابط الطباعة
         const printBtn = document.getElementById('btnPrintPrescriptionBtn');
-        printBtn.href = `{{ url('doctor/visits') }}/${rx.patient_id}/prescription/print`; // يتم التوجيه لطباعة الوصفة
+        printBtn.href = `{{ url('doctor/visits') }}/${rx.patient_id}/prescription/print`;
 
         // رسم جدول الأدوية
         const tbody = document.getElementById('dispensingItemsBody');
@@ -479,21 +479,52 @@
 
         rx.items.forEach((item, index) => {
             const hasStock = item.is_in_stock;
-            const stockBadge = hasStock 
-                ? `<span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock} علبة)</span>`
-                : `<div class="d-flex flex-column gap-1 align-items-center">
-                     <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-times-circle me-1"></i> غير متوفر</span>
-                     ${item.alternatives && item.alternatives.length > 0 
-                        ? `<button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-0 px-2 rounded" onclick="openAlternativesModal(${item.id})"><i class="fas fa-exchange-alt me-1"></i> البدائل (${item.alternatives.length})</button>` 
-                        : ''}
-                   </div>`;
+            let stockBadge = '';
+
+            if (item.substitution_status === 'pending_approval') {
+                stockBadge = `
+                    <div class="d-flex flex-column gap-1 align-items-center">
+                        <span class="badge bg-warning text-dark border border-warning px-2 py-1 shadow-xs">
+                            <i class="fas fa-hourglass-half fa-spin me-1"></i> بانتظار موافقة الطبيب
+                        </span>
+                        <small class="text-muted font-monospace">مقترح: ${item.suggested_medicine_name || 'بديل'}</small>
+                    </div>`;
+            } else if (item.substitution_status === 'approved') {
+                stockBadge = `
+                    <div class="d-flex flex-column gap-1 align-items-center">
+                        <span class="badge bg-success text-white px-2 py-1 shadow-xs">
+                            <i class="fas fa-check-circle me-1"></i> وافق الطبيب على البديل ✅
+                        </span>
+                    </div>`;
+            } else if (item.substitution_status === 'rejected') {
+                stockBadge = `
+                    <div class="d-flex flex-column gap-1 align-items-center">
+                        <span class="badge bg-danger text-white px-2 py-1 shadow-xs">
+                            <i class="fas fa-times-circle me-1"></i> رفض الطبيب البديل ❌
+                        </span>
+                        <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-0 px-2 rounded mt-1" onclick="openAlternativesModal(${item.id})">
+                            <i class="fas fa-exchange-alt me-1"></i> اختيار بديل آخر
+                        </button>
+                    </div>`;
+            } else if (hasStock) {
+                stockBadge = `<span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock} علبة)</span>`;
+            } else {
+                stockBadge = `
+                    <div class="d-flex flex-column gap-1 align-items-center">
+                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-times-circle me-1"></i> غير متوفر</span>
+                        ${item.alternatives && item.alternatives.length > 0 
+                            ? `<button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})"><i class="fas fa-exchange-alt me-1"></i> اقتراح بديل للطبيب (${item.alternatives.length})</button>` 
+                            : ''}
+                    </div>`;
+            }
 
             html += `
-                <tr id="dispRow-${item.id}" class="${!hasStock ? 'table-warning' : ''}">
+                <tr id="dispRow-${item.id}" class="${!hasStock && item.substitution_status !== 'approved' ? 'table-warning' : ''}">
                     <td class="text-center fw-bold text-muted">${index + 1}</td>
                     <td>
                         <div class="fw-bold text-dark fs-6" id="medName-${item.id}">
                             ${item.name}
+                            ${item.substitution_status === 'approved' ? '<span class="badge bg-success ms-1">بديل معتمد من الطبيب</span>' : ''}
                         </div>
                         <div class="small text-muted">
                             ${item.generic_name ? `<span class="badge bg-light text-secondary border me-1">${item.generic_name}</span>` : ''}
@@ -535,17 +566,22 @@
         item.alternatives.forEach(alt => {
             const hasStock = (alt.total_stock > 0 || alt.total_open_sub_units > 0);
             html += `
-                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center p-3 gap-2">
                     <div>
-                        <div class="fw-bold text-dark">${alt.name}</div>
+                        <div class="fw-bold text-dark fs-6">${alt.name}</div>
                         <div class="small text-muted">${alt.generic_name || ''} - ${alt.dosage_form || ''} (${alt.strength || ''})</div>
                         <div class="small font-monospace ${hasStock ? 'text-success' : 'text-danger'}">
                             <i class="fas fa-boxes me-1"></i> الرصيد المتوفر: ${alt.total_stock} ${alt.main_unit || 'علبة'}
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-2" ${!hasStock ? 'disabled' : ''} onclick="applyAlternative(${alt.id}, '${escapeHtml(alt.name)}')">
-                        <i class="fas fa-check me-1"></i> استبدال بهذا الدواء
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-2 shadow-sm" ${!hasStock ? 'disabled' : ''} onclick="sendAlternativeProposalToDoctor(${alt.id}, '${escapeHtml(alt.name)}')">
+                            <i class="fas fa-paper-plane me-1"></i> إرسال اقتراح للطبيب
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success fw-bold px-2 py-2" ${!hasStock ? 'disabled' : ''} onclick="applyAlternative(${alt.id}, '${escapeHtml(alt.name)}')">
+                            <i class="fas fa-check me-1"></i> استبدال مباشر
+                        </button>
+                    </div>
                 </div>
             `;
         });
@@ -555,7 +591,59 @@
         modal.show();
     }
 
-    // تطبيق استبدال الدواء في شاشة الصرف
+    // إرسال طلب اقتراح البديل إلى شاشة الطبيب للموافقة
+    function sendAlternativeProposalToDoctor(altId, altName) {
+        if (!targetItemForAlternative || !currentPrescriptionData) return;
+
+        fetch(`{{ url('pharmacy/pos/prescription-items') }}/${targetItemForAlternative}/suggest-alternative`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                suggested_medicine_id: altId,
+                substitution_reason: `عدم توفر الصنف الأصلي - مقترح البديل المكافئ (${altName})`
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // إغلاق المودال
+                const modalEl = document.getElementById('alternativeModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم إرسال الطلب للطبيب 📨',
+                    text: data.message,
+                    timer: 3500,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false
+                });
+
+                // تحديث حالة البند محلياً
+                const item = currentPrescriptionData.items.find(i => i.id === targetItemForAlternative);
+                if (item) {
+                    item.substitution_status = 'pending_approval';
+                    item.suggested_medicine_name = altName;
+                }
+                renderActivePrescription(currentPrescriptionData);
+
+            } else {
+                Swal.fire({ icon: 'error', title: 'خطأ', text: data.message || 'تعذر إرسال الطلب للطبيب.' });
+            }
+        })
+        .catch(err => {
+            console.error('Error suggesting alternative:', err);
+            Swal.fire({ icon: 'error', title: 'خطأ', text: 'تعذر الاتصال بالخادم.' });
+        });
+    }
+
+    // تطبيق استبدال الدواء المباشر في شاشة الصرف
     function applyAlternative(altId, altName) {
         if (!targetItemForAlternative || !currentPrescriptionData) return;
 
@@ -564,6 +652,7 @@
             item.medicine_id = altId;
             item.name = altName + ' (بديل)';
             item.is_in_stock = true;
+            item.substitution_status = 'approved';
 
             // تحديث الصف
             document.getElementById(`medName-${item.id}`).innerHTML = `${altName} <span class="badge bg-warning text-dark ms-1">بديل معتمد</span>`;

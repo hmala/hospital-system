@@ -20,12 +20,18 @@ class PrescriptionItem extends Model
         'instructions',
         'status',
         'dispensed_medicine_id',
+        'suggested_medicine_id',
+        'substitution_status',
+        'substitution_reason',
+        'substitution_response_notes',
+        'substitution_responded_at',
         'notes',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'duration_days' => 'integer',
+        'substitution_responded_at' => 'datetime',
     ];
 
     // ────────────── العلاقات ──────────────
@@ -43,6 +49,11 @@ class PrescriptionItem extends Model
     public function dispensedMedicine()
     {
         return $this->belongsTo(Medicine::class, 'dispensed_medicine_id');
+    }
+
+    public function suggestedMedicine()
+    {
+        return $this->belongsTo(Medicine::class, 'suggested_medicine_id');
     }
 
     // ────────────── Accessors ──────────────

@@ -1596,6 +1596,47 @@ datalist option:hover {
                                     @method('PUT')
                                     <input type="hidden" name="is_prescription_form" value="1">
 
+                                    <!-- لوحة تنبيهات طلبات استبدال الأدوية الواردة من الصيدلية -->
+                                    <div id="liveSubstitutionAlertsContainer" class="mb-4">
+                                        @if(isset($pendingSubstitutionRequests) && $pendingSubstitutionRequests->count() > 0)
+                                            @foreach($pendingSubstitutionRequests as $subReq)
+                                                <div class="alert alert-warning border-2 border-warning shadow-sm rounded-4 p-3 mb-3 substitution-alert-card" id="subAlert-{{ $subReq->id }}">
+                                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <div class="bg-warning text-dark p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                                                <i class="fas fa-exchange-alt fa-bounce"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                                                    <span>🔔 إشعار من الصيدلية: مقترح بديل دوائي</span>
+                                                                    <span class="badge bg-danger rounded-pill px-2 py-1 small">بانتظار قرارك</span>
+                                                                </h6>
+                                                                <div class="text-dark small mb-1">
+                                                                    الدواء المطلوب: <strong class="text-danger text-decoration-line-through">{{ $subReq->medicine?->name ?? $subReq->medicine_name }}</strong>
+                                                                    <i class="fas fa-arrow-left mx-2 text-primary"></i>
+                                                                    البديل المقترح: <strong class="text-success fs-6">{{ $subReq->suggestedMedicine?->name ?? 'دواء بديل' }}</strong>
+                                                                    <span class="text-muted">({{ $subReq->suggestedMedicine?->dosage_form }} - {{ $subReq->suggestedMedicine?->strength }})</span>
+                                                                </div>
+                                                                <div class="small text-secondary">
+                                                                    <i class="fas fa-info-circle me-1"></i>
+                                                                    <span>توضيح الصيدلية: {{ $subReq->substitution_reason ?? 'عدم توفر الصنف الأصلي حالياً' }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <button type="button" class="btn btn-success fw-bold px-3 py-2 shadow-sm rounded-3 btn-approve-sub" onclick="respondToSubstitution({{ $subReq->id }}, 'approve')">
+                                                                <i class="fas fa-check-circle me-1"></i> موافقة واعتماد البديل
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-danger fw-bold px-3 py-2 rounded-3 btn-reject-sub" onclick="respondToSubstitution({{ $subReq->id }}, 'reject')">
+                                                                <i class="fas fa-times-circle me-1"></i> رفض البديل
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
+
                                     <!-- قسم الأدوية والوصفة الطبية الإلكترونية -->
                                     <div class="card border-success mb-4">
                                         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
@@ -3234,7 +3275,140 @@ function confirmSurgeryReferral() {
         if (firstTab) {
             activateVisitTab(firstTab);
         }
+
+        // فحص دوري لحظي لطلبات استبدال الأدوية من الصيدلية كل 10 ثوان
+        setInterval(checkLiveSubstitutionRequests, 10000);
     });
+
+    // استعلام لحظي عن طلبات البدائل الواردة من الصيدلية
+    function checkLiveSubstitutionRequests() {
+        const visitId = {{ $visit->id }};
+        fetch(`{{ url('doctor/visits') }}/${visitId}/substitution-requests`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.requests) {
+                    renderSubstitutionAlerts(data.requests);
+                }
+            })
+            .catch(err => console.error('Error fetching substitution requests:', err));
+    }
+
+    // رسم بطاقات طلبات استبدال الأدوية
+    function renderSubstitutionAlerts(requests) {
+        const container = document.getElementById('liveSubstitutionAlertsContainer');
+        if (!container) return;
+
+        if (requests.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        requests.forEach(req => {
+            html += `
+                <div class="alert alert-warning border-2 border-warning shadow-sm rounded-4 p-3 mb-3 substitution-alert-card" id="subAlert-${req.id}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-warning text-dark p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="fas fa-exchange-alt fa-bounce"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <span>🔔 إشعار من الصيدلية: مقترح بديل دوائي</span>
+                                    <span class="badge bg-danger rounded-pill px-2 py-1 small">بانتظار قرارك</span>
+                                </h6>
+                                <div class="text-dark small mb-1">
+                                    الدواء المطلوب: <strong class="text-danger text-decoration-line-through">${req.original_medicine_name}</strong>
+                                    <i class="fas fa-arrow-left mx-2 text-primary"></i>
+                                    البديل المقترح: <strong class="text-success fs-6">${req.suggested_medicine_name}</strong>
+                                    <span class="text-muted">(${req.suggested_form || ''} - ${req.suggested_strength || ''})</span>
+                                </div>
+                                <div class="small text-secondary">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span>توضيح الصيدلية: ${req.substitution_reason || 'عدم توفر الصنف الأصلي حالياً'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-success fw-bold px-3 py-2 shadow-sm rounded-3 btn-approve-sub" onclick="respondToSubstitution(${req.id}, 'approve')">
+                                <i class="fas fa-check-circle me-1"></i> موافقة واعتماد البديل
+                            </button>
+                            <button type="button" class="btn btn-outline-danger fw-bold px-3 py-2 rounded-3 btn-reject-sub" onclick="respondToSubstitution(${req.id}, 'reject')">
+                                <i class="fas fa-times-circle me-1"></i> رفض البديل
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // إرسال قرار الطبيب (موافقة أو رفض)
+    function respondToSubstitution(itemId, action) {
+        const card = document.getElementById(`subAlert-${itemId}`);
+        if (card) {
+            card.querySelectorAll('button').forEach(btn => btn.disabled = true);
+        }
+
+        fetch(`{{ url('doctor/prescriptions/items') }}/${itemId}/respond-substitution`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ action: action })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (card) {
+                    card.style.transition = 'all 0.4s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.remove(), 400);
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: action === 'approve' ? 'success' : 'info',
+                        title: action === 'approve' ? 'تم اعتماد البديل ✅' : 'تم رفض البديل ❌',
+                        text: data.message,
+                        timer: 3000,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(data.message);
+                }
+
+                // إذا كانت موافقة، نقوم بتحديث اسم الدواء في القائمة دون الحاجة لإعادة تحميل الصفحة
+                if (action === 'approve' && data.item && data.item.medicine_name) {
+                    // تحديث حقل الإدخال المقابل
+                    const medItems = document.querySelectorAll('.medication-item');
+                    medItems.forEach(itemEl => {
+                        const selectEl = itemEl.querySelector('.medicine-select2');
+                        const customInput = itemEl.querySelector('.custom-medicine-input');
+                        // تحديث الخيار
+                        if (selectEl && selectEl.value == data.item.medicine_id) {
+                            // already selected
+                        }
+                    });
+                }
+
+            } else {
+                if (card) card.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                alert(data.message || 'حدث خطأ أثناء معالجة الطلب.');
+            }
+        })
+        .catch(err => {
+            if (card) card.querySelectorAll('button').forEach(btn => btn.disabled = false);
+            console.error('Error responding to substitution:', err);
+        });
+    }
 </script>
 
 @endsection 
