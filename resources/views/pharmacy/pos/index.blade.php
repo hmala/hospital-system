@@ -507,14 +507,25 @@
                         </button>
                     </div>`;
             } else if (hasStock) {
-                stockBadge = `<span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock} علبة)</span>`;
+                stockBadge = `
+                    <div class="d-flex flex-column gap-1 align-items-center">
+                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock > 0 ? item.total_stock + ' علبة' : 'على الرف'})</span>
+                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 rounded shadow-xs mt-1" onclick="toggleItemStock(${item.id})" title="تحديد كـ غير متوفر على الرف">
+                            <i class="fas fa-times me-1"></i> تعيين كـ غير متوفر
+                        </button>
+                    </div>`;
             } else {
                 stockBadge = `
                     <div class="d-flex flex-column gap-1 align-items-center">
                         <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-times-circle me-1"></i> غير متوفر</span>
-                        ${item.alternatives && item.alternatives.length > 0 
-                            ? `<button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})"><i class="fas fa-exchange-alt me-1"></i> اقتراح بديل للطبيب (${item.alternatives.length})</button>` 
-                            : ''}
+                        <div class="d-flex align-items-center gap-1 mt-1">
+                            <button type="button" class="btn btn-xs btn-outline-success py-0 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})" title="تحديد كـ متوفر على الرف">
+                                <i class="fas fa-check me-1"></i> متوفر على الرف
+                            </button>
+                            ${item.alternatives && item.alternatives.length > 0 
+                                ? `<button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-0 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})"><i class="fas fa-exchange-alt me-1"></i> البدائل (${item.alternatives.length})</button>` 
+                                : ''}
+                        </div>
                     </div>`;
             }
 
@@ -666,6 +677,20 @@
         if (modal) modal.hide();
     }
 
+    // تبديل حالة توفر الصنف يدوياً (متوفر / غير متوفر)
+    function toggleItemStock(itemId) {
+        if (!currentPrescriptionData) return;
+        const item = currentPrescriptionData.items.find(i => i.id === itemId);
+        if (item) {
+            item.is_in_stock = !item.is_in_stock;
+            // إذا كان تم تحديد توفره وكان غير معتمد، إزالة وسم الرفض
+            if (item.is_in_stock && item.substitution_status === 'rejected') {
+                item.substitution_status = 'none';
+            }
+            renderActivePrescription(currentPrescriptionData);
+        }
+    }
+
     // تنفيذ عملية الصرف الفوري بضغطة زر واحدة
     function executeDispense() {
         if (!currentSelectedRxId || !currentPrescriptionData) {
@@ -678,14 +703,15 @@
         btn.disabled = true;
         btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> جاري الصرف وتحديث المخزون...`;
 
-        // تجهيز بيانات البنود المعدلة (إن وُجد استبدال)
+        // تجهيز بيانات البنود وحالات التوفر
         const payload = {
             _token: '{{ csrf_token() }}',
             items: currentPrescriptionData.items.map(i => ({
                 id: i.id,
                 medicine_id: i.medicine_id,
                 quantity: i.quantity,
-                unit_type: i.unit_type || 'main_unit'
+                unit_type: i.unit_type || 'main_unit',
+                is_available: i.is_in_stock
             }))
         };
 

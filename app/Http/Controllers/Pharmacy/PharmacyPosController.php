@@ -359,15 +359,24 @@ class PharmacyPosController extends Controller
             ]);
 
             $totalAmount = 0.00;
+            $dispensedCount = 0;
+            $outOfStockCount = 0;
 
             foreach ($prescription->items as $pItem) {
                 $medId = $pItem->medicine_id;
                 $qty = (float) $pItem->quantity;
                 $unitType = $pItem->unit_type ?? 'main_unit';
+                $isAvailable = true;
 
-                // في حال قام الصيدلي باستبدال الدواء ببديل مكافئ أو تعديل الكمية
+                // في حال تم تعديل الصنف من الواجهة (توفر/استبدال/كمية)
                 if ($itemsById->has($pItem->id)) {
                     $customItem = $itemsById->get($pItem->id);
+                    if (isset($customItem['is_available']) && ($customItem['is_available'] === false || $customItem['is_available'] === 'false' || $customItem['is_available'] === 0)) {
+                        $isAvailable = false;
+                    }
+                    if (isset($customItem['status']) && $customItem['status'] === 'out_of_stock') {
+                        $isAvailable = false;
+                    }
                     if (!empty($customItem['medicine_id'])) {
                         $medId = $customItem['medicine_id'];
                     }
@@ -379,6 +388,14 @@ class PharmacyPosController extends Controller
                     }
                 }
 
+                if (!$isAvailable) {
+                    $pItem->update([
+                        'status' => 'out_of_stock',
+                    ]);
+                    $outOfStockCount++;
+                    continue;
+                }
+
                 $medicine = $medId ? Medicine::find($medId) : null;
                 $usedBatchId = null;
                 $unitPrice = 0;
@@ -387,7 +404,7 @@ class PharmacyPosController extends Controller
                     $unitPrice = ($unitType === 'sub_unit') ? ($medicine->sub_unit_sale_price ?? $medicine->sale_price) : $medicine->sale_price;
                     $remainingQtyToDeduct = $qty;
 
-                    // خصم المخزون بنظام FEFO
+                    // خصم المخزون بنظام FEFO إن وجد رصيد
                     $batches = $medicine->activeBatches;
                     foreach ($batches as $batch) {
                         if ($remainingQtyToDeduct <= 0) {
@@ -430,6 +447,7 @@ class PharmacyPosController extends Controller
                     'unit_type' => $unitType,
                     'status' => 'dispensed',
                 ]);
+                $dispensedCount++;
             }
 
             $sale->update([
@@ -438,9 +456,17 @@ class PharmacyPosController extends Controller
                 'insurance_share' => $totalAmount,
             ]);
 
-            // تحديث حالة الوصفة ككل
+            // تحديد الحالة الإجمالية للوصفة (صرفت بالكامل أم جزئياً)
+            $totalItemsCount = $prescription->items->count();
+            $prescriptionStatus = 'dispensed';
+            if ($outOfStockCount > 0 && $dispensedCount > 0) {
+                $prescriptionStatus = 'partially_dispensed';
+            } elseif ($dispensedCount === 0 && $outOfStockCount > 0) {
+                $prescriptionStatus = 'out_of_stock';
+            }
+
             $prescription->update([
-                'status' => 'dispensed',
+                'status' => $prescriptionStatus,
                 'dispensed_at' => now(),
                 'dispensed_by' => $userId,
                 'sale_id' => $sale->id,
@@ -448,11 +474,18 @@ class PharmacyPosController extends Controller
 
             DB::commit();
 
+            $statusText = $prescriptionStatus === 'partially_dispensed' 
+                ? "تم صرف ({$dispensedCount}) صنف من أصل ({$totalItemsCount}) وتحديث حالة الوصفة كـ (صرفت جزئياً)."
+                : "تم صرف وتجهيز الوصفة ({$prescription->prescription_number}) بالكامل بنجاح.";
+
             return response()->json([
                 'success' => true,
-                'message' => "تم صرف وتجهيز الوصفة ({$prescription->prescription_number}) بنجاح.",
+                'message' => $statusText,
                 'prescription_id' => $prescription->id,
                 'prescription_number' => $prescription->prescription_number,
+                'status' => $prescriptionStatus,
+                'dispensed_count' => $dispensedCount,
+                'out_of_stock_count' => $outOfStockCount,
                 'patient_name' => optional($prescription->patient)->user->name ?? 'مريض',
                 'sale_id' => $sale->id,
                 'print_url' => $prescription->visit_id ? route('doctor.visits.prescription.print', $prescription->visit_id) : route('pharmacy.pos.sales.print', $sale->id),

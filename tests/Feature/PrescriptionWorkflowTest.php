@@ -519,5 +519,61 @@ class PrescriptionWorkflowTest extends TestCase
         $this->assertEquals('rejected', $item->fresh()->substitution_status);
         $this->assertEquals($this->medicine->id, $item->fresh()->medicine_id);
     }
+
+    public function test_pharmacy_can_partially_dispense_prescription_with_unavailable_items()
+    {
+        $visit = $this->createVisit();
+
+        $prescription = Prescription::create([
+            'visit_id' => $visit->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'status' => 'pending',
+            'diagnosis' => 'فحص موسع',
+        ]);
+
+        $item1 = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $this->medicine->id,
+            'quantity' => 1,
+            'status' => 'pending',
+        ]);
+
+        $item2 = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $this->medicine->id,
+            'quantity' => 1,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('pharmacy.pos.prescriptions.dispense', $prescription), [
+            'items' => [
+                [
+                    'id' => $item1->id,
+                    'medicine_id' => $this->medicine->id,
+                    'quantity' => 1,
+                    'is_available' => true,
+                ],
+                [
+                    'id' => $item2->id,
+                    'medicine_id' => $this->medicine->id,
+                    'quantity' => 1,
+                    'is_available' => false,
+                ]
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'status' => 'partially_dispensed',
+            'dispensed_count' => 1,
+            'out_of_stock_count' => 1,
+        ]);
+
+        $this->assertEquals('partially_dispensed', $prescription->fresh()->status);
+        $this->assertEquals('dispensed', $item1->fresh()->status);
+        $this->assertEquals('out_of_stock', $item2->fresh()->status);
+    }
 }
 
