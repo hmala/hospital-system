@@ -69,15 +69,15 @@ Consult these files before making changes or proposing fixes:
 - **واجهة الطبيب والوصفة الطبية الرسمية (Doctor Consultation & Printable Prescription)**:
   * تحديث [DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) وواجهة الكشف [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) لربط قائمة الأدوية بدليل الأصناف مع الإكمال التلقائي واختيار الشكل الدوائي وحفظ الوصفة إلكترونياً تلقائياً.
   * تصميم قالب طباعة الوصفة الطبية [prescription-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/prescription-print.blade.php) بتصميم طبي احترافي يشمل بيانات الطبيب والمريض، العلامة المائية للراشيتة RX، الباركود، والتعليمات الصيدلانية.
-- **منظومة اقتراح البدائل الدوائية وموافقة الطبيب اللحظية والصرف الجزئي**:
+- **منظومة اقتراح البدائل الدوائية وموافقة الطبيب اللحظية وتتبع حالة الصرف المباشر (Live Pharmacy Dispensing Tracking)**:
   * إضافة أزرار التبديل اليدوي السريع لحالة توفر الدواء في الصيدلية (`[ ✅ متوفر على الرف ]` / `[ ❌ تعيين كـ غير متوفر ]`) للتعامل بمرونة كاملة مع الصيدليات الخارجية.
   * دعم الصرف الجزئي الذكي (Partial Dispensing) في [PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php) بحيث يتم صرف الأدوية المتوفرة وتحديث حالة الوصفة كـ `partially_dispensed` مع تعليم الأصناف غير المتوفرة بوضوح.
   * إنشاء ميغريشن `2026_09_24_120000_add_substitution_fields_to_prescription_items_table.php` لإضافة حقول طلب البديل وحالة الموافقة (`suggested_medicine_id`, `substitution_status`, `substitution_reason`, `substitution_response_notes`, `substitution_responded_at`).
   * تحديث [PrescriptionItem.php](file:///c:/wamp64/www/hospital-system/app/Models/PrescriptionItem.php) و [PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php) بإضافة مسار `pos.items.suggest-alternative` لإرسال مقترح البديل من الصيدلية إلى الطبيب.
   * تحديث [DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) بإضافة مساري `visits.substitution-requests` و `prescriptions.items.respond-substitution` للتعامل مع موافقة ورفض الطبيب للبدائل وتحديث الخطة العلاجية تلقائياً.
-  * تصميم لوحة التنبيهات اللحظية التفاعلية في شاشة كشف الطبيب [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) مع فحص تلقائي حي وموافقة/رفض بنقرة واحدة.
+  * تصميم لوحة التنبيهات اللحظية التفاعلية وشارات حالة الصرف الحية في شاشة كشف الطبيب [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) لمتابعة حالة صرف الوصفة من الصيدلية لحظة بلحظة (تم الصرف بالكامل ✅ / صرف جزئي ⚠️ / قيد الصرف ⏳ / مقترح بديل 🔄).
 - **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء وتحديث [PrescriptionWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PrescriptionWorkflowTest.php) واجتياز كافة الاختبارات بنجاح 100%: **12 passed (56 assertions)** واجتياز حزمة اختبارات الصيدلية بالكامل: **24 passed (101 assertions)**.
+  * إنشاء وتحديث [PrescriptionWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PrescriptionWorkflowTest.php) واجتياز كافة الاختبارات بنجاح 100%: **12 passed (56 assertions)** واجتياز حزمة اختبارات الصيدلية بالكامل: **32 passed (138 assertions)**.
 
 ## Session log (2026-09-23 — إصلاح وتفعيل أزرار حفظ إعدادات أسعار وتصنيفات المختبر ودعم stack scripts)
 

@@ -586,6 +586,13 @@ datalist option:hover {
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" type="button" role="tab" data-bs-target="#treatmentTab">
                             <i class="fas fa-pills me-2"></i>خطة العلاج
+                            @if(isset($latestPrescription) && $latestPrescription)
+                                <span id="tabRxBadge" class="{{ $latestPrescription->status_badge }} ms-1 px-2 py-0 small rounded-pill">
+                                    {{ $latestPrescription->status_text }}
+                                </span>
+                            @else
+                                <span id="tabRxBadge" class="d-none"></span>
+                            @endif
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -1639,17 +1646,33 @@ datalist option:hover {
 
                                     <!-- قسم الأدوية والوصفة الطبية الإلكترونية -->
                                     <div class="card border-success mb-4">
-                                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0">
-                                                <i class="fas fa-prescription me-2"></i>
-                                                الأدوية الموصوفة (الوصفة الطبية الإلكترونية E-Prescription)
-                                            </h5>
+                                        <div class="card-header bg-success text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                                <h5 class="mb-0">
+                                                    <i class="fas fa-prescription me-2"></i>
+                                                    الأدوية الموصوفة (الوصفة الطبية الإلكترونية E-Prescription)
+                                                </h5>
+                                                @if(isset($latestPrescription) && $latestPrescription)
+                                                    <span class="badge bg-light text-dark font-monospace px-2 py-1 border border-secondary shadow-sm">
+                                                        {{ $latestPrescription->prescription_number }}
+                                                    </span>
+                                                    <span id="liveRxStatusBadge" class="{{ $latestPrescription->status_badge }} px-3 py-1 fs-6 shadow-sm rounded-pill d-inline-flex align-items-center">
+                                                        <i class="fas {{ $latestPrescription->status === 'dispensed' ? 'fa-check-circle text-white' : ($latestPrescription->status === 'partially_dispensed' ? 'fa-exclamation-triangle' : ($latestPrescription->status === 'cancelled' ? 'fa-times-circle' : 'fa-hourglass-half')) }} me-1"></i>
+                                                        <span>حالة الصرف: {{ $latestPrescription->status_text }}</span>
+                                                        @if($latestPrescription->dispensed_at)
+                                                            <small class="ms-1 opacity-75">({{ $latestPrescription->dispensed_at->format('H:i') }})</small>
+                                                        @endif
+                                                    </span>
+                                                @else
+                                                    <span id="liveRxStatusBadge" class="badge bg-secondary px-2 py-1 d-none"></span>
+                                                @endif
+                                            </div>
                                             <div class="d-flex gap-2">
-                                                <button type="button" class="btn btn-light btn-sm text-success fw-bold" onclick="addMedication()">
+                                                <button type="button" class="btn btn-light btn-sm text-success fw-bold shadow-sm" onclick="addMedication()">
                                                     <i class="fas fa-plus me-1"></i>
                                                     إضافة دواء
                                                 </button>
-                                                <a href="{{ route('doctor.visits.prescription.print', $visit->id) }}" target="_blank" class="btn btn-outline-light btn-sm">
+                                                <a href="{{ route('doctor.visits.prescription.print', $visit->id) }}" target="_blank" class="btn btn-outline-light btn-sm shadow-sm">
                                                     <i class="fas fa-print me-1"></i>
                                                     طباعة الوصفة (RX)
                                                 </a>
@@ -3280,17 +3303,47 @@ function confirmSurgeryReferral() {
         setInterval(checkLiveSubstitutionRequests, 10000);
     });
 
-    // استعلام لحظي عن طلبات البدائل الواردة من الصيدلية
+    // استعلام لحظي عن طلبات البدائل وحالة صرف الوصفة من الصيدلية
     function checkLiveSubstitutionRequests() {
         const visitId = {{ $visit->id }};
         fetch(`{{ url('doctor/visits') }}/${visitId}/substitution-requests`)
             .then(res => res.json())
             .then(data => {
-                if (data.success && data.requests) {
-                    renderSubstitutionAlerts(data.requests);
+                if (data.success) {
+                    if (data.requests) {
+                        renderSubstitutionAlerts(data.requests);
+                    }
+                    if (data.prescription_status) {
+                        updateLiveRxStatus(data);
+                    }
                 }
             })
             .catch(err => console.error('Error fetching substitution requests:', err));
+    }
+
+    // تحديث شارة حالة الصرف الحية للوصفة الطبية
+    function updateLiveRxStatus(data) {
+        const liveBadge = document.getElementById('liveRxStatusBadge');
+        const tabBadge = document.getElementById('tabRxBadge');
+
+        if (liveBadge && data.prescription_status) {
+            liveBadge.className = `${data.prescription_badge || 'badge bg-secondary'} px-3 py-1 fs-6 shadow-sm rounded-pill d-inline-flex align-items-center`;
+            liveBadge.classList.remove('d-none');
+            
+            let iconClass = 'fa-hourglass-half';
+            if (data.prescription_status === 'dispensed') iconClass = 'fa-check-circle text-white';
+            else if (data.prescription_status === 'partially_dispensed') iconClass = 'fa-exclamation-triangle';
+            else if (data.prescription_status === 'cancelled') iconClass = 'fa-times-circle';
+
+            let timeStr = data.dispensed_at ? `<small class="ms-1 opacity-75">(${data.dispensed_at})</small>` : '';
+            liveBadge.innerHTML = `<i class="fas ${iconClass} me-1"></i><span>حالة الصرف: ${data.prescription_status_text}</span>${timeStr}`;
+        }
+
+        if (tabBadge && data.prescription_status) {
+            tabBadge.className = `${data.prescription_badge || 'badge bg-secondary'} ms-1 px-2 py-0 small rounded-pill`;
+            tabBadge.textContent = data.prescription_status_text;
+            tabBadge.classList.remove('d-none');
+        }
     }
 
     // رسم بطاقات طلبات استبدال الأدوية
