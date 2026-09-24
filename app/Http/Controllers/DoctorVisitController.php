@@ -8,6 +8,9 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Notification as AppNotification;
 use App\Models\PrescribedMedication;
+use App\Models\Medicine;
+use App\Models\Prescription;
+use App\Models\PrescriptionItem;
 use App\Models\User;
 use App\Models\UserLabTestGroup;
 use App\Models\UserLabTestStat;
@@ -408,6 +411,12 @@ class DoctorVisitController extends Controller
             ->orderBy('id')
             ->get();
 
+        $availableMedicines = Medicine::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'sale_price', 'sub_unit_sale_price', 'main_unit', 'sub_unit']);
+
+        $latestPrescription = $visit->prescriptions()->with('items.medicine')->latest()->first();
+
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
@@ -420,7 +429,9 @@ class DoctorVisitController extends Controller
             'hasCompletedRequests',
             'hasPendingRequests',
             'availableDoctors',
-            'emergencyServices'
+            'emergencyServices',
+            'availableMedicines',
+            'latestPrescription'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -512,15 +523,50 @@ class DoctorVisitController extends Controller
             $updateData['status'] = $request->status;
         }
 
-        if ($request->has('prescribed_medications')) {
+        if ($request->has('prescribed_medications') || $request->has('is_prescription_form')) {
             \Illuminate\Support\Facades\DB::transaction(function () use ($visit, $request) {
-                // حذف الأدوية والعلاجات القديمة
+                // حذف الأدوية والعلاجات القديمة في جدول PrescribedMedication للتوافق
                 $visit->prescribedMedications()->delete();
+
+                $diagnosisText = null;
+                if ($request->has('diagnosis')) {
+                    $diagnosisText = is_array($request->diagnosis) 
+                        ? ($request->diagnosis['description'] ?? json_encode($request->diagnosis, JSON_UNESCAPED_UNICODE)) 
+                        : $request->diagnosis;
+                } elseif ($visit->diagnosis) {
+                    $diagnosisText = is_array($visit->diagnosis) 
+                        ? ($visit->diagnosis['description'] ?? json_encode($visit->diagnosis, JSON_UNESCAPED_UNICODE)) 
+                        : $visit->diagnosis;
+                }
+
+                // إنشاء أو تحديث الوصفة الطبية الإلكترونية
+                $prescription = Prescription::firstOrCreate(
+                    [
+                        'visit_id' => $visit->id,
+                        'status' => 'pending'
+                    ],
+                    [
+                        'patient_id' => $visit->patient_id,
+                        'doctor_id' => $visit->doctor_id,
+                        'diagnosis' => $diagnosisText,
+                        'notes' => $request->treatment_plan ?? $visit->treatment_plan,
+                    ]
+                );
+
+                if ($prescription->status === 'pending') {
+                    $prescription->update([
+                        'patient_id' => $visit->patient_id,
+                        'doctor_id' => $visit->doctor_id,
+                        'diagnosis' => $diagnosisText,
+                        'notes' => $request->treatment_plan ?? $visit->treatment_plan,
+                    ]);
+                    $prescription->items()->delete();
+                }
 
                 // حفظ الأدوية العادية
                 if (isset($request->prescribed_medications) && is_array($request->prescribed_medications)) {
                     foreach ($request->prescribed_medications as $key => $item) {
-                        if (is_numeric($key) && isset($item['name'])) {
+                        if (is_numeric($key) && isset($item['name']) && !empty($item['name'])) {
                             PrescribedMedication::create([
                                 'visit_id' => $visit->id,
                                 'item_type' => 'medication',
@@ -532,6 +578,33 @@ class DoctorVisitController extends Controller
                                 'duration' => $item['duration'] ?? null,
                                 'instructions' => $item['instructions'] ?? null,
                             ]);
+
+                            // ربط الصنف بالدواء في جدول الأدوية الرسمي إن وجد
+                            $medId = $item['medicine_id'] ?? null;
+                            if (!$medId) {
+                                $matchedMedicine = Medicine::where('name', $item['name'])
+                                    ->orWhere('generic_name', $item['name'])
+                                    ->first();
+                                $medId = $matchedMedicine?->id;
+                            }
+
+                            if ($prescription->status === 'pending') {
+                                $freqStr = !empty($item['frequency']) ? ('x' . $item['frequency']) : '';
+                                $dosageStr = $item['dosage'] ?? '';
+                                $timesStr = $item['times'] ?? '';
+
+                                PrescriptionItem::create([
+                                    'prescription_id' => $prescription->id,
+                                    'medicine_id' => $medId,
+                                    'medicine_name' => $item['name'],
+                                    'quantity' => isset($item['quantity']) && (float)$item['quantity'] > 0 ? (float)$item['quantity'] : 1,
+                                    'unit_type' => $item['unit_type'] ?? 'main_unit',
+                                    'dosage_frequency' => trim("{$dosageStr} {$freqStr} {$timesStr}"),
+                                    'duration_days' => is_numeric($item['duration'] ?? null) ? (int)$item['duration'] : 7,
+                                    'instructions' => $item['instructions'] ?? null,
+                                    'status' => 'pending',
+                                ]);
+                            }
                         }
                     }
 
@@ -552,6 +625,11 @@ class DoctorVisitController extends Controller
                             }
                         }
                     }
+                }
+
+                // إذا لم يتم تسجيل أي أدوية بالوصفة، احذف سجل الوصفة الفارغ لتجنب ظهور وصفة بـ 0 أدوية
+                if (isset($prescription) && $prescription->status === 'pending' && $prescription->items()->count() === 0) {
+                    $prescription->delete();
                 }
             });
         }
@@ -1097,5 +1175,23 @@ class DoctorVisitController extends Controller
         $timeline = $events->sortByDesc('date')->values();
 
         return view('doctors.patient-history', compact('patient', 'timeline'));
+    }
+
+    /**
+     * طباعة الوصفة الطبية الرسمية (Prescription Print)
+     */
+    public function printPrescription(Visit $visit)
+    {
+        $visit->load([
+            'patient.user',
+            'doctor.user',
+            'prescriptions.items.medicine',
+            'prescriptions.items.dispensedMedicine',
+            'prescribedMedications'
+        ]);
+
+        $prescription = $visit->prescriptions()->latest()->first();
+
+        return view('doctors.visits.prescription-print', compact('visit', 'prescription'));
     }
 }

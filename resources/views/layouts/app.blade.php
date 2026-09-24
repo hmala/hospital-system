@@ -1081,13 +1081,7 @@
                             </a>
                         </li>
                         @endcan
-                        @can('process pharmacy requests')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.requests.*') ? 'active' : '' }}" href="{{ route('staff.requests.index') }}">
-                                <i class="fas fa-tasks"></i><span> الطلبات</span>
-                            </a>
-                        </li>
-                        @endcan
+
 
                         @can('view lab tests')
                         <li class="nav-item">
@@ -1236,53 +1230,61 @@
                         </div>
                         @endcanany
 
-                        <!-- قسم الصيدلية (Pharmacy) -->
+                        <!-- قسم الصيدلية وصرف الأدوية (Pharmacy) -->
                         @canany(['view pharmacy', 'manage medicines'])
                         @php
                             $isPharmacyActive = request()->routeIs('pharmacy.*');
+                            $pendingRxCount = \App\Models\Prescription::where('status', 'pending')->count();
+                            $expiringBatchesCount = \App\Models\MedicineBatch::where('status', 'active')->whereDate('expiry_date', '<=', now()->addDays(90))->count();
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isPharmacyActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#pharmacySection" aria-expanded="{{ $isPharmacyActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-pills"></i> الصيدلية</span>
+                            <span><i class="fas fa-pills"></i> الصيدلية وصرف الأدوية</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isPharmacyActive ? 'show' : '' }}" id="pharmacySection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.pos.index') ? 'active' : '' }}" href="{{ route('pharmacy.pos.index') }}">
-                                    <i class="fas fa-cash-register"></i><span> نقطة البيع والصرف (POS)</span>
+                                    <i class="fas fa-cash-register text-success"></i><span> نقطة البيع والصرف (POS)</span>
+                                    @if($pendingRxCount > 0)
+                                        <span class="badge bg-danger ms-auto">{{ $pendingRxCount }} وصفة</span>
+                                    @endif
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.pos.sales.*') ? 'active' : '' }}" href="{{ route('pharmacy.pos.sales.history') }}">
-                                    <i class="fas fa-history"></i><span> سجل مبيعات الصيدلية</span>
+                                    <i class="fas fa-history text-primary"></i><span> سجل مبيعات الصيدلية</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.batches.*') ? 'active' : '' }}" href="{{ route('pharmacy.batches.index') }}">
+                                    <i class="fas fa-boxes text-warning"></i><span> تتبع الشحنات والصلاحية (FEFO)</span>
+                                    @if($expiringBatchesCount > 0)
+                                        <span class="badge bg-warning text-dark ms-auto">{{ $expiringBatchesCount }} تنبيه</span>
+                                    @endif
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.index') || request()->routeIs('pharmacy.medicines.show') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.index') }}">
-                                    <i class="fas fa-capsules"></i><span> دليل الأدوية والمستلزمات</span>
+                                    <i class="fas fa-capsules text-info"></i><span> دليل الأدوية والبدائل</span>
                                 </a>
                             </li>
                             @can('create medicines')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.create') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.create') }}">
-                                    <i class="fas fa-plus-circle"></i><span> إضافة دواء / مستلزم جديد</span>
+                                    <i class="fas fa-plus-circle text-success"></i><span> إضافة دواء / مستلزم جديد</span>
                                 </a>
                             </li>
                             @endcan
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.services.*') ? 'active' : '' }}" href="{{ route('pharmacy.services.index') }}">
-                                    <i class="fas fa-syringe"></i><span> الخدمات الصيدلانية</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('pharmacy.batches.*') ? 'active' : '' }}" href="{{ route('pharmacy.batches.index') }}">
-                                    <i class="fas fa-boxes"></i><span> شحنات وتنبيهات الصلاحية (FEFO)</span>
+                                    <i class="fas fa-syringe text-danger"></i><span> الخدمات الصيدلانية</span>
                                 </a>
                             </li>
                             @can('import medicines')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.import') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.import') }}">
-                                    <i class="fas fa-file-excel"></i><span> استيراد وتحديث الأدوية</span>
+                                    <i class="fas fa-file-excel text-success"></i><span> استيراد وتحديث الأدوية</span>
                                 </a>
                             </li>
                             @endcan

@@ -334,6 +334,7 @@ Route::middleware(['auth'])->group(function () {
         
         // Patient Medical History Timeline
         Route::get('/patient/{patient}/history', [DoctorVisitController::class, 'showPatientHistory'])->name('patient.history');
+        Route::get('/visits/{visit}/prescription/print', [DoctorVisitController::class, 'printPrescription'])->name('visits.prescription.print');
     });
     
     // مسارات المريض للزيارات
@@ -678,6 +679,9 @@ Route::middleware(['auth'])->group(function () {
         // نقطة البيع السريعة والصرف (POS)
         Route::get('pos', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'index'])->name('pos.index');
         Route::get('pos/search', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'search'])->name('pos.search');
+        Route::get('pos/pending-prescriptions', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'pendingPrescriptions'])->name('pos.pending-prescriptions');
+        Route::get('pos/prescriptions/{prescription}', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'getPrescriptionDetails'])->name('pos.prescriptions.show');
+        Route::post('pos/prescriptions/{prescription}/dispense', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'dispensePrescription'])->name('pos.prescriptions.dispense');
         Route::post('pos/store', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'store'])->name('pos.store');
         Route::get('pos/held', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'heldBills'])->name('pos.held');
         Route::get('pos/held/{sale}/resume', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'resumeHeldBill'])->name('pos.held.resume');

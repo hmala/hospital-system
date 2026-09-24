@@ -10,6 +10,8 @@ use App\Models\Patient;
 use App\Models\PharmacySale;
 use App\Models\PharmacySaleItem;
 use App\Models\PharmacyService;
+use App\Models\Prescription;
+use App\Models\PrescriptionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,8 +32,15 @@ class PharmacyPosController extends Controller
             ->get();
 
         $heldCount = PharmacySale::where('is_held', true)->count();
+        $pendingPrescriptionsCount = Prescription::where('status', 'pending')->count();
 
-        return view('pharmacy.pos.index', compact('insuranceCategories', 'pharmacyServices', 'heldCount'));
+        $pendingPrescriptions = Prescription::where('status', 'pending')
+            ->with(['doctor.user', 'patient.user', 'items.medicine.activeBatches'])
+            ->orderBy('created_at', 'desc')
+            ->take(15)
+            ->get();
+
+        return view('pharmacy.pos.index', compact('insuranceCategories', 'pharmacyServices', 'heldCount', 'pendingPrescriptionsCount', 'pendingPrescriptions'));
     }
 
     /**
@@ -147,11 +156,286 @@ class PharmacyPosController extends Controller
     }
 
     /**
+     * قائمة الوصفات الطبية الإلكترونية الواردة الجاهزة للصرف
+     */
+    public function pendingPrescriptions(Request $request)
+    {
+        $prescriptions = Prescription::where('status', 'pending')
+            ->with([
+                'patient.user',
+                'doctor.user',
+                'items.medicine',
+                'visit'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit(40)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'count' => $prescriptions->count(),
+            'prescriptions' => $prescriptions->map(function ($rx) {
+                return [
+                    'id' => $rx->id,
+                    'prescription_number' => $rx->prescription_number,
+                    'patient_id' => $rx->patient_id,
+                    'patient_name' => optional($rx->patient)->user->name ?? 'مريض مباشر',
+                    'patient_phone' => optional($rx->patient)->user->phone ?? '-',
+                    'patient_national_id' => optional($rx->patient)->user->national_id ?? '-',
+                    'doctor_name' => optional($rx->doctor)->user->name ?? 'طبيب استشاري',
+                    'specialization' => optional($rx->doctor)->specialization ?? 'استشارية',
+                    'diagnosis' => $rx->diagnosis ?? '-',
+                    'items_count' => $rx->items->count(),
+                    'created_at' => $rx->created_at ? $rx->created_at->format('Y-m-d H:i') : '-',
+                    'time_ago' => $rx->created_at ? $rx->created_at->diffForHumans() : '-',
+                ];
+            })
+        ]);
+    }
+
+    /**
+     * تفاصيل وصفة طبية إلكترونية مع فحص الأرصدة والبدائل اللحظية
+     */
+    public function getPrescriptionDetails(Prescription $prescription)
+    {
+        $prescription->load([
+            'patient.user',
+            'doctor.user',
+            'items.medicine.activeBatches' => function ($q) {
+                $q->orderBy('expiry_date', 'asc');
+            },
+            'items.medicine.alternatives',
+            'visit'
+        ]);
+
+        $itemsData = $prescription->items->map(function ($item) {
+            $med = $item->medicine;
+            $alternatives = collect();
+            if ($med) {
+                $alternatives = $med->alternatives;
+                if ($alternatives->isEmpty() && !empty($med->generic_name)) {
+                    $alternatives = Medicine::where('id', '!=', $med->id)
+                        ->where('is_active', true)
+                        ->where('generic_name', $med->generic_name)
+                        ->where('dosage_form', $med->dosage_form)
+                        ->limit(5)
+                        ->get();
+                }
+            }
+
+            $altFormatted = $alternatives->map(function ($alt) {
+                return [
+                    'id' => $alt->id,
+                    'name' => $alt->name,
+                    'dosage_form' => $alt->dosage_form,
+                    'strength' => $alt->strength,
+                    'sale_price' => $alt->sale_price,
+                    'sub_unit_sale_price' => $alt->sub_unit_sale_price,
+                    'main_unit' => $alt->main_unit,
+                    'sub_unit' => $alt->sub_unit,
+                    'total_stock' => $alt->total_stock,
+                    'total_open_sub_units' => $alt->total_open_sub_units,
+                ];
+            });
+
+            return [
+                'id' => $item->id,
+                'medicine_id' => $med ? $med->id : null,
+                'name' => $med ? $med->name : ($item->notes ?? 'دواء غير محدد'),
+                'generic_name' => $med?->generic_name,
+                'dosage_form' => $med?->dosage_form,
+                'strength' => $med?->strength,
+                'unit_type' => $item->unit_type ?? 'main_unit',
+                'main_unit' => $med?->main_unit ?? 'علبة',
+                'sub_unit' => $med?->sub_unit ?? 'شريط',
+                'quantity' => (float)$item->quantity ?: 1,
+                'dosage_frequency' => $item->dosage_frequency,
+                'instructions' => $item->instructions,
+                'duration_days' => $item->duration_days,
+                'sale_price' => $med?->sale_price ?? 0,
+                'sub_unit_sale_price' => $med?->sub_unit_sale_price ?? 0,
+                'hi_price' => $med?->hi_price ?? $med?->sale_price ?? 0,
+                'moi_price' => $med?->moi_price ?? $med?->sale_price ?? 0,
+                'sub_units_count' => $med?->sub_units_count ?? 1,
+                'total_stock' => $med?->total_stock ?? 0,
+                'total_open_sub_units' => $med?->total_open_sub_units ?? 0,
+                'is_in_stock' => $med && ($med->total_stock > 0 || $med->total_open_sub_units > 0),
+                'alternatives' => $altFormatted,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'prescription' => [
+                'id' => $prescription->id,
+                'prescription_number' => $prescription->prescription_number,
+                'patient_id' => $prescription->patient_id,
+                'patient_name' => optional($prescription->patient)->user->name ?? 'مريض مباشر',
+                'patient_phone' => optional($prescription->patient)->user->phone ?? '',
+                'doctor_name' => optional($prescription->doctor)->user->name ?? 'استشاري',
+                'diagnosis' => $prescription->diagnosis,
+                'notes' => $prescription->notes,
+                'items' => $itemsData,
+            ]
+        ]);
+    }
+
+    /**
+     * صرف وتجهيز وصفة طبية إلكترونية فوراً بضغطة زر واحدة
+     * يقوم بخصم المخزون بنظام FEFO، وتحديث حالة الوصفة وبنودها إلى مصروفة، دون تعقيدات محاسبية
+     */
+    public function dispensePrescription(Request $request, Prescription $prescription)
+    {
+        if ($prescription->status === 'dispensed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'هذه الوصفة تم صرفها وتجهيزها مسبقاً.'
+            ], 422);
+        }
+
+        $prescription->load(['items.medicine.activeBatches', 'patient.user', 'doctor.user', 'visit']);
+
+        DB::beginTransaction();
+        try {
+            $userId = Auth::id() ?? 1;
+            $itemsData = $request->input('items', []);
+            $itemsById = collect($itemsData)->keyBy('id');
+
+            // إنشاء سجل صرف بالمبيعات لأغراض التتبع المخزني والرقابي
+            $sale = PharmacySale::create([
+                'invoice_number' => PharmacySale::generateInvoiceNumber(),
+                'patient_id' => $prescription->patient_id,
+                'patient_name' => optional($prescription->patient)->user->name ?? 'مريض استشارية',
+                'patient_phone' => optional($prescription->patient)->user->phone ?? null,
+                'sale_type' => 'prescription',
+                'insurance_type' => 'none',
+                'copay_percentage' => 0,
+                'payment_status' => 'paid',
+                'dispensing_status' => 'dispensed',
+                'payment_route' => 'pharmacy_cashier',
+                'is_held' => false,
+                'user_id' => $userId,
+                'dispensed_by' => $userId,
+                'dispensed_at' => now(),
+                'notes' => $request->input('notes', 'صرف وتجهيز فوري للوصفة: ' . $prescription->prescription_number),
+            ]);
+
+            $totalAmount = 0.00;
+
+            foreach ($prescription->items as $pItem) {
+                $medId = $pItem->medicine_id;
+                $qty = (float) $pItem->quantity;
+                $unitType = $pItem->unit_type ?? 'main_unit';
+
+                // في حال قام الصيدلي باستبدال الدواء ببديل مكافئ أو تعديل الكمية
+                if ($itemsById->has($pItem->id)) {
+                    $customItem = $itemsById->get($pItem->id);
+                    if (!empty($customItem['medicine_id'])) {
+                        $medId = $customItem['medicine_id'];
+                    }
+                    if (isset($customItem['quantity']) && (float)$customItem['quantity'] > 0) {
+                        $qty = (float)$customItem['quantity'];
+                    }
+                    if (!empty($customItem['unit_type'])) {
+                        $unitType = $customItem['unit_type'];
+                    }
+                }
+
+                $medicine = $medId ? Medicine::find($medId) : null;
+                $usedBatchId = null;
+                $unitPrice = 0;
+
+                if ($medicine) {
+                    $unitPrice = ($unitType === 'sub_unit') ? ($medicine->sub_unit_sale_price ?? $medicine->sale_price) : $medicine->sale_price;
+                    $remainingQtyToDeduct = $qty;
+
+                    // خصم المخزون بنظام FEFO
+                    $batches = $medicine->activeBatches;
+                    foreach ($batches as $batch) {
+                        if ($remainingQtyToDeduct <= 0) {
+                            break;
+                        }
+                        $usedBatchId = $batch->id;
+
+                        if ($unitType === 'main_unit') {
+                            $deductMain = (int) min($batch->current_quantity, $remainingQtyToDeduct);
+                            if ($deductMain > 0) {
+                                $batch->deductStock(mainUnits: $deductMain, subUnits: 0, subUnitsCount: $medicine->sub_units_count);
+                                $remainingQtyToDeduct -= $deductMain;
+                            }
+                        } else {
+                            $deductSub = (int) $remainingQtyToDeduct;
+                            $batch->deductStock(mainUnits: 0, subUnits: $deductSub, subUnitsCount: $medicine->sub_units_count);
+                            $remainingQtyToDeduct = 0;
+                        }
+                    }
+
+                    PharmacySaleItem::create([
+                        'sale_id' => $sale->id,
+                        'item_type' => 'medicine',
+                        'medicine_id' => $medicine->id,
+                        'batch_id' => $usedBatchId,
+                        'unit_type' => $unitType,
+                        'quantity' => $qty,
+                        'unit_price' => $unitPrice,
+                        'subtotal' => round($unitPrice * $qty, 2),
+                        'dosage_instructions' => trim($pItem->dosage_frequency . ' ' . $pItem->instructions),
+                    ]);
+
+                    $totalAmount += round($unitPrice * $qty, 2);
+                }
+
+                // تحديث بند الوصفة
+                $pItem->update([
+                    'medicine_id' => $medId,
+                    'quantity' => $qty,
+                    'unit_type' => $unitType,
+                    'status' => 'dispensed',
+                ]);
+            }
+
+            $sale->update([
+                'total_amount' => $totalAmount,
+                'patient_share' => 0,
+                'insurance_share' => $totalAmount,
+            ]);
+
+            // تحديث حالة الوصفة ككل
+            $prescription->update([
+                'status' => 'dispensed',
+                'dispensed_at' => now(),
+                'dispensed_by' => $userId,
+                'sale_id' => $sale->id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "تم صرف وتجهيز الوصفة ({$prescription->prescription_number}) بنجاح.",
+                'prescription_id' => $prescription->id,
+                'prescription_number' => $prescription->prescription_number,
+                'patient_name' => optional($prescription->patient)->user->name ?? 'مريض',
+                'sale_id' => $sale->id,
+                'print_url' => $prescription->visit_id ? route('doctor.visits.prescription.print', $prescription->visit_id) : route('pharmacy.pos.sales.print', $sale->id),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء صرف الوصفة: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
      * حفظ فاتورة الصرف / البيع (نقدي، ضمان، أو تعليق)
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'prescription_id' => 'nullable|exists:prescriptions,id',
             'patient_id' => 'nullable|exists:patients,id',
             'patient_name' => 'nullable|string|max:255',
             'patient_phone' => 'nullable|string|max:50',
@@ -306,6 +590,25 @@ class PharmacyPosController extends Controller
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
             ]);
+
+            // إذا كانت الفاتورة مرتبطة بوصفة طبية إلكترونية، تحديث حالة الوصفة
+            if (!empty($validated['prescription_id'])) {
+                $prescription = Prescription::find($validated['prescription_id']);
+                if ($prescription) {
+                    $prescription->update([
+                        'status' => $isHeld ? 'in_progress' : 'dispensed',
+                        'dispensed_at' => $isHeld ? null : now(),
+                        'dispensed_by' => $isHeld ? null : (Auth::id() ?? 1),
+                        'sale_id' => $sale->id,
+                    ]);
+
+                    if (!$isHeld) {
+                        foreach ($prescription->items as $pItem) {
+                            $pItem->update(['status' => 'dispensed']);
+                        }
+                    }
+                }
+            }
 
             DB::commit();
 

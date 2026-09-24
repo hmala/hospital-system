@@ -59,6 +59,24 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-24 — منظومة الوصفات الطبية الإلكترونية المدمجة E-Prescription وصرف الصيدلية الفوري)
+
+### Done
+- **قاعدة البيانات ونماذج الوصفات الإلكترونية (E-Prescriptions Schema & Models)**:
+  * إنشاء ميغريشن `2026_09_24_100000_create_e_prescriptions_tables.php` لجدولي `prescriptions` و `prescription_items` مع توليد رقم وصفي موحد (`RX-YYYYMMDD-XXXX`) وتتبع حالات الصرف (`pending`, `partially_dispensed`, `dispensed`, `cancelled`).
+  * إنشاء نماذج Eloquent: [Prescription.php](file:///c:/wamp64/www/hospital-system/app/Models/Prescription.php) و [PrescriptionItem.php](file:///c:/wamp64/www/hospital-system/app/Models/PrescriptionItem.php) وربط العلاقات مع [Doctor.php](file:///c:/wamp64/www/hospital-system/app/Models/Doctor.php)، [Patient.php](file:///c:/wamp64/www/hospital-system/app/Models/Patient.php)، و [Visit.php](file:///c:/wamp64/www/hospital-system/app/Models/Visit.php).
+  * تزويد النظام بدليل الأدوية الرسمي المعتمد للتأمين الصحي العراقي (~220 دواء) مع ربط البدائل والوجبات الافتتاحية عبر الباذر [OfficialMedicinesSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/OfficialMedicinesSeeder.php).
+- **واجهة الطبيب والوصفة الطبية الرسمية (Doctor Consultation & Printable Prescription)**:
+  * تحديث [DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) وواجهة الكشف [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) لربط قائمة الأدوية بدليل الأصناف مع الإكمال التلقائي واختيار الشكل الدوائي وحفظ الوصفة إلكترونياً تلقائياً.
+  * تصميم قالب طباعة الوصفة الطبية [prescription-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/prescription-print.blade.php) بتصميم طبي احترافي يشمل بيانات الطبيب والمريض، العلامة المائية للراشيتة RX، الباركود، والتعليمات الصيدلانية.
+- **تكامل شاشة الصيدلية ونقطة البيع POS للصرف الفوري (Integrated Pharmacy Dispensing)**:
+  * إعادة تصميم شاشة الصيدلية [resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php) بالكامل إلى **محطة صرف وتجهيز أدوية مبسطة** تستقبل الوصفات الواردة لحظياً بدون الدخول في أي تفاصيل دفع أو كاشير.
+  * إضافة طابور لحظي للوصفات الواردة مع التحديث التلقائي اللحظي (Auto-refresh) وبطاقات التنبيه التفاعلية.
+  * زر الصرف الفوري المباشر بضغطة زر واحدة `[ ✅ تأكيد صرف وتجهيز الدواء ]` عبر المسار `pharmacy.pos.prescriptions.dispense` مع خصم المخزون بنظام FEFO وتحديث حالة الوصفة وبنودها إلى `dispensed` وإشعار المحطة.
+  * نافذة بدائل دوائية مدمجة لاستبدال الأدوية غير المتوفرة ببدائلها المتوفرة بنقرة واحدة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء وتحديث [PrescriptionWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PrescriptionWorkflowTest.php) واجتياز كافة الاختبارات الشاملة بنجاح 100%: **8 passed (37 assertions)** واجتياز حزمة اختبارات الصيدلية بالكامل: **23 passed (97 assertions)**.
+
 ## Session log (2026-09-23 — إصلاح وتفعيل أزرار حفظ إعدادات أسعار وتصنيفات المختبر ودعم stack scripts)
 
 ### Done

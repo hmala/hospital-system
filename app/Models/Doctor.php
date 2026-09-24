@@ -15,6 +15,8 @@ class Doctor extends Model
         'department_id',
         'phone',
         'specialization',
+        'qualification',
+        'license_number',
         'type',
         'schedule',
         'consultation_fee',
@@ -58,6 +60,11 @@ class Doctor extends Model
     public function emergencies()
     {
         return $this->hasMany(Emergency::class);
+    }
+
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
     }
 
     public function radiologyRequests()

@@ -1547,33 +1547,9 @@ datalist option:hover {
                                                                         @if(isset($resultData['findings']))
                                                                             <div class="mb-3">
                                                                                 <h6 class="text-primary"><i class="fas fa-search me-2"></i>النتائج:</h6>
-                                                                                <p class="mb-0 ps-3">{{ $resultData['findings'] }}</p>
+                                                                                <p class="mb-0">{{ is_array($resultData['findings']) ? json_encode($resultData['findings'], JSON_UNESCAPED_UNICODE) : $resultData['findings'] }}</p>
                                                                             </div>
                                                                         @endif
-                                                                        
-                                                                        @if(isset($resultData['impression']))
-                                                                            <div class="mb-3">
-                                                                                <h6 class="text-info"><i class="fas fa-clipboard-check me-2"></i>الانطباع:</h6>
-                                                                                <p class="mb-0 ps-3">{{ $resultData['impression'] }}</p>
-                                                                            </div>
-                                                                        @endif
-                                                                        
-                                                                        @if(isset($resultData['recommendations']))
-                                                                            <div class="mb-3">
-                                                                                <h6 class="text-warning"><i class="fas fa-lightbulb me-2"></i>التوصيات:</h6>
-                                                                                <p class="mb-0 ps-3">{{ $resultData['recommendations'] }}</p>
-                                                                            </div>
-                                                                        @endif
-                                                                        
-                                                                        @if(isset($resultData['radiologist']))
-                                                                            <div class="mb-3">
-                                                                                <small class="text-muted">
-                                                                                    <i class="fas fa-user-md me-1"></i>
-                                                                                    أخصائي الأشعة: <strong>{{ $resultData['radiologist'] }}</strong>
-                                                                                </small>
-                                                                            </div>
-                                                                        @endif
-                                                                        
                                                                         @if(isset($resultData['images']) && is_array($resultData['images']) && count($resultData['images']) > 0)
                                                                             <div class="mb-2">
                                                                                 <h6 class="text-success"><i class="fas fa-images me-2"></i>الصور:</h6>
@@ -1610,133 +1586,145 @@ datalist option:hover {
                                         <i class="fas fa-exclamation-triangle me-2"></i>
                                         <strong>تنبيه مهم:</strong> يُفضل وضع خطة العلاج بعد الحصول على نتائج التحاليل والأشعة المطلوبة.
                                         @if($hasPendingRequests)
-                                            <br><small>لديك {{ $visit->requests->where('status', 'pending')->count() }} طلب قيد الانتظار.</small>
+                                            <span class="d-block mt-1">توجد طلبات قيد الانتظار لم تكتمل بعد.</span>
                                         @endif
                                     </div>
                                 @endif
 
-                                <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" id="treatmentForm" onsubmit="clearSavedData()">
+                                <form action="{{ route('doctor.visits.update', $visit->id) }}" method="POST" id="treatmentForm">
                                     @csrf
                                     @method('PUT')
+                                    <input type="hidden" name="is_prescription_form" value="1">
 
-                                    <!-- قسم الأدوية المحددة -->
+                                    <!-- قسم الأدوية والوصفة الطبية الإلكترونية -->
                                     <div class="card border-success mb-4">
-                                        <div class="card-header bg-success text-white">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h5 class="mb-0">
-                                                    <i class="fas fa-pills me-2"></i>
-                                                    الأدوية الموصوفة
-                                                </h5>
-                                                <button type="button" class="btn btn-light btn-sm" onclick="addMedication()">
+                                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">
+                                                <i class="fas fa-prescription me-2"></i>
+                                                الأدوية الموصوفة (الوصفة الطبية الإلكترونية E-Prescription)
+                                            </h5>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-light btn-sm text-success fw-bold" onclick="addMedication()">
                                                     <i class="fas fa-plus me-1"></i>
                                                     إضافة دواء
                                                 </button>
+                                                <a href="{{ route('doctor.visits.prescription.print', $visit->id) }}" target="_blank" class="btn btn-outline-light btn-sm">
+                                                    <i class="fas fa-print me-1"></i>
+                                                    طباعة الوصفة (RX)
+                                                </a>
                                             </div>
                                         </div>
                                         <div class="card-body">
-                                            <!-- قسم الأدوية المحددة -->
-                                            <!-- قسم الأدوية المحددة -->
                                             <div id="medicationsContainer">
-                                                @if($prescribedMedications->count() > 0)
+                                                @if(count($prescribedMedications) > 0)
                                                     @foreach($prescribedMedications as $index => $medication)
-                                                    <div class="medication-item card mb-3 border-0 shadow-sm">
-                                                        <div class="card-body bg-light">
+                                                    <div class="medication-item card mb-3 border-success">
+                                                        <div class="card-body">
                                                             <div class="row g-3">
-                                                                <div class="col-md-3">
-                                                                    <label class="form-label fw-bold">اسم الدواء</label>
-                                                                    <input type="text" class="form-control" name="prescribed_medications[{{ $index }}][name]"
+                                                                <div class="col-md-5">
+                                                                    <label class="form-label fw-bold">
+                                                                        <i class="fas fa-pills text-success me-1"></i>
+                                                                        اسم الدواء (دليل الضمان الصحي)
+                                                                    </label>
+                                                                    <select class="form-select medicine-select2" data-index="{{ $index }}" onchange="handleMedicineSelect(this)">
+                                                                        <option value="">-- ابحث بالاسم التجاري أو العلمي --</option>
+                                                                        @php $matched = false; @endphp
+                                                                        @if(isset($availableMedicines))
+                                                                            @foreach($availableMedicines as $availMed)
+                                                                                @php
+                                                                                    $isSel = ($medication->name == $availMed->name || (isset($medication->medicine_id) && $medication->medicine_id == $availMed->id));
+                                                                                    if ($isSel) $matched = true;
+                                                                                @endphp
+                                                                                <option value="{{ $availMed->id }}" 
+                                                                                        data-id="{{ $availMed->id }}"
+                                                                                        data-name="{{ $availMed->name }}"
+                                                                                        data-generic="{{ $availMed->generic_name }}"
+                                                                                        data-strength="{{ $availMed->strength }}"
+                                                                                        data-form="{{ $availMed->dosage_form }}"
+                                                                                        {{ $isSel ? 'selected' : '' }}>
+                                                                                    {{ $availMed->name }} {{ $availMed->strength }} ({{ $availMed->generic_name ?? '' }} - {{ $availMed->dosage_form }})
+                                                                                </option>
+                                                                            @endforeach
+                                                                        @endif
+                                                                        <option value="custom" {{ (!$matched && !empty($medication->name)) ? 'selected' : '' }}>✏️ كتابة اسم دواء يدوي غير مدرج</option>
+                                                                    </select>
+                                                                    <input type="hidden" name="prescribed_medications[{{ $index }}][medicine_id]" class="med-id-input" value="{{ $medication->medicine_id ?? '' }}">
+                                                                    <input type="text" class="form-control med-name-input mt-2" name="prescribed_medications[{{ $index }}][name]"
                                                                            value="{{ $medication->name }}"
-                                                                           placeholder="اسم الدواء" list="commonMedications" required>
+                                                                           placeholder="اسم الدواء الموصوف" required>
                                                                 </div>
                                                                 <div class="col-md-2">
-                                                                    <label class="form-label fw-bold">نوع العلاج</label>
-                                                                    <select class="form-select" name="prescribed_medications[{{ $index }}][type]" required>
-                                                                        <option value="tablet" {{ $medication->type == 'tablet' ? 'selected' : '' }}>حبوب</option>
-                                                                        <option value="injection" {{ $medication->type == 'injection' ? 'selected' : '' }}>إبرة</option>
+                                                                    <label class="form-label fw-bold">الشكل الدوائي</label>
+                                                                    <select class="form-select med-type-select" name="prescribed_medications[{{ $index }}][type]" required>
+                                                                        <option value="tablet" {{ $medication->type == 'tablet' ? 'selected' : '' }}>حبوب / أقراص</option>
+                                                                        <option value="injection" {{ $medication->type == 'injection' ? 'selected' : '' }}>إبرة / حقن</option>
                                                                         <option value="syrup" {{ $medication->type == 'syrup' ? 'selected' : '' }}>شراب</option>
-                                                                        <option value="cream" {{ $medication->type == 'cream' ? 'selected' : '' }}>كريم</option>
+                                                                        <option value="cream" {{ $medication->type == 'cream' ? 'selected' : '' }}>كريم / مرهم</option>
                                                                         <option value="drops" {{ $medication->type == 'drops' ? 'selected' : '' }}>قطرات</option>
                                                                         <option value="other" {{ $medication->type == 'other' ? 'selected' : '' }}>أخرى</option>
                                                                     </select>
                                                                 </div>
                                                                 <div class="col-md-2">
-                                                                    <label class="form-label fw-bold">الجرعة</label>
-                                                                    <input type="text" class="form-control" name="prescribed_medications[{{ $index }}][dosage]"
+                                                                    <label class="form-label fw-bold">الجرعة / القوة</label>
+                                                                    <input type="text" class="form-control med-dosage-input" name="prescribed_medications[{{ $index }}][dosage]"
                                                                            value="{{ $medication->dosage }}"
-                                                                           placeholder="500mg" required>
+                                                                           placeholder="مثال: 500mg" required>
                                                                 </div>
                                                                 <div class="col-md-2">
                                                                     <label class="form-label fw-bold d-block mb-2">التكرار يومياً</label>
-                                                                    <div class="frequency-selector" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                                                        @foreach(['1' => 'مرة', '2' => 'مرتين', '3' => 'ثلاث', '4' => 'أربع', 'as_needed' => 'عند الحاجة'] as $value => $label)
+                                                                    <div class="frequency-selector" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                                                        @foreach(['1' => '1x', '2' => '2x', '3' => '3x', '4' => '4x', 'as_needed' => 'حاجة'] as $value => $label)
                                                                         <input type="radio" id="freq_{{ $index }}_{{ $value }}" name="prescribed_medications[{{ $index }}][frequency]" value="{{ $value }}" {{ $medication->frequency == $value ? 'checked' : '' }} style="display: none;">
-                                                                        <label for="freq_{{ $index }}_{{ $value }}" class="frequency-btn" style="padding: 6px 10px; border: 2px solid #e9ecef; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease; background: white;">{{ $label }}</label>
+                                                                        <label for="freq_{{ $index }}_{{ $value }}" class="frequency-btn" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 0.8rem; background: white;">{{ $label }}</label>
                                                                         @endforeach
                                                                     </div>
                                                                 </div>
-                                                                <div class="col-md-2">
-                                                                    <label class="form-label fw-bold">المدة</label>
-                                                                    <input type="text" class="form-control" name="prescribed_medications[{{ $index }}][duration]"
-                                                                           value="{{ $medication->duration }}"
-                                                                           placeholder="7 أيام" required>
-                                                                </div>
-                                                                <div class="col-md-1 d-flex align-items-end">
-                                                                    <button type="button" class="btn btn-danger btn-sm w-100" onclick="removeMedication(this)" title="حذف">
+                                                                <div class="col-md-1 d-flex align-items-end justify-content-center">
+                                                                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-medication" onclick="window.removeMedication(this); return false;" title="حذف الدواء">
                                                                         <i class="fas fa-trash"></i>
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                            <div class="row g-3 mt-2">
-                                                                <div class="col-md-4">
-                                                                    <label class="form-label fw-bold">الأوقات</label>
-                                                                    <input type="text" class="form-control" name="prescribed_medications[{{ $index }}][times]"
-                                                                           value="{{ $medication->times }}"
-                                                                           placeholder="صباح، ظهر، مساء">
+                                                            <div class="row g-3 mt-1">
+                                                                <div class="col-md-2">
+                                                                    <label class="form-label text-muted small fw-bold">المدة</label>
+                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[{{ $index }}][duration]"
+                                                                           value="{{ $medication->duration }}"
+                                                                           placeholder="مثال: 7 أيام">
                                                                 </div>
-                                                                <div class="col-md-8">
-                                                                    <label class="form-label fw-bold">تعليمات خاصة</label>
-                                                                    <input type="text" class="form-control" name="prescribed_medications[{{ $index }}][instructions]"
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label text-muted small fw-bold">التوقيت</label>
+                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[{{ $index }}][times]"
+                                                                           value="{{ $medication->times }}"
+                                                                           placeholder="صباحاً، بعد الأكل...">
+                                                                </div>
+                                                                <div class="col-md-7">
+                                                                    <label class="form-label text-muted small fw-bold">تعليمات وتوصيات خاصة للصيدلي والمريض</label>
+                                                                    <input type="text" class="form-control form-control-sm" name="prescribed_medications[{{ $index }}][instructions]"
                                                                            value="{{ $medication->instructions }}"
-                                                                           placeholder="بعد الأكل، مع الماء، إلخ...">
+                                                                           placeholder="مثال: يؤخذ بعد الطعام مباشرة مع كوب ماء وفير">
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     @endforeach
                                                 @else
-                                                    <div class="text-center py-4 text-muted">
+                                                    <div id="noMedicationsNotice" class="text-center py-4 text-muted">
                                                         <i class="fas fa-pills fa-3x mb-3 text-success opacity-25"></i>
-                                                        <p class="mb-1">لا توجد أدوية موصوفة</p>
-                                                        <small>اضغط على "إضافة دواء" أعلاه لبدء إضافة الأدوية</small>
+                                                        <p class="mb-1">لا توجد أدوية موصوفة بعد</p>
+                                                        <small>اضغط على "إضافة دواء" أعلاه لبدء إضافة الأدوية من دليل الضمان الصحي</small>
                                                     </div>
                                                 @endif
                                             </div>
-                                            </div>
-
-                                            <!-- قائمة الأدوية الشائعة -->
-                                            <datalist id="commonMedications">
-                                                <option value="أموكسيسيلين 500mg">
-                                                <option value="أزيثروميسين 500mg">
-                                                <option value="باراسيتامول 500mg">
-                                                <option value="إيبوبروفين 400mg">
-                                                <option value="أملوديبين 5mg">
-                                                <option value="لوسارتان 50mg">
-                                                <option value="ميتفورمين 500mg">
-                                                <option value="أوميبرازول 20mg">
-                                                <option value="سالبوتامول رذاذ">
-                                                <option value="سيفالكسين 500mg">
-                                                <option value="ديكلوفيناك 50mg">
-                                                <option value="فيتامين D 1000 وحدة">
-                                                <option value="كالسيوم 500mg">
-                                                <option value="أسبرين 75mg">
-                                            </datalist>
                                         </div>
                                     </div>
 
+                                    </div>
+
                                     <div class="d-flex justify-content-end align-items-center mt-3">
-                                        <button type="submit" class="btn btn-success btn-lg">
+                                        <button type="submit" class="btn btn-success btn-lg px-4">
                                             <i class="fas fa-save me-1"></i>
-                                            حفظ خطة العلاج
+                                            حفظ خطة العلاج والوصفة
                                         </button>
                                     </div>
                                 </form>
@@ -2544,169 +2532,231 @@ $treatmentCount = $otherTreatments->count();
 @endphp
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize global variables
-    window.medicationIndex = 0;
-    window.treatmentIndex = 0;
+window.availableMedicinesData = @json($availableMedicines ?? []);
 
-    // Make functions global
+window.handleMedicineSelect = function(selectElem) {
+    const row = selectElem.closest('.medication-item');
+    if (!row) return;
+
+    const idInput = row.querySelector('.med-id-input');
+    const nameInput = row.querySelector('.med-name-input');
+    const dosageInput = row.querySelector('.med-dosage-input');
+    const typeSelect = row.querySelector('.med-type-select');
+
+    const val = selectElem.value;
+    if (!val || val === '') {
+        if (idInput) idInput.value = '';
+        return;
+    }
+
+    if (val === 'custom') {
+        if (idInput) idInput.value = '';
+        if (nameInput) {
+            nameInput.value = '';
+            nameInput.focus();
+        }
+        return;
+    }
+
+    const medId = parseInt(val, 10);
+    const med = (window.availableMedicinesData || []).find(m => m.id === medId);
+
+    if (med) {
+        if (idInput) idInput.value = med.id;
+        if (nameInput) nameInput.value = med.name;
+        if (dosageInput && med.strength) dosageInput.value = med.strength;
+
+        if (typeSelect && med.dosage_form) {
+            const formStr = (med.dosage_form || '').toLowerCase();
+            if (formStr.includes('tab') || formStr.includes('cap') || formStr.includes('حبوب') || formStr.includes('كبسول')) {
+                typeSelect.value = 'tablet';
+            } else if (formStr.includes('inj') || formStr.includes('amp') || formStr.includes('vial') || formStr.includes('إبر') || formStr.includes('حقن')) {
+                typeSelect.value = 'injection';
+            } else if (formStr.includes('syr') || formStr.includes('susp') || formStr.includes('شراب') || formStr.includes('معلق')) {
+                typeSelect.value = 'syrup';
+            } else if (formStr.includes('cream') || formStr.includes('oint') || formStr.includes('gel') || formStr.includes('مرهم') || formStr.includes('كريم')) {
+                typeSelect.value = 'cream';
+            } else if (formStr.includes('drop') || formStr.includes('قطر')) {
+                typeSelect.value = 'drops';
+            } else {
+                typeSelect.value = 'other';
+            }
+        }
+    }
+};
+
+window.removeMedication = function(elem) {
+    try {
+        if (!elem) return;
+        const item = elem.closest('.medication-item');
+        if (item) {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                const $s = $(item).find('.medicine-select2');
+                if ($s.length && $s.hasClass('select2-hidden-accessible')) {
+                    $s.select2('destroy');
+                }
+            }
+            item.remove();
+        }
+        const container = document.getElementById('medicationsContainer');
+        if (container && container.querySelectorAll('.medication-item').length === 0) {
+            const notice = document.getElementById('noMedicationsNotice');
+            if (notice) notice.style.display = 'block';
+        }
+    } catch(e) {
+        console.error('Error removing medication:', e);
+    }
+};
+
+window.initMedicineSelect2 = function(context) {
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        const $targets = context ? $(context).find('.medicine-select2') : $('.medicine-select2');
+        $targets.each(function() {
+            if (!$(this).hasClass('select2-hidden-accessible')) {
+                $(this).select2({
+                    placeholder: '-- ابحث بالاسم التجاري أو العلمي --',
+                    width: '100%',
+                    dir: 'rtl',
+                    allowClear: true
+                }).on('select2:select', function () {
+                    window.handleMedicineSelect(this);
+                }).on('select2:clear', function() {
+                    window.handleMedicineSelect(this);
+                });
+            }
+        });
+    }
+};
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-remove-medication');
+    if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.removeMedication(btn);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    window.medicationIndex = {{ $medicationCount }};
+
     window.clearSavedData = function() {
         localStorage.removeItem('saved_medications');
-        localStorage.removeItem('saved_treatments');
     };
+
+    window.initMedicineSelect2();
+
+    if (typeof $ !== 'undefined') {
+        $('#treatmentCollapse').on('shown.bs.collapse', function () {
+            window.initMedicineSelect2();
+        });
+    }
 
     window.addMedication = function() {
-    try {
-        console.log('addMedication called');
-        const container = document.getElementById('medicationsContainer');
-        console.log('container:', container);
-        if (!container) {
-            console.error('Medications container not found');
-            return;
-        }
-    const medicationHtml = `
-        <div class="medication-item card mb-3 border-success">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label class="form-label">اسم الدواء</label>
-                        <input type="text" class="form-control" name="prescribed_medications[${medicationIndex}][name]"
-                               placeholder="اسم الدواء أو اختر من القائمة" list="commonMedications">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">نوع العلاج</label>
-                        <select class="form-select" name="prescribed_medications[${medicationIndex}][type]">
-                            <option value="tablet">حبوب</option>
-                            <option value="injection">إبرة</option>
-                            <option value="syrup">شراب</option>
-                            <option value="cream">كريم</option>
-                            <option value="drops">قطرات</option>
-                            <option value="other">أخرى</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">الجرعة</label>
-                        <input type="text" class="form-control" name="prescribed_medications[${medicationIndex}][dosage]"
-                               placeholder="مثال: 500mg">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label d-block mb-2">عدد المرات</label>
-                        <div class="frequency-selector" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <input type="radio" id="new_freq_${medicationIndex}_1" name="prescribed_medications[${medicationIndex}][frequency]" value="1" style="display: none;">
-                            <label for="new_freq_${medicationIndex}_1" class="frequency-btn" style="padding: 6px 10px; border: 2px solid #e9ecef; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease; background: white;">مرة</label>
+        try {
+            const container = document.getElementById('medicationsContainer');
+            if (!container) return;
 
-                            <input type="radio" id="new_freq_${medicationIndex}_2" name="prescribed_medications[${medicationIndex}][frequency]" value="2" style="display: none;">
-                            <label for="new_freq_${medicationIndex}_2" class="frequency-btn" style="padding: 6px 10px; border: 2px solid #e9ecef; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease; background: white;">مرتين</label>
+            const notice = document.getElementById('noMedicationsNotice');
+            if (notice) notice.style.display = 'none';
 
-                            <input type="radio" id="new_freq_${medicationIndex}_3" name="prescribed_medications[${medicationIndex}][frequency]" value="3" style="display: none;">
-                            <label for="new_freq_${medicationIndex}_3" class="frequency-btn" style="padding: 6px 10px; border: 2px solid #e9ecef; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease; background: white;">ثلاث</label>
+            let optionsHtml = '<option value="">-- ابحث بالاسم التجاري أو العلمي --</option>';
+            if (window.availableMedicinesData && window.availableMedicinesData.length > 0) {
+                window.availableMedicinesData.forEach(med => {
+                    optionsHtml += `<option value="${med.id}">${med.name} ${med.strength || ''} (${med.generic_name || ''} - ${med.dosage_form || ''})</option>`;
+                });
+            }
+            optionsHtml += '<option value="custom">✏️ كتابة اسم دواء يدوي غير مدرج</option>';
 
-                            <input type="radio" id="new_freq_${medicationIndex}_4" name="prescribed_medications[${medicationIndex}][frequency]" value="4" style="display: none;">
-                            <label for="new_freq_${medicationIndex}_4" class="frequency-btn" style="padding: 6px 10px; border: 2px solid #e9ecef; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease; background: white;">أربع</label>
+            const idx = window.medicationIndex;
+            const medicationHtml = `
+                <div class="medication-item card mb-3 border-success">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-pills text-success me-1"></i>
+                                    اسم الدواء (دليل الضمان الصحي)
+                                </label>
+                                <select class="form-select medicine-select2" data-index="${idx}" onchange="handleMedicineSelect(this)">
+                                    ${optionsHtml}
+                                </select>
+                                <input type="hidden" name="prescribed_medications[${idx}][medicine_id]" class="med-id-input" value="">
+                                <input type="text" class="form-control med-name-input mt-2" name="prescribed_medications[${idx}][name]"
+                                       placeholder="اسم الدواء الموصوف" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold">الشكل الدوائي</label>
+                                <select class="form-select med-type-select" name="prescribed_medications[${idx}][type]" required>
+                                    <option value="tablet">حبوب / أقراص</option>
+                                    <option value="injection">إبرة / حقن</option>
+                                    <option value="syrup">شراب</option>
+                                    <option value="cream">كريم / مرهم</option>
+                                    <option value="drops">قطرات</option>
+                                    <option value="other">أخرى</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold">الجرعة / القوة</label>
+                                <input type="text" class="form-control med-dosage-input" name="prescribed_medications[${idx}][dosage]"
+                                       placeholder="مثال: 500mg" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold d-block mb-2">التكرار يومياً</label>
+                                <div class="frequency-selector" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                    <input type="radio" id="new_freq_${idx}_1" name="prescribed_medications[${idx}][frequency]" value="1" checked style="display: none;">
+                                    <label for="new_freq_${idx}_1" class="frequency-btn" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 0.8rem; background: white;">1x</label>
 
-                            <input type="radio" id="new_freq_${medicationIndex}_needed" name="prescribed_medications[${medicationIndex}][frequency]" value="as_needed" style="display: none;">
-                            <label for="new_freq_${medicationIndex}_needed" class="frequency-btn" style="padding: 6px 10px; border: 2px solid #e9ecef; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease; background: white;">عند الحاجة</label>
+                                    <input type="radio" id="new_freq_${idx}_2" name="prescribed_medications[${idx}][frequency]" value="2" style="display: none;">
+                                    <label for="new_freq_${idx}_2" class="frequency-btn" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 0.8rem; background: white;">2x</label>
+
+                                    <input type="radio" id="new_freq_${idx}_3" name="prescribed_medications[${idx}][frequency]" value="3" style="display: none;">
+                                    <label for="new_freq_${idx}_3" class="frequency-btn" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 0.8rem; background: white;">3x</label>
+
+                                    <input type="radio" id="new_freq_${idx}_4" name="prescribed_medications[${idx}][frequency]" value="4" style="display: none;">
+                                    <label for="new_freq_${idx}_4" class="frequency-btn" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 0.8rem; background: white;">4x</label>
+
+                                    <input type="radio" id="new_freq_${idx}_needed" name="prescribed_medications[${idx}][frequency]" value="as_needed" style="display: none;">
+                                    <label for="new_freq_${idx}_needed" class="frequency-btn" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 0.8rem; background: white;">حاجة</label>
+                                </div>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end justify-content-center">
+                                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-medication" onclick="window.removeMedication(this)" title="حذف الدواء">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-2">
+                                <label class="form-label text-muted small fw-bold">المدة</label>
+                                <input type="text" class="form-control form-control-sm" name="prescribed_medications[${idx}][duration]"
+                                       placeholder="مثال: 7 أيام">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small fw-bold">التوقيت</label>
+                                <input type="text" class="form-control form-control-sm" name="prescribed_medications[${idx}][times]"
+                                       placeholder="صباحاً، بعد الأكل...">
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label text-muted small fw-bold">تعليمات وتوصيات خاصة للصيدلي والمريض</label>
+                                <input type="text" class="form-control form-control-sm" name="prescribed_medications[${idx}][instructions]"
+                                       placeholder="مثال: يؤخذ بعد الطعام مباشرة مع كوب ماء وفير">
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">الأوقات</label>
-                        <input type="text" class="form-control" name="prescribed_medications[${medicationIndex}][times]"
-                               placeholder="صباح، مساء">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeMedication(this)">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
                 </div>
-                <div class="row mt-2">
-                    <div class="col-md-3">
-                        <label class="form-label">المدة</label>
-                        <input type="text" class="form-control" name="prescribed_medications[${medicationIndex}][duration]"
-                               placeholder="أيام">
-                    </div>
-                    <div class="col-md-9">
-                        <label class="form-label">تعليمات خاصة</label>
-                        <input type="text" class="form-control" name="prescribed_medications[${medicationIndex}][instructions]"
-                               placeholder="تعليمات خاصة للمريض">
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    console.log('Inserting HTML:', medicationHtml);
-    container.insertAdjacentHTML('beforeend', medicationHtml);
-    console.log('HTML inserted, medicationIndex now:', medicationIndex);
-    medicationIndex++;
-    } catch (error) {
-        console.error('Error in addMedication:', error);
-    }
-    }; // End of window.addMedication
+            `;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = medicationHtml.trim();
+            const newRow = tempDiv.firstChild;
+            container.appendChild(newRow);
 
-    window.removeMedication = function(button) {
-        button.closest('.medication-item').remove();
-    };
-
-    window.addOtherTreatment = function() {
-        try {
-            console.log('addOtherTreatment called');
-            const container = document.getElementById('otherTreatmentsContainer');
-        console.log('container:', container);
-        if (!container) {
-            console.error('Container not found');
-            return;
+            window.initMedicineSelect2(newRow);
+            window.medicationIndex++;
+        } catch (error) {
+            console.error('Error in addMedication:', error);
         }
-    const treatmentHtml = `
-        <div class="treatment-item card mb-3 border-info">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label class="form-label">نوع العلاج</label>
-                        <select class="form-select" name="prescribed_medications[other_treatments][${treatmentIndex}][type]">
-                            <option value="">اختر النوع</option>
-                            <option value="physical_therapy">علاج فيزيائي</option>
-                            <option value="occupational_therapy">علاج وظيفي</option>
-                            <option value="speech_therapy">علاج نطقي</option>
-                            <option value="surgery">جراحة</option>
-                            <option value="radiotherapy">علاج إشعاعي</option>
-                            <option value="chemotherapy">علاج كيميائي</option>
-                            <option value="other">أخرى</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">وصف العلاج</label>
-                        <input type="text" class="form-control" name="prescribed_medications[other_treatments][${treatmentIndex}][description]"
-                               placeholder="وصف العلاج المطلوب">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">المدة</label>
-                        <input type="text" class="form-control" name="prescribed_medications[other_treatments][${treatmentIndex}][duration]"
-                               placeholder="عدد الجلسات/الأيام">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">التكرار</label>
-                        <input type="text" class="form-control" name="prescribed_medications[other_treatments][${treatmentIndex}][frequency]"
-                               placeholder="يومياً، أسبوعياً">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeTreatment(this)">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    container.insertAdjacentHTML('beforeend', treatmentHtml);
-    treatmentIndex++;
-    } catch (error) {
-        console.error('Error in addOtherTreatment:', error);
-    }
-}
-
-function removeTreatment(button) {
-    button.closest('.treatment-item').remove();
-}
+    };
 
     // إدارة الأيقونات المنسدلة للمجموعات
     document.querySelectorAll('.main-group-header').forEach(header => {

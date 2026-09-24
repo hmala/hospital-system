@@ -57,6 +57,16 @@ class Visit extends Model
         return $this->belongsTo(Appointment::class);
     }
 
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function latestPrescription()
+    {
+        return $this->hasOne(Prescription::class)->latestOfMany();
+    }
+
     // العلاقة مع الطلبات
     public function requests()
     {
