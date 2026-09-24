@@ -1210,18 +1210,7 @@ class DoctorVisitController extends Controller
     {
         $prescription = $visit->prescriptions()->latest()->first();
         if (!$prescription) {
-            return response()->json([
-                'success' => true,
-                'count' => 0,
-                'requests' => [],
-                'prescription_id' => null,
-                'prescription_number' => null,
-                'prescription_status' => null,
-                'prescription_status_text' => null,
-                'prescription_badge' => null,
-                'dispensed_at' => null,
-                'items' => [],
-            ]);
+            return response()->json(['success' => true, 'count' => 0, 'requests' => []]);
         }
 
         $pendingRequests = $prescription->items()
@@ -1244,27 +1233,10 @@ class DoctorVisitController extends Controller
                 ];
             });
 
-        $itemsSummary = $prescription->items()->with('medicine')->get()->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'medicine_name' => $item->medicine?->name ?? $item->medicine_name,
-                'status' => $item->status,
-                'status_text' => $item->status_text,
-                'substitution_status' => $item->substitution_status,
-            ];
-        });
-
         return response()->json([
             'success' => true,
             'count' => $pendingRequests->count(),
             'requests' => $pendingRequests,
-            'prescription_id' => $prescription->id,
-            'prescription_number' => $prescription->prescription_number,
-            'prescription_status' => $prescription->status,
-            'prescription_status_text' => $prescription->status_text,
-            'prescription_badge' => $prescription->status_badge,
-            'dispensed_at' => $prescription->dispensed_at ? $prescription->dispensed_at->format('H:i') : null,
-            'items' => $itemsSummary,
         ]);
     }
 

@@ -165,10 +165,11 @@ class PharmacyPosController extends Controller
                 'patient.user',
                 'doctor.user',
                 'items.medicine',
+                'items.suggestedMedicine',
                 'visit'
             ])
             ->orderBy('created_at', 'desc')
-            ->limit(40)
+            ->limit(60)
             ->get();
 
         return response()->json([
@@ -178,6 +179,24 @@ class PharmacyPosController extends Controller
                 $hasApprovedSub = $rx->items->contains(fn($it) => $it->substitution_status === 'approved');
                 $hasPendingSub = $rx->items->contains(fn($it) => $it->substitution_status === 'pending_approval');
                 $hasRejectedSub = $rx->items->contains(fn($it) => $it->substitution_status === 'rejected');
+
+                $itemsSummary = $rx->items->map(function ($it) {
+                    return [
+                        'id' => $it->id,
+                        'name' => $it->medicine?->name ?? $it->medicine_name,
+                        'suggested_name' => $it->suggestedMedicine?->name,
+                        'substitution_status' => $it->substitution_status,
+                        'quantity' => $it->quantity,
+                        'unit_type' => $it->unit_type,
+                    ];
+                });
+
+                $stage = 'new';
+                if ($hasApprovedSub) {
+                    $stage = 'approved_ready';
+                } elseif ($hasPendingSub) {
+                    $stage = 'awaiting_doctor';
+                }
 
                 return [
                     'id' => $rx->id,
@@ -190,6 +209,8 @@ class PharmacyPosController extends Controller
                     'specialization' => optional($rx->doctor)->specialization ?? 'استشارية',
                     'diagnosis' => $rx->diagnosis ?? '-',
                     'items_count' => $rx->items->count(),
+                    'items_summary' => $itemsSummary,
+                    'stage' => $stage,
                     'has_approved_sub' => $hasApprovedSub,
                     'has_pending_sub' => $hasPendingSub,
                     'has_rejected_sub' => $hasRejectedSub,

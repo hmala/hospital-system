@@ -64,7 +64,7 @@ class PharmacyPosTest extends TestCase
     {
         $response = $this->actingAs($this->adminUser)->get(route('pharmacy.pos.index'));
         $response->assertStatus(200);
-        $response->assertSee('نقطة بيع وصرف الصيدلية');
+        $response->assertSee('خط صرف وتجهيز الأدوية');
     }
 
     public function test_pos_search_by_barcode_returns_medicine_with_batches_and_alternatives()
