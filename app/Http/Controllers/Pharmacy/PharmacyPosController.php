@@ -175,6 +175,10 @@ class PharmacyPosController extends Controller
             'success' => true,
             'count' => $prescriptions->count(),
             'prescriptions' => $prescriptions->map(function ($rx) {
+                $hasApprovedSub = $rx->items->contains(fn($it) => $it->substitution_status === 'approved');
+                $hasPendingSub = $rx->items->contains(fn($it) => $it->substitution_status === 'pending_approval');
+                $hasRejectedSub = $rx->items->contains(fn($it) => $it->substitution_status === 'rejected');
+
                 return [
                     'id' => $rx->id,
                     'prescription_number' => $rx->prescription_number,
@@ -186,6 +190,9 @@ class PharmacyPosController extends Controller
                     'specialization' => optional($rx->doctor)->specialization ?? 'استشارية',
                     'diagnosis' => $rx->diagnosis ?? '-',
                     'items_count' => $rx->items->count(),
+                    'has_approved_sub' => $hasApprovedSub,
+                    'has_pending_sub' => $hasPendingSub,
+                    'has_rejected_sub' => $hasRejectedSub,
                     'created_at' => $rx->created_at ? $rx->created_at->format('Y-m-d H:i') : '-',
                     'time_ago' => $rx->created_at ? $rx->created_at->diffForHumans() : '-',
                 ];

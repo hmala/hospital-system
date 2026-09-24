@@ -159,6 +159,9 @@
                                 <span class="text-muted ms-1" id="dispDiagnosisText">لا يوجد تشخيص مسجل</span>
                             </div>
                         </div>
+
+                        <!-- إشعار موافقة / رفض الطبيب على البديل -->
+                        <div id="rxSubstitutionFeedbackBanner" class="mt-3 mb-0" style="display: none;"></div>
                     </div>
 
                     <!-- جدول الأدوية المطلوب صرفها -->
@@ -435,8 +438,33 @@
         let html = '';
         prescriptions.forEach(rx => {
             const isSelected = currentSelectedRxId == rx.id ? 'border-primary bg-primary-subtle shadow-sm' : '';
+            
+            let subStatusBadge = '';
+            if (rx.has_approved_sub) {
+                subStatusBadge = `
+                    <div class="mt-2 pt-2 border-top">
+                        <span class="badge bg-success text-white w-100 py-1 d-flex align-items-center justify-content-center gap-1 shadow-xs">
+                            <i class="fas fa-check-circle fa-bounce"></i> موافقة الطبيب على البديل ✅ جاهز للصرف
+                        </span>
+                    </div>`;
+            } else if (rx.has_pending_sub) {
+                subStatusBadge = `
+                    <div class="mt-2 pt-2 border-top">
+                        <span class="badge bg-warning text-dark w-100 py-1 d-flex align-items-center justify-content-center gap-1 shadow-xs">
+                            <i class="fas fa-hourglass-half fa-spin"></i> بانتظار موافقة الطبيب على البديل
+                        </span>
+                    </div>`;
+            } else if (rx.has_rejected_sub) {
+                subStatusBadge = `
+                    <div class="mt-2 pt-2 border-top">
+                        <span class="badge bg-danger text-white w-100 py-1 d-flex align-items-center justify-content-center gap-1 shadow-xs">
+                            <i class="fas fa-times-circle"></i> رفض الطبيب البديل ❌
+                        </span>
+                    </div>`;
+            }
+
             html += `
-                <div class="prescription-queue-card card border rounded-3 p-3 mb-2 shadow-xs cursor-pointer transition-all ${isSelected}" 
+                <div class="prescription-queue-card card border rounded-3 p-3 mb-2 shadow-xs cursor-pointer transition-all ${isSelected} ${rx.has_approved_sub ? 'border-success' : ''}" 
                      data-id="${rx.id}" 
                      data-rx-number="${rx.prescription_number}"
                      data-patient-name="${rx.patient_name}"
@@ -459,6 +487,7 @@
                             ${rx.items_count} أدوية
                         </span>
                     </div>
+                    ${subStatusBadge}
                 </div>
             `;
         });
@@ -512,6 +541,60 @@
         document.getElementById('dispDoctorName').innerText = 'د. ' + (rx.doctor_name || 'الاستشاري');
         document.getElementById('dispDiagnosisText').innerText = rx.diagnosis || rx.notes || 'لا يوجد تشخيص إضافي مسجل';
         document.getElementById('dispItemsCount').innerText = (rx.items ? rx.items.length : 0) + ' أدوية';
+
+        // فحص إشعارات موافقة أو رفض الطبيب على البدائل
+        const feedbackBanner = document.getElementById('rxSubstitutionFeedbackBanner');
+        if (feedbackBanner) {
+            const approvedItems = (rx.items || []).filter(i => i.substitution_status === 'approved');
+            const pendingItems = (rx.items || []).filter(i => i.substitution_status === 'pending_approval');
+            const rejectedItems = (rx.items || []).filter(i => i.substitution_status === 'rejected');
+
+            if (approvedItems.length > 0) {
+                feedbackBanner.style.display = 'block';
+                feedbackBanner.innerHTML = `
+                    <div class="alert alert-success border-2 border-success shadow-sm rounded-3 p-3 d-flex align-items-center gap-3">
+                        <div class="bg-success text-white p-2 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                            <i class="fas fa-check-double fa-bounce"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="text-success fs-6">✅ وافق الطبيب المعالج على استبدال (${approvedItems.length}) دواء!</strong>
+                                <span class="badge bg-success text-white">معتمد وجاهز للصرف</span>
+                            </div>
+                            <div class="small text-dark mt-1">
+                                ${approvedItems.map(ai => `<span class="me-3"><i class="fas fa-pills text-success me-1"></i><strong>${ai.name}</strong> ${ai.substitution_response_notes ? `(${ai.substitution_response_notes})` : ''}</span>`).join('')}
+                            </div>
+                            <small class="text-muted d-block mt-1">تم تعديل الوصفة الطبية رسمياً، اضغط على <strong>«تأكيد صرف وتجهيز الدواء»</strong> أدناه لإتمام الصرف وخصم المخزون.</small>
+                        </div>
+                    </div>`;
+            } else if (pendingItems.length > 0) {
+                feedbackBanner.style.display = 'block';
+                feedbackBanner.innerHTML = `
+                    <div class="alert alert-warning border-2 border-warning shadow-sm rounded-3 p-3 d-flex align-items-center gap-3">
+                        <div class="bg-warning text-dark p-2 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                            <i class="fas fa-hourglass-half fa-spin"></i>
+                        </div>
+                        <div>
+                            <strong class="text-dark fs-6">⏳ بانتظار موافقة الطبيب على البديل المقترح</strong>
+                            <small class="text-muted d-block">تم إرسال المقترح إلى شاشة الطبيب. ستصلك الموافقة هنا تلقائياً فور اعتمادها من قبل الطبيب.</small>
+                        </div>
+                    </div>`;
+            } else if (rejectedItems.length > 0) {
+                feedbackBanner.style.display = 'block';
+                feedbackBanner.innerHTML = `
+                    <div class="alert alert-danger border-2 border-danger shadow-sm rounded-3 p-3 d-flex align-items-center gap-3">
+                        <div class="bg-danger text-white p-2 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div>
+                            <strong class="text-danger fs-6">❌ رفض الطبيب المعالج مقترح البديل:</strong>
+                            <small class="text-dark d-block">${rejectedItems.map(ri => ri.substitution_response_notes || 'يرجى البحث عن الصنف الأصلي أو اقتراح بديل آخر').join(', ')}</small>
+                        </div>
+                    </div>`;
+            } else {
+                feedbackBanner.style.display = 'none';
+            }
+        }
 
         // رابط الطباعة
         const printBtn = document.getElementById('btnPrintPrescriptionBtn');
