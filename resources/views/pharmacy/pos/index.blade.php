@@ -240,15 +240,38 @@
 
 <!-- Modal: استبدال الدواء ببديل مكافئ متوفر -->
 <div class="modal fade" id="alternativeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title fw-bold"><i class="fas fa-exchange-alt me-2"></i>اختيار بديل مكافئ متوفر في الصيدلية</h5>
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exchange-alt me-2"></i>
+                    اختيار واقتراح بديل للدواء: <span id="modalTargetMedName" class="text-primary font-monospace">-</span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-3">
-                <p class="small text-muted mb-2">الدواء الأصلي غير متوفر حالياً. اختر أحد البدائل المكافئة حيوياً المتوفرة بالمخزون:</p>
-                <div class="list-group" id="alternativesModalList">
+            <div class="modal-body p-3 p-md-4">
+                <!-- حقل البحث المباشر في كامل دليل الأدوية -->
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="modalAltSearchInput" class="form-control" placeholder="ابحث في دليل الأدوية الكامل بالاسم التجاري أو العلمي أو التركيز...">
+                </div>
+
+                <!-- سبب / ملاحظة اقتراح البديل -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-comment-medical text-primary me-1"></i>
+                        ملاحظة / سبب الاستبدال الموجه للطبيب (اختياري):
+                    </label>
+                    <input type="text" id="modalAltReasonInput" class="form-control form-control-sm" placeholder="مثال: غير متوفر الصنف الأصلي - متوفر نفس المادة الفعالة بشركة بديلة">
+                </div>
+
+                <!-- قائمة البدائل المقترحة والنتائج -->
+                <h6 class="fw-bold text-dark mb-2 small d-flex align-items-center justify-content-between">
+                    <span><i class="fas fa-list-check text-success me-1"></i> البدائل المتاحة للاختيار:</span>
+                    <span class="badge bg-secondary-subtle text-secondary" id="modalAltCountBadge">0 بديل</span>
+                </h6>
+
+                <div class="list-group shadow-xs" id="alternativesModalList" style="max-height: 320px; overflow-y: auto;">
                     <!-- Dynamic Alternatives List -->
                 </div>
             </div>
@@ -331,6 +354,27 @@
                     renderQuickSearchResults(data.medicines || []);
                 });
         }, 300));
+
+        // البحث عن بدائل داخل مودال البدائل
+        const modalAltSearchInput = document.getElementById('modalAltSearchInput');
+        if (modalAltSearchInput) {
+            modalAltSearchInput.addEventListener('input', debounce(function() {
+                const q = this.value.trim();
+                if (q.length < 1) {
+                    if (targetItemForAlternative && currentPrescriptionData) {
+                        const item = currentPrescriptionData.items.find(i => i.id === targetItemForAlternative);
+                        renderAlternativesList(item ? (item.alternatives || []) : []);
+                    }
+                    return;
+                }
+
+                fetch(`{{ route('pharmacy.pos.search') }}?q=${encodeURIComponent(q)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        renderAlternativesList(data.medicines || []);
+                    });
+            }, 300));
+        }
 
         // إذا كانت هناك وصفة أولى بالقائمة، اخترها تلقائياً لتسهيل الاستخدام
         const firstCard = document.querySelector('.prescription-queue-card');
@@ -569,27 +613,52 @@
     function openAlternativesModal(itemId) {
         targetItemForAlternative = itemId;
         const item = currentPrescriptionData.items.find(i => i.id === itemId);
-        if (!item || !item.alternatives) return;
+        if (!item) return;
 
+        document.getElementById('modalTargetMedName').innerText = item.name;
+        document.getElementById('modalAltReasonInput').value = `عدم توفر دواء (${item.name}) - مقترح البديل`;
+        document.getElementById('modalAltSearchInput').value = '';
+
+        renderAlternativesList(item.alternatives || []);
+
+        const modal = new bootstrap.Modal(document.getElementById('alternativeModal'));
+        modal.show();
+    }
+
+    // رسم قائمة البدائل داخل المودال
+    function renderAlternativesList(alternatives) {
         const listContainer = document.getElementById('alternativesModalList');
-        let html = '';
+        const badge = document.getElementById('modalAltCountBadge');
+        if (badge) badge.innerText = alternatives.length + ' بديل';
 
-        item.alternatives.forEach(alt => {
+        if (!alternatives || alternatives.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-search-plus fa-2x mb-2 text-warning"></i>
+                    <p class="small mb-1 fw-bold">لا توجد بدائل مكافئة مسبقة</p>
+                    <p class="small text-muted mb-0">استخدم شريط البحث أعلاه للبحث عن أي دواء بديل من الدليل الرسمي.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        alternatives.forEach(alt => {
             const hasStock = (alt.total_stock > 0 || alt.total_open_sub_units > 0);
             html += `
                 <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center p-3 gap-2">
                     <div>
                         <div class="fw-bold text-dark fs-6">${alt.name}</div>
                         <div class="small text-muted">${alt.generic_name || ''} - ${alt.dosage_form || ''} (${alt.strength || ''})</div>
-                        <div class="small font-monospace ${hasStock ? 'text-success' : 'text-danger'}">
-                            <i class="fas fa-boxes me-1"></i> الرصيد المتوفر: ${alt.total_stock} ${alt.main_unit || 'علبة'}
+                        <div class="small font-monospace ${hasStock ? 'text-success' : 'text-secondary'}">
+                            <i class="fas fa-boxes me-1"></i> ${hasStock ? `رصيد النظام: ${alt.total_stock} ${alt.main_unit || 'علبة'}` : 'متوفر على الرف'}
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-2 shadow-sm" ${!hasStock ? 'disabled' : ''} onclick="sendAlternativeProposalToDoctor(${alt.id}, '${escapeHtml(alt.name)}')">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-2 shadow-sm" onclick="sendAlternativeProposalToDoctor(${alt.id}, '${escapeHtml(alt.name)}')">
                             <i class="fas fa-paper-plane me-1"></i> إرسال اقتراح للطبيب
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-success fw-bold px-2 py-2" ${!hasStock ? 'disabled' : ''} onclick="applyAlternative(${alt.id}, '${escapeHtml(alt.name)}')">
+                        <button type="button" class="btn btn-sm btn-outline-success fw-bold px-2 py-2" onclick="applyAlternative(${alt.id}, '${escapeHtml(alt.name)}')">
                             <i class="fas fa-check me-1"></i> استبدال مباشر
                         </button>
                     </div>
@@ -598,13 +667,17 @@
         });
 
         listContainer.innerHTML = html;
-        const modal = new bootstrap.Modal(document.getElementById('alternativeModal'));
-        modal.show();
     }
 
     // إرسال طلب اقتراح البديل إلى شاشة الطبيب للموافقة
     function sendAlternativeProposalToDoctor(altId, altName) {
         if (!targetItemForAlternative || !currentPrescriptionData) return;
+
+        const reasonInput = document.getElementById('modalAltReasonInput');
+        const customReason = reasonInput ? reasonInput.value.trim() : '';
+        const finalReason = customReason.length > 0 
+            ? customReason 
+            : `عدم توفر الصنف الأصلي - مقترح البديل المكافئ (${altName})`;
 
         fetch(`{{ url('pharmacy/pos/prescription-items') }}/${targetItemForAlternative}/suggest-alternative`, {
             method: 'POST',
@@ -615,7 +688,7 @@
             },
             body: JSON.stringify({
                 suggested_medicine_id: altId,
-                substitution_reason: `عدم توفر الصنف الأصلي - مقترح البديل المكافئ (${altName})`
+                substitution_reason: finalReason
             })
         })
         .then(res => res.json())
