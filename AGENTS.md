@@ -77,8 +77,20 @@ Consult these files before making changes or proposing fixes:
   * تحديث [DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) بإضافة مساري `visits.substitution-requests` و `prescriptions.items.respond-substitution` للتعامل مع موافقة ورفض الطبيب للبدائل وتحديث الخطة العلاجية تلقائياً.
   * تصميم لوحة التنبيهات اللحظية التفاعلية وشارات حالة الصرف الحية في شاشة كشف الطبيب [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) لمتابعة حالة صرف الوصفة من الصيدلية لحظة بلحظة (تم الصرف بالكامل ✅ / صرف جزئي ⚠️ / قيد الصرف ⏳ / مقترح بديل 🔄).
   * ربط منظومة الصيدلية بـ **محطة العيادة وشاشة طابور مراجعي الفحوصات والخدمات الطبية** [index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php) و [DoctorQueueController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorQueueController.php) لعرض حالة صرف الأدوية 💊 وتنبيهات البدائل الدوائية المقترحة 🔔 وإمكانية استدعاء المريض أو البت في البديل مباشرة من شاشة الانتظار الرئيسية `/doctor/visits` تماماً كالمختبر والأشعة.
+- **محطة صرف الأدوية التفاعلية بنظام كانبان (Kanban Pharmacy Flow Workstation)**:
+  * إعادة هندسة وتصميم شاشة صرف ونقطة بيع الصيدلية [index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php) لتعتمد بالكامل على نظام تدفق كانبان التفاعلي المقسم إلى 3 مراحل تشغيلية:
+    1. 📥 **عمود الوصفات الواردة الجديدة**: استقبال الوصفات الطبية الإلكترونية الصادرة من العيادات لحظياً مع شارات توفر الأدوية.
+    2. ⏳ **عمود بانتظار قرار الطبيب**: جمع الوصفات المعلقة التي تحتوي على طلبات استبدال أدوية بانتظار رد الطبيب المعالج.
+    3. ✅ **عمود المعتمدة والجاهزة للصرف الفوري**: الوصفات المتوفرة بالكامل أو المقبولة بدائلها لصرفها بضغطة زر واحدة.
+  * تصميم نافذة الصرف السريع المنبثقة `#dispensingModal` مع دعم اختصار زر المسافة (`Spacebar`)، التبديل الفوري لتوافر الأصناف `[ ✅ متوفر ]` / `[ ❌ غير متوفر ]`، واقتراح البدائل بضغطة زر.
+  * إضافة حقل بحث فوري عالي السرعة (`#kanbanSearchInput`) لفلترة بطاقات كانبان لحظياً بالاسم ورقم الوصفة RX، مع نافذة فحص الأرصدة والبدائل `#manualSearchModal`.
+- **أتمتة النشر على خادم Hostinger ودليل الأدوية**:
+  * تحديث وتطوير سكربت النشر التلقائي [deploy_hostinger.bat](file:///c:/wamp64/www/hospital-system/deploy_hostinger.bat) للتحقق التلقائي والذكي من مسار المشروع وحل مشكلة التشغيل من خارج المجلد.
+  * دمج باذر الأدوية الرسمي [OfficialMedicinesSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/OfficialMedicinesSeeder.php) في [DatabaseSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/DatabaseSeeder.php) وفي دورة النشر التلقائي عبر SSH لضمان تعبئة وتحديث قائمة الأدوية الرسمية (~220 صنفاً) بالأسعار والباركودات على السيرفر مباشرة.
+- **تحديث الرسم البياني المعرفي (Graphify Knowledge Graph)**:
+  * تشغيل أداة `graphify update .` وتحديث شجرة العلاقات البرمجية بالكامل (3,187 عقدة، 4,722 علاقة وترابط، عبر 793 ملفاً).
 - **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء وتحديث [PrescriptionWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PrescriptionWorkflowTest.php) واجتياز كافة الاختبارات بنجاح 100%: **13 passed (60 assertions)** واجتياز حزمة اختبارات الصيدلية بالكامل: **33 passed (142 assertions)**.
+  * إنشاء وتحديث [PrescriptionWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PrescriptionWorkflowTest.php) و [PharmacyPosTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyPosTest.php) واجتياز كافة الاختبارات بنجاح 100%: **33 passed (142 assertions)**.
 
 ## Session log (2026-09-23 — إصلاح وتفعيل أزرار حفظ إعدادات أسعار وتصنيفات المختبر ودعم stack scripts)
 
