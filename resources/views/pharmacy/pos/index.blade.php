@@ -528,47 +528,65 @@
             if (item.substitution_status === 'pending_approval') {
                 stockBadge = `
                     <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-warning text-dark border border-warning px-2 py-1 shadow-xs">
+                        <span class="badge bg-warning text-dark border border-warning px-2 py-1 shadow-xs mb-1">
                             <i class="fas fa-hourglass-half fa-spin me-1"></i> بانتظار موافقة الطبيب
                         </span>
-                        <small class="text-muted font-monospace">مقترح: ${item.suggested_medicine_name || 'بديل'}</small>
+                        <small class="text-muted font-monospace mb-1">مقترح: <strong>${item.suggested_medicine_name || 'بديل'}</strong></small>
+                        <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})">
+                            <i class="fas fa-exchange-alt me-1"></i> تغيير البديل المقترح
+                        </button>
                     </div>`;
             } else if (item.substitution_status === 'approved') {
                 stockBadge = `
                     <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-success text-white px-2 py-1 shadow-xs">
+                        <span class="badge bg-success text-white px-2 py-1 shadow-xs mb-1">
                             <i class="fas fa-check-circle me-1"></i> وافق الطبيب على البديل ✅
                         </span>
+                        <small class="text-success font-monospace">معتمد للصرف الفوري</small>
                     </div>`;
             } else if (item.substitution_status === 'rejected') {
                 stockBadge = `
                     <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-danger text-white px-2 py-1 shadow-xs">
+                        <span class="badge bg-danger text-white px-2 py-1 shadow-xs mb-1">
                             <i class="fas fa-times-circle me-1"></i> رفض الطبيب البديل ❌
                         </span>
-                        <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-0 px-2 rounded mt-1" onclick="openAlternativesModal(${item.id})">
-                            <i class="fas fa-exchange-alt me-1"></i> اختيار بديل آخر
-                        </button>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})">
+                                <i class="fas fa-check me-1"></i> توفر الأصلي
+                            </button>
+                            <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})">
+                                <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل آخر
+                            </button>
+                        </div>
                     </div>`;
             } else if (hasStock) {
                 stockBadge = `
                     <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock > 0 ? item.total_stock + ' علبة' : 'على الرف'})</span>
-                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 rounded shadow-xs mt-1" onclick="toggleItemStock(${item.id})" title="تحديد كـ غير متوفر على الرف">
-                            <i class="fas fa-times me-1"></i> تعيين كـ غير متوفر
-                        </button>
+                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1 mb-1">
+                            <i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock > 0 ? item.total_stock + ' علبة' : 'على الرف'})
+                        </span>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-danger py-1 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})" title="تحديد كـ غير متوفر على الرف">
+                                <i class="fas fa-times-circle me-1"></i> غير متوفر
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})" title="اقتراح بديل مكافئ لهذا الدواء">
+                                <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل
+                            </button>
+                        </div>
                     </div>`;
             } else {
                 stockBadge = `
                     <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-times-circle me-1"></i> غير متوفر</span>
-                        <div class="d-flex align-items-center gap-1 mt-1">
-                            <button type="button" class="btn btn-xs btn-outline-success py-0 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})" title="تحديد كـ متوفر على الرف">
-                                <i class="fas fa-check me-1"></i> متوفر على الرف
+                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1 mb-1">
+                            <i class="fas fa-times-circle me-1"></i> غير متوفر
+                        </span>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})" title="تحديد كـ متوفر على الرف">
+                                <i class="fas fa-check-circle me-1"></i> متوفر على الرف
                             </button>
-                            ${item.alternatives && item.alternatives.length > 0 
-                                ? `<button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-0 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})"><i class="fas fa-exchange-alt me-1"></i> البدائل (${item.alternatives.length})</button>` 
-                                : ''}
+                            <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})" title="فتح نافذة اختيار واقتراح البديل">
+                                <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل للطبيب
+                            </button>
                         </div>
                     </div>`;
             }
