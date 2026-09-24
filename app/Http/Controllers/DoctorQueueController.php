@@ -66,12 +66,14 @@ class DoctorQueueController extends Controller
             ->limit(10)
             ->get();
 
-        // 3. Patients Waiting for Lab/Radiology Test Results
+        // 3. Patients Waiting for Lab/Radiology Test Results & Pharmacy Dispensing
         $pendingTestsVisits = Visit::with([
             'patient.user',
             'appointment',
             'radiologyRequests.radiologyType',
-            'requests'
+            'requests',
+            'prescriptions.items.medicine',
+            'prescriptions.items.suggestedMedicine',
         ])
         ->where('doctor_id', $doctor->id)
         ->whereDate('visit_date', $today)
@@ -80,7 +82,8 @@ class DoctorQueueController extends Controller
             $q->whereHas('radiologyRequests')
               ->orWhereHas('requests', function($rq) {
                   $rq->whereIn('type', ['lab', 'radiology']);
-              });
+              })
+              ->orWhereHas('prescriptions');
         })
         ->latest('updated_at')
         ->get();
@@ -92,10 +95,13 @@ class DoctorQueueController extends Controller
 
             $radRequests = $v->radiologyRequests;
             $labRequests = $v->requests->where('type', 'lab');
+            $prescriptions = $v->prescriptions;
 
             $testsList = [];
             $totalTests = 0;
             $completedCount = 0;
+            $hasSubstitutionAlert = false;
+            $substitutionsList = [];
 
             foreach ($radRequests as $rr) {
                 $typeName = $rr->radiologyType ? $rr->radiologyType->name : 'أشعة';
@@ -139,6 +145,34 @@ class DoctorQueueController extends Controller
                 }
             }
 
+            foreach ($prescriptions as $rx) {
+                $isDispensed = in_array($rx->status, ['dispensed', 'partially_dispensed']);
+                $totalTests++;
+                if ($isDispensed) $completedCount++;
+
+                foreach ($rx->items as $item) {
+                    if ($item->substitution_status === 'pending_approval') {
+                        $hasSubstitutionAlert = true;
+                        $substitutionsList[] = [
+                            'item_id' => $item->id,
+                            'original' => $item->medicine?->name ?? $item->medicine_name,
+                            'suggested' => $item->suggestedMedicine?->name ?? 'بديل مقترح',
+                            'reason' => $item->substitution_reason ?? '',
+                        ];
+                    }
+                }
+
+                $testsList[] = [
+                    'type' => 'pharmacy',
+                    'name' => 'صيدلية: ' . $rx->status_text,
+                    'prescription_number' => $rx->prescription_number,
+                    'status' => $rx->status,
+                    'status_text' => $rx->status_text,
+                    'is_ready' => $isDispensed,
+                    'has_sub' => $hasSubstitutionAlert,
+                ];
+            }
+
             $allReady = ($totalTests > 0) && ($completedCount === $totalTests);
 
             return [
@@ -146,6 +180,8 @@ class DoctorQueueController extends Controller
                 'patient_name' => $pName,
                 'queue_number' => $qNum,
                 'all_ready' => $allReady,
+                'has_substitution_alert' => $hasSubstitutionAlert,
+                'substitutions' => $substitutionsList,
                 'total_tests' => $totalTests,
                 'completed_tests' => $completedCount,
                 'tests' => $testsList,

@@ -372,11 +372,13 @@
                 </table>
             </div>
 
-            <!-- 2. جدول مراجعي الفحوصات والنتائج (الأشعة والمختبر) -->
+            <!-- 2. جدول مراجعي الفحوصات الطبية وصرف الأدوية (الأشعة والمختبر والصيدلية) -->
+            <div id="live-pharmacy-substitutions-banner" class="mb-3" style="display: none;"></div>
+
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
-                    <i class="fas fa-microscope me-2 text-info"></i>
-                    مراجعو الفحوصات الطبية (الأشعة والمختبر)
+                    <i class="fas fa-notes-medical me-2 text-info"></i>
+                    مراجعو الفحوصات الطبية وصرف الأدوية (الأشعة، المختبر، والصيدلية)
                 </h5>
                 <span class="badge bg-info text-white" id="badge-pending-tests-count">0 مراجع</span>
             </div>
@@ -386,15 +388,15 @@
                         <tr>
                             <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
                             <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-vial me-2"></i>الفحوصات المطلوبة</th>
-                            <th><i class="fas fa-tasks me-2"></i>حالة النتائج</th>
+                            <th><i class="fas fa-clipboard-check me-2"></i>الفحوصات والأدوية المطلوبة</th>
+                            <th><i class="fas fa-tasks me-2"></i>حالة الإنجاز والصرف</th>
                             <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
                         </tr>
                     </thead>
                     <tbody id="doctor-station-pending-tests">
                         <tr>
                             <td colspan="5" class="text-center py-4 text-muted">
-                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات حالياً
+                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات أو صرف أدوية حالياً
                             </td>
                         </tr>
                     </tbody>
@@ -755,10 +757,43 @@
                 }
 
                 // 3. Render Pending / Ready Test Results Table Rows (مراجعو الفحوصات والنتائج)
+                // 3. Render Pending / Ready Test Results & Pharmacy Table Rows (مراجعو الفحوصات والنتائج والصيدلية)
                 const pendingTestsList = data.pending_tests_list || [];
                 const pendingTestsCount = (stats.pending_tests_count !== undefined) ? stats.pending_tests_count : pendingTestsList.length;
                 const badgePendingCount = document.getElementById('badge-pending-tests-count');
                 if (badgePendingCount) badgePendingCount.textContent = `${pendingTestsCount} مراجع`;
+
+                // Top Pharmacy Substitutions Urgent Alert Banner
+                const subBanner = document.getElementById('live-pharmacy-substitutions-banner');
+                if (subBanner) {
+                    const subVisits = pendingTestsList.filter(item => item.has_substitution_alert);
+                    if (subVisits.length > 0) {
+                        subBanner.style.display = 'block';
+                        subBanner.innerHTML = `
+                            <div class="alert alert-danger border-2 border-danger shadow-sm rounded-4 p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-danger text-white p-2 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                                        <i class="fas fa-prescription-bottle-alt fa-bounce"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="d-block fs-6 text-danger">🔔 إشعار عاجل من الصيدلية: (${subVisits.length}) مريض بانتظار موافقتك على بدائل دوائية</strong>
+                                        <small class="text-dark">اقترحت الصيدلية بدائل لبعض الأدوية غير المتوفرة ويرجى اتخاذ القرار الطبي.</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    ${subVisits.map(sv => `
+                                        <a href="{{ url('/doctor/visits') }}/${sv.visit_id}" class="btn btn-danger btn-sm fw-bold shadow-sm d-inline-flex align-items-center gap-1">
+                                            <i class="fas fa-exchange-alt"></i>
+                                            <span>#${sv.queue_number} ${sv.patient_name}</span>
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        subBanner.style.display = 'none';
+                    }
+                }
 
                 const pendingTbody = document.getElementById('doctor-station-pending-tests');
                 if (pendingTbody) {
@@ -766,36 +801,55 @@
                         pendingTbody.innerHTML = `
                             <tr>
                                 <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات حالياً
+                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات أو صرف أدوية حالياً
                                 </td>
                             </tr>
                         `;
                     } else {
                         pendingTbody.innerHTML = pendingTestsList.map(item => {
                             const isReady = item.all_ready;
-                            const readyBadge = isReady 
-                                ? '<span class="status-badge status-completed fw-bold" style="background: #bbf7d0; color: #14532d; border-color: #86efac;"><i class="fas fa-check-double text-success me-1"></i> النتائج جاهزة للمراجعة</span>'
-                                : `<span class="status-badge status-pending fw-semibold" style="background: #fef08a; color: #854d0e; border-color: #fde047;"><i class="fas fa-hourglass-half me-1"></i> قيد الفحص (${item.completed_tests}/${item.total_tests})</span>`;
+                            let readyBadge = isReady 
+                                ? '<span class="status-badge status-completed fw-bold" style="background: #bbf7d0; color: #14532d; border-color: #86efac;"><i class="fas fa-check-double text-success me-1"></i> جاهز للمراجعة</span>'
+                                : `<span class="status-badge status-pending fw-semibold" style="background: #fef08a; color: #854d0e; border-color: #fde047;"><i class="fas fa-hourglass-half me-1"></i> قيد الإجراء (${item.completed_tests}/${item.total_tests})</span>`;
                             
+                            if (item.has_substitution_alert) {
+                                readyBadge = '<span class="status-badge bg-danger text-white fw-bold shadow-sm"><i class="fas fa-exchange-alt fa-spin me-1"></i> بديل بانتظار موافقتك</span>';
+                            }
+
                             const testsBadges = (item.tests || []).map(t => {
-                                const icon = t.type === 'radiology' ? 'fa-x-ray' : 'fa-vial';
-                                const badgeClass = t.is_ready ? 'bg-success text-white' : 'bg-white text-dark border border-warning';
-                                return `<span class="badge ${badgeClass} small me-1 px-2 py-1"><i class="fas ${icon} me-1"></i>${t.name}</span>`;
+                                let icon = 'fa-vial';
+                                let badgeClass = t.is_ready ? 'bg-success text-white' : 'bg-white text-dark border border-warning';
+                                if (t.type === 'radiology') {
+                                    icon = 'fa-x-ray';
+                                } else if (t.type === 'pharmacy') {
+                                    icon = 'fa-prescription';
+                                    if (t.has_sub) {
+                                        badgeClass = 'bg-danger text-white border border-danger';
+                                    } else if (t.status === 'partially_dispensed') {
+                                        badgeClass = 'bg-warning text-dark border border-warning';
+                                    } else if (t.is_ready) {
+                                        badgeClass = 'bg-success text-white';
+                                    } else {
+                                        badgeClass = 'bg-info text-white';
+                                    }
+                                }
+                                return `<span class="badge ${badgeClass} small me-1 mb-1 px-2 py-1"><i class="fas ${icon} me-1"></i>${t.name}</span>`;
                             }).join(' ');
 
                             return `
-                                <tr class="${isReady ? 'ready-test-visit' : 'pending-test-visit'}">
+                                <tr class="${item.has_substitution_alert ? 'border border-danger' : (isReady ? 'ready-test-visit' : 'pending-test-visit')}">
                                     <td>
-                                        <span class="badge ${isReady ? 'bg-success' : 'bg-secondary'} text-white fw-bold fs-6">#${item.queue_number}</span>
+                                        <span class="badge ${isReady ? 'bg-success' : (item.has_substitution_alert ? 'bg-danger' : 'bg-secondary')} text-white fw-bold fs-6">#${item.queue_number}</span>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-circle" style="${isReady ? 'background: #bbf7d0; color: #166534; border-color: #86efac;' : ''}">
+                                            <div class="avatar-circle" style="${isReady ? 'background: #bbf7d0; color: #166534; border-color: #86efac;' : (item.has_substitution_alert ? 'background: #fee2e2; color: #991b1b;' : '')}">
                                                 ${item.patient_name.charAt(0)}
                                             </div>
                                             <div class="ms-2">
                                                 <strong class="text-dark fs-6">${item.patient_name}</strong>
                                                 ${isReady ? '<span class="badge bg-success ms-1 small">جاهز</span>' : ''}
+                                                ${item.has_substitution_alert ? '<span class="badge bg-danger ms-1 small">بديل دوائي</span>' : ''}
                                             </div>
                                         </div>
                                     </td>
@@ -807,15 +861,19 @@
                                     </td>
                                     <td class="text-end">
                                         <div class="d-flex gap-1 justify-content-end align-items-center">
-                                            ${isReady ? `
+                                            ${item.has_substitution_alert ? `
+                                                <a href="{{ url('/doctor/visits') }}/${item.visit_id}" class="action-btn btn-danger fw-bold shadow-sm" title="البت في بديل الدواء">
+                                                    <i class="fas fa-exchange-alt"></i> مراجعة البديل
+                                                </a>
+                                            ` : (isReady ? `
                                                 <button type="button" class="action-btn btn-success fw-bold shadow-sm" onclick="doctorCallResults(${item.visit_id})">
                                                     <i class="fas fa-bullhorn"></i> استدعاء
                                                 </button>
                                             ` : `
-                                                <button type="button" class="action-btn btn-secondary" disabled title="لا يمكن الاستدعاء حتى تكتمل جميع الفحوصات من المختبر أو الأشعة" style="cursor: not-allowed; opacity: 0.65;">
+                                                <button type="button" class="action-btn btn-secondary" disabled title="لا يمكن الاستدعاء حتى تكتمل جميع الفحوصات أو الصرف" style="cursor: not-allowed; opacity: 0.65;">
                                                     <i class="fas fa-hourglass-half"></i> بالانتظار
                                                 </button>
-                                            `}
+                                            `)}
                                             <a href="{{ url('/doctor/visits') }}/${item.visit_id}" class="action-btn btn-outline-primary" title="عرض ملف الزيارة">
                                                 <i class="fas fa-eye"></i>
                                             </a>

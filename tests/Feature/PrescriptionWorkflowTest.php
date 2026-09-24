@@ -575,5 +575,47 @@ class PrescriptionWorkflowTest extends TestCase
         $this->assertEquals('dispensed', $item1->fresh()->status);
         $this->assertEquals('out_of_stock', $item2->fresh()->status);
     }
+
+    public function test_doctor_queue_shows_prescriptions_and_substitution_alerts()
+    {
+        $visit = $this->createVisit();
+
+        $prescription = Prescription::create([
+            'visit_id' => $visit->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'status' => 'pending',
+            'diagnosis' => 'فحص موسع',
+        ]);
+
+        $altMedicine = Medicine::create([
+            'name' => 'Cefixime 400mg (Alternative)',
+            'generic_name' => 'Cefixime',
+            'dosage_form' => 'Tablet',
+            'strength' => '400mg',
+            'is_active' => true,
+        ]);
+
+        $item = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $this->medicine->id,
+            'suggested_medicine_id' => $altMedicine->id,
+            'quantity' => 1,
+            'substitution_status' => 'pending_approval',
+            'substitution_reason' => 'عدم توفر الصنف الأصلي',
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(route('queue.doctor.data', $this->doctor->id));
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+        ]);
+        $response->assertJsonFragment([
+            'visit_id' => $visit->id,
+            'has_substitution_alert' => true,
+        ]);
+    }
 }
 
