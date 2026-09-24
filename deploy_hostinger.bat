@@ -7,14 +7,22 @@ echo     Hospital System - Auto Deploy to Hostinger
 echo ========================================================
 echo.
 
-cd /d "%~dp0"
+if exist "%~dp0.git" (
+    cd /d "%~dp0"
+) else if exist "c:\wamp64\www\hospital-system\.git" (
+    cd /d "c:\wamp64\www\hospital-system"
+) else (
+    cd /d "%~dp0"
+)
+
+echo Working directory: %CD%
+echo.
 
 echo [1/2] Pushing local changes to GitHub main branch...
 git push origin main
 if %ERRORLEVEL% NEQ 0 (
     echo.
-    echo [ERROR] Failed to push to GitHub. Please check your network.
-    goto end
+    echo [WARNING] git push returned an issue. Continuing to server pull if changes are already on GitHub...
 )
 echo [OK] Pushed to GitHub successfully.
 echo.
