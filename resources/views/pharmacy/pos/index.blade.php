@@ -1034,33 +1034,35 @@
                     </div>`;
             } else if (hasStock) {
                 stockBadge = `
-                    <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1 mb-1">
-                            <i class="fas fa-check-circle me-1"></i> متوفر (${item.total_stock > 0 ? item.total_stock + ' علبة' : 'على الرف'})
-                        </span>
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-xs btn-outline-danger py-1 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})" title="تحديد كـ غير متوفر على الرف">
-                                <i class="fas fa-times-circle me-1"></i> غير متوفر
-                            </button>
-                            <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})" title="اقتراح بديل مكافئ لهذا الدواء">
-                                <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل
-                            </button>
-                        </div>
+                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                        <button type="button" 
+                                class="btn btn-sm btn-success fw-bold px-3 py-1 rounded-pill shadow-xs d-flex align-items-center gap-1" 
+                                onclick="toggleItemStock(${item.id})" 
+                                title="اضغط للتحويل إلى غير متوفر">
+                            <i class="fas fa-check-circle"></i> متوفر
+                        </button>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-warning text-dark fw-bold px-2 py-1 rounded-pill shadow-xs" 
+                                onclick="openAlternativesModal(${item.id})" 
+                                title="اقتراح بديل مكافئ لهذا الدواء">
+                            <i class="fas fa-exchange-alt me-1"></i> بديل
+                        </button>
                     </div>`;
             } else {
                 stockBadge = `
-                    <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1 mb-1">
-                            <i class="fas fa-times-circle me-1"></i> غير متوفر
-                        </span>
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})" title="تحديد كـ متوفر على الرف">
-                                <i class="fas fa-check-circle me-1"></i> متوفر على الرف
-                            </button>
-                            <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})" title="فتح نافذة اختيار واقتراح البديل">
-                                <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل للطبيب
-                            </button>
-                        </div>
+                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                        <button type="button" 
+                                class="btn btn-sm btn-danger fw-bold px-3 py-1 rounded-pill shadow-xs d-flex align-items-center gap-1" 
+                                onclick="toggleItemStock(${item.id})" 
+                                title="اضغط للتحويل إلى متوفر">
+                            <i class="fas fa-times-circle"></i> غير متوفر
+                        </button>
+                        <button type="button" 
+                                class="btn btn-sm btn-warning text-dark fw-bold px-3 py-1 rounded-pill shadow-xs d-flex align-items-center gap-1" 
+                                onclick="openAlternativesModal(${item.id})" 
+                                title="فتح نافذة اختيار واقتراح البديل">
+                            <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل للطبيب
+                        </button>
                     </div>`;
             }
 
