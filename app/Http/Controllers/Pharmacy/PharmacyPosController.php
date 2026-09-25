@@ -167,11 +167,10 @@ class PharmacyPosController extends Controller
                 'items.medicine',
                 'items.suggestedMedicine',
                 'visit',
-                'emergency.patient.user',
                 'emergency.emergencyPatient',
-                'emergency.doctor.user'
+                'emergency.doctor.user',
             ])
-            ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END, created_at DESC")
+            ->orderBy('created_at', 'desc')
             ->limit(60)
             ->get();
 
@@ -201,32 +200,22 @@ class PharmacyPosController extends Controller
                     $stage = 'awaiting_doctor';
                 }
 
+                // بيانات المريض (طوارئ أو عيادة)
                 $isEmergency = !is_null($rx->emergency_id);
-                $patientName = 'مريض مباشر';
-                $patientPhone = '-';
-                $patientNationalId = '-';
-                $doctorName = 'طبيب';
-                $specialization = 'استشارية';
-
-                if ($rx->patient && $rx->patient->user) {
-                    $patientName = $rx->patient->user->name;
-                    $patientPhone = $rx->patient->user->phone ?? '-';
-                    $patientNationalId = $rx->patient->user->national_id ?? '-';
-                } elseif ($rx->emergency) {
-                    $patientName = $rx->emergency->patient?->user?->name 
-                        ?? $rx->emergency->emergencyPatient?->name 
-                        ?? ('مريض طوارئ #' . $rx->emergency->id);
-                    $patientPhone = $rx->emergency->patient?->user?->phone 
-                        ?? $rx->emergency->emergencyPatient?->phone 
-                        ?? '-';
-                }
-
-                if ($rx->doctor && $rx->doctor->user) {
-                    $doctorName = $rx->doctor->user->name;
-                    $specialization = $rx->doctor->specialization ?? ($isEmergency ? 'طوارئ' : 'استشارية');
-                } elseif ($rx->emergency && $rx->emergency->doctor) {
-                    $doctorName = $rx->emergency->doctor->user?->name ?? 'طبيب طوارئ';
-                    $specialization = 'طوارئ';
+                if ($isEmergency && $rx->emergency) {
+                    $em = $rx->emergency;
+                    $patientName = $em->emergencyPatient?->name
+                        ?? optional($em->patient)?->user?->name
+                        ?? optional($rx->patient)?->user?->name
+                        ?? 'مريض طوارئ';
+                    $doctorName  = optional($em->doctor)?->user?->name
+                        ?? optional($rx->doctor)?->user?->name
+                        ?? 'طبيب طوارئ';
+                    $specialization = '🚨 قسم الطوارئ';
+                } else {
+                    $patientName   = optional($rx->patient)?->user?->name ?? 'مريض مباشر';
+                    $doctorName    = optional($rx->doctor)?->user?->name ?? 'طبيب استشاري';
+                    $specialization = optional($rx->doctor)?->specialization ?? 'استشارية';
                 }
 
                 return [
@@ -234,13 +223,11 @@ class PharmacyPosController extends Controller
                     'prescription_number' => $rx->prescription_number,
                     'patient_id' => $rx->patient_id,
                     'patient_name' => $patientName,
-                    'patient_phone' => $patientPhone,
-                    'patient_national_id' => $patientNationalId,
+                    'patient_phone' => optional($rx->patient)?->user?->phone ?? '-',
+                    'patient_national_id' => optional($rx->patient)?->user?->national_id ?? '-',
                     'doctor_name' => $doctorName,
                     'specialization' => $specialization,
                     'is_emergency' => $isEmergency,
-                    'emergency_id' => $rx->emergency_id,
-                    'emergency_room' => $rx->emergency?->room_assigned ?? null,
                     'diagnosis' => $rx->diagnosis ?? '-',
                     'items_count' => $rx->items->count(),
                     'items_summary' => $itemsSummary,
@@ -263,16 +250,30 @@ class PharmacyPosController extends Controller
         $prescription->load([
             'patient.user',
             'doctor.user',
-            'emergency.patient.user',
-            'emergency.emergencyPatient',
-            'emergency.doctor.user',
             'items.medicine.activeBatches' => function ($q) {
                 $q->orderBy('expiry_date', 'asc');
             },
             'items.medicine.alternatives',
             'items.suggestedMedicine',
-            'visit'
+            'visit',
+            'emergency.emergencyPatient',
+            'emergency.doctor.user',
         ]);
+
+        $isEmergency = !is_null($prescription->emergency_id);
+        if ($isEmergency && $prescription->emergency) {
+            $em = $prescription->emergency;
+            $patientName = $em->emergencyPatient?->name
+                ?? optional($em->patient)?->user?->name
+                ?? optional($prescription->patient)?->user?->name
+                ?? 'مريض طوارئ';
+            $doctorName  = optional($em->doctor)?->user?->name
+                ?? optional($prescription->doctor)?->user?->name
+                ?? 'طبيب طوارئ';
+        } else {
+            $patientName = optional($prescription->patient)?->user?->name ?? 'مريض مباشر';
+            $doctorName  = optional($prescription->doctor)?->user?->name ?? 'استشاري';
+        }
 
         $itemsData = $prescription->items->map(function ($item) {
             $med = $item->medicine;
@@ -308,7 +309,7 @@ class PharmacyPosController extends Controller
             return [
                 'id' => $item->id,
                 'medicine_id' => $med ? $med->id : null,
-                'name' => $med ? $med->name : ($item->medicine_name ?? $item->notes ?? 'دواء غير محدد'),
+                'name' => $med ? $med->name : ($item->notes ?? 'دواء غير محدد'),
                 'generic_name' => $med?->generic_name,
                 'dosage_form' => $med?->dosage_form,
                 'strength' => $med?->strength,
@@ -337,44 +338,19 @@ class PharmacyPosController extends Controller
             ];
         });
 
-        $patientName = 'مريض مباشر';
-        $patientPhone = '';
-        $doctorName = 'طبيب';
-        $isEmergency = !is_null($prescription->emergency_id);
-
-        if ($prescription->patient && $prescription->patient->user) {
-            $patientName = $prescription->patient->user->name;
-            $patientPhone = $prescription->patient->user->phone ?? '';
-        } elseif ($prescription->emergency) {
-            $patientName = $prescription->emergency->patient?->user?->name 
-                ?? $prescription->emergency->emergencyPatient?->name 
-                ?? ('مريض طوارئ #' . $prescription->emergency->id);
-            $patientPhone = $prescription->emergency->patient?->user?->phone 
-                ?? $prescription->emergency->emergencyPatient?->phone 
-                ?? '';
-        }
-
-        if ($prescription->doctor && $prescription->doctor->user) {
-            $doctorName = $prescription->doctor->user->name;
-        } elseif ($prescription->emergency && $prescription->emergency->doctor) {
-            $doctorName = $prescription->emergency->doctor->user?->name ?? 'طبيب طوارئ';
-        }
-
         return response()->json([
             'success' => true,
             'prescription' => [
-                'id' => $prescription->id,
+                'id'                  => $prescription->id,
                 'prescription_number' => $prescription->prescription_number,
-                'patient_id' => $prescription->patient_id,
-                'patient_name' => $patientName,
-                'patient_phone' => $patientPhone,
-                'doctor_name' => $doctorName,
-                'is_emergency' => $isEmergency,
-                'emergency_id' => $prescription->emergency_id,
-                'emergency_room' => $prescription->emergency?->room_assigned ?? null,
-                'diagnosis' => $prescription->diagnosis,
-                'notes' => $prescription->notes,
-                'items' => $itemsData,
+                'patient_id'          => $prescription->patient_id,
+                'patient_name'        => $patientName,
+                'patient_phone'       => optional($prescription->patient)?->user?->phone ?? '',
+                'doctor_name'         => $doctorName,
+                'diagnosis'           => $prescription->diagnosis,
+                'notes'               => $prescription->notes,
+                'is_emergency'        => $isEmergency,
+                'items'               => $itemsData,
             ]
         ]);
     }
@@ -563,30 +539,11 @@ class PharmacyPosController extends Controller
                 'sale_id' => $sale->id,
             ]);
 
-            // في حال كانت الوصفة تابعة لقسم الطوارئ، تحديث حالة العلاج في ملف الطوارئ
-            if ($prescription->emergency_id) {
-                \App\Models\EmergencyTreatment::where('emergency_id', $prescription->emergency_id)
-                    ->where('status', '!=', 'cancelled')
-                    ->update([
-                        'status' => ($prescriptionStatus === 'dispensed') ? 'completed' : 'in_progress',
-                        'completed_at' => ($prescriptionStatus === 'dispensed') ? now() : null,
-                    ]);
-            }
-
             DB::commit();
 
             $statusText = $prescriptionStatus === 'partially_dispensed' 
                 ? "تم صرف ({$dispensedCount}) صنف من أصل ({$totalItemsCount}) وتحديث حالة الوصفة كـ (صرفت جزئياً)."
                 : "تم صرف وتجهيز الوصفة ({$prescription->prescription_number}) بالكامل بنجاح.";
-
-            $respPatientName = 'مريض مباشر';
-            if ($prescription->patient && $prescription->patient->user) {
-                $respPatientName = $prescription->patient->user->name;
-            } elseif ($prescription->emergency) {
-                $respPatientName = $prescription->emergency->patient?->user?->name 
-                    ?? $prescription->emergency->emergencyPatient?->name 
-                    ?? ('مريض طوارئ #' . $prescription->emergency->id);
-            }
 
             return response()->json([
                 'success' => true,
@@ -596,8 +553,7 @@ class PharmacyPosController extends Controller
                 'status' => $prescriptionStatus,
                 'dispensed_count' => $dispensedCount,
                 'out_of_stock_count' => $outOfStockCount,
-                'patient_name' => $respPatientName,
-                'is_emergency' => !is_null($prescription->emergency_id),
+                'patient_name' => optional($prescription->patient)->user->name ?? 'مريض',
                 'sale_id' => $sale->id,
                 'print_url' => $prescription->visit_id ? route('doctor.visits.prescription.print', $prescription->visit_id) : route('pharmacy.pos.sales.print', $sale->id),
             ]);

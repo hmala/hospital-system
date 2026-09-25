@@ -755,28 +755,24 @@
             }
 
             html += `
-                <tr onclick="openDispensingModal(${rx.id})" class="${rx.is_emergency ? 'table-danger-subtle' : ''}">
+                <tr onclick="openDispensingModal(${rx.id})">
                     <td class="font-monospace fw-bold text-primary">
-                        <span class="fs-6 d-block">
-                            ${rx.prescription_number}
-                            ${rx.is_emergency ? '<span class="badge bg-danger text-white ms-1"><i class="fas fa-ambulance me-1"></i> طوارئ STAT</span>' : ''}
-                        </span>
+                        <span class="fs-6 d-block">${rx.prescription_number}</span>
                         <small class="text-muted font-monospace">#${rx.id}</small>
                     </td>
                     <td>
-                        <span class="sla-badge ${rx.is_emergency ? 'sla-red fw-bold' : slaClass}">
-                            <i class="${rx.is_emergency ? 'fas fa-bolt' : 'far fa-clock'}"></i> ${rx.is_emergency ? 'عاجل طوارئ' : slaText}
+                        <span class="sla-badge ${slaClass}">
+                            <i class="far fa-clock"></i> ${slaText}
                         </span>
                     </td>
                     <td>
                         <div class="fw-bold text-dark fs-6">
-                            <i class="fas fa-user ${rx.is_emergency ? 'text-danger' : 'text-secondary'} me-1"></i>${rx.patient_name}
-                            ${rx.emergency_room ? `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-bed me-1 text-muted"></i>${rx.emergency_room}</span>` : ''}
+                            <i class="fas fa-user text-secondary me-1"></i>${rx.patient_name}
                         </div>
                     </td>
                     <td>
                         <div class="fw-semibold text-dark small">
-                            <i class="fas fa-user-md ${rx.is_emergency ? 'text-danger' : 'text-info'} me-1"></i>${rx.doctor_name}
+                            <i class="fas fa-user-md text-info me-1"></i>${rx.doctor_name}
                         </div>
                     </td>
                     <td>
@@ -851,6 +847,14 @@
             return `<span class="badge ${badgeClass} small me-1 mb-1 px-2 py-1"><i class="fas fa-pills me-1"></i>${it.name}</span>`;
         }).join('');
 
+        // شريط طوارئ في أعلى البطاقة
+        const emergencyBanner = rx.is_emergency
+            ? `<div class="d-flex align-items-center gap-1 mb-2 px-2 py-1 bg-danger bg-opacity-10 rounded border border-danger" style="margin: -4px -4px 8px -4px;">
+                   <i class="fas fa-ambulance text-danger small"></i>
+                   <span class="text-danger fw-bold small">🚨 وصفة طوارئ</span>
+               </div>`
+            : '';
+
         let actionButtonHtml = '';
         if (type === 'ready') {
             actionButtonHtml = `
@@ -869,28 +873,21 @@
         } else {
             actionButtonHtml = `
                 <div class="d-flex gap-1 mt-3 pt-2 border-top">
-                    <button type="button" class="btn btn-${rx.is_emergency ? 'danger' : 'primary'} btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-tasks"></i> ${rx.is_emergency ? '🚨 تجهيز طوارئ فوري' : '⚡ فحص وتجهيز الصرف'}
+                    <button type="button" class="btn ${rx.is_emergency ? 'btn-danger' : 'btn-primary'} btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
+                        <i class="fas fa-tasks"></i> ${rx.is_emergency ? '🚨 صرف طوارئ STAT' : '⚡ فحص وتجهيز الصرف'}
                     </button>
                 </div>`;
         }
 
-        const emergencyBanner = rx.is_emergency ? `
-            <div class="badge bg-danger text-white mb-2 py-1 px-2 w-100 text-center fw-bold shadow-xs d-flex align-items-center justify-content-between">
-                <span><i class="fas fa-ambulance me-1"></i> طلب طوارئ STAT</span>
-                ${rx.emergency_room ? `<span class="badge bg-white text-danger">${rx.emergency_room}</span>` : ''}
-            </div>
-        ` : '';
-
         return `
-            <div class="kanban-card card-${type} ${rx.is_emergency ? 'border-2 border-danger' : ''}" 
-                 data-id="${rx.id}" 
+            <div class="kanban-card card-${type}${rx.is_emergency ? ' border border-danger' : ''}"
+                 data-id="${rx.id}"
                  data-rx-number="${rx.prescription_number}"
                  data-patient-name="${rx.patient_name}"
                  onclick="openDispensingModal(${rx.id})">
                 ${emergencyBanner}
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="badge ${type === 'ready' ? 'bg-success' : (type === 'pending' ? 'bg-warning text-dark' : (rx.is_emergency ? 'bg-danger text-white' : 'bg-primary-subtle text-primary'))} font-monospace fw-bold px-2 py-1">
+                    <span class="badge ${type === 'ready' ? 'bg-success' : (type === 'pending' ? 'bg-warning text-dark' : 'bg-primary-subtle text-primary')} font-monospace fw-bold px-2 py-1">
                         <i class="fas fa-hashtag me-1"></i>${rx.prescription_number}
                     </span>
                     <span class="badge bg-light text-muted border font-monospace small">
@@ -898,10 +895,11 @@
                     </span>
                 </div>
                 <div class="fw-bold text-dark fs-6 mb-1">
-                    <i class="fas fa-user-injured ${rx.is_emergency ? 'text-danger' : 'text-secondary'} me-1"></i>${rx.patient_name}
+                    <i class="fas fa-user-injured text-secondary me-1"></i>${rx.patient_name}
                 </div>
                 <div class="small text-muted mb-2">
                     <i class="fas fa-user-md text-info me-1"></i>${rx.doctor_name}
+                    ${rx.is_emergency ? '<span class="badge bg-danger text-white ms-1 small">طوارئ</span>' : ''}
                 </div>
                 <div class="mb-2">
                     ${itemsSummaryHtml}
@@ -937,9 +935,16 @@
 
         document.getElementById('modalDispRxNumber').innerText = rx.prescription_number;
         document.getElementById('modalDispPatientName').innerText = rx.patient_name || 'مريض';
-        document.getElementById('modalDispDoctorName').innerText = 'د. ' + (rx.doctor_name || 'الاستشاري');
+        document.getElementById('modalDispDoctorName').innerText =
+            (rx.is_emergency ? '🚨 طوارئ — د. ' : 'د. ') + (rx.doctor_name || 'الاستشاري');
         document.getElementById('modalDispDiagnosisText').innerText = rx.diagnosis || rx.notes || 'لا يوجد تشخيص إضافي مسجل';
         document.getElementById('modalDispItemsCount').innerText = (rx.items ? rx.items.length : 0) + ' أدوية';
+
+        // شارة طوارئ في عنوان المودال
+        const modalTitle = document.getElementById('modalDispRxNumber');
+        if (modalTitle) {
+            modalTitle.innerHTML = `${rx.prescription_number}${rx.is_emergency ? ' <span class="badge bg-danger ms-1">🚨 طوارئ STAT</span>' : ''}`;
+        }
 
         // فحص إشعارات موافقة أو رفض الطبيب على البدائل
         const feedbackBanner = document.getElementById('modalRxSubstitutionFeedbackBanner');
@@ -995,9 +1000,14 @@
             }
         }
 
-        // رابط الطباعة
+        // رابط الطباعة (غير متاح لوصفات الطوارئ)
         const printBtn = document.getElementById('modalBtnPrintPrescription');
-        printBtn.href = `{{ url('doctor/visits') }}/${rx.patient_id}/prescription/print`;
+        if (rx.is_emergency) {
+            printBtn.style.display = 'none';
+        } else {
+            printBtn.style.display = '';
+            printBtn.href = `{{ url('doctor/visits') }}/${rx.patient_id}/prescription/print`;
+        }
 
         // رسم جدول الأدوية
         const tbody = document.getElementById('modalDispensingItemsBody');

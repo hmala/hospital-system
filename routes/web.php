@@ -607,6 +607,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/complete', [\App\Http\Controllers\EmergencyController::class, 'complete'])->name('complete');
         Route::post('/{emergency}/update-medical', [\App\Http\Controllers\EmergencyController::class, 'updateMedical'])->name('update-medical');
         Route::post('/{emergency}/treatments', [\App\Http\Controllers\EmergencyController::class, 'storeTreatment'])->name('treatments.store');
+        Route::delete('/{emergency}/treatments/{treatment}', [\App\Http\Controllers\EmergencyController::class, 'destroyTreatment'])->name('treatments.destroy');
+        Route::get('/{emergency}/substitution-requests', [\App\Http\Controllers\EmergencyController::class, 'getSubstitutionRequests'])->name('substitution-requests');
+        Route::post('/{emergency}/respond-substitution', [\App\Http\Controllers\EmergencyController::class, 'respondToEmergencySubstitution'])->name('respond-substitution');
         Route::post('/{emergency}/create-consultation', [\App\Http\Controllers\EmergencyController::class, 'createConsultation'])->name('create-consultation');
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');

@@ -59,30 +59,39 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
-## Session log (2026-09-25 — ربط قسم الطوارئ بالصيدلية وتوليد طلبات الصرف العاجلة STAT وتحديث العلاج المباشر)
+## Session log (2026-09-25 — تبسيط جدول الطوارئ، إزالة زر كشف وعلاج، توحيد بطاقات الصيدلية وتحديث شجرة العلاقات البرمجية Graphify)
 
 ### Done
-- **قاعدة البيانات ونماذج طلبات أدوية الطوارئ (Emergency Prescriptions Integration)**:
-  * إنشاء ميغريشن `2026_09_25_180000_make_patient_id_nullable_in_prescriptions_table.php` لدعم وصفات الطوارئ للحالات المؤقتة والمسجلة مباشرة برقم الطوارئ (`emergency_id`).
-  * تحديث [Emergency.php](file:///c:/wamp64/www/hospital-system/app/Models/Emergency.php) بربط علاقات الوصفات `prescriptions()` و `latestPrescription()`.
-  * حماية وتحديث [Hospital.php](file:///c:/wamp64/www/hospital-system/app/Models/Hospital.php) بـ `$guarded = []`.
-- **متحكم الطوارئ وتوليد طلبات الأدوية العاجلة (STAT Emergency Orders)**:
-  * تحديث [EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php):
-    - إضافة دالة `storeTreatment` لحفظ علاجات الطوارئ (أدوية، حقن، محاليل وريدية، أكسجين) وتوليد وصفة إلكترونية فورية عاجلة (🚨 STAT Emergency Prescription) ترسل لحظياً لصيدلية المستشفى.
-    - تمرير قائمة دليل الأدوية الرسمي `$officialMedicines` لواجهة الطوارئ لدعم الإكمال التلقائي الفوري للأدوية.
-    - مطابقة قيم أنواع العلاج مع قاعدة البيانات (`medication`, `injection`, `drip`, `oxygen`, `other`).
-- **نقطة بيع الصيدلية واستقبال وصرف وصفات الطوارئ (Pharmacy POS & STAT Dispensing)**:
-  * تحديث [PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php):
-    - إعطاء أولوية قصوى لطلبات الطوارئ (`🚨 STAT`) في قائمة الانتظار وفي شاشة كانبان الصيدلية (`CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END`).
-    - تضمين اسم مريض الطوارئ ورقم السرير/الغرفة في تفاصيل الوصفة.
-    - عند صرف الوصفة من الصيدلية (`dispensePrescription`)، يتم تحديث سجلات علاج الطوارئ المرتبطة بها تلقائياً إلى حالة "مكتمل / مصروف" (`completed`).
-- **الواجهات التفاعلية (Emergency & Pharmacy UI)**:
-  * تطوير نافذة علاج الطوارئ `#treatmentModal` في [emergency/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/index.blade.php) لتوفير إدخال سريع للأدوية والمحاليل مع دعم الإكمال التلقائي والكميات والجرعات.
-  * تطوير نافذة تفاصيل العلاجات `#treatmentResultsModal` لعرض شارات تتبع صرف أدوية الوصفة الحية وسجل العلاجات السريرية.
-  * إبراز بطاقات وصفوف وصفات الطوارئ بشارات مميزة (`🚨 طوارئ (STAT)`) في شاشة الصيدلية [pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php).
+- **شاشة الطوارئ وحذف زر «كشف وعلاج» المنفصل (`emergency/index.blade.php`)**:
+  * حذف زر `[ 🩺 كشف وعلاج ]` المنفصل من جدول الحالات النشطة بناءً على طلب المستخدم، والاعتماد على القائمة المنسدلة المدمجة للأفعال والإجراءات.
+  * تضمين خيار `[ 🩺 فتح ملف الكشف ]` المباشر داخل القائمة المنسدلة للوصول إلى محطة الكشف والملف السريري.
+  * إضافة تنبيه بصري ذكي لزر القائمة المنسدلة: يتحول إلى اللون الأحمر (`btn-danger`) مع أيقونة تبادل دوائي متحركة وشارة بعدد البدائل المعلقة في حال وجود طلبات استبدال أدوية صادرة من الصيدلية بانتظار قرار الطبيب.
+- **منظومة الصيدلية وبطاقات الكانبان وتفاصيل الطوارئ (`pharmacy/pos/index.blade.php` و `PharmacyPosController.php`)**:
+  * توحيد تصميم وتخطيط بطاقات الكانبان ومودال تفاصيل الوصفة، مع إضافة شريط علوي أحمر بارز وشارة `🚑 وصفة طوارئ STAT` لتمييز وصفات الطوارئ العاجلة فورياً عن وصفات العيادات الاستشارية.
+  * تحسين دالة `getPrescriptionDetails` لدعم وصفات الطوارئ وجلب بيانات المريض غير المسجل واسم طبيب الطوارئ وإخفاء زر طباعة راشيتة العيادة غير المنطبقة.
+- **تحديث شجرة العلاقات المعرفية والبرمجية (Graphify Knowledge Graph)**:
+  * تشغيل أداة `graphify update .` وتحديث شجرة العلاقات البرمجية بنسبة 100% لـ 842 ملفاً، وبناء 3,250 عقدة و 4,915 علاقة وترابط، عبر 709 مجتمع برمجي في [graphify-out/](file:///c:/wamp64/www/hospital-system/graphify-out/).
 - **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبارات التكامل [EmergencyPharmacyIntegrationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyPharmacyIntegrationTest.php) بنجاح 100%: **3 passed (18 assertions)**.
-  * التحقق من سلامة كافة اختبارات الوصفات والصيدلية القائمة (`PrescriptionWorkflowTest` & `PharmacyPosTest`).
+  * تحديث [EmergencyWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php) و [PharmacyPosTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyPosTest.php) واجتياز كافة الاختبارات بنجاح 100%: 10 passed (46 assertions).
+
+## Session log (2026-09-25 — تبسيط شاشة طوارئ وتنظيف المودالات واعتماد محطة الكشف والعلاج الموحدة)
+
+### Done
+- **تنظيف جدول الطوارئ الرئيسي وحذف القوائم والمودالات الزائدة (`emergency/index.blade.php`)**:
+  * استبدال القائمة المنسدلة المعقدة بزر رئيسي مباشر وأنيق `[ 🩺 كشف وعلاج ]` يربط مباشرة بمحطة الكشف السريري الشاملة [show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php).
+  * حصر القائمة المنسدلة المصغرة بالإجراءات الإدارية والانتقالية فقط (تحويل إلى العمليات، تحويل رقود، خروج متعافي، خروج على مسؤوليته، ورابط فتح الملف).
+  * إزالة أكثر من 950 سطراً من المودالات المكررة الثقيلة لكل صف (`vitalSignsModal`, `medicalModal`, `treatmentModal`, `treatmentResultsModal`, `labModal`, `radiologyModal`, `consultationModal`) و `datalist` الأدوية، مما خفض حجم ملف الواجهة من 103 كيلوبايت إلى 44 كيلوبايت وجعل تحميل الشاشة فائق السرعة والخفة.
+  * إضافة زر تصفح الملف السريع للحالات المسجل خروجها (`discharged`).
+- **محطة كشف وعلاج الطوارئ المتكاملة (`emergency/show.blade.php`)**:
+  * إعادة ترتيب التبويبات وفق التسلسل الطبي السريري الصحيح:
+    1. 💓 **العلامات الحيوية** (التبويب النشط الأول لقياس الضغط، النبض، الحرارة، والتنفس فور وصول المريض).
+    2. 🩺 **التشخيص والخدمات** (التشخيص الطبي وتحديد الخدمات التمريضية الفورية).
+    3. 🧪 **المختبر والأشعة والنتائج** (إرسال الفحوصات الطبية ومتابعة النتائج).
+    4. 💊 **الأدوية وعلاج الطوارئ** (الوصفة الطبية، إعطاء الأدوية والمحاليل والإبر من دليل الـ 220 دواء).
+  * حذف تبويب المالية والسجل نهائياً لعدم الحاجة له في محطة الكشف السريري.
+  * دعم التحديد التلقائي لنوع العلاج (إبرة، محلول وريدي، دواء) وفقاً للشكل الصيدلاني والتكرار، وإصلاح علاقة `creator` في موديل [EmergencyTreatment.php](file:///c:/wamp64/www/hospital-system/app/Models/EmergencyTreatment.php).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء [EmergencyWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php) واجتياز كافة الاختبارات: 54 passed (260 assertions) بنجاح 100%.
 
 ## Session log (2026-09-24 — منظومة الوصفات الطبية الإلكترونية المدمجة E-Prescription وصرف الصيدلية الفوري)
 

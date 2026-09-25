@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\Prescription;
 
 class Emergency extends Model
 {
@@ -83,6 +84,11 @@ class Emergency extends Model
         return $this->hasMany(EmergencyTreatment::class);
     }
 
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
@@ -116,16 +122,6 @@ class Emergency extends Model
     public function latestVitalSign(): HasOne
     {
         return $this->hasOne(EmergencyVitalSign::class)->latestOfMany();
-    }
-
-    public function prescriptions(): HasMany
-    {
-        return $this->hasMany(\App\Models\Prescription::class)->latest();
-    }
-
-    public function latestPrescription(): HasOne
-    {
-        return $this->hasOne(\App\Models\Prescription::class)->latestOfMany();
     }
 
     public function appointments(): HasMany
