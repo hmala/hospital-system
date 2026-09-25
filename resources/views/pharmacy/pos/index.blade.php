@@ -1130,15 +1130,21 @@
 
         document.getElementById('modalTargetMedName').innerText = `${item.name} (${item.dosage_form || ''} - ${item.strength || ''})`;
         document.getElementById('modalAltReasonInput').value = '';
-        document.getElementById('modalAltSearchInput').value = '';
+        const searchInp = document.getElementById('modalAltSearchInput');
+        searchInp.value = '';
 
         renderAlternativesList(item.alternatives || []);
 
-        const altModal = new bootstrap.Modal(document.getElementById('alternativeModal'));
+        const altModalEl = document.getElementById('alternativeModal');
+        const altModal = new bootstrap.Modal(altModalEl);
         altModal.show();
+
+        altModalEl.addEventListener('shown.bs.modal', function () {
+            searchInp.focus();
+        }, { once: true });
     }
 
-    // رسم قائمة البدائل داخل النافذة
+    // رسم قائمة البدائل داخل النافذة (اختيار يدوي للموظف)
     function renderAlternativesList(alternatives) {
         const listContainer = document.getElementById('alternativesModalList');
         document.getElementById('modalAltCountBadge').innerText = `${alternatives.length} بديل`;
@@ -1146,30 +1152,29 @@
         if (alternatives.length === 0) {
             listContainer.innerHTML = `
                 <div class="text-center py-4 text-muted">
-                    <i class="fas fa-info-circle fa-2x mb-2 opacity-50"></i>
-                    <p class="small mb-1">لم يتم العثور على بدائل مسجلة تلقائياً لهذا الصنف</p>
-                    <small class="text-secondary">يمكنك كتابة اسم أي دواء في حقل البحث أعلاه لاقتراحه على الطبيب.</small>
+                    <i class="fas fa-search fa-2x mb-2 text-warning opacity-75"></i>
+                    <p class="small mb-1 fw-bold">اكتب اسم الدواء البديل في حقل البحث أعلاه</p>
+                    <small class="text-secondary">يمكنك اختيار أي دواء من الدليل لاقتراحه على الطبيب المعالج.</small>
                 </div>`;
             return;
         }
 
         let html = '';
         alternatives.forEach(alt => {
-            const inStock = alt.total_stock > 0 || (alt.total_open_sub_units > 0);
             html += `
                 <div class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center gap-3">
                     <div>
-                        <div class="fw-bold text-dark fs-6">${alt.name}</div>
-                        <div class="small text-muted">
-                            <span class="badge bg-light text-secondary border me-1">${alt.dosage_form || '-'}</span>
-                            <span class="badge bg-light text-secondary border me-1">${alt.strength || '-'}</span>
-                            <span class="badge ${inStock ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
-                                ${inStock ? `متوفر بالمخزون (${alt.total_stock} ${alt.main_unit || 'علبة'})` : 'غير متوفر'}
-                            </span>
+                        <div class="fw-bold text-dark fs-6">
+                            <i class="fas fa-pills text-primary me-1"></i>${alt.name}
+                        </div>
+                        <div class="small text-muted mt-1">
+                            ${alt.dosage_form ? `<span class="badge bg-light text-secondary border me-1">${alt.dosage_form}</span>` : ''}
+                            ${alt.strength ? `<span class="badge bg-light text-secondary border me-1">${alt.strength}</span>` : ''}
+                            ${alt.sale_price ? `<span class="badge bg-success-subtle text-success border border-success">${Number(alt.sale_price).toLocaleString()} د.ع</span>` : ''}
                         </div>
                     </div>
                     <button type="button" class="btn btn-warning btn-sm text-dark fw-bold px-3 py-2 rounded-3 shadow-xs d-flex align-items-center gap-1" onclick="submitAlternativeSuggestion(${alt.id})">
-                        <i class="fas fa-paper-plane"></i> اقتراح هذا البديل
+                        <i class="fas fa-check-circle"></i> اختيار هذا البديل
                     </button>
                 </div>`;
         });
