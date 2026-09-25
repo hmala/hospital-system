@@ -977,14 +977,14 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header bg-danger text-white py-3">
                 <div class="d-flex align-items-center gap-2">
-                    <div class="bg-white text-danger p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                        <i class="fas fa-ambulance"></i>
+                    <div class="bg-white text-danger p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-prescription fa-lg"></i>
                     </div>
                     <div>
                         <h5 class="modal-title fw-bold mb-0" id="treatmentModalLabel-{{ $emergency->id }}">
-                            طلب وصرف علاج طوارئ فوري (STAT Order)
+                            الأدوية والعلاجات الموصوفة (وصفة طوارئ فورية 🚨 STAT E-Prescription)
                         </h5>
-                        <small class="opacity-75">حالة طوارئ #{{ $emergency->id }} | المريض: {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض طوارئ' }}</small>
+                        <small class="opacity-75">حالة طوارئ #{{ $emergency->id }} | المريض: {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض طوارئ' }} {{ $emergency->room_assigned ? ' | ' . $emergency->room_assigned : '' }}</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
@@ -992,85 +992,129 @@
             <form method="POST" action="{{ route('emergency.treatments.store', $emergency) }}" class="emergency-treatment-form">
                 @csrf
                 <div class="modal-body p-3 p-md-4">
-                    <div class="alert alert-danger-subtle border border-danger-subtle rounded-3 p-3 mb-3 d-flex align-items-center gap-3">
-                        <i class="fas fa-bolt text-danger fs-3"></i>
-                        <div class="small text-dark">
-                            <strong>أولوية قصوى (STAT Order):</strong> سيتم إرسال الأدوية والمحاليل المطلوبة مباشرة إلى شاشة الصيدلية المركزية بنظام الأولوية القصوى لتجهيزها وصرفها فوراً للقسم.
+                    <div class="alert alert-danger-subtle border border-danger-subtle rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fas fa-bolt text-danger fs-3"></i>
+                            <div class="small text-dark">
+                                <strong>أولوية قصوى (🚨 STAT Emergency Order):</strong> سيتم إرسال الأدوية والمحاليل المطلوبة مباشرة إلى شاشة الصيدلية المركزية بنظام الأولوية القصوى لتجهيزها وصرفها فوراً للقسم.
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm fw-bold px-3 shadow-sm" onclick="addEmergencyMedicationCard({{ $emergency->id }})">
+                            <i class="fas fa-plus me-1"></i>
+                            إضافة دواء / علاج
+                        </button>
+                    </div>
+
+                    <div id="medicationsContainer-{{ $emergency->id }}">
+                        <div class="medication-item card mb-3 border-danger shadow-sm rounded-3">
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold">
+                                            <i class="fas fa-pills text-danger me-1"></i>
+                                            اسم الدواء (دليل الأدوية المعتمد)
+                                        </label>
+                                        <select class="form-select emergency-med-select" data-index="0" onchange="handleEmergencyMedSelect(this)">
+                                            <option value="">-- ابحث بالاسم التجاري أو العلمي --</option>
+                                            @if(isset($officialMedicines))
+                                                @foreach($officialMedicines as $availMed)
+                                                    <option value="{{ $availMed->id }}"
+                                                            data-id="{{ $availMed->id }}"
+                                                            data-name="{{ $availMed->name }}"
+                                                            data-generic="{{ $availMed->generic_name }}"
+                                                            data-strength="{{ $availMed->strength }}"
+                                                            data-form="{{ $availMed->dosage_form }}"
+                                                            data-main-unit="{{ $availMed->main_unit }}"
+                                                            data-sub-unit="{{ $availMed->sub_unit }}">
+                                                        {{ $availMed->name }} {{ $availMed->strength }} ({{ $availMed->generic_name ?? '' }} - {{ $availMed->dosage_form }})
+                                                    </option>
+                                                @endforeach
+                                            @endif
+                                            <option value="custom">✏️ كتابة اسم دواء يدوي غير مدرج</option>
+                                        </select>
+                                        <input type="hidden" name="treatments[0][medicine_id]" class="med-id-input" value="">
+                                        <input type="text" class="form-control med-name-input mt-2" name="treatments[0][description]" placeholder="اسم الدواء الموصوف" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold">الشكل الدوائي</label>
+                                        <select class="form-select med-type-select" name="treatments[0][treatment_type]" required>
+                                            <option value="drip">🧪 محلول / مغذي وريدي</option>
+                                            <option value="injection">💉 إبرة / حقن</option>
+                                            <option value="medication">💊 حبوب / أقراص</option>
+                                            <option value="oxygen">🫁 أكسجين</option>
+                                            <option value="syrup">شراب</option>
+                                            <option value="cream">كريم / مرهم</option>
+                                            <option value="drops">قطرات</option>
+                                            <option value="other">أخرى</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold">الجرعة / القوة</label>
+                                        <input type="text" class="form-control med-dosage-input" name="treatments[0][dosage]" placeholder="مثال: 1000mg/100ml">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold d-block mb-2">التكرار</label>
+                                        <div class="frequency-selector d-flex gap-1 flex-wrap">
+                                            <input type="radio" id="er_freq_{{ $emergency->id }}_0_stat" name="treatments[0][frequency]" value="stat" checked style="display: none;">
+                                            <label for="er_freq_{{ $emergency->id }}_0_stat" class="btn btn-sm btn-outline-danger er-freq-btn active py-1 px-2 fw-bold" style="font-size: 0.75rem;">🚨 STAT</label>
+
+                                            <input type="radio" id="er_freq_{{ $emergency->id }}_0_1" name="treatments[0][frequency]" value="1" style="display: none;">
+                                            <label for="er_freq_{{ $emergency->id }}_0_1" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">1x</label>
+
+                                            <input type="radio" id="er_freq_{{ $emergency->id }}_0_2" name="treatments[0][frequency]" value="2" style="display: none;">
+                                            <label for="er_freq_{{ $emergency->id }}_0_2" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">2x</label>
+
+                                            <input type="radio" id="er_freq_{{ $emergency->id }}_0_3" name="treatments[0][frequency]" value="3" style="display: none;">
+                                            <label for="er_freq_{{ $emergency->id }}_0_3" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">3x</label>
+
+                                            <input type="radio" id="er_freq_{{ $emergency->id }}_0_needed" name="treatments[0][frequency]" value="as_needed" style="display: none;">
+                                            <label for="er_freq_{{ $emergency->id }}_0_needed" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">حاجة</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-end justify-content-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-card p-2" onclick="removeEmergencyMedicationCard(this)" title="حذف الدواء">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-2">
+                                        <label class="form-label text-muted small fw-bold">الكمية المطلوبة</label>
+                                        <input type="number" class="form-control form-control-sm text-center" name="treatments[0][quantity]" value="1" min="1" step="1">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label text-muted small fw-bold">الوحدة</label>
+                                        <select class="form-select form-select-sm" name="treatments[0][unit_type]">
+                                            <option value="main_unit">علبة / فيال / قارورة</option>
+                                            <option value="sub_unit">شريط / أمبولة</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label text-muted small fw-bold">التوقيت / المدة</label>
+                                        <input type="text" class="form-control form-control-sm" name="treatments[0][times]" value="فوراً في الطوارئ" placeholder="مثال: فوراً">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold">تعليمات وتوصيات الصيدلي والتمريض</label>
+                                        <input type="text" class="form-control form-control-sm" name="treatments[0][instructions]" value="تسريب وريدي بطيء / إعطاء فوري" placeholder="مثال: تسريب وريدي مع مراقبة الضغط">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 130px;">نوع العلاج</th>
-                                    <th>اسم الدواء / المحلول / الإجراء</th>
-                                    <th style="width: 90px;">الكمية</th>
-                                    <th style="width: 110px;">الوحدة</th>
-                                    <th style="width: 170px;">الجرعة / التكرار</th>
-                                    <th style="width: 160px;">طريقة الإعطاء</th>
-                                    <th style="width: 50px;" class="text-center"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="treatment-rows-{{ $emergency->id }}">
-                                <tr class="treatment-row">
-                                    <td>
-                                        <select name="treatments[0][treatment_type]" class="form-select form-select-sm" required>
-                                            <option value="medication">💊 دوائي</option>
-                                            <option value="injection">💉 إبرة / حقنة</option>
-                                            <option value="drip">🧪 محلول وريدي</option>
-                                            <option value="oxygen">🫁 أكسجين</option>
-                                            <option value="other">📋 أخرى</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="text" 
-                                               name="treatments[0][description]" 
-                                               class="form-control form-control-sm treatment-med-input" 
-                                               list="officialEmergencyMedsList" 
-                                               placeholder="ابحث بالاسم التجاري أو العلمي..." 
-                                               required 
-                                               autocomplete="off">
-                                        <input type="hidden" name="treatments[0][medicine_id]" class="treatment-med-id">
-                                    </td>
-                                    <td>
-                                        <input type="number" name="treatments[0][quantity]" class="form-control form-control-sm text-center" min="1" value="1" step="1">
-                                    </td>
-                                    <td>
-                                        <select name="treatments[0][unit_type]" class="form-select form-select-sm">
-                                            <option value="main_unit">علبة / فيال</option>
-                                            <option value="sub_unit">شريط / أمبولة</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="text" name="treatments[0][dosage_frequency]" class="form-control form-control-sm" placeholder="مثال: فوري STAT / 1x3" value="جرعة فورية STAT">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="treatments[0][instructions]" class="form-control form-control-sm" placeholder="مثال: تسريب وريدي بطيء / عضلي" value="إعطاء فوري في الطوارئ">
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row p-1" title="حذف">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
                     <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button type="button" class="btn btn-outline-danger btn-sm add-treatment-row fw-bold rounded-2 px-3" data-emergency-id="{{ $emergency->id }}">
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold rounded-2 px-3 shadow-sm" onclick="addEmergencyMedicationCard({{ $emergency->id }})">
                             <i class="fas fa-plus me-1"></i>
-                            إضافة صنف / علاج آخر
+                            إضافة دواء / صنف آخر
                         </button>
-                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>يمكنك إضافة عدة أدوية ومحاليل في نفس الطلب.</small>
+                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>يمكنك إضافة عدة أدوية ومحاليل في نفس طلب الصرف الفوري.</small>
                     </div>
                 </div>
                 <div class="modal-footer bg-light gap-2 py-2">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm d-flex align-items-center gap-2">
                         <i class="fas fa-paper-plane"></i>
-                        <span>إرسال طلب الصرف الفوري للصيدلية (STAT)</span>
+                        <span>إرسال طلب الصرف الفوري للصيدلية (🚨 STAT Order)</span>
                     </button>
                 </div>
             </form>
@@ -1504,14 +1548,205 @@
 
 @section('scripts')
 <script>
+window.officialMedicinesData = @json($officialMedicines ?? []);
+
+window.handleEmergencyMedSelect = function(selectElem) {
+    const card = selectElem.closest('.medication-item');
+    if (!card) return;
+
+    const idInput = card.querySelector('.med-id-input');
+    const nameInput = card.querySelector('.med-name-input');
+    const dosageInput = card.querySelector('.med-dosage-input');
+    const typeSelect = card.querySelector('.med-type-select');
+    const unitSelect = card.querySelector('select[name*="[unit_type]"]');
+
+    const val = selectElem.value;
+    if (!val || val === '') {
+        if (idInput) idInput.value = '';
+        return;
+    }
+
+    if (val === 'custom') {
+        if (idInput) idInput.value = '';
+        if (nameInput) {
+            nameInput.value = '';
+            nameInput.focus();
+        }
+        return;
+    }
+
+    const medId = parseInt(val, 10);
+    const med = (window.officialMedicinesData || []).find(m => m.id === medId);
+
+    if (med) {
+        if (idInput) idInput.value = med.id;
+        if (nameInput) nameInput.value = med.name;
+        if (dosageInput && med.strength) dosageInput.value = med.strength;
+
+        if (typeSelect && med.dosage_form) {
+            const formStr = (med.dosage_form || '').toLowerCase();
+            if (formStr.includes('infus') || formStr.includes('drip') || formStr.includes('محلول') || formStr.includes('وريدي')) {
+                typeSelect.value = 'drip';
+            } else if (formStr.includes('inj') || formStr.includes('amp') || formStr.includes('vial') || formStr.includes('إبر') || formStr.includes('حقن')) {
+                typeSelect.value = 'injection';
+            } else if (formStr.includes('tab') || formStr.includes('cap') || formStr.includes('حبوب') || formStr.includes('كبسول')) {
+                typeSelect.value = 'medication';
+            } else if (formStr.includes('syr') || formStr.includes('susp') || formStr.includes('شراب') || formStr.includes('معلق')) {
+                typeSelect.value = 'syrup';
+            } else if (formStr.includes('cream') || formStr.includes('oint') || formStr.includes('gel') || formStr.includes('مرهم') || formStr.includes('كريم')) {
+                typeSelect.value = 'cream';
+            } else if (formStr.includes('drop') || formStr.includes('قطر')) {
+                typeSelect.value = 'drops';
+            } else {
+                typeSelect.value = 'other';
+            }
+        }
+    }
+};
+
+window.addEmergencyMedicationCard = function(emergencyId) {
+    const container = document.getElementById(`medicationsContainer-${emergencyId}`);
+    if (!container) return;
+
+    const idx = container.querySelectorAll('.medication-item').length;
+
+    let optionsHtml = '<option value="">-- ابحث بالاسم التجاري أو العلمي --</option>';
+    if (window.officialMedicinesData && window.officialMedicinesData.length > 0) {
+        window.officialMedicinesData.forEach(med => {
+            optionsHtml += `<option value="${med.id}">${med.name} ${med.strength || ''} (${med.generic_name || ''} - ${med.dosage_form || ''})</option>`;
+        });
+    }
+    optionsHtml += '<option value="custom">✏️ كتابة اسم دواء يدوي غير مدرج</option>';
+
+    const cardHtml = `
+        <div class="medication-item card mb-3 border-danger shadow-sm rounded-3">
+            <div class="card-body p-3">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-pills text-danger me-1"></i>
+                            اسم الدواء (دليل الأدوية المعتمد)
+                        </label>
+                        <select class="form-select emergency-med-select" data-index="${idx}" onchange="handleEmergencyMedSelect(this)">
+                            ${optionsHtml}
+                        </select>
+                        <input type="hidden" name="treatments[${idx}][medicine_id]" class="med-id-input" value="">
+                        <input type="text" class="form-control med-name-input mt-2" name="treatments[${idx}][description]" placeholder="اسم الدواء الموصوف" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">الشكل الدوائي</label>
+                        <select class="form-select med-type-select" name="treatments[${idx}][treatment_type]" required>
+                            <option value="drip">🧪 محلول / مغذي وريدي</option>
+                            <option value="injection">💉 إبرة / حقنة</option>
+                            <option value="medication">💊 حبوب / أقراص</option>
+                            <option value="oxygen">🫁 أكسجين</option>
+                            <option value="syrup">شراب</option>
+                            <option value="cream">كريم / مرهم</option>
+                            <option value="drops">قطرات</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">الجرعة / القوة</label>
+                        <input type="text" class="form-control med-dosage-input" name="treatments[${idx}][dosage]" placeholder="مثال: 1000mg/100ml">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold d-block mb-2">التكرار</label>
+                        <div class="frequency-selector d-flex gap-1 flex-wrap">
+                            <input type="radio" id="er_freq_${emergencyId}_${idx}_stat" name="treatments[${idx}][frequency]" value="stat" checked style="display: none;">
+                            <label for="er_freq_${emergencyId}_${idx}_stat" class="btn btn-sm btn-outline-danger er-freq-btn active py-1 px-2 fw-bold" style="font-size: 0.75rem;">🚨 STAT</label>
+
+                            <input type="radio" id="er_freq_${emergencyId}_${idx}_1" name="treatments[${idx}][frequency]" value="1" style="display: none;">
+                            <label for="er_freq_${emergencyId}_${idx}_1" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">1x</label>
+
+                            <input type="radio" id="er_freq_${emergencyId}_${idx}_2" name="treatments[${idx}][frequency]" value="2" style="display: none;">
+                            <label for="er_freq_${emergencyId}_${idx}_2" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">2x</label>
+
+                            <input type="radio" id="er_freq_${emergencyId}_${idx}_3" name="treatments[${idx}][frequency]" value="3" style="display: none;">
+                            <label for="er_freq_${emergencyId}_${idx}_3" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">3x</label>
+
+                            <input type="radio" id="er_freq_${emergencyId}_${idx}_needed" name="treatments[${idx}][frequency]" value="as_needed" style="display: none;">
+                            <label for="er_freq_${emergencyId}_${idx}_needed" class="btn btn-sm btn-outline-secondary er-freq-btn py-1 px-2" style="font-size: 0.75rem;">حاجة</label>
+                        </div>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end justify-content-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-card p-2" onclick="removeEmergencyMedicationCard(this)" title="حذف الدواء">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small fw-bold">الكمية المطلوبة</label>
+                        <input type="number" class="form-control form-control-sm text-center" name="treatments[${idx}][quantity]" value="1" min="1" step="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small fw-bold">الوحدة</label>
+                        <select class="form-select form-select-sm" name="treatments[${idx}][unit_type]">
+                            <option value="main_unit">علبة / فيال / قارورة</option>
+                            <option value="sub_unit">شريط / أمبولة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small fw-bold">التوقيت / المدة</label>
+                        <input type="text" class="form-control form-control-sm" name="treatments[${idx}][times]" value="فوراً في الطوارئ" placeholder="مثال: فوراً">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">تعليمات وتوصيات الصيدلي والتمريض</label>
+                        <input type="text" class="form-control form-control-sm" name="treatments[${idx}][instructions]" value="تسريب وريدي بطيء / إعطاء فوري" placeholder="مثال: تسريب وريدي مع مراقبة الضغط">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = cardHtml.trim();
+    container.appendChild(temp.firstChild);
+};
+
+window.removeEmergencyMedicationCard = function(btn) {
+    const card = btn.closest('.medication-item');
+    if (!card) return;
+    const container = card.closest('[id^="medicationsContainer-"]');
+    if (container && container.querySelectorAll('.medication-item').length > 1) {
+        card.remove();
+    } else {
+        card.querySelectorAll('input, select').forEach(field => {
+            if (field.type === 'radio') {
+                if (field.value === 'stat') field.checked = true;
+            } else if (field.name.includes('[quantity]')) {
+                field.value = '1';
+            } else {
+                field.value = '';
+            }
+        });
+    }
+};
+
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.matches('.frequency-selector input[type="radio"]')) {
+        const selector = e.target.closest('.frequency-selector');
+        if (selector) {
+            selector.querySelectorAll('.er-freq-btn').forEach(lbl => {
+                lbl.classList.remove('active', 'btn-outline-danger', 'btn-danger');
+                lbl.classList.add('btn-outline-secondary');
+            });
+            const activeLabel = selector.querySelector(`label[for="${e.target.id}"]`);
+            if (activeLabel) {
+                activeLabel.classList.remove('btn-outline-secondary');
+                activeLabel.classList.add(e.target.value === 'stat' ? 'btn-outline-danger' : 'btn-secondary', 'active');
+            }
+        }
+    }
+});
+
 document.addEventListener('click', function(event) {
     if (event.target.closest('.add-service-row')) {
         const button = event.target.closest('.add-service-row');
         const emergencyId = button.getAttribute('data-emergency-id');
         const container = document.getElementById(`service-rows-${emergencyId}`);
-        if (!container) {
-            return;
-        }
+        if (!container) return;
         const template = document.getElementById('service-row-template');
         const clone = template.content.cloneNode(true);
         container.appendChild(clone);
@@ -1524,34 +1759,6 @@ document.addEventListener('click', function(event) {
             row.remove();
         } else if (row) {
             row.querySelector('select').value = '';
-        }
-    }
-
-    if (event.target.closest('.add-treatment-row')) {
-        const button = event.target.closest('.add-treatment-row');
-        const emergencyId = button.getAttribute('data-emergency-id');
-        const container = document.getElementById(`treatment-rows-${emergencyId}`);
-        const template = document.getElementById(`treatment-row-template-${emergencyId}`);
-        if (!container || !template) {
-            return;
-        }
-        const index = container.querySelectorAll('.treatment-row').length;
-        const clone = template.content.cloneNode(true);
-        clone.querySelectorAll('[data-name]').forEach(el => {
-            el.setAttribute('name', el.getAttribute('data-name').replace('__index__', index));
-        });
-        container.appendChild(clone);
-    }
-
-    if (event.target.closest('.remove-treatment-row')) {
-        const row = event.target.closest('.treatment-row');
-        const container = row.closest('tbody');
-        if (container && container.querySelectorAll('.treatment-row').length > 1) {
-            row.remove();
-        } else if (row) {
-            row.querySelectorAll('select, textarea, input').forEach(field => {
-                field.value = '';
-            });
         }
     }
 });
@@ -1572,63 +1779,6 @@ document.addEventListener('click', function(event) {
         </button>
     </div>
 </template>
-
-{{-- قائمة الأدوية الرسمية للإكمال التلقائي الفوري --}}
-<datalist id="officialEmergencyMedsList">
-    @if(isset($officialMedicines) && $officialMedicines->count())
-        @foreach($officialMedicines as $med)
-            <option value="{{ $med->name }}" data-id="{{ $med->id }}">
-                {{ $med->name }} {{ $med->dosage_form ? "({$med->dosage_form})" : '' }} {{ $med->strength ? "- {$med->strength}" : '' }} {{ $med->generic_name ? "[$med->generic_name]" : '' }}
-            </option>
-        @endforeach
-    @endif
-</datalist>
-
-@foreach($emergencies as $emergency)
-<template id="treatment-row-template-{{ $emergency->id }}">
-    <tr class="treatment-row">
-        <td>
-            <select data-name="treatments[__index__][treatment_type]" class="form-select form-select-sm" required>
-                <option value="medication">💊 دوائي</option>
-                <option value="injection">💉 إبرة / حقنة</option>
-                <option value="drip">🧪 محلول وريدي</option>
-                <option value="oxygen">🫁 أكسجين</option>
-                <option value="other">📋 أخرى</option>
-            </select>
-        </td>
-        <td>
-            <input type="text" 
-                   data-name="treatments[__index__][description]" 
-                   class="form-control form-control-sm treatment-med-input" 
-                   list="officialEmergencyMedsList" 
-                   placeholder="ابحث بالاسم التجاري أو العلمي..." 
-                   required 
-                   autocomplete="off">
-            <input type="hidden" data-name="treatments[__index__][medicine_id]" class="treatment-med-id">
-        </td>
-        <td>
-            <input type="number" data-name="treatments[__index__][quantity]" class="form-control form-control-sm text-center" min="1" value="1" step="1">
-        </td>
-        <td>
-            <select data-name="treatments[__index__][unit_type]" class="form-select form-select-sm">
-                <option value="main_unit">علبة / فيال</option>
-                <option value="sub_unit">شريط / أمبولة</option>
-            </select>
-        </td>
-        <td>
-            <input type="text" data-name="treatments[__index__][dosage_frequency]" class="form-control form-control-sm" placeholder="مثال: فوري STAT / 1x3" value="جرعة فورية STAT">
-        </td>
-        <td>
-            <input type="text" data-name="treatments[__index__][instructions]" class="form-control form-control-sm" placeholder="مثال: تسريب وريدي بطيء / عضلي" value="إعطاء فوري في الطوارئ">
-        </td>
-        <td class="text-center">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row p-1" title="حذف">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        </td>
-    </tr>
-</template>
-@endforeach
 
 <style>
 .medical-modal {

@@ -593,53 +593,69 @@ class EmergencyController extends Controller
             abort(403, 'غير مصرح لك بإضافة علاجات الطوارئ');
         }
 
-        $request->validate([
-            'treatments' => 'required|array|min:1',
-            'treatments.*.description' => 'required|string|max:255',
-            'treatments.*.treatment_type' => 'nullable|in:medication,injection,drip,oxygen,other',
-            'treatments.*.medicine_id' => 'nullable|exists:medicines,id',
-            'treatments.*.quantity' => 'nullable|numeric|min:0.1',
-            'treatments.*.unit_type' => 'nullable|in:main_unit,sub_unit',
-            'treatments.*.frequency_per_day' => 'nullable|integer|min:1|max:24',
-            'treatments.*.dosage_frequency' => 'nullable|string|max:100',
-            'treatments.*.instructions' => 'nullable|string|max:255',
-            'treatments.*.status' => 'nullable|in:planned,in_progress,completed,cancelled',
-            'treatments.*.notes' => 'nullable|string|max:500',
-        ]);
+        $rawItems = $request->input('treatments') ?? $request->input('prescribed_medications') ?? [];
+        if (empty($rawItems) || !is_array($rawItems)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'يرجى إضافة علاج أو دواء واحد على الأقل.'], 422);
+            }
+            return redirect()->back()->with('error', 'يرجى إضافة علاج أو دواء واحد على الأقل.');
+        }
 
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             $createdTreatments = [];
             $prescriptionItemsData = [];
 
-            foreach ($request->treatments as $trData) {
-                if (empty($trData['description'])) {
+            foreach ($rawItems as $trData) {
+                $description = $trData['description'] ?? $trData['name'] ?? null;
+                if (empty($description)) {
                     continue;
                 }
 
-                $rawTreatmentType = $trData['treatment_type'] ?? 'medication';
-                $dbTreatmentType = match ($rawTreatmentType) {
-                    'medication', 'injection', 'drip', 'oxygen' => $rawTreatmentType,
+                $rawType = $trData['treatment_type'] ?? $trData['type'] ?? 'medication';
+                $dbTreatmentType = match ($rawType) {
+                    'medication', 'tablet', 'syrup', 'cream', 'drops' => 'medication',
+                    'injection' => 'injection',
+                    'drip' => 'drip',
+                    'oxygen' => 'oxygen',
                     default => 'other',
                 };
+
                 $treatmentStatus = $trData['status'] ?? 'in_progress';
                 $qty = (float)($trData['quantity'] ?? 1);
                 $unitType = $trData['unit_type'] ?? 'main_unit';
-                $dosageFreq = !empty($trData['dosage_frequency']) 
-                    ? $trData['dosage_frequency'] 
-                    : (!empty($trData['frequency_per_day']) ? ($trData['frequency_per_day'] . ' مرات يومياً') : 'جرعة طوارئ فورية STAT');
-                $instructions = $trData['instructions'] ?? 'إعطاء فوري في قسم الطوارئ';
+                $dosage = $trData['dosage'] ?? null;
+                $duration = $trData['duration'] ?? null;
+                $times = $trData['times'] ?? null;
+                $instructions = $trData['instructions'] ?? ($times ? ($times . ($duration ? " - لمدة {$duration}" : '')) : 'إعطاء فوري في قسم الطوارئ');
+
+                // تكرار الجرعة
+                $freqInput = $trData['frequency'] ?? $trData['dosage_frequency'] ?? $trData['frequency_per_day'] ?? null;
+                $freqPerDay = is_numeric($freqInput) ? (int)$freqInput : 1;
+                $dosageFreq = !empty($trData['dosage_frequency'])
+                    ? $trData['dosage_frequency']
+                    : ($freqInput === 'as_needed' ? 'عند الحاجة' : ($freqInput === 'stat' || $freqInput === 'STAT' ? 'جرعة فورية STAT' : (is_numeric($freqInput) ? ($freqInput . ' مرات يومياً') : 'جرعة طوارئ فورية STAT')));
+
                 $medicineId = !empty($trData['medicine_id']) ? $trData['medicine_id'] : null;
 
                 // إذا لم يتم تمرير medicine_id ولكن تم كتابة اسم دواء، نحاول مطابقته
-                if (!$medicineId && in_array($rawTreatmentType, ['medication', 'injection', 'drip'])) {
-                    $matchedMed = \App\Models\Medicine::where('name', $trData['description'])
-                        ->orWhere('generic_name', $trData['description'])
+                if (!$medicineId && in_array($dbTreatmentType, ['medication', 'injection', 'drip'])) {
+                    $matchedMed = \App\Models\Medicine::where('name', $description)
+                        ->orWhere('generic_name', $description)
                         ->first();
                     if ($matchedMed) {
                         $medicineId = $matchedMed->id;
                     }
                 }
+
+                // تجهيز الملاحظات
+                $notesArr = array_filter([
+                    $dosage ? "الجرعة: {$dosage}" : null,
+                    $duration ? "المدة: {$duration}" : null,
+                    $times ? "التوقيت: {$times}" : null,
+                    $trData['notes'] ?? null
+                ]);
+                $finalNotes = !empty($notesArr) ? implode(' | ', $notesArr) : null;
 
                 // 1. تسجيل العلاج في جدول علاجات الطوارئ
                 $treatment = EmergencyTreatment::create([
@@ -648,23 +664,24 @@ class EmergencyController extends Controller
                     'nurse_id' => $emergency->nurse_id ?? ($user->hasRole('nurse') ? $user->id : null),
                     'created_by' => $user->id,
                     'treatment_type' => $dbTreatmentType,
-                    'description' => $trData['description'],
-                    'frequency_per_day' => (int)($trData['frequency_per_day'] ?? 1),
+                    'description' => $description,
+                    'frequency_per_day' => $freqPerDay,
                     'status' => $treatmentStatus,
                     'started_at' => now(),
-                    'notes' => $trData['notes'] ?? null,
+                    'notes' => $finalNotes,
                 ]);
                 $createdTreatments[] = $treatment;
 
                 // 2. إذا كان علاجاً دوائياً أو حقنة أو محلولاً، نجمعه لتوليد طلب صرف فوري للصيدلية
-                if (in_array($rawTreatmentType, ['medication', 'injection', 'drip'])) {
+                if (in_array($dbTreatmentType, ['medication', 'injection', 'drip'])) {
+                    $fullInstructions = trim(($dosage ? "({$dosage}) " : '') . $instructions);
                     $prescriptionItemsData[] = [
                         'medicine_id' => $medicineId,
-                        'medicine_name' => $trData['description'],
+                        'medicine_name' => $description,
                         'quantity' => $qty > 0 ? $qty : 1,
                         'unit_type' => $unitType,
                         'dosage_frequency' => $dosageFreq,
-                        'instructions' => $instructions,
+                        'instructions' => $fullInstructions ?: 'إعطاء فوري في قسم الطوارئ',
                         'status' => 'pending',
                     ];
                 }
