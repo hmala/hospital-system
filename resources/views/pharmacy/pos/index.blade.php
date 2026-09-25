@@ -1032,36 +1032,28 @@
                             </button>
                         </div>
                     </div>`;
-            } else if (hasStock) {
-                stockBadge = `
-                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
-                        <button type="button" 
-                                class="btn btn-sm btn-success fw-bold px-3 py-1 rounded-pill shadow-xs d-flex align-items-center gap-1" 
-                                onclick="toggleItemStock(${item.id})" 
-                                title="اضغط للتحويل إلى غير متوفر">
-                            <i class="fas fa-check-circle"></i> متوفر
-                        </button>
-                        <button type="button" 
-                                class="btn btn-sm btn-outline-warning text-dark fw-bold px-2 py-1 rounded-pill shadow-xs" 
-                                onclick="openAlternativesModal(${item.id})" 
-                                title="اقتراح بديل مكافئ لهذا الدواء">
-                            <i class="fas fa-exchange-alt me-1"></i> بديل
-                        </button>
-                    </div>`;
             } else {
                 stockBadge = `
-                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                    <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                        <div class="btn-group btn-group-sm shadow-xs" role="group">
+                            <button type="button" 
+                                    class="btn ${hasStock ? 'btn-success fw-bold text-white shadow-xs' : 'btn-outline-success'}" 
+                                    onclick="setItemAvailability(${item.id}, true)"
+                                    title="تحديد كـ متوفر على الرف">
+                                <i class="fas fa-check-circle me-1"></i> متوفر
+                            </button>
+                            <button type="button" 
+                                    class="btn ${!hasStock ? 'btn-danger fw-bold text-white shadow-xs' : 'btn-outline-danger'}" 
+                                    onclick="setItemAvailability(${item.id}, false)"
+                                    title="تحديد كـ غير متوفر">
+                                <i class="fas fa-times-circle me-1"></i> غير متوفر
+                            </button>
+                        </div>
                         <button type="button" 
-                                class="btn btn-sm btn-danger fw-bold px-3 py-1 rounded-pill shadow-xs d-flex align-items-center gap-1" 
-                                onclick="toggleItemStock(${item.id})" 
-                                title="اضغط للتحويل إلى متوفر">
-                            <i class="fas fa-times-circle"></i> غير متوفر
-                        </button>
-                        <button type="button" 
-                                class="btn btn-sm btn-warning text-dark fw-bold px-3 py-1 rounded-pill shadow-xs d-flex align-items-center gap-1" 
+                                class="btn btn-sm ${!hasStock ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'} py-1 px-2 rounded-2 shadow-xs" 
                                 onclick="openAlternativesModal(${item.id})" 
-                                title="فتح نافذة اختيار واقتراح البديل">
-                            <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل للطبيب
+                                title="اقتراح بديل مكافئ لهذا الدواء">
+                            <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل
                         </button>
                     </div>`;
             }
@@ -1100,6 +1092,19 @@
         });
 
         tbody.innerHTML = html;
+    }
+
+    // تعيين حالة توفر الدواء (متوفر / غير متوفر)
+    function setItemAvailability(itemId, isAvailable) {
+        if (!currentPrescriptionData) return;
+        const item = currentPrescriptionData.items.find(i => i.id === itemId);
+        if (!item) return;
+
+        item.is_in_stock = isAvailable;
+        if (item.substitution_status === 'rejected') {
+            item.substitution_status = 'none';
+        }
+        renderModalPrescription(currentPrescriptionData);
     }
 
     // تبديل حالة توفر الدواء يدوياً من الشاشة
