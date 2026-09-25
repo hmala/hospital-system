@@ -548,10 +548,7 @@
             modalAltSearchInput.addEventListener('input', debounce(function() {
                 const q = this.value.trim();
                 if (q.length < 1) {
-                    if (targetItemForAlternative && currentPrescriptionData) {
-                        const item = currentPrescriptionData.items.find(i => i.id === targetItemForAlternative);
-                        renderAlternativesList(item ? (item.alternatives || []) : []);
-                    }
+                    renderAlternativesList([]);
                     return;
                 }
 
@@ -1133,7 +1130,8 @@
         const searchInp = document.getElementById('modalAltSearchInput');
         searchInp.value = '';
 
-        renderAlternativesList(item.alternatives || []);
+        // لا نظهر أي مقترحات تلقائياً - المودال يبدأ فارغاً للبحث فقط
+        renderAlternativesList([]);
 
         const altModalEl = document.getElementById('alternativeModal');
         const altModal = new bootstrap.Modal(altModalEl);
