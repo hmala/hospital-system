@@ -974,83 +974,104 @@
 
 <div class="modal fade" id="treatmentModal-{{ $emergency->id }}" tabindex="-1" aria-labelledby="treatmentModalLabel-{{ $emergency->id }}" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title" id="treatmentModalLabel-{{ $emergency->id }}">
-                    <i class="fas fa-pills me-2"></i>
-                    إضافة علاج لحالة الطوارئ #{{ $emergency->id }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-danger text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-white text-danger p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="fas fa-ambulance"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="treatmentModalLabel-{{ $emergency->id }}">
+                            طلب وصرف علاج طوارئ فوري (STAT Order)
+                        </h5>
+                        <small class="opacity-75">حالة طوارئ #{{ $emergency->id }} | المريض: {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض طوارئ' }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
-            <form method="POST" action="{{ route('emergency.treatments.store', $emergency) }}">
+            <form method="POST" action="{{ route('emergency.treatments.store', $emergency) }}" class="emergency-treatment-form">
                 @csrf
-                <div class="modal-body">
+                <div class="modal-body p-3 p-md-4">
+                    <div class="alert alert-danger-subtle border border-danger-subtle rounded-3 p-3 mb-3 d-flex align-items-center gap-3">
+                        <i class="fas fa-bolt text-danger fs-3"></i>
+                        <div class="small text-dark">
+                            <strong>أولوية قصوى (STAT Order):</strong> سيتم إرسال الأدوية والمحاليل المطلوبة مباشرة إلى شاشة الصيدلية المركزية بنظام الأولوية القصوى لتجهيزها وصرفها فوراً للقسم.
+                        </div>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 140px;">نوع العلاج</th>
-                                    <th>اسم الدواء / العلاج</th>
-                                    <th style="width: 120px;">المرات يومياً</th>
-                                    <th style="width: 140px;">الحالة</th>
-                                    <th style="width: 140px;">تاريخ البدء</th>
-                                    <th style="width: 140px;">تاريخ الانتهاء</th>
-                                    <th style="width: 70px;"></th>
+                                    <th style="width: 130px;">نوع العلاج</th>
+                                    <th>اسم الدواء / المحلول / الإجراء</th>
+                                    <th style="width: 90px;">الكمية</th>
+                                    <th style="width: 110px;">الوحدة</th>
+                                    <th style="width: 170px;">الجرعة / التكرار</th>
+                                    <th style="width: 160px;">طريقة الإعطاء</th>
+                                    <th style="width: 50px;" class="text-center"></th>
                                 </tr>
                             </thead>
                             <tbody id="treatment-rows-{{ $emergency->id }}">
                                 <tr class="treatment-row">
                                     <td>
-                                        <select name="treatments[0][treatment_type]" class="form-select" required>
-                                            <option value="">اختر النوع</option>
-                                            <option value="medication">دوائي</option>
-                                            <option value="injection">إبرة</option>
-                                            <option value="drip">محلول</option>
-                                            <option value="oxygen">أكسجين</option>
-                                            <option value="other">أخرى</option>
+                                        <select name="treatments[0][treatment_type]" class="form-select form-select-sm" required>
+                                            <option value="medication">💊 دوائي</option>
+                                            <option value="injection">💉 إبرة / حقنة</option>
+                                            <option value="drip">🧪 محلول وريدي</option>
+                                            <option value="oxygen">🫁 أكسجين</option>
+                                            <option value="other">📋 أخرى</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <textarea name="treatments[0][description]" class="form-control" rows="2" placeholder="اسم الدواء أو العلاج..." required></textarea>
-                                        <input type="hidden" name="treatments[0][notes]" value="">
+                                        <input type="text" 
+                                               name="treatments[0][description]" 
+                                               class="form-control form-control-sm treatment-med-input" 
+                                               list="officialEmergencyMedsList" 
+                                               placeholder="ابحث بالاسم التجاري أو العلمي..." 
+                                               required 
+                                               autocomplete="off">
+                                        <input type="hidden" name="treatments[0][medicine_id]" class="treatment-med-id">
                                     </td>
                                     <td>
-                                        <input type="number" name="treatments[0][frequency_per_day]" class="form-control" min="1" max="24" placeholder="عدد المرات" aria-label="عدد المرات يومياً">
+                                        <input type="number" name="treatments[0][quantity]" class="form-control form-control-sm text-center" min="1" value="1" step="1">
                                     </td>
                                     <td>
-                                        <select name="treatments[0][status]" class="form-select" required>
-                                            <option value="planned">مخطط</option>
-                                            <option value="in_progress">قيد التنفيذ</option>
-                                            <option value="completed">مكتمل</option>
-                                            <option value="cancelled">ملغي</option>
+                                        <select name="treatments[0][unit_type]" class="form-select form-select-sm">
+                                            <option value="main_unit">علبة / فيال</option>
+                                            <option value="sub_unit">شريط / أمبولة</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <input type="date" name="treatments[0][started_at]" class="form-control">
+                                        <input type="text" name="treatments[0][dosage_frequency]" class="form-control form-control-sm" placeholder="مثال: فوري STAT / 1x3" value="جرعة فورية STAT">
                                     </td>
                                     <td>
-                                        <input type="date" name="treatments[0][completed_at]" class="form-control">
+                                        <input type="text" name="treatments[0][instructions]" class="form-control form-control-sm" placeholder="مثال: تسريب وريدي بطيء / عضلي" value="إعطاء فوري في الطوارئ">
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row" aria-label="حذف">
-                                            <i class="fas fa-trash"></i>
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row p-1" title="حذف">
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
                     <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button type="button" class="btn btn-outline-primary btn-sm add-treatment-row" data-emergency-id="{{ $emergency->id }}">
+                        <button type="button" class="btn btn-outline-danger btn-sm add-treatment-row fw-bold rounded-2 px-3" data-emergency-id="{{ $emergency->id }}">
                             <i class="fas fa-plus me-1"></i>
-                            إضافة علاج
+                            إضافة صنف / علاج آخر
                         </button>
-                        <small class="text-muted">أضف علاجاً واحداً أو أكثر ثم احفظ.</small>
+                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>يمكنك إضافة عدة أدوية ومحاليل في نفس الطلب.</small>
                     </div>
                 </div>
-                <div class="modal-footer gap-2">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-warning">حفظ العلاجات</button>
+                <div class="modal-footer bg-light gap-2 py-2">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm d-flex align-items-center gap-2">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>إرسال طلب الصرف الفوري للصيدلية (STAT)</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -1355,62 +1376,123 @@
     @endif
     <div class="modal fade" id="treatmentResultsModal-{{ $emergency->id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title">
-                        <i class="fas fa-pills me-2"></i>
-                        العلاجات المسجلة - حالة طوارئ #{{ $emergency->id }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-dark text-white py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary text-white p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">
+                                العلاجات والأدوية - حالة طوارئ #{{ $emergency->id }}
+                            </h5>
+                            <small class="text-white-50">المريض: {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض طوارئ' }}</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-3 p-md-4">
+                    {{-- 1. بطاقات الوصفات الإلكترونية وطلبات الصرف من الصيدلية --}}
+                    @if($emergency->prescriptions && $emergency->prescriptions->count())
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary mb-2 d-flex align-items-center gap-2">
+                                <i class="fas fa-prescription-bottle-alt"></i>
+                                <span>طلبات الصرف من الصيدلية (E-Prescriptions):</span>
+                            </h6>
+                            @foreach($emergency->prescriptions as $rx)
+                                <div class="card border border-primary-subtle shadow-xs rounded-3 mb-2">
+                                    <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary font-monospace">{{ $rx->prescription_number }}</span>
+                                            <small class="text-muted">{{ $rx->created_at->format('Y-m-d H:i') }}</small>
+                                        </div>
+                                        <div>
+                                            @if($rx->status === 'dispensed')
+                                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> تم الصرف من الصيدلية ✅</span>
+                                            @elseif($rx->status === 'partially_dispensed')
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i> صرف جزئي ⚠️</span>
+                                            @elseif($rx->status === 'out_of_stock')
+                                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> غير متوفر بالصيدلية ❌</span>
+                                            @else
+                                                <span class="badge bg-secondary"><i class="fas fa-hourglass-half me-1"></i> بانتظار الصرف في الصيدلية ⏳</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-2 px-3">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach($rx->items as $rxItem)
+                                                <span class="badge bg-white text-dark border p-2 shadow-xs">
+                                                    <i class="fas fa-capsules text-primary me-1"></i>
+                                                    <strong>{{ $rxItem->medicine?->name ?? $rxItem->medicine_name }}</strong>
+                                                    <span class="text-muted">({{ $rxItem->quantity }} {{ $rxItem->unit_type === 'sub_unit' ? 'شريط' : 'علبة' }})</span>
+                                                    @if($rxItem->status === 'dispensed')
+                                                        <span class="badge bg-success ms-1">مصروف ✅</span>
+                                                    @elseif($rxItem->status === 'out_of_stock')
+                                                        <span class="badge bg-danger ms-1">غير متوفر ❌</span>
+                                                    @endif
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    {{-- 2. جدول العلاجات والإجراءات المسجلة --}}
                     @php
                         $treatmentTypes = [
-                            'medication' => 'دوائي',
-                            'injection' => 'إبرة',
-                            'drip' => 'محلول',
-                            'oxygen' => 'أكسجين',
-                            'other' => 'أخرى',
+                            'medication' => '💊 دوائي',
+                            'injection' => '💉 إبرة / حقنة',
+                            'drip' => '🧪 محلول وريدي',
+                            'oxygen' => '🫁 أكسجين',
+                            'other' => '📋 أخرى',
                         ];
                         $statusLabels = [
-                            'planned' => 'مخطط',
-                            'in_progress' => 'قيد التنفيذ',
-                            'completed' => 'مكتمل',
-                            'cancelled' => 'ملغي',
+                            'planned' => '<span class="badge bg-secondary">مخطط</span>',
+                            'in_progress' => '<span class="badge bg-warning text-dark">قيد الإعطاء</span>',
+                            'completed' => '<span class="badge bg-success">مكتمل / مصروف ✅</span>',
+                            'cancelled' => '<span class="badge bg-danger">ملغي</span>',
                         ];
                     @endphp
+                    <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                        <i class="fas fa-list-check text-secondary"></i>
+                        <span>سجل العلاجات والإجراءات التمريضية:</span>
+                    </h6>
                     @if($emergency->treatments->count())
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped mb-0">
+                            <table class="table table-bordered table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width: 140px;">نوع العلاج</th>
+                                        <th style="width: 130px;">النوع</th>
                                         <th>اسم الدواء / العلاج</th>
-                                        <th style="width: 120px;">المرات يومياً</th>
-                                        <th style="width: 140px;">الحالة</th>
-                                        <th style="width: 140px;">تاريخ البدء</th>
-                                        <th style="width: 140px;">تاريخ الانتهاء</th>
+                                        <th style="width: 120px;">التكرار</th>
+                                        <th style="width: 120px;" class="text-center">الحالة</th>
+                                        <th style="width: 130px;">الوقت</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($emergency->treatments as $treatment)
                                         <tr>
                                             <td>{{ $treatmentTypes[$treatment->treatment_type] ?? $treatment->treatment_type }}</td>
-                                            <td>{{ $treatment->description }}</td>
-                                            <td>{{ $treatment->frequency_per_day ? $treatment->frequency_per_day . ' مرة' : '-' }}</td>
-                                            <td>{{ $statusLabels[$treatment->status] ?? $treatment->status }}</td>
-                                            <td>{{ optional($treatment->started_at)->format('d/m/Y') ?? '-' }}</td>
-                                            <td>{{ optional($treatment->completed_at)->format('d/m/Y') ?? '-' }}</td>
+                                            <td class="fw-semibold text-dark">{{ $treatment->description }}</td>
+                                            <td class="small">{{ $treatment->frequency_per_day ? $treatment->frequency_per_day . ' مرة يومياً' : '-' }}</td>
+                                            <td class="text-center">{!! $statusLabels[$treatment->status] ?? $treatment->status !!}</td>
+                                            <td class="small text-muted">{{ optional($treatment->started_at ?? $treatment->created_at)->format('d/m/Y H:i') ?? '-' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
                     @else
-                        <div class="alert alert-light border text-muted mb-0">
-                            لا يوجد أي علاج مسجل بعد لهذه الحالة.
+                        <div class="alert alert-light border text-muted mb-0 text-center py-4">
+                            <i class="fas fa-pills fa-2x mb-2 opacity-50"></i>
+                            <p class="mb-0">لا يوجد أي علاج أو دواء مسجل لهذه الحالة بعد.</p>
                         </div>
                     @endif
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">إغلاق</button>
                 </div>
             </div>
         </div>
@@ -1491,43 +1573,57 @@ document.addEventListener('click', function(event) {
     </div>
 </template>
 
+{{-- قائمة الأدوية الرسمية للإكمال التلقائي الفوري --}}
+<datalist id="officialEmergencyMedsList">
+    @if(isset($officialMedicines) && $officialMedicines->count())
+        @foreach($officialMedicines as $med)
+            <option value="{{ $med->name }}" data-id="{{ $med->id }}">
+                {{ $med->name }} {{ $med->dosage_form ? "({$med->dosage_form})" : '' }} {{ $med->strength ? "- {$med->strength}" : '' }} {{ $med->generic_name ? "[$med->generic_name]" : '' }}
+            </option>
+        @endforeach
+    @endif
+</datalist>
+
 @foreach($emergencies as $emergency)
 <template id="treatment-row-template-{{ $emergency->id }}">
     <tr class="treatment-row">
         <td>
-            <select data-name="treatments[__index__][treatment_type]" class="form-select" required>
-                <option value="">اختر النوع</option>
-                <option value="medication">دوائي</option>
-                <option value="injection">إبرة</option>
-                <option value="drip">محلول</option>
-                <option value="oxygen">أكسجين</option>
-                <option value="other">أخرى</option>
+            <select data-name="treatments[__index__][treatment_type]" class="form-select form-select-sm" required>
+                <option value="medication">💊 دوائي</option>
+                <option value="injection">💉 إبرة / حقنة</option>
+                <option value="drip">🧪 محلول وريدي</option>
+                <option value="oxygen">🫁 أكسجين</option>
+                <option value="other">📋 أخرى</option>
             </select>
         </td>
         <td>
-            <textarea data-name="treatments[__index__][description]" class="form-control" rows="2" placeholder="اسم الدواء أو العلاج..." required></textarea>
-            <input type="hidden" data-name="treatments[__index__][notes]" value="">
+            <input type="text" 
+                   data-name="treatments[__index__][description]" 
+                   class="form-control form-control-sm treatment-med-input" 
+                   list="officialEmergencyMedsList" 
+                   placeholder="ابحث بالاسم التجاري أو العلمي..." 
+                   required 
+                   autocomplete="off">
+            <input type="hidden" data-name="treatments[__index__][medicine_id]" class="treatment-med-id">
         </td>
         <td>
-            <input type="number" data-name="treatments[__index__][frequency_per_day]" class="form-control" min="1" max="24" placeholder="عدد المرات" aria-label="عدد المرات يومياً">
+            <input type="number" data-name="treatments[__index__][quantity]" class="form-control form-control-sm text-center" min="1" value="1" step="1">
         </td>
         <td>
-            <select data-name="treatments[__index__][status]" class="form-select" required>
-                <option value="planned">مخطط</option>
-                <option value="in_progress">قيد التنفيذ</option>
-                <option value="completed">مكتمل</option>
-                <option value="cancelled">ملغي</option>
+            <select data-name="treatments[__index__][unit_type]" class="form-select form-select-sm">
+                <option value="main_unit">علبة / فيال</option>
+                <option value="sub_unit">شريط / أمبولة</option>
             </select>
         </td>
         <td>
-            <input type="date" data-name="treatments[__index__][started_at]" class="form-control">
+            <input type="text" data-name="treatments[__index__][dosage_frequency]" class="form-control form-control-sm" placeholder="مثال: فوري STAT / 1x3" value="جرعة فورية STAT">
         </td>
         <td>
-            <input type="date" data-name="treatments[__index__][completed_at]" class="form-control">
+            <input type="text" data-name="treatments[__index__][instructions]" class="form-control form-control-sm" placeholder="مثال: تسريب وريدي بطيء / عضلي" value="إعطاء فوري في الطوارئ">
         </td>
         <td class="text-center">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row" aria-label="حذف">
-                <i class="fas fa-trash"></i>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-treatment-row p-1" title="حذف">
+                <i class="fas fa-trash-alt"></i>
             </button>
         </td>
     </tr>

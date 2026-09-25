@@ -755,24 +755,28 @@
             }
 
             html += `
-                <tr onclick="openDispensingModal(${rx.id})">
+                <tr onclick="openDispensingModal(${rx.id})" class="${rx.is_emergency ? 'table-danger-subtle' : ''}">
                     <td class="font-monospace fw-bold text-primary">
-                        <span class="fs-6 d-block">${rx.prescription_number}</span>
+                        <span class="fs-6 d-block">
+                            ${rx.prescription_number}
+                            ${rx.is_emergency ? '<span class="badge bg-danger text-white ms-1"><i class="fas fa-ambulance me-1"></i> طوارئ STAT</span>' : ''}
+                        </span>
                         <small class="text-muted font-monospace">#${rx.id}</small>
                     </td>
                     <td>
-                        <span class="sla-badge ${slaClass}">
-                            <i class="far fa-clock"></i> ${slaText}
+                        <span class="sla-badge ${rx.is_emergency ? 'sla-red fw-bold' : slaClass}">
+                            <i class="${rx.is_emergency ? 'fas fa-bolt' : 'far fa-clock'}"></i> ${rx.is_emergency ? 'عاجل طوارئ' : slaText}
                         </span>
                     </td>
                     <td>
                         <div class="fw-bold text-dark fs-6">
-                            <i class="fas fa-user text-secondary me-1"></i>${rx.patient_name}
+                            <i class="fas fa-user ${rx.is_emergency ? 'text-danger' : 'text-secondary'} me-1"></i>${rx.patient_name}
+                            ${rx.emergency_room ? `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-bed me-1 text-muted"></i>${rx.emergency_room}</span>` : ''}
                         </div>
                     </td>
                     <td>
                         <div class="fw-semibold text-dark small">
-                            <i class="fas fa-user-md text-info me-1"></i>${rx.doctor_name}
+                            <i class="fas fa-user-md ${rx.is_emergency ? 'text-danger' : 'text-info'} me-1"></i>${rx.doctor_name}
                         </div>
                     </td>
                     <td>
@@ -865,20 +869,28 @@
         } else {
             actionButtonHtml = `
                 <div class="d-flex gap-1 mt-3 pt-2 border-top">
-                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-tasks"></i> ⚡ فحص وتجهيز الصرف
+                    <button type="button" class="btn btn-${rx.is_emergency ? 'danger' : 'primary'} btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
+                        <i class="fas fa-tasks"></i> ${rx.is_emergency ? '🚨 تجهيز طوارئ فوري' : '⚡ فحص وتجهيز الصرف'}
                     </button>
                 </div>`;
         }
 
+        const emergencyBanner = rx.is_emergency ? `
+            <div class="badge bg-danger text-white mb-2 py-1 px-2 w-100 text-center fw-bold shadow-xs d-flex align-items-center justify-content-between">
+                <span><i class="fas fa-ambulance me-1"></i> طلب طوارئ STAT</span>
+                ${rx.emergency_room ? `<span class="badge bg-white text-danger">${rx.emergency_room}</span>` : ''}
+            </div>
+        ` : '';
+
         return `
-            <div class="kanban-card card-${type}" 
+            <div class="kanban-card card-${type} ${rx.is_emergency ? 'border-2 border-danger' : ''}" 
                  data-id="${rx.id}" 
                  data-rx-number="${rx.prescription_number}"
                  data-patient-name="${rx.patient_name}"
                  onclick="openDispensingModal(${rx.id})">
+                ${emergencyBanner}
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="badge ${type === 'ready' ? 'bg-success' : (type === 'pending' ? 'bg-warning text-dark' : 'bg-primary-subtle text-primary')} font-monospace fw-bold px-2 py-1">
+                    <span class="badge ${type === 'ready' ? 'bg-success' : (type === 'pending' ? 'bg-warning text-dark' : (rx.is_emergency ? 'bg-danger text-white' : 'bg-primary-subtle text-primary'))} font-monospace fw-bold px-2 py-1">
                         <i class="fas fa-hashtag me-1"></i>${rx.prescription_number}
                     </span>
                     <span class="badge bg-light text-muted border font-monospace small">
@@ -886,7 +898,7 @@
                     </span>
                 </div>
                 <div class="fw-bold text-dark fs-6 mb-1">
-                    <i class="fas fa-user-injured text-secondary me-1"></i>${rx.patient_name}
+                    <i class="fas fa-user-injured ${rx.is_emergency ? 'text-danger' : 'text-secondary'} me-1"></i>${rx.patient_name}
                 </div>
                 <div class="small text-muted mb-2">
                     <i class="fas fa-user-md text-info me-1"></i>${rx.doctor_name}

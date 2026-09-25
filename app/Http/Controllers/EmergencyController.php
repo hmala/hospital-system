@@ -46,6 +46,8 @@ class EmergencyController extends Controller
             'labRequests.labTests',
             'radiologyRequests.radiologyTypes',
             'treatments',
+            'prescriptions.items.medicine',
+            'latestPrescription.items.medicine',
             'latestSurgery.room',
             'latestBedReservation.room',
             'vitalSignReadings' => function($query) {
@@ -127,7 +129,12 @@ class EmergencyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'icd10Codes', 'stats', 'filter', 'date'));
+        $officialMedicines = \App\Models\Medicine::where('is_active', true)
+            ->select('id', 'name', 'generic_name', 'dosage_form', 'strength', 'main_unit', 'sub_unit')
+            ->orderBy('name')
+            ->get();
+
+        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'icd10Codes', 'stats', 'filter', 'date', 'officialMedicines'));
     }
 
     /**
@@ -462,47 +469,7 @@ class EmergencyController extends Controller
         return redirect()->route('emergency.index')->with('success', 'تم تحديث المعلومات الطبية بنجاح');
     }
 
-    /**
-     * حفظ علاج جديد لحالة الطوارئ
-     */
-    public function storeTreatment(Request $request, Emergency $emergency)
-    {
-        $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
-            abort(403, 'غير مصرح لك بتسجيل علاج الطوارئ');
-        }
 
-        $validated = $request->validate([
-            'treatments' => 'required|array|min:1',
-            'treatments.*.treatment_type' => 'required|in:medication,injection,drip,oxygen,other',
-            'treatments.*.description' => 'required|string|max:1000',
-            'treatments.*.notes' => 'nullable|string|max:1000',
-            'treatments.*.frequency_per_day' => 'nullable|integer|min:1|max:24',
-            'treatments.*.status' => 'required|in:planned,in_progress,completed,cancelled',
-            'treatments.*.started_at' => 'nullable|date',
-            'treatments.*.completed_at' => 'nullable|date|after_or_equal:started_at',
-        ]);
-
-        foreach ($validated['treatments'] as $treatmentData) {
-            EmergencyTreatment::create([
-                'emergency_id' => $emergency->id,
-                'created_by' => $user->id,
-                'treatment_type' => $treatmentData['treatment_type'],
-                'description' => $treatmentData['description'],
-                'notes' => $treatmentData['notes'] ?? null,
-                'frequency_per_day' => $treatmentData['frequency_per_day'] ?? null,
-                'status' => $treatmentData['status'],
-                'started_at' => $treatmentData['started_at'] ?? null,
-                'completed_at' => $treatmentData['completed_at'] ?? null,
-            ]);
-        }
-
-        if (!$emergency->treatment_given && !empty($validated['treatments'][0]['description'])) {
-            $emergency->update(['treatment_given' => $validated['treatments'][0]['description']]);
-        }
-
-        return redirect()->route('emergency.index')->with('success', 'تم إضافة علاج الطوارئ بنجاح');
-    }
 
     /**
      * عرض لوحة تحكم الطوارئ
@@ -614,6 +581,136 @@ class EmergencyController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'تم إنهاء علاج الحالة بنجاح');
+    }
+
+    /**
+     * حفظ طلبات وعلاجات الطوارئ وتوليد وصفة إلكترونية فورية (STAT Emergency Prescription) للصيدلية
+     */
+    public function storeTreatment(Request $request, Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بإضافة علاجات الطوارئ');
+        }
+
+        $request->validate([
+            'treatments' => 'required|array|min:1',
+            'treatments.*.description' => 'required|string|max:255',
+            'treatments.*.treatment_type' => 'nullable|in:medication,injection,drip,oxygen,other',
+            'treatments.*.medicine_id' => 'nullable|exists:medicines,id',
+            'treatments.*.quantity' => 'nullable|numeric|min:0.1',
+            'treatments.*.unit_type' => 'nullable|in:main_unit,sub_unit',
+            'treatments.*.frequency_per_day' => 'nullable|integer|min:1|max:24',
+            'treatments.*.dosage_frequency' => 'nullable|string|max:100',
+            'treatments.*.instructions' => 'nullable|string|max:255',
+            'treatments.*.status' => 'nullable|in:planned,in_progress,completed,cancelled',
+            'treatments.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $createdTreatments = [];
+            $prescriptionItemsData = [];
+
+            foreach ($request->treatments as $trData) {
+                if (empty($trData['description'])) {
+                    continue;
+                }
+
+                $rawTreatmentType = $trData['treatment_type'] ?? 'medication';
+                $dbTreatmentType = match ($rawTreatmentType) {
+                    'medication', 'injection', 'drip', 'oxygen' => $rawTreatmentType,
+                    default => 'other',
+                };
+                $treatmentStatus = $trData['status'] ?? 'in_progress';
+                $qty = (float)($trData['quantity'] ?? 1);
+                $unitType = $trData['unit_type'] ?? 'main_unit';
+                $dosageFreq = !empty($trData['dosage_frequency']) 
+                    ? $trData['dosage_frequency'] 
+                    : (!empty($trData['frequency_per_day']) ? ($trData['frequency_per_day'] . ' مرات يومياً') : 'جرعة طوارئ فورية STAT');
+                $instructions = $trData['instructions'] ?? 'إعطاء فوري في قسم الطوارئ';
+                $medicineId = !empty($trData['medicine_id']) ? $trData['medicine_id'] : null;
+
+                // إذا لم يتم تمرير medicine_id ولكن تم كتابة اسم دواء، نحاول مطابقته
+                if (!$medicineId && in_array($rawTreatmentType, ['medication', 'injection', 'drip'])) {
+                    $matchedMed = \App\Models\Medicine::where('name', $trData['description'])
+                        ->orWhere('generic_name', $trData['description'])
+                        ->first();
+                    if ($matchedMed) {
+                        $medicineId = $matchedMed->id;
+                    }
+                }
+
+                // 1. تسجيل العلاج في جدول علاجات الطوارئ
+                $treatment = EmergencyTreatment::create([
+                    'emergency_id' => $emergency->id,
+                    'doctor_id' => $emergency->doctor_id,
+                    'nurse_id' => $emergency->nurse_id ?? ($user->hasRole('nurse') ? $user->id : null),
+                    'created_by' => $user->id,
+                    'treatment_type' => $dbTreatmentType,
+                    'description' => $trData['description'],
+                    'frequency_per_day' => (int)($trData['frequency_per_day'] ?? 1),
+                    'status' => $treatmentStatus,
+                    'started_at' => now(),
+                    'notes' => $trData['notes'] ?? null,
+                ]);
+                $createdTreatments[] = $treatment;
+
+                // 2. إذا كان علاجاً دوائياً أو حقنة أو محلولاً، نجمعه لتوليد طلب صرف فوري للصيدلية
+                if (in_array($rawTreatmentType, ['medication', 'injection', 'drip'])) {
+                    $prescriptionItemsData[] = [
+                        'medicine_id' => $medicineId,
+                        'medicine_name' => $trData['description'],
+                        'quantity' => $qty > 0 ? $qty : 1,
+                        'unit_type' => $unitType,
+                        'dosage_frequency' => $dosageFreq,
+                        'instructions' => $instructions,
+                        'status' => 'pending',
+                    ];
+                }
+            }
+
+            // 3. إنشاء أو تحديث الوصفة الطبية الإلكترونية لحالة الطوارئ
+            $prescription = null;
+            if (!empty($prescriptionItemsData)) {
+                $prescription = \App\Models\Prescription::create([
+                    'patient_id' => $emergency->patient_id,
+                    'doctor_id' => $emergency->doctor_id,
+                    'emergency_id' => $emergency->id,
+                    'status' => 'pending',
+                    'diagnosis' => $emergency->diagnosis ?? $emergency->chief_complaint ?? 'حالة طوارئ عاجلة',
+                    'notes' => '🚨 طلب أدوية ومحاليل طوارئ عاجلة (STAT Emergency Order)',
+                ]);
+
+                foreach ($prescriptionItemsData as $itemData) {
+                    $prescription->items()->create($itemData);
+                }
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'تم حفظ علاج الطوارئ وإرسال طلب الصرف الفوري (STAT) للصيدلية بنجاح 🚨',
+                    'prescription_number' => $prescription?->prescription_number,
+                    'prescription_id' => $prescription?->id,
+                    'treatments_count' => count($createdTreatments),
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'تم حفظ علاجات الطوارئ وإرسال طلب الصرف الفوري للصيدلية بنجاح 🚨');
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'حدث خطأ أثناء حفظ العلاج: ' . $e->getMessage()
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ العلاج: ' . $e->getMessage());
+        }
     }
 
     /**

@@ -59,6 +59,31 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-25 — ربط قسم الطوارئ بالصيدلية وتوليد طلبات الصرف العاجلة STAT وتحديث العلاج المباشر)
+
+### Done
+- **قاعدة البيانات ونماذج طلبات أدوية الطوارئ (Emergency Prescriptions Integration)**:
+  * إنشاء ميغريشن `2026_09_25_180000_make_patient_id_nullable_in_prescriptions_table.php` لدعم وصفات الطوارئ للحالات المؤقتة والمسجلة مباشرة برقم الطوارئ (`emergency_id`).
+  * تحديث [Emergency.php](file:///c:/wamp64/www/hospital-system/app/Models/Emergency.php) بربط علاقات الوصفات `prescriptions()` و `latestPrescription()`.
+  * حماية وتحديث [Hospital.php](file:///c:/wamp64/www/hospital-system/app/Models/Hospital.php) بـ `$guarded = []`.
+- **متحكم الطوارئ وتوليد طلبات الأدوية العاجلة (STAT Emergency Orders)**:
+  * تحديث [EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php):
+    - إضافة دالة `storeTreatment` لحفظ علاجات الطوارئ (أدوية، حقن، محاليل وريدية، أكسجين) وتوليد وصفة إلكترونية فورية عاجلة (🚨 STAT Emergency Prescription) ترسل لحظياً لصيدلية المستشفى.
+    - تمرير قائمة دليل الأدوية الرسمي `$officialMedicines` لواجهة الطوارئ لدعم الإكمال التلقائي الفوري للأدوية.
+    - مطابقة قيم أنواع العلاج مع قاعدة البيانات (`medication`, `injection`, `drip`, `oxygen`, `other`).
+- **نقطة بيع الصيدلية واستقبال وصرف وصفات الطوارئ (Pharmacy POS & STAT Dispensing)**:
+  * تحديث [PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php):
+    - إعطاء أولوية قصوى لطلبات الطوارئ (`🚨 STAT`) في قائمة الانتظار وفي شاشة كانبان الصيدلية (`CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END`).
+    - تضمين اسم مريض الطوارئ ورقم السرير/الغرفة في تفاصيل الوصفة.
+    - عند صرف الوصفة من الصيدلية (`dispensePrescription`)، يتم تحديث سجلات علاج الطوارئ المرتبطة بها تلقائياً إلى حالة "مكتمل / مصروف" (`completed`).
+- **الواجهات التفاعلية (Emergency & Pharmacy UI)**:
+  * تطوير نافذة علاج الطوارئ `#treatmentModal` في [emergency/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/index.blade.php) لتوفير إدخال سريع للأدوية والمحاليل مع دعم الإكمال التلقائي والكميات والجرعات.
+  * تطوير نافذة تفاصيل العلاجات `#treatmentResultsModal` لعرض شارات تتبع صرف أدوية الوصفة الحية وسجل العلاجات السريرية.
+  * إبراز بطاقات وصفوف وصفات الطوارئ بشارات مميزة (`🚨 طوارئ (STAT)`) في شاشة الصيدلية [pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات التكامل [EmergencyPharmacyIntegrationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyPharmacyIntegrationTest.php) بنجاح 100%: **3 passed (18 assertions)**.
+  * التحقق من سلامة كافة اختبارات الوصفات والصيدلية القائمة (`PrescriptionWorkflowTest` & `PharmacyPosTest`).
+
 ## Session log (2026-09-24 — منظومة الوصفات الطبية الإلكترونية المدمجة E-Prescription وصرف الصيدلية الفوري)
 
 ### Done

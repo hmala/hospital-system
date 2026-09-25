@@ -118,6 +118,16 @@ class Emergency extends Model
         return $this->hasOne(EmergencyVitalSign::class)->latestOfMany();
     }
 
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(\App\Models\Prescription::class)->latest();
+    }
+
+    public function latestPrescription(): HasOne
+    {
+        return $this->hasOne(\App\Models\Prescription::class)->latestOfMany();
+    }
+
     public function appointments(): HasMany
     {
         return $this->hasMany(\App\Models\Appointment::class);
