@@ -1604,6 +1604,31 @@ window.handleEmergencyMedSelect = function(selectElem) {
     }
 };
 
+window.initEmergencySelect2 = function(context) {
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        const $context = context ? $(context) : $(document);
+        const $targets = $context.hasClass('emergency-med-select') ? $context : $context.find('.emergency-med-select');
+        
+        $targets.each(function() {
+            const $this = $(this);
+            if (!$this.hasClass('select2-hidden-accessible')) {
+                const parentModal = $this.closest('.modal');
+                $this.select2({
+                    placeholder: '-- ابحث بالاسم التجاري أو العلمي --',
+                    width: '100%',
+                    dir: 'rtl',
+                    allowClear: true,
+                    dropdownParent: parentModal.length ? parentModal : $(document.body)
+                }).on('select2:select', function () {
+                    window.handleEmergencyMedSelect(this);
+                }).on('select2:clear', function() {
+                    window.handleEmergencyMedSelect(this);
+                });
+            }
+        });
+    }
+};
+
 window.addEmergencyMedicationCard = function(emergencyId) {
     const container = document.getElementById(`medicationsContainer-${emergencyId}`);
     if (!container) return;
@@ -1702,7 +1727,11 @@ window.addEmergencyMedicationCard = function(emergencyId) {
 
     const temp = document.createElement('div');
     temp.innerHTML = cardHtml.trim();
-    container.appendChild(temp.firstChild);
+    const newCard = temp.firstChild;
+    container.appendChild(newCard);
+
+    // Initialize Select2 on the newly created card
+    window.initEmergencySelect2(newCard);
 };
 
 window.removeEmergencyMedicationCard = function(btn) {
@@ -1710,6 +1739,12 @@ window.removeEmergencyMedicationCard = function(btn) {
     if (!card) return;
     const container = card.closest('[id^="medicationsContainer-"]');
     if (container && container.querySelectorAll('.medication-item').length > 1) {
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            const $s = $(card).find('.emergency-med-select');
+            if ($s.length && $s.hasClass('select2-hidden-accessible')) {
+                $s.select2('destroy');
+            }
+        }
         card.remove();
     } else {
         card.querySelectorAll('input, select').forEach(field => {
@@ -1721,8 +1756,20 @@ window.removeEmergencyMedicationCard = function(btn) {
                 field.value = '';
             }
         });
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $(card).find('.emergency-med-select').val('').trigger('change');
+        }
     }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    // When any treatment modal is opened, initialize Select2 properly with modal as parent
+    if (typeof $ !== 'undefined') {
+        $(document).on('shown.bs.modal', '[id^="treatmentModal-"]', function () {
+            window.initEmergencySelect2(this);
+        });
+    }
+});
 
 document.addEventListener('change', function(e) {
     if (e.target && e.target.matches('.frequency-selector input[type="radio"]')) {
@@ -1781,6 +1828,27 @@ document.addEventListener('click', function(event) {
 </template>
 
 <style>
+.select2-container {
+    z-index: 1060 !important;
+}
+.select2-dropdown {
+    z-index: 1065 !important;
+}
+.select2-container--default .select2-selection--single {
+    height: 38px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px !important;
+    padding-right: 12px !important;
+    font-weight: 500 !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
 .medical-modal {
     border: 0;
     overflow: hidden;
