@@ -294,10 +294,10 @@ class AppointmentController extends Controller
             'cancellation_reason' => 'nullable|string|max:500'
         ]);
 
-        // التحقق من أن الموعد لم يتم تحويله إلى زيارة
-        if ($appointment->visit) {
+        // التحقق من أن الموعد لم تكتمل زيارته
+        if ($appointment->visit && ($appointment->visit->status === 'completed' || $appointment->visit->is_completed)) {
             return redirect()->back()
-                ->with('error', 'لا يمكن إلغاء موعد تم تحويله إلى زيارة بالفعل');
+                ->with('error', 'لا يمكن إلغاء موعد تم إكمال كشفه وزيارته بالفعل');
         }
 
         $appointment->cancel($request->cancellation_reason ?: 'تم الإلغاء من قبل المستخدم');

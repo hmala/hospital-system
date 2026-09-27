@@ -156,10 +156,32 @@
                             }
                         }
 
-                        // 1. تفاصيل الموعد
+                        // 1. تفاصيل الموعد أو الخدمة
                         if ($payment->appointment) {
-                            $consultFee = $payment->appointment->consultation_fee ?? 0;
-                            $lineItems[] = ['الخدمة' => 'رسوم كشف العيادة الاستشارية', 'السعر' => $consultFee];
+                            $consultFee = $payment->appointment->consultation_fee ?? ($payment->total_amount ?: $payment->amount);
+                            $serviceTitle = 'رسوم كشف العيادة الاستشارية';
+                            
+                            $scanType = null;
+                            if ($payment->appointment->visit) {
+                                $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
+                                if ($medReq) {
+                                    $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                                    $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                                    if ($radTypeId) {
+                                        $scanType = \App\Models\RadiologyType::find($radTypeId);
+                                    }
+                                }
+                            }
+
+                            if ($scanType) {
+                                $serviceTitle = 'فحص سونار: ' . $scanType->name . ($scanType->code ? ' (' . $scanType->code . ')' : '');
+                            } elseif (preg_match('/دفع رسوم\s+(.+)/u', $payment->description, $m) && !str_contains($m[1], 'موعد #')) {
+                                $serviceTitle = trim($m[1]);
+                            } elseif (!empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
+                                $serviceTitle = $payment->appointment->reason;
+                            }
+
+                            $lineItems[] = ['الخدمة' => $serviceTitle, 'السعر' => $consultFee];
                         }
 
                         // 2. طلبات طبية (تحاليل، أشعة، صيدلية، طوارئ)
@@ -325,6 +347,10 @@
                             <div class="col-md-6 mb-2">
                                 <small class="text-muted">القسم:</small>
                                 <div class="fw-bold">{{ $payment->appointment->department->name }}</div>
+                            </div>
+                            <div class="col-12 mb-2">
+                                <small class="text-muted">الخدمة / الفحص المطلوب:</small>
+                                <div class="fw-bold text-primary">{{ $serviceTitle ?? ($payment->appointment->reason ?? 'كشف طبي عام') }}</div>
                             </div>
                         </div>
                     </div>

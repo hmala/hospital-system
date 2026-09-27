@@ -434,14 +434,41 @@
                                     
                                     <!-- حقول خاصة بالسونار -->
                                     <div class="col-12 mb-3" id="ultrasoundDetailsContainer" style="display: none;">
-                                        <div class="card border-primary">
-                                            <div class="card-header bg-primary text-white">
-                                                <i class="fas fa-baby me-2"></i>تفاصيل السونار
+                                        <div class="card border-primary shadow-sm">
+                                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                                <span><i class="fas fa-wave-square me-2"></i>تفاصيل وتحديد نوع فحص السونار</span>
+                                                <span class="badge bg-light text-primary fw-bold"><i class="fas fa-cash-register me-1"></i>دفع مسبق في الكاشير</span>
                                             </div>
                                             <div class="card-body">
                                                 <div class="row">
-                                                    <div class="col-12 mb-3">
-                                                        <label for="ultrasound_staff_id" class="form-label fw-bold">الموظف المسؤول <span class="text-danger">*</span></label>
+                                                    <div class="col-md-7 mb-3 position-relative">
+                                                        <label for="ultrasound_search_input" class="form-label fw-bold">نوع فحص السونار <span class="text-danger">*</span></label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-primary"></i></span>
+                                                            <input type="text" 
+                                                                   class="form-control border-start-0" 
+                                                                   id="ultrasound_search_input" 
+                                                                   placeholder="ابحث عن نوع السونار (اكتب حرفاً للبدء)..." 
+                                                                   autocomplete="off"
+                                                                   value="">
+                                                            <button class="btn btn-outline-secondary" type="button" id="clearUltrasoundSearch" style="display: none;" title="مسح">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </div>
+                                                        <input type="hidden" id="ultrasound_type_id" name="ultrasound_type_id" value="{{ old('ultrasound_type_id') }}">
+
+                                                        <!-- قائمة الاقتراحات المنسدلة: لا تظهر أي نتائج إلا بعد إدخال أول حرف -->
+                                                        <div id="ultrasound_suggestions" 
+                                                             class="position-absolute w-100 bg-white shadow-lg rounded-3 border mt-1" 
+                                                             style="display: none; max-height: 260px; overflow-y: auto; z-index: 1050; left: 0;">
+                                                        </div>
+
+                                                        @error('ultrasound_type_id')
+                                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+                                                    <div class="col-md-5 mb-3">
+                                                        <label for="ultrasound_staff_id" class="form-label fw-bold">أخصائي / موظف السونار <span class="text-danger">*</span></label>
                                                         <select class="form-select" id="ultrasound_staff_id" name="ultrasound_staff_id">
                                                             <option value="">اختر الموظف...</option>
                                                             @foreach($ultrasoundStaff as $staff)
@@ -454,10 +481,22 @@
                                                             <div class="text-danger mt-1">{{ $message }}</div>
                                                         @enderror
                                                     </div>
+
+                                                    <!-- شريط معاينة السعر المعتمد -->
+                                                    <div class="col-12 mb-3" id="ultrasoundPriceBox" style="display: none;">
+                                                        <div class="p-2 px-3 bg-light border border-primary border-opacity-25 rounded d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <i class="fas fa-tag text-primary me-2"></i>
+                                                                <span class="text-muted small">سعر فحص السونار المعتمد:</span>
+                                                                <strong class="text-primary fs-6 me-2" id="ultrasoundPriceText">0 د.ع</strong>
+                                                            </div>
+                                                            <span class="badge bg-warning text-dark"><i class="fas fa-receipt me-1"></i>جاهز للدفع في الكاشير فور تأكيد الحجز</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div class="alert alert-info mb-0">
+                                                <div class="alert alert-info mb-0 py-2">
                                                     <i class="fas fa-info-circle me-2"></i>
-                                                    <small>يجب تحديد الموظف المسؤول قبل إنشاء الطلب</small>
+                                                    <small>سيتم إرسال الطلب فوراً إلى الكاشير لدفع الأجور، ولا يُسمح بدخول المريض لغرفة السونار إلا بعد إتمام الدفع.</small>
                                                 </div>
                                             </div>
                                         </div>
@@ -665,14 +704,25 @@ function setRadiologyCategory(category) {
     if (ultrasoundDetailsContainer) {
         if (category === 'ultrasound') {
             ultrasoundDetailsContainer.style.display = 'block';
-            // جعل حقل موظف السونار مطلوب
             document.getElementById('ultrasound_staff_id').required = true;
+            document.getElementById('ultrasound_type_id').required = true;
         } else {
             ultrasoundDetailsContainer.style.display = 'none';
-            // إلغاء جعل حقل موظف السونار مطلوب
             document.getElementById('ultrasound_staff_id').required = false;
-            // مسح القيم
+            document.getElementById('ultrasound_type_id').required = false;
             document.getElementById('ultrasound_staff_id').value = '';
+            document.getElementById('ultrasound_type_id').value = '';
+            const searchInput = document.getElementById('ultrasound_search_input');
+            if (searchInput) searchInput.value = '';
+            const suggestionsBox = document.getElementById('ultrasound_suggestions');
+            if (suggestionsBox) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+            }
+            const clearBtn = document.getElementById('clearUltrasoundSearch');
+            if (clearBtn) clearBtn.style.display = 'none';
+            const priceBox = document.getElementById('ultrasoundPriceBox');
+            if (priceBox) priceBox.style.display = 'none';
         }
     }
     
@@ -921,8 +971,16 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
     
     // التحقق من حقول السونار إذا تم اختيارها
     if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound') {
+        const ultrasoundTypeId = document.getElementById('ultrasound_type_id').value;
         const ultrasoundStaffId = document.getElementById('ultrasound_staff_id').value;
         
+        if (!ultrasoundTypeId) {
+            e.preventDefault();
+            alert('يرجى اختيار نوع فحص السونار');
+            document.getElementById('ultrasound_type_id').focus();
+            return false;
+        }
+
         if (!ultrasoundStaffId) {
             e.preventDefault();
             alert('يرجى اختيار الموظف المسؤول عن السونار');
@@ -971,6 +1029,129 @@ document.addEventListener('change', function(e) {
         }
     }
 });
+
+// وظيفة البحث الذكي في أنواع السونار (لا تقترح إلا بعد كتابة أول حرف)
+const sonarTypes = @json($radiologyTypes->filter(fn($t) => $t->subcategory === 'سونار' || $t->main_category === 'سونار')->values());
+
+const sonarSearchInput = document.getElementById('ultrasound_search_input');
+const sonarHiddenId = document.getElementById('ultrasound_type_id');
+const sonarSuggestions = document.getElementById('ultrasound_suggestions');
+const sonarClearBtn = document.getElementById('clearUltrasoundSearch');
+const sonarPriceBox = document.getElementById('ultrasoundPriceBox');
+const sonarPriceText = document.getElementById('ultrasoundPriceText');
+
+function escapeSonarHtml(text) {
+    if (!text) return '';
+    return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+if (sonarSearchInput && sonarSuggestions) {
+    // 1. لا تظهر أي نتائج إلا بعد إدخال أول حرف (>= 1)
+    sonarSearchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+
+        if (query.length < 1) {
+            sonarSuggestions.style.display = 'none';
+            sonarSuggestions.innerHTML = '';
+            sonarClearBtn.style.display = 'none';
+            sonarHiddenId.value = '';
+            sonarPriceBox.style.display = 'none';
+            return;
+        }
+
+        sonarClearBtn.style.display = 'block';
+
+        // البحث بالاسم أو الرمز
+        const matches = sonarTypes.filter(t => {
+            const name = (t.name || '').toLowerCase();
+            const code = (t.code || '').toLowerCase();
+            return name.includes(query) || code.includes(query);
+        });
+
+        if (matches.length === 0) {
+            sonarSuggestions.innerHTML = `
+                <div class="p-3 text-muted text-center small">
+                    <i class="fas fa-search me-1"></i> لا توجد نتائج مطابقة لـ "<strong>${escapeSonarHtml(this.value)}</strong>"
+                </div>
+            `;
+            sonarSuggestions.style.display = 'block';
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+        matches.forEach(t => {
+            const formattedPrice = new Intl.NumberFormat('en-US').format(t.base_price);
+            html += `
+                <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 sonar-suggestion-item" 
+                        data-id="${t.id}" 
+                        data-name="${escapeSonarHtml(t.name)}" 
+                        data-price="${t.base_price}">
+                    <div>
+                        <strong class="text-dark d-block">${escapeSonarHtml(t.name)}</strong>
+                        <small class="text-muted font-monospace"><i class="fas fa-barcode me-1"></i>${escapeSonarHtml(t.code || '-')}</small>
+                    </div>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+                        ${formattedPrice} د.ع
+                    </span>
+                </button>
+            `;
+        });
+        html += '</div>';
+        sonarSuggestions.innerHTML = html;
+        sonarSuggestions.style.display = 'block';
+    });
+
+    // 2. اختيار الفحص عند الضغط عليه
+    sonarSuggestions.addEventListener('click', function(e) {
+        const btn = e.target.closest('.sonar-suggestion-item');
+        if (!btn) return;
+
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        const price = parseFloat(btn.dataset.price);
+
+        sonarHiddenId.value = id;
+        sonarSearchInput.value = name;
+        sonarSuggestions.style.display = 'none';
+        sonarClearBtn.style.display = 'block';
+
+        sonarPriceText.textContent = new Intl.NumberFormat('en-US').format(price) + ' د.ع';
+        sonarPriceBox.style.display = 'block';
+    });
+
+    // 3. مسح البحث
+    sonarClearBtn.addEventListener('click', function() {
+        sonarSearchInput.value = '';
+        sonarHiddenId.value = '';
+        sonarSuggestions.style.display = 'none';
+        sonarClearBtn.style.display = 'none';
+        sonarPriceBox.style.display = 'none';
+        sonarSearchInput.focus();
+    });
+
+    // 4. إغلاق القائمة عند النقر في الخارج
+    document.addEventListener('click', function(e) {
+        if (!sonarSearchInput.contains(e.target) && !sonarSuggestions.contains(e.target)) {
+            sonarSuggestions.style.display = 'none';
+        }
+    });
+
+    // 5. استعادة القيمة السابقة عند وجود old('ultrasound_type_id')
+    if (sonarHiddenId.value) {
+        const oldType = sonarTypes.find(t => t.id == sonarHiddenId.value);
+        if (oldType) {
+            sonarSearchInput.value = oldType.name;
+            sonarClearBtn.style.display = 'block';
+            sonarPriceText.textContent = new Intl.NumberFormat('en-US').format(oldType.base_price) + ' د.ع';
+            sonarPriceBox.style.display = 'block';
+        }
+    }
+}
 
 // وظيفة البحث في التحاليل
 const labSearchInput = document.getElementById('labSearchInput');

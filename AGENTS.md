@@ -59,6 +59,27 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-27 — مواءمة حجز السونار في الاستعلامات، جدول الاستشارية، الصندوق، وإلغاء الحجز)
+
+### Done
+- **حجز السونار في الاستعلامات (Inquiry Ultrasound Booking Flow)**:
+  * تحسين حقل اختيار نوع السونار في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php) ليعتمد البحث الفوري والإكمال التلقائي عند بدء كتابة أول حرف لمنع تكدس القوائم المنسدلة الطويلة.
+  * إصلاح خطأ الصلاحيات `403` في [InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php) عبر فحص الصلاحيات التفصيلية (`inquiry.create.radiology.ultrasound` وغيرها) وتمرير الصلاحيات بدقة.
+  * إنشاء موعد استشاري تلقائي برقم طابور وسعر الفحص واسمه، وضبط إنشاء ملف الطبيب في جدول `doctors` ليتوافق مع بنية جداول MySQL الفعلية دون طلب أعمدة غير موجودة (`qualification` / `license_number`).
+  * تحويل المستخدم تلقائياً بعد إتمام الحجز إلى شاشة جدول استشاريي اليوم [consultant-availability](http://127.0.0.1:8000/consultant-availability).
+- **جدول الاستشارية وإلغاء الحجوزات (`consultant-availability/index.blade.php` و `Appointment.php`)**:
+  * تضمين حجوزات السونار ضمن جدول حجوزات اليوم في [ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php) وإضافة شارة مميزة `[ 〰️ حجز سونار ]`.
+  * إصلاح دالة `Appointment::canBeCancelled()`؛ حيث كانت تمنع الإلغاء إذا وجد سجل زيارة (`!$this->visit`). عُدلت لتسمح بالإلغاء ما دامت الزيارة لم تكتمل بعد (`!$visitCompleted`).
+  * إظهار زر `[ ❌ إلغاء ]` في جدول الحجوزات لتمكين إلغاء الموعد، مع إلغاء الزيارة وطلب الأشعة التابع له تلقائياً واسترجاع المبلغ في الصندوق إن كان مدفوعاً.
+- **صندوق المحاسبة وسند القبض (`CashierController.php` وواجهات الصندوق)**:
+  * إصلاح صفحة دفع الصندوق `/cashier/payment/{appointment}` لإظهار بطاقة تفصيلية واضحة بنوع فحص السونار ورمزه وسعره الفعلي (50,000 د.ع) بدلاً من تصفير الرسوم إلى 0.
+  * تحديث [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) لتسجيل الموعد والزيارة والطلب الطبي كمدفوع (`paid`) وإنشاء طلب فحص الأشعة لقسم السونار فور استلام الدفعة.
+  * تحديث قالب سند القبض المطبوع والشاشة في [receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php) و [receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php) لعرض اسم فحص السونار والرمز بدلاً من النص الثابت "رسوم كشف العيادة الاستشارية".
+- **تحديث شجرة العلاقات البرمجية (Graphify Knowledge Graph)**:
+  * تشغيل `graphify update .` وتحديث شجرة العلاقات بالكامل بنسبة 100% عبر 869 ملفاً (3,291 عقدة، 4,813 علاقة، عبر 740 مجتمعاً برمجياً).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [UltrasoundInquiryBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UltrasoundInquiryBookingTest.php) بنجاح 100%: 1 passed (18 assertions).
+
 ## Session log (2026-09-25 — تبسيط جدول الطوارئ، إزالة زر كشف وعلاج، توحيد بطاقات الصيدلية وتحديث شجرة العلاقات البرمجية Graphify)
 
 ### Done

@@ -184,6 +184,10 @@
                                             <span class="badge bg-danger">
                                                 <i class="fas fa-ambulance me-1"></i> استشارة طوارئ
                                             </span>
+                                        @elseif(str_contains($appointment->reason ?? '', 'سونار') || optional($appointment->doctor)->specialization === 'سونار')
+                                            <span class="badge bg-primary text-white">
+                                                <i class="fas fa-wave-square me-1"></i> حجز سونار
+                                            </span>
                                         @else
                                             <span class="badge bg-info text-dark">
                                                 <i class="fas fa-calendar-check me-1"></i> حجز استشارية

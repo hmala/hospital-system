@@ -110,14 +110,19 @@ class DoctorVisitController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذا الموعد');
         }
 
-        // التحقق من أن الموعد لم يتم تحويله إلى زيارة بعد
-        if ($appointment->visit) {
-            return redirect()->back()->with('error', 'هذا الموعد تم تحويله إلى زيارة بالفعل');
-        }
-
         // التحقق من دفع رسوم الكشف قبل إدخال المريض للطبيب
         if ($appointment->payment_status !== 'paid') {
             return redirect()->back()->with('error', 'لا يمكن إدخال المريض للطبيب قبل اكتمال الدفع');
+        }
+
+        // إذا كان الموعد مرتبطاً بزيارة مسبقاً (مثل حجوزات السونار من الاستعلامات)
+        if ($appointment->visit) {
+            $appointment->visit->update(['status' => 'in_progress']);
+            $appointment->update(['status' => 'confirmed']);
+            if ($user->hasRole('consultation_receptionist') || $user->hasRole('admin')) {
+                return redirect()->route('consultant-availability.index')->with('success', 'تم إدخال المريض بنجاح');
+            }
+            return redirect()->route('doctor.visits.show', $appointment->visit->id)->with('success', 'تم إدخال المريض بنجاح');
         }
 
         // إنشاء زيارة من الموعد

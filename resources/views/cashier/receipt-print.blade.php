@@ -308,10 +308,32 @@
             // Line Items Extraction
             $lineItems = [];
 
-            // 1. Consultation
+            // 1. Consultation / Appointment Service
             if ($payment->appointment || $payment->payment_type === 'appointment' || $payment->payment_type === 'consultation') {
                 $consultFee = $payment->appointment->consultation_fee ?? ($payment->total_amount ?: $payment->amount);
-                $lineItems[] = ['name' => 'اجور كشف استشارية', 'qty' => 1, 'price' => $consultFee];
+                
+                $serviceTitle = 'اجور كشف استشارية';
+                $scanType = null;
+                if ($payment->appointment && $payment->appointment->visit) {
+                    $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
+                    if ($medReq) {
+                        $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                        $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                        if ($radTypeId) {
+                            $scanType = \App\Models\RadiologyType::find($radTypeId);
+                        }
+                    }
+                }
+
+                if ($scanType) {
+                    $serviceTitle = 'فحص سونار: ' . $scanType->name;
+                } elseif (preg_match('/دفع رسوم\s+(.+)/u', $payment->description, $m) && !str_contains($m[1], 'موعد #')) {
+                    $serviceTitle = trim($m[1]);
+                } elseif ($payment->appointment && !empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
+                    $serviceTitle = $payment->appointment->reason;
+                }
+
+                $lineItems[] = ['name' => $serviceTitle, 'qty' => 1, 'price' => $consultFee];
             }
 
             // 2. Surgery

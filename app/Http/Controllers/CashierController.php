@@ -149,7 +149,7 @@ class CashierController extends Controller
                 ->with('warning', 'هذا الموعد تم دفعه مسبقاً');
         }
 
-        $appointment->load(['patient.user', 'doctor.user', 'department']);
+        $appointment->load(['patient.user', 'doctor.user', 'department', 'visit']);
 
         return view('cashier.payment-form', compact('appointment'));
     }
@@ -184,11 +184,39 @@ class CashierController extends Controller
             $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
             $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
-            $doctorPricing = $appointment->doctor ? $appointment->doctor->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
-            $isCovered = $doctorPricing ? $doctorPricing['is_covered'] : false;
-            
+            // فحص ما إذا كان الموعد مرتبطاً بفحص سونار أو أشعة
+            $scanType = null;
+            $appointment->load('visit');
+            if ($appointment->visit) {
+                $medReq = \App\Models\Request::where('visit_id', $appointment->visit->id)->where('type', 'radiology')->first();
+                if ($medReq) {
+                    $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                    $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                    if ($radTypeId) {
+                        $scanType = \App\Models\RadiologyType::find($radTypeId);
+                    }
+                }
+            }
+
+            if ($scanType) {
+                $servicePricing = $scanType->calculateInsurancePricing($insuranceType, $copayPercentage);
+            } elseif ($appointment->doctor && $appointment->doctor->consultation_fee > 0) {
+                $servicePricing = $appointment->doctor->calculateInsurancePricing($insuranceType, $copayPercentage);
+            } else {
+                $baseFee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 0);
+                $isCovered = ($insuranceType !== 'none');
+                $patientShare = $isCovered ? round($baseFee * ($copayPercentage / 100.0), 2) : $baseFee;
+                $servicePricing = [
+                    'is_covered' => $isCovered,
+                    'total_amount' => $baseFee,
+                    'patient_share' => $patientShare,
+                    'insurance_share' => max(0, $baseFee - $patientShare),
+                ];
+            }
+
+            $isCovered = $servicePricing ? $servicePricing['is_covered'] : false;
             $patientPaidAmount = (float)$request->amount;
-            $totalApproved = $isCovered ? (float)$doctorPricing['total_amount'] : ($appointment->consultation_fee ?? $patientPaidAmount);
+            $totalApproved = $isCovered ? (float)$servicePricing['total_amount'] : ($appointment->consultation_fee ?? $patientPaidAmount);
             if ($totalApproved <= 0) {
                 $totalApproved = $patientPaidAmount;
             }
@@ -212,7 +240,7 @@ class CashierController extends Controller
                 'claim_status' => $claimStatus,
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'appointment',
-                'description' => 'دفع رسوم موعد #' . $appointment->id,
+                'description' => ($scanType ? 'دفع رسوم ' . $scanType->name : 'دفع رسوم موعد #' . $appointment->id),
                 'notes' => $request->notes,
                 'paid_at' => Carbon::now()
             ]);
@@ -222,6 +250,56 @@ class CashierController extends Controller
                 'payment_status' => 'paid',
                 'payment_id' => $payment->id
             ]);
+
+            // تحديث الزيارة والطلبات الطبية المرتبطة إن وجدت
+            if ($appointment->visit) {
+                $appointment->visit->update([
+                    'status' => 'in_progress'
+                ]);
+
+                $medReqs = \App\Models\Request::where('visit_id', $appointment->visit->id)->get();
+                foreach ($medReqs as $medReq) {
+                    $medReq->update([
+                        'payment_status' => 'paid',
+                        'payment_id' => $payment->id,
+                        'status' => 'pending'
+                    ]);
+
+                    // إذا كان طلباً للأشعة أو السونار، إنشاء سجل في radiology_requests إن لم يوجد
+                    if ($medReq->type === 'radiology') {
+                        $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                        $radTypeIds = $details['radiology_type_ids'] ?? [];
+                        if (empty($radTypeIds) && !empty($details['ultrasound_type_id'])) {
+                            $radTypeIds = [$details['ultrasound_type_id']];
+                        }
+
+                        foreach ($radTypeIds as $radTypeId) {
+                            $exists = \App\Models\RadiologyRequest::where('visit_id', $appointment->visit->id)
+                                ->where('radiology_type_id', $radTypeId)
+                                ->exists();
+
+                            if (!$exists) {
+                                try {
+                                    $radTypeObj = \App\Models\RadiologyType::find($radTypeId);
+                                    \App\Models\RadiologyRequest::create([
+                                        'visit_id' => $appointment->visit->id,
+                                        'patient_id' => $appointment->patient_id,
+                                        'doctor_id' => $appointment->doctor_id,
+                                        'radiology_type_id' => $radTypeId,
+                                        'requested_date' => now(),
+                                        'status' => 'pending',
+                                        'priority' => 'normal',
+                                        'clinical_indication' => $appointment->reason ?? 'طلب سونار من الاستعلامات',
+                                        'total_cost' => $radTypeObj ? $radTypeObj->base_price : null,
+                                    ]);
+                                } catch (\Exception $e) {
+                                    \Log::error('Failed to create radiology request from appointment payment: ' . $e->getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             DB::commit();
 
@@ -450,12 +528,19 @@ class CashierController extends Controller
 
             \Log::info('Request updated to paid');
 
-            // تحديث حالة الزيارة من pending_payment إلى in_progress لتظهر في المختبر
+            // تحديث حالة الزيارة من pending_payment إلى in_progress لتظهر في المختبر والأشعة
             if ($request->visit) {
                 $request->visit->update([
                     'status' => 'in_progress'
                 ]);
-                \Log::info('Visit status updated to in_progress');
+                // تحديث الموعد المرتبط إن وجد (مثل حجوزات السونار) لتصبح مدفوعة في شاشة توفر الاستشاريين
+                if ($request->visit->appointment_id) {
+                    \App\Models\Appointment::where('id', $request->visit->appointment_id)->update([
+                        'payment_status' => 'paid',
+                        'payment_id' => $payment->id
+                    ]);
+                }
+                \Log::info('Visit and linked appointment status updated to in_progress / paid');
             } else {
                 \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);
             }

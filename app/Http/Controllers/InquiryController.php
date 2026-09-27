@@ -193,8 +193,19 @@ class InquiryController extends Controller
         $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         
-        // جلب موظفي السونار من جدول المستخدمين حسب الدور
-        $ultrasoundStaff = User::role('radiology_ultrasound')->get();
+        // جلب موظفي وأطباء السونار من جدول المستخدمين حسب الدور أو التخصص
+        $ultrasoundStaff = User::where(function($query) {
+            $query->whereHas('roles', function($q) {
+                $q->where('name', 'radiology_ultrasound');
+            })->orWhereHas('doctor', function($q) {
+                $q->where('specialization', 'LIKE', '%سونار%')
+                  ->where('is_active', true);
+            });
+        })->get();
+
+        if ($ultrasoundStaff->isEmpty()) {
+            $ultrasoundStaff = User::role('radiology_ultrasound')->get();
+        }
         
         // جلب موظفي الإيكو من جدول المستخدمين حسب الدور
         $echoStaff = User::role('radiology_echo')->get();
@@ -257,6 +268,7 @@ class InquiryController extends Controller
             'radiology_type_ids' => 'nullable|array',  // اختياري - سيحدده موظف الأشعة لاحقاً
             'radiology_type_ids.*' => 'exists:radiology_types,id',
             'radiology_category' => 'nullable|in:radiology,echo,ultrasound,mri',
+            'ultrasound_type_id' => 'required_if:radiology_category,ultrasound|nullable|exists:radiology_types,id',  // نوع فحص السونار المحدد - مطلوب إذا كانت الفئة ultrasound
             'ultrasound_staff_id' => 'required_if:radiology_category,ultrasound|nullable|exists:users,id',  // الموظف المسؤول عن السونار - مطلوب إذا كانت الفئة ultrasound
             'echo_type_id' => 'required_if:radiology_category,echo|nullable|exists:radiology_types,id',  // نوع الإيكو المحدد - مطلوب إذا كانت الفئة echo
             'echo_staff_id' => 'required_if:radiology_category,echo|nullable|exists:users,id',  // الموظف المسؤول عن الإيكو - مطلوب إذا كانت الفئة echo
@@ -280,12 +292,29 @@ class InquiryController extends Controller
             if (!$serviceType || !$serviceType->is_active) {
                 abort(403, 'نوع الخدمة غير متاح: ' . $requestType);
             }
-            if ($serviceType->required_permission && !$user->can($serviceType->required_permission)) {
+
+            $hasPermission = $user->hasRole('admin') || ($serviceType->required_permission && $user->can($serviceType->required_permission));
+
+            // للأشعة: تحقق إضافي من الصلاحيات الفرعية المحددة لكل نوع (مثل inquiry.create.radiology.ultrasound)
+            if (!$hasPermission && $requestType === 'radiology') {
+                $radiologyCategory = $httpRequest->radiology_category ?? 'general';
+                $categoryPerm = ($radiologyCategory === 'radiology' || $radiologyCategory === 'general') 
+                    ? 'inquiry.create.radiology.general' 
+                    : 'inquiry.create.radiology.' . $radiologyCategory;
+
+                $hasPermission = $user->can($categoryPerm) ||
+                                 $user->can('inquiry.create.radiology.ultrasound') ||
+                                 $user->can('inquiry.create.radiology.general') ||
+                                 $user->can('inquiry.create.radiology.mri') ||
+                                 $user->can('inquiry.create.radiology.echo');
+            }
+
+            if ($serviceType->required_permission && !$hasPermission) {
                 abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
             }
             
             // التحقق من صلاحيات الأشعة حسب النوع المحدد
-            if ($requestType === 'radiology') {
+            if ($requestType === 'radiology' && !$user->hasRole('admin')) {
                 $radiologyCategory = $httpRequest->radiology_category ?? 'radiology';
                 $radiologyCategoryPermission = 'inquiry.create.radiology.' . $radiologyCategory;
                 
@@ -623,7 +652,8 @@ class InquiryController extends Controller
         // تحديد حالة الزيارة بناءً على ما إذا تم تحديد الخدمات أم لا
         $hasServices = ($requestType === 'lab' && $httpRequest->lab_test_ids) || 
                        ($requestType === 'radiology' && $httpRequest->radiology_type_ids) ||
-                       ($requestType === 'radiology' && $radiologyCategory === 'echo' && $httpRequest->echo_type_id);
+                       ($requestType === 'radiology' && $radiologyCategory === 'echo' && $httpRequest->echo_type_id) ||
+                       ($requestType === 'radiology' && $radiologyCategory === 'ultrasound' && $httpRequest->ultrasound_type_id);
         
         $visitStatus = $hasServices ? 'pending_payment' : 'pending_service_selection';
         
@@ -675,12 +705,111 @@ class InquiryController extends Controller
         
         // معلومات خاصة بالسونار
         if ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') {
+            $sonarDoc = null;
             if ($httpRequest->ultrasound_staff_id) {
                 $details['ultrasound_staff_id'] = $httpRequest->ultrasound_staff_id;
-                // تعيين الطبيب المسؤول عن السونار
-                $visit->doctor_id = $httpRequest->ultrasound_staff_id;
-                $visit->save();
+                // تعيين الطبيب المسؤول إن وجد سجل طبيب مرتبط بالمستخدم المختار
+                $sonarDoc = \App\Models\Doctor::where('user_id', $httpRequest->ultrasound_staff_id)->first();
+                if (!$sonarDoc) {
+                    $staffUser = \App\Models\User::find($httpRequest->ultrasound_staff_id);
+                    if ($staffUser) {
+                        $doctorData = [
+                            'phone' => $staffUser->phone ?? '07700000000',
+                            'department_id' => $inquiryDept->id,
+                            'type' => 'consultant',
+                            'specialization' => 'سونار',
+                            'consultation_fee' => 0,
+                            'is_active' => true,
+                            'is_available_today' => true,
+                        ];
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'qualification')) {
+                            $doctorData['qualification'] = 'أخصائي سونار';
+                        }
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'license_number')) {
+                            $doctorData['license_number'] = 'SONAR-' . $staffUser->id;
+                        }
+                        $sonarDoc = \App\Models\Doctor::firstOrCreate(
+                            ['user_id' => $staffUser->id],
+                            $doctorData
+                        );
+                    }
+                }
             }
+            // إذا لم يتم العثور على سجل طبيب، البحث عن طبيب استشاري سونار
+            if (!$sonarDoc) {
+                $sonarDoc = \App\Models\Doctor::where('specialization', 'LIKE', '%سونار%')->where('is_active', true)->first();
+            }
+            if (!$sonarDoc) {
+                $sonarDoc = \App\Models\Doctor::where('type', 'consultant')->where('is_active', true)->first();
+            }
+            if (!$sonarDoc) {
+                $defaultUser = \App\Models\User::where('role', 'doctor')->first() ?? $user;
+                $defaultDocData = [
+                    'phone' => $defaultUser->phone ?? '07700000000',
+                    'department_id' => $inquiryDept->id,
+                    'type' => 'consultant',
+                    'specialization' => 'سونار',
+                    'consultation_fee' => 0,
+                    'is_active' => true,
+                    'is_available_today' => true,
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'qualification')) {
+                    $defaultDocData['qualification'] = 'أخصائي سونار';
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'license_number')) {
+                    $defaultDocData['license_number'] = 'DOC-DEF-' . $defaultUser->id;
+                }
+                $sonarDoc = \App\Models\Doctor::firstOrCreate(
+                    ['user_id' => $defaultUser->id],
+                    $defaultDocData
+                );
+            }
+
+            if ($sonarDoc) {
+                $visit->doctor_id = $sonarDoc->id;
+            }
+
+            $sonarTypeObj = null;
+            if ($httpRequest->ultrasound_type_id) {
+                $details['ultrasound_type_id'] = $httpRequest->ultrasound_type_id;
+                $sonarTypeObj = \App\Models\RadiologyType::find($httpRequest->ultrasound_type_id);
+                // إضافة نوع السونار إلى radiology_type_ids ليتم تسعيره فوراً في الكاشير
+                if (!isset($details['radiology_type_ids'])) {
+                    $details['radiology_type_ids'] = [];
+                }
+                if (!in_array($httpRequest->ultrasound_type_id, $details['radiology_type_ids'])) {
+                    $details['radiology_type_ids'][] = $httpRequest->ultrasound_type_id;
+                }
+                $details['services_selected'] = true; // تم تحديد نوع الفحص بنجاح
+                $hasServices = true; // مؤهل للدفع الفوري
+                $visit->status = 'pending_payment'; // تحويل الزيارة مباشرة للكاشير للدفع قبل الدخول
+            }
+
+            // إنشاء موعد في طابور الأطباء الاستشاريين ليظهر في شاشة توفر الاستشاريين
+            $sonarTypeName = $sonarTypeObj ? $sonarTypeObj->name : 'فحص سونار';
+            $sonarFee = $sonarTypeObj ? ($sonarTypeObj->base_price ?? 0) : ($sonarDoc->consultation_fee ?? 0);
+
+            $maxQueue = \App\Models\Appointment::where('doctor_id', $sonarDoc?->id)
+                ->whereDate('appointment_date', today())
+                ->max('queue_number') ?? 0;
+
+            $sonarAppointment = \App\Models\Appointment::create([
+                'patient_id' => $patient->id,
+                'doctor_id' => $sonarDoc?->id,
+                'department_id' => $sonarDoc?->department_id ?? $inquiryDept->id,
+                'appointment_date' => Carbon::today(),
+                'queue_number' => $maxQueue + 1,
+                'reason' => 'حجز سونار - ' . $sonarTypeName,
+                'notes' => 'حجز سونار من الاستعلامات' . ($sonarTypeObj ? ' (كود: ' . $sonarTypeObj->code . ')' : ''),
+                'consultation_fee' => $sonarFee,
+                'duration' => 20,
+                'status' => 'scheduled',
+                'payment_status' => 'pending',
+                'insurance_type' => $bookingInsuranceType
+            ]);
+
+            $visit->appointment_id = $sonarAppointment->id;
+            $visit->save();
         }
         
         // معلومات خاصة بالإيكو
@@ -700,8 +829,11 @@ class InquiryController extends Controller
             }
             if ($httpRequest->echo_staff_id) {
                 $details['echo_staff_id'] = $httpRequest->echo_staff_id;
-                // تعيين الطبيب المسؤول عن الإيكو
-                $visit->doctor_id = $httpRequest->echo_staff_id;
+                // تعيين الطبيب المسؤول عن الإيكو إن وجد سجل طبيب مرتبط
+                $echoDoc = \App\Models\Doctor::where('user_id', $httpRequest->echo_staff_id)->first();
+                if ($echoDoc) {
+                    $visit->doctor_id = $echoDoc->id;
+                }
             }
             // حفظ التغييرات على الزيارة
             $visit->save();
@@ -759,6 +891,13 @@ class InquiryController extends Controller
 
         // تجميع جميع الرسائل
         $finalMessage = 'تم إنشاء ' . $totalRequests . ' طلبات بنجاح';
+
+        // إذا كان الحجز لسونار أو المستخدم موظف استعلامات استشارية، تحويله إلى شاشة توفر الاستشاريين
+        $hasUltrasound = in_array('radiology', $requestTypes) && (($httpRequest->radiology_category ?? '') === 'ultrasound');
+        if ($hasUltrasound || $user->hasRole('consultation_receptionist')) {
+            return redirect()->route('consultant-availability.index')
+                ->with('success', 'تم حجز السونار بنجاح وإدراجه في طابور اليوم! يرجى توجيه المريض للكاشير لدفع الأجور.');
+        }
 
         // إرجاع إلى صفحة الاستعلامات مع الرسالة
         return redirect()->route('inquiry.index')

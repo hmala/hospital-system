@@ -24,23 +24,6 @@
         </div>
     @endif
 
-    @if(!$appointment->doctor || $appointment->consultation_fee <= 0)
-        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-radius: 12px; background-color: #fff3cd;">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fs-3 text-warning me-3"></i>
-                    <div>
-                        <h6 class="fw-bold mb-1 text-dark">تنبيه: أجور الكشف لهذا الطبيب غير محددة (0 د.ع)</h6>
-                        <small class="text-secondary">يمكنك تعديل أجور الطبيب من قسم الأطباء، أو إدخال المبلغ المستحق يدوياً في حقل "المبلغ".</small>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-auto fw-bold" data-bs-toggle="modal" data-bs-target="#doctorFeeErrorModal">
-                    <i class="fas fa-exclamation-circle me-1"></i>عرض سبب التنبيه
-                </button>
-            </div>
-        </div>
-    @endif
-
     @php
         $patient = $appointment->patient;
         $doctor = $appointment->doctor;
@@ -53,12 +36,87 @@
             $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
         }
 
-        $regularPrice = (float)($doctor ? $doctor->getRegularPrice() : ($appointment->consultation_fee ?? 0));
-        $moiPrice = (float)($doctor && $doctor->moi_price > 0 ? $doctor->moi_price : $regularPrice);
-        $isMoiActive = (bool)($doctor ? ($doctor->is_moi_active ?? true) : true);
-        $hiPrice = (float)($doctor && $doctor->hi_price > 0 ? $doctor->hi_price : $regularPrice);
-        $isHiActive = (bool)($doctor ? ($doctor->is_hi_active ?? true) : true);
+        // فحص ما إذا كان الموعد مرتبطاً بفحص سونار أو خدمة أشعة
+        $scanType = null;
+        if ($appointment->visit) {
+            $medReq = \App\Models\Request::where('visit_id', $appointment->visit->id)->where('type', 'radiology')->first();
+            if ($medReq) {
+                $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                if ($radTypeId) {
+                    $scanType = \App\Models\RadiologyType::find($radTypeId);
+                }
+            }
+        }
+
+        if ($scanType) {
+            $serviceName = $scanType->name;
+            $serviceCode = $scanType->code;
+            $serviceCategory = $scanType->main_category ?? 'سونار';
+            $regularPrice = (float)$scanType->base_price;
+            $moiPrice = (float)($scanType->moi_price > 0 ? $scanType->moi_price : $regularPrice);
+            $isMoiActive = (bool)($scanType->is_moi_active ?? true);
+            $hiPrice = (float)($scanType->hi_price > 0 ? $scanType->hi_price : $regularPrice);
+            $isHiActive = (bool)($scanType->is_hi_active ?? true);
+        } else {
+            $serviceName = $appointment->reason ?? 'كشف طبي عام';
+            $serviceCode = null;
+            $serviceCategory = 'استشارية';
+            $regularPrice = (float)($appointment->consultation_fee > 0 
+                ? $appointment->consultation_fee 
+                : ($doctor ? $doctor->getRegularPrice() : 0));
+            $moiPrice = (float)($doctor && $doctor->moi_price > 0 ? $doctor->moi_price : $regularPrice);
+            $isMoiActive = (bool)($doctor ? ($doctor->is_moi_active ?? true) : true);
+            $hiPrice = (float)($doctor && $doctor->hi_price > 0 ? $doctor->hi_price : $regularPrice);
+            $isHiActive = (bool)($doctor ? ($doctor->is_hi_active ?? true) : true);
+        }
     @endphp
+
+    @if((!$appointment->doctor && !$scanType) || $regularPrice <= 0)
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-radius: 12px; background-color: #fff3cd;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fs-3 text-warning me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">تنبيه: أجور الخدمة غير محددة (0 د.ع)</h6>
+                        <small class="text-secondary">يرجى إدخال المبلغ المستحق يدوياً في حقل "المبلغ المستلم".</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-auto fw-bold" data-bs-toggle="modal" data-bs-target="#doctorFeeErrorModal">
+                    <i class="fas fa-exclamation-circle me-1"></i>عرض سبب التنبيه
+                </button>
+            </div>
+        </div>
+    @endif
+
+    <!-- بطاقة تفاصيل الخدمة / الفحص البارزة -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%); border-left: 5px solid #0d6efd !important;">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-white p-3 shadow-sm me-3 text-primary d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        @if($scanType)
+                            <i class="fas fa-wave-square fs-4"></i>
+                        @else
+                            <i class="fas fa-stethoscope fs-4"></i>
+                        @endif
+                    </div>
+                    <div>
+                        <span class="badge bg-primary mb-1">{{ $serviceCategory }}</span>
+                        @if($serviceCode)
+                            <span class="badge bg-dark mb-1">{{ $serviceCode }}</span>
+                        @endif
+                        <h5 class="fw-bold mb-0 text-dark">{{ $serviceName }}</h5>
+                        <small class="text-muted">{{ $appointment->notes ?? '' }}</small>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="text-muted small d-block">السعر الأساسي المعتمد:</span>
+                    <span class="fs-4 fw-bold text-success">{{ number_format($regularPrice) }} د.ع</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-md-8">
@@ -66,7 +124,7 @@
                 <div class="card-header bg-gradient-success text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                     <h5 class="mb-0">
                         <i class="fas fa-file-invoice-dollar me-2"></i>
-                        تسوية ودفع رسوم الاستشارية
+                        تسوية ودفع رسوم {{ $scanType ? 'فحص السونار' : 'الاستشارية' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -256,6 +314,17 @@
                         <div class="fw-bold">{{ $appointment->appointment_date->format('Y-m-d H:i') }}</div>
                     </div>
                     <div class="mb-3">
+                        <small class="text-muted">الخدمة / الفحص:</small>
+                        <div class="fw-bold text-primary">{{ $serviceName }}</div>
+                        @if($serviceCode)
+                            <span class="badge bg-light text-dark border mt-1">{{ $serviceCode }}</span>
+                        @endif
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">الأجر المعتمد:</small>
+                        <div class="fw-bold text-success">{{ number_format($regularPrice) }} د.ع</div>
+                    </div>
+                    <div class="mb-3">
                         <small class="text-muted">القسم:</small>
                         <div class="fw-bold">{{ $appointment->department ? $appointment->department->name : 'غير محدد' }}</div>
                     </div>
@@ -392,7 +461,7 @@ function showDoctorFeeModal() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const shouldShowModal = @json(!$appointment->doctor || $appointment->consultation_fee <= 0 || session('error') ? true : false);
+    const shouldShowModal = @json(((!$appointment->doctor && !$scanType) || $regularPrice <= 0 || session('error')) ? true : false);
     if (shouldShowModal) {
         showDoctorFeeModal();
     }

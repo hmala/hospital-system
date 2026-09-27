@@ -69,10 +69,14 @@ class ConsultantAvailabilityController extends Controller
         // تجميع الأطباء حسب التخصص للعرض
         $groupedDoctors = $consultantDoctors->groupBy('specialization');
 
-        // جلب المواعيد المحجوزة اليوم للأطباء الاستشاريين (المجدولة والمؤكدة والتي يتم استدعاؤها)
+        // جلب المواعيد المحجوزة اليوم للأطباء الاستشاريين وحجوزات السونار (المجدولة والمؤكدة والتي يتم استدعاؤها)
         $todayAppointments = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'emergency'])
-            ->whereHas('doctor', function($q) {
-                $q->where('type', 'consultant');
+            ->where(function($query) {
+                $query->whereHas('doctor', function($q) {
+                    $q->where('type', 'consultant')
+                      ->orWhere('specialization', 'LIKE', '%سونار%');
+                })
+                ->orWhere('reason', 'LIKE', '%سونار%');
             })
             ->whereDate('appointment_date', today())
             ->whereIn('status', ['scheduled', 'confirmed', 'calling'])
