@@ -68,7 +68,7 @@ class OfficialMedicinesSeeder extends Seeder
                 // توليد حجم التعبئة تلقائياً
                 $packSize = $subUnitsCount . ' ' . $subUnit;
 
-                $med = Medicine::firstOrCreate(
+                $med = Medicine::updateOrCreate(
                     [
                         'name' => $tradeName,
                         'national_code' => $nationalCode ?: null,

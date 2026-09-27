@@ -31,7 +31,7 @@ echo [2/2] Connecting to Hostinger via SSH...
 echo Please enter your SSH password if prompted:
 echo --------------------------------------------------------
 
-ssh -p 65002 -t u175868711@92.113.18.46 "cd domains/hinpa.icu/public_html/hearmz && echo '=== [1/4] Pulling from GitHub ===' && git pull origin main && echo '=== [2/4] Running Migrations ===' && php artisan migrate --force && echo '=== [3/4] Seeding Official Medicines Catalog ===' && php artisan db:seed --class=OfficialMedicinesSeeder --force && echo '=== [4/4] Clearing Cache ===' && php artisan optimize:clear && echo '=============================================' && echo 'Deployment completed successfully!' && echo '============================================='"
+ssh -p 65002 -t u175868711@92.113.18.46 "cd domains/hinpa.icu/public_html/hearmz && echo '=== [1/6] Pulling from GitHub ===' && git pull origin main && echo '=== [2/6] Running Migrations ===' && php artisan migrate --force && echo '=== [3/6] Seeding Official Medicines Catalog ===' && php artisan db:seed --class=OfficialMedicinesSeeder --force && echo '=== [4/6] Seeding Radiology and Ultrasound Services ===' && php artisan db:seed --class=RadiologyTypesSeeder --force && echo '=== [5/6] Resetting Permissions Cache ===' && php artisan permission:cache-reset && echo '=== [6/6] Clearing App & View Cache ===' && php artisan optimize:clear && echo '=============================================' && echo 'Deployment completed successfully!' && echo '============================================='"
 
 :end
 echo.
