@@ -24,6 +24,12 @@ class DepartmentController extends Controller
 
     public function index()
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view departments'))) {
+            abort(403, 'غير مصرح لك بعرض قائمة العيادات والأقسام');
+        }
+
         $departments = Department::with(['hospital', 'doctors'])
             ->withCount(['appointments as today_appointments_count' => function($query) {
                 $query->whereDate('appointment_date', today());
@@ -36,12 +42,24 @@ class DepartmentController extends Controller
 
     public function create()
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create departments'))) {
+            abort(403, 'غير مصرح لك بإضافة عيادة أو قسم جديد');
+        }
+
         $hospitals = Hospital::all();
         return view('departments.create', compact('hospitals'));
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create departments'))) {
+            abort(403, 'غير مصرح لك بإضافة عيادة أو قسم جديد');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
@@ -79,6 +97,12 @@ class DepartmentController extends Controller
 
     public function show(Department $department)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view departments'))) {
+            abort(403, 'غير مصرح لك بعرض بيانات العيادة');
+        }
+
         $department->load(['doctors', 'appointments' => function($query) {
             $query->whereDate('appointment_date', today());
         }]);
@@ -88,12 +112,24 @@ class DepartmentController extends Controller
 
     public function edit(Department $department)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit departments'))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات العيادة');
+        }
+
         $hospitals = Hospital::all();
         return view('departments.edit', compact('department', 'hospitals'));
     }
 
     public function update(Request $request, Department $department)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit departments'))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات العيادة');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:internal,surgery,pediatrics,obstetrics,orthopedics,cardiology,dentistry,dermatology,emergency,other',
@@ -121,6 +157,12 @@ class DepartmentController extends Controller
 
     public function destroy(Department $department)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('delete departments'))) {
+            abort(403, 'غير مصرح لك بحذف العيادة');
+        }
+
         $department->delete();
 
         return redirect()->route('departments.admin')

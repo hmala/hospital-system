@@ -23,9 +23,9 @@ class ConsultantAvailabilityController extends Controller
                 return $next($request);
             }
             
-            // التحقق من أن المستخدم لديه صلاحية إدارة توفر الأطباء الاستشاريين أو عرض تقارير الحسابات
             $user = auth()->user();
-            if (!$user || (!$user->can('manage consultant availability') && !$user->can('view cashier reports') && !$user->hasRole('admin'))) {
+            $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if (!$isAdmin && (!$user || (!$user->can('manage consultant availability') && !$user->can('view cashier reports') && !$user->can('view doctor profits') && !$user->can('view appointments')))) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
             }
             return $next($request);
@@ -37,6 +37,12 @@ class ConsultantAvailabilityController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage consultant availability') && !$user->can('view appointments')))) {
+            abort(403, 'غير مصرح لك بعرض جدول توفر الاستشاريين');
+        }
+
         $weekDays = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
         $daysMap = [
@@ -104,6 +110,12 @@ class ConsultantAvailabilityController extends Controller
 
     public function financialMovements(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للاستشارية');
+        }
+
         $query = ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier'])
             ->whereHas('appointment.doctor', function ($q) {
                 $q->where('type', 'consultant');
@@ -179,6 +191,12 @@ class ConsultantAvailabilityController extends Controller
 
     public function doctorAccounts(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى حسابات الأطباء');
+        }
+
         $consultantDoctors = Doctor::with(['user', 'department', 'financialAccount'])
             ->join('users', 'doctors.user_id', '=', 'users.id')
             ->where('doctors.type', 'consultant')

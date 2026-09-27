@@ -17,7 +17,8 @@ class AppointmentController extends Controller
     public function index()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view appointments') && !$user->hasRole(['patient', 'receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view appointments') && !$user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بعرض المواعيد');
         }
         
@@ -90,7 +91,8 @@ class AppointmentController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create appointments') && !$user->hasRole(['patient', 'receptionist', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('create appointments') && !$user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بحجز موعد');
         }
 
@@ -110,7 +112,8 @@ class AppointmentController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create appointments') && !$user->hasRole(['patient', 'receptionist', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('create appointments') && !$user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بحجز موعد');
         }
 
@@ -163,7 +166,8 @@ class AppointmentController extends Controller
     public function show(Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view appointments') && !$user->hasRole(['patient', 'receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view appointments') && !$user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بعرض بيانات الموعد');
         }
 
@@ -174,7 +178,8 @@ class AppointmentController extends Controller
     public function edit(Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit appointments') && !$user->hasRole(['receptionist', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit appointments'))) {
             abort(403, 'غير مصرح لك بتعديل الموعد');
         }
 
@@ -194,7 +199,8 @@ class AppointmentController extends Controller
     public function update(Request $request, Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit appointments') && !$user->hasRole(['receptionist', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit appointments'))) {
             abort(403, 'غير مصرح لك بتعديل الموعد');
         }
 
@@ -246,7 +252,8 @@ class AppointmentController extends Controller
     public function destroy(Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('delete appointments')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('delete appointments'))) {
             abort(403, 'غير مصرح لك بحذف الموعد');
         }
 
@@ -260,7 +267,8 @@ class AppointmentController extends Controller
     public function confirm(Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit appointments') && !$user->can('change appointment status') && !$user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('edit appointments') && !$user->can('change appointment status')))) {
             abort(403, 'غير مصرح لك بتغيير حالة الموعد');
         }
 
@@ -273,7 +281,8 @@ class AppointmentController extends Controller
     public function complete(Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit appointments') && !$user->can('change appointment status') && !$user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('edit appointments') && !$user->can('change appointment status')))) {
             abort(403, 'غير مصرح لك بتغيير حالة الموعد');
         }
 
@@ -286,7 +295,9 @@ class AppointmentController extends Controller
     public function cancel(Request $request, Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit appointments') && !$user->can('change appointment status') && !$user->hasRole(['patient', 'receptionist', 'doctor', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isOwnPatient = $user && $user->hasRole('patient') && $user->patient && $appointment->patient_id === $user->patient->id;
+        if (!$isAdmin && !$isOwnPatient && (!$user || (!$user->can('edit appointments') && !$user->can('cancel appointments') && !$user->can('change appointment status')))) {
             abort(403, 'غير مصرح لك بإلغاء الموعد');
         }
 

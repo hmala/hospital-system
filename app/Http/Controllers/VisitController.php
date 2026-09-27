@@ -16,7 +16,8 @@ class VisitController extends Controller
     public function index()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view visits'))) {
             abort(403, 'غير مصرح لك بعرض الزيارات');
         }
 
@@ -38,7 +39,8 @@ class VisitController extends Controller
     public function create($patientId = null, $appointmentId = null)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create visits'))) {
             abort(403, 'غير مصرح لك بإنشاء زيارة');
         }
 
@@ -82,7 +84,8 @@ class VisitController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create visits'))) {
             abort(403, 'غير مصرح لك بإنشاء زيارة');
         }
 
@@ -135,7 +138,8 @@ class VisitController extends Controller
     public function show(Visit $visit)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view visits'))) {
             abort(403, 'غير مصرح لك بعرض بيانات الزيارة');
         }
 
@@ -146,7 +150,8 @@ class VisitController extends Controller
     public function edit(Visit $visit)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit visits') && !$user->hasRole(['doctor', 'nurse'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit visits'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات الزيارة');
         }
 
@@ -160,7 +165,8 @@ class VisitController extends Controller
     public function update(Request $request, Visit $visit)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit visits') && !$user->hasRole(['doctor', 'nurse'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit visits'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات الزيارة');
         }
 
@@ -212,7 +218,8 @@ class VisitController extends Controller
     public function destroy(Visit $visit)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('delete visits')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('delete visits'))) {
             abort(403, 'غير مصرح لك بحذف الزيارة');
         }
 
@@ -225,7 +232,8 @@ class VisitController extends Controller
     public function createFromAppointment(Appointment $appointment)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create visits') && !$user->hasRole(['doctor', 'receptionist', 'nurse', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create visits'))) {
             abort(403, 'غير مصرح لك بإنشاء زيارة من موعد');
         }
 

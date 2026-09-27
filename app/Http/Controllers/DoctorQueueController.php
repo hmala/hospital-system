@@ -366,6 +366,12 @@ class DoctorQueueController extends Controller
      */
     public function callNext(Request $request, $doctorId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المرضى من الطابور.'], 403);
+        }
+
         $doctor = Doctor::findOrFail($doctorId);
         $today = today();
 
@@ -430,6 +436,12 @@ class DoctorQueueController extends Controller
      */
     public function recall(Request $request, $appointmentId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بإعادة المناداة على المريض.'], 403);
+        }
+
         $appointment = Appointment::with(['patient.user', 'doctor.user'])->findOrFail($appointmentId);
         
         $appointment->status = 'calling';
@@ -454,6 +466,12 @@ class DoctorQueueController extends Controller
      */
     public function callForResults(Request $request, $visitId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المراجعين للنتائج.'], 403);
+        }
+
         $visit = Visit::with(['patient.user', 'doctor.user', 'appointment', 'radiologyRequests', 'requests'])->findOrFail($visitId);
         
         $hasPendingRad = $visit->radiologyRequests()->where('status', '!=', 'completed')->exists();
@@ -515,6 +533,12 @@ class DoctorQueueController extends Controller
      */
     public function startConsultation(Request $request, $appointmentId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك ببدء الكشف الطبي.'], 403);
+        }
+
         $appointment = Appointment::with(['patient.user', 'doctor.user'])->findOrFail($appointmentId);
 
         if ($appointment->payment_status !== 'paid' && !$appointment->emergency_id) {
@@ -556,6 +580,12 @@ class DoctorQueueController extends Controller
      */
     public function skip(Request $request, $appointmentId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتأخير دور المريض.'], 403);
+        }
+
         $appointment = Appointment::findOrFail($appointmentId);
         
         // Put at the end of queue

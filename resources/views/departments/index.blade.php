@@ -7,9 +7,11 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="fas fa-clinic-medical me-2"></i>إدارة العيادات</h2>
+                @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create departments'))
                 <a href="{{ route('departments.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>إضافة عيادة جديدة
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -53,12 +55,18 @@
                                     <td>@if($department->is_active)<span class="badge bg-success">نشط</span>@else<span class="badge bg-danger">غير نشط</span>@endif</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('view departments'))
                                             <a href="{{ route('departments.show', $department) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
+                                            @endif
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('edit departments'))
                                             <a href="{{ route('departments.edit', $department) }}" class="btn btn-warning" title="تعديل"><i class="fas fa-edit"></i></a>
+                                            @endif
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('delete departments'))
                                             <form action="{{ route('departments.destroy', $department) }}" method="POST" class="d-inline">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="btn btn-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف العيادة؟')"><i class="fas fa-trash"></i></button>
                                             </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

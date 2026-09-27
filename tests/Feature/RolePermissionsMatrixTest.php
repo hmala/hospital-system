@@ -289,6 +289,57 @@ class RolePermissionsMatrixTest extends TestCase
         // 6. Accountant surgery review without 'review surgery prices' => 403
         $this->actingAs($cashierUser)->get(route('accountant.surgeries.index'))->assertStatus(403);
     }
+
+    #[Test]
+    public function doctor_and_clinic_routes_are_strictly_gated_by_granular_permissions()
+    {
+        Permission::firstOrCreate(['name' => 'view doctors', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create doctors', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit doctors', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete doctors', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view departments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create departments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view appointments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create appointments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view visits', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create visits', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view own visits', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage consultant availability', 'guard_name' => 'web']);
+
+        $staffRole = Role::firstOrCreate(['name' => 'staff_clinic_test', 'guard_name' => 'web']);
+        $staffUser = User::factory()->create(['email' => 'staff_clinic@hospital.com']);
+        $staffUser->assignRole($staffRole);
+
+        // 1. Without 'view doctors' => 403 on doctors.index
+        $staffRole->syncPermissions([]);
+        $this->actingAs($staffUser)->get(route('doctors.index'))->assertStatus(403);
+        $this->actingAs($staffUser)->get(route('doctors.create'))->assertStatus(403);
+
+        // Grant 'view doctors'
+        $staffRole->givePermissionTo('view doctors');
+        $this->actingAs($staffUser)->get(route('doctors.index'))->assertStatus(200);
+        $this->actingAs($staffUser)->get(route('doctors.create'))->assertStatus(403);
+
+        // 2. Departments
+        $this->actingAs($staffUser)->get(route('departments.index'))->assertStatus(403);
+        $this->actingAs($staffUser)->get(route('departments.create'))->assertStatus(403);
+
+        // 3. Appointments
+        $this->actingAs($staffUser)->get(route('appointments.index'))->assertStatus(403);
+        $this->actingAs($staffUser)->get(route('appointments.create'))->assertStatus(403);
+
+        // 4. Visits
+        $this->actingAs($staffUser)->get(route('visits.index'))->assertStatus(403);
+        $this->actingAs($staffUser)->get(route('visits.create'))->assertStatus(403);
+
+        // 5. Doctor workstation (view own visits)
+        $this->actingAs($staffUser)->get(route('doctor.visits.index'))->assertStatus(403);
+
+        // 6. Consultant availability
+        $this->actingAs($staffUser)->get(route('consultant-availability.index'))->assertStatus(403);
+        $staffRole->givePermissionTo('manage consultant availability');
+        $this->actingAs($staffUser)->get(route('consultant-availability.index'))->assertStatus(200);
+    }
 }
 
 

@@ -59,6 +59,28 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-27 — المرحلة 3: تطهير وإحكام صلاحيات العيادات والاستشارية ومحطة الأطباء)
+
+### Done
+- **تطهير وإحكام محطة الطبيب وطابور الانتظار وتوفر الاستشاريين (`DoctorVisitController.php`, `DoctorQueueController.php`, `ConsultantAvailabilityController.php`)**:
+  * إلغاء التجاوز التلقائي لدور الطبيب `hasRole(['doctor', ...])`، واستبداله بفحص الصلاحيات الدقيقة:
+    - `view own visits`: تتحكم حصراً بالدخول إلى محطة كشف الطبيب (`doctor.visits.index`) وعرض الزيارة (`doctor.visits.show`).
+    - `manage own visits`: تتحكم بتعديل الكشف الطبي، كتابة الوصفة، طلب الفحوصات الطبية، إنهاء الزيارة، والرد على مقترحات بدائل الأدوية الصيدلانية.
+    - `manage consultant availability`: تتحكم بجدول توفر الاستشاريين والعيادات، واستدعاء المرضى من طابور الانتظار.
+    - `view cashier reports` و `view doctor profits`: تتحكم بكشوفات الحركات المالية للاستشارية وحسابات وأرباح الأطباء.
+- **تطهير وإحكام وحدات الأطباء، الأقسام، المواعيد، والزيارات (`DoctorController.php`, `DepartmentController.php`, `AppointmentController.php`, `VisitController.php`)**:
+  * إلغاء كافة فحوصات الأدوار المتجاوزة `hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse'])`.
+  * ربط كل إجراء بصلاحيته الحصرية:
+    - `view doctors`, `create doctors`, `edit doctors`, `delete doctors`: لإدارة سجلات الأطباء الاستشاريين.
+    - `view departments`, `create departments`, `edit departments`, `delete departments`: لإدارة العيادات والأقسام.
+    - `view appointments`, `create appointments`, `edit appointments`, `delete appointments`, `cancel appointments`: لإدارة المواعيد.
+    - `view visits`, `create visits`, `edit visits`, `delete visits`: لإدارة سجل الزيارات الطبية العامة.
+- **إحكام أزرار واجهات العيادات والأطباء والمواعيد والزيارات**:
+  * إحكام أزرار الإضافة والتعديل والحذف والتوفر في واجهات `doctors/index.blade.php`, `departments/index.blade.php`, `appointments/index.blade.php`, `visits/index.blade.php`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * توسيع اختبارات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) واجتياز كافة الاختبارات بنجاح 100%: 8 passed (64 assertions).
+  * اجتياز اختبارات الوصفات الطبية والطوارئ والعمليات وحجز السونار: 16 passed (129 assertions).
+
 ## Session log (2026-09-27 — المرحلة 2: تطهير وإحكام صلاحيات الصندوق والكاشير والمالية)
 
 ### Done

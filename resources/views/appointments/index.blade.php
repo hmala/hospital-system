@@ -14,9 +14,11 @@
                 </h2>
                 <div>
                     <small class="text-muted me-3" id="last-update">آخر تحديث: الآن</small>
+                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create appointments') || auth()->user()->hasRole('patient'))
                     <a href="{{ route('appointments.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>حجز موعد جديد
                     </a>
+                    @endif
                 </div>
             </div>
         </div>
@@ -79,8 +81,10 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('view appointments') || auth()->user()->hasRole('patient'))
                                             <a href="{{ route('appointments.show', $appointment) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
-                                            @if($appointment->payment_status === 'paid')
+                                            @endif
+                                            @if($appointment->payment_status === 'paid' && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create visits') || auth()->user()->can('manage own visits')))
                                                 <form action="{{ route('visits.create-from-appointment', $appointment) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success" title="تحويل إلى زيارة">
@@ -88,7 +92,7 @@
                                                     </button>
                                                 </form>
                                             @endif
-                                            @if($appointment->canBeCancelled())
+                                            @if($appointment->canBeCancelled() && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('cancel appointments') || auth()->user()->can('edit appointments') || auth()->user()->hasRole('patient')))
                                             <button type="button" class="btn btn-warning" title="إلغاء" data-bs-toggle="modal" data-bs-target="#cancelAppointmentModal" data-appointment-id="{{ $appointment->id }}">
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -167,8 +171,10 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('view appointments') || auth()->user()->hasRole('patient'))
                                             <a href="{{ route('appointments.show', $appointment) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
-                                            @if($appointment->payment_status === 'paid')
+                                            @endif
+                                            @if($appointment->payment_status === 'paid' && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create visits') || auth()->user()->can('manage own visits')))
                                                 <form action="{{ route('visits.create-from-appointment', $appointment) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success" title="تحويل إلى زيارة">
@@ -176,12 +182,14 @@
                                                     </button>
                                                 </form>
                                             @endif
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('edit appointments'))
                                             <a href="{{ route('appointments.edit', $appointment) }}" class="btn btn-warning" title="تعديل"><i class="fas fa-edit"></i></a>
-                                            @if($appointment->canBeCancelled())
+                                            @endif
+                                            @if($appointment->canBeCancelled() && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('cancel appointments') || auth()->user()->can('edit appointments') || auth()->user()->hasRole('patient')))
                                             <button type="button" class="btn btn-danger" title="إلغاء" data-bs-toggle="modal" data-bs-target="#cancelAppointmentModal" data-appointment-id="{{ $appointment->id }}">
                                                 <i class="fas fa-times"></i>
                                             </button>
-                                            @else
+                                            @elseif(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('delete appointments'))
                                             <form action="{{ route('appointments.destroy', $appointment) }}" method="POST" class="d-inline">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="btn btn-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف الموعد؟')"><i class="fas fa-trash"></i></button>

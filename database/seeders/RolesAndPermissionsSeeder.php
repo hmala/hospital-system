@@ -208,6 +208,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $doctorRole = Role::firstOrCreate(['name' => 'doctor']);
         $doctorRole->givePermissionTo([
             'view patients',
+            'view own visits',
             'manage own visits',
             'view visits',
             'create visits',
