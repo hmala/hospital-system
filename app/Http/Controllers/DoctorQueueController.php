@@ -76,8 +76,17 @@ class DoctorQueueController extends Controller
             'prescriptions.items.suggestedMedicine',
         ])
         ->where('doctor_id', $doctor->id)
-        ->whereDate('visit_date', $today)
         ->whereNotIn('status', ['completed', 'cancelled'])
+        ->where(function($q) use ($today) {
+            $q->whereDate('visit_date', $today)
+              ->orWhereDate('updated_at', $today)
+              ->orWhereHas('requests', function($rq) use ($today) {
+                  $rq->whereDate('created_at', $today);
+              })
+              ->orWhereHas('radiologyRequests', function($rq) use ($today) {
+                  $rq->whereDate('created_at', $today);
+              });
+        })
         ->where(function($q) {
             $q->whereHas('radiologyRequests')
               ->orWhereHas('requests', function($rq) {
