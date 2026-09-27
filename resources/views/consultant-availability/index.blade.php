@@ -278,7 +278,7 @@
                                     </td>
                                     <td class="fw-bold text-dark">
                                         <i class="fas fa-user text-secondary me-1"></i>
-                                        {{ optional(optional($req->visit)->patient ?? $req->patient)->name ?? 'مريض غير مسجل' }}
+                                        {{ optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض غير مسجل' }}
                                     </td>
                                     <td class="text-primary fw-semibold">
                                         <i class="fas fa-user-md me-1"></i>
@@ -297,7 +297,7 @@
                                         <small class="text-muted">{{ Str::limit($req->description ?? $req->notes ?? '-', 50) }}</small>
                                     </td>
                                     <td class="fw-bold text-success fs-6">
-                                        {{ number_format($req->amount ?? 0) }} د.ع
+                                        {{ number_format($req->total_amount ?? 0) }} د.ع
                                     </td>
                                     <td>
                                         @can('process payments')

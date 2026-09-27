@@ -92,6 +92,11 @@ class Patient extends Model
         return $this->hasMany(\App\Models\RadiologyRequest::class);
     }
 
+    public function getNameAttribute()
+    {
+        return $this->user ? $this->user->name : null;
+    }
+
     public function getFileNumberAttribute()
     {
         return $this->national_id ?? $this->id;
