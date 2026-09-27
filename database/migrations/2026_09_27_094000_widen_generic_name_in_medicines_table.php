@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('medicines', function (Blueprint $table) {
-            $table->dropIndex('medicines_generic_name_index');
+            $table->dropIndex('medicines_name_index');
             $table->text('generic_name')->nullable()->change();
             $table->text('name')->change();
         });
@@ -26,7 +26,7 @@ return new class extends Migration
         Schema::table('medicines', function (Blueprint $table) {
             $table->string('generic_name', 255)->nullable()->change();
             $table->string('name', 255)->change();
-            $table->index('generic_name');
+            $table->index('name');
         });
     }
 };
