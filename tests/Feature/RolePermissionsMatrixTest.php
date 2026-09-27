@@ -156,5 +156,45 @@ class RolePermissionsMatrixTest extends TestCase
         ]);
         $response->assertStatus(403);
     }
+
+    #[Test]
+    public function patient_crud_actions_are_strictly_gated_by_permissions()
+    {
+        Permission::firstOrCreate(['name' => 'view patients', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create patients', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit patients', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete patients', 'guard_name' => 'web']);
+
+        $receptionist = User::factory()->create(['email' => 'reception_crud@hospital.com']);
+        $role = Role::findByName('receptionist');
+        $receptionist->assignRole($role);
+
+        // Give ONLY view patients (no create, no edit, no delete)
+        $role->syncPermissions(['view patients']);
+
+        $patientUser = User::factory()->create(['name' => 'مريض تجريبي']);
+        $patient = \App\Models\Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'male',
+            'date_of_birth' => '1990-01-01',
+            'blood_group' => 'O+',
+        ]);
+
+        // 1. Can view index and show
+        $this->actingAs($receptionist)->get(route('patients.index'))->assertStatus(200);
+        $this->actingAs($receptionist)->get(route('patients.show', $patient))->assertStatus(200);
+
+        // 2. Cannot access create or store
+        $this->actingAs($receptionist)->get(route('patients.create'))->assertStatus(403);
+        $this->actingAs($receptionist)->post(route('patients.store'), ['name' => 'مريض جديد'])->assertStatus(403);
+
+        // 3. Cannot access edit or update
+        $this->actingAs($receptionist)->get(route('patients.edit', $patient))->assertStatus(403);
+        $this->actingAs($receptionist)->put(route('patients.update', $patient), ['name' => 'تعديل اسم'])->assertStatus(403);
+
+        // 4. Cannot delete
+        $this->actingAs($receptionist)->delete(route('patients.destroy', $patient))->assertStatus(403);
+    }
 }
+
 

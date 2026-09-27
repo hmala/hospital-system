@@ -35,8 +35,9 @@ class InquiryController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view inquiries'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى صفحة الاستعلامات');
         }
 
         // جلب آخر الزيارات في الاستعلامات ومصرف الدم (اليوم)
@@ -97,9 +98,23 @@ class InquiryController extends Controller
     public function create(HttpRequest $httpRequest)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canBookAny = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$canBookAny) {
+            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
         // البحث عن المريض
@@ -248,9 +263,23 @@ class InquiryController extends Controller
     public function store(HttpRequest $httpRequest)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canBookAny = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$canBookAny) {
+            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
         // جلب أنواع الخدمات المتاحة للمستخدم للتحقق من الصلاحيات
@@ -911,7 +940,8 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view inquiries') && !$user->can('create inquiries')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -947,8 +977,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view inquiries') && !$user->can('manage inquiries')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى تفاصيل الاستعلام');
         }
 
         // البحث عن الزيارة في قسم الاستعلامات
@@ -979,8 +1010,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage inquiries'))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الاستعلام');
         }
 
         // البحث عن الزيارة في قسم الاستعلامات
@@ -1046,8 +1078,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage inquiries'))) {
+            abort(403, 'غير مصرح لك بتحديث بيانات الاستعلام');
         }
 
         $httpRequest->validate([
@@ -1093,8 +1126,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage inquiries'))) {
+            abort(403, 'غير مصرح لك بحذف الاستعلام');
         }
 
         // البحث عن الزيارة في قسم الاستعلامات
@@ -1134,8 +1168,9 @@ class InquiryController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->can('view occupancy') && !$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor', 'surgery_staff'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view occupancy'))) {
+            abort(403, 'غير مصرح لك بعرض المرضى المقيمين');
         }
 
         $search = $request->query('search');

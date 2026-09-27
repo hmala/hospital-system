@@ -14,8 +14,8 @@ class PatientController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view patients') && !$user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse'])) {
-            abort(403, 'غير مصرح لك بعرض المرضى');
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patients'))) {
+            abort(403, 'غير مصرح لك بعرض قائمة المرضى');
         }
 
         $search = trim($request->get('search', ''));
@@ -67,8 +67,8 @@ class PatientController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
-            abort(403, 'غير مصرح لك بإضافة مريض');
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('create patients'))) {
+            abort(403, 'غير مصرح لك بإضافة مريض جديد');
         }
 
         $countries = \App\Models\Country::all();
@@ -82,8 +82,8 @@ class PatientController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
-            abort(403, 'غير مصرح لك بإضافة مريض');
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('create patients'))) {
+            abort(403, 'غير مصرح لك بإضافة مريض جديد');
         }
 
         $request->validate([
@@ -183,7 +183,7 @@ class PatientController extends Controller
     public function show(Patient $patient)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view patients') && !$user->hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patients'))) {
             abort(403, 'غير مصرح لك بعرض بيانات المريض');
         }
 
@@ -195,7 +195,7 @@ class PatientController extends Controller
     public function edit(Patient $patient)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('edit patients'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات المريض');
         }
 
@@ -210,7 +210,7 @@ class PatientController extends Controller
     public function update(Request $request, Patient $patient)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit patients') && !$user->hasRole(['receptionist', 'inquiry_staff'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('edit patients'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات المريض');
         }
 
@@ -302,7 +302,7 @@ class PatientController extends Controller
     public function destroy(Patient $patient)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('delete patients')) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('delete patients'))) {
             abort(403, 'غير مصرح لك بحذف المريض');
         }
 

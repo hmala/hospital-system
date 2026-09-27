@@ -59,6 +59,27 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-27 — المرحلة 1: تطهير وإحكام صلاحيات الاستعلامات وملفات المرضى وحجوزات الأسرّة)
+
+### Done
+- **تطهير شامل لكافة دوال ملفات المرضى (`PatientController.php` و `patients/index.blade.php`)**:
+  * إلغاء كافة استدعاءات أسماء الأدوار الثابتة `hasRole(['receptionist', 'doctor', 'inquiry_staff', 'staff', 'nurse'])` التي كانت تتجاوز الصلاحيات وتسمح بالإضافة والتعديل والحذف حتى بعد سحب الصلاحيات من شاشة الأدوار.
+  * ربط كل إجراء بصلاحيته الحصرية والمطابقة للوحة التحكم:
+    - `view patients`: تتحكم حصراً بعرض قائمة المرضى وتفاصيل ملف المريض.
+    - `create patients`: تتحكم بنموذج ودالة إنشاء مريض جديد وزر `[ + إضافة مريض جديد ]`.
+    - `edit patients`: تتحكم بنموذج ودالة تعديل المريض وزر `[ ✏️ تعديل ]` في جدول المرضى.
+    - `delete patients`: تتحكم بدالة الحذف وزر `[ 🗑️ حذف ]` في جدول المرضى.
+- **تطهير وإحكام شاشة وعمليات الاستعلامات (`InquiryController.php`)**:
+  * إلغاء التجاوز التلقائي بالاسم `hasRole(['admin', 'receptionist', ...])` من كافة دوال الاستعلامات:
+    - `view inquiries`: تتحكم بالدخول إلى شاشة استقبال الاستعلامات الرئيسية `inquiry.index`.
+    - `create inquiries` أو صلاحيات الحجز التفصيلية: تتحكم بنموذج ودالة الحجز `create` و `store`.
+    - `manage inquiries`: تتحكم بدوال تعديل، تحديث حالة، وحذف الاستعلامات.
+    - `view occupancy`: تتحكم حصراً بعرض شاشة المرضى المقيمين في المستشفى.
+- **إحكام حجوزات الأسرّة (`BedReservationController.php`)**:
+  * استبدال الفحص الثابت للأدوار بصلاحيات `view occupancy` و `manage rooms`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * توسيع اختبارات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) لاختبار كافة عمليات المرضى (العرض، الإضافة، التعديل، الحذف) ومنعها تلقائياً بـ `403` عند سحب الصلاحيات، واجتياز كافة الاختبارات بنجاح 100%: 6 passed (43 assertions).
+
 ## Session log (2026-09-27 — إحكام الصلاحيات الدقيقة لفحوصات الأشعة والسونار وأرشيف المرضى)
 
 ### Done
