@@ -56,8 +56,7 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
-- When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
-- **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
+- **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
 ## Session log (2026-09-25 — تبسيط جدول الطوارئ، إزالة زر كشف وعلاج، توحيد بطاقات الصيدلية وتحديث شجرة العلاقات البرمجية Graphify)
 
