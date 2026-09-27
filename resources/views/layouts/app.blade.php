@@ -112,11 +112,8 @@
             if (Auth::user()->can('view visits')) {
                 $incompleteVisits = \App\Models\Visit::whereIn('status', ['pending', 'in_progress'])->count();
             }
-            if (Auth::user()->hasRole('radiology_staff') || Auth::user()->hasRole('التخدير') || Auth::user()->hasRole('admin')) {
+            if (Auth::user()->can('view radiology')) {
                 $pendingSurgeryRadiology = \App\Models\SurgeryRadiologyTest::where('status', 'pending')->count();
-            }
-            if (Auth::user()->hasRole('التخدير') || Auth::user()->hasRole('admin')) {
-                // عداد محطة التخدير - بعد الجراح (موجود مسبقاً بالأعلى ولكن نؤكد عليه هنا إذا لزم الأمر)
             }
             if (Auth::user()->can('view radiology')) {
                 $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
@@ -691,10 +688,11 @@
 
                     <!-- روابط ثابتة حسب الصلاحيات -->
                         
-                        @canany(['view patients', 'view inquiries', 'view cashier', 'view patient history'])
+                        <!-- قسم إدارة المرضى والاستعلامات -->
+                        @canany(['view patients', 'view inquiries', 'view patient history', 'view occupancy'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#patientMgmtSection" aria-expanded="false">
-                            <span><i class="fas fa-user-injured"></i> إدارة المرضى</span>
+                            <span><i class="fas fa-concierge-bell"></i> إدارة المرضى والاستعلامات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="patientMgmtSection">
@@ -728,11 +726,21 @@
                             </a>
                         </li>
                         @endcan
+                        </div> <!-- end patientMgmtSection -->
+                        @endcanany
 
+                        <!-- قسم الصندوق والمالية -->
+                        @canany(['view cashier', 'view cashier reports', 'view cashier surgeries', 'review surgery prices'])
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#cashierSection" aria-expanded="false">
+                            <span><i class="fas fa-cash-register"></i> الصندوق والمالية</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section" id="cashierSection">
                         @can('view cashier')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.index') || request()->routeIs('cashier.payment.*') || request()->routeIs('cashier.receipt*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
-                                <i class="fas fa-cash-register"></i><span> الكاشير</span>
+                                <i class="fas fa-cash-register"></i><span> لوحة الكاشير العامة</span>
                                 @php
                                     $pendingPayments = \App\Models\Appointment::where('payment_status', 'pending')
                                         ->whereIn('status', ['scheduled', 'confirmed'])
@@ -786,8 +794,8 @@
                             </a>
                         </li>
                         @endcan
-                    </div> <!-- end patientMgmtSection -->
-                    @endcanany
+                        </div> <!-- end cashierSection -->
+                        @endcanany
 
                 
 
@@ -968,7 +976,6 @@
                         @endcan
 
                         @can('view resident station')
-                        @if((!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('resident-station.*') ? 'active' : '' }}" href="{{ route('resident-station.index') }}">
                                 <i class="fas fa-user-graduate"></i><span> محطة المقيم</span>
@@ -977,11 +984,9 @@
                                 @endif
                             </a>
                         </li>
-                        @endif
                         @endcan
                         
                         @can('view operation theater station')
-                        @if((!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('operation-theater-station.*') ? 'active' : '' }}" href="{{ route('operation-theater-station.index') }}">
                                 <i class="fas fa-procedures"></i><span> صالة العمليات</span>
@@ -990,11 +995,9 @@
                                 @endif
                             </a>
                         </li>
-                        @endif
                         @endcan
                         
                         @can('view surgeon station')
-                        @if(Auth::user()->hasRole('الجراح') || (!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
                                 <i class="fas fa-user-md"></i><span> محطة الجراح</span>
@@ -1003,11 +1006,9 @@
                                 @endif
                             </a>
                         </li>
-                        @endif
                         @endcan
                         
                         @can('view anesthesia station')
-                        @if(Auth::user()->hasRole('التخدير') || (!Auth::user()->hasRole('التخدير') && !Auth::user()->hasRole('الجراح')) || Auth::user()->hasRole('admin'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('anesthesia-station.*') ? 'active' : '' }}" href="{{ route('anesthesia-station.index') }}">
                                 <i class="fas fa-syringe"></i><span> محطة التخدير</span>
@@ -1016,7 +1017,6 @@
                                 @endif
                             </a>
                         </li>
-                        @endif
                         @endcan
 
                         @can('view nursing station')
@@ -1114,7 +1114,7 @@
                         </li>
                         @endcan
 
-                        @if(auth()->user()->hasRole('radiology_staff') || auth()->user()->hasRole('التخدير') || auth()->user()->hasRole('admin'))
+                        @can('view radiology')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
                                 <i class="fas fa-x-ray"></i><span> أشعة العمليات</span>
@@ -1126,7 +1126,7 @@
                                 <i class="fas fa-list"></i><span> عمليات تحتاج اختيار أشعة</span>
                             </a>
                         </li>
-                        @endif
+                        @endcan
 
                         @can('view lab test groups')
                         <li class="nav-item">
@@ -1183,7 +1183,7 @@
                         </li>
                         @endcan
 
-                        @hasrole('admin')
+                        @canany(['manage users', 'manage roles'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
                                 <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
@@ -1194,7 +1194,7 @@
                                 <i class="fas fa-tags"></i><span> تسعير وتصنيف التحاليل</span>
                             </a>
                         </li>
-                        @endhasrole
+                        @endcanany
 
                         </div>
                         @endcanany
@@ -1291,7 +1291,7 @@
                         </div>
                         @endcanany
 
-                        @hasanyrole('admin|accountant')
+                        @canany(['view cashier reports', 'review surgery prices'])
                         @php
                             $isConsultantActive = request()->routeIs('admin.doctor-commission-settings.*') ||
                                                    request()->routeIs('cashier.report') ||
@@ -1384,7 +1384,7 @@
                                 </li>
                             </div>
                         </div>
-                        @endhasanyrole
+                        @endcanany
 
                    @canany(['manage inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests'])
                     <div class="sidebar-divider"></div>

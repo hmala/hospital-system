@@ -1,193 +1,263 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="mb-4">
-        <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-right"></i> رجوع
-        </a>
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-1"></i> رجوع لقائمة الأدوار
+            </a>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" form="roleCreateForm" class="btn btn-primary px-4 fw-bold shadow-sm">
+                <i class="fas fa-save me-1"></i> حفظ الدور الجديد
+            </button>
+        </div>
     </div>
 
     <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="fas fa-plus-circle"></i> إضافة دور جديد</h4>
+        <div class="col-xl-11 col-lg-12">
+            <div class="card shadow border-0 rounded-3 overflow-hidden">
+                <div class="card-header bg-gradient bg-primary text-white py-3 px-4">
+                    <h4 class="mb-1 fw-bold"><i class="fas fa-plus-circle me-2"></i> إضافة دور وظيفي جديد</h4>
+                    <small class="text-white-50">تحديد اسم الدور وتخصيص الصلاحيات التشغيلية والإدارية الممنوحة له</small>
                 </div>
-                <div class="card-body">
-                    <form action="{{ route('roles.store') }}" method="POST">
+
+                <div class="card-body p-4 bg-light bg-opacity-50">
+                    <form id="roleCreateForm" action="{{ route('roles.store') }}" method="POST">
                         @csrf
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="name" class="form-label">الاسم الإنجليزي <span class="text-danger">*</span></label>
-                                <input type="text" 
-                                       class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" 
-                                       name="name" 
-                                       value="{{ old('name') }}" 
-                                       placeholder="مثال: custom_role"
-                                       required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="text-muted">استخدم أحرف إنجليزية صغيرة وشرطة سفلية فقط</small>
-                            </div>
+                        <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+                            <div class="card-body p-4">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="name" class="form-label fw-bold">الاسم البرمجي للدور (System Key) <span class="text-danger">*</span></label>
+                                        <input type="text" 
+                                               class="form-control @error('name') is-invalid @enderror" 
+                                               id="name" 
+                                               name="name" 
+                                               value="{{ old('name') }}" 
+                                               placeholder="مثال: custom_specialist"
+                                               required>
+                                        @error('name')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="text-muted">استخدم أحرف إنجليزية صغيرة وشرطة سفلية فقط (e.g. senior_nurse)</small>
+                                    </div>
 
-                            <div class="col-md-6">
-                                <label for="display_name" class="form-label">الاسم المعروض <span class="text-danger">*</span></label>
-                                <input type="text" 
-                                       class="form-control @error('display_name') is-invalid @enderror" 
-                                       id="display_name" 
-                                       name="display_name" 
-                                       value="{{ old('display_name') }}" 
-                                       placeholder="مثال: مدير مخصص"
-                                       required>
-                                @error('display_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                    <div class="col-md-6">
+                                        <label for="display_name" class="form-label fw-bold">المسمى الوظيفي المعروض (Display Name) <span class="text-danger">*</span></label>
+                                        <input type="text" 
+                                               class="form-control @error('display_name') is-invalid @enderror" 
+                                               id="display_name" 
+                                               name="display_name" 
+                                               value="{{ old('display_name') }}" 
+                                               placeholder="مثال: مسؤول عناية خاصة"
+                                               required>
+                                        @error('display_name')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="text-muted">الاسم الذي سيظهر للمستخدمين في النظام</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">الصلاحيات</label>
-                            @error('permissions')
-                                <div class="text-danger small mb-2">{{ $message }}</div>
-                            @enderror
-                            
-                            @foreach($permissions as $module => $perms)
-                            <div class="card mb-3">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-folder"></i> 
-                                        @switch($module)
-                                            @case('patients') المرضى @break
-                                            @case('doctors') الأطباء @break
-                                            @case('departments') العيادات @break
-                                            @case('appointments') المواعيد @break
-                                            @case('visits') الزيارات @break
-                                            @case('surgeries') العمليات @break
-                                            @case('radiology') الأشعة @break
-                                            @case('tests') التحاليل @break
-                                            @case('inquiries') الاستعلامات @break
-                                            @case('rooms') الغرف @break
-                                            @case('inventory') المخزون @break
-                                            @case('cashier') الكاشير @break
-                                            @case('emergencies') الطوارئ @break
-                                            @case('pharmacy') الصيدلية @break
-                                            @case('system') إدارة النظام @break
-                                            @case('consultant') الأطباء الاستشاريين @break
-                                            @case('section') الأقسام الرئيسية @break
-                                            @default {{ $module }}
-                                        @endswitch
-                                    </h6>
-                                    <div class="form-check">
-                                        <input class="form-check-input module-checkbox" 
-                                               type="checkbox" 
-                                               id="module_{{ $loop->index }}"
-                                               data-module="{{ $loop->index }}">
-                                        <label class="form-check-label fw-bold text-primary" for="module_{{ $loop->index }}">
-                                            <i class="fas fa-check-double"></i> تحديد الكل
-                                        </label>
+                        <!-- شريط التصفية والبحث السريع -->
+                        <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+                            <div class="card-body p-3">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-lg-5 col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 text-muted"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control bg-light border-0" id="searchPermissions" placeholder="بحث فوري في الصلاحيات بالاسم أو الوظيفة...">
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-7 col-md-6 text-md-end">
+                                        <div class="btn-group btn-group-sm flex-wrap" role="group">
+                                            <button type="button" class="btn btn-outline-primary quick-select" data-action="all">
+                                                <i class="fas fa-check-double me-1"></i> تفعيل الكل
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info quick-select" data-action="view">
+                                                <i class="fas fa-eye me-1"></i> عرض فقط
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success quick-select" data-action="create">
+                                                <i class="fas fa-plus me-1"></i> إضافة فقط
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning quick-select" data-action="edit">
+                                                <i class="fas fa-edit me-1"></i> تعديل فقط
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger quick-select" data-action="delete">
+                                                <i class="fas fa-trash me-1"></i> حذف فقط
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary quick-select" data-action="none">
+                                                <i class="fas fa-times me-1"></i> إلغاء التحديد
+                                            </button>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-light border ms-2" id="expandCollapseAll">
+                                            <i class="fas fa-expand-alt"></i> <span>توسيع الكل</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        @foreach($perms as $permission)
-                                        <div class="col-md-6 col-lg-4 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input permission-checkbox" 
-                                                       type="checkbox" 
-                                                       name="permissions[]" 
-                                                       value="{{ $permission->name }}" 
-                                                       id="perm_{{ $permission->id }}"
-                                                       data-module="{{ $loop->parent->index }}"
-                                                       {{ in_array($permission->name, old('permissions', [])) ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="perm_{{ $permission->id }}">
-                                                    @php
-                                                        $sectionPermissions = [
-                                                            'view patient management section' => 'عرض قسم إدارة المرضى',
-                                                            'view emergency section' => 'عرض قسم الطوارئ',
-                                                            'view doctors section' => 'عرض قسم الأطباء والعيادات',
-                                                            'view appointments section' => 'عرض قسم المواعيد والزيارات',
-                                                            'view surgeries section' => 'عرض قسم العمليات الجراحية',
-                                                            'view lab section' => 'عرض قسم المختبر والأشعة',
-                                                            'view settings section' => 'عرض قسم الإعدادات',
-                                                            'view resident station' => 'عرض محطة الطبيب المقيم',
-                                                            'view operation theater station' => 'عرض صالة العمليات',
-                                                            'view surgeon station' => 'عرض محطة الطبيب الجراح',
-                                                            'view anesthesia station' => 'عرض محطة التخدير',
-                                                            'view nursing station' => 'عرض محطة التمريض',
-                                                        ];
-                                                        
-                                                        if (isset($sectionPermissions[$permission->name])) {
-                                                            $label = $sectionPermissions[$permission->name];
-                                                        } else {
-                                                            // special case lab tests
-                                                            if($permission->name === 'view lab tests') {
-                                                                $label = 'عرض أنواع التحاليل';
-                                                            } else {
-                                                                $parts = explode(' ', $permission->name);
-                                                                $verb = $parts[0] ?? '';
-                                                                $res = $parts[1] ?? '';
-                                                                $verbMap = [
-                                                                    'view' => 'عرض',
-                                                                    'create' => 'إنشاء',
-                                                                    'edit' => 'تعديل',
-                                                                    'delete' => 'حذف',
-                                                                    'manage' => 'إدارة',
-                                                                    'cancel' => 'إلغاء',
-                                                                    'process' => 'معالجة',
-                                                                    'control' => 'التحكم في',
-                                                                ];
-                                                                $resourceMap = [
-                                                                    'patients' => 'المرضى',
-                                                                    'doctors' => 'الأطباء',
-                                                                    'departments' => 'العيادات',
-                                                                    'appointments' => 'المواعيد',
-                                                                    'visits' => 'الزيارات',
-                                                                    'surgeries' => 'العمليات',
-                                                                    'radiology' => 'الأشعة',
-                                                                    'tests' => 'التحاليل',
-                                                                    'inquiries' => 'الاستعلامات',
-                                                                    'lab' => 'المختبر',
-                                                                    'pharmacy' => 'الصيدلية',
-                                                                    'referrals' => 'التحويلات',
-                                                                    'consultant' => 'الاستشاريين',
-                                                                    'cashier' => 'الكاشير',
-                                                                    'types' => 'أنواع التحاليل',
-                                                                    'rooms' => 'الغرف',
-                                                                    'emergencies' => 'الطوارئ',
-                                                                    'users' => 'المستخدمين',
-                                                                    'roles' => 'الأدوار',
-                                                                    'permissions' => 'الصلاحيات',
-                                                                    'own' => 'الخاصة',
-                                                                    'surgery' => 'العمليات',
-                                                                    'lab' => 'المختبر',
-                                                                    'emergency' => 'الطوارئ',
-                                                                ];
-                                                                $label = ($verbMap[$verb] ?? $verb) . ' ' . ($resourceMap[$res] ?? $res);
-                                                            }
-                                                        }
-                                                    @endphp
-                                                    {{ $label }}
-                                                </label>
+                            </div>
+                        </div>
+
+                        @error('permissions')
+                            <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i> {{ $message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @enderror
+
+                        @php
+                            $sections = $moduleOrder ?? \App\Http\Controllers\RoleManagementController::getModuleOrder();
+                            $defs = $permissionDefinitions ?? \App\Http\Controllers\RoleManagementController::getPermissionDefinitions();
+                            $selectedPermissions = old('permissions', []);
+                        @endphp
+
+                        <!-- أقسام الصلاحيات الـ 9 -->
+                        <div class="accordion" id="permissionsAccordion">
+                            @foreach($sections as $moduleKey => $moduleInfo)
+                            @php
+                                $perms = $permissions[$moduleKey] ?? collect();
+                                $collapseId = "collapse_" . $moduleKey;
+                                $headerId = "heading_" . $moduleKey;
+                                $totalInModule = count($perms);
+                                if ($totalInModule === 0) continue;
+
+                                $checkedInModule = 0;
+                                foreach($perms as $p) {
+                                    if (in_array($p->name, $selectedPermissions)) {
+                                        $checkedInModule++;
+                                    }
+                                }
+                            @endphp
+                            <div class="accordion-item border-0 shadow-sm rounded-3 mb-3 overflow-hidden permission-module-item" data-module="{{ $moduleKey }}">
+                                <h2 class="accordion-header" id="{{ $headerId }}">
+                                    <div class="accordion-button collapsed py-3 px-4 bg-white" 
+                                         type="button" 
+                                         data-bs-toggle="collapse" 
+                                         data-bs-target="#{{ $collapseId }}" 
+                                         aria-expanded="false" 
+                                         aria-controls="{{ $collapseId }}">
+                                        <div class="d-flex justify-content-between align-items-center w-100 me-3 flex-wrap gap-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-3 bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} p-2 me-3 fs-5">
+                                                    <i class="fas {{ $moduleInfo['icon'] }}"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="fw-bold fs-6 text-dark">{{ $moduleInfo['name'] }}</span>
+                                                        <span class="badge bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} border border-{{ $moduleInfo['color'] }} border-opacity-25 module-badge" id="badge_{{ $moduleKey }}">
+                                                            {{ $checkedInModule }} / {{ $totalInModule }}
+                                                        </span>
+                                                    </div>
+                                                    <small class="text-muted d-block">{{ $moduleInfo['description'] }}</small>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex align-items-center gap-3 ms-auto" onclick="event.stopPropagation();">
+                                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                                    <input class="form-check-input select-all-module" 
+                                                           type="checkbox" 
+                                                           role="switch" 
+                                                           id="switch_{{ $moduleKey }}"
+                                                           data-module="{{ $moduleKey }}"
+                                                           {{ $checkedInModule === $totalInModule && $totalInModule > 0 ? 'checked' : '' }}
+                                                           style="cursor: pointer; width: 2.8em; height: 1.4em;">
+                                                    <label class="form-check-label small fw-bold text-muted cursor-pointer" for="switch_{{ $moduleKey }}">
+                                                        تحديد كامل القسم
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
-                                        @endforeach
+                                    </div>
+                                </h2>
+
+                                <div id="{{ $collapseId }}" 
+                                     class="accordion-collapse collapse" 
+                                     aria-labelledby="{{ $headerId }}" 
+                                     data-bs-parent="#permissionsAccordion">
+                                    <div class="accordion-body p-0 border-top bg-white">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="table-light text-muted small">
+                                                    <tr>
+                                                        <th style="width: 50px;" class="text-center">#</th>
+                                                        <th>اسم الصلاحية والوظيفة السريرية / الإدارية</th>
+                                                        <th style="width: 140px;" class="text-center">نوع الإجراء</th>
+                                                        <th style="width: 130px;" class="text-center">الحالة والتفعيل</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($perms as $index => $permission)
+                                                    @php
+                                                        $def = $defs[$permission->name] ?? null;
+                                                        $permLabel = $def['label'] ?? $permission->name;
+                                                        $permAction = $def['action'] ?? 'إجراء';
+                                                        $permBadge = $def['badge'] ?? 'secondary';
+                                                        $isChecked = in_array($permission->name, $selectedPermissions);
+                                                    @endphp
+                                                    <tr class="permission-row {{ $isChecked ? 'table-active-row' : '' }}">
+                                                        <td class="text-center text-muted small fw-semibold">
+                                                            {{ $loop->iteration }}
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="me-2 text-{{ $permBadge }}">
+                                                                    <i class="fas fa-check-circle fs-6"></i>
+                                                                </div>
+                                                                <div>
+                                                                    <label for="perm_{{ $permission->id }}" class="fw-bold text-dark mb-0 d-block cursor-pointer permission-label">
+                                                                        {{ $permLabel }}
+                                                                    </label>
+                                                                    <code class="text-muted small user-select-all" style="font-size: 0.78rem;">{{ $permission->name }}</code>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-{{ $permBadge }} bg-opacity-10 text-{{ $permBadge }} border border-{{ $permBadge }} border-opacity-25 px-2 py-1">
+                                                                {{ $permAction }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <div class="form-check form-switch d-inline-block m-0">
+                                                                <input class="form-check-input permission-checkbox" 
+                                                                       type="checkbox" 
+                                                                       name="permissions[]" 
+                                                                       value="{{ $permission->name }}" 
+                                                                       id="perm_{{ $permission->id }}"
+                                                                       data-module="{{ $moduleKey }}"
+                                                                       {{ $isChecked ? 'checked' : '' }}
+                                                                       style="cursor: pointer; width: 2.5em; height: 1.3em;">
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             @endforeach
                         </div>
 
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{{ route('roles.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> إلغاء
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> حفظ
-                            </button>
+                        <!-- أزرار الحفظ السفلية -->
+                        <div class="card border-0 shadow-sm rounded-3 mt-4 bg-white">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="text-muted small">
+                                    <i class="fas fa-info-circle text-primary me-1"></i> يمكنك تعديل صلاحيات هذا الدور لاحقاً في أي وقت من لوحة إدارة الأدوار.
+                                </span>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary px-3">
+                                        <i class="fas fa-times me-1"></i> إلغاء
+                                    </a>
+                                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                                        <i class="fas fa-save me-1"></i> حفظ الدور الجديد
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -197,67 +267,199 @@
 </div>
 
 <style>
-    .form-check {
-        padding: 0.5rem;
-        border-radius: 5px;
-        transition: background-color 0.2s;
+    .cursor-pointer { cursor: pointer; }
+    .table-active-row {
+        background-color: rgba(13, 110, 253, 0.04) !important;
     }
-    .form-check:hover {
-        background-color: #f8f9fa;
+    .accordion-button:not(.collapsed) {
+        background-color: #f8fafc !important;
+        box-shadow: none !important;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
     }
-    .form-check-input:checked ~ .form-check-label {
-        font-weight: 600;
-        color: #0d6efd;
+    .accordion-button:focus {
+        box-shadow: none !important;
     }
+    .form-switch .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    mark {
+        background-color: #fef08a;
+        color: #854d0e;
+        padding: 0.1em 0.3em;
+        border-radius: 3px;
+        font-weight: 700;
+    }
+    .text-teal { color: #0d9488 !important; }
+    .bg-teal { background-color: #0d9488 !important; }
+    .border-teal { border-color: #0d9488 !important; }
+    .text-purple { color: #7c3aed !important; }
+    .bg-purple { background-color: #7c3aed !important; }
+    .border-purple { border-color: #7c3aed !important; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // تحديث حالة "تحديد الكل" عند تحميل الصفحة
-    updateSelectAllStatus();
+    updateAllCounters();
+
+    // 1. زر توسيع / طي الكل
+    let allExpanded = false;
+    const expandCollapseBtn = document.getElementById('expandCollapseAll');
+    const allCollapses = document.querySelectorAll('.accordion-collapse');
     
-    // عند النقر على "تحديد الكل" لقسم معين
-    document.querySelectorAll('.module-checkbox').forEach(function(selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            const moduleIndex = this.dataset.module;
-            const isChecked = this.checked;
-            
-            // تحديد/إلغاء تحديد جميع الصلاحيات في هذا القسم
-            document.querySelectorAll(`.permission-checkbox[data-module="${moduleIndex}"]`).forEach(function(checkbox) {
-                checkbox.checked = isChecked;
+    if (expandCollapseBtn) {
+        expandCollapseBtn.addEventListener('click', function() {
+            allExpanded = !allExpanded;
+            allCollapses.forEach(function(collapse) {
+                const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false });
+                if (allExpanded) {
+                    bsCollapse.show();
+                    expandCollapseBtn.innerHTML = '<i class="fas fa-compress-alt"></i> <span>طي الكل</span>';
+                } else {
+                    bsCollapse.hide();
+                    expandCollapseBtn.innerHTML = '<i class="fas fa-expand-alt"></i> <span>توسيع الكل</span>';
+                }
             });
         });
-    });
-    
-    // عند تغيير أي صلاحية، تحديث حالة "تحديد الكل"
-    document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            updateSelectAllStatus();
+    }
+
+    // 2. مفتاح تحديد كامل القسم (Switch لكل قسم)
+    document.querySelectorAll('.select-all-module').forEach(function(switchElem) {
+        switchElem.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const moduleKey = this.dataset.module;
+            const isChecked = this.checked;
+            
+            document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).forEach(function(checkbox) {
+                checkbox.checked = isChecked;
+                const row = checkbox.closest('tr');
+                if (row) {
+                    if (isChecked) row.classList.add('table-active-row');
+                    else row.classList.remove('table-active-row');
+                }
+            });
+
+            updateModuleCounter(moduleKey);
         });
     });
-    
-    // دالة لتحديث حالة "تحديد الكل" لكل قسم
-    function updateSelectAllStatus() {
-        document.querySelectorAll('.module-checkbox').forEach(function(selectAllCheckbox) {
-            const moduleIndex = selectAllCheckbox.dataset.module;
-            const moduleCheckboxes = document.querySelectorAll(`.permission-checkbox[data-module="${moduleIndex}"]`);
-            const checkedCount = document.querySelectorAll(`.permission-checkbox[data-module="${moduleIndex}"]:checked`).length;
-            
-            // إذا كانت جميع الصلاحيات محددة
-            if (checkedCount === moduleCheckboxes.length) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
+
+    // 3. عند تغيير أي Checkbox فردي
+    document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const moduleKey = this.dataset.module;
+            const row = this.closest('tr');
+            if (row) {
+                if (this.checked) row.classList.add('table-active-row');
+                else row.classList.remove('table-active-row');
             }
-            // إذا كان بعضها محدد
-            else if (checkedCount > 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = true;
-            }
-            // إذا لم يكن أي منها محدد
-            else {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            }
+            updateModuleCounter(moduleKey);
+        });
+    });
+
+    // 4. أزرار التحديد السريع
+    document.querySelectorAll('.quick-select').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const action = this.dataset.action;
+            const allCheckboxes = document.querySelectorAll('.permission-checkbox');
+
+            allCheckboxes.forEach(function(checkbox) {
+                const permName = checkbox.value.toLowerCase();
+                let shouldCheck = false;
+
+                if (action === 'all') {
+                    shouldCheck = true;
+                } else if (action === 'none') {
+                    shouldCheck = false;
+                } else if (action === 'view') {
+                    shouldCheck = permName.startsWith('view') || permName.includes('.view');
+                } else if (action === 'create') {
+                    shouldCheck = permName.startsWith('create') || permName.includes('.create');
+                } else if (action === 'edit') {
+                    shouldCheck = permName.startsWith('edit') || permName.includes('.edit');
+                } else if (action === 'delete') {
+                    shouldCheck = permName.startsWith('delete') || permName.includes('.delete');
+                }
+
+                checkbox.checked = shouldCheck;
+                const row = checkbox.closest('tr');
+                if (row) {
+                    if (shouldCheck) row.classList.add('table-active-row');
+                    else row.classList.remove('table-active-row');
+                }
+            });
+
+            updateAllCounters();
+        });
+    });
+
+    // 5. البحث الفوري في الصلاحيات
+    const searchInput = document.getElementById('searchPermissions');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const moduleItems = document.querySelectorAll('.permission-module-item');
+
+            moduleItems.forEach(function(moduleItem) {
+                const rows = moduleItem.querySelectorAll('.permission-row');
+                let moduleHasMatch = false;
+
+                rows.forEach(function(row) {
+                    const labelElem = row.querySelector('.permission-label');
+                    const codeElem = row.querySelector('code');
+                    const text = ((labelElem ? labelElem.textContent : '') + ' ' + (codeElem ? codeElem.textContent : '')).toLowerCase();
+
+                    if (searchTerm === '' || text.includes(searchTerm)) {
+                        row.style.display = '';
+                        moduleHasMatch = true;
+
+                        if (searchTerm !== '' && labelElem) {
+                            const originalText = labelElem.getAttribute('data-original') || labelElem.textContent;
+                            if (!labelElem.getAttribute('data-original')) {
+                                labelElem.setAttribute('data-original', originalText);
+                            }
+                            const regex = new RegExp(`(${searchTerm})`, 'gi');
+                            labelElem.innerHTML = originalText.replace(regex, '<mark>$1</mark>');
+                        } else if (labelElem && labelElem.getAttribute('data-original')) {
+                            labelElem.innerHTML = labelElem.getAttribute('data-original');
+                        }
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                if (moduleHasMatch) {
+                    moduleItem.style.display = '';
+                    if (searchTerm !== '') {
+                        const collapse = moduleItem.querySelector('.accordion-collapse');
+                        if (collapse) {
+                            bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).show();
+                        }
+                    }
+                } else {
+                    moduleItem.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    function updateModuleCounter(moduleKey) {
+        const total = document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).length;
+        const checked = document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]:checked`).length;
+        const badge = document.getElementById(`badge_${moduleKey}`);
+        const switchElem = document.getElementById(`switch_${moduleKey}`);
+
+        if (badge) {
+            badge.textContent = `${checked} / ${total}`;
+        }
+        if (switchElem) {
+            switchElem.checked = (checked === total && total > 0);
+            switchElem.indeterminate = (checked > 0 && checked < total);
+        }
+    }
+
+    function updateAllCounters() {
+        document.querySelectorAll('.select-all-module').forEach(function(switchElem) {
+            updateModuleCounter(switchElem.dataset.module);
         });
     }
 });
