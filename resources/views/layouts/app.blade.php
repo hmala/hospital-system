@@ -711,13 +711,13 @@
                             </a>
                         </li>
                         @endcan
-                        @canany(['view patient history', 'view inquiries'])
+                        @can('view patient history')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.patients.history') ? 'active' : '' }}" href="{{ route('inquiry.patients.history') }}">
                                 <i class="fas fa-folder-open"></i><span> سجل وأرشيف المرضى</span>
                             </a>
                         </li>
-                        @endcanany
+                        @endcan
 
                         @can('view occupancy')
                         <li class="nav-item">

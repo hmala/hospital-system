@@ -59,6 +59,23 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-27 — إحكام الصلاحيات الدقيقة لفحوصات الأشعة والسونار وأرشيف المرضى)
+
+### Done
+- **إحكام الصلاحيات الفرعية للأشعة والسونار (Inquiry Radiology Modalities Strict Gating)**:
+  * إلغاء الاعتماد التلقائي والفضفاض على الصلاحية القديمة `inquiry.create.radiology` التي كانت تتسبب في ظهور كافة أزرار الأشعة والسونار حتى لو كانت غير مفعلة في شاشة الأدوار والصلاحيات.
+  * ربط كل نوع فحص بصلاحيته الحصرية والمستقلة: `inquiry.create.radiology.general` (أشعة عامة)، `inquiry.create.radiology.ultrasound` (سونار)، `inquiry.create.radiology.mri` (رنين مغناطيسي)، و `inquiry.create.radiology.echo` (إيكو القلب).
+  * حجب بطاقة الأشعة بالكامل من شاشة الحجز في حال عدم امتلاك المستخدم لأي من الصلاحيات الأربعة، وحصر الأزرار المعروضة فقط بالأنواع المصرح له بها، وتفعيل النوع المتاح تلقائياً كخيار افتراضي في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php).
+  * تشديد التحقق في دالة الحفظ `InquiryController@store` لمنع الحجز عبر الـ API / Form في حال محاولة تجاوز الصلاحية المحددة للنوع وإرجاع خطأ `403`.
+- **حجب وتأمين أرشيف وسجل المرضى الشامل (`view patient history`)**:
+  * إزالة التجاوز الصريح والتلقائي لدور موظف الاستعلامات (`receptionist`) في دوال عرض الأرشيف والمستندات `InquiryController@patientHistory` و `serveDocumentFile`، وإلزام التحقق من صلاحية `view patient history` أو دور المدير `admin`.
+  * تحديث القالب الرئيسي [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php) لإخفاء رابط "سجل وأرشيف المرضى" من القائمة الجانبية ما لم يمتلك المستخدم صلاحية `view patient history` صراحةً بدلاً من `@canany(['view patient history', 'view inquiries'])`.
+- **تنظيف الصلاحيات وقاعدة البيانات (Database Migration & Cleanup)**:
+  * إنشاء ميغريشن `2026_09_27_220000_cleanup_legacy_radiology_inquiry_permission.php` لحذف الصلاحية العامة المضللة `inquiry.create.radiology` من أدوار الاستعلامات وضمان توفر الصلاحيات الفرعية وتحديث كاش الصلاحيات.
+  * تنظيف مصفوفة تعريفات الصلاحيات في [RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إضافة اختبارات موجهة في [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) للتحقق من حجب الأرشيف وحجب حجز الأشعة غير المصرح بها، واجتياز كافة الاختبارات بنجاح 100%: 5 passed (36 assertions).
+
 ## Session log (2026-09-27 — مواءمة حجز السونار في الاستعلامات، جدول الاستشارية، الصندوق، وإلغاء الحجز)
 
 ### Done

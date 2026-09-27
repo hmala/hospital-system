@@ -209,7 +209,6 @@ class RoleManagementController extends Controller
             'inquiry.create.radiology.general' => ['label' => 'حجز فحص أشعة عامة (X-Ray)', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.radiology.mri' => ['label' => 'حجز فحص رنين مغناطيسي (MRI)', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.radiology.echo' => ['label' => 'حجز فحص إيكو للقلب (Echocardiogram)', 'action' => 'حجز', 'badge' => 'primary'],
-            'inquiry.create.radiology' => ['label' => 'حجز طلب أشعة عام من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.lab' => ['label' => 'حجز تحاليل مختبرية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.pharmacy' => ['label' => 'طلب صيدلية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.blood_bank' => ['label' => 'حجز طلب مصرف الدم', 'action' => 'حجز', 'badge' => 'primary'],

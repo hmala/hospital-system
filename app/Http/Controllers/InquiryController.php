@@ -121,18 +121,20 @@ class InquiryController extends Controller
         $requestTypes = [];
         foreach ($serviceTypes as $serviceType) {
             // التحقق من الصلاحية إذا كانت محددة
-            if ($serviceType->required_permission) {
-                $hasPermission = $user->can($serviceType->required_permission);
-                
-                // للأشعة: تحقق إضافي من الصلاحيات المحددة لكل نوع
-                if (!$hasPermission && $serviceType->name === 'radiology') {
-                    $hasPermission = $user->can('inquiry.create.radiology.general') ||
-                                   $user->can('inquiry.create.radiology.ultrasound') ||
-                                   $user->can('inquiry.create.radiology.mri') ||
-                                   $user->can('inquiry.create.radiology.echo');
+            $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if ($serviceType->name === 'radiology') {
+                // للأشعة: تظهر فقط إذا كان لدى المستخدم صلاحية نوع واحد على الأقل من الفحوصات الأربعة
+                $hasRadiologyModality = $isAdmin ||
+                                       $user->can('inquiry.create.radiology.general') ||
+                                       $user->can('inquiry.create.radiology.ultrasound') ||
+                                       $user->can('inquiry.create.radiology.mri') ||
+                                       $user->can('inquiry.create.radiology.echo');
+
+                if (!$hasRadiologyModality) {
+                    continue;
                 }
-                
-                if (!$hasPermission) {
+            } else {
+                if ($serviceType->required_permission && !$isAdmin && !$user->can($serviceType->required_permission)) {
                     continue;
                 }
             }
@@ -228,12 +230,13 @@ class InquiryController extends Controller
         
         // لا نحتاج لتقييد requestTypes هنا - الصلاحيات تم التحقق منها مسبقاً في السطر 83-96
 
-        // التحقق من صلاحيات حجز أنواع الأشعة
+        // التحقق من صلاحيات حجز أنواع الأشعة المحددة بدقة
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $radiologyPermissions = [
-            'general' => $user->can('inquiry.create.radiology.general') || $user->can('inquiry.create.radiology'),
-            'ultrasound' => $user->can('inquiry.create.radiology.ultrasound') || $user->can('inquiry.create.radiology'),
-            'mri' => $user->can('inquiry.create.radiology.mri') || $user->can('inquiry.create.radiology'),
-            'echo' => $user->can('inquiry.create.radiology.echo') || $user->can('inquiry.create.radiology'),
+            'general' => $isAdmin || $user->can('inquiry.create.radiology.general'),
+            'ultrasound' => $isAdmin || $user->can('inquiry.create.radiology.ultrasound'),
+            'mri' => $isAdmin || $user->can('inquiry.create.radiology.mri'),
+            'echo' => $isAdmin || $user->can('inquiry.create.radiology.echo'),
         ];
 
         return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'doctorsJson', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist', 'ultrasoundStaff', 'echoStaff', 'radiologyPermissions'));
@@ -298,52 +301,36 @@ class InquiryController extends Controller
         $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
 
         // التحقق من الصلاحيات لكل نوع طلب
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         foreach ($requestTypes as $requestType) {
             $serviceType = ServiceType::where('name', $requestType)->first();
             if (!$serviceType || !$serviceType->is_active) {
                 abort(403, 'نوع الخدمة غير متاح: ' . $requestType);
             }
 
-            $hasPermission = $user->hasRole('admin') || ($serviceType->required_permission && $user->can($serviceType->required_permission));
-
-            // للأشعة: تحقق إضافي من الصلاحيات الفرعية المحددة لكل نوع (مثل inquiry.create.radiology.ultrasound)
-            if (!$hasPermission && $requestType === 'radiology') {
-                $radiologyCategory = $httpRequest->radiology_category ?? 'general';
-                $categoryPerm = ($radiologyCategory === 'radiology' || $radiologyCategory === 'general') 
-                    ? 'inquiry.create.radiology.general' 
-                    : 'inquiry.create.radiology.' . $radiologyCategory;
-
-                $hasPermission = $user->can($categoryPerm) ||
-                                 $user->can('inquiry.create.radiology.ultrasound') ||
-                                 $user->can('inquiry.create.radiology.general') ||
-                                 $user->can('inquiry.create.radiology.mri') ||
-                                 $user->can('inquiry.create.radiology.echo');
-            }
-
-            if ($serviceType->required_permission && !$hasPermission) {
-                abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
-            }
-            
-            // التحقق من صلاحيات الأشعة حسب النوع المحدد
-            if ($requestType === 'radiology' && !$user->hasRole('admin')) {
+            if ($requestType === 'radiology') {
                 $radiologyCategory = $httpRequest->radiology_category ?? 'radiology';
-                $radiologyCategoryPermission = 'inquiry.create.radiology.' . $radiologyCategory;
-                
-                // إذا كانت الفئة 'radiology' (أشعة عامة)، نتحقق من 'inquiry.create.radiology.general'
-                if ($radiologyCategory === 'radiology') {
-                    $radiologyCategoryPermission = 'inquiry.create.radiology.general';
-                }
-                
-                // التحقق من الصلاحية المحددة أو الصلاحية العامة
-                if (!$user->can($radiologyCategoryPermission) && !$user->can('inquiry.create.radiology')) {
+                $categoryPerm = match($radiologyCategory) {
+                    'ultrasound' => 'inquiry.create.radiology.ultrasound',
+                    'mri' => 'inquiry.create.radiology.mri',
+                    'echo' => 'inquiry.create.radiology.echo',
+                    default => 'inquiry.create.radiology.general',
+                };
+
+                if (!$isAdmin && !$user->can($categoryPerm)) {
                     $categoryNames = [
-                        'general' => 'الأشعة العامة',
-                        'ultrasound' => 'السونار',
-                        'mri' => 'الرنين المغناطيسي',
-                        'echo' => 'الإيكو'
+                        'general' => 'الأشعة العامة (X-Ray)',
+                        'ultrasound' => 'السونار (Ultrasound)',
+                        'mri' => 'الرنين المغناطيسي (MRI)',
+                        'echo' => 'إيكو القلب (Echocardiogram)',
+                        'radiology' => 'الأشعة العامة (X-Ray)',
                     ];
-                    $categoryName = $categoryNames[$radiologyCategory] ?? 'هذا النوع من الأشعة';
+                    $categoryName = $categoryNames[$radiologyCategory] ?? 'هذا النوع من الفحوصات';
                     abort(403, 'ليس لديك صلاحية حجز ' . $categoryName);
+                }
+            } else {
+                if ($serviceType->required_permission && !$isAdmin && !$user->can($serviceType->required_permission)) {
+                    abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
                 }
             }
         }
@@ -1290,7 +1277,7 @@ class InquiryController extends Controller
     public function patientHistory(HttpRequest $request, Patient $patient = null)
     {
         $user = Auth::user();
-        if ($user && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patient history'))) {
             abort(403, 'غير مصرح لك بالوصول إلى سجل وأرشيف المرضى الشامل');
         }
 
@@ -1478,7 +1465,7 @@ class InquiryController extends Controller
     public function serveDocumentFile(PatientDocument $document)
     {
         $user = Auth::user();
-        if ($user && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patient history'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذا المستند');
         }
 

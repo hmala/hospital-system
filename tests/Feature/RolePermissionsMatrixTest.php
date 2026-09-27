@@ -110,4 +110,51 @@ class RolePermissionsMatrixTest extends TestCase
         $response = $this->actingAs($receptionist)->get(route('roles.index'));
         $this->assertFalse($receptionist->can('view cashier'));
     }
+
+    #[Test]
+    public function patient_history_is_forbidden_without_view_patient_history_permission()
+    {
+        $receptionist = User::factory()->create(['email' => 'reception_hist@hospital.com']);
+        $role = Role::findByName('receptionist');
+        $receptionist->assignRole($role);
+
+        // Has view inquiries but NOT view patient history
+        $role->syncPermissions(['view inquiries']);
+
+        $response = $this->actingAs($receptionist)->get(route('inquiry.patients.history'));
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function radiology_modalities_are_strictly_gated_by_granular_permissions()
+    {
+        \App\Models\ServiceType::firstOrCreate(
+            ['name' => 'radiology'],
+            ['label' => 'أشعة وسونار', 'icon' => 'fa-x-ray', 'color' => 'info', 'is_active' => true, 'order' => 2]
+        );
+
+        $receptionist = User::factory()->create(['email' => 'reception_rad@hospital.com']);
+        $role = Role::findByName('receptionist');
+        $receptionist->assignRole($role);
+
+        // Grant only ultrasound, not general or echo or mri
+        $role->syncPermissions(['view inquiries', 'inquiry.create.radiology.ultrasound']);
+
+        $patientUser = User::factory()->create(['name' => 'مريض تجريبي']);
+        $patient = \App\Models\Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'male',
+            'date_of_birth' => '1990-01-01',
+            'blood_group' => 'O+',
+        ]);
+
+        // General radiology booking should be forbidden
+        $response = $this->actingAs($receptionist)->post(route('inquiry.store'), [
+            'patient_id' => $patient->id,
+            'request_type' => ['radiology'],
+            'radiology_category' => 'radiology',
+        ]);
+        $response->assertStatus(403);
+    }
 }
+

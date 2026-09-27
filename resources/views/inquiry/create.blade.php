@@ -711,9 +711,23 @@
 }
 </style>
 
+@php
+    $defaultRadiologyCategory = '';
+    if (!empty($radiologyPermissions['general'])) {
+        $defaultRadiologyCategory = 'radiology';
+    } elseif (!empty($radiologyPermissions['ultrasound'])) {
+        $defaultRadiologyCategory = 'ultrasound';
+    } elseif (!empty($radiologyPermissions['mri'])) {
+        $defaultRadiologyCategory = 'mri';
+    } elseif (!empty($radiologyPermissions['echo'])) {
+        $defaultRadiologyCategory = 'echo';
+    }
+@endphp
+
 <script>
 let selectedTypes = new Set();
-let selectedRadiologyCategory = @json(old('radiology_category', 'radiology'));
+let defaultRadiologyCategory = @json(old('radiology_category', $defaultRadiologyCategory));
+let selectedRadiologyCategory = defaultRadiologyCategory;
 
 function setRadiologyCategory(category) {
     selectedRadiologyCategory = category;
@@ -790,8 +804,10 @@ function updateInsuranceVisibility() {
 }
 
 function updateRadiologyCategoryInfo() {
-    const category = selectedRadiologyCategory || 'radiology';
-    setRadiologyCategory(category);
+    const category = selectedRadiologyCategory || defaultRadiologyCategory;
+    if (category) {
+        setRadiologyCategory(category);
+    }
 }
 
 function toggleRequestType(type) {
