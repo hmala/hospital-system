@@ -94,6 +94,7 @@ class DoctorQueueController extends Controller
             $qNum = $v->appointment ? $v->appointment->queue_number : $v->id;
 
             $radRequests = $v->radiologyRequests;
+            $medicalRadRequests = $v->requests->where('type', 'radiology');
             $labRequests = $v->requests->where('type', 'lab');
             $prescriptions = $v->prescriptions;
 
@@ -113,6 +114,20 @@ class DoctorQueueController extends Controller
                     'type' => 'radiology',
                     'name' => $typeName,
                     'status' => $rr->status,
+                    'is_ready' => $isReady
+                ];
+            }
+
+            foreach ($medicalRadRequests as $mr) {
+                $isReady = ($mr->status === 'completed');
+                $totalTests++;
+                if ($isReady) $completedCount++;
+
+                $testsList[] = [
+                    'type' => 'radiology',
+                    'name' => $mr->description ?: 'فحص أشعة / سونار',
+                    'status' => $mr->status,
+                    'payment_status' => $mr->payment_status,
                     'is_ready' => $isReady
                 ];
             }

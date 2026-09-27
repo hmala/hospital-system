@@ -851,17 +851,33 @@ class DoctorVisitController extends Controller
             $details['nursing_service_names'] = $nursingServiceNames;
         }
         
+        $detectedSubtype = null;
         if ($request->type === 'radiology' && $request->radiology_types) {
             $details['radiology_types'] = $request->radiology_types;
             $details['radiology_type_ids'] = $request->radiology_types;
             
-            // إنشاء وصف يتضمن أسماء الأشعة
+            // إنشاء وصف يتضمن أسماء الأشعة وتحديد الفئة الفرعية (سونار / رنين / إيكو)
             $radiologyTypeNames = [];
             foreach ($request->radiology_types as $typeId) {
                 $radiologyType = \App\Models\RadiologyType::find($typeId);
                 if ($radiologyType) {
                     $radiologyTypeNames[] = $radiologyType->name;
                     $details['radiology_type_id'] = $typeId; // حفظ أول نوع لاستخدامه لاحقاً
+
+                    if (!$detectedSubtype) {
+                        $cat = mb_strtolower($radiologyType->main_category ?? '');
+                        $sub = mb_strtolower($radiologyType->subcategory ?? '');
+                        $name = mb_strtolower($radiologyType->name ?? '');
+                        if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') || str_contains($cat, 'ultrasound') || str_contains($name, 'doppler') || str_contains($name, 'sonar')) {
+                            $detectedSubtype = 'ultrasound';
+                        } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($name, 'رنين') || str_contains($cat, 'mri')) {
+                            $detectedSubtype = 'mri';
+                        } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($name, 'إيكو') || str_contains($cat, 'echo')) {
+                            $detectedSubtype = 'echo';
+                        } else {
+                            $detectedSubtype = 'general';
+                        }
+                    }
                 }
             }
             $radiologyDescription = !empty($radiologyTypeNames) 
@@ -880,6 +896,7 @@ class DoctorVisitController extends Controller
         $medicalRequest = MedicalRequest::create([
             'visit_id' => $visit->id,
             'type' => $request->type,
+            'subtype' => $detectedSubtype,
             'description' => ($request->type === 'radiology' && isset($radiologyDescription)) 
                 ? $radiologyDescription 
                 : (($request->type === 'nursing' && isset($nursingDescription)) 

@@ -344,26 +344,52 @@
                             <!-- حقول خاصة بالكشف الطبي -->
                             <div id="checkupFields" style="display: none;">
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="doctor_id" class="form-label">
-                                            <i class="fas fa-user-md me-1"></i>
-                                            الطبيب <span class="text-danger">*</span>
+                                    @php
+                                        $selectedDoctor = old('doctor_id') ? $doctors->firstWhere('id', old('doctor_id')) : null;
+                                        $selectedDoctorName = $selectedDoctor ? ('د. ' . (optional($selectedDoctor->user)->name ?? 'طبيب') . ' - ' . ($selectedDoctor->specialization ?? '')) : '';
+                                        $selectedDoctorDept = $selectedDoctor ? optional($selectedDoctor->department)->name : '';
+                                    @endphp
+                                    <div class="col-md-6 mb-3 position-relative">
+                                        <label for="doctor_search_input" class="form-label fw-bold">
+                                            <i class="fas fa-user-md me-1 text-primary"></i>
+                                            الطبيب الاستشاري <span class="text-danger">*</span>
                                         </label>
-                                        <select class="form-select @error('doctor_id') is-invalid @enderror" 
-                                                id="doctor_id" 
-                                                name="doctor_id">
-                                            <option value="">اختر الطبيب</option>
-                                            @foreach($doctors as $doctor)
-                                                <option value="{{ $doctor->id }}" 
-                                                        data-department="{{ $doctor->department_id }}"
-                                                        @selected(old('doctor_id') == $doctor->id)>
-                                                    د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->specialization }}
-                                                    ({{ $doctor->is_available_today ? 'متوفر' : 'غير متوفر' }})
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white border-end-0 text-primary">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   class="form-control border-start-0 @error('doctor_id') is-invalid @enderror" 
+                                                   id="doctor_search_input" 
+                                                   placeholder="ابحث باسم الطبيب أو التخصص (اكتب حرفاً للبدء)..." 
+                                                   autocomplete="off"
+                                                   value="{{ $selectedDoctorName }}">
+                                            <button class="btn btn-outline-secondary" type="button" id="clearDoctorSearchBtn" style="{{ $selectedDoctor ? '' : 'display: none;' }}" title="مسح">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" id="doctor_id" name="doctor_id" value="{{ old('doctor_id') }}">
+
+                                        <!-- قائمة الاقتراحات الذكية: تظهر بعد كتابة أول حرف -->
+                                        <div id="doctor_suggestions" 
+                                             class="position-absolute w-100 bg-white shadow-lg rounded-3 border mt-1" 
+                                             style="display: none; max-height: 280px; overflow-y: auto; z-index: 1055; left: 0;">
+                                        </div>
+
+                                        <!-- بطاقة تأكيد اختيار الطبيب -->
+                                        <div id="selectedDoctorBox" class="mt-2 p-2 rounded-2 bg-light border border-success border-opacity-25 align-items-center justify-content-between" style="{{ $selectedDoctor ? 'display: flex;' : 'display: none;' }}">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-user-check text-success fs-5"></i>
+                                                <div>
+                                                    <strong class="text-success d-block" id="selectedDoctorNameText">{{ $selectedDoctorName }}</strong>
+                                                    <small class="text-muted" id="selectedDoctorDeptText">{{ $selectedDoctorDept ? 'العيادة: ' . $selectedDoctorDept : '' }}</small>
+                                                </div>
+                                            </div>
+                                            <span class="badge bg-success rounded-pill px-2 py-1">محدد</span>
+                                        </div>
+
                                         @error('doctor_id')
-                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
                                     </div>
                                     <div class="col-md-6 mb-3">
@@ -551,7 +577,7 @@
 
 
                             @if($patient->insurance_type && $patient->insurance_type !== 'none')
-                            <div class="row mt-3">
+                            <div class="row mt-3" id="insuranceCoverageSection">
                                 <div class="col-12">
                                     <div class="p-3 border rounded-3 bg-light">
                                         <label class="form-label fw-bold d-flex align-items-center gap-2 mb-2">
@@ -744,6 +770,23 @@ function setRadiologyCategory(category) {
             document.getElementById('echo_staff_id').value = '';
         }
     }
+
+    updateInsuranceVisibility();
+}
+
+function updateInsuranceVisibility() {
+    const insuranceRow = document.getElementById('insuranceCoverageSection');
+    if (!insuranceRow) return;
+
+    // السونار المباشر من الاستعلامات حجز عادي نقدي فقط (إخفاء خيار الضمان بالكامل)
+    const isDirectUltrasound = selectedTypes.has('radiology') && (selectedRadiologyCategory === 'ultrasound');
+    if (isDirectUltrasound) {
+        insuranceRow.style.display = 'none';
+        const noRadio = document.getElementById('apply_insurance_no');
+        if (noRadio) noRadio.checked = true;
+    } else {
+        insuranceRow.style.display = 'block';
+    }
 }
 
 function updateRadiologyCategoryInfo() {
@@ -777,6 +820,8 @@ function toggleRequestType(type) {
     } else {
         details.style.display = 'none';
     }
+
+    updateInsuranceVisibility();
 }
 
 function updateFormFields() {
@@ -943,8 +988,9 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         
         if (!doctorId) {
             e.preventDefault();
-            alert('يرجى اختيار الطبيب');
-            document.getElementById('doctor_id').focus();
+            alert('يرجى البحث واختيار الطبيب الاستشاري');
+            const searchInput = document.getElementById('doctor_search_input');
+            if (searchInput) searchInput.focus();
             return false;
         }
         
@@ -1153,6 +1199,145 @@ if (sonarSearchInput && sonarSuggestions) {
     }
 }
 
+// وظيفة البحث الذكي في قائمة الأطباء الاستشاريين (Autocomplete / Typeahead)
+const consultantDoctorsList = @json($doctorsJson ?? []);
+
+const doctorSearchInput = document.getElementById('doctor_search_input');
+const doctorHiddenId = document.getElementById('doctor_id');
+const doctorSuggestions = document.getElementById('doctor_suggestions');
+const doctorClearBtn = document.getElementById('clearDoctorSearchBtn');
+const selectedDoctorBox = document.getElementById('selectedDoctorBox');
+const selectedDoctorNameText = document.getElementById('selectedDoctorNameText');
+const selectedDoctorDeptText = document.getElementById('selectedDoctorDeptText');
+
+function escapeDoctorHtml(text) {
+    if (!text) return '';
+    return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+if (doctorSearchInput && doctorSuggestions) {
+    // 1. إظهار النتائج التنبؤية فور كتابة أول حرف (>= 1)
+    doctorSearchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+
+        if (query.length < 1) {
+            doctorSuggestions.style.display = 'none';
+            doctorSuggestions.innerHTML = '';
+            doctorClearBtn.style.display = 'none';
+            doctorHiddenId.value = '';
+            if (selectedDoctorBox) selectedDoctorBox.style.display = 'none';
+            return;
+        }
+
+        doctorClearBtn.style.display = 'block';
+
+        // مطابقة ذكية بالاسم، الاسم الصافي، التخصص، أو اسم العيادة
+        const matches = consultantDoctorsList.filter(d => {
+            const name = (d.name || '').toLowerCase();
+            const rawName = (d.raw_name || '').toLowerCase();
+            const spec = (d.specialization || '').toLowerCase();
+            const dept = (d.department_name || '').toLowerCase();
+            return name.includes(query) || rawName.includes(query) || spec.includes(query) || dept.includes(query);
+        });
+
+        if (matches.length === 0) {
+            doctorSuggestions.innerHTML = `
+                <div class="p-3 text-muted text-center small">
+                    <i class="fas fa-user-slash me-1"></i> لا يوجد أطباء مطابقين لـ "<strong>${escapeDoctorHtml(this.value)}</strong>"
+                </div>
+            `;
+            doctorSuggestions.style.display = 'block';
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+        matches.forEach(d => {
+            const availBadge = d.is_available 
+                ? '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="fas fa-check-circle me-1"></i>متوفر اليوم</span>'
+                : '<span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1"><i class="fas fa-times-circle me-1"></i>غير متاح اليوم</span>';
+
+            html += `
+                <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 doctor-suggestion-item" 
+                        data-id="${d.id}" 
+                        data-name="${escapeDoctorHtml(d.name)}" 
+                        data-specialization="${escapeDoctorHtml(d.specialization)}" 
+                        data-dept="${escapeDoctorHtml(d.department_name)}"
+                        data-available="${d.is_available ? '1' : '0'}">
+                    <div>
+                        <strong class="text-dark d-block"><i class="fas fa-user-md me-1 text-primary"></i>${escapeDoctorHtml(d.name)}</strong>
+                        <small class="text-muted"><i class="fas fa-stethoscope me-1"></i>${escapeDoctorHtml(d.specialization)} ${d.department_name ? '• ' + escapeDoctorHtml(d.department_name) : ''}</small>
+                    </div>
+                    <div>
+                        ${availBadge}
+                    </div>
+                </button>
+            `;
+        });
+        html += '</div>';
+        doctorSuggestions.innerHTML = html;
+        doctorSuggestions.style.display = 'block';
+    });
+
+    // 2. اختيار الطبيب عند النقر على المقترح
+    doctorSuggestions.addEventListener('click', function(e) {
+        const btn = e.target.closest('.doctor-suggestion-item');
+        if (!btn) return;
+
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        const spec = btn.dataset.specialization;
+        const dept = btn.dataset.dept;
+
+        doctorHiddenId.value = id;
+        doctorSearchInput.value = `${name} - ${spec}`;
+        doctorSuggestions.style.display = 'none';
+        doctorClearBtn.style.display = 'block';
+
+        if (selectedDoctorBox) {
+            selectedDoctorNameText.textContent = `${name} - ${spec}`;
+            selectedDoctorDeptText.textContent = dept ? `العيادة: ${dept}` : '';
+            selectedDoctorBox.style.display = 'flex';
+        }
+    });
+
+    // 3. مسح اختيار الطبيب
+    doctorClearBtn.addEventListener('click', function() {
+        doctorSearchInput.value = '';
+        doctorHiddenId.value = '';
+        doctorSuggestions.style.display = 'none';
+        doctorSuggestions.innerHTML = '';
+        doctorClearBtn.style.display = 'none';
+        if (selectedDoctorBox) selectedDoctorBox.style.display = 'none';
+        doctorSearchInput.focus();
+    });
+
+    // 4. إغلاق القائمة عند النقر خارجها
+    document.addEventListener('click', function(e) {
+        if (!doctorSearchInput.contains(e.target) && !doctorSuggestions.contains(e.target)) {
+            doctorSuggestions.style.display = 'none';
+        }
+    });
+
+    // 5. استعادة القيمة في حال وجود old('doctor_id')
+    if (doctorHiddenId.value && !doctorSearchInput.value) {
+        const oldDoc = consultantDoctorsList.find(d => d.id == doctorHiddenId.value);
+        if (oldDoc) {
+            doctorSearchInput.value = `${oldDoc.name} - ${oldDoc.specialization}`;
+            doctorClearBtn.style.display = 'block';
+            if (selectedDoctorBox) {
+                selectedDoctorNameText.textContent = `${oldDoc.name} - ${oldDoc.specialization}`;
+                selectedDoctorDeptText.textContent = oldDoc.department_name ? `العيادة: ${oldDoc.department_name}` : '';
+                selectedDoctorBox.style.display = 'flex';
+            }
+        }
+    }
+}
+
 // وظيفة البحث في التحاليل
 const labSearchInput = document.getElementById('labSearchInput');
 const clearLabSearch = document.getElementById('clearLabSearch');
@@ -1191,6 +1376,11 @@ if (labSearchInput) {
         labSearchInput.focus();
     });
 }
+
+// تشغيل التحقق من حالة خيار الضمان عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    updateInsuranceVisibility();
+});
 
 // إذا كان هناك خطأ في الصيغة، عرض النموذج مباشرة
 @if($errors->any())

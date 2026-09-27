@@ -59,49 +59,6 @@
         </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex flex-wrap justify-content-center gap-3">
-                <form method="POST" action="{{ route('consultant-availability.bulk-update') }}" style="display: inline;">
-                    @csrf
-                    <input type="hidden" name="is_available_today" value="1">
-                    <button type="submit" class="btn btn-success btn-lg px-4 py-3" onclick="return confirm('هل أنت متأكد من تفعيل التوفر لجميع الأطباء الاستشاريين؟')">
-                        <i class="fas fa-toggle-on fa-2x me-2"></i>
-                        <div>
-                            <div class="fw-bold">تفعيل الكل</div>
-                            <small>اجعل جميع الأطباء متاحين</small>
-                        </div>
-                    </button>
-                </form>
-                <form method="POST" action="{{ route('consultant-availability.bulk-update') }}" style="display: inline;">
-                    @csrf
-                    <input type="hidden" name="is_available_today" value="0">
-                    <button type="submit" class="btn btn-danger btn-lg px-4 py-3" onclick="return confirm('هل أنت متأكد من إلغاء التوفر لجميع الأطباء الاستشاريين؟')">
-                        <i class="fas fa-toggle-off fa-2x me-2"></i>
-                        <div>
-                            <div class="fw-bold">إلغاء الكل</div>
-                            <small>اجعل جميع الأطباء غير متاحين</small>
-                        </div>
-                    </button>
-                </form>
-                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-outline-primary btn-lg px-4 py-3">
-                    <i class="fas fa-chart-line fa-2x me-2"></i>
-                    <div>
-                        <div class="fw-bold">حركات مالية</div>
-                        <small>عرض سجل الحركات المالية</small>
-                    </div>
-                </a>
-                <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-outline-info btn-lg px-4 py-3">
-                    <i class="fas fa-tv fa-2x me-2"></i>
-                    <div>
-                        <div class="fw-bold">شاشة الصالة العامة</div>
-                        <small>عرض طابور كافة العيادات</small>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show mx-auto" style="max-width: 600px;" role="alert">
@@ -237,10 +194,17 @@
                                                     </button>
                                                 </form>
                                             @else
-                                                <button type="button" class="btn btn-sm btn-secondary" disabled title="يجب دفع الرسوم أولاً">
-                                                    <i class="fas fa-sign-in-alt me-1"></i>
-                                                    غير مدفوع
-                                                </button>
+                                                @can('process payments')
+                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-sm btn-success text-white fw-bold shadow-xs" title="قبض رسوم الكشفية">
+                                                        <i class="fas fa-cash-register me-1"></i>
+                                                        قبض الكشفية
+                                                    </a>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="يجب دفع الرسوم أولاً">
+                                                        <i class="fas fa-sign-in-alt me-1"></i>
+                                                        غير مدفوع
+                                                    </button>
+                                                @endcan
                                             @endif
 
                                             @if($appointment->canBeCancelled())
@@ -272,33 +236,164 @@
     </div>
     @endif
 
-    <!-- Unified Doctors Table -->
+    <!-- Pending Clinic Medical Requests Section (فحوصات وسونار العيادات بانتظار السداد) -->
+    @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 text-dark fw-bold">
+                        <i class="fas fa-wave-square text-primary me-2"></i>
+                        طلبات السونار والفحوصات المحولة من العيادات اليوم (بانتظار السداد)
+                        <span class="badge bg-warning text-dark ms-2">{{ $pendingConsultantRequests->count() }}</span>
+                    </h5>
+                    <span class="text-muted small">يتم إدخال المريض فورياً في طابور السونار بعد قبض الرسوم</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 80px;" class="text-center"># الطلب</th>
+                                    <th>الوقت</th>
+                                    <th>المريض</th>
+                                    <th>الطبيب المحيل</th>
+                                    <th>نوع الفحص المطلوب</th>
+                                    <th>التفاصيل والملاحظات</th>
+                                    <th>المبلغ المطلوب</th>
+                                    <th>الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($pendingConsultantRequests as $req)
+                                <tr>
+                                    <td class="text-center">
+                                        <span class="badge bg-dark fs-6">#{{ $req->id }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-clock me-1 text-primary"></i>
+                                            {{ $req->created_at ? $req->created_at->format('H:i') : '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-dark">
+                                        <i class="fas fa-user text-secondary me-1"></i>
+                                        {{ optional(optional($req->visit)->patient ?? $req->patient)->name ?? 'مريض غير مسجل' }}
+                                    </td>
+                                    <td class="text-primary fw-semibold">
+                                        <i class="fas fa-user-md me-1"></i>
+                                        د. {{ optional(optional($req->doctor)->user)->name ?? (optional(optional($req->visit)->doctor)->user->name ?? 'العيادة') }}
+                                    </td>
+                                    <td>
+                                        @if($req->subtype === 'ultrasound')
+                                            <span class="badge bg-info text-dark"><i class="fas fa-wave-square me-1"></i>سونار (Ultrasound)</span>
+                                        @elseif($req->type === 'radiology')
+                                            <span class="badge bg-primary"><i class="fas fa-x-ray me-1"></i>أشعة</span>
+                                        @else
+                                            <span class="badge bg-secondary">{{ $req->type }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ Str::limit($req->description ?? $req->notes ?? '-', 50) }}</small>
+                                    </td>
+                                    <td class="fw-bold text-success fs-6">
+                                        {{ number_format($req->amount ?? 0) }} د.ع
+                                    </td>
+                                    <td>
+                                        @can('process payments')
+                                            <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-sm btn-success fw-bold text-white shadow-xs">
+                                                <i class="fas fa-cash-register me-1"></i>
+                                                قبض الرسوم
+                                            </a>
+                                        @else
+                                            <span class="badge bg-secondary">بانتظار الصندوق</span>
+                                        @endcan
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Unified Doctors Section with Quick Filters & Live Search -->
     <div class="row g-4">
         <div class="col-12">
             @if($consultantDoctors->count() > 0)
+                <!-- Filter Pills & Live Search Bar -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex flex-wrap flex-lg-nowrap gap-2 align-items-center justify-content-between">
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                <span class="text-muted fw-bold small me-1"><i class="fas fa-filter me-1 text-primary"></i>فلترة:</span>
+                                <button type="button" class="btn btn-sm btn-outline-success active fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="available" onclick="filterDoctorsTable('available', this)">
+                                    <i class="fas fa-user-check me-1"></i>
+                                    المتواجدون
+                                    <span class="badge bg-success ms-1 rounded-pill" id="countAvailable">{{ $consultantDoctors->where('is_available_today', true)->count() }}</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="unavailable" onclick="filterDoctorsTable('unavailable', this)">
+                                    <i class="fas fa-user-times me-1"></i>
+                                    غير المتاحين
+                                    <span class="badge bg-danger ms-1 rounded-pill" id="countUnavailable">{{ $consultantDoctors->where('is_available_today', false)->count() }}</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="all" onclick="filterDoctorsTable('all', this)">
+                                    <i class="fas fa-users me-1"></i>
+                                    الجميع
+                                    <span class="badge bg-secondary ms-1 rounded-pill" id="countAll">{{ $consultantDoctors->count() }}</span>
+                                </button>
+                                <span class="text-muted d-none d-md-inline mx-1">|</span>
+                                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-sm btn-outline-primary px-2 py-1 rounded-pill shadow-xs d-inline-flex align-items-center gap-1" title="عرض سجل الحركات المالية">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span class="fw-semibold">حركات مالية</span>
+                                </a>
+                                <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-sm btn-outline-info px-2 py-1 rounded-pill shadow-xs d-inline-flex align-items-center gap-1" title="عرض طابور كافة العيادات">
+                                    <i class="fas fa-tv"></i>
+                                    <span class="fw-semibold">شاشة الصالة</span>
+                                </a>
+                            </div>
+                            <div style="width: 220px; min-width: 180px;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white border-end-0 text-muted py-1"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="doctorQuickSearch" class="form-control border-start-0 py-1" placeholder="بحث سريع..." oninput="handleDoctorSearch(this.value)">
+                                    <button class="btn btn-outline-secondary py-1" type="button" onclick="clearDoctorSearch()" id="clearDoctorSearchBtn" style="display: none;" title="مسح">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="table-responsive shadow-sm rounded-3 bg-white">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0" id="doctorsAvailabilityTable">
                         <thead class="table-light">
                             <tr class="text-muted small text-uppercase">
                                 <th style="width: 4rem;">#</th>
                                 <th>الطبيب</th>
-                                <th>التخصص / القسم</th>
+                                <th>التخصص / العيادة</th>
                                 <th style="width: 9rem;" class="text-center">الحالة</th>
                                 <th style="width: 10rem;" class="text-center">شاشة الانتظار</th>
-                                <th style="width: 7rem;" class="text-center">تعديل</th>
+                                <th style="width: 8rem;" class="text-center">التوفر اللحظي</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($consultantDoctors as $index => $doctor)
-                                <tr>
+                                <tr class="doctor-row" 
+                                    id="doctor-row-{{ $doctor->id }}" 
+                                    data-status="{{ $doctor->is_available_today ? 'available' : 'unavailable' }}" 
+                                    data-search="{{ strtolower($doctor->user->name . ' ' . $doctor->specialization . ' ' . ($doctor->department->name ?? '')) }}">
                                     <td class="text-muted small fw-bold">{{ $index + 1 }}</td>
                                     <td>
                                         <div class="d-flex align-items-center gap-3">
-                                            <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0;">
+                                            <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0;">
                                                 {{ mb_substr($doctor->user->name, 0, 1) }}
                                             </span>
                                             <div>
-                                                <div class="fw-semibold">د. {{ $doctor->user->name }}</div>
+                                                <div class="fw-bold text-dark fs-6">د. {{ $doctor->user->name }}</div>
                                                 <div class="text-muted small">{{ $doctor->department->name ?? 'غير محدد' }}</div>
                                             </div>
                                         </div>
@@ -309,7 +404,7 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge {{ $doctor->is_available_today ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2">
+                                        <span class="badge {{ $doctor->is_available_today ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">
                                             {{ $doctor->is_available_today ? 'متاح' : 'غير متاح' }}
                                         </span>
                                     </td>
@@ -320,20 +415,29 @@
                                         </a>
                                     </td>
                                     <td class="text-center">
-                                        <form method="POST" action="{{ route('consultant-availability.update', $doctor->id) }}" style="display: inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="day" value="{{ $selectedDay }}">
-                                            <input type="hidden" name="is_available_today" value="{{ $doctor->is_available_today ? '0' : '1' }}">
-                                            <button type="submit" class="btn btn-sm {{ $doctor->is_available_today ? 'btn-outline-danger' : 'btn-outline-success' }}" title="{{ $doctor->is_available_today ? 'اجعل غير متاح' : 'اجعل متاح' }}">
-                                                <i class="fas {{ $doctor->is_available_today ? 'fa-toggle-off' : 'fa-toggle-on' }}"></i>
-                                            </button>
-                                        </form>
+                                        <div class="form-check form-switch d-inline-block m-0 p-0" style="min-height: auto;">
+                                            <input class="form-check-input doctor-toggle-switch fs-4 m-0" 
+                                                   type="checkbox" 
+                                                   role="switch" 
+                                                   id="switch-doc-{{ $doctor->id }}" 
+                                                   data-doctor-id="{{ $doctor->id }}"
+                                                   data-doctor-name="{{ $doctor->user->name }}"
+                                                   {{ $doctor->is_available_today ? 'checked' : '' }}
+                                                   onchange="toggleDoctorAvailability({{ $doctor->id }}, this.checked, this)"
+                                                   title="{{ $doctor->is_available_today ? 'انقر لجعله غير متاح فوراً' : 'انقر لجعله متاحاً فوراً' }}"
+                                                   style="cursor: pointer;">
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+
+                    <div id="noDoctorsMatchingFilter" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3 d-block"></i>
+                        <h6 class="text-muted fw-bold">لا يوجد أطباء مطابقين لهذا الفلتر أو البحث</h6>
+                        <small class="text-secondary">جرّب اختيار فلتر آخر أو تفريغ شريط البحث أعلاه</small>
+                    </div>
                 </div>
             @else
                 <div class="text-center py-5 bg-white rounded-3 shadow-sm">
@@ -575,6 +679,157 @@ function callPatient(appointmentId, btnElement) {
         }
     });
 }
+
+// ===== نظام الفلترة والبحث اللحظي وسويتشات التبديل للأطباء الاستشاريين =====
+let currentDoctorFilter = 'available'; // العرض الافتراضي: المتواجدون اليوم فقط لتقليل الزحام
+
+function filterDoctorsTable(filterType, btnElement) {
+    currentDoctorFilter = filterType;
+    document.querySelectorAll('.doctor-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.remove('shadow-sm');
+    });
+    if (btnElement) {
+        btnElement.classList.add('active');
+        btnElement.classList.add('shadow-sm');
+    }
+    applyDoctorRowFilters();
+}
+
+function handleDoctorSearch(query) {
+    const clearBtn = document.getElementById('clearDoctorSearchBtn');
+    if (clearBtn) clearBtn.style.display = query.trim() ? 'block' : 'none';
+    applyDoctorRowFilters();
+}
+
+function clearDoctorSearch() {
+    const input = document.getElementById('doctorQuickSearch');
+    if (input) {
+        input.value = '';
+        const clearBtn = document.getElementById('clearDoctorSearchBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+        applyDoctorRowFilters();
+        input.focus();
+    }
+}
+
+function applyDoctorRowFilters() {
+    const query = (document.getElementById('doctorQuickSearch')?.value || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('.doctor-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status');
+        const rowSearch = row.getAttribute('data-search') || '';
+
+        const matchesStatus = (currentDoctorFilter === 'all') || (rowStatus === currentDoctorFilter);
+        const matchesQuery = !query || rowSearch.includes(query);
+
+        if (matchesStatus && matchesQuery) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const noMatchesEl = document.getElementById('noDoctorsMatchingFilter');
+    if (noMatchesEl) {
+        noMatchesEl.style.display = (visibleCount === 0) ? 'block' : 'none';
+    }
+}
+
+function toggleDoctorAvailability(doctorId, isAvailable, switchEl) {
+    switchEl.disabled = true;
+    const badgeEl = document.getElementById(`badge-doc-${doctorId}`);
+    const rowEl = document.getElementById(`doctor-row-${doctorId}`);
+
+    fetch(`{{ url('consultant-availability') }}/${doctorId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            day: '{{ $selectedDay }}',
+            is_available_today: isAvailable ? 1 : 0
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        switchEl.disabled = false;
+        if (data.success) {
+            // تحديث الشارة
+            if (badgeEl) {
+                badgeEl.className = `badge ${isAvailable ? 'bg-success' : 'bg-danger'} fs-6 px-3 py-2 doctor-status-badge`;
+                badgeEl.textContent = isAvailable ? 'متاح' : 'غير متاح';
+            }
+            // تحديث حالة الصف
+            if (rowEl) {
+                rowEl.setAttribute('data-status', isAvailable ? 'available' : 'unavailable');
+            }
+            switchEl.title = isAvailable ? 'انقر لجعله غير متاح فوراً' : 'انقر لجعله متاحاً فوراً';
+
+            // تحديث عدادات الفلاتر
+            updateAvailabilityCounts();
+
+            // تطبيق الفلتر فوراً
+            applyDoctorRowFilters();
+
+            showQuickToast(data.message || (isAvailable ? 'تم تفعيل توفر الطبيب ✅' : 'تم إلغاء توفر الطبيب ❌'), isAvailable ? 'success' : 'warning');
+        } else {
+            switchEl.checked = !isAvailable;
+            alert(data.message || 'فشل التحديث');
+        }
+    })
+    .catch(err => {
+        switchEl.disabled = false;
+        switchEl.checked = !isAvailable;
+        console.error(err);
+        alert('حدث خطأ في الاتصال بالخادم');
+    });
+}
+
+function updateAvailabilityCounts() {
+    const rows = document.querySelectorAll('.doctor-row');
+    let avail = 0;
+    let unavail = 0;
+    rows.forEach(r => {
+        if (r.getAttribute('data-status') === 'available') avail++;
+        else unavail++;
+    });
+    const elAvail = document.getElementById('countAvailable');
+    const elUnavail = document.getElementById('countUnavailable');
+    const elAll = document.getElementById('countAll');
+    if (elAvail) elAvail.textContent = avail;
+    if (elUnavail) elUnavail.textContent = unavail;
+    if (elAll) elAll.textContent = rows.length;
+}
+
+function showQuickToast(msg, type = 'success') {
+    let toast = document.getElementById('liveAvailabilityToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'liveAvailabilityToast';
+        toast.style.cssText = 'position:fixed;bottom:24px;left:24px;z-index:9999;padding:12px 22px;border-radius:12px;font-weight:bold;box-shadow:0 8px 24px rgba(0,0,0,0.18);transition:all 0.3s ease;transform:translateY(100px);opacity:0;display:flex;align-items:center;gap:8px;font-size:0.95rem;';
+        document.body.appendChild(toast);
+    }
+    toast.className = type === 'success' ? 'bg-success text-white' : 'bg-dark text-white border border-secondary';
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle text-white' : 'info-circle text-warning'} fs-5"></i><span>${msg}</span>`;
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+        toast.style.transform = 'translateY(100px)';
+        toast.style.opacity = '0';
+    }, 2800);
+}
+
+// تطبيق الفلتر الافتراضي عند فتح الصفحة (المتواجدون اليوم فقط لتقليل الزحام)
+document.addEventListener('DOMContentLoaded', function() {
+    applyDoctorRowFilters();
+});
 </script>
 @endsection
 

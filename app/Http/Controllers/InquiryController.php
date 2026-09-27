@@ -166,11 +166,22 @@ class InquiryController extends Controller
             })
             ->where('is_active', true)
             ->where('type', 'consultant')
-            ->whereJsonContains('working_days', [$todayArabic])
-            ->where('is_available_today', true)
+            ->orderByDesc('is_available_today')
             ->orderBy('specialization')
             ->orderBy('user_id')
             ->get();
+
+        $doctorsJson = $doctors->map(function($doc) {
+            return [
+                'id' => $doc->id,
+                'name' => 'د. ' . (optional($doc->user)->name ?? 'طبيب'),
+                'raw_name' => optional($doc->user)->name ?? '',
+                'specialization' => $doc->specialization ?? 'استشاري',
+                'department_id' => $doc->department_id,
+                'department_name' => optional($doc->department)->name ?? '',
+                'is_available' => (bool)$doc->is_available_today,
+            ];
+        })->values();
 
         // جلب أطباء الطوارئ المتاحين
         $emergencyDoctors = Doctor::with(['user', 'department'])
@@ -225,7 +236,7 @@ class InquiryController extends Controller
             'echo' => $user->can('inquiry.create.radiology.echo') || $user->can('inquiry.create.radiology'),
         ];
 
-        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist', 'ultrasoundStaff', 'echoStaff', 'radiologyPermissions'));
+        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'doctorsJson', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist', 'ultrasoundStaff', 'echoStaff', 'radiologyPermissions'));
     }
 
     /**
@@ -805,7 +816,7 @@ class InquiryController extends Controller
                 'duration' => 20,
                 'status' => 'scheduled',
                 'payment_status' => 'pending',
-                'insurance_type' => $bookingInsuranceType
+                'insurance_type' => 'none' // حجز عادي نقدي دائماً للسونار المباشر من الاستعلامات
             ]);
 
             $visit->appointment_id = $sonarAppointment->id;
@@ -842,6 +853,8 @@ class InquiryController extends Controller
         // تحديد الحالة: إذا تم تحديد الخدمات -> pending للدفع، وإلا -> pending_service_selection
         $requestStatus = $hasServices ? 'pending' : 'pending_service_selection';
         
+        $requestInsuranceType = ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') ? 'none' : $bookingInsuranceType;
+
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,
             'type' => $requestType,
@@ -850,7 +863,7 @@ class InquiryController extends Controller
             'status' => $requestStatus,
             'payment_status' => $hasServices ? 'pending' : 'not_applicable',
             'details' => json_encode($details),
-            'insurance_type' => $bookingInsuranceType
+            'insurance_type' => $requestInsuranceType
         ]);
 
         // رسالة نجاح مفصلة

@@ -85,9 +85,21 @@ class ConsultantAvailabilityController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
-        $groupedDoctors = $consultantDoctors->groupBy('specialization');
+        // جلب طلبات الفحوصات والسونار المعلقة الصادرة اليوم من العيادات الاستشارية بانتظار الدفع
+        $pendingConsultantRequests = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->where('payment_status', 'pending')
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('created_at', today())
+            ->where(function($q) {
+                $q->whereHas('visit.doctor', function($dq) {
+                    $dq->where('type', 'consultant');
+                })->orWhere('subtype', 'ultrasound')
+                  ->orWhere('description', 'LIKE', '%سونار%');
+            })
+            ->latest()
+            ->get();
 
-        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'weekDays', 'selectedDay'));
+        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'pendingConsultantRequests', 'weekDays', 'selectedDay'));
     }
 
     public function financialMovements(Request $request)
@@ -405,6 +417,16 @@ class ConsultantAvailabilityController extends Controller
         $doctor->update($updates);
 
         $statusText = $isAvailable ? 'متوفر' : 'غير متوفر';
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'doctor_id' => $doctor->id,
+                'is_available_today' => $isAvailable,
+                'status_text' => $statusText,
+                'message' => "تم تحديث توفر د. {$doctor->user->name} إلى: {$statusText}",
+            ]);
+        }
 
         return redirect()->back()->with('success', "تم تحديث توفر الطبيب: {$statusText}");
     }

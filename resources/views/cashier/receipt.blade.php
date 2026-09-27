@@ -13,7 +13,7 @@
                     <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary me-2" target="_blank">
                         <i class="fas fa-print me-2"></i>طباعة
                     </a>
-                    <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
+                    <a href="{{ auth()->user()->hasRole('consultation_receptionist') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-right me-2"></i>العودة
                     </a>
                 </div>

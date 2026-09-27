@@ -11,7 +11,7 @@
                             <i class="fas fa-file-invoice-dollar me-2"></i>
                             تسوية ودفع رسوم الطلب الطبي
                         </h5>
-                        <a href="{{ route('cashier.index') }}" class="btn btn-sm btn-outline-light">
+                        <a href="{{ auth()->user()->hasRole('consultation_receptionist') && !auth()->user()->hasRole('admin') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-sm btn-outline-light">
                             <i class="fas fa-arrow-right me-1"></i>العودة
                         </a>
                     </div>
@@ -378,7 +378,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
+                            <a href="{{ auth()->user()->hasRole('consultation_receptionist') && !auth()->user()->hasRole('admin') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-right me-1"></i>
                                 العودة
                             </a>

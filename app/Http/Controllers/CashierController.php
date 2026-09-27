@@ -651,10 +651,10 @@ class CashierController extends Controller
 
             DB::commit();
 
-            \Log::info('Transaction committed. Redirecting to cashier index.');
+            \Log::info('Transaction committed. Redirecting to cashier receipt.');
 
-            // العودة إلى صفحة الكاشير الرئيسية مع رسالة نجاح
-            return redirect()->route('cashier.index')
+            // العودة إلى صفحة إيصال الدفع
+            return redirect()->route('cashier.receipt', $payment->id)
                 ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number)
                 ->with('payment_id', $payment->id);
 
