@@ -219,10 +219,14 @@
                                                                     <small class="text-muted">{{ $appointment->created_at->format('H:i') }}</small>
                                                                 </td>
                                                                 <td>
-                                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                                                        تسديد
-                                                                    </a>
+                                                                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process consultation payments'))
+                                                                        <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                                                            تسديد
+                                                                        </a>
+                                                                    @else
+                                                                        <span class="badge bg-secondary">غير مصرح</span>
+                                                                    @endif
                                                                 </td>
                                                             </tr>
                                                         @endforeach
@@ -314,10 +318,14 @@
                                                                     <small class="text-muted">{{ $request->created_at->format('H:i') }}</small>
                                                                 </td>
                                                                 <td>
-                                                                    <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                                                        تسديد
-                                                                    </a>
+                                                                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process medical requests payments'))
+                                                                        <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                                                            تسديد
+                                                                        </a>
+                                                                    @else
+                                                                        <span class="badge bg-secondary">غير مصرح</span>
+                                                                    @endif
                                                                 </td>
                                                             </tr>
                                                         @endforeach
@@ -369,10 +377,14 @@
                                                                     <small class="text-muted">{{ $payment->created_at->format('H:i') }}</small>
                                                                 </td>
                                                                 <td>
-                                                                    <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                                                        تسديد
-                                                                    </a>
+                                                                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process emergency payments'))
+                                                                        <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                                                            تسديد
+                                                                        </a>
+                                                                    @else
+                                                                        <span class="badge bg-secondary">غير مصرح</span>
+                                                                    @endif
                                                                 </td>
                                                             </tr>
                                                         @endforeach

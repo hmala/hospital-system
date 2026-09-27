@@ -31,10 +31,9 @@ class CashierController extends Controller
     public function index()
     {
         $user = Auth::user();
-
-        // التحقق من الصلاحيات
-        if (!$user->hasRole('admin') && !$user->can('view cashier') && !$user->can('view cashier appointments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('view cashier appointments') && !$user->can('view cashier medical requests') && !$user->can('view cashier emergency')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى لوحة الكاشير');
         }
 
         // جلب المواعيد المعلقة (غير المدفوعة)
@@ -138,9 +137,9 @@ class CashierController extends Controller
     public function showPaymentForm(Appointment $appointment)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process consultation payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process consultation payments'))) {
+            abort(403, 'غير مصرح لك بقبض وتسديد رسوم الكشفية');
         }
 
         // التحقق من أن الموعد لم يتم دفعه بعد
@@ -160,9 +159,9 @@ class CashierController extends Controller
     public function processPayment(Request $request, Appointment $appointment)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process consultation payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process consultation payments'))) {
+            abort(403, 'غير مصرح لك بقبض وتسديد رسوم الكشفية');
         }
 
         $request->validate([
@@ -320,9 +319,23 @@ class CashierController extends Controller
     public function showReceipt(Payment $payment)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canViewReceipt = $isAdmin || (
+            $user && (
+                $user->can('view cashier') ||
+                $user->can('view cashier reports') ||
+                $user->can('process consultation payments') ||
+                $user->can('process medical requests payments') ||
+                $user->can('process emergency payments') ||
+                $user->can('process surgery payments') ||
+                $user->can('process payments') ||
+                $user->can('view payments') ||
+                $user->hasRole('patient')
+            )
+        );
 
-        if (!$user->hasRole(['admin', 'cashier', 'accountant', 'patient']) && !$user->can('view cashier') && !$user->can('view cashier reports') && !$user->can('process payments')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$canViewReceipt) {
+            abort(403, 'غير مصرح لك بعرض سند القبض');
         }
 
         $payment->load([
@@ -372,9 +385,9 @@ class CashierController extends Controller
     public function showRequestPaymentForm(MedicalRequest $request)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process medical requests payments') && !$user->can('process medical request payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('process medical requests payments') && !$user->can('process medical request payments')))) {
+            abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
         // التحقق من أن الطلب لم يتم دفعه بعد
@@ -404,9 +417,9 @@ class CashierController extends Controller
         \Log::info('HTTP Request data: ' . json_encode($httpRequest->all()));
         
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process medical requests payments') && !$user->can('process medical request payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('process medical requests payments') && !$user->can('process medical request payments')))) {
+            abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
         $httpRequest->validate([
@@ -672,8 +685,9 @@ class CashierController extends Controller
     public function paymentsReport(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view cashier reports') && !$user->can('view cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view cashier reports'))) {
+            abort(403, 'غير مصرح لك بعرض التقارير المالية وكشوفات الصندوق');
         }
 
         $range = $request->query('range');
@@ -812,9 +826,9 @@ class CashierController extends Controller
     public function statements(Request $request)
     {
         $user = Auth::user();
-
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view cashier reports'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كشوفات الحسابات');
         }
 
         $data = $this->buildStatementData($request);
@@ -825,9 +839,9 @@ class CashierController extends Controller
     public function exportStatements(Request $request)
     {
         $user = Auth::user();
-
-        if (!$user->can('view cashier reports') && !$user->hasRole('admin')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view cashier reports'))) {
+            abort(403, 'غير مصرح لك بتصدير كشوفات الحسابات');
         }
 
         $data = $this->buildStatementData($request);
@@ -1006,9 +1020,9 @@ class CashierController extends Controller
     public function surgeriesIndex()
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('view cashier surgeries') && !$user->can('view cashier') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view cashier surgeries'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كاشير العمليات');
         }
 
         // جلب العمليات المعلقة (بانتظار الدفع أو دفع جزئي، أو التي تحتوي مبالغ زائدة للاسترجاع) مجمعة حسب المريض
@@ -1087,9 +1101,9 @@ class CashierController extends Controller
     public function surgeriesPaid(Request $request)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('view cashier surgeries') && !$user->can('view cashier') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view cashier surgeries'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كاشير العمليات');
         }
 
         // بناء الاستعلام
@@ -1146,10 +1160,9 @@ class CashierController extends Controller
      */
     public function showSurgeryPaymentForm(Surgery $surgery)
     {
-        $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process surgery payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');
         }
 
         $isCancelled = $surgery->status === 'cancelled';
@@ -1209,9 +1222,9 @@ class CashierController extends Controller
     public function processSurgeryPayment(Request $request, Surgery $surgery)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process surgery payments') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');
         }
 
         if ($surgery->status === 'cancelled') {
@@ -1484,9 +1497,9 @@ class CashierController extends Controller
     public function processSurgeryRefund(Request $request, Surgery $surgery)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole('admin') && !$user->can('process surgery payments') && !$user->can('process refunds') && !$user->can('process payments') && !$user->hasRole('cashier')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('process surgery payments') && !$user->can('process refunds')))) {
+            abort(403, 'غير مصرح لك بمعالجة استرجاع مبالغ العمليات');
         }
 
         $isCancelled = $surgery->status === 'cancelled';
@@ -1600,9 +1613,9 @@ class CashierController extends Controller
     public function showEmergencyPaymentForm(Payment $payment)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist']) && !$user->can('process emergency payments') && !$user->can('process payments')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process emergency payments'))) {
+            abort(403, 'غير مصرح لك بقبض رسوم الطوارئ');
         }
 
         // التحقق من أن الدفعة تخص خدمات طوارئ ولم يتم دفعها بعد
@@ -1628,9 +1641,9 @@ class CashierController extends Controller
     public function processEmergencyPayment(Request $request, Payment $payment)
     {
         $user = Auth::user();
-
-        if (!$user->hasRole(['admin', 'cashier', 'receptionist']) && !$user->can('process emergency payments') && !$user->can('process payments')) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process emergency payments'))) {
+            abort(403, 'غير مصرح لك بقبض رسوم الطوارئ');
         }
 
         $request->validate([
@@ -1755,7 +1768,8 @@ class CashierController extends Controller
     public function emergencyFinancialMovements(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -1803,7 +1817,8 @@ class CashierController extends Controller
     public function emergencyStatements(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2174,7 +2189,8 @@ class CashierController extends Controller
     public function emergencyReferrals(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2302,7 +2318,8 @@ class CashierController extends Controller
     public function emergencyDoctorAccounts(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2351,7 +2368,8 @@ class CashierController extends Controller
     public function emergencyDoctorAccount(Request $request, \App\Models\Doctor $doctor)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -2403,7 +2421,8 @@ class CashierController extends Controller
     public function emergencyDoctorPayout(Request $request, \App\Models\Doctor $doctor)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'cashier', 'accountant']) && !$user->can('view doctor profits') && !$user->can('view cashier reports')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

@@ -59,6 +59,26 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-27 — المرحلة 2: تطهير وإحكام صلاحيات الصندوق والكاشير والمالية)
+
+### Done
+- **تطهير وإحكام شاشة وعمليات الصندوق والكاشير والمالية (`CashierController.php` و `AccountantController.php`)**:
+  * إلغاء التجاوز التلقائي لدور الكاشير `hasRole('cashier')` و `hasRole(['admin', 'cashier', 'receptionist'])` من كافة دوال الصندوق، وتطبيق التحقق الصارم بالصلاحيات:
+    - `view cashier`: تتحكم حصراً بالدخول إلى لوحة الكاشير الرئيسية `cashier.index`.
+    - `process consultation payments`: تتحكم بعرض ودفع رسوم كشفية الاستشارية والمواعيد.
+    - `process medical requests payments`: تتحكم بعرض ودفع طلبات الأشعة والسونار والمختبر.
+    - `view cashier reports`: تتحكم بعرض تقارير الكاشير وكشوفات الحركات المالية اليومية.
+    - `view cashier surgeries`: تتحكم بعرض كاشير العمليات والعمليات المدفوعة والمعلقة.
+    - `process surgery payments`: تتحكم بنموذج ودفع وتثبيت أجور العمليات الجراحية.
+    - `process refunds`: تتحكم باسترجاع مبالغ العمليات الملغاة أو الفوارق المالية للمرضى.
+    - `process emergency payments`: تتحكم بنماذج ودفع فواتير الطوارئ.
+    - `review surgery prices`: تتحكم حصراً بمحطة مراجعة وتدقيق أسعار العمليات في قسم الحسابات `AccountantController`.
+- **إحكام أزرار واجهات الكاشير والعمليات (`cashier/index.blade.php` و `cashier/surgeries/index.blade.php`)**:
+  * ربط أزرار [ تسديد ] لكشفية الاستشارية، طلبات الأشعة والمختبر، وحالات الطوارئ بصلاحيات المعالجة الخاصة بكل منها بدلاً من الظهور غير المشروط.
+  * ربط أزرار [ تسديد الرسوم ] و [ إرجاع الفارق / إرجاع المبلغ ] في كاشير العمليات بصلاحيات `process surgery payments` و `process refunds` مع إظهار شارة "غير مصرح" عند سحب الصلاحية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * توسيع اختبارات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) لتشمل كافة مسارات الصندوق والعمليات والحسابات والتأكد من إرجاع `403` فورياً عند سحب الصلاحيات من دور الكاشير، واجتياز كافة الاختبارات بنجاح 100%: 7 passed (51 assertions).
+
 ## Session log (2026-09-27 — المرحلة 1: تطهير وإحكام صلاحيات الاستعلامات وملفات المرضى وحجوزات الأسرّة)
 
 ### Done

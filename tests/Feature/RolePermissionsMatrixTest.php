@@ -195,6 +195,100 @@ class RolePermissionsMatrixTest extends TestCase
         // 4. Cannot delete
         $this->actingAs($receptionist)->delete(route('patients.destroy', $patient))->assertStatus(403);
     }
+
+    #[Test]
+    public function cashier_routes_are_strictly_gated_by_granular_permissions()
+    {
+        Permission::firstOrCreate(['name' => 'view cashier', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'process consultation payments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'process medical requests payments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view cashier reports', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view cashier surgeries', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'process surgery payments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'review surgery prices', 'guard_name' => 'web']);
+
+        $cashierRole = Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'web']);
+        $cashierUser = User::factory()->create(['email' => 'cashier_test@hospital.com']);
+        $cashierUser->assignRole($cashierRole);
+
+        // 1. Without 'view cashier', accessing cashier index returns 403
+        $cashierRole->syncPermissions([]);
+        $this->actingAs($cashierUser)->get(route('cashier.index'))->assertStatus(403);
+
+        // 2. Give ONLY 'view cashier'
+        $cashierRole->syncPermissions(['view cashier']);
+        $this->actingAs($cashierUser)->get(route('cashier.index'))->assertStatus(200);
+
+        // 3. Create dummy appointment
+        $patientUser = User::factory()->create(['name' => 'مريض كاشير']);
+        $patient = \App\Models\Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'male',
+            'date_of_birth' => '1990-01-01',
+            'blood_group' => 'O+',
+        ]);
+        $hospital = \App\Models\Hospital::first();
+        if (!$hospital) {
+            $hospital = \App\Models\Hospital::create([
+                'name' => 'مستشفى الفحص',
+                'code' => 'TEST',
+                'address' => 'بغداد',
+                'phone' => '123456',
+                'email' => 'test@hospital.com',
+                'status' => 'active',
+            ]);
+        }
+        $dept = \App\Models\Department::firstOrCreate(
+            ['name' => 'قسم الباطنية'],
+            [
+                'hospital_id' => $hospital->id,
+                'room_number' => '101',
+                'consultation_fee' => 25000,
+                'working_hours_start' => '08:00',
+                'working_hours_end' => '16:00',
+                'max_patients_per_day' => 30,
+                'type' => 'internal',
+                'is_active' => true,
+            ]
+        );
+        $doctorUser = User::factory()->create(['name' => 'دكتور فحص']);
+        $doctor = \App\Models\Doctor::create([
+            'user_id' => $doctorUser->id,
+            'department_id' => $dept->id,
+            'specialization' => 'طب عام',
+            'qualification' => 'MBChB',
+            'license_number' => 'DOC-TEST-' . uniqid(),
+            'consultation_fee' => 25000,
+            'status' => 'active',
+            'is_active' => true,
+        ]);
+        $appointment = \App\Models\Appointment::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'department_id' => $dept->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => '10:00:00',
+            'status' => 'scheduled',
+            'consultation_fee' => 25000,
+        ]);
+
+        // Attempt consultation payment form without 'process consultation payments' => 403
+        $this->actingAs($cashierUser)->get(route('cashier.payment.form', $appointment->id))->assertStatus(403);
+
+        // Grant 'process consultation payments' => 200
+        $cashierRole->givePermissionTo('process consultation payments');
+        $this->actingAs($cashierUser)->get(route('cashier.payment.form', $appointment->id))->assertStatus(200);
+
+        // 4. Reports without 'view cashier reports' => 403
+        $this->actingAs($cashierUser)->get(route('cashier.report'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('cashier.statements'))->assertStatus(403);
+
+        // 5. Surgery cashier without 'view cashier surgeries' => 403
+        $this->actingAs($cashierUser)->get(route('cashier.surgeries.index'))->assertStatus(403);
+
+        // 6. Accountant surgery review without 'review surgery prices' => 403
+        $this->actingAs($cashierUser)->get(route('accountant.surgeries.index'))->assertStatus(403);
+    }
 }
 
 
