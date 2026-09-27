@@ -1698,5 +1698,7 @@
     </script>
 
     @stack('modals')
+    @yield('scripts')
+    @stack('scripts')
 </body>
 </html>

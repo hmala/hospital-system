@@ -74,12 +74,19 @@ class Request extends Model
                 return null;
 
             case 'radiology':
-                if (!empty($details['radiology_type_ids']) && is_array($details['radiology_type_ids'])) {
-                    return RadiologyType::whereIn('id', $details['radiology_type_ids'])->sum('base_price');
+                $radIds = [];
+                if (!empty($details['radiology_type_ids'])) {
+                    $radIds = (array) $details['radiology_type_ids'];
+                } elseif (!empty($details['radiology_types'])) {
+                    $radIds = (array) $details['radiology_types'];
+                } elseif (!empty($details['radiology_type_id'])) {
+                    $radIds = (array) $details['radiology_type_id'];
+                } elseif (!empty($details['ultrasound_type_id'])) {
+                    $radIds = (array) $details['ultrasound_type_id'];
                 }
 
-                if (!empty($details['radiology_types']) && is_array($details['radiology_types'])) {
-                    return RadiologyType::whereIn('id', $details['radiology_types'])->sum('base_price');
+                if (!empty($radIds)) {
+                    return (float) RadiologyType::whereIn('id', $radIds)->sum('base_price');
                 }
 
                 return null;

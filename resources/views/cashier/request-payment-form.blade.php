@@ -27,6 +27,90 @@
                             $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
                         }
                         $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
+
+                        $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                        $items = [];
+
+                        if ($request->type === 'lab') {
+                            $testIds = $details['lab_test_ids'] ?? [];
+                            if (empty($testIds) && !empty($details['package_id'])) {
+                                $pkg = \App\Models\Package::find($details['package_id']);
+                                if ($pkg) {
+                                    $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                }
+                            }
+                            if (!empty($testIds)) {
+                                foreach ($testIds as $tId) {
+                                    $test = \App\Models\LabTest::find($tId);
+                                    if ($test) {
+                                        $items[] = [
+                                            'id' => $test->id,
+                                            'name' => $test->name,
+                                            'code' => $test->code,
+                                            'type' => 'lab',
+                                            'base_price' => (float)$test->getRegularPrice(),
+                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
+                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
+                                            'is_moi_active' => (bool)$test->is_moi_active,
+                                            'is_hi_active' => (bool)$test->is_hi_active,
+                                        ];
+                                    }
+                                }
+                            } elseif (!empty($details['tests'])) {
+                                foreach ($details['tests'] as $tName) {
+                                    $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                    if ($test) {
+                                        $items[] = [
+                                            'id' => $test->id,
+                                            'name' => $test->name,
+                                            'code' => $test->code,
+                                            'type' => 'lab',
+                                            'base_price' => (float)$test->getRegularPrice(),
+                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
+                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
+                                            'is_moi_active' => (bool)$test->is_moi_active,
+                                            'is_hi_active' => (bool)$test->is_hi_active,
+                                        ];
+                                    }
+                                }
+                            }
+                        } elseif ($request->type === 'radiology') {
+                            $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? $details['ultrasound_type_id'] ?? [];
+                            if (!is_array($typeIds)) {
+                                $typeIds = [$typeIds];
+                            }
+                            if (!empty($typeIds)) {
+                                foreach ($typeIds as $rId) {
+                                    $rad = \App\Models\RadiologyType::find($rId);
+                                    if ($rad) {
+                                        $items[] = [
+                                            'id' => $rad->id,
+                                            'name' => $rad->name,
+                                            'code' => $rad->code,
+                                            'type' => 'radiology',
+                                            'base_price' => (float)$rad->getRegularPrice(),
+                                            'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : $rad->getRegularPrice()),
+                                            'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : $rad->getRegularPrice()),
+                                            'is_moi_active' => (bool)$rad->is_moi_active,
+                                            'is_hi_active' => (bool)$rad->is_hi_active,
+                                        ];
+                                    }
+                                }
+                            }
+                        }
+
+                        $initialApproved = count($items) > 0 ? collect($items)->sum('base_price') : (float)($request->total_amount ?? 0);
+                        $initialPatient = $initialApproved;
+                        $initialInsurance = 0;
+                        if ($defaultInsurance === 'moi') {
+                            $initialApproved = count($items) > 0 ? collect($items)->sum(fn($i) => $i['moi_price'] ?: $i['base_price']) : $initialApproved;
+                            $initialPatient = round($initialApproved * ($defaultCopay / 100));
+                            $initialInsurance = max(0, $initialApproved - $initialPatient);
+                        } elseif ($defaultInsurance === 'hi') {
+                            $initialApproved = count($items) > 0 ? collect($items)->sum(fn($i) => $i['hi_price'] ?: $i['base_price']) : $initialApproved;
+                            $initialPatient = round($initialApproved * ($defaultCopay / 100));
+                            $initialInsurance = max(0, $initialApproved - $initialPatient);
+                        }
                     @endphp
 
                     <!-- معلومات الطلب والمريض -->
@@ -156,19 +240,19 @@
                                 <div class="col-4">
                                     <div class="bg-white p-2 rounded border">
                                         <small class="text-muted d-block">إجمالي السعر المعتمد</small>
-                                        <strong class="text-dark fs-6" id="display_approved_price">0 د.ع</strong>
+                                        <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($initialApproved) }} د.ع</strong>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="bg-white p-2 rounded border border-success">
                                         <small class="text-success fw-bold d-block">تحمل المريض (نقداً)</small>
-                                        <strong class="text-success fs-6" id="display_patient_share">0 د.ع</strong>
+                                        <strong class="text-success fs-6" id="display_patient_share">{{ number_format($initialPatient) }} د.ع</strong>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="bg-white p-2 rounded border border-primary">
                                         <small class="text-primary fw-bold d-block">حصة الضمان (ذمة)</small>
-                                        <strong class="text-primary fs-6" id="display_insurance_share">0 د.ع</strong>
+                                        <strong class="text-primary fs-6" id="display_insurance_share">{{ number_format($initialInsurance) }} د.ع</strong>
                                     </div>
                                 </div>
                             </div>
@@ -181,76 +265,6 @@
                                 تفاصيل الخدمات والأسعار المعتمدة
                             </h6>
                             <div class="border rounded-3 p-3 bg-white">
-                                @php
-                                    $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                    $items = [];
-
-                                    if ($request->type === 'lab') {
-                                        $testIds = $details['lab_test_ids'] ?? [];
-                                        if (empty($testIds) && !empty($details['package_id'])) {
-                                            $pkg = \App\Models\Package::find($details['package_id']);
-                                            if ($pkg) {
-                                                $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                                            }
-                                        }
-                                        if (!empty($testIds)) {
-                                            foreach ($testIds as $tId) {
-                                                $test = \App\Models\LabTest::find($tId);
-                                                if ($test) {
-                                                    $items[] = [
-                                                        'id' => $test->id,
-                                                        'name' => $test->name,
-                                                        'code' => $test->code,
-                                                        'type' => 'lab',
-                                                        'base_price' => (float)$test->getRegularPrice(),
-                                                        'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
-                                                        'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
-                                                        'is_moi_active' => (bool)$test->is_moi_active,
-                                                        'is_hi_active' => (bool)$test->is_hi_active,
-                                                    ];
-                                                }
-                                            }
-                                        } elseif (!empty($details['tests'])) {
-                                            foreach ($details['tests'] as $tName) {
-                                                $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
-                                                if ($test) {
-                                                    $items[] = [
-                                                        'id' => $test->id,
-                                                        'name' => $test->name,
-                                                        'code' => $test->code,
-                                                        'type' => 'lab',
-                                                        'base_price' => (float)$test->getRegularPrice(),
-                                                        'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
-                                                        'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
-                                                        'is_moi_active' => (bool)$test->is_moi_active,
-                                                        'is_hi_active' => (bool)$test->is_hi_active,
-                                                    ];
-                                                }
-                                            }
-                                        }
-                                    } elseif ($request->type === 'radiology') {
-                                        $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
-                                        if (!empty($typeIds)) {
-                                            foreach ($typeIds as $rId) {
-                                                $rad = \App\Models\RadiologyType::find($rId);
-                                                if ($rad) {
-                                                    $items[] = [
-                                                        'id' => $rad->id,
-                                                        'name' => $rad->name,
-                                                        'code' => $rad->code,
-                                                        'type' => 'radiology',
-                                                        'base_price' => (float)$rad->getRegularPrice(),
-                                                        'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : $rad->getRegularPrice()),
-                                                        'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : $rad->getRegularPrice()),
-                                                        'is_moi_active' => (bool)$rad->is_moi_active,
-                                                        'is_hi_active' => (bool)$rad->is_hi_active,
-                                                    ];
-                                                }
-                                            }
-                                        }
-                                    }
-                                @endphp
-
                                 @if(count($items) > 0)
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-hover align-middle mb-0" id="itemsTable">
@@ -282,8 +296,8 @@
                                                             <span class="fw-semibold">{{ $item['name'] }}</span>
                                                         </td>
                                                         <td><code>{{ $item['code'] }}</code></td>
-                                                        <td class="text-end fw-bold row-approved-price">0 د.ع</td>
-                                                        <td class="text-end text-success fw-bold row-patient-share">0 د.ع</td>
+                                                        <td class="text-end fw-bold row-approved-price">{{ number_format($item['base_price']) }} د.ع</td>
+                                                        <td class="text-end text-success fw-bold row-patient-share">{{ number_format($item['base_price']) }} د.ع</td>
                                                         <td class="text-end text-primary fw-bold row-insurance-share">0 د.ع</td>
                                                     </tr>
                                                 @endforeach
@@ -291,9 +305,9 @@
                                             <tfoot class="table-success">
                                                 <tr>
                                                     <th colspan="3" class="text-end fw-bold">المجموع الإجمالي:</th>
-                                                    <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">0 د.ع</th>
-                                                    <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">0 د.ع</th>
-                                                    <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">0 د.ع</th>
+                                                    <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">{{ number_format($initialApproved) }} د.ع</th>
+                                                    <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">{{ number_format($initialPatient) }} د.ع</th>
+                                                    <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">{{ number_format($initialInsurance) }} د.ع</th>
                                                 </tr>
                                             </tfoot>
                                         </table>
@@ -354,7 +368,7 @@
                                            name="amount" 
                                            step="0.01" 
                                            min="0" 
-                                           value="{{ old('amount', 0) }}" 
+                                           value="{{ old('amount', $initialPatient > 0 ? $initialPatient : ($request->total_amount ?? 0)) }}" 
                                            required>
                                     <span class="input-group-text bg-success text-white fw-bold">IQD</span>
                                 </div>
