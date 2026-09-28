@@ -205,13 +205,28 @@ class EyeReceptionController extends Controller
             return response()->json([]);
         }
 
-        $patients = Patient::where('name', 'like', "%{$term}%")
-            ->orWhere('phone', 'like', "%{$term}%")
-            ->orWhere('medical_record_number', 'like', "%{$term}%")
-            ->select('id', 'name', 'phone', 'gender', 'age', 'insurance_type')
+        $patients = Patient::with('user')
+            ->whereHas('user', function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                  ->orWhere('phone', 'like', "%{$term}%");
+            })
+            ->orWhere('national_id', 'like', "%{$term}%")
             ->limit(10)
             ->get();
 
-        return response()->json($patients);
+        // Format for JSON response
+        $results = $patients->map(function ($patient) {
+            return [
+                'id' => $patient->id,
+                'name' => $patient->name,
+                'phone' => $patient->phone,
+                'gender' => $patient->user->gender ?? null,
+                'age' => $patient->age,
+                'insurance_type' => $patient->insurance_type,
+                'national_id' => $patient->national_id,
+            ];
+        });
+
+        return response()->json($results);
     }
 }
