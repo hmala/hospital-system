@@ -59,6 +59,18 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+## Session log (2026-09-28 — تبسيط لوحة الصلاحيات وتنظيف مسارات المواعيد والزيارات اليدوية)
+
+### Done
+- **تنظيف الروابط والقوائم الجانبية ومسارات المواعيد والزيارات (`layouts/app.blade.php`, `RoleManagementController.php`, `RolesAndPermissionsSeeder.php`)**:
+  * إزالة روابط `/appointments` («المواعيد» و«حجز موعد») من الشريط الجانبي لتفادي التكرار والاعتماد الكامل على منظومة الاستعلامات وجدول الاستشارية الحديث (`inquiry.create` -> `consultant-availability` -> `doctor.visits`).
+  * حجب صلاحيات المواعيد غير المستخدمة (`view appointments`, `create appointments`, `edit appointments`, `delete appointments`) وصلاحيات إنشاء وتعديل وحذف الزيارات اليدوية (`create visits`, `edit visits`, `delete visits`) من شاشات إضافة وتعديل الأدوار عبر `getHiddenPermissions()` لمنع إنشاء زيارات أو مواعيد التفافية خارج المسار المالي والاستعلاماتي.
+  * الحفاظ الحصري على صلاحية `cancel appointments` مفعلة لإدارة زر `[ ❌ إلغاء ]` في جدول حجوزات وطابور الاستشارية.
+  * الحفاظ على صلاحية `view visits` لسجل الزيارات الطبية العامة.
+  * سحب صلاحيات الزيارات والمواعيد المتقادمة من كافة الأدوار غير الإدارية عبر ميغريشن آمن `2026_09_28_083500_cleanup_legacy_visit_crud_permissions.php` وتحديث بذور الصلاحيات `RolesAndPermissionsSeeder.php`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) بنجاح 100%: 9 passed (74 assertions).
+
 ## Session log (2026-09-27 — المرحلة 3: تطهير وإحكام صلاحيات العيادات والاستشارية ومحطة الأطباء)
 
 ### Done

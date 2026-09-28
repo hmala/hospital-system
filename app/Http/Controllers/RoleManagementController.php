@@ -29,6 +29,9 @@ class RoleManagementController extends Controller
             'create appointments',
             'edit appointments',
             'delete appointments',
+            'create visits',
+            'edit visits',
+            'delete visits',
         ];
     }
 

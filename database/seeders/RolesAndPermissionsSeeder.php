@@ -211,8 +211,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view own visits',
             'manage own visits',
             'view visits',
-            'create visits',
-            'edit visits',
             'view surgeries',
             'create surgeries',
             'edit surgeries',
@@ -234,8 +232,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $patientRole = Role::firstOrCreate(['name' => 'patient']);
         $patientRole->givePermissionTo([
             'view own visits',
-            'view appointments',
-            'create appointments',
             'cancel appointments',
             'view departments',
             'view doctors',
@@ -249,13 +245,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit patients',
             'view doctors',
             'view departments',
-            'view appointments',
-            'create appointments',
-            'edit appointments',
-            'delete appointments',
+            'cancel appointments',
             'view visits',
-            'create visits',
-            'edit visits',
             'view surgeries',
             'create surgeries',
             'edit surgeries',
@@ -436,8 +427,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $nurseRole->givePermissionTo([
             'view patients',
             'view visits',
-            'create visits',
-            'edit visits',
             'view emergencies',
             'create emergencies',
             'edit emergencies',
@@ -456,8 +445,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $residentRole->givePermissionTo([
             'view patients',
             'view visits',
-            'create visits',
-            'edit visits',
             'view surgeries',
             'view resident station', // محطة المقيم فقط
             'view lab tests',
