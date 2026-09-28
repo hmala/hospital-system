@@ -1028,9 +1028,17 @@
 
                         @can('view surgeries')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('surgeries.*') ? 'active' : '' }}" href="{{ route('surgeries.index') }}">
+                            <a class="nav-link {{ request()->routeIs('surgeries.*') && !request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.index') }}">
                                 <i class="fas fa-procedures"></i><span> العمليات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeries }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
+                                <i class="fas fa-clock"></i><span> قائمة انتظار العمليات</span>
+                                @if($waitingSurgeries > 0)
+                                <span class="badge bg-warning ms-2">{{ $waitingSurgeries }}</span>
+                                @endif
                             </a>
                         </li>
                         @endcan
@@ -1115,48 +1123,63 @@
                         </div>
                         @endcanany
 
-                        <!-- قسم المختبر والأشعة -->
-                        @canany(['view radiology', 'manage radiology types', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests', 'view lab test groups'])
+                        <!-- قسم الأشعة والسونار -->
+                        @canany(['view radiology', 'manage radiology types'])
+                        @php
+                            $isRadiologyActive = request()->routeIs('radiology.*') || 
+                                                 request()->routeIs('radiology-staff.*') || 
+                                                 request()->routeIs('staff.surgery-radiology-tests.*');
+                        @endphp
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#labSection" aria-expanded="false">
-                            <span><i class="fas fa-microscope"></i> المختبر والأشعة</span>
+                        <div class="sidebar-section-title {{ $isRadiologyActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#radiologySection" aria-expanded="{{ $isRadiologyActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-x-ray"></i> الأشعة والسونار</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="labSection">
-
+                        <div class="collapse collapse-section {{ $isRadiologyActive ? 'show' : '' }}" id="radiologySection">
                         @can('view radiology')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('radiology.*') && !request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
-                                <i class="fas fa-x-ray"></i><span> الإشعة</span>
+                            <a class="nav-link {{ request()->routeIs('radiology.index') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
+                                <i class="fas fa-th-list"></i><span> لوحة قسم الأشعة</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('radiology-staff.*') ? 'active' : '' }}" href="{{ route('radiology-staff.index') }}">
-                                <i class="fas fa-user-md"></i><span> طلبات الأشعة</span>
+                                <i class="fas fa-user-md"></i><span> طلبات وفحوصات الأشعة</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
+                                <i class="fas fa-procedures"></i><span> أشعة العمليات</span>
+                                <span class="badge bg-secondary ms-2">{{ $pendingSurgeryRadiology }}</span>
                             </a>
                         </li>
                         @endcan
                         @can('manage radiology types')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.types.index') }}">
-                                <i class="fas fa-file-medical-alt"></i><span> أنواع الأشعة</span>
+                                <i class="fas fa-file-medical-alt"></i><span> أنواع وأسعار الأشعة</span>
                             </a>
                         </li>
                         @endcan
-                                             @can('view surgeries')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
-                                <i class="fas fa-clock"></i><span> قائمة الانتظار</span>
-                                @if($waitingSurgeries > 0)
-                                <span class="badge bg-warning ms-2">{{ $waitingSurgeries }}</span>
-                                @endif
-                            </a>
-                        </li>
-                        @endcan
+                        </div> <!-- end radiologySection -->
+                        @endcanany
 
-
+                        <!-- قسم المختبر والتحاليل الطبية -->
+                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view lab test groups', 'view packages'])
+                        @php
+                            $isLabActive = request()->routeIs('lab.*') || 
+                                           request()->routeIs('admin.packages.*') || 
+                                           request()->routeIs('staff.surgery-lab-tests.*') || 
+                                           request()->routeIs('lab-tests.*');
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isLabActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#labSection" aria-expanded="{{ $isLabActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-microscope"></i> المختبر والتحاليل</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isLabActive ? 'show' : '' }}" id="labSection">
                         @can('view lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab.*') ? 'active' : '' }}" href="{{ route('lab.index') }}">
@@ -1166,38 +1189,19 @@
                         </li>
                         @endcan
 
-                        @can('view packages')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
-                                <i class="fas fa-boxes"></i><span> الباقات</span>
-                            </a>
-                        </li>
-                        @endcan
-
                         @can('manage surgery lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.surgery-lab-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-lab-tests.index') }}">
-                                <i class="fas fa-flask"></i><span> تحاليل العمليات</span>
+                                <i class="fas fa-vial"></i><span> تحاليل العمليات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeryLabTests }}</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.surgery-lab-tests.selection') ? 'active' : '' }}" href="{{ route('staff.surgery-lab-tests.selection') }}">
-                                <i class="fas fa-list"></i><span> عمليات تحتاج اختيار تحاليل</span>
                             </a>
                         </li>
                         @endcan
 
-                        @can('view radiology')
+                        @can('view packages')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
-                                <i class="fas fa-x-ray"></i><span> أشعة العمليات</span>
-                                <span class="badge bg-secondary ms-2">{{ $pendingSurgeryRadiology }}</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.selection') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.selection') }}">
-                                <i class="fas fa-list"></i><span> عمليات تحتاج اختيار أشعة</span>
+                            <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
+                                <i class="fas fa-boxes"></i><span> الباقات الطبية</span>
                             </a>
                         </li>
                         @endcan
@@ -1205,7 +1209,7 @@
                         @can('view lab test groups')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
-                                <i class="fas fa-layer-group"></i> مجموعات المفضلات
+                                <i class="fas fa-layer-group"></i><span> مجموعات المفضلات</span>
                             </a>
                         </li>
                         @endcan
@@ -1222,8 +1226,7 @@
                             </a>
                         </li>
                         @endcan
-
-                        </div>
+                        </div> <!-- end labSection -->
                         @endcanany
 
                         <!-- قسم الإدارة والإعدادات -->

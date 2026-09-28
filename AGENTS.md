@@ -59,6 +59,31 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
+
+## Session log (2026-09-28 — المرحلة 4: تطهير وإحكام صلاحيات الأشعة والسونار وفصل القوائم الجانبية)
+
+### Done
+- **تطهير وإحكام صلاحيات قسم الأشعة والسونار (`RadiologyController.php`, `RadiologyStaffController.php`, `RadiologyTypeController.php`, `RoleManagementController.php`)**:
+  * إلغاء كافة التجاوزات التلقائية للأدوار (`hasRole('radiology_staff')`, `hasAnyRole(...)`) التي كانت تسمح للمستخدمين بالدخول أو تعديل وحفظ التقارير حتى بعد سحب الصلاحيات من لوحة التحكم.
+  * ربط كل إجراء بصلاحيته الحصرية والمطابقة لبطاقة الأشعة في لوحة التحكم:
+    - `view radiology`: حماية الدخول إلى لوحة الأشعة العامة (`radiology.index`) ومحطة الكادر الفني (`radiology-staff.index`) وعرض تفاصيل الفحص (`radiology.show`).
+    - `create radiology`: حماية نموذج وإجراء إضافة فحص أشعة يدوياً (`create`, `store`).
+    - `edit radiology`: حماية نموذج وتعديل طلب الفحص (`edit`, `update`).
+    - `delete radiology`: حماية حذف وإلغاء طلبات الأشعة (`destroy`, `cancel`).
+    - `process radiology requests`: حماية كافة الإجراءات التنفيذية للأشعة (بدء الفحص `startProcedure`، الجدولة `schedule`، الإنهاء `complete`، وحفظ التقرير والنتائج الشعاعية `saveResults` وتحديثها عبر الكادر الفني `RadiologyStaffController@update`).
+    - `manage radiology types`: حماية شاملة لإدارة وإنشاء وتعديل وتعطيل أنواع وتصنيفات وأسعار الأشعة (`RadiologyTypeController`).
+  * حجب صلاحيات CRUD المتفرعة القديمة والزائدة لأنواع الأشعة (`create radiology types`, `edit radiology types`, `delete radiology types`, `view radiology types`) من شاشة الأدوار عبر `getHiddenPermissions()` لمنع التشتيت وحصرها في `manage radiology types`.
+- **فصل وتنظيم القائمة الجانبية (`layouts/app.blade.php`)**:
+  * فصل قسم «المختبر والأشعة» المدمج سابقاً إلى قسمين مستقلين تماماً:
+    1. **قسم الأشعة والسونار (`radiologySection`)**: يشمل لوحة الفحوصات والطلبات، محطة كادر الأشعة، وأنواع الأشعة والتصوير.
+    2. **قسم المختبر والتحاليل الطبية (`labSection`)**: يشمل سجل الفحوصات، استلام العينات، وإعدادات أسعار التحاليل.
+  * نقل بند «قائمة انتظار العمليات» (`surgeries.waiting`) الذي كان موضوعاً بالخطأ داخل قسم المختبر والأشعة إلى مكانه الصحيح داخل **قسم العمليات الجراحية (`surgerySection`)**.
+- **تصميم واجهة الخطأ 403 (`resources/views/errors/403.blade.php`)**:
+  * إعادة تصميم صفحة الخطأ `403 Forbidden` بنمط عصري Glassmorphism داكن وأنيق يعرض بوضوح اسم الصلاحية أو سبب المنع، اسم المستخدم، دوره الحالي، والمسار المطلوب مع أزرار واضحة للعودة وتحديث الصفحة وطلب الصلاحية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * توسيع وتحديث [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) لاختبار الحماية الصارمة لكافة مسارات الأشعة وإرجاع `403` فورياً عند سحب الصلاحيات واجتياز الاختبار بنجاح (10 passed, 93 assertions).
+  * اجتياز كامل اختبارات النظام العامة: 65 passed (371 assertions).
+
 ## Session log (2026-09-28 — توحيد الحسابات العامة والحسابيات في قسم جانبي شامل ومنظم)
 
 ### Done

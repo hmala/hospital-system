@@ -400,4 +400,33 @@ class RolePermissionsMatrixTest extends TestCase
         $this->assertTrue($testRole->fresh()->hasPermissionTo('view surgeries'));
         $this->assertTrue($testRole->fresh()->hasPermissionTo('manage rooms'));
     }
+
+    public function test_radiology_routes_are_strictly_gated_by_permissions()
+    {
+        $role = Role::firstOrCreate(['name' => 'radiology_staff_test', 'guard_name' => 'web']);
+        $user = User::factory()->create(['email' => 'rad_test@hospital.com']);
+        $user->assignRole($role);
+
+        // 1. Without permissions: all radiology routes return 403
+        $role->syncPermissions([]);
+        $this->actingAs($user)->get(route('radiology.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('radiology-staff.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('radiology.types.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('radiology.create'))->assertStatus(403);
+
+        // 2. Grant ONLY 'view radiology': index and staff requests return 200, types and create return 403
+        $role->syncPermissions(['view radiology']);
+        $this->actingAs($user)->get(route('radiology.index'))->assertStatus(200);
+        $this->actingAs($user)->get(route('radiology-staff.index'))->assertStatus(200);
+        $this->actingAs($user)->get(route('radiology.types.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('radiology.create'))->assertStatus(403);
+
+        // 3. Grant 'manage radiology types': types index returns 200
+        $role->givePermissionTo('manage radiology types');
+        $this->actingAs($user)->get(route('radiology.types.index'))->assertStatus(200);
+
+        // 4. Grant 'create radiology': create form returns 200
+        $role->givePermissionTo('create radiology');
+        $this->actingAs($user)->get(route('radiology.create'))->assertStatus(200);
+    }
 }

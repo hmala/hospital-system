@@ -43,6 +43,10 @@ class RoleManagementController extends Controller
             'edit payments',
             'view payments',
             'view doctor profits',
+            'create radiology types',
+            'edit radiology types',
+            'delete radiology types',
+            'view radiology types',
         ];
     }
 
