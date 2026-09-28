@@ -62,12 +62,12 @@ Consult these files before making changes or proposing fixes:
 ## Session log (2026-09-28 — تبسيط لوحة الصلاحيات وتنظيف مسارات المواعيد والزيارات اليدوية)
 
 ### Done
-- **تنظيف الروابط والقوائم الجانبية ومسارات المواعيد والزيارات (`layouts/app.blade.php`, `RoleManagementController.php`, `RolesAndPermissionsSeeder.php`)**:
+- **تنظيف الروابط والقوائم الجانبية ومسارات المواعيد والزيارات والتحويلات (`layouts/app.blade.php`, `RoleManagementController.php`, `RolesAndPermissionsSeeder.php`, `DoctorVisitController.php`)**:
   * إزالة روابط `/appointments` («المواعيد» و«حجز موعد») من الشريط الجانبي لتفادي التكرار والاعتماد الكامل على منظومة الاستعلامات وجدول الاستشارية الحديث (`inquiry.create` -> `consultant-availability` -> `doctor.visits`).
-  * حجب صلاحيات المواعيد غير المستخدمة (`view appointments`, `create appointments`, `edit appointments`, `delete appointments`) وصلاحيات إنشاء وتعديل وحذف الزيارات اليدوية (`create visits`, `edit visits`, `delete visits`) من شاشات إضافة وتعديل الأدوار عبر `getHiddenPermissions()` لمنع إنشاء زيارات أو مواعيد التفافية خارج المسار المالي والاستعلاماتي.
-  * الحفاظ الحصري على صلاحية `cancel appointments` مفعلة لإدارة زر `[ ❌ إلغاء ]` في جدول حجوزات وطابور الاستشارية.
-  * الحفاظ على صلاحية `view visits` لسجل الزيارات الطبية العامة.
-  * سحب صلاحيات الزيارات والمواعيد المتقادمة من كافة الأدوار غير الإدارية عبر ميغريشن آمن `2026_09_28_083500_cleanup_legacy_visit_crud_permissions.php` وتحديث بذور الصلاحيات `RolesAndPermissionsSeeder.php`.
+  * حجب صلاحيات المواعيد غير المستخدمة (`view appointments`, `create appointments`, `edit appointments`, `delete appointments`) وصلاحيات إنشاء وتعديل وحذف الزيارات اليدوية (`create visits`, `edit visits`, `delete visits`) وصلاحيات التحويلات المتقادمة (`view referrals`, `create referrals`, `manage referrals`) من شاشات إضافة وتعديل الأدوار عبر `getHiddenPermissions()` لمنع التشتيت وإنشاء زيارات أو تحويلات التفافية خارج المسار.
+  * الحفاظ الحصري على صلاحية `cancel appointments` مفعلة لإدارة زر `[ ❌ إلغاء ]` في جدول حجوزات وطابور الاستشارية، وصلاحية `view visits` لسجل الزيارات الطبية العامة.
+  * حصر التحويل الطبي بين الأطباء الاستشاريين في محطة الكشف بصلاحية `manage own visits` وتطهير التجاوزات.
+  * سحب صلاحيات الزيارات والمواعيد والتحويلات المتقادمة من كافة الأدوار غير الإدارية عبر ميغريشن آمن `2026_09_28_083500_cleanup_legacy_visit_crud_permissions.php` و `2026_09_28_103000_cleanup_legacy_referral_permissions.php`.
 - **الاختبارات الآلية (Automated Tests)**:
   * اجتياز كامل اختبارات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) بنجاح 100%: 9 passed (74 assertions).
 

@@ -32,6 +32,9 @@ class RoleManagementController extends Controller
             'create visits',
             'edit visits',
             'delete visits',
+            'view referrals',
+            'create referrals',
+            'manage referrals',
         ];
     }
 

@@ -741,7 +741,7 @@ class DoctorVisitController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('create referrals') && !$user->can('manage own visits')))) {
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
             abort(403, 'غير مصرح لك بإحالة المريض إلى طبيب آخر');
         }
 
