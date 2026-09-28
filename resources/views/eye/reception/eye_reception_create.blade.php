@@ -63,7 +63,9 @@
                                 <select name="doctor_id" class="form-select">
                                     <option value="">-- أي طبيب عيون متاح --</option>
                                     @foreach($doctors as $doc)
-                                        <option value="{{ $doc->id }}">{{ $doc->user->name ?? 'طبيب' }}</option>
+                                        <option value="{{ $doc->id }}" {{ $doc->is_available_today ? '' : 'class=text-muted' }}>
+                                            {{ $doc->is_available_today ? '🟢 [متاح اليوم]' : '⚪ [غير متوفر]' }} د. {{ $doc->user->name ?? 'طبيب' }} - {{ $doc->specialization ?? 'جراحة العيون' }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>

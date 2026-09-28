@@ -1061,6 +1061,11 @@
                         </div>
                         <div class="collapse collapse-section {{ $isEyeActive ? 'show' : '' }}" id="eyeCenterSection">
                             <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.availability.*') ? 'active' : '' }}" href="{{ route('eye.availability.index') }}">
+                                    <i class="fas fa-calendar-check text-success"></i><span> توفر أطباء العيون</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.reception.*') ? 'active' : '' }}" href="{{ route('eye.reception.index') }}">
                                     <i class="fas fa-id-card text-primary"></i><span> استعلامات وطابور العيون</span>
                                     @if($todayEyeAppts > 0)

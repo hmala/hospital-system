@@ -70,7 +70,24 @@ class EyeReceptionController extends Controller
      */
     public function create()
     {
-        $doctors = Doctor::with('user')->where('is_active', true)->get();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereHas('department', function ($dq) {
+                    $dq->where('name', 'like', '%عيون%')->orWhere('name', 'like', '%Eye%');
+                })
+                ->orWhere('specialization', 'like', '%عيون%')
+                ->orWhere('specialization', 'like', '%Eye%')
+                ->orWhere('specialization', 'like', '%شبكية%')
+                ->orWhere('specialization', 'like', '%قرنية%')
+                ->orWhere('specialization', 'like', '%ساد%')
+                ->orWhere('specialization', 'like', '%بصريات%')
+                ->orWhere('specialization', 'like', '%جلوكوما%')
+                ->orWhere('specialization', 'like', '%حول%');
+            })
+            ->orderByDesc('is_available_today')
+            ->get();
+
         return view('eye.reception.eye_reception_create', compact('doctors'));
     }
 
@@ -167,6 +184,15 @@ class EyeReceptionController extends Controller
         ]);
 
         return back()->with('success', "تم تحديث حالة الموعد إلى ({$appointment->status_arabic})");
+    }
+
+    /**
+     * طباعة كارت وتذكرة مراجع العيون المخصصة للطابور والعيادة
+     */
+    public function printTicket(EyeAppointment $appointment)
+    {
+        $appointment->load(['patient.user', 'doctor.user', 'doctor.department', 'latestInvoice']);
+        return view('eye.reception.eye_reception_ticket_print', compact('appointment'));
     }
 
     /**

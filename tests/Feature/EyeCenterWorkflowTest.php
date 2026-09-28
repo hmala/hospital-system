@@ -394,4 +394,89 @@ class EyeCenterWorkflowTest extends TestCase
         $this->assertEquals('completed', $surgery->status);
         $this->assertStringContainsString('uneventful', $surgery->operative_notes);
     }
+
+    public function test_eye_doctor_availability_index_and_stats()
+    {
+        $response = $this->actingAs($this->admin)->get(route('eye.availability.index'));
+        $response->assertStatus(200);
+        $response->assertSee('توفر أطباء واستشاريي العيون');
+        $response->assertSee('د. فراس استشاري عيون');
+        $response->assertSee('السبت');
+        $response->assertSee('الأحد');
+    }
+
+    public function test_eye_doctor_single_and_bulk_availability_toggle()
+    {
+        // 1. Single toggle
+        $updateResponse = $this->actingAs($this->admin)->post(route('eye.availability.update', $this->doctor), [
+            'is_available_today' => 1,
+        ]);
+        $updateResponse->assertSessionHas('success');
+        $this->doctor->refresh();
+        $this->assertTrue((bool)$this->doctor->is_available_today);
+
+        // 2. Bulk toggle to unavailable
+        $bulkResponse = $this->actingAs($this->admin)->post(route('eye.availability.bulkUpdate'), [
+            'is_available_today' => 0,
+        ]);
+        $bulkResponse->assertSessionHas('success');
+        $this->doctor->refresh();
+        $this->assertFalse((bool)$this->doctor->is_available_today);
+    }
+
+    public function test_eye_patient_call_admit_and_dilate_actions()
+    {
+        $appointment = EyeAppointment::create([
+            'appointment_number' => 'EYE-20260928-999',
+            'patient_id'         => $this->patient->id,
+            'doctor_id'          => $this->doctor->id,
+            'visit_type'         => 'consultation',
+            'queue_number'       => 15,
+            'status'             => 'waiting',
+            'insurance_type'     => 'cash',
+            'created_by'         => $this->admin->id,
+        ]);
+
+        // 1. Call patient
+        $callResponse = $this->actingAs($this->admin)->post(route('eye.availability.callPatient', $appointment));
+        $callResponse->assertJson([
+            'success' => true,
+            'queue_number' => 15,
+        ]);
+
+        // 2. Dilate pupil
+        $dilateResponse = $this->actingAs($this->admin)->post(route('eye.availability.dilatePatient', $appointment));
+        $dilateResponse->assertSessionHas('success');
+        $appointment->refresh();
+        $this->assertEquals('dilated', $appointment->status);
+
+        // 3. Admit patient
+        $admitResponse = $this->actingAs($this->admin)->post(route('eye.availability.admitPatient', $appointment));
+        $admitResponse->assertSessionHas('success');
+        $appointment->refresh();
+        $this->assertEquals('in_clinic', $appointment->status);
+    }
+
+    public function test_eye_reception_print_thermal_queue_ticket()
+    {
+        $appointment = EyeAppointment::create([
+            'appointment_number' => 'EYE-20260928-888',
+            'patient_id'         => $this->patient->id,
+            'doctor_id'          => $this->doctor->id,
+            'visit_type'         => 'consultation',
+            'queue_number'       => 7,
+            'status'             => 'waiting',
+            'insurance_type'     => 'health_insurance',
+            'created_by'         => $this->admin->id,
+        ]);
+
+        $ticketResponse = $this->actingAs($this->admin)->get(route('eye.reception.printTicket', $appointment));
+        $ticketResponse->assertStatus(200);
+        $ticketResponse->assertSee('تذكرة طابور مراجع العيون');
+        $ticketResponse->assertSee('#7');
+        $ticketResponse->assertSee('EYE-20260928-888');
+        $ticketResponse->assertSee('أحمد سمير علي');
+        $ticketResponse->assertSee('د. فراس استشاري عيون');
+        $ticketResponse->assertSee('الضمان الصحي');
+    }
 }

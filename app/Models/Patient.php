@@ -141,4 +141,19 @@ class Patient extends Model
             ->whereMonth('visit_date', now()->month)
             ->count();
     }
+
+    public function getNameAttribute()
+    {
+        return $this->user->name ?? '';
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->user->phone ?? '';
+    }
+
+    public function getMedicalRecordNumberAttribute()
+    {
+        return $this->national_id ?? ($this->medical_number ?? ('MRN-' . str_pad($this->id, 5, '0', STR_PAD_LEFT)));
+    }
 }

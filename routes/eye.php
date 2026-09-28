@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Eye\EyeCashierController;
+use App\Http\Controllers\Eye\EyeDoctorAvailabilityController;
 use App\Http\Controllers\Eye\EyeExaminationController;
 use App\Http\Controllers\Eye\EyeInvestigationController;
 use App\Http\Controllers\Eye\EyeReceptionController;
@@ -16,12 +17,23 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('eye')->name('eye.')->group(function () {
 
+    // 0. توفر أطباء واستشاريي العيون وطابور المراجعين المباشر
+    Route::prefix('availability')->name('availability.')->group(function () {
+        Route::get('/', [EyeDoctorAvailabilityController::class, 'index'])->name('index');
+        Route::post('/update/{doctor}', [EyeDoctorAvailabilityController::class, 'update'])->name('update');
+        Route::post('/bulk-update', [EyeDoctorAvailabilityController::class, 'bulkUpdate'])->name('bulkUpdate');
+        Route::post('/call-patient/{appointment}', [EyeDoctorAvailabilityController::class, 'callPatient'])->name('callPatient');
+        Route::post('/admit-patient/{appointment}', [EyeDoctorAvailabilityController::class, 'admitPatient'])->name('admitPatient');
+        Route::post('/dilate-patient/{appointment}', [EyeDoctorAvailabilityController::class, 'dilatePatient'])->name('dilatePatient');
+    });
+
     // 1. استعلامات واستقبال وطابور العيون
     Route::prefix('reception')->name('reception.')->group(function () {
         Route::get('/', [EyeReceptionController::class, 'index'])->name('index');
         Route::get('/create', [EyeReceptionController::class, 'create'])->name('create');
         Route::post('/store', [EyeReceptionController::class, 'store'])->name('store');
         Route::patch('/appointments/{appointment}/status', [EyeReceptionController::class, 'updateStatus'])->name('updateStatus');
+        Route::get('/appointments/{appointment}/ticket', [EyeReceptionController::class, 'printTicket'])->name('printTicket');
         Route::get('/search-patients', [EyeReceptionController::class, 'searchPatients'])->name('searchPatients');
     });
 

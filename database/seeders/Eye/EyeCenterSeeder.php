@@ -65,7 +65,112 @@ class EyeCenterSeeder extends Seeder
             ]);
         }
 
-        // 3. بذر أصناف المخزن الافتتاحية التخصصية للعيون
+        // 3. إنشاء قسم مركز وجراحة العيون كقسم رسمي في المستشفى
+        $eyeDept = \App\Models\Department::firstOrCreate(
+            ['name' => 'مركز وجراحة العيون'],
+            [
+                'hospital_id'          => 1,
+                'type'                 => 'surgery',
+                'room_number'          => 'EYE-101',
+                'consultation_fee'     => 25000,
+                'working_hours_start'  => '08:00:00',
+                'working_hours_end'    => '20:00:00',
+                'max_patients_per_day' => 50,
+                'is_active'            => true,
+            ]
+        );
+
+        // 4. إنشاء نخبة من استشاريي وأطباء العيون المتخصصين
+        $eyeDoctors = [
+            [
+                'name'               => 'د. فراس حميد العبيدي',
+                'email'              => 'firas.eye@hospital.com',
+                'phone'              => '07701112233',
+                'specialization'     => 'جراحة الشبكية والجسم الزجاجي',
+                'qualification'      => 'استشاري جراحة الشبكية والعيون (FRCS)',
+                'license_number'     => 'DOC-EYE-001',
+                'consultation_fee'   => 35000,
+                'working_days'       => ['السبت', 'الإثنين', 'الأربعاء'],
+                'is_available_today' => true,
+            ],
+            [
+                'name'               => 'د. عمار يوسف خليل',
+                'email'              => 'ammar.eye@hospital.com',
+                'phone'              => '07702223344',
+                'specialization'     => 'جراحة الساد (الفاكو) وزراعة العدسات',
+                'qualification'      => 'استشاري جراحة الساد وتصحيح البصر (ICO)',
+                'license_number'     => 'DOC-EYE-002',
+                'consultation_fee'   => 30000,
+                'working_days'       => ['السبت', 'الأحد', 'الثلاثاء', 'الخميس'],
+                'is_available_today' => true,
+            ],
+            [
+                'name'               => 'د. رنا سعدون الجميلي',
+                'email'              => 'rana.eye@hospital.com',
+                'phone'              => '07703334455',
+                'specialization'     => 'طب عيون الأطفال وجراحة الحول',
+                'qualification'      => 'بورد عربي في طب وجراحة العيون',
+                'license_number'     => 'DOC-EYE-003',
+                'consultation_fee'   => 25000,
+                'working_days'       => ['الأحد', 'الإثنين', 'الأربعاء'],
+                'is_available_today' => true,
+            ],
+            [
+                'name'               => 'د. مصطفى كمال التميمي',
+                'email'              => 'mustafa.eye@hospital.com',
+                'phone'              => '07704445566',
+                'specialization'     => 'أمراض وجراحة القرنية والليزك',
+                'qualification'      => 'زمالة كلية الجراحين الملكية البريطانية',
+                'license_number'     => 'DOC-EYE-004',
+                'consultation_fee'   => 30000,
+                'working_days'       => ['السبت', 'الثلاثاء', 'الخميس'],
+                'is_available_today' => true,
+            ],
+            [
+                'name'               => 'د. زينب عبد الحسين',
+                'email'              => 'zainab.eye@hospital.com',
+                'phone'              => '07705556677',
+                'specialization'     => 'تشخيص وعلاج الجلوكوما وضغط العين',
+                'qualification'      => 'دكتوراه طب وجراحة العيون',
+                'license_number'     => 'DOC-EYE-005',
+                'consultation_fee'   => 25000,
+                'working_days'       => ['الإثنين', 'الثلاثاء', 'الأربعاء'],
+                'is_available_today' => false,
+            ],
+        ];
+
+        foreach ($eyeDoctors as $docData) {
+            $user = \App\Models\User::firstOrCreate(
+                ['email' => $docData['email']],
+                [
+                    'name'              => $docData['name'],
+                    'phone'             => $docData['phone'],
+                    'password'          => \Illuminate\Support\Facades\Hash::make('password123'),
+                    'email_verified_at' => now(),
+                ]
+            );
+
+            if ($doctorRole && !$user->hasRole('doctor')) {
+                $user->assignRole($doctorRole);
+            }
+
+            \App\Models\Doctor::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'phone'              => $docData['phone'],
+                    'department_id'      => $eyeDept->id,
+                    'specialization'     => $docData['specialization'],
+                    'type'               => 'consultant',
+                    'consultation_fee'   => $docData['consultation_fee'],
+                    'working_days'       => $docData['working_days'],
+                    'is_active'          => true,
+                    'is_available_today' => $docData['is_available_today'],
+                    'available_date'     => now()->toDateString(),
+                ]
+            );
+        }
+
+        // 5. بذر أصناف المخزن الافتتاحية التخصصية للعيون
         $items = [
             // عدسات IOL
             [

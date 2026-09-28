@@ -11,6 +11,9 @@
             <p class="text-muted mb-0 small">إدارة مراجعي عيادات العيون، حجز المواعيد، ومتابعة تدفق الحالات لحظياً</p>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ route('eye.availability.index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-calendar-check me-1"></i>توفر أطباء العيون
+            </a>
             <a href="{{ route('eye.cashier.index') }}" class="btn btn-outline-success">
                 <i class="fas fa-cash-register me-1"></i>كاشير العيون
             </a>
@@ -132,7 +135,12 @@
     <!-- جدول طابور المراجعين اليومي -->
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-list-ol me-2 text-primary"></i>قائمة المراجعين اليومية (#طابور العيون)</h5>
+            <h5 class="mb-0 fw-bold text-dark">
+                <i class="fas fa-list-ol me-2 text-primary"></i>قائمة المراجعين اليومية (#طابور العيون)
+                <span class="badge bg-success-subtle text-success border border-success ms-2 px-2 py-1 small">
+                    <i class="fas fa-circle fa-xs me-1"></i>مباشر 🟢
+                </span>
+            </h5>
             <span class="badge bg-light text-dark border">العدد: {{ $appointments->total() }}</span>
         </div>
         <div class="table-responsive">
@@ -146,7 +154,7 @@
                         <th>الطبيب المعالج</th>
                         <th>حالة الكاشير</th>
                         <th>الحالة السريرية</th>
-                        <th class="text-center" style="width: 180px;">الإجراءات</th>
+                        <th class="text-center" style="width: 200px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -213,46 +221,59 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <!-- فتح محطة الفحص السريري -->
-                                <a href="{{ route('eye.examinations.create', ['appointment_id' => $app->id]) }}" class="btn btn-outline-primary" title="فتح محطة كشف العيون">
-                                    <i class="fas fa-stethoscope me-1"></i>كشف
+                            <div class="d-flex justify-content-center align-items-center gap-1">
+                                <!-- طباعة تذكرة الطابور الحرارية -->
+                                <a href="{{ route('eye.reception.printTicket', $app) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="طباعة كارت وتذكرة الدور 🖨️">
+                                    <i class="fas fa-print"></i>
                                 </a>
-                                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow">
-                                    <li>
-                                        <form action="{{ route('eye.reception.updateStatus', $app) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="in_clinic">
-                                            <button type="submit" class="dropdown-item"><i class="fas fa-door-open me-2 text-primary"></i>استدعاء إلى العيادة</button>
-                                        </form>
-                                    </li>
-                                    <li>
-                                        <form action="{{ route('eye.reception.updateStatus', $app) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="in_investigation">
-                                            <button type="submit" class="dropdown-item"><i class="fas fa-microscope me-2 text-info"></i>تحويل لغرفة الأجهزة</button>
-                                        </form>
-                                    </li>
-                                    <li>
-                                        <form action="{{ route('eye.reception.updateStatus', $app) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="completed">
-                                            <button type="submit" class="dropdown-item"><i class="fas fa-check-double me-2 text-success"></i>إنهاء الزيارة</button>
-                                        </form>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    @if($app->latestInvoice)
-                                    <li>
-                                        <a href="{{ route('eye.cashier.printReceipt', $app->latestInvoice) }}" class="dropdown-item" target="_blank">
-                                            <i class="fas fa-print me-2 text-secondary"></i>طباعة الوصل
-                                        </a>
-                                    </li>
-                                    @endif
-                                </ul>
+
+                                <div class="btn-group btn-group-sm">
+                                    <!-- فتح محطة الفحص السريري -->
+                                    <a href="{{ route('eye.examinations.create', ['appointment_id' => $app->id]) }}" class="btn btn-outline-primary" title="فتح محطة كشف العيون">
+                                        <i class="fas fa-stethoscope me-1"></i>كشف
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                        <li>
+                                            <a href="{{ route('eye.reception.printTicket', $app) }}" target="_blank" class="dropdown-item">
+                                                <i class="fas fa-ticket-alt me-2 text-primary"></i>طباعة كارت وتذكرة الدور
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form action="{{ route('eye.reception.updateStatus', $app) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="in_clinic">
+                                                <button type="submit" class="dropdown-item"><i class="fas fa-door-open me-2 text-primary"></i>استدعاء إلى العيادة</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{{ route('eye.reception.updateStatus', $app) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="in_investigation">
+                                                <button type="submit" class="dropdown-item"><i class="fas fa-microscope me-2 text-info"></i>تحويل لغرفة الأجهزة</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{{ route('eye.reception.updateStatus', $app) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="completed">
+                                                <button type="submit" class="dropdown-item"><i class="fas fa-check-double me-2 text-success"></i>إنهاء الزيارة</button>
+                                            </form>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        @if($app->latestInvoice)
+                                        <li>
+                                            <a href="{{ route('eye.cashier.printReceipt', $app->latestInvoice) }}" class="dropdown-item" target="_blank">
+                                                <i class="fas fa-print me-2 text-secondary"></i>طباعة الوصل
+                                            </a>
+                                        </li>
+                                        @endif
+                                    </ul>
+                                </div>
                             </div>
                         </td>
                     </tr>
