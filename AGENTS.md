@@ -58,6 +58,17 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-09-28 — عزل صالة الانتظار العامة لمركز العيون)
+
+### Done
+- **عزل وتخصيص شاشة صالة الانتظار العامة لمركز العيون (`EyeQueueController.php` و `all-clinics-display.blade.php`)**:
+  * تم بناء كونترولر جديد `EyeQueueController` مستقل تماماً مخصص لجلب بيانات وحالة الطابور اللحظية (`allClinicsData`) لأطباء واستشاريي العيون فقط دون الاختلاط بالعيادات الاستشارية الأخرى للمستشفى.
+  * تم تصميم واجهة عرض الطابور المباشرة وتخصيص عناوينها إلى "صالة انتظار مركز وجراحة العيون" لتعمل على الشاشات الكبيرة (TV) داخل المركز.
+  * تم تحديث مسارات `routes/eye.php` بروابط مخصصة (`eye.queue.all-clinics.display`).
+  * تم تصحيح زر "شاشة الصالة العامة" في صفحة توفر أطباء العيون ليوجه المستخدم إلى الشاشة الجديدة المعزولة.
+- **الاختبارات الآلية والمعرفية**:
+  * تمت إضافة اختبار جديد `test_eye_queue_waiting_hall_screens` لضمان عمل شاشات طابور العيون بنجاح 100%.
+  * تحديث المخطط المعرفي (Graphify) ورفع التعديلات على فرع `hr`.
 ## Session log (2026-09-28 — واجهة واستمارة إضافة وتعديل أطباء العيون المخصصة لمركز العيون)
 
 ### Done
