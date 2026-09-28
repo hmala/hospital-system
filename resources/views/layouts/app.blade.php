@@ -1045,8 +1045,14 @@
                         @canany(['view eye center', 'manage eye appointments', 'manage eye examinations', 'manage eye cashier', 'manage eye store', 'manage eye surgeries', 'manage eye investigations'])
                         @php
                             $isEyeActive = request()->routeIs('eye.*');
-                            $todayEyeAppts = \App\Models\Eye\EyeAppointment::whereDate('appointment_date', today())->whereIn('status', ['waiting', 'dilated'])->count();
-                            $todayEyeSurgeries = \App\Models\Eye\EyeSurgery::whereDate('surgery_date', today())->where('status', 'scheduled')->count();
+                            $todayEyeAppts = 0;
+                            $todayEyeSurgeries = 0;
+                            if (\Illuminate\Support\Facades\Schema::hasTable('eye_appointments')) {
+                                $todayEyeAppts = \App\Models\Eye\EyeAppointment::whereDate('created_at', today())->whereIn('status', ['waiting', 'dilated'])->count();
+                            }
+                            if (\Illuminate\Support\Facades\Schema::hasTable('eye_surgeries')) {
+                                $todayEyeSurgeries = \App\Models\Eye\EyeSurgery::whereDate('surgery_date', today())->where('status', 'scheduled')->count();
+                            }
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isEyeActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#eyeCenterSection" aria-expanded="{{ $isEyeActive ? 'true' : 'false' }}">

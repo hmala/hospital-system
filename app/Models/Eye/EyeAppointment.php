@@ -110,4 +110,9 @@ class EyeAppointment extends Model
             default            => $this->status
         };
     }
+
+    public function getAppointmentDateAttribute()
+    {
+        return $this->created_at;
+    }
 }
