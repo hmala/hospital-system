@@ -716,3 +716,7 @@ Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');
 });
 
+// تضمين مسارات مركز العيون
+require base_path('routes/eye.php');
+
+

@@ -1041,6 +1041,58 @@
                         </div>
                         @endcanany
 
+                        <!-- قسم مركز وجراحة العيون (Eye Center) -->
+                        @canany(['view eye center', 'manage eye appointments', 'manage eye examinations', 'manage eye cashier', 'manage eye store', 'manage eye surgeries', 'manage eye investigations'])
+                        @php
+                            $isEyeActive = request()->routeIs('eye.*');
+                            $todayEyeAppts = \App\Models\Eye\EyeAppointment::whereDate('appointment_date', today())->whereIn('status', ['waiting', 'dilated'])->count();
+                            $todayEyeSurgeries = \App\Models\Eye\EyeSurgery::whereDate('surgery_date', today())->where('status', 'scheduled')->count();
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isEyeActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#eyeCenterSection" aria-expanded="{{ $isEyeActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-eye text-primary"></i> مركز وجراحة العيون</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isEyeActive ? 'show' : '' }}" id="eyeCenterSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.reception.*') ? 'active' : '' }}" href="{{ route('eye.reception.index') }}">
+                                    <i class="fas fa-id-card text-primary"></i><span> استعلامات وطابور العيون</span>
+                                    @if($todayEyeAppts > 0)
+                                        <span class="badge bg-primary ms-auto">{{ $todayEyeAppts }}</span>
+                                    @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.cashier.*') ? 'active' : '' }}" href="{{ route('eye.cashier.index') }}">
+                                    <i class="fas fa-cash-register text-success"></i><span> كاشير وفواتير العيون</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.examinations.*') ? 'active' : '' }}" href="{{ route('eye.examinations.index') }}">
+                                    <i class="fas fa-stethoscope text-info"></i><span> محطة الكشف السريري OD/OS</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.investigations.*') ? 'active' : '' }}" href="{{ route('eye.investigations.index') }}">
+                                    <i class="fas fa-x-ray text-warning"></i><span> الفحوصات والأجهزة (OCT/ميدان)</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.surgeries.*') ? 'active' : '' }}" href="{{ route('eye.surgeries.index') }}">
+                                    <i class="fas fa-procedures text-danger"></i><span> جراحة العيون وحقن الفاكو</span>
+                                    @if($todayEyeSurgeries > 0)
+                                        <span class="badge bg-danger ms-auto">{{ $todayEyeSurgeries }}</span>
+                                    @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.store.*') ? 'active' : '' }}" href="{{ route('eye.store.index') }}">
+                                    <i class="fas fa-boxes text-secondary"></i><span> مخزن مستلزمات وعدسات العيون</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcanany
+
                         <!-- قسم المختبر والأشعة -->
                         @canany(['view radiology', 'manage radiology types', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests', 'view lab test groups'])
                         <div class="sidebar-divider"></div>

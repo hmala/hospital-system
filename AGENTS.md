@@ -58,6 +58,30 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-09-28 — منظومة مركز وجراحة العيون المتكاملة: استعلامات، كاشير، مخزن عدسات، فحص سريري OD/OS، أجهزة وتشخيص، وعمليات فاكو)
+
+### Done
+- **قاعدة البيانات ونماذج العيون المعزولة (`database/migrations` و `app/Models/Eye/`)**:
+  * إنشاء ميغريشن `2026_09_28_120000_create_eye_center_tables.php` وبناء 8 جداول متخصصة بمعزل عن نظام المستشفى العام: `eye_appointments`, `eye_invoices`, `eye_invoice_items`, `eye_store_items`, `eye_store_movements`, `eye_examinations`, `eye_investigations`, `eye_surgeries`.
+  * إنشاء 7 نماذج Eloquent متقدمة في المجلد `app/Models/Eye/` مع الترقيم التلقائي للأجهزة والفواتير والمواعيد.
+- **استعلامات وطابور العيون (`EyeReceptionController.php` و `resources/views/eye/reception/`)**:
+  * شاشة استقبال تفاعلية تدعم البحث اللحظي بالأجاكس، إدارة الطابور الحي وحالات الانتظار، توسيع الحدقة (`dilated`)، وتوليد فواتير الكشف التلقائية.
+- **كاشير مركز العيون المستقل والترحيل اليومي (`EyeCashierController.php` و `resources/views/eye/cashier/`)**:
+  * نقطة تحصيل وفواتير خاصة بالعيون تقبل الدفع النقدي والبطاقة وضمان الصحة، طباعة وصولات حرارية تخصصية، وترحيل الإيرادات اليومية آلياً إلى حسابات وخزينة المستشفى المركزية عبر `FinancialTransaction` (`hospital_revenue`).
+- **مخزن مستلزمات وعدسات العيون بالتوريد المزدوج (`EyeStoreController.php` و `resources/views/eye/store/`)**:
+  * إدارة مخزون عدسات IOL (الديوبتر والرقم التسلسلي)، إبر الشبكية (Eylea, Lucentis)، والمستهلكات الجراحية.
+  * دعم التوريد المزدوج: الشراء والتوريد المباشر من المجهزين + طلبات النقل الداخلية من المخزن الرئيسي (`stock_transfer_requests`).
+- **محطة الكشف السريري التخصصي OD/OS (`EyeExaminationController.php` و `resources/views/eye/examinations/`)**:
+  * محطة متطورة وفق معايير OpenEyes و EyeDraw: فحص ثنائي للعين اليمنى واليسرى، حدة الإبصار (Unaided / Corrected)، شبكة فحص الانكسار وطباعة راشيتة النظارة، قياس ضغط العين، وفحص المصباح الشقي بزر السلامة السريع WNL.
+- **فحوصات الأجهزة التشخيصية وعارض التقارير (`EyeInvestigationController.php` و `resources/views/eye/investigations/`)**:
+  * طلب ومتابعة فحوصات OCT، الساحة البصرية، قياس أبعاد العين Biometry، وطبوغرافيا القرنية Pentacam مع عارض تقارير مدمج (PDF وصور).
+- **صالة جراحة العيون وزراعة العدسات (`EyeSurgeryController.php` و `resources/views/eye/surgeries/`)**:
+  * جدولة عمليات الفاكو وحقن الشبكية مع **خصم العدسة المطوية المختارة تلقائياً من مخزن العيون فور الحجز** وتدوين تقارير الجراحة والمضاعفات وخطة المتابعة.
+- **التكامل والاختبارات الآلية والمعرفية**:
+  * إضافة قسم مركز العيون التخصصي إلى القائمة الجانبية للنظام `resources/views/layouts/app.blade.php`.
+  * إنشاء واجتياز اختبارات الميزة الشاملة [EyeCenterWorkflowTest.php](file:///f:/hospital-system%20p/tests/Feature/EyeCenterWorkflowTest.php) بنجاح 100% (7 passed, 36 assertions) بجانب كافة اختبارات الطوارئ والصيدلية السابقة (23 passed, 106 assertions) دون أي تراجع أو تعارض.
+  * تحديث شجرة العلاقات البرمجية المعرفية (Graphify Knowledge Graph): 3,337 عقدة و 5,161 علاقة عبر 832 ملفاً.
+
 ## Session log (2026-09-25 — تبسيط جدول الطوارئ، إزالة زر كشف وعلاج، توحيد بطاقات الصيدلية وتحديث شجرة العلاقات البرمجية Graphify)
 
 ### Done
