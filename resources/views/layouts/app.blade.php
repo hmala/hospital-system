@@ -729,18 +729,18 @@
                         </div> <!-- end patientMgmtSection -->
                         @endcanany
 
-                        <!-- قسم الصندوق والمالية -->
-                        @canany(['view cashier', 'view cashier reports', 'view cashier surgeries', 'review surgery prices'])
+                        <!-- قسم الصندوق ونقاط القبض -->
+                        @canany(['view cashier', 'view cashier reports', 'view cashier surgeries'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#cashierSection" aria-expanded="false">
-                            <span><i class="fas fa-cash-register"></i> الصندوق والمالية</span>
+                            <span><i class="fas fa-cash-register"></i> الصندوق ونقاط القبض</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="cashierSection">
                         @can('view cashier')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.index') || request()->routeIs('cashier.payment.*') || request()->routeIs('cashier.receipt*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
-                                <i class="fas fa-cash-register"></i><span> لوحة الكاشير العامة</span>
+                                <i class="fas fa-cash-register text-success"></i><span> لوحة الكاشير العامة</span>
                                 @php
                                     $pendingPayments = \App\Models\Appointment::where('payment_status', 'pending')
                                         ->whereIn('status', ['scheduled', 'confirmed'])
@@ -749,13 +749,6 @@
                                 @if($pendingPayments > 0)
                                     <span class="badge bg-warning ms-2">{{ $pendingPayments }}</span>
                                 @endif
-                            </a>
-                        </li>
-                        @endcan
-                        @can('view cashier reports')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
-                                <i class="fas fa-file-invoice-dollar"></i><span> سجل الفواتير</span>
                             </a>
                         </li>
                         @endcan
@@ -774,10 +767,28 @@
                             </a>
                         </li>
                         @endcan
+                        @can('view cashier reports')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
+                                <i class="fas fa-file-invoice-dollar text-info"></i><span> سجل الفواتير واليومية</span>
+                            </a>
+                        </li>
+                        @endcan
+                        </div> <!-- end cashierSection -->
+                        @endcanany
+
+                        <!-- قسم الحسابات العامة والرقابة المالية -->
+                        @canany(['review surgery prices', 'manage health insurance'])
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#accountingSection" aria-expanded="false">
+                            <span><i class="fas fa-calculator"></i> الحسابات العامة</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section" id="accountingSection">
                         @can('review surgery prices')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('accountant.surgeries.*') ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
-                                <i class="fas fa-calculator text-primary"></i><span> مراجعة أسعار العمليات</span>
+                                <i class="fas fa-file-signature text-primary"></i><span> مراجعة أسعار العمليات</span>
                                 @php
                                     $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
                                 @endphp
@@ -787,14 +798,14 @@
                             </a>
                         </li>
                         @endcan
-                        @can('view cashier')
+                        @can('manage health insurance')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('health-insurance-categories.*') ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
                                 <i class="fas fa-shield-alt text-primary"></i><span> نسب استقطاع الضمان</span>
                             </a>
                         </li>
                         @endcan
-                        </div> <!-- end cashierSection -->
+                        </div> <!-- end accountingSection -->
                         @endcanany
 
                 

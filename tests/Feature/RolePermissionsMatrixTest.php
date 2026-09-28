@@ -59,7 +59,7 @@ class RolePermissionsMatrixTest extends TestCase
     }
 
     #[Test]
-    public function admin_can_view_role_edit_screen_with_9_operational_cards()
+    public function admin_can_view_role_edit_screen_with_10_operational_cards()
     {
         $admin = User::factory()->create(['email' => 'admin_test@hospital.com']);
         $admin->assignRole('admin');
@@ -71,7 +71,8 @@ class RolePermissionsMatrixTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('الاستعلامات والحجوزات');
         $response->assertSee('العيادات والاستشارية ومحطة الأطباء');
-        $response->assertSee('الصندوق والمالية');
+        $response->assertSee('الصندوق ونقاط القبض');
+        $response->assertSee('الحسابات العامة والرقابة المالية');
         $response->assertSee('الأشعة والسونار والإيكو');
         $response->assertSee('المختبر والتحاليل الطبية');
         $response->assertSee('الصيدلية والمخزن الطبي');
@@ -288,6 +289,11 @@ class RolePermissionsMatrixTest extends TestCase
 
         // 6. Accountant surgery review without 'review surgery prices' => 403
         $this->actingAs($cashierUser)->get(route('accountant.surgeries.index'))->assertStatus(403);
+
+        // 7. Health insurance categories without 'manage health insurance' => 403
+        $this->actingAs($cashierUser)->get(route('health-insurance-categories.index'))->assertStatus(403);
+        $cashierRole->givePermissionTo('manage health insurance');
+        $this->actingAs($cashierUser)->get(route('health-insurance-categories.index'))->assertStatus(200);
     }
 
     #[Test]

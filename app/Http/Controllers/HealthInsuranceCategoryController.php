@@ -4,17 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Models\HealthInsuranceCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class HealthInsuranceCategoryController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function index()
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage health insurance'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى إدارة نسب استقطاع الضمان الصحي.');
+        }
+
         $categories = HealthInsuranceCategory::orderBy('sort_order')->orderBy('code')->get();
         return view('health-insurance-categories.index', compact('categories'));
     }
 
     public function update(Request $request, HealthInsuranceCategory $category)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage health insurance'))) {
+            abort(403, 'غير مصرح لك بتعديل نسب استقطاع الضمان الصحي.');
+        }
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',

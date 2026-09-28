@@ -43,21 +43,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'cancel appointments',
             'change appointment status',
 
-            // صلاحيات الكاشير - منفصلة لكل قسم
+            // صلاحيات الكاشير والحسابات
             'view cashier',
-            'view cashier appointments',      // عرض مواعيد الاستشارية
             'process consultation payments',   // معالجة دفع الاستشارية
-            'view cashier medical requests',  // عرض الطلبات الطبية
             'process medical requests payments', // معالجة دفع الطلبات الطبية
-            'view cashier emergency',         // عرض طوارئ الكاشير
             'process emergency payments',     // معالجة دفع الطوارئ
             'view cashier surgeries',         // عرض عمليات الكاشير
             'process surgery payments',       // معالجة دفع العمليات
             'process refunds',                // معالجة الاسترجاع المالي
-            'process payments',               // معالجة المدفوعات العامة
             'view cashier reports',           // عرض تقارير المدفوعات
             'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
+            'manage health insurance',        // إدارة نسب وفئات استقطاع الضمان الصحي
             
             // صلاحيات الزيارات
             'view visits',
@@ -287,14 +284,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
         $cashierRole->givePermissionTo([
             'view cashier',
-            'view cashier appointments',
             'process consultation payments',
-            'view cashier medical requests',
             'process medical requests payments',
-            'view cashier emergency',
             'process emergency payments',
             'view cashier surgeries',
             'process surgery payments',
+            'process refunds',
             'view cashier reports',
             'view patients',
         ]);
@@ -305,6 +300,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier reports',
             'view patients',
             'review surgery prices',
+            'manage health insurance',
         ]);
 
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)

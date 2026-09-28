@@ -132,14 +132,18 @@
                                         <i class="fas fa-table me-2"></i>
                                         المعاملات المعلقة - بانتظار الدفع
                                         @php
+                                            $canApp = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process consultation payments') || auth()->user()->can('view cashier appointments');
+                                            $canMed = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process medical requests payments') || auth()->user()->can('view cashier medical requests');
+                                            $canEmg = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process emergency payments') || auth()->user()->can('view cashier emergency');
+
                                             $combinedCount = 0;
-                                            if(auth()->user()->can('view cashier appointments') && isset($pendingAppointments)) {
+                                            if($canApp && isset($pendingAppointments)) {
                                                 $combinedCount += $pendingAppointments->total();
                                             }
-                                            if(auth()->user()->can('view cashier medical requests') && isset($pendingMedicalRequests)) {
+                                            if($canMed && isset($pendingMedicalRequests)) {
                                                 $combinedCount += $pendingMedicalRequests->total();
                                             }
-                                            if(auth()->user()->can('view cashier emergency') && isset($pendingEmergencyPayments)) {
+                                            if($canEmg && isset($pendingEmergencyPayments)) {
                                                 $combinedCount += $pendingEmergencyPayments->total();
                                             }
                                         @endphp
@@ -150,13 +154,13 @@
                                 <div class="card-body">
                                     @php
                                         $hasRows = false;
-                                        if(auth()->user()->can('view cashier appointments') && isset($pendingAppointments) && $pendingAppointments->count() > 0) {
+                                        if($canApp && isset($pendingAppointments) && $pendingAppointments->count() > 0) {
                                             $hasRows = true;
                                         }
-                                        if(auth()->user()->can('view cashier medical requests') && isset($pendingMedicalRequests) && $pendingMedicalRequests->count() > 0) {
+                                        if($canMed && isset($pendingMedicalRequests) && $pendingMedicalRequests->count() > 0) {
                                             $hasRows = true;
                                         }
-                                        if(auth()->user()->can('view cashier emergency') && isset($pendingEmergencyPayments) && $pendingEmergencyPayments->count() > 0) {
+                                        if($canEmg && isset($pendingEmergencyPayments) && $pendingEmergencyPayments->count() > 0) {
                                             $hasRows = true;
                                         }
                                     @endphp
@@ -176,7 +180,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @if(auth()->user()->can('view cashier appointments'))
+                                                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process consultation payments') || auth()->user()->can('view cashier appointments'))
                                                         @foreach($pendingAppointments ?? [] as $appointment)
                                                             @php
                                                                 $patientName = optional(optional($appointment->patient)->user)->name ?? 'غير محدد';
@@ -232,7 +236,7 @@
                                                         @endforeach
                                                     @endif
 
-                                                    @if(auth()->user()->can('view cashier medical requests'))
+                                                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process medical requests payments') || auth()->user()->can('view cashier medical requests'))
                                                         @foreach($pendingMedicalRequests ?? [] as $request)
                                                             @php
                                                                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
@@ -331,7 +335,7 @@
                                                         @endforeach
                                                     @endif
 
-                                                    @if(auth()->user()->can('view cashier emergency'))
+                                                    @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process emergency payments') || auth()->user()->can('view cashier emergency'))
                                                         @foreach($pendingEmergencyPayments ?? [] as $payment)
                                                             @php
                                                                 $em = $payment->emergency;
