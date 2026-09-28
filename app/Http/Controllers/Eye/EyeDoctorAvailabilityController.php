@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Eye;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Eye\EyeAppointment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class EyeDoctorAvailabilityController extends Controller
 {
@@ -202,5 +207,190 @@ class EyeDoctorAvailabilityController extends Controller
         ]);
 
         return back()->with('success', "تم وضع قطرات توسيع الحدقة للمريض ({$appointment->patient->name}) وتحديث حالته في الطابور.");
+    }
+
+    /**
+     * استمارة إضافة طبيب واستشاري عيون جديد خاصة بمركز العيون
+     */
+    public function createDoctor()
+    {
+        $eyeSpecializations = [
+            'جراحة الشبكية والجسم الزجاجي (Vitreoretinal Surgery)',
+            'جراحة الساد (الماء الأبيض) والفاكو وزراعة العدسات (Phaco & IOL)',
+            'أمراض وجراحة القرنية والليزك وتصحيح البصر (Cornea & Refractive)',
+            'تشخيص وعلاج الجلوكوما وضغط العين (Glaucoma)',
+            'طب عيون الأطفال والحول (Pediatric Ophthalmology & Strabismus)',
+            'جراحة تجميل العين وتقويم الجفون ومجرى الدمع (Oculoplastics)',
+            'فحص البصريات والعدسات الطبية اللاصقة (Optometry)',
+            'طب وجراحة العيون العامة (Comprehensive Ophthalmology)',
+        ];
+
+        $weekDays = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+        return view('eye.availability.create_doctor', compact('eyeSpecializations', 'weekDays'));
+    }
+
+    /**
+     * حفظ طبيب عيون جديد في مركز العيون
+     */
+    public function storeDoctor(Request $request)
+    {
+        $request->validate([
+            'name'             => 'required|string|max:255',
+            'email'            => 'required|email|unique:users,email',
+            'phone'            => 'required|string|max:20',
+            'password'         => 'nullable|string|min:6',
+            'specialization'   => 'required|string|max:255',
+            'custom_specialization' => 'nullable|string|max:255',
+            'type'             => 'required|in:consultant,surgeon,resident,optometrist',
+            'consultation_fee' => 'required|numeric|min:0',
+            'hi_price'         => 'nullable|numeric|min:0',
+            'is_hi_active'     => 'nullable',
+            'moi_price'        => 'nullable|numeric|min:0',
+            'is_moi_active'    => 'nullable',
+            'start_time'       => 'required',
+            'end_time'         => 'required',
+            'working_days'     => 'required|array|min:1',
+            'working_days.*'   => 'string',
+            'is_available_today' => 'nullable',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // جلب أو إنشاء قسم مركز العيون
+            $eyeDepartment = Department::where(function ($q) {
+                $q->where('name', 'like', '%عيون%')->orWhere('name', 'like', '%Eye%');
+            })->first();
+
+            if (!$eyeDepartment) {
+                $firstHospitalId = DB::table('hospitals')->value('id') ?? 1;
+                $eyeDepartment = Department::create([
+                    'hospital_id'         => $firstHospitalId,
+                    'name'                => 'مركز وجراحة العيون',
+                    'type'                => 'surgery',
+                    'room_number'         => 'EYE-101',
+                    'consultation_fee'    => 25000,
+                    'working_hours_start' => '08:00:00',
+                    'working_hours_end'   => '20:00:00',
+                    'is_active'           => true,
+                ]);
+            }
+
+            // إنشاء حساب المستخدم
+            $user = User::create([
+                'name'     => $request->name,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password ?: 'password'),
+                'role'     => 'doctor',
+                'phone'    => $request->phone,
+            ]);
+
+            // إسناد دور طبيب
+            if (Role::where('name', 'doctor')->exists()) {
+                $user->assignRole('doctor');
+            }
+
+            $finalSpecialization = ($request->specialization === 'other' && $request->filled('custom_specialization'))
+                ? $request->custom_specialization
+                : $request->specialization;
+
+            $isAvailableToday = $request->boolean('is_available_today');
+
+            // إنشاء سجل الطبيب التابع لمركز العيون
+            Doctor::create([
+                'user_id'            => $user->id,
+                'department_id'      => $eyeDepartment->id,
+                'type'               => $request->type === 'optometrist' ? 'consultant' : $request->type,
+                'phone'              => $request->phone,
+                'specialization'     => $finalSpecialization,
+                'qualification'      => 'استشاري طب وجراحة العيون',
+                'license_number'     => 'EYE-LIC-' . $user->id . '-' . rand(1000, 9999),
+                'consultation_fee'   => $request->consultation_fee,
+                'hi_price'           => $request->hi_price ?? ($request->consultation_fee * 0.9),
+                'is_hi_active'       => $request->has('is_hi_active'),
+                'moi_price'          => $request->moi_price ?? ($request->consultation_fee * 0.8),
+                'is_moi_active'      => $request->has('is_moi_active'),
+                'start_time'         => $request->start_time,
+                'end_time'           => $request->end_time,
+                'working_days'       => $request->working_days,
+                'is_active'          => true,
+                'is_available_today' => $isAvailableToday,
+                'available_date'     => $isAvailableToday ? now()->toDateString() : null,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('eye.availability.index')
+                ->with('success', "تمت إضافة د. {$request->name} إلى أطباء مركز العيون بنجاح!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'حدث خطأ أثناء إضافة الطبيب: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * استمارة تعديل بيانات ودوام طبيب العيون
+     */
+    public function editDoctor(Doctor $doctor)
+    {
+        $doctor->load(['user', 'department']);
+
+        $eyeSpecializations = [
+            'جراحة الشبكية والجسم الزجاجي (Vitreoretinal Surgery)',
+            'جراحة الساد (الماء الأبيض) والفاكو وزراعة العدسات (Phaco & IOL)',
+            'أمراض وجراحة القرنية والليزك وتصحيح البصر (Cornea & Refractive)',
+            'تشخيص وعلاج الجلوكوما وضغط العين (Glaucoma)',
+            'طب عيون الأطفال والحول (Pediatric Ophthalmology & Strabismus)',
+            'جراحة تجميل العين وتقويم الجفون ومجرى الدمع (Oculoplastics)',
+            'فحص البصريات والعدسات الطبية اللاصقة (Optometry)',
+            'طب وجراحة العيون العامة (Comprehensive Ophthalmology)',
+        ];
+
+        $weekDays = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+        return view('eye.availability.edit_doctor', compact('doctor', 'eyeSpecializations', 'weekDays'));
+    }
+
+    /**
+     * تحديث بيانات ودوام وأجور طبيب العيون
+     */
+    public function updateDoctorSettings(Request $request, Doctor $doctor)
+    {
+        $request->validate([
+            'name'             => 'required|string|max:255',
+            'phone'            => 'required|string|max:20',
+            'specialization'   => 'required|string|max:255',
+            'type'             => 'required|in:consultant,surgeon,resident,optometrist',
+            'consultation_fee' => 'required|numeric|min:0',
+            'hi_price'         => 'nullable|numeric|min:0',
+            'moi_price'        => 'nullable|numeric|min:0',
+            'start_time'       => 'required',
+            'end_time'         => 'required',
+            'working_days'     => 'required|array|min:1',
+            'is_active'        => 'nullable',
+        ]);
+
+        $doctor->user->update([
+            'name'  => $request->name,
+            'phone' => $request->phone,
+        ]);
+
+        $doctor->update([
+            'phone'            => $request->phone,
+            'specialization'   => $request->specialization,
+            'type'             => $request->type === 'optometrist' ? 'consultant' : $request->type,
+            'consultation_fee' => $request->consultation_fee,
+            'hi_price'         => $request->hi_price ?? $doctor->hi_price,
+            'is_hi_active'     => $request->has('is_hi_active'),
+            'moi_price'        => $request->moi_price ?? $doctor->moi_price,
+            'is_moi_active'    => $request->has('is_moi_active'),
+            'start_time'       => $request->start_time,
+            'end_time'         => $request->end_time,
+            'working_days'     => $request->working_days,
+            'is_active'        => $request->has('is_active'),
+        ]);
+
+        return redirect()->route('eye.availability.index')
+            ->with('success', "تم تحديث بيانات ودوام د. {$request->name} بنجاح!");
     }
 }

@@ -17,9 +17,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('eye')->name('eye.')->group(function () {
 
-    // 0. توفر أطباء واستشاريي العيون وطابور المراجعين المباشر
+    // 0. توفر أطباء واستشاريي العيون وطابور المراجعين المباشر وإدارة أطباء العيون
     Route::prefix('availability')->name('availability.')->group(function () {
         Route::get('/', [EyeDoctorAvailabilityController::class, 'index'])->name('index');
+        Route::get('/doctors/create', [EyeDoctorAvailabilityController::class, 'createDoctor'])->name('doctors.create');
+        Route::post('/doctors/store', [EyeDoctorAvailabilityController::class, 'storeDoctor'])->name('doctors.store');
+        Route::get('/doctors/{doctor}/edit', [EyeDoctorAvailabilityController::class, 'editDoctor'])->name('doctors.edit');
+        Route::put('/doctors/{doctor}', [EyeDoctorAvailabilityController::class, 'updateDoctorSettings'])->name('doctors.updateSettings');
         Route::post('/update/{doctor}', [EyeDoctorAvailabilityController::class, 'update'])->name('update');
         Route::post('/bulk-update', [EyeDoctorAvailabilityController::class, 'bulkUpdate'])->name('bulkUpdate');
         Route::post('/call-patient/{appointment}', [EyeDoctorAvailabilityController::class, 'callPatient'])->name('callPatient');

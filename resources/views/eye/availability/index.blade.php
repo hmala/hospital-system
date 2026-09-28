@@ -100,6 +100,11 @@
                     </button>
                 </form>
 
+                <!-- Add Eye Doctor Button -->
+                <a href="{{ route('eye.availability.doctors.create') }}" class="btn btn-success px-4 py-2 shadow-sm fw-bold">
+                    <i class="fas fa-user-md me-1"></i> إضافة طبيب عيون جديد
+                </a>
+
                 <!-- Eye Reception Link -->
                 <a href="{{ route('eye.reception.index') }}" class="btn btn-outline-primary px-4 py-2 shadow-sm fw-bold">
                     <i class="fas fa-users me-1"></i> طابور الاستعلامات
@@ -269,7 +274,12 @@
                         <i class="fas fa-user-md text-primary me-2"></i>
                         دليل وجدول أطباء واستشاريي العيون (يوم {{ $selectedDay }})
                     </h5>
-                    <span class="badge bg-light text-muted border">العدد: {{ $eyeDoctors->count() }} طبيب</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <a href="{{ route('eye.availability.doctors.create') }}" class="btn btn-sm btn-success fw-bold shadow-sm">
+                            <i class="fas fa-plus-circle me-1"></i> إضافة طبيب عيون جديد
+                        </a>
+                        <span class="badge bg-light text-muted border">العدد: {{ $eyeDoctors->count() }} طبيب</span>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -281,8 +291,8 @@
                                 <th>أيام الدوام المعتمدة</th>
                                 <th>تسعيرة الكشف</th>
                                 <th class="text-center" style="width: 140px;">الحالة اليوم</th>
-                                <th class="text-center" style="width: 130px;">تعديل التوفر</th>
-                                <th class="text-center" style="width: 150px;">حجز موعد</th>
+                                <th class="text-center" style="width: 110px;">تبديل التوفر</th>
+                                <th class="text-center" style="width: 180px;">إدارة وحجز</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -345,9 +355,14 @@
                                     </form>
                                 </td>
                                 <td class="text-center">
-                                    <a href="{{ route('eye.reception.create', ['doctor_id' => $doctor->id]) }}" class="btn btn-sm btn-outline-primary shadow-sm" title="حجز موعد عند هذا الطبيب">
-                                        <i class="fas fa-calendar-plus me-1"></i>حجز موعد
-                                    </a>
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <a href="{{ route('eye.availability.doctors.edit', $doctor) }}" class="btn btn-sm btn-outline-secondary" title="تعديل بيانات وجدول دوام الطبيب">
+                                            <i class="fas fa-cog me-1"></i>تعديل
+                                        </a>
+                                        <a href="{{ route('eye.reception.create', ['doctor_id' => $doctor->id]) }}" class="btn btn-sm btn-outline-primary shadow-sm" title="حجز موعد عند هذا الطبيب">
+                                            <i class="fas fa-calendar-plus me-1"></i>حجز
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             @empty

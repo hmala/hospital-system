@@ -479,4 +479,77 @@ class EyeCenterWorkflowTest extends TestCase
         $ticketResponse->assertSee('د. فراس استشاري عيون');
         $ticketResponse->assertSee('الضمان الصحي');
     }
+
+    public function test_create_and_store_eye_specialized_doctor()
+    {
+        // 1. Check create view
+        $createResponse = $this->actingAs($this->admin)->get(route('eye.availability.doctors.create'));
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('إضافة طبيب واستشاري عيون جديد');
+        $createResponse->assertSee('مركز وجراحة العيون التخصصي');
+        $createResponse->assertSee('جراحة الشبكية والجسم الزجاجي');
+
+        // 2. Post new eye doctor
+        $storeResponse = $this->actingAs($this->admin)->post(route('eye.availability.doctors.store'), [
+            'name'               => 'د. حيدر جاسم القرني',
+            'email'              => 'haider.eye@hospital.iq',
+            'phone'              => '07709876543',
+            'password'           => 'secret123',
+            'type'               => 'consultant',
+            'specialization'     => 'أمراض وجراحة القرنية والليزك وتصحيح البصر (Cornea & Refractive)',
+            'consultation_fee'   => 30000,
+            'is_hi_active'       => 1,
+            'hi_price'           => 27000,
+            'is_moi_active'      => 1,
+            'moi_price'          => 24000,
+            'start_time'         => '09:00',
+            'end_time'           => '15:00',
+            'working_days'       => ['الأحد', 'الثلاثاء', 'الخميس'],
+            'is_available_today' => 1,
+        ]);
+
+        $storeResponse->assertRedirect(route('eye.availability.index'));
+        $storeResponse->assertSessionHas('success');
+
+        // Check user created
+        $user = User::where('email', 'haider.eye@hospital.iq')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals('د. حيدر جاسم القرني', $user->name);
+
+        // Check doctor created
+        $newDoc = Doctor::where('user_id', $user->id)->first();
+        $this->assertNotNull($newDoc);
+        $this->assertEquals(30000, $newDoc->consultation_fee);
+        $this->assertTrue((bool)$newDoc->is_available_today);
+        $this->assertContains('الأحد', $newDoc->working_days);
+    }
+
+    public function test_edit_and_update_eye_doctor_settings()
+    {
+        // 1. Edit view
+        $editResponse = $this->actingAs($this->admin)->get(route('eye.availability.doctors.edit', $this->doctor));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('تعديل بيانات وجدول دوام');
+
+        // 2. Update settings
+        $updateResponse = $this->actingAs($this->admin)->put(route('eye.availability.doctors.updateSettings', $this->doctor), [
+            'name'             => 'د. فراس حميد المعدل',
+            'phone'            => '07701112233',
+            'type'             => 'surgeon',
+            'specialization'   => 'جراحة الساد والفاكو وزراعة العدسات',
+            'consultation_fee' => 35000,
+            'start_time'       => '08:00',
+            'end_time'         => '16:00',
+            'working_days'     => ['السبت', 'الإثنين', 'الأربعاء'],
+            'is_active'        => 1,
+        ]);
+
+        $updateResponse->assertRedirect(route('eye.availability.index'));
+        $updateResponse->assertSessionHas('success');
+
+        $this->doctor->refresh();
+        $this->assertEquals('د. فراس حميد المعدل', $this->doctor->user->name);
+        $this->assertEquals(35000, $this->doctor->consultation_fee);
+        $this->assertEquals('جراحة الساد والفاكو وزراعة العدسات', $this->doctor->specialization);
+    }
 }
