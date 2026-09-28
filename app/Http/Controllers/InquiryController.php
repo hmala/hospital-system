@@ -939,10 +939,23 @@ class InquiryController extends Controller
     public function search()
     {
         $user = Auth::user();
-
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view inquiries') && !$user->can('create inquiries')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $canCreate = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
+
+        if (!$canCreate) {
+            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
         return view('inquiry.search');
@@ -953,6 +966,25 @@ class InquiryController extends Controller
      */
     public function searchPatients(HttpRequest $httpRequest)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canCreate = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
+
+        if (!$canCreate) {
+            abort(403, 'غير مصرح لك بالبحث لإنشاء طلبات استعلامات');
+        }
         $query = $httpRequest->get('query');
 
         if (empty($query)) {

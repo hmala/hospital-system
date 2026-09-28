@@ -243,7 +243,7 @@ class RoleManagementController extends Controller
         return [
             // 🏢 1. الاستعلامات والحجوزات
             'view inquiries' => ['label' => 'عرض شاشة واستقبال الاستعلامات', 'action' => 'عرض', 'badge' => 'info'],
-            'create inquiries' => ['label' => 'إضافة استفسار أو قيد استعلامات', 'action' => 'إضافة', 'badge' => 'success'],
+            'create inquiries' => ['label' => 'حجز وإنشاء طلب جديد في الاستعلامات', 'action' => 'إضافة', 'badge' => 'success'],
             'manage inquiries' => ['label' => 'إدارة ومتابعة طلبات الاستعلامات', 'action' => 'إدارة', 'badge' => 'primary'],
             'view patients' => ['label' => 'عرض قائمة المرضى المسجلين', 'action' => 'عرض', 'badge' => 'info'],
             'create patients' => ['label' => 'فتح ملف مريض جديد', 'action' => 'إضافة', 'badge' => 'success'],

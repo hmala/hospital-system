@@ -156,9 +156,11 @@
                             </a>
 
                             {{-- زر إنشاء طلب استعلامات --}}
+                            @canany(['create inquiries', 'inquiry.create.checkup', 'inquiry.create.radiology.general', 'inquiry.create.radiology.ultrasound', 'inquiry.create.radiology.mri', 'inquiry.create.radiology.echo', 'inquiry.create.lab', 'inquiry.create.pharmacy', 'inquiry.create.blood_bank'])
                             <a href="{{ route('inquiry.create', ['patient_id' => $patient->id]) }}" class="btn btn-primary rounded-pill shadow-sm">
                                 <i class="fas fa-plus me-1"></i> طلب جديد
                             </a>
+                            @endcanany
                         </div>
                     </div>
                 </div>
