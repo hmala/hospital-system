@@ -1096,9 +1096,14 @@
                                     @endif
                                 </a>
                             </li>
-                            <li class="nav-item">
+                                                        <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.store.*') ? 'active' : '' }}" href="{{ route('eye.store.index') }}">
                                     <i class="fas fa-boxes text-secondary"></i><span> مخزن مستلزمات وعدسات العيون</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.permissions.*') ? 'active' : '' }}" href="{{ route('eye.permissions.index') }}">
+                                    <i class="fas fa-user-shield text-dark"></i><span> صلاحيات ومستخدمي العيون</span>
                                 </a>
                             </li>
                         </div>

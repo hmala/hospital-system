@@ -94,4 +94,10 @@ Route::middleware(['auth'])->prefix('eye')->name('eye.')->group(function () {
         Route::get('/all-clinics/data', [\App\Http\Controllers\Eye\EyeQueueController::class, 'allClinicsData'])->name('all-clinics.data');
     });
 
+    // 8. صلاحيات العيون
+    Route::prefix('permissions')->name('permissions.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Eye\EyePermissionsController::class, 'index'])->name('index');
+        Route::put('/{user}', [\App\Http\Controllers\Eye\EyePermissionsController::class, 'update'])->name('update');
+    });
+
 });

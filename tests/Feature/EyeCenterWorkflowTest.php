@@ -565,4 +565,24 @@ class EyeCenterWorkflowTest extends TestCase
                      ->assertJsonStructure(['success', 'clinics']);
     }
 
+    public function test_eye_permissions_management()
+    {
+        $this->actingAs($this->admin);
+
+        $response = $this->get(route('eye.permissions.index'));
+        $response->assertStatus(200);
+        $response->assertViewIs('eye.permissions.index');
+
+        $userToUpdate = \App\Models\User::factory()->create(); \Spatie\Permission\Models\Permission::firstOrCreate(['name'=>'view eye center']); \Spatie\Permission\Models\Permission::firstOrCreate(['name'=>'manage eye appointments']);
+        
+        $responseUpdate = $this->put(route('eye.permissions.update', $userToUpdate), [
+            'permissions' => ['view eye center', 'manage eye appointments']
+        ]);
+        
+        $responseUpdate->assertRedirect();
+        
+        $this->assertTrue($userToUpdate->hasPermissionTo('view eye center'));
+        $this->assertTrue($userToUpdate->hasPermissionTo('manage eye appointments'));
+    }
+
 }
