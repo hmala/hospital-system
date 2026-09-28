@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="h3 text-gray-800 mb-0"><i class="fas fa-user-shield text-primary me-2"></i> صلاحيات ومستخدمي العيون</h2>
-            <p class="text-muted mb-0 mt-1">إدارة صلاحيات الوصول الخاصة بمركز العيون (الاستعلامات، المخزن، العمليات، الخ) للموظفين والأطباء</p>
+            <p class="text-muted mb-0 mt-1">إدارة صلاحيات الوصول الخاصة بمركز العيون. <strong>ملاحظة:</strong> يتم عرض كادر مركز العيون فقط. لمنح الصلاحية لموظف آخر من المستشفى، استخدم صندوق البحث.</p>
         </div>
     </div>
 
