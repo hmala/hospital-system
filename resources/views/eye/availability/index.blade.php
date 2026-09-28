@@ -116,7 +116,7 @@
                 </a>
 
                 <!-- Public Queue TV Screen Link -->
-                <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-outline-info px-4 py-2 shadow-sm fw-bold" title="شاشة العرض العامة للتلفاز">
+                <a href="{{ route('eye.queue.all-clinics.display') }}" target="_blank" class="btn btn-outline-info px-4 py-2 shadow-sm fw-bold" title="شاشة العرض العامة للتلفاز">
                     <i class="fas fa-tv me-1"></i> شاشة صالة الانتظار العامة
                 </a>
             </div>

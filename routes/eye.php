@@ -79,13 +79,19 @@ Route::middleware(['auth'])->prefix('eye')->name('eye.')->group(function () {
         Route::post('/{investigation}/results', [EyeInvestigationController::class, 'updateResults'])->name('updateResults');
     });
 
-    // 6. عمليات وإجراءات وحقن العيون
+    // 6. عمليات وزرع عدسات وحقن العيون
     Route::prefix('surgeries')->name('surgeries.')->group(function () {
         Route::get('/', [EyeSurgeryController::class, 'index'])->name('index');
         Route::get('/create', [EyeSurgeryController::class, 'create'])->name('create');
         Route::post('/store', [EyeSurgeryController::class, 'store'])->name('store');
         Route::get('/{surgery}', [EyeSurgeryController::class, 'show'])->name('show');
         Route::patch('/{surgery}/status', [EyeSurgeryController::class, 'updateStatus'])->name('updateStatus');
+    });
+
+    // 7. صالة الانتظار والشاشات
+    Route::prefix('queue')->name('queue.')->group(function () {
+        Route::get('/all-clinics', [\App\Http\Controllers\Eye\EyeQueueController::class, 'allClinicsDisplay'])->name('all-clinics.display');
+        Route::get('/all-clinics/data', [\App\Http\Controllers\Eye\EyeQueueController::class, 'allClinicsData'])->name('all-clinics.data');
     });
 
 });

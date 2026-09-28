@@ -552,4 +552,17 @@ class EyeCenterWorkflowTest extends TestCase
         $this->assertEquals(35000, $this->doctor->consultation_fee);
         $this->assertEquals('جراحة الساد والفاكو وزراعة العدسات', $this->doctor->specialization);
     }
+    public function test_eye_queue_waiting_hall_screens()
+    {
+        $this->actingAs($this->admin);
+
+        $response = $this->get(route('eye.queue.all-clinics.display'));
+        $response->assertStatus(200);
+        $response->assertViewIs('eye.queue.all-clinics-display');
+
+        $responseJson = $this->getJson(route('eye.queue.all-clinics.data'));
+        $responseJson->assertStatus(200)
+                     ->assertJsonStructure(['success', 'clinics']);
+    }
+
 }
