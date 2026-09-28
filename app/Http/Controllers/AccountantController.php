@@ -14,8 +14,16 @@ class AccountantController extends Controller
         $this->middleware(function ($request, $next) {
             $user = Auth::user();
             $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-            if (!$isAdmin && (!$user || !$user->can('review surgery prices'))) {
-                abort(403, 'غير مصرح لك بالوصول إلى صفحات مراجعة الحسابات.');
+            $currentAction = $request->route() ? $request->route()->getActionMethod() : '';
+
+            if (in_array($currentAction, ['emergencyAnalytics', 'diagnosticAnalytics'])) {
+                if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('review surgery prices')))) {
+                    abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات الحسابات.');
+                }
+            } else {
+                if (!$isAdmin && (!$user || !$user->can('review surgery prices'))) {
+                    abort(403, 'غير مصرح لك بالوصول إلى صفحات مراجعة الحسابات.');
+                }
             }
             return $next($request);
         });
