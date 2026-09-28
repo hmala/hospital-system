@@ -878,13 +878,6 @@
                         </li>
                         @endcan
 
-                        @can('view departments')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('departments.public') ? 'active' : '' }}" href="{{ route('departments.public') }}">
-                                <i class="fas fa-clinic-medical"></i><span> العيادات</span>
-                            </a>
-                        </li>
-                        @endcan
 
                         @can('manage own visits')
                         <li class="nav-item">
