@@ -22,14 +22,26 @@ class RoleManagementController extends Controller
         return view('roles.index', compact('roles'));
     }
 
+    public static function getHiddenPermissions(): array
+    {
+        return [
+            'view appointments',
+            'create appointments',
+            'edit appointments',
+            'delete appointments',
+        ];
+    }
+
     public function rolesCreate()
     {
         $moduleOrder = self::getModuleOrder();
         $permissionDefinitions = self::getPermissionDefinitions();
 
-        $permissions = Permission::all()->groupBy(function($permission) {
-            return $this->permissionGroup($permission->name);
-        });
+        $permissions = Permission::whereNotIn('name', self::getHiddenPermissions())
+            ->get()
+            ->groupBy(function($permission) {
+                return $this->permissionGroup($permission->name);
+            });
         return view('roles.create', compact('permissions', 'moduleOrder', 'permissionDefinitions'));
     }
 
@@ -79,9 +91,11 @@ class RoleManagementController extends Controller
         $moduleOrder = self::getModuleOrder();
         $permissionDefinitions = self::getPermissionDefinitions();
 
-        $permissions = Permission::all()->groupBy(function($permission) {
-            return $this->permissionGroup($permission->name);
-        });
+        $permissions = Permission::whereNotIn('name', self::getHiddenPermissions())
+            ->get()
+            ->groupBy(function($permission) {
+                return $this->permissionGroup($permission->name);
+            });
         $rolePermissions = $role->permissions->pluck('name')->toArray();
         return view('roles.edit', compact('role', 'permissions', 'rolePermissions', 'moduleOrder', 'permissionDefinitions'));
     }
@@ -270,11 +284,7 @@ class RoleManagementController extends Controller
             'create departments' => ['label' => 'إضافة عيادة أو قسم طبي جديد', 'action' => 'إضافة', 'badge' => 'success'],
             'edit departments' => ['label' => 'تعديل بيانات العيادات والأقسام', 'action' => 'تعديل', 'badge' => 'warning'],
             'delete departments' => ['label' => 'حذف عيادة أو قسم', 'action' => 'حذف', 'badge' => 'danger'],
-            'view appointments' => ['label' => 'عرض جدول وقائمة المواعيد', 'action' => 'عرض', 'badge' => 'info'],
-            'create appointments' => ['label' => 'حجز موعد استشاري جديد', 'action' => 'إضافة', 'badge' => 'success'],
-            'edit appointments' => ['label' => 'تعديل بيانات الموعد', 'action' => 'تعديل', 'badge' => 'warning'],
-            'delete appointments' => ['label' => 'حذف موعد استشاري', 'action' => 'حذف', 'badge' => 'danger'],
-            'cancel appointments' => ['label' => 'إلغاء المواعيد المحجوزة', 'action' => 'إلغاء', 'badge' => 'danger'],
+            'cancel appointments' => ['label' => 'إلغاء المواعيد وحجوزات السونار', 'action' => 'إلغاء', 'badge' => 'danger'],
             'view visits' => ['label' => 'عرض سجل الزيارات الطبية العامة', 'action' => 'عرض', 'badge' => 'info'],
             'create visits' => ['label' => 'إنشاء زيارة طبية جديدة', 'action' => 'إضافة', 'badge' => 'success'],
             'edit visits' => ['label' => 'تعديل بيانات الزيارة الطبية', 'action' => 'تعديل', 'badge' => 'warning'],

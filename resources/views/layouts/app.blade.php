@@ -891,27 +891,19 @@
                         </div>
                         @endcanany
 
-                        <!-- قسم المواعيد والزيارات -->
-                        @canany(['view appointments', 'view visits', 'view own visits', 'create appointments'])
+                        <!-- قسم الزيارات الطبية -->
+                        @canany(['view visits', 'view own visits'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#appointmentSection" aria-expanded="false">
-                            <span><i class="fas fa-calendar-alt"></i> المواعيد والزيارات</span>
+                            <span><i class="fas fa-file-medical"></i> الزيارات الطبية</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="appointmentSection">
 
-                        @can('view appointments')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" href="{{ route('appointments.index') }}">
-                                <i class="fas fa-calendar-check"></i><span> المواعيد</span>
-                                <span class="badge bg-secondary ms-2">{{ $confirmedAppointments }}</span>
-                            </a>
-                        </li>
-                        @endcan
                         @can('view visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('visits.*') ? 'active' : '' }}" href="{{ route('visits.index') }}">
-                                <i class="fas fa-file-medical"></i><span> الزيارات</span>
+                                <i class="fas fa-file-medical"></i><span> سجل الزيارات الطبية</span>
                                 <span class="badge bg-secondary ms-2">{{ $incompleteVisits }}</span>
                             </a>
                         </li>
@@ -920,15 +912,7 @@
                         @can('view own visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
-                                <i class="fas fa-file-medical"></i><span> زياراتي</span>
-                            </a>
-                        </li>
-                        @endcan
-
-                        @can('create appointments')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" href="{{ route('appointments.index') }}">
-                                <i class="fas fa-calendar-plus"></i><span> حجز موعد</span>
+                                <i class="fas fa-user-injured"></i><span> زياراتي السابقة</span>
                             </a>
                         </li>
                         @endcan
