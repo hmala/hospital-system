@@ -8,9 +8,13 @@
                 <i class="fas fa-arrow-right me-1"></i> رجوع لقائمة الأدوار
             </a>
         </div>
-        <div class="d-flex gap-2">
-            <button type="submit" form="rolePermissionsForm" class="btn btn-primary px-4 fw-bold shadow-sm">
-                <i class="fas fa-save me-1"></i> حفظ التعديلات
+        <div class="d-flex align-items-center gap-2">
+            <div id="autoSaveBadge" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 fs-6 shadow-sm d-flex align-items-center gap-2">
+                <i class="fas fa-bolt text-warning" id="autoSaveIcon"></i>
+                <span id="autoSaveText">الحفظ اللحظي التلقائي مفعّل</span>
+            </div>
+            <button type="submit" form="rolePermissionsForm" class="btn btn-outline-primary px-3 fw-bold shadow-sm">
+                <i class="fas fa-save me-1"></i> حفظ يدوي
             </button>
         </div>
     </div>
@@ -308,6 +312,19 @@
     </div>
 </div>
 
+<!-- حاوية التنبيه اللحظي الفوري -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div id="permissionLiveToast" class="toast align-items-center text-white bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2 py-2 px-3" id="liveToastMessage">
+                <i class="fas fa-check-circle text-success fs-5"></i>
+                <span>تم تحديث الصلاحية فورياً</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 <style>
     .cursor-pointer { cursor: pointer; }
     .table-active-row {
@@ -365,15 +382,81 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. مفتاح تحديد كامل القسم (Switch لكل قسم)
+    // إعدادات الحفظ اللحظي الفوري عبر AJAX
+    const toggleUrl = "{{ route('roles.toggle-permission', $role) }}";
+    const csrfToken = "{{ csrf_token() }}";
+    const autoSaveIcon = document.getElementById('autoSaveIcon');
+    const autoSaveText = document.getElementById('autoSaveText');
+    const liveToastEl = document.getElementById('permissionLiveToast');
+    const liveToast = liveToastEl ? new bootstrap.Toast(liveToastEl, { delay: 2000 }) : null;
+    const liveToastMsg = document.getElementById('liveToastMessage');
+
+    function setSavingState(isSaving, message, isError = false) {
+        if (!autoSaveIcon || !autoSaveText) return;
+        if (isSaving) {
+            autoSaveIcon.className = 'fas fa-spinner fa-spin text-primary';
+            autoSaveText.textContent = message || 'جاري الحفظ الفوري...';
+        } else if (isError) {
+            autoSaveIcon.className = 'fas fa-exclamation-circle text-danger';
+            autoSaveText.textContent = message || 'فشل الحفظ!';
+        } else {
+            autoSaveIcon.className = 'fas fa-check-circle text-success';
+            autoSaveText.textContent = message || 'تم الحفظ فورياً وتفريغ الكاش';
+            setTimeout(() => {
+                autoSaveIcon.className = 'fas fa-bolt text-warning';
+                autoSaveText.textContent = 'الحفظ اللحظي التلقائي مفعّل';
+            }, 2500);
+        }
+    }
+
+    function showToast(text, isSuccess = true) {
+        if (!liveToast || !liveToastMsg) return;
+        liveToastMsg.innerHTML = isSuccess 
+            ? `<i class="fas fa-check-circle text-success fs-5"></i> <span>${text}</span>`
+            : `<i class="fas fa-times-circle text-danger fs-5"></i> <span>${text}</span>`;
+        liveToast.show();
+    }
+
+    async function sendToggleRequest(payload, onFailCallback) {
+        setSavingState(true);
+        try {
+            const res = await fetch(toggleUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'حدث خطأ في السيرفر');
+            }
+            setSavingState(false, data.message);
+            showToast(data.message, true);
+            return data;
+        } catch (err) {
+            setSavingState(false, err.message, true);
+            showToast('خطأ: ' + err.message, false);
+            if (typeof onFailCallback === 'function') {
+                onFailCallback();
+            }
+            return null;
+        }
+    }
+
+    // 2. مفتاح تحديد كامل القسم (Switch لكل قسم) مع الحفظ اللحظي
     document.querySelectorAll('.select-all-module').forEach(function(switchElem) {
         switchElem.addEventListener('change', function(e) {
             e.stopPropagation();
             const moduleKey = this.dataset.module;
             const isChecked = this.checked;
+            const perms = [];
             
             document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).forEach(function(checkbox) {
                 checkbox.checked = isChecked;
+                perms.push(checkbox.value);
                 const row = checkbox.closest('tr');
                 if (row) {
                     if (isChecked) row.classList.add('table-active-row');
@@ -383,28 +466,67 @@ document.addEventListener('DOMContentLoaded', function() {
 
             updateModuleCounter(moduleKey);
             updateGlobalCounter();
+
+            // حفظ فوري للقسم كامل
+            if (perms.length > 0) {
+                sendToggleRequest({
+                    permissions: perms,
+                    status: isChecked
+                }, () => {
+                    // تراجع عند الفشل
+                    switchElem.checked = !isChecked;
+                    document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).forEach(function(cb) {
+                        cb.checked = !isChecked;
+                        const r = cb.closest('tr');
+                        if (r) {
+                            if (!isChecked) r.classList.add('table-active-row');
+                            else r.classList.remove('table-active-row');
+                        }
+                    });
+                    updateModuleCounter(moduleKey);
+                    updateGlobalCounter();
+                });
+            }
         });
     });
 
-    // 3. عند تغيير أي Checkbox فردي
+    // 3. عند تغيير أي Checkbox فردي (حفظ فوري لحظي)
     document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
             const moduleKey = this.dataset.module;
+            const isChecked = this.checked;
             const row = this.closest('tr');
             if (row) {
-                if (this.checked) row.classList.add('table-active-row');
+                if (isChecked) row.classList.add('table-active-row');
                 else row.classList.remove('table-active-row');
             }
             updateModuleCounter(moduleKey);
             updateGlobalCounter();
+
+            // إرسال طلب الحفظ اللحظي التلقائي
+            sendToggleRequest({
+                permission: this.value,
+                status: isChecked
+            }, () => {
+                // تراجع عند الفشل
+                checkbox.checked = !isChecked;
+                if (row) {
+                    if (checkbox.checked) row.classList.add('table-active-row');
+                    else row.classList.remove('table-active-row');
+                }
+                updateModuleCounter(moduleKey);
+                updateGlobalCounter();
+            });
         });
     });
 
-    // 4. أزرار التحديد السريع
+    // 4. أزرار التحديد السريع مع الحفظ اللحظي
     document.querySelectorAll('.quick-select').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const action = this.dataset.action;
             const allCheckboxes = document.querySelectorAll('.permission-checkbox');
+            const targetPerms = [];
+            const isEnable = (action !== 'none');
 
             allCheckboxes.forEach(function(checkbox) {
                 const permName = checkbox.value.toLowerCase();
@@ -424,6 +546,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     shouldCheck = permName.startsWith('delete') || permName.includes('.delete');
                 }
 
+                if (shouldCheck || action === 'none') {
+                    targetPerms.push(checkbox.value);
+                }
+
                 checkbox.checked = shouldCheck;
                 const row = checkbox.closest('tr');
                 if (row) {
@@ -433,6 +559,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             updateAllCounters();
+
+            // حفظ فوري للتحديد السريع
+            if (targetPerms.length > 0) {
+                sendToggleRequest({
+                    permissions: targetPerms,
+                    status: isEnable
+                });
+            }
         });
     });
 

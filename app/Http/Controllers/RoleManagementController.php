@@ -115,6 +115,53 @@ class RoleManagementController extends Controller
             ->with('success', 'تم تحديث الدور بنجاح');
     }
 
+    public function togglePermission(Request $request, Role $role)
+    {
+        if ($role->name === 'admin' && !auth()->user()->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دور مدير النظام الرئيسي محمي ولا يمكن التعديل عليه.'
+            ], 403);
+        }
+
+        $status = filter_var($request->input('status'), FILTER_VALIDATE_BOOLEAN);
+
+        // إذا تم إرسال مصفوفة صلاحيات (تحديد كامل القسم أو تحديد سريع)
+        if ($request->has('permissions') && is_array($request->permissions)) {
+            $perms = $request->permissions;
+            foreach ($perms as $permName) {
+                if (!empty($permName)) {
+                    $permission = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                    if ($status) {
+                        $role->givePermissionTo($permission);
+                    } else {
+                        $role->revokePermissionTo($permission);
+                    }
+                }
+            }
+        } 
+        // أو إذا تم إرسال صلاحية فردية واحدة
+        elseif ($request->filled('permission')) {
+            $permName = $request->input('permission');
+            $permission = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+            if ($status) {
+                $role->givePermissionTo($permission);
+            } else {
+                $role->revokePermissionTo($permission);
+            }
+        }
+
+        // تفريغ كاش الصلاحيات فورياً
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        return response()->json([
+            'success' => true,
+            'message' => $status ? 'تم تفعيل الصلاحية فورياً' : 'تم تعطيل الصلاحية فورياً',
+            'status' => $status,
+            'granted_count' => $role->permissions()->count(),
+        ]);
+    }
+
     public function rolesDestroy(Role $role)
     {
         if (in_array($role->name, ['admin', 'admin-hsop'])) {

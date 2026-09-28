@@ -340,6 +340,60 @@ class RolePermissionsMatrixTest extends TestCase
         $staffRole->givePermissionTo('manage consultant availability');
         $this->actingAs($staffUser)->get(route('consultant-availability.index'))->assertStatus(200);
     }
+
+    #[Test]
+    public function test_auto_toggle_permission_ajax_endpoint(): void
+    {
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $admin = User::factory()->create(['email' => 'admin_toggle@hospital.com']);
+        $admin->assignRole($adminRole);
+
+        $testRole = Role::firstOrCreate(['name' => 'nurse_toggle_test', 'guard_name' => 'web']);
+        $testRole->syncPermissions([]);
+
+        // 1. Toggle single permission ON
+        $response = $this->actingAs($admin)->postJson(route('roles.toggle-permission', $testRole), [
+            'permission' => 'view surgeries',
+            'status' => true,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => true,
+                'granted_count' => 1,
+            ]);
+        $this->assertTrue($testRole->fresh()->hasPermissionTo('view surgeries'));
+
+        // 2. Toggle single permission OFF
+        $response = $this->actingAs($admin)->postJson(route('roles.toggle-permission', $testRole), [
+            'permission' => 'view surgeries',
+            'status' => false,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => false,
+                'granted_count' => 0,
+            ]);
+        $this->assertFalse($testRole->fresh()->hasPermissionTo('view surgeries'));
+
+        // 3. Toggle batch permissions
+        $response = $this->actingAs($admin)->postJson(route('roles.toggle-permission', $testRole), [
+            'permissions' => ['view surgeries', 'manage rooms'],
+            'status' => true,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => true,
+                'granted_count' => 2,
+            ]);
+        $this->assertTrue($testRole->fresh()->hasPermissionTo('view surgeries'));
+        $this->assertTrue($testRole->fresh()->hasPermissionTo('manage rooms'));
+    }
 }
 
 
