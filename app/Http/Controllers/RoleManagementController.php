@@ -39,14 +39,21 @@ class RoleManagementController extends Controller
             'view cashier medical requests',
             'view cashier emergency',
             'process payments',
-            'view payments',
             'create payments',
             'edit payments',
+            'view payments',
+            'view doctor profits',
         ];
     }
 
     public function rolesCreate()
     {
+        Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
         $moduleOrder = self::getModuleOrder();
         $permissionDefinitions = self::getPermissionDefinitions();
 
@@ -101,7 +108,6 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'view doctor profits', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -224,16 +230,16 @@ class RoleManagementController extends Controller
                 'description' => 'توفر الاستشاريين، محطة كشف الطبيب، إدارة العيادات والمواعيد والزيارات'
             ],
             'cashier' => [
-                'name' => 'الصندوق ونقاط القبض',
+                'name' => 'الصندوق والكاشير',
                 'icon' => 'fa-cash-register',
                 'color' => 'success',
-                'description' => 'قبض كشفية الاستشارية، رسوم المختبر والأشعة، كاشير الطوارئ والعمليات، وسندات الصندوق اليومية'
+                'description' => 'الكاشير العام، كشفية الاستشارية، كاشير السونار والأشعة، كاشير الطوارئ والعمليات، وإرجاع المبالغ'
             ],
             'accounting' => [
-                'name' => 'الحسابات العامة والرقابة المالية',
+                'name' => 'الحسابات العامة والمالية',
                 'icon' => 'fa-file-invoice-dollar',
-                'color' => 'primary',
-                'description' => 'تدقيق أسعار العمليات الجراحية، نسب وفئات استقطاع الضمان الصحي، وحسابات وأرباح الأطباء'
+                'color' => 'secondary',
+                'description' => 'مراجعة وتدقيق أسعار العمليات، التقارير واليوميات المالية، وإدارة نسب استقطاع الضمان'
             ],
             'radiology' => [
                 'name' => 'الأشعة والسونار والإيكو',
@@ -317,20 +323,19 @@ class RoleManagementController extends Controller
             'create referrals' => ['label' => 'إنشاء تحويل طبي لمريض', 'action' => 'إضافة', 'badge' => 'success'],
             'manage referrals' => ['label' => 'إدارة وقبول التحويلات الطبية', 'action' => 'إدارة', 'badge' => 'primary'],
 
-            // 💳 3. الصندوق ونقاط القبض
+            // 💳 3. الصندوق والكاشير
             'view cashier' => ['label' => 'عرض لوحة الكاشير المركزية العامة', 'action' => 'عرض', 'badge' => 'info'],
-            'process consultation payments' => ['label' => 'قبض كشفية الاستشارية وحجز السونار', 'action' => 'معالجة', 'badge' => 'success'],
-            'process medical requests payments' => ['label' => 'قبض رسوم فحوصات المختبر والأشعة', 'action' => 'معالجة', 'badge' => 'success'],
-            'process emergency payments' => ['label' => 'قبض فواتير وخدمات الطوارئ', 'action' => 'معالجة', 'badge' => 'success'],
-            'view cashier surgeries' => ['label' => 'عرض كاشير العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
+            'process consultation payments' => ['label' => 'قبض وتسديد كشفية الاستشارية وحجز السونار', 'action' => 'معالجة', 'badge' => 'success'],
+            'process medical requests payments' => ['label' => 'قبض وتسديد رسوم الفحوصات (مختبر وأشعة)', 'action' => 'معالجة', 'badge' => 'success'],
+            'process emergency payments' => ['label' => 'قبض وتسديد فواتير وإجراءات الطوارئ', 'action' => 'معالجة', 'badge' => 'success'],
+            'view cashier surgeries' => ['label' => 'عرض كاشير قسم العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
             'process surgery payments' => ['label' => 'قبض وتثبيت دفعات العمليات وأجور الغرف', 'action' => 'معالجة', 'badge' => 'success'],
-            'process refunds' => ['label' => 'استرجاع مبالغ العمليات الملغاة وفوارق الغرف للمرضى', 'action' => 'إرجاع', 'badge' => 'danger'],
-            'view cashier reports' => ['label' => 'عرض كشوفات الصندوق والتقارير المالية اليومية', 'action' => 'عرض', 'badge' => 'info'],
+            'process refunds' => ['label' => 'استرجاع مبالغ العمليات الملغاة وفوارق الغرف للمرضى', 'action' => 'معالجة', 'badge' => 'warning'],
 
-            // 📊 4. الحسابات العامة والرقابة المالية
+            // 📊 4. الحسابات العامة والمالية
             'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار وتكاليف العمليات (محاسب)', 'action' => 'مراجعة', 'badge' => 'warning'],
-            'manage health insurance' => ['label' => 'إدارة وضبط نسب استقطاع فئات الضمان الصحي الوطني', 'action' => 'إدارة', 'badge' => 'primary'],
-            'view doctor profits' => ['label' => 'عرض كشوفات حسابات وأرباح الأطباء الاستشاريين', 'action' => 'عرض', 'badge' => 'info'],
+            'view cashier reports' => ['label' => 'عرض كشوفات الحسابات واليوميات والتقارير المالية', 'action' => 'عرض', 'badge' => 'info'],
+            'manage health insurance' => ['label' => 'إدارة نسب وفئات استقطاع الضمان الصحي الوطني', 'action' => 'إدارة', 'badge' => 'primary'],
 
             // 〰️ 4. الأشعة والسونار والإيكو
             'view radiology' => ['label' => 'عرض قسم الأشعة والسونار وقائمة الفحوصات', 'action' => 'عرض', 'badge' => 'info'],
@@ -422,14 +427,17 @@ class RoleManagementController extends Controller
             return 'inquiry';
         }
         
-        // 2. Accounting & General Finance
+        // 2. Accounting & Financial Management
         if (in_array($permissionName, [
-            'review surgery prices', 'manage health insurance', 'view doctor profits'
-        ]) || str_contains($permissionName, 'accounting') || str_contains($permissionName, 'insurance')) {
+            'review surgery prices', 
+            'view cashier reports', 
+            'manage health insurance',
+            'view doctor profits'
+        ]) || str_contains($permissionName, 'insurance')) {
             return 'accounting';
         }
 
-        // 3. Cashier & Points of Sale
+        // 3. Cashier & POS
         if (str_contains($permissionName, 'cashier') || str_contains($permissionName, 'payment') || str_contains($permissionName, 'refund')) {
             return 'cashier';
         }

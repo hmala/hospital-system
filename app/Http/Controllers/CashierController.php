@@ -32,7 +32,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('view cashier appointments') && !$user->can('view cashier medical requests') && !$user->can('view cashier emergency')))) {
+        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('process consultation payments') && !$user->can('process medical requests payments') && !$user->can('process emergency payments')))) {
             abort(403, 'غير مصرح لك بالوصول إلى لوحة الكاشير');
         }
 

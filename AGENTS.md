@@ -59,19 +59,22 @@ Consult these files before making changes or proposing fixes:
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
-## Session log (2026-09-28 — فصل الحسابات العامة عن الصندوق وإحكام صلاحية نسب استقطاع الضمان)
+## Session log (2026-09-28 — فصل الصندوق والكاشير عن الحسابات العامة والمالية وحماية نسب الضمان)
 
 ### Done
-- **فصل الحسابات العامة عن الصندوق وإعادة تنظيم البطاقات (`RoleManagementController.php`, `layouts/app.blade.php`, `HealthInsuranceCategoryController.php`)**:
-  * فصل بطاقة «الصندوق والمالية» المدمجة إلى بطاقتين مستقلتين:
-    1. **بطاقة 3: الصندوق ونقاط القبض (`cashier`)**: مقتصرة على العمليات التشغيلية المباشرة (عرض الصندوق، تسديد كشفية الاستشارية، تسديد الفحوصات، تسديد الطوارئ، تسديد العمليات، استرجاع المبالغ، كاشير العمليات، والتقارير اليومية).
-    2. **بطاقة 4: الحسابات العامة والرقابة المالية (`accounting`)**: تشمل مراجعة وتدقيق أسعار العمليات الجراحية، حسابات وأرباح الأطباء، وإدارة نسب استقطاع الضمان الصحي.
-  * حجب صلاحيات الصندوق التكرارية والميتة (`view cashier appointments`, `view cashier medical requests`, `view cashier emergency`, `process payments`, `view payments`, `create payments`, `edit payments`) عبر `getHiddenPermissions()` وتبسيط منطق العرض في `cashier/index.blade.php` ليعتمد مباشرة على صلاحية الدفع أو الإدارة.
-  * إنشاء صلاحية مستقلة ومحكمة `manage health insurance` («إدارة نسب استقطاع الضمان الصحي») وحمايتها في [HealthInsuranceCategoryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HealthInsuranceCategoryController.php) لمنع وصول موظف الصندوق العادي إلى تعديل نسب الضمان وحصرها بالإدارة والمحاسب العام.
-  * فصل القائمة الجانبية في [layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php) إلى قسمين متميزين: «الصندوق ونقاط القبض» و «الحسابات العامة».
-  * ميغريشن آمن [2026_09_28_123000_separate_cashier_and_accounting_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_09_28_123000_separate_cashier_and_accounting_permissions.php) لإنشاء الصلاحيات وسحب الصلاحيات المتروكة.
+- **فصل الصندوق والكاشير عن الحسابات العامة والمالية (`layouts/app.blade.php`, `RoleManagementController.php`, `HealthInsuranceCategoryController.php`, `CashierController.php`, `RolesAndPermissionsSeeder.php`)**:
+  * فصل بطاقة «الصندوق والمالية» المدمجة السابقة إلى بطاقتين وقسمين مستقلين:
+    1. **الصندوق والكاشير (`cashier`)**:
+       - تشمل حصراً العمليات النقدية اليومية لموظف الصندوق: `view cashier` (دخول اللوحة)، `process consultation payments` (كشفية الاستشارية والسونار)، `process medical requests payments` (رسوم الفحوصات الطبية)، `process emergency payments` (فواتير الطوارئ)، `view cashier surgeries` (كاشير العمليات)، `process surgery payments` (دفعات وأجور العمليات والغرف)، و `process refunds` (استرجاع المبالغ للمرضى).
+       - تنظيف وحجب الصلاحيات المزدوجة والمتقادمة: `view cashier appointments`، `view cashier medical requests`، `view cashier emergency`، `process payments`، `create payments`، `edit payments`، `view payments`، و `view doctor profits`.
+    2. **الحسابات العامة والمالية (`accounting`)**:
+       - تشمل صلاحيات المحاسب المالي وإدارة التسعير: `review surgery prices` (مراجعة وتدقيق أسعار العمليات)، `view cashier reports` (التقارير وسجل الفواتير واليوميات المالية وحسابات الأطباء)، و `manage health insurance` (إدارة نسب وفئات استقطاع الضمان الصحي الوطني).
+  * حماية واجهة نسب استقطاع الضمان الصحي [HealthInsuranceCategoryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HealthInsuranceCategoryController.php) بصلاحية خاصة `manage health insurance` مع الإدارة، وعزلها من القائمة الجانبية بحيث لا تظهر للكاشير العادي بعد اليوم.
+  * تحديث القائمة الجانبية [app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php) لتقسيم الصندوق والحسابات إلى قسمين منفصلين قابلين للطي.
+  * إنشاء ميغريشن آمن [2026_09_28_130000_separate_cashier_and_accounting_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_09_28_130000_separate_cashier_and_accounting_permissions.php) لتطبيق الفصل التلقائي عند النشر وتحديث بذور الصلاحيات `RolesAndPermissionsSeeder.php`.
 - **الاختبارات الآلية (Automated Tests)**:
-  * تحديث [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) واختبار حجب والسماح لواجهة نسب الضمان بدقة والتأكد من تواجد 10 بطاقات تشغيلية منظمة: 9 passed (79 assertions).
+  * تحديث واجتياز اختبارات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) للبطاقات العشر وصلاحية نسب الضمان بنجاح 100%: 9 passed (79 assertions).
+  * اجتياز كامل اختبارات النظام العامة: 64 passed (357 assertions).
 
 ## Session log (2026-09-28 — تبسيط لوحة الصلاحيات وتنظيف مسارات المواعيد والزيارات اليدوية)
 

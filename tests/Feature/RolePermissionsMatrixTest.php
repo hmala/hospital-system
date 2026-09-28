@@ -71,8 +71,8 @@ class RolePermissionsMatrixTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('الاستعلامات والحجوزات');
         $response->assertSee('العيادات والاستشارية ومحطة الأطباء');
-        $response->assertSee('الصندوق ونقاط القبض');
-        $response->assertSee('الحسابات العامة والرقابة المالية');
+        $response->assertSee('الصندوق والكاشير');
+        $response->assertSee('الحسابات العامة والمالية');
         $response->assertSee('الأشعة والسونار والإيكو');
         $response->assertSee('المختبر والتحاليل الطبية');
         $response->assertSee('الصيدلية والمخزن الطبي');
@@ -401,5 +401,3 @@ class RolePermissionsMatrixTest extends TestCase
         $this->assertTrue($testRole->fresh()->hasPermissionTo('manage rooms'));
     }
 }
-
-

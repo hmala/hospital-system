@@ -43,18 +43,22 @@ class RolesAndPermissionsSeeder extends Seeder
             'cancel appointments',
             'change appointment status',
 
-            // صلاحيات الكاشير والحسابات
+            // صلاحيات الكاشير - منفصلة لكل قسم
             'view cashier',
+            'view cashier appointments',      // عرض مواعيد الاستشارية
             'process consultation payments',   // معالجة دفع الاستشارية
+            'view cashier medical requests',  // عرض الطلبات الطبية
             'process medical requests payments', // معالجة دفع الطلبات الطبية
+            'view cashier emergency',         // عرض طوارئ الكاشير
             'process emergency payments',     // معالجة دفع الطوارئ
             'view cashier surgeries',         // عرض عمليات الكاشير
             'process surgery payments',       // معالجة دفع العمليات
             'process refunds',                // معالجة الاسترجاع المالي
+            'process payments',               // معالجة المدفوعات العامة
             'view cashier reports',           // عرض تقارير المدفوعات
             'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
-            'manage health insurance',        // إدارة نسب وفئات استقطاع الضمان الصحي
+            'manage health insurance',        // إدارة فئات ونسب استقطاع الضمان الصحي الوطني
             
             // صلاحيات الزيارات
             'view visits',
@@ -290,7 +294,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier surgeries',
             'process surgery payments',
             'process refunds',
-            'view cashier reports',
             'view patients',
         ]);
 
@@ -314,7 +317,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view doctors',
             'view occupancy',
             'view cashier',
-            'view cashier appointments',
             'process consultation payments',
             'inquiry.create.checkup',
             // يمكن إضافة صلاحيات الأشعة حسب الحاجة:
