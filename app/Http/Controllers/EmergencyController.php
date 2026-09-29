@@ -220,7 +220,14 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('create emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (!$user) {
+            abort(401, 'غير مسجل الدخول');
+        }
+
+        if (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && 
+            !$user->can('create emergencies') && 
+            !$user->can('view emergencies') && 
+            !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
             abort(403, 'غير مصرح لك بالبحث عن المرضى');
         }
 
@@ -232,7 +239,6 @@ class EmergencyController extends Controller
         $patients = Patient::with('user')
             ->where(function($pQuery) use ($query) {
                 $pQuery->where('national_id', 'LIKE', "%{$query}%")
-                       ->orWhere('medical_number', 'LIKE', "%{$query}%")
                        ->orWhere('id', $query)
                        ->orWhereHas('user', function($q) use ($query) {
                            $q->where('name', 'LIKE', "%{$query}%")
@@ -242,15 +248,23 @@ class EmergencyController extends Controller
             ->limit(15)
             ->get()
             ->map(function($patient) {
+                $u = $patient->user;
+                $dob = $u->date_of_birth ?? null;
+                $age = null;
+                if ($dob) {
+                    try {
+                        $age = \Carbon\Carbon::parse($dob)->age;
+                    } catch (\Exception $e) {
+                        $age = null;
+                    }
+                }
                 return [
                     'id' => $patient->id,
-                    'name' => $patient->user->name ?? 'مريض بدون اسم',
-                    'phone' => $patient->user->phone ?? ($patient->phone ?? 'لا يوجد هاتف'),
+                    'name' => $u->name ?? 'مريض بدون اسم',
+                    'phone' => $u->phone ?? 'لا يوجد هاتف',
                     'national_id' => $patient->national_id ?? '',
-                    'medical_number' => $patient->medical_number ?? '',
-                    'gender' => $patient->gender === 'male' ? 'ذكر' : ($patient->gender === 'female' ? 'أنثى' : 'غير محدد'),
-                    'birth_date' => $patient->birth_date ?? '',
-                    'age' => $patient->age ?? ($patient->birth_date ? \Carbon\Carbon::parse($patient->birth_date)->age : ''),
+                    'gender' => ($u->gender ?? null) === 'male' ? 'ذكر' : (($u->gender ?? null) === 'female' ? 'أنثى' : 'غير محدد'),
+                    'age' => $age ? $age : '',
                 ];
             });
 

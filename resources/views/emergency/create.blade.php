@@ -70,8 +70,8 @@
                                                 <div class="small text-muted d-flex flex-wrap gap-2 mt-1">
                                                     <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ $selectedPatient->user->phone ?? ($selectedPatient->phone ?? 'لا يوجد') }}</span></span>
                                                     <span class="badge bg-secondary" id="selectedPatientIdBadge">#{{ $selectedPatient->id ?? '' }}</span>
-                                                    @if(isset($selectedPatient) && ($selectedPatient->medical_number || $selectedPatient->national_id))
-                                                        <span class="badge bg-info text-dark" id="selectedPatientRefBadge">{{ $selectedPatient->medical_number ?: $selectedPatient->national_id }}</span>
+                                                    @if(isset($selectedPatient) && $selectedPatient->national_id)
+                                                        <span class="badge bg-info text-dark" id="selectedPatientRefBadge">{{ $selectedPatient->national_id }}</span>
                                                     @endif
                                                 </div>
                                             </div>
@@ -238,10 +238,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('HTTP status ' + res.status);
+                    }
+                    return res.json();
+                })
                 .then(patients => {
                     searchSpinner.style.display = 'none';
-                    if (!patients || patients.length === 0) {
+                    if (!Array.isArray(patients) || patients.length === 0) {
                         searchResults.innerHTML = `
                             <div class="list-group-item text-center text-muted py-3">
                                 <i class="fas fa-user-slash me-1"></i> لم يتم العثور على مريض مطابق. 
@@ -259,10 +264,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
+                    // حفظ مؤقت للمرضى في خريطة لتجنب أخطاء الاقتباس
+                    window.currentPatientsMap = {};
+                    patients.forEach(p => {
+                        window.currentPatientsMap[p.id] = p;
+                    });
+
                     searchResults.innerHTML = patients.map(p => `
                         <button type="button" 
                                 class="list-group-item list-group-item-action text-end d-flex justify-content-between align-items-center py-2 patient-result-item" 
-                                data-patient='${JSON.stringify(p).replace(/'/g, "&apos;")}'>
+                                data-patient-id="${p.id}">
                             <div>
                                 <div class="fw-bold text-primary mb-1">
                                     <i class="fas fa-user-circle me-1"></i>${p.name}
@@ -274,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="text-start">
                                 <span class="badge bg-primary">#${p.id}</span>
-                                ${p.medical_number ? `<span class="badge bg-secondary ms-1">${p.medical_number}</span>` : ''}
+                                ${p.national_id ? `<span class="badge bg-secondary ms-1">${p.national_id}</span>` : ''}
                             </div>
                         </button>
                     `).join('');
@@ -284,8 +295,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // ربط أحداث النقر على المرضى
                     document.querySelectorAll('.patient-result-item').forEach(item => {
                         item.addEventListener('click', function() {
-                            const patient = JSON.parse(this.getAttribute('data-patient'));
-                            selectPatient(patient);
+                            const pid = this.getAttribute('data-patient-id');
+                            const patient = window.currentPatientsMap ? window.currentPatientsMap[pid] : null;
+                            if (patient) {
+                                selectPatient(patient);
+                            }
                         });
                     });
                 })
@@ -293,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Search error:', err);
                     searchSpinner.style.display = 'none';
                 });
-            }, 300);
+            }, 250);
         });
 
         // إغلاق النتائج عند النقر خارجها
@@ -318,8 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
             refBadge.className = 'badge bg-info text-dark';
             selectedIdBadge.parentNode.appendChild(refBadge);
         }
-        if (patient.medical_number || patient.national_id) {
-            refBadge.textContent = patient.medical_number || patient.national_id;
+        if (patient.national_id) {
+            refBadge.textContent = patient.national_id;
             refBadge.style.display = 'inline-block';
         } else {
             refBadge.style.display = 'none';
