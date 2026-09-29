@@ -30,6 +30,24 @@
             padding: 16mm 20mm;
             position: relative;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .report-content-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            flex: 1 0 auto;
+        }
+
+        .report-content-table > tbody > tr > td {
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .footer-print-space {
+            display: none;
         }
 
         /* Watermark Background */
@@ -350,35 +368,48 @@
         }
 
         /* Footer */
-        .report-footer {
-            margin-top: 35px;
+        .report-footer-wrapper {
+            margin-top: auto;
+            width: 100%;
             padding-top: 14px;
+        }
+
+        .report-footer {
             border-top: 1px solid #dee2e6;
+            padding-top: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 12px;
-            font-style: italic;
+            font-size: 11.5px;
+            color: #333;
+            font-family: 'Segoe UI', 'Tajawal', Tahoma, sans-serif;
+        }
+
+        .footer-printed-by {
+            font-size: 11.5px;
             color: #333;
         }
 
         .footer-printed-by span {
-            font-weight: bold;
-            font-style: normal;
+            font-weight: 700;
+            color: #1e3a5f;
         }
 
         .footer-datetime {
-            display: flex;
-            gap: 20px;
-            font-style: italic;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #444;
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            letter-spacing: 0.3px;
         }
 
         .hospital-contact-line {
             text-align: center;
-            font-size: 11px;
-            color: #777;
-            margin-top: 8px;
-            font-style: normal;
+            font-size: 10px;
+            color: #555;
+            margin-top: 6px;
+            font-family: 'Segoe UI', 'Tajawal', Tahoma, sans-serif;
+            direction: rtl;
         }
 
         /* Print Media Styles */
@@ -390,6 +421,7 @@
             body {
                 background: #fff;
                 padding: 0;
+                margin: 0;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -397,16 +429,58 @@
             .report-page {
                 box-shadow: none;
                 margin: 0;
-                padding: 12mm 15mm;
+                padding: 0;
                 max-width: 100%;
                 min-height: auto;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                display: block;
+            }
+
+            .decorative-border {
+                display: none;
+            }
+
+            .report-page::before {
+                position: fixed;
+                inset: 0;
+                opacity: 0.04;
+            }
+
+            .footer-print-space {
+                display: block;
+                height: 52px;
+            }
+
+            .report-footer-wrapper {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                background: #ffffff;
+                padding: 6px 0 2px 0;
+                z-index: 9999;
+            }
+
+            .test-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .patient-info-grid {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .report-header {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
 
             @page {
                 size: A4 portrait;
-                margin: 0;
+                margin: 10mm 15mm 15mm 15mm;
             }
         }
     </style>
@@ -500,9 +574,14 @@
             <div class="corner-pattern bottom-left"></div>
         </div>
 
-        <!-- Header Section with Logo, Badge & Hospital Info -->
-        <!-- Header Section -->
-        <div class="report-header">
+        <!-- Report Content in Layout Table for multi-page print footer support -->
+        <table class="report-content-table">
+            <tbody>
+                <tr>
+                    <td>
+
+                        <!-- Header Section -->
+                        <div class="report-header">
             <div class="header-top-row">
                 <!-- Left: Hospital Logo (in place of Lab Icon badge) -->
                 <div class="hospital-logo-side">
@@ -728,20 +807,32 @@
                 </div>
             @endif
         @endif
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>
+                        <div class="footer-print-space"></div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
 
-        <!-- Footer -->
-        <div class="report-footer">
-            <div class="footer-printed-by">
-                Printed by : <span>{{ auth()->user()->name ?? 'Hadeel' }}</span>
+        <!-- Footer: Always at the bottom of every page on print and bottom on screen -->
+        <div class="report-footer-wrapper">
+            <div class="report-footer">
+                <div class="footer-printed-by">
+                    Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
+                </div>
+                <div class="footer-datetime">
+                    <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
+                </div>
             </div>
-            <div class="footer-datetime">
-                <span>{{ now()->format('d-m-Y') }}</span>
-                <span>{{ now()->format('g:i:sA') }}</span>
-            </div>
-        </div>
 
-        <div class="hospital-contact-line">
-            📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+            <div class="hospital-contact-line">
+                📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+            </div>
         </div>
 
     </div>
