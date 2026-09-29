@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinical Laboratory Report - {{ $request->visit?->patient?->user?->name ?? 'Patient' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -125,32 +128,20 @@
             position: relative;
         }
 
-        .lab-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #e8f4f4;
-            color: #1e7e8f;
-            border: 1px solid #1e7e8f;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 13px;
-        }
-
-        .lab-badge img {
-            width: 20px;
-            height: 20px;
-        }
-
-        .hospital-logo-container {
-            text-align: center;
+        .hospital-logo-side {
+            text-align: left;
+            min-width: 180px;
         }
 
         .hospital-logo-img {
-            height: 95px;
-            max-width: 220px;
+            height: 85px;
+            max-width: 180px;
             object-fit: contain;
+        }
+
+        .clinical-lab-center {
+            text-align: center;
+            flex-grow: 1;
         }
 
         .hospital-title-side {
@@ -159,19 +150,22 @@
         }
 
         .hospital-name-ar {
-            font-size: 20px;
-            font-weight: bold;
-            color: #1e7e8f;
-            font-family: 'Tahoma', Arial, sans-serif;
-            margin-bottom: 3px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e3a5f;
+            font-family: 'Tajawal', 'Cairo', 'Tahoma', sans-serif;
+            margin-bottom: 2px;
             direction: rtl;
+            line-height: 1.25;
         }
 
         .hospital-name-en {
-            font-size: 13px;
-            color: #555;
+            font-size: 9.5px;
+            color: #555555;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            line-height: 1.2;
         }
 
         .clinical-lab-banner {
@@ -507,24 +501,25 @@
         </div>
 
         <!-- Header Section with Logo, Badge & Hospital Info -->
+        <!-- Header Section -->
         <div class="report-header">
             <div class="header-top-row">
-                <div class="lab-badge">
-                    <img src="{{ asset('images/' . $badgeIcon) }}" alt="Lab Icon">
-                    <span>{{ $badgeText }}</span>
-                </div>
-
-                <div class="hospital-logo-container">
+                <!-- Left: Hospital Logo (in place of Lab Icon badge) -->
+                <div class="hospital-logo-side">
                     <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img">
                 </div>
 
+                <!-- Center: Clinical Laboratory Title -->
+                <div class="clinical-lab-center">
+                    <div class="clinical-lab-banner">Clinical Laboratory</div>
+                </div>
+
+                <!-- Right: Hospital Name in Arabic & English -->
                 <div class="hospital-title-side">
                     <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
                     <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
                 </div>
             </div>
-
-          
         </div>
 
         <!-- Patient Info Box -->
