@@ -78,8 +78,8 @@ return new class extends Migration
             if ($perm) {
                 $nonAdminRoles = Role::whereNotIn('name', ['admin', 'admin-hsop', 'hospital_admin'])->get();
                 foreach ($nonAdminRoles as $role) {
-                    if ($role->hasPermissionTo($obsPerm)) {
-                        $role->revokePermissionTo($obsPerm);
+                    if ($role->hasPermissionTo($perm)) {
+                        $role->revokePermissionTo($perm);
                     }
                 }
             }

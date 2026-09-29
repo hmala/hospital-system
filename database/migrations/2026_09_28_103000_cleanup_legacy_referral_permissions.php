@@ -22,10 +22,13 @@ return new class extends Migration
 
         // Revoke legacy referral permissions from all non-admin roles
         $roles = Role::whereNotIn('name', ['admin', 'admin-hsop'])->get();
-        foreach ($roles as $role) {
-            foreach ($legacyReferralPermissions as $permName) {
-                if ($role->hasPermissionTo($permName)) {
-                    $role->revokePermissionTo($permName);
+        foreach ($legacyReferralPermissions as $permName) {
+            $perm = Permission::where('name', $permName)->first();
+            if ($perm) {
+                foreach ($roles as $role) {
+                    if ($role->hasPermissionTo($perm)) {
+                        $role->revokePermissionTo($perm);
+                    }
                 }
             }
         }

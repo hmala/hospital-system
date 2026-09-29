@@ -24,18 +24,24 @@ return new class extends Migration
         }
 
         // 2. Grant manage health insurance to accountant and admin
-        $adminRoles = Role::whereIn('name', ['admin', 'admin-hsop', 'accountant'])->get();
-        foreach ($adminRoles as $role) {
-            if (!$role->hasPermissionTo('manage health insurance')) {
-                $role->givePermissionTo('manage health insurance');
+        $healthInsurancePerm = Permission::where('name', 'manage health insurance')->where('guard_name', 'web')->first();
+        if ($healthInsurancePerm) {
+            $adminRoles = Role::whereIn('name', ['admin', 'admin-hsop', 'accountant'])->get();
+            foreach ($adminRoles as $role) {
+                if (!$role->hasPermissionTo($healthInsurancePerm)) {
+                    $role->givePermissionTo($healthInsurancePerm);
+                }
             }
         }
 
         // Grant process refunds to cashier and admin
-        $cashierRoles = Role::whereIn('name', ['admin', 'admin-hsop', 'cashier'])->get();
-        foreach ($cashierRoles as $role) {
-            if (!$role->hasPermissionTo('process refunds')) {
-                $role->givePermissionTo('process refunds');
+        $refundPerm = Permission::where('name', 'process refunds')->where('guard_name', 'web')->first();
+        if ($refundPerm) {
+            $cashierRoles = Role::whereIn('name', ['admin', 'admin-hsop', 'cashier'])->get();
+            foreach ($cashierRoles as $role) {
+                if (!$role->hasPermissionTo($refundPerm)) {
+                    $role->givePermissionTo($refundPerm);
+                }
             }
         }
 
@@ -52,10 +58,13 @@ return new class extends Migration
         ];
 
         $nonAdminRoles = Role::whereNotIn('name', ['admin', 'admin-hsop'])->get();
-        foreach ($nonAdminRoles as $role) {
-            foreach ($obsoletePermissions as $permName) {
-                if ($role->hasPermissionTo($permName)) {
-                    $role->revokePermissionTo($permName);
+        foreach ($obsoletePermissions as $permName) {
+            $perm = Permission::where('name', $permName)->first();
+            if ($perm) {
+                foreach ($nonAdminRoles as $role) {
+                    if ($role->hasPermissionTo($perm)) {
+                        $role->revokePermissionTo($perm);
+                    }
                 }
             }
         }

@@ -22,10 +22,13 @@ return new class extends Migration
 
         // Revoke legacy manual visit CRUD from non-admin roles
         $roles = Role::whereNotIn('name', ['admin', 'admin-hsop'])->get();
-        foreach ($roles as $role) {
-            foreach ($legacyVisitPermissions as $permName) {
-                if ($role->hasPermissionTo($permName)) {
-                    $role->revokePermissionTo($permName);
+        foreach ($legacyVisitPermissions as $permName) {
+            $perm = Permission::where('name', $permName)->first();
+            if ($perm) {
+                foreach ($roles as $role) {
+                    if ($role->hasPermissionTo($perm)) {
+                        $role->revokePermissionTo($perm);
+                    }
                 }
             }
         }
