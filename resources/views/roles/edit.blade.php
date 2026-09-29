@@ -180,41 +180,53 @@
                             @endphp
                             <div class="accordion-item border-0 shadow-sm rounded-3 mb-3 overflow-hidden permission-module-item" data-module="{{ $moduleKey }}">
                                 <h2 class="accordion-header" id="{{ $headerId }}">
-                                    <div class="accordion-button collapsed py-3 px-4 bg-white" 
+                                    <div class="accordion-button collapsed py-3 px-3 px-md-4 bg-white d-flex align-items-center justify-content-between flex-nowrap" 
                                          type="button" 
                                          data-bs-toggle="collapse" 
                                          data-bs-target="#{{ $collapseId }}" 
                                          aria-expanded="false" 
                                          aria-controls="{{ $collapseId }}">
-                                        <div class="d-flex justify-content-between align-items-center w-100 me-3 flex-wrap gap-2">
-                                            <div class="d-flex align-items-center">
-                                                <div class="rounded-3 bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} p-2 me-3 fs-5">
-                                                    <i class="fas {{ $moduleInfo['icon'] }}"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="fw-bold fs-6 text-dark">{{ $moduleInfo['name'] }}</span>
-                                                        <span class="badge bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} border border-{{ $moduleInfo['color'] }} border-opacity-25 module-badge" id="badge_{{ $moduleKey }}">
-                                                            {{ $checkedInModule }} / {{ $totalInModule }}
-                                                        </span>
-                                                    </div>
-                                                    <small class="text-muted d-block">{{ $moduleInfo['description'] }}</small>
-                                                </div>
+                                        
+                                        <!-- عنوان وأيقونة القسم والوصف -->
+                                        <div class="d-flex align-items-center min-w-0 me-3">
+                                            <div class="module-icon-box rounded-3 bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} d-flex align-items-center justify-content-center me-3 flex-shrink-0">
+                                                <i class="fas {{ $moduleInfo['icon'] }} fs-5"></i>
                                             </div>
+                                            <div class="min-w-0">
+                                                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                                    <span class="fw-bold fs-6 text-dark text-truncate">{{ $moduleInfo['name'] }}</span>
+                                                    <span class="badge bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} border border-{{ $moduleInfo['color'] }} border-opacity-25 rounded-pill px-2 py-1 module-badge" id="badge_{{ $moduleKey }}">
+                                                        {{ $checkedInModule }} / {{ $totalInModule }}
+                                                    </span>
+                                                </div>
+                                                <small class="text-muted d-block text-truncate" style="max-width: 620px;" title="{{ $moduleInfo['description'] }}">
+                                                    {{ $moduleInfo['description'] }}
+                                                </small>
+                                            </div>
+                                        </div>
 
-                                            <div class="d-flex align-items-center gap-3 ms-auto" onclick="event.stopPropagation();">
-                                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                        <!-- مفتاح تفعيل/إطفاء القسم وسهم الطي والتوسيع -->
+                                        <div class="d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 ms-auto">
+                                            <div class="module-toggle-capsule d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                                <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
                                                     <input class="form-check-input select-all-module" 
                                                            type="checkbox" 
                                                            role="switch" 
                                                            id="switch_{{ $moduleKey }}"
                                                            data-module="{{ $moduleKey }}"
                                                            {{ $checkedInModule === $totalInModule ? 'checked' : '' }}
-                                                           style="cursor: pointer; width: 2.8em; height: 1.4em;">
-                                                    <label class="form-check-label small fw-bold text-muted cursor-pointer" for="switch_{{ $moduleKey }}">
-                                                        تحديد كامل القسم
-                                                    </label>
+                                                           title="تفعيل أو إطفاء كافة صلاحيات هذا القسم">
                                                 </div>
+                                                <label class="form-check-label small fw-bold {{ $checkedInModule === $totalInModule ? 'text-success' : ($checkedInModule > 0 ? 'text-warning' : 'text-muted') }} cursor-pointer user-select-none mb-0 d-none d-sm-inline" 
+                                                       for="switch_{{ $moduleKey }}" 
+                                                       id="switch_label_{{ $moduleKey }}"
+                                                       style="min-width: 85px; text-align: center;">
+                                                    {{ $checkedInModule === $totalInModule ? 'مفعل بالكامل' : ($checkedInModule > 0 ? "تفعيل جزئي ({$checkedInModule})" : 'معطل بالكامل') }}
+                                                </label>
+                                            </div>
+
+                                            <div class="chevron-box rounded-circle bg-light d-flex align-items-center justify-content-center text-secondary">
+                                                <i class="fas fa-chevron-down fs-7 chevron-icon"></i>
                                             </div>
                                         </div>
                                     </div>
@@ -330,6 +342,16 @@
     .table-active-row {
         background-color: rgba(13, 110, 253, 0.04) !important;
     }
+    .accordion-button::after {
+        display: none !important;
+    }
+    .accordion-button {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .accordion-button:hover {
+        background-color: #f8fafc !important;
+    }
     .accordion-button:not(.collapsed) {
         background-color: #f8fafc !important;
         box-shadow: none !important;
@@ -337,6 +359,44 @@
     }
     .accordion-button:focus {
         box-shadow: none !important;
+    }
+    .module-icon-box {
+        width: 44px;
+        height: 44px;
+    }
+    .module-toggle-capsule {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 50rem;
+        padding: 4px 12px;
+        transition: all 0.2s ease;
+    }
+    .module-toggle-capsule:hover {
+        background-color: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    .module-toggle-capsule .form-check-input {
+        width: 2.3em !important;
+        height: 1.25em !important;
+        cursor: pointer;
+        margin: 0 !important;
+        float: none !important;
+    }
+    .chevron-box {
+        width: 32px;
+        height: 32px;
+        transition: background-color 0.2s ease;
+    }
+    .accordion-button:not(.collapsed) .chevron-box {
+        background-color: #e0edff !important;
+        color: #0d6efd !important;
+    }
+    .accordion-button:not(.collapsed) .chevron-icon {
+        transform: rotate(180deg);
+        color: #0d6efd !important;
+    }
+    .chevron-icon {
+        transition: transform 0.25s ease;
     }
     .form-switch .form-check-input:checked {
         background-color: #0d6efd;
@@ -626,6 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const checked = document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]:checked`).length;
         const badge = document.getElementById(`badge_${moduleKey}`);
         const switchElem = document.getElementById(`switch_${moduleKey}`);
+        const statusLabel = document.getElementById(`switch_label_${moduleKey}`);
 
         if (badge) {
             badge.textContent = `${checked} / ${total}`;
@@ -633,6 +694,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (switchElem) {
             switchElem.checked = (checked === total && total > 0);
             switchElem.indeterminate = (checked > 0 && checked < total);
+        }
+        if (statusLabel) {
+            if (checked === total && total > 0) {
+                statusLabel.textContent = 'مفعل بالكامل';
+                statusLabel.className = 'form-check-label small fw-bold text-success cursor-pointer user-select-none mb-0 d-none d-sm-inline';
+            } else if (checked === 0) {
+                statusLabel.textContent = 'معطل بالكامل';
+                statusLabel.className = 'form-check-label small fw-bold text-muted cursor-pointer user-select-none mb-0 d-none d-sm-inline';
+            } else {
+                statusLabel.textContent = `تفعيل جزئي (${checked})`;
+                statusLabel.className = 'form-check-label small fw-bold text-warning cursor-pointer user-select-none mb-0 d-none d-sm-inline';
+            }
         }
     }
 
