@@ -165,7 +165,11 @@ class EmergencyController extends Controller
             abort(403, 'غير مصرح لك بإنشاء حالات طوارئ');
         }
 
-        $patients = Patient::with('user')->get();
+        $selectedPatient = null;
+        $selectedPatientId = old('patient_id', request('patient_id'));
+        if ($selectedPatientId) {
+            $selectedPatient = Patient::with('user')->find($selectedPatientId);
+        }
 
         $daysMap = [
             'Saturday' => 'السبت',
@@ -201,9 +205,56 @@ class EmergencyController extends Controller
                 ->get();
         }
 
-        $nurses = User::role('nurse')->where('is_active', true)->get();
+        $nurses = collect();
+        if (\Spatie\Permission\Models\Role::where('name', 'nurse')->where('guard_name', 'web')->exists()) {
+            $nurses = User::role('nurse')->where('is_active', true)->get();
+        }
 
-        return view('emergency.create', compact('patients', 'doctors', 'nurses'));
+        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses'));
+    }
+
+    /**
+     * البحث التفاعلي المباشر عن المرضى لحالات الطوارئ (AJAX)
+     */
+    public function searchPatients(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('admin') && !$user->can('create emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بالبحث عن المرضى');
+        }
+
+        $query = trim($request->get('query', ''));
+        if (empty($query) || mb_strlen($query) < 1) {
+            return response()->json([]);
+        }
+
+        $patients = Patient::with('user')
+            ->where(function($pQuery) use ($query) {
+                $pQuery->where('national_id', 'LIKE', "%{$query}%")
+                       ->orWhere('medical_number', 'LIKE', "%{$query}%")
+                       ->orWhere('id', $query)
+                       ->orWhereHas('user', function($q) use ($query) {
+                           $q->where('name', 'LIKE', "%{$query}%")
+                             ->orWhere('phone', 'LIKE', "%{$query}%");
+                       });
+            })
+            ->limit(15)
+            ->get()
+            ->map(function($patient) {
+                return [
+                    'id' => $patient->id,
+                    'name' => $patient->user->name ?? 'مريض بدون اسم',
+                    'phone' => $patient->user->phone ?? ($patient->phone ?? 'لا يوجد هاتف'),
+                    'national_id' => $patient->national_id ?? '',
+                    'medical_number' => $patient->medical_number ?? '',
+                    'gender' => $patient->gender === 'male' ? 'ذكر' : ($patient->gender === 'female' ? 'أنثى' : 'غير محدد'),
+                    'birth_date' => $patient->birth_date ?? '',
+                    'age' => $patient->age ?? ($patient->birth_date ? \Carbon\Carbon::parse($patient->birth_date)->age : ''),
+                ];
+            });
+
+        return response()->json($patients);
     }
 
     /**

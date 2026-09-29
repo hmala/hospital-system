@@ -28,34 +28,74 @@
                         @csrf
 
                         <div class="row">
-                            <!-- اختيار المريض -->
+                            <!-- اختيار المريض التفاعلي بالبحث المباشر -->
                             <div class="col-md-6 mb-3">
-                                <label for="patient_id" class="form-label">المريض *</label>
-                                <div class="input-group">
-                                    <select class="form-select @error('patient_id') is-invalid @enderror"
-                                            id="patient_id"
-                                            name="patient_id"
-                                            required>
-                                        <option value="">اختر المريض</option>
-                                        @foreach($patients as $patient)
-                                            <option value="{{ $patient->id }}" {{ old('patient_id') == $patient->id ? 'selected' : '' }}>
-                                                {{ $patient->user->name ?? 'مريض بدون بيانات' }} - {{ $patient->user->phone ?? '' }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" class="btn btn-outline-secondary" id="newPatientBtn" title="مريض جديد">
-                                        <i class="fas fa-user-plus"></i>
-                                    </button>
+                                <label for="patientSearchInput" class="form-label fw-bold">المريض <span class="text-danger">*</span></label>
+                                
+                                <!-- الحقل المخفي لـ patient_id -->
+                                <input type="hidden" name="patient_id" id="patient_id" value="{{ old('patient_id', $selectedPatient->id ?? '') }}">
+
+                                <!-- واجهة البحث المباشر -->
+                                <div id="patientSearchContainer" style="{{ (old('patient_id') || isset($selectedPatient)) && !old('new_patient_name') ? 'display: none;' : '' }}">
+                                    <div class="position-relative">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-primary"></i></span>
+                                            <input type="text" 
+                                                   class="form-control border-start-0 @error('patient_id') is-invalid @enderror" 
+                                                   id="patientSearchInput" 
+                                                   placeholder="ابحث باسم المريض، رقم الهاتف، أو الرقم الطبي / الوطني..."
+                                                   autocomplete="off">
+                                            <button type="button" class="btn btn-outline-info" id="newPatientBtn" title="تسجيل مريض جديد غير مسجل">
+                                                <i class="fas fa-user-plus me-1"></i> مريض جديد
+                                            </button>
+                                        </div>
+                                        <div id="patientSearchSpinner" class="position-absolute" style="left: 125px; top: 10px; display: none;">
+                                            <span class="spinner-border spinner-border-sm text-primary"></span>
+                                        </div>
+                                        <!-- قائمة نتائج البحث المنبثقة -->
+                                        <div id="patientSearchResults" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; max-height: 280px; overflow-y: auto; display: none;"></div>
+                                    </div>
+                                    <div class="form-text text-muted mt-1"><i class="fas fa-info-circle me-1"></i>اكتب حرفين أو أكثر للبحث السريع وعرض النتائج المطابقة فورياً.</div>
                                 </div>
+
+                                <!-- بطاقة المريض المختار -->
+                                <div id="selectedPatientCard" class="card border-primary bg-light mb-2 shadow-sm" style="{{ (old('patient_id') || isset($selectedPatient)) && !old('new_patient_name') ? '' : 'display: none;' }}">
+                                    <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                                                <i class="fas fa-user fa-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-primary" id="selectedPatientName">{{ $selectedPatient->user->name ?? '' }}</h6>
+                                                <div class="small text-muted d-flex flex-wrap gap-2 mt-1">
+                                                    <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ $selectedPatient->user->phone ?? ($selectedPatient->phone ?? 'لا يوجد') }}</span></span>
+                                                    <span class="badge bg-secondary" id="selectedPatientIdBadge">#{{ $selectedPatient->id ?? '' }}</span>
+                                                    @if(isset($selectedPatient) && ($selectedPatient->medical_number || $selectedPatient->national_id))
+                                                        <span class="badge bg-info text-dark" id="selectedPatientRefBadge">{{ $selectedPatient->medical_number ?: $selectedPatient->national_id }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="clearSelectedPatientBtn">
+                                            <i class="fas fa-times me-1"></i> تغيير المريض
+                                        </button>
+                                    </div>
+                                </div>
+
                                 @error('patient_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ $message }}</div>
                                 @enderror
                             </div>
 
                             <!-- حقول إنشاء مريض جديد -->
-                            <div class="col-md-12 mb-3" id="newPatientFields" style="display: none;">
+                            <div class="col-md-12 mb-3" id="newPatientFields" style="{{ old('new_patient_name') ? '' : 'display: none;' }}">
                                 <div class="card border-info p-3">
-                                    <h6 class="mb-3 text-info">بيانات المريض الجديد</h6>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0 text-info fw-bold"><i class="fas fa-user-plus me-1"></i>بيانات المريض الجديد غير المسجل</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelNewPatientBtn">
+                                            <i class="fas fa-arrow-right me-1"></i> العودة لاختيار مريض مسجل
+                                        </button>
+                                    </div>
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label">الاسم الكامل *</label>
@@ -83,7 +123,6 @@
                                             <input type="date" class="form-control @error('new_patient_dob') is-invalid @enderror" name="new_patient_dob" id="new_patient_dob" value="{{ old('new_patient_dob') }}">
                                             @error('new_patient_dob')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
@@ -158,28 +197,232 @@
 </div>
 
 <script>
-    document.getElementById('newPatientBtn').addEventListener('click', function() {
-        const fields = document.getElementById('newPatientFields');
-        if (!fields) return;
-        if (fields.style.display === 'block') {
-            fields.style.display = 'none';
-            document.getElementById('patient_id').setAttribute('required', 'required');
-        } else {
-            fields.style.display = 'block';
-            document.getElementById('patient_id').removeAttribute('required');
-        }
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('patientSearchInput');
+    const searchResults = document.getElementById('patientSearchResults');
+    const searchSpinner = document.getElementById('patientSearchSpinner');
+    const searchContainer = document.getElementById('patientSearchContainer');
+    const hiddenPatientId = document.getElementById('patient_id');
+    const selectedCard = document.getElementById('selectedPatientCard');
+    const selectedName = document.getElementById('selectedPatientName');
+    const selectedPhone = document.getElementById('selectedPatientPhone');
+    const selectedIdBadge = document.getElementById('selectedPatientIdBadge');
+    const clearPatientBtn = document.getElementById('clearSelectedPatientBtn');
+    
+    const newPatientBtn = document.getElementById('newPatientBtn');
+    const cancelNewPatientBtn = document.getElementById('cancelNewPatientBtn');
+    const newPatientFields = document.getElementById('newPatientFields');
+    const newPatientNameInput = document.getElementById('new_patient_name');
 
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const fields = document.getElementById('newPatientFields');
-        if (fields && fields.style.display === 'block') {
-            const name = document.getElementById('new_patient_name').value.trim();
-            if (!name) {
-                e.preventDefault();
-                alert('يرجى إدخال اسم المريض الجديد');
-                document.getElementById('new_patient_name').focus();
+    let searchTimeout = null;
+
+    // البحث المباشر
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+
+            if (query.length < 1) {
+                searchResults.innerHTML = '';
+                searchResults.style.display = 'none';
+                searchSpinner.style.display = 'none';
+                return;
+            }
+
+            searchSpinner.style.display = 'block';
+
+            searchTimeout = setTimeout(() => {
+                fetch(`{{ route('emergency.search-patients') }}?query=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.json())
+                .then(patients => {
+                    searchSpinner.style.display = 'none';
+                    if (!patients || patients.length === 0) {
+                        searchResults.innerHTML = `
+                            <div class="list-group-item text-center text-muted py-3">
+                                <i class="fas fa-user-slash me-1"></i> لم يتم العثور على مريض مطابق. 
+                                <button type="button" class="btn btn-link btn-sm p-0 text-info fw-bold" id="quickNewPatientBtn">تسجيله كمريض جديد؟</button>
+                            </div>
+                        `;
+                        searchResults.style.display = 'block';
+
+                        const quickBtn = document.getElementById('quickNewPatientBtn');
+                        if (quickBtn) {
+                            quickBtn.addEventListener('click', () => {
+                                showNewPatientMode(query);
+                            });
+                        }
+                        return;
+                    }
+
+                    searchResults.innerHTML = patients.map(p => `
+                        <button type="button" 
+                                class="list-group-item list-group-item-action text-end d-flex justify-content-between align-items-center py-2 patient-result-item" 
+                                data-patient='${JSON.stringify(p).replace(/'/g, "&apos;")}'>
+                            <div>
+                                <div class="fw-bold text-primary mb-1">
+                                    <i class="fas fa-user-circle me-1"></i>${p.name}
+                                </div>
+                                <div class="small text-muted">
+                                    <i class="fas fa-phone-alt me-1 text-secondary"></i>${p.phone} 
+                                    ${p.age ? ` | <i class="fas fa-birthday-cake me-1 text-secondary"></i>${p.age} سنة (${p.gender})` : ''}
+                                </div>
+                            </div>
+                            <div class="text-start">
+                                <span class="badge bg-primary">#${p.id}</span>
+                                ${p.medical_number ? `<span class="badge bg-secondary ms-1">${p.medical_number}</span>` : ''}
+                            </div>
+                        </button>
+                    `).join('');
+
+                    searchResults.style.display = 'block';
+
+                    // ربط أحداث النقر على المرضى
+                    document.querySelectorAll('.patient-result-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            const patient = JSON.parse(this.getAttribute('data-patient'));
+                            selectPatient(patient);
+                        });
+                    });
+                })
+                .catch(err => {
+                    console.error('Search error:', err);
+                    searchSpinner.style.display = 'none';
+                });
+            }, 300);
+        });
+
+        // إغلاق النتائج عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
+        });
+    }
+
+    // دالة اختيار المريض
+    function selectPatient(patient) {
+        hiddenPatientId.value = patient.id;
+        selectedName.textContent = patient.name;
+        selectedPhone.textContent = patient.phone;
+        selectedIdBadge.textContent = `#${patient.id}`;
+
+        let refBadge = document.getElementById('selectedPatientRefBadge');
+        if (!refBadge) {
+            refBadge = document.createElement('span');
+            refBadge.id = 'selectedPatientRefBadge';
+            refBadge.className = 'badge bg-info text-dark';
+            selectedIdBadge.parentNode.appendChild(refBadge);
+        }
+        if (patient.medical_number || patient.national_id) {
+            refBadge.textContent = patient.medical_number || patient.national_id;
+            refBadge.style.display = 'inline-block';
+        } else {
+            refBadge.style.display = 'none';
+        }
+
+        searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
+        searchInput.value = '';
+        searchContainer.style.display = 'none';
+        selectedCard.style.display = 'block';
+
+        // إخفاء حقول المريض الجديد إن كانت مفتوحة
+        if (newPatientFields) {
+            newPatientFields.style.display = 'none';
+            clearNewPatientInputs();
+        }
+    }
+
+    // زر تغيير المريض
+    if (clearPatientBtn) {
+        clearPatientBtn.addEventListener('click', function() {
+            hiddenPatientId.value = '';
+            selectedCard.style.display = 'none';
+            searchContainer.style.display = 'block';
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+        });
+    }
+
+    // زر مريض جديد
+    function showNewPatientMode(prefillName = '') {
+        hiddenPatientId.value = '';
+        selectedCard.style.display = 'none';
+        searchContainer.style.display = 'none';
+        searchResults.style.display = 'none';
+        if (newPatientFields) {
+            newPatientFields.style.display = 'block';
+            if (prefillName && newPatientNameInput) {
+                newPatientNameInput.value = prefillName;
+            }
+            if (newPatientNameInput) {
+                newPatientNameInput.focus();
             }
         }
-    });
+    }
+
+    if (newPatientBtn) {
+        newPatientBtn.addEventListener('click', function() {
+            showNewPatientMode(searchInput ? searchInput.value.trim() : '');
+        });
+    }
+
+    if (cancelNewPatientBtn) {
+        cancelNewPatientBtn.addEventListener('click', function() {
+            if (newPatientFields) {
+                newPatientFields.style.display = 'none';
+                clearNewPatientInputs();
+            }
+            searchContainer.style.display = 'block';
+            if (searchInput) {
+                searchInput.focus();
+            }
+        });
+    }
+
+    function clearNewPatientInputs() {
+        if (newPatientNameInput) newPatientNameInput.value = '';
+        const phone = document.getElementById('new_patient_phone');
+        if (phone) phone.value = '';
+        const dob = document.getElementById('new_patient_dob');
+        if (dob) dob.value = '';
+        const gender = document.getElementById('new_patient_gender');
+        if (gender) gender.value = '';
+    }
+
+    // التحقق عند إرسال النموذج
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const isNewPatientActive = newPatientFields && newPatientFields.style.display === 'block';
+            if (isNewPatientActive) {
+                const name = newPatientNameInput ? newPatientNameInput.value.trim() : '';
+                if (!name) {
+                    e.preventDefault();
+                    alert('يرجى إدخال اسم المريض الجديد');
+                    newPatientNameInput.focus();
+                    return;
+                }
+            } else {
+                if (!hiddenPatientId.value) {
+                    e.preventDefault();
+                    alert('يرجى اختيار المريض من نتائج البحث أو تسجيل مريض جديد');
+                    if (searchContainer.style.display === 'none') {
+                        searchContainer.style.display = 'block';
+                    }
+                    if (searchInput) searchInput.focus();
+                    return;
+                }
+            }
+        });
+    }
+});
 </script>
 @endsection

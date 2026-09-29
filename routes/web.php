@@ -598,6 +598,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\EmergencyController::class, 'index'])->name('index');
         Route::get('/dashboard', [\App\Http\Controllers\EmergencyController::class, 'dashboard'])->name('dashboard');
         Route::get('/create', [\App\Http\Controllers\EmergencyController::class, 'create'])->name('create');
+        Route::get('/search-patients', [\App\Http\Controllers\EmergencyController::class, 'searchPatients'])->name('search-patients');
         Route::post('/', [\App\Http\Controllers\EmergencyController::class, 'store'])->name('store');
         Route::get('/{emergency}', [\App\Http\Controllers\EmergencyController::class, 'show'])->name('show');
         Route::get('/{emergency}/edit', [\App\Http\Controllers\EmergencyController::class, 'edit'])->name('edit');

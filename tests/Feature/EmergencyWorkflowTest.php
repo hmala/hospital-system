@@ -98,6 +98,26 @@ class EmergencyWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_emergency_create_screen_renders_with_live_patient_search()
+    {
+        $response = $this->actingAs($this->admin)->get(route('emergency.create'));
+
+        $response->assertStatus(200);
+        $response->assertSee('patientSearchInput');
+        $response->assertSee('ابحث باسم المريض');
+        $response->assertDontSee('<select class="form-select @error(\'patient_id\')', false);
+    }
+
+    public function test_emergency_search_patients_ajax_returns_matching_results()
+    {
+        $response = $this->actingAs($this->admin)->getJson(route('emergency.search-patients', ['query' => 'تجريبي']));
+
+        $response->assertStatus(200);
+        $response->assertJsonFragment([
+            'name' => 'مريض طوارئ تجريبي',
+        ]);
+    }
+
     public function test_emergency_index_displays_clean_consultation_button()
     {
         $response = $this->actingAs($this->admin)->get(route('emergency.index'));
