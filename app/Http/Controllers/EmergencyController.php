@@ -182,7 +182,7 @@ class EmergencyController extends Controller
         ];
         $todayArabic = $daysMap[date('l')] ?? 'السبت';
 
-        $doctors = Doctor::with('user')
+        $doctors = Doctor::has('user')->with('user')
             ->where('is_active', true)
             ->where('is_available_today', true)
             ->whereJsonContains('working_days', [$todayArabic])
@@ -193,9 +193,9 @@ class EmergencyController extends Controller
             })
             ->get();
 
-        // إذا القائمة فارغة، عرض جميع أطباء الطوارئ (ليتم اختيار الطبيب المسؤول بدون تعطيل الحالة)
+        // إذا القائمة فارغة، عرض جميع أطباء الطوارئ الفعالين
         if ($doctors->isEmpty()) {
-            $doctors = Doctor::with('user')
+            $doctors = Doctor::has('user')->with('user')
                 ->where('is_active', true)
                 ->where(function($query) {
                     $query->where('specialization', 'LIKE', '%طوارئ%')
@@ -205,13 +205,24 @@ class EmergencyController extends Controller
                 ->get();
         }
 
+        // إذا لم يتوفر طبيب طوارئ محدد، استخدام الأطباء الفعالين
+        if ($doctors->isEmpty()) {
+            $doctors = Doctor::has('user')->with('user')
+                ->where('is_active', true)
+                ->get();
+        }
+
         $assignedDoctor = null;
         if ($user->doctor) {
             $assignedDoctor = $user->doctor;
         } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
-            $assignedDoctor = Doctor::where('user_id', $user->id)->first();
+            $assignedDoctor = Doctor::has('user')->where('user_id', $user->id)->first();
         } else {
             $assignedDoctor = $doctors->first();
+        }
+
+        if ($assignedDoctor) {
+            $assignedDoctor->loadMissing('user');
         }
 
         $nurses = collect();
@@ -354,6 +365,9 @@ class EmergencyController extends Controller
                 if ($doc) {
                     $doctorId = $doc->id;
                 }
+            }
+            if (empty($doctorId)) {
+                $doctorId = Doctor::has('user')->where('is_active', true)->value('id');
             }
         }
 

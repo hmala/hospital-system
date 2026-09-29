@@ -149,13 +149,24 @@
 
                             <!-- الطبيب (تحديد تلقائي) -->
                             <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id ?? '' }}">
-                            @if(isset($assignedDoctor) && $assignedDoctor)
-                                @php
-                                    $docName = $assignedDoctor->user->name ?? '';
-                                    if (!str_starts_with($docName, 'د.') && !str_starts_with($docName, 'الدكتور') && !str_starts_with($docName, 'الدكتورة')) {
-                                        $docName = 'د. ' . $docName;
+                            @php
+                                $rawDocName = trim($assignedDoctor?->user?->name ?? '');
+                                if (!$rawDocName && auth()->check()) {
+                                    $u = auth()->user();
+                                    if ($u->hasRole('doctor') || (method_exists($u, 'isDoctor') && $u->isDoctor())) {
+                                        $rawDocName = trim($u->name);
                                     }
-                                @endphp
+                                }
+                                $docName = '';
+                                if ($rawDocName !== '') {
+                                    if (!str_starts_with($rawDocName, 'د.') && !str_starts_with($rawDocName, 'الدكتور') && !str_starts_with($rawDocName, 'الدكتورة')) {
+                                        $docName = 'د. ' . $rawDocName;
+                                    } else {
+                                        $docName = $rawDocName;
+                                    }
+                                }
+                            @endphp
+                            @if(!empty($docName))
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">الطبيب</label>
                                     <div class="input-group">
