@@ -194,7 +194,7 @@ function buildSelectedLabTests($requestDetails) {
                         $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
                     @endphp
 
-                    @if($request->payment_status == 'paid' && ($request->type == 'lab' || $isBloodBankRequest))
+                    @if($request->type == 'lab' || $isBloodBankRequest)
                         <a href="{{ route('lab.print', $request) }}" 
                            class="btn btn-success" 
                            target="_blank">
