@@ -153,38 +153,25 @@
             object-fit: contain;
         }
 
-        .specialist-credentials {
+        .hospital-title-side {
             text-align: right;
-        }
-
-        .specialist-title {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 13.5px;
-            font-weight: bold;
-            color: #8b0000;
-        }
-
-        .specialist-sub {
-            font-size: 10px;
-            color: #555;
-            margin-top: 2px;
+            min-width: 190px;
         }
 
         .hospital-name-ar {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
-            color: #222;
+            color: #1e7e8f;
             font-family: 'Tahoma', Arial, sans-serif;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             direction: rtl;
         }
 
         .hospital-name-en {
-            font-size: 14px;
-            color: #777;
+            font-size: 13px;
+            color: #555;
             font-weight: 600;
             letter-spacing: 0.5px;
-            margin-bottom: 10px;
         }
 
         .clinical-lab-banner {
@@ -531,15 +518,13 @@
                     <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img">
                 </div>
 
-                <div class="specialist-credentials">
-                    <div class="specialist-title">M.B.Ch.B., F.I.C.M.S.</div>
-                    <div class="specialist-sub">Medical Microbiology & Immunology</div>
+                <div class="hospital-title-side">
+                    <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
+                    <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
                 </div>
             </div>
 
-            <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
-            <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
-            <div class="clinical-lab-banner">Clinical Laboratory</div>
+          
         </div>
 
         <!-- Patient Info Box -->
