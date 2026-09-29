@@ -47,6 +47,8 @@ class RoleManagementController extends Controller
             'edit radiology types',
             'delete radiology types',
             'view radiology types',
+            'cancel surgeries',
+            'manage surgeries',
         ];
     }
 

@@ -60,6 +60,30 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+
+## Session log (2026-09-29 — المرحلة 5: تطهير وإحكام صلاحيات العمليات الجراحية والرقود ومحطات الصالات والغرف)
+
+### Done
+- **تطهير وإحكام صلاحيات قسم العمليات الجراحية (`SurgeryController.php`, `RoomController.php`, `ResidentStationController.php`, `RoleManagementController.php`)**:
+  * إلغاء كافة التجاوزات التلقائية للأدوار (`hasRole(['receptionist', 'doctor', 'surgery_staff', 'inquiry_staff'])`) التي كانت تسمح للمستخدمين بالدخول، الحجز، التعديل، والحذف حتى بعد سحب الصلاحيات من لوحة التحكم.
+  * ربط كل إجراء بصلاحيته الحصرية والمطابقة لبطاقة العمليات الجراحية والرقود الـ 16 في لوحة التحكم:
+    - `view surgeries`: حماية الدخول إلى سجل وجدول العمليات (`surgeries.index`) وتفاصيل العملية (`surgeries.show`) وطباعة وصل العملية (`surgeries.print`).
+    - `create surgeries`: حماية نموذج وإجراء حجز وإدراج عملية جديدة (`create`, `store`).
+    - `edit surgeries`: حماية تعديل بيانات العملية (`edit`, `update`) وتحديث تفاصيل وتوقيت ومستلزمات العملية (`updateDetails`) وتغيير نوع العملية (`updateSurgeryType`) وإضافة وحذف العمليات الإضافية (`addOperation`, `removeOperation`) وإضافة وحذف الأجهزة الطبية الجراحية (`addDevice`, `removeDevice`).
+    - `delete surgeries`: حماية إلغاء أو حذف حجز العملية نهائياً وتحرير الغرفة للمريض (`destroy`, `cancel`).
+    - `control surgeries`: حماية التحكم بمراحل العملية الحيوية (بدء العملية `start`، إكمال العملية وصالة العمليات `complete`، وتسجيل خروج المريض `discharge`).
+    - `manage surgery waiting list`: حماية إدارة قائمة انتظار العمليات (`surgeries.waiting`) ودخول المريض من الانتظار (`checkIn`) وإعادته لقائمة الانتظار (`returnToWaiting`).
+    - `view surgical operations` و `manage surgical operations`: حماية دليل وتسعير العمليات الجراحية (`SurgicalOperationController`).
+    - `view resident station`, `view operation theater station`, `view surgeon station`, `view anesthesia station`, `view nursing station`: حماية محطات العمليات الجراحية الخمس ومحطة إعطاء العلاجات السريرية (`administerTreatment`).
+    - `manage rooms`: حماية إنشاء وتعديل وحذف غرف الرقود ومزامنة وتحرير الشاغر (`RoomController`).
+    - `view medical devices` و `manage medical devices`: حماية دليل وإدارة وصيانة الأجهزة الطبية الجراحية (`MedicalDeviceController`).
+  * حجب الصلاحيات المتقادمة الزائدة (`cancel surgeries`, `manage surgeries`) من شاشة الأدوار عبر `getHiddenPermissions()` وسحبها تلقائياً عبر ميغريشن آمن `2026_09_29_100000_strictly_gate_surgery_permissions.php`.
+- **إحكام أزرار واجهات العمليات والغرف وقائمة الانتظار**:
+  * تحديث واجهات [surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php)، [surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php)، [rooms/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/rooms/index.blade.php)، و [rooms/_room_table.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/rooms/_room_table.blade.php) بربط أزرار الإجراءات بتوجيهات `@can` و `@canany` بدلاً من أسماء الأدوار الثابتة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * توسيع وتحديث [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) لاختبار الحماية الصارمة لكافة مسارات ومحطات العمليات وإرجاع `403` فورياً عند سحب الصلاحيات واجتياز الاختبار بنجاح (11 passed, 130 assertions).
+  * اجتياز كامل اختبارات النظام العامة: 66 passed (408 assertions).
+
 ## Session log (2026-09-28 — المرحلة 4: تطهير وإحكام صلاحيات الأشعة والسونار وفصل القوائم الجانبية)
 
 ### Done

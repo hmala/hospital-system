@@ -429,4 +429,63 @@ class RolePermissionsMatrixTest extends TestCase
         $role->givePermissionTo('create radiology');
         $this->actingAs($user)->get(route('radiology.create'))->assertStatus(200);
     }
+
+    public function test_surgery_routes_and_stations_are_strictly_gated_by_permissions()
+    {
+        $role = Role::firstOrCreate(['name' => 'surgery_staff_test', 'guard_name' => 'web']);
+        $user = User::factory()->create(['email' => 'surgery_test@hospital.com']);
+        $user->assignRole($role);
+
+        // 1. Without permissions: all surgery routes and stations return 403
+        $role->syncPermissions([]);
+        $this->actingAs($user)->get(route('surgeries.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('surgeries.create'))->assertStatus(403);
+        $this->actingAs($user)->get(route('surgeries.waiting'))->assertStatus(403);
+        $this->actingAs($user)->get(route('rooms.create'))->assertStatus(403);
+        $this->actingAs($user)->get(route('surgical-operations.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('surgeon-station.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('anesthesia-station.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('resident-station.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('operation-theater-station.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('nursing-station.index'))->assertStatus(403);
+
+        // 2. Grant 'view surgeries': surgeries index returns 200, but others stay 403
+        $role->syncPermissions(['view surgeries']);
+        $this->actingAs($user)->get(route('surgeries.index'))->assertStatus(200);
+        $this->actingAs($user)->get(route('surgeries.create'))->assertStatus(403);
+        $this->actingAs($user)->get(route('rooms.create'))->assertStatus(403);
+        $this->actingAs($user)->get(route('surgeon-station.index'))->assertStatus(403);
+
+        // 3. Grant 'create surgeries': create page returns 200
+        $role->givePermissionTo('create surgeries');
+        $this->actingAs($user)->get(route('surgeries.create'))->assertStatus(200);
+
+        // 4. Grant 'manage surgery waiting list': waiting page returns 200
+        $role->givePermissionTo('manage surgery waiting list');
+        $this->actingAs($user)->get(route('surgeries.waiting'))->assertStatus(200);
+
+        // 5. Grant 'manage rooms': room creation returns 200
+        $role->givePermissionTo('manage rooms');
+        $this->actingAs($user)->get(route('rooms.create'))->assertStatus(200);
+
+        // 6. Grant 'view surgical operations': surgical operations index returns 200
+        $role->givePermissionTo('view surgical operations');
+        $this->actingAs($user)->get(route('surgical-operations.index'))->assertStatus(200);
+
+        // 7. Grant individual station permissions
+        $role->givePermissionTo('view surgeon station');
+        $this->actingAs($user)->get(route('surgeon-station.index'))->assertStatus(200);
+
+        $role->givePermissionTo('view anesthesia station');
+        $this->actingAs($user)->get(route('anesthesia-station.index'))->assertStatus(200);
+
+        $role->givePermissionTo('view resident station');
+        $this->actingAs($user)->get(route('resident-station.index'))->assertStatus(200);
+
+        $role->givePermissionTo('view operation theater station');
+        $this->actingAs($user)->get(route('operation-theater-station.index'))->assertStatus(200);
+
+        $role->givePermissionTo('view nursing station');
+        $this->actingAs($user)->get(route('nursing-station.index'))->assertStatus(200);
+    }
 }
