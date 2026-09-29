@@ -217,8 +217,6 @@ class EmergencyController extends Controller
             $assignedDoctor = $user->doctor;
         } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
             $assignedDoctor = Doctor::has('user')->where('user_id', $user->id)->first();
-        } else {
-            $assignedDoctor = $doctors->first();
         }
 
         if ($assignedDoctor) {
@@ -365,9 +363,6 @@ class EmergencyController extends Controller
                 if ($doc) {
                     $doctorId = $doc->id;
                 }
-            }
-            if (empty($doctorId)) {
-                $doctorId = Doctor::has('user')->where('is_active', true)->value('id');
             }
         }
 
