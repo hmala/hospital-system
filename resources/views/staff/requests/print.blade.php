@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نتائج التحاليل - {{ $request->visit->patient->user->name }}</title>
+    <title>Laboratory Report - {{ $request->visit?->patient?->user?->name ?? 'Patient' }}</title>
     <style>
         * {
             margin: 0;
@@ -12,636 +12,625 @@
         }
 
         body {
-            font-family: 'Arial', 'Tahoma', sans-serif;
-            direction: rtl;
-            background: #fff;
-            color: #333;
+            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+            direction: ltr;
+            background: #f4f6f9;
+            color: #222;
             padding: 20px;
         }
 
-        .page {
+        .report-page {
             max-width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            background: white;
+            background: #ffffff;
+            padding: 15mm 18mm;
             position: relative;
-            padding: 20mm;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
 
-        /* علامة مائية في الخلفية باستخدام صورة 1.jpg */
-        .page::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-image: url('{{ asset('images/1.jpg') }}');
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-size: 55% auto;
-            opacity: 0.08; /* خفيف وواضح */
-            pointer-events: none;
-            z-index: 0;
+        /* Top Action Buttons */
+        .print-toolbar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 9999;
         }
 
-        /* إبقاء بقية المحتوى فوق العلامة المائية */
-        .page > * { position: relative; z-index: 1; }
-
-        /* الإطار الزخرفي */
-        .decorative-border {
-            position: absolute;
-            top: 10mm;
-            right: 10mm;
-            bottom: 10mm;
-            left: 10mm;
-            border: 2px solid #1e7e8f;
-            pointer-events: none;
+        .toolbar-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
 
-        /* الزخرفة البنية على يمين الصفحة */
-        .right-pattern {
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 58mm;
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: right top;
-            opacity: 0.28;
-            pointer-events: none;
-        }
+        .btn-print { background: #1e4b88; color: #fff; }
+        .btn-print:hover { background: #153765; }
+        .btn-close-window { background: #6c757d; color: #fff; }
 
-        .corner-pattern {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            opacity: 0.1;
-        }
-
-        .corner-pattern.top-right {
-            top: 0;
-            right: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%231e7e8f"/></svg>');
-        }
-
-        .corner-pattern.bottom-left {
-            bottom: 0;
-            left: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L0,100 L100,100 Z" fill="%231e7e8f"/></svg>');
-        }
-
-        /* الترويسة */
-        .header {
+        /* Report Header */
+        .report-header {
+            position: relative;
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px solid #1e7e8f;
-        }
-
-        .logo-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            margin-bottom: 10px;
-            position: relative;
-            width: 100%;
-            min-height: 120px;
-        }
-
-        .logo {
-            width: 200px;
-            height: 120px;
-            margin: 0;
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            top: 0;
-        }
-
-        .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        /* صف الشعار وشارة المختبر */
-        .logo-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            margin-bottom: 10px;
-            position: relative;
-            width: 100%;
-        }
-
-        .lab-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #e8f4f4;
-            color: #1e7e8f;
-            border: 1px solid #1e7e8f;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-            white-space: nowrap;
-            position: absolute;
-            right: 0;
-            top: 8px;
-        }
-
-        .lab-badge img {
-            width: 22px;
-            height: 22px;
-        }
-
-        .hospital-name-ar {
-            font-size: 28px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-        }
-
-        .hospital-name-en {
-            font-size: 18px;
-            color: #888;
-            font-style: normal;
-            margin-bottom: 15px;
-        }
-
-        .document-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            margin-top: 15px;
-        }
-
-        /* معلومات الوثيقة */
-        .document-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 25px;
-            padding: 10px 0;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #666;
-        }
-
-        .info-value {
-            color: #333;
-        }
-
-        /* معلومات المريض */
-        .patient-info {
-            background: rgba(248, 249, 250, 0.55);
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
-
-        .patient-info h3 {
-            color: #1e7e8f;
-            font-size: 18px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #1e7e8f;
-        }
-
-        .patient-details {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-        }
-
-        .detail-item {
-            display: flex;
-            gap: 10px;
-        }
-
-        .detail-label {
-            font-weight: bold;
-            color: #555;
-            min-width: 100px;
-        }
-
-        .detail-value {
-            color: #333;
-        }
-
-        /* جدول النتائج */
-        .results-section {
-            margin-bottom: 25px;
-        }
-
-        .results-section h3 {
-            color: #1e7e8f;
-            font-size: 18px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #1e7e8f;
-        }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
             margin-bottom: 20px;
+            padding-top: 5px;
         }
 
-        .results-table thead {
-            background: #1e7e8f;
-            color: white;
+        .header-top-right {
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
         }
 
-        .results-table th {
-            padding: 12px;
-            text-align: center;
+        .specialist-title {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 13px;
             font-weight: bold;
-            border: 1px solid #dee2e6;
+            color: #8b0000;
         }
 
-        .results-table td {
-            padding: 10px;
-            text-align: center;
-            border: 1px solid #dee2e6;
+        .header-sub-qualifications {
+            font-size: 10.5px;
+            color: #555;
+            margin-bottom: 4px;
         }
 
-        .results-table tbody tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        .results-table tbody tr:hover {
-            background: #e9ecef;
-        }
-
-        .status-normal {
-            color: #28a745;
+        .clinical-lab-title {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 34px;
             font-weight: bold;
+            font-style: italic;
+            color: #1e4b88;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            margin-top: 5px;
         }
 
-        .status-high {
-            color: #dc3545;
+        /* Patient Info Section */
+        .patient-info-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 10px 25px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            line-height: 1.5;
+            margin-bottom: 4px;
+        }
+
+        .info-pill {
+            background-color: #e5e8ec;
+            color: #111;
             font-weight: bold;
+            font-size: 12.5px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            min-width: 120px;
+            display: inline-block;
         }
 
-        .status-low {
-            color: #ffc107;
+        .info-colon {
+            margin: 0 8px;
             font-weight: bold;
+            color: #333;
         }
 
-        /* الملاحظات */
-        .notes-section {
-            background: #fff9e6;
-            border: 1px solid #ffc107;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 25px;
+        .val-arabic-name {
+            color: #1e4b88;
+            font-weight: bold;
+            font-size: 14.5px;
+            font-family: 'Tahoma', Arial, sans-serif;
+            direction: rtl;
         }
 
-        .notes-section h4 {
-            color: #856404;
-            font-size: 16px;
+        .val-english-name {
+            color: #8b0000;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .info-val-text {
+            color: #111;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        /* Table Column Headers */
+        .tests-header-bar {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr 1fr;
+            border-top: 1.5px solid #2b5899;
+            border-bottom: 1.5px solid #2b5899;
+            padding: 6px 4px;
             margin-bottom: 10px;
         }
 
-        .notes-content {
+        .header-col {
+            color: #1e4b88;
+            font-weight: bold;
+            font-size: 13.5px;
+        }
+
+        .header-col.center {
+            text-align: center;
+        }
+
+        .header-col.right {
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        /* Test Items */
+        .test-card {
+            padding: 6px 4px 8px 4px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        .test-card:last-child {
+            border-bottom: 1.5px solid #2b5899;
+        }
+
+        .test-main-row {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr 1fr;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+
+        .test-name {
+            font-weight: bold;
+            color: #000;
+            font-size: 13.5px;
+        }
+
+        .test-value-cell {
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .test-value-cell.right {
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        .val-normal {
+            color: #1e4b88;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .val-abnormal {
+            color: #c00000;
+            font-weight: bold;
+            font-size: 14px;
+            text-decoration: underline;
+        }
+
+        .unit-label {
             color: #333;
-            line-height: 1.6;
+            font-size: 12.5px;
+            margin-left: 4px;
         }
 
-        /* التذييل */
-        .footer {
-            position: absolute;
-            bottom: 20mm;
-            left: 20mm;
-            right: 20mm;
-            border-top: 2px solid #1e7e8f;
+        .test-meta-row {
+            display: flex;
+            align-items: center;
+            font-size: 12.5px;
+            color: #222;
+            margin-bottom: 3px;
+        }
+
+        .meta-label {
+            min-width: 140px;
+            font-weight: normal;
+            color: #222;
+        }
+
+        .meta-conv-range {
+            width: 250px;
+            color: #222;
+        }
+
+        .meta-si-range {
+            color: #222;
+        }
+
+        .test-device-row {
+            font-size: 12px;
+            color: #1e4b88;
+            margin-top: 2px;
+        }
+
+        /* Category Header */
+        .category-header-row {
+            background-color: #f1f4f8;
+            color: #1e4b88;
+            font-weight: bold;
+            font-size: 13px;
+            padding: 5px 8px;
+            margin-top: 8px;
+            border-left: 3px solid #1e4b88;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Footer */
+        .report-footer {
+            margin-top: 40px;
             padding-top: 15px;
-        }
-
-        .footer-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 12px;
-            color: #666;
+            font-style: italic;
+            color: #333;
         }
 
-        .contact-info {
-            display: flex;
-            gap: 20px;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .barcode {
-            text-align: center;
-            font-size: 18px;
+        .footer-printed-by span {
             font-weight: bold;
-            color: #1e7e8f;
+            font-style: normal;
         }
 
-        /* أزرار الطباعة */
-        .print-buttons {
-            position: fixed;
-            top: 20px;
-            left: 20px;
+        .footer-datetime {
             display: flex;
-            gap: 10px;
-            z-index: 1000;
+            gap: 25px;
+            font-style: italic;
         }
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-print {
-            background: #1e7e8f;
-            color: white;
-        }
-
-        .btn-pdf {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-back {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-        }
-
+        /* Print Media Styles */
         @media print {
-            .print-buttons {
+            .print-toolbar {
                 display: none !important;
             }
 
             body {
+                background: #fff;
                 padding: 0;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
-            .page {
+            .report-page {
+                box-shadow: none;
                 margin: 0;
-                padding: 15mm;
+                padding: 12mm 15mm;
+                max-width: 100%;
+                min-height: auto;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
             @page {
-                size: A4;
+                size: A4 portrait;
                 margin: 0;
             }
         }
     </style>
 </head>
 <body>
-    <!-- أزرار الطباعة -->
-    <div class="print-buttons">
-        <button class="btn btn-print" onclick="window.print()">
-            🖨️ طباعة
+
+    <!-- Action Toolbar (Hidden during print) -->
+    <div class="print-toolbar">
+        <button class="toolbar-btn btn-print" onclick="window.print()">
+            🖨️ Print Report
         </button>
-        <button class="btn btn-pdf" onclick="generatePDF()">
-            📄 حفظ PDF
-        </button>
-        <button class="btn btn-back" onclick="window.history.back()">
-            ← رجوع
+        <button class="toolbar-btn btn-close-window" onclick="window.history.back()">
+            ✕ Back
         </button>
     </div>
 
-    <div class="page">
-        <!-- الإطار الزخرفي -->
-        <div class="decorative-border">
-            <div class="corner-pattern top-right"></div>
-            <div class="corner-pattern bottom-left"></div>
+    @php
+        // Helper: Convert Arabic Name to English Transliteration
+        function transliterateArabicName($text) {
+            if (empty($text)) return '';
+            $known = [
+                'محمد' => 'Mohammed', 'احمد' => 'Ahmed', 'أحمد' => 'Ahmed', 'علي' => 'Ali',
+                'حسين' => 'Hussein', 'حسن' => 'Hasan', 'صادق' => 'Sadeq', 'ياسين' => 'Yaseen',
+                'عباس' => 'Abbas', 'فاضل' => 'Fadhel', 'كاظم' => 'Kadhim', 'مهدي' => 'Mahdi',
+                'عمر' => 'Omar', 'عثمان' => 'Othman', 'خالد' => 'Khalid', 'مصطفى' => 'Mustafa',
+                'ابراهيم' => 'Ibrahim', 'إبراهيم' => 'Ibrahim', 'يوسف' => 'Yousif', 'محمود' => 'Mahmoud',
+                'عبدالله' => 'Abdullah', 'عبد الله' => 'Abdullah', 'عبد الرحمن' => 'Abdulrahman',
+                'فاطمة' => 'Fatima', 'زينب' => 'Zainab', 'مريم' => 'Maryam', 'نور' => 'Noor',
+                'سارة' => 'Sara', 'ساره' => 'Sara', 'هدى' => 'Huda', 'حيدر' => 'Haider'
+            ];
+            $words = preg_split('/\s+/', trim($text));
+            $latinWords = [];
+            $charMap = [
+                'ا' => 'a', 'أ' => 'A', 'إ' => 'E', 'آ' => 'Aa', 'ب' => 'b', 'ت' => 't', 'ث' => 'th',
+                'ج' => 'j', 'ح' => 'h', 'خ' => 'kh', 'د' => 'd', 'ذ' => 'dh', 'ر' => 'r', 'ز' => 'z',
+                'س' => 's', 'ش' => 'sh', 'ص' => 's', 'ض' => 'd', 'ط' => 't', 'ظ' => 'dh', 'ع' => 'a',
+                'غ' => 'gh', 'ف' => 'f', 'ق' => 'q', 'ك' => 'k', 'ل' => 'l', 'م' => 'm', 'ن' => 'n',
+                'ه' => 'h', 'ة' => 'a', 'و' => 'w', 'ي' => 'y', 'ى' => 'a', 'ء' => ''
+            ];
+            foreach ($words as $w) {
+                if (isset($known[$w])) {
+                    $latinWords[] = $known[$w];
+                } else {
+                    $chars = mb_str_split($w);
+                    $res = '';
+                    foreach ($chars as $c) {
+                        $res .= $charMap[$c] ?? $c;
+                    }
+                    $latinWords[] = ucfirst($res);
+                }
+            }
+            return implode(' ', $latinWords);
+        }
+
+        $rawName = $request->visit?->patient?->user?->name ?? 'Patient';
+        $arabicName = $rawName;
+        $englishName = transliterateArabicName($rawName);
+
+        $patientAge = $request->visit?->patient?->age ?? '';
+        $rawGender = strtolower($request->visit?->patient?->gender ?? '');
+        $genderEn = ($rawGender === 'female' || $rawGender === 'أنثى') ? 'Female' : 'Male';
+
+        $rawDoctor = $request->visit?->doctor?->user?->name ?? '';
+        $doctorEn = $rawDoctor ? (str_starts_with($rawDoctor, 'د.') || str_starts_with($rawDoctor, 'الدكتور') ? transliterateArabicName($rawDoctor) : 'Dr. ' . transliterateArabicName($rawDoctor)) : '';
+
+        $sampleNo = 'IQ' . ($request->created_at ? $request->created_at->format('y') : date('y')) . '/' . str_pad($request->id, 7, '0', STR_PAD_LEFT);
+        $patientNo = ($request->created_at ? $request->created_at->format('y') : date('y')) . '/' . str_pad($request->visit?->patient_id ?? $request->patient_id ?? $request->id, 7, '0', STR_PAD_LEFT);
+
+        $sampleDate = $request->created_at ? $request->created_at->format('d-M-Y') : date('d-M-Y');
+        $sampleTime = $request->created_at ? $request->created_at->format('H:i A') : date('H:i A');
+
+        $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
+        $testsCount = $labResults->count();
+
+        // Also check if result details in JSON exist
+        if ($testsCount === 0 && !empty($request->result)) {
+            $parsedRes = is_string($request->result) ? json_decode($request->result, true) : $request->result;
+            $savedArr = $parsedRes['test_results'] ?? [];
+            $testsCount = count($savedArr);
+        }
+    @endphp
+
+    <div class="report-page">
+
+        <!-- Header -->
+        <div class="report-header">
+            <div class="header-top-right">
+                <div class="header-sub-qualifications">Medical Microbiology (UK) - Cert. Med. Immunology (UK)</div>
+                <div class="specialist-title">M.B.Ch.B., F.I.C.M.S.</div>
+            </div>
+            <div class="clinical-lab-title">Clinical Laboratory</div>
         </div>
 
-        <!-- الترويسة -->
-@php
-                $isBloodBankRequest = $isBloodBankRequest ?? ($request->type === 'blood_bank' || data_get($request->details, 'blood_bank', false));
-                $documentTitle = $isBloodBankRequest ? 'نموذج مصرف الدم' : 'نتائج التحاليل المخبرية';
-                $badgeText = $isBloodBankRequest ? 'مصرف الدم' : 'المختبر';
-                $badgeIcon = $isBloodBankRequest ? 'blood-bank-icon.svg' : 'lab-icon.svg';
-            @endphp
-
-            <div class="header">
-            <div class="logo-row">
-                <div class="logo">
-                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" style="width: 200px; height: 120px;">
+        <!-- Patient Info Box -->
+        <div class="patient-info-grid">
+            <!-- Left Column -->
+            <div>
+                <div class="info-row">
+                    <span class="info-pill">Patient Name</span>
+                    <span class="info-colon">:</span>
+                    <span class="val-arabic-name">{{ $arabicName }}</span>
                 </div>
-                <div class="lab-badge">
-                    <img src="{{ asset('images/' . $badgeIcon) }}" alt="Lab Icon">
-                    <span>{{ $badgeText }}</span>
+                <div class="info-row">
+                    <span class="info-pill">Patient Name</span>
+                    <span class="info-colon">:</span>
+                    <span class="val-english-name">{{ $englishName }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-pill">Age</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-pill">Sex</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $genderEn }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-pill">Consultant</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $doctorEn }}</span>
                 </div>
             </div>
-            <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
-            <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
-            <div class="document-title">{{ $documentTitle }}</div>
-        </div>
 
-        <!-- معلومات الوثيقة -->
-        <div class="document-info">
-            <div class="info-item">
-                <span class="info-label">التاريخ:</span>
-                <span class="info-value">{{ now()->format('Y-m-d') }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">العدد:</span>
-                <span class="info-value">{{ $request->id }}</span>
-            </div>
-        </div>
-
-        <!-- معلومات المريض -->
-        <div class="patient-info">
-            <h3>معلومات المريض</h3>
-            <div class="patient-details">
-                <div class="detail-item">
-                    <span class="detail-label">الاسم:</span>
-                    <span class="detail-value">{{ $request->visit->patient->user->name }}</span>
+            <!-- Right Column -->
+            <div>
+                <div class="info-row">
+                    <span class="info-pill">Sample No.</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $sampleNo }}</span>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">العمر:</span>
-                    <span class="detail-value">{{ $request->visit->patient->age }} سنة</span>
+                <div class="info-row">
+                    <span class="info-pill">Patient No.</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $patientNo }}</span>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">الجنس:</span>
-                    <span class="detail-value">{{ $request->visit->patient->gender == 'male' ? 'ذكر' : 'أنثى' }}</span>
+                <div class="info-row">
+                    <span class="info-pill">Sample Date</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $sampleDate }}</span>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">رقم الهاتف:</span>
-                    <span class="detail-value">{{ $request->visit->patient->phone }}</span>
+                <div class="info-row">
+                    <span class="info-pill">Sample Time</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $sampleTime }}</span>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">الطبيب المعالج:</span>
-                    <span class="detail-value">د. {{ $request->visit->doctor?->user?->name ?? 'غير محدد' }}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">تاريخ الزيارة:</span>
-                    <span class="detail-value">{{ $request->visit->visit_date->format('Y-m-d') }}</span>
+                <div class="info-row">
+                    <span class="info-pill">Number Of Tests</span>
+                    <span class="info-colon">:</span>
+                    <span class="info-val-text">{{ $testsCount }}</span>
                 </div>
             </div>
         </div>
 
-        @if($isBloodBankRequest)
-            <div class="results-section">
-                <h3>بيانات طلب مصرف الدم</h3>
-                @if($bloodBankRequest)
-                    <table class="results-table">
+        @if(isset($isBloodBankRequest) && $isBloodBankRequest)
+            <!-- Blood Bank Specialized Table -->
+            <div style="margin-top: 20px;">
+                <div class="category-header-row">Blood Bank Request Details</div>
+                @if(isset($bloodBankRequest) && $bloodBankRequest)
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
                         <tbody>
-                            <tr><td><strong>رقم الطلب</strong></td><td>{{ $request->id }}</td></tr>
-                            <tr><td><strong>حالة الطلب</strong></td><td>{{ $bloodBankRequest->status }}</td></tr>
-                            <tr><td><strong>الغرفة</strong></td><td>{{ $bloodBankRequest->room_no ?? '-' }}</td></tr>
-                            <tr><td><strong>فصيلة المتبرع</strong></td><td>{{ $bloodBankRequest->donor_group ?? '-' }}</td></tr>
-                            <tr><td><strong>فصيلة المريض</strong></td><td>{{ $bloodBankRequest->patient_group ?? '-' }}</td></tr>
-                            <tr><td><strong>وزن المتبرع</strong></td><td>{{ $bloodBankRequest->donor_weight ?? '-' }}</td></tr>
-                            <tr><td><strong>وزن المريض</strong></td><td>{{ $bloodBankRequest->recipient_weight ?? '-' }}</td></tr>
-                            <tr><td><strong>درجة الحرارة</strong></td><td>{{ $bloodBankRequest->at_room_temp ?? '-' }}</td></tr>
-                            <tr><td><strong>بند</strong></td><td>{{ $bloodBankRequest->bovine_albumin ?? '-' }}</td></tr>
-                            <tr><td><strong>مضاد الغلوبولين البشري</strong></td><td>{{ $bloodBankRequest->anti_human_globulin ?? '-' }}</td></tr>
-                            <tr><td><strong>توافقية</strong></td><td>{{ $bloodBankRequest->compatibility ?? '-' }}</td></tr>
-                            <tr><td><strong>رقم القارورة</strong></td><td>{{ $bloodBankRequest->bottle_no ?? '-' }}</td></tr>
-                            <tr><td><strong>تاريخ العملية</strong></td><td>{{ $bloodBankRequest->operative_date?->format('Y-m-d') ?? '-' }}</td></tr>
-                            <tr><td><strong>تاريخ الانتهاء</strong></td><td>{{ $bloodBankRequest->exp_date?->format('Y-m-d') ?? '-' }}</td></tr>
-                            <tr><td><strong>الطبيب المسؤول</strong></td><td>{{ $bloodBankRequest->doctor_in_charge ?? '-' }}</td></tr>
-                            <tr><td><strong>المبلغ الإجمالي</strong></td><td>{{ $bloodBankRequest->total_amount ?? 0 }}</td></tr>
+                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; width: 40%; padding: 6px;">Request ID</td><td>{{ $request->id }}</td></tr>
+                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Status</td><td>{{ $bloodBankRequest->status }}</td></tr>
+                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Donor Group</td><td>{{ $bloodBankRequest->donor_group ?? '-' }}</td></tr>
+                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Patient Group</td><td>{{ $bloodBankRequest->patient_group ?? '-' }}</td></tr>
+                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Compatibility</td><td>{{ $bloodBankRequest->compatibility ?? '-' }}</td></tr>
+                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Bottle No</td><td>{{ $bloodBankRequest->bottle_no ?? '-' }}</td></tr>
                         </tbody>
                     </table>
-                    @if($bloodBankRequest->notes)
-                        <div class="notes-section">
-                            <h4>📝 ملاحظات مصرف الدم:</h4>
-                            <div class="notes-content">{{ $bloodBankRequest->notes }}</div>
-                        </div>
-                    @endif
-                @else
-                    <div class="alert alert-warning">لم يتم العثور على بيانات مصرف الدم المتخصصة لهذا الطلب.</div>
                 @endif
             </div>
         @else
-            <!-- نتائج التحاليل -->
+            <!-- Column Headers -->
+            <div class="tests-header-bar">
+                <div class="header-col">Laboratory Test Results</div>
+                <div class="header-col center">Conventional Units</div>
+                <div class="header-col right">SI Units</div>
+            </div>
+
+            <!-- Test Items List -->
             @php
-                $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
+                $currentGroup = null;
             @endphp
 
             @if($labResults->count() > 0)
-            <div class="results-section">
-                <h3>نتائج الفحوصات المختبرية</h3>
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px;">#</th>
-                            <th style="text-align: right; padding-right: 15px;">اسم الفحص / المعيار</th>
-                            <th>النتيجة</th>
-                            <th>الوحدة</th>
-                            <th>المدى الطبيعي</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php 
-                            $currentParent = null; 
-                            $counter = 1;
-                        @endphp
-                        @foreach($labResults as $result)
-                            @if($result->parent_test_name && $result->parent_test_name !== $currentParent)
-                                @php $currentParent = $result->parent_test_name; @endphp
-                                <tr style="background: #e8f4f6; font-weight: bold; text-align: right;">
-                                    <td colspan="6" style="text-align: right; padding: 8px 15px; color: #1e7e8f; border-top: 2px solid #1e7e8f;">
-                                        🔬 <strong>{{ $currentParent }}</strong>
-                                    </td>
-                                </tr>
-                            @elseif(!$result->parent_test_name)
-                                @php $currentParent = null; @endphp
-                            @endif
+                @foreach($labResults as $res)
+                    @php
+                        // Optional Category / Parent heading
+                        $parentName = $res->parent_test_name;
+                        $val = trim($res->value ?? '');
+                        $status = strtolower($res->status ?? 'normal');
+                        $unit = trim($res->unit ?? '');
+                        $refRange = trim($res->reference_range ?? '');
+                        $isAbnormal = in_array($status, ['high', 'low', 'abnormal', 'positive']);
 
-                            <tr>
-                                <td>{{ $counter++ }}</td>
-                                <td style="text-align: right; padding-right: {{ $result->parent_test_name ? '30px' : '15px' }};">
-                                    @if($result->parent_test_name)
-                                        <span style="color: #666; margin-left: 5px;">↳</span>
-                                    @endif
-                                    <strong>{{ $result->test_name }}</strong>
-                                </td>
-                                <td><strong style="font-size: 15px;">{{ $result->value }}</strong></td>
-                                <td>{{ $result->unit ?: '—' }}</td>
-                                <td>{{ $result->reference_range ?: '—' }}</td>
-                                <td>
-                                    <span class="status-{{ $result->status }}">
-                                        {{ $result->status == 'normal' ? '✓ طبيعي' : ($result->status == 'high' ? '↑ مرتفع' : ($result->status == 'low' ? '↓ منخفض' : ($result->status ?: '—'))) }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                        // Secondary SI Unit computation or alternate display
+                        $siVal = '';
+                        $siUnit = '';
+                        $siRange = '';
+
+                        // Auto-calculate common dual units if standard
+                        if (is_numeric($val)) {
+                            $num = (float)$val;
+                            if (strtolower($unit) === 'g/l') {
+                                $siVal = number_format($num * 100, 1);
+                                $siUnit = 'mg/dl';
+                                // Parse range if format 'X.XX - Y.YY'
+                                if (preg_match('/([\d\.]+)\s*-\s*([\d\.]+)/', $refRange, $m)) {
+                                    $siRange = number_format((float)$m[1] * 100, 1) . ' - ' . number_format((float)$m[2] * 100, 1);
+                                }
+                            } elseif (strtolower($unit) === 'mg/dl' && $num > 10) {
+                                $siVal = number_format($num / 100, 2);
+                                $siUnit = 'g/l';
+                                if (preg_match('/([\d\.]+)\s*-\s*([\d\.]+)/', $refRange, $m)) {
+                                    $siRange = number_format((float)$m[1] / 100, 2) . ' - ' . number_format((float)$m[2] / 100, 2);
+                                }
+                            }
+                        }
+                    @endphp
+
+                    @if($parentName && $parentName !== $currentGroup)
+                        @php $currentGroup = $parentName; @endphp
+                        <div class="category-header-row">
+                            {{ $currentGroup }}
+                        </div>
+                    @endif
+
+                    <div class="test-card">
+                        <!-- Main Test Row -->
+                        <div class="test-main-row">
+                            <div class="test-name">
+                                {{ $res->test_name }}
+                            </div>
+                            <div class="test-value-cell">
+                                <span class="{{ $isAbnormal ? 'val-abnormal' : 'val-normal' }}">{{ $val ?: '—' }}</span>
+                                @if($unit)
+                                    <span class="unit-label">{{ $unit }}</span>
+                                @endif
+                            </div>
+                            <div class="test-value-cell right">
+                                @if($siVal)
+                                    <span class="{{ $isAbnormal ? 'val-abnormal' : 'val-normal' }}">{{ $siVal }}</span>
+                                    <span class="unit-label">{{ $siUnit }}</span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Reference Range Row -->
+                        @if($refRange || $siRange)
+                        <div class="test-meta-row">
+                            <span class="meta-label">Normal Range :</span>
+                            <span class="meta-conv-range">{{ $refRange ?: '—' }}</span>
+                            @if($siRange)
+                                <span class="meta-si-range">{{ $siRange }}</span>
+                            @endif
+                        </div>
+                        @endif
+
+                        <!-- Device / Method Row -->
+                        <div class="test-device-row">
+                            By Cobas Integra 400 plus (Roche Diagnostics)
+                        </div>
+                    </div>
+                @endforeach
+            @elseif(!empty($request->result))
+                @php
+                    $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
+                    $testResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
+                @endphp
+                @foreach($testResults as $tName => $tVal)
+                    @php
+                        $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : $tVal;
+                        $unitStr = is_array($tVal) ? ($tVal['unit'] ?? '') : '';
+                        $refStr = is_array($tVal) ? ($tVal['reference_range'] ?? '') : '';
+                        $statusStr = is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal';
+                        $isAbn = in_array(strtolower($statusStr), ['high', 'low', 'abnormal']);
+                    @endphp
+                    <div class="test-card">
+                        <div class="test-main-row">
+                            <div class="test-name">{{ is_numeric($tName) ? 'Test #' . ($tName + 1) : $tName }}</div>
+                            <div class="test-value-cell">
+                                <span class="{{ $isAbn ? 'val-abnormal' : 'val-normal' }}">{{ $valStr }}</span>
+                                @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
+                            </div>
+                            <div class="test-value-cell right"></div>
+                        </div>
+                        @if($refStr)
+                        <div class="test-meta-row">
+                            <span class="meta-label">Normal Range :</span>
+                            <span class="meta-conv-range">{{ $refStr }}</span>
+                        </div>
+                        @endif
+                        <div class="test-device-row">By Cobas Integra 400 plus (Roche Diagnostics)</div>
+                    </div>
+                @endforeach
+            @else
+                <div style="text-align: center; padding: 40px; color: #888;">
+                    No laboratory test results recorded for this request yet.
+                </div>
             @endif
         @endif
 
-        <!-- الملاحظات -->
-        @php
-            $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-            $notes = is_array($resultData) ? ($resultData['notes'] ?? '') : '';
-        @endphp
-
-        @if($notes)
-        <div class="notes-section">
-            <h4>📝 ملاحظات إضافية:</h4>
-            <div class="notes-content">{{ $notes }}</div>
-        </div>
-        @endif
-
-        <!-- التذييل -->
-        <div class="footer">
-            <div class="footer-content">
-                <div class="contact-info">
-                    <div class="contact-item">
-                        📞 +964 (0) 778 050 7060
-                    </div>
-                    <div class="contact-item">
-                        📧 info@alkafaathospital.com
-                    </div>
-                    <div class="contact-item">
-                        📍 بغداد - الحارثية - شارع الكندي
-                    </div>
-                </div>
-                <div class="barcode">
-                    {{ $request->id }}-7178
-                </div>
+        <!-- Footer -->
+        <div class="report-footer">
+            <div class="footer-printed-by">
+                Printed by : <span>{{ auth()->user()->name ?? 'Hadeel' }}</span>
+            </div>
+            <div class="footer-datetime">
+                <span>{{ now()->format('d-m-Y') }}</span>
+                <span>{{ now()->format('g:i:sA') }}</span>
             </div>
         </div>
+
     </div>
 
-    <script>
-        function generatePDF() {
-            // حفظ كـ PDF باستخدام وظيفة الطباعة في المتصفح
-            window.print();
-        }
-    </script>
 </body>
 </html>
