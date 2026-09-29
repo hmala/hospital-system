@@ -147,18 +147,23 @@
                                 @enderror
                             </div>
 
-                            <!-- الطبيب المسؤول (تحديد تلقائي بدون قائمة اختيار) -->
+                            <!-- الطبيب (تحديد تلقائي) -->
                             <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id ?? '' }}">
                             @if(isset($assignedDoctor) && $assignedDoctor)
+                                @php
+                                    $docName = $assignedDoctor->user->name ?? '';
+                                    if (!str_starts_with($docName, 'د.') && !str_starts_with($docName, 'الدكتور') && !str_starts_with($docName, 'الدكتورة')) {
+                                        $docName = 'د. ' . $docName;
+                                    }
+                                @endphp
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label text-muted small fw-bold mb-1">الطبيب المسؤول</label>
+                                    <label class="form-label fw-bold">الطبيب</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light text-primary border-end-0"><i class="fas fa-user-md"></i></span>
-                                        <input type="text" class="form-control bg-light text-primary fw-bold border-start-0" 
-                                               value="د. {{ $assignedDoctor->user->name ?? '' }} (طبيب الطوارئ المسؤول)" 
+                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
+                                        <input type="text" class="form-control bg-light text-primary fw-bold" 
+                                               value="{{ $docName }}" 
                                                readonly>
                                     </div>
-                                    <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>محدد تلقائياً حسب طبيب الحالة / نوبة الطوارئ الحالية.</small>
                                 </div>
                             @endif
 

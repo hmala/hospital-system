@@ -113,7 +113,7 @@ class EmergencyWorkflowTest extends TestCase
         $response = $this->actingAs($this->doctorUser)->get(route('emergency.create'));
 
         $response->assertStatus(200);
-        $response->assertSee('طبيب الطوارئ المسؤول');
+        $response->assertSee($this->doctorUser->name);
         $response->assertSee('value="' . $this->doctor->id . '"', false);
         $response->assertDontSee('<select class="form-select @error(\'doctor_id\')', false);
     }
