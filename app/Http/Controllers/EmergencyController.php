@@ -212,16 +212,7 @@ class EmergencyController extends Controller
                 ->get();
         }
 
-        $assignedDoctor = null;
-        if ($user->doctor) {
-            $assignedDoctor = $user->doctor;
-        } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
-            $assignedDoctor = Doctor::has('user')->where('user_id', $user->id)->first();
-        }
-
-        if ($assignedDoctor) {
-            $assignedDoctor->loadMissing('user');
-        }
+        $assignedDoctor = $user->doctor ?: Doctor::where('user_id', $user->id)->first();
 
         $nurses = collect();
         if (\Spatie\Permission\Models\Role::where('name', 'nurse')->where('guard_name', 'web')->exists()) {
@@ -356,14 +347,8 @@ class EmergencyController extends Controller
 
         $doctorId = $request->doctor_id;
         if (empty($doctorId)) {
-            if ($user->doctor) {
-                $doctorId = $user->doctor->id;
-            } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
-                $doc = Doctor::where('user_id', $user->id)->first();
-                if ($doc) {
-                    $doctorId = $doc->id;
-                }
-            }
+            $assignedDoc = $user->doctor ?: Doctor::where('user_id', $user->id)->first();
+            $doctorId = $assignedDoc?->id;
         }
 
         $emergency = Emergency::create([

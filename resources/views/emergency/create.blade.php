@@ -147,51 +147,17 @@
                                 @enderror
                             </div>
 
-                            @if(isset($assignedDoctor) && $assignedDoctor)
-                                @php
-                                    $rawDocName = trim($assignedDoctor->user->name ?? '');
-                                    if ($rawDocName !== '') {
-                                        if (!str_starts_with($rawDocName, 'د.') && !str_starts_with($rawDocName, 'الدكتور') && !str_starts_with($rawDocName, 'الدكتورة')) {
-                                            $docName = 'د. ' . $rawDocName;
-                                        } else {
-                                            $docName = $rawDocName;
-                                        }
-                                    } else {
-                                        $docName = 'الطبيب المسؤول';
-                                    }
-                                @endphp
-                                <!-- الطبيب (تثبيت تلقائي إذا كان المستخدم طبيباً) -->
-                                <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id }}">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">الطبيب المسؤول</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
-                                        <input type="text" class="form-control bg-light text-primary fw-bold" 
-                                               value="{{ $docName }}" 
-                                               readonly>
-                                    </div>
+                            <!-- الطبيب المسؤول (نفس المستخدم المسجل حالياً) -->
+                            <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id ?? '' }}">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">الطبيب المسؤول</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
+                                    <input type="text" class="form-control bg-light text-primary fw-bold" 
+                                           value="{{ auth()->user()->name ?? 'المستخدم الحالي' }}" 
+                                           readonly>
                                 </div>
-                            @else
-                                <!-- اختيار الطبيب (اختياري لموظفي الطوارئ والاستقبال) -->
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">الطبيب المسؤول <span class="text-muted fw-normal">(اختياري)</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
-                                        <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror">
-                                            <option value="">-- بدون تحديد طبيب حالياً / اختيار لاحقاً --</option>
-                                            @foreach($doctors as $doc)
-                                                <option value="{{ $doc->id }}" {{ old('doctor_id') == $doc->id ? 'selected' : '' }}>
-                                                    {{ $doc->user->name ?? 'طبيب' }}
-                                                    @if($doc->specialization) ({{ $doc->specialization }}) @endif
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    @error('doctor_id')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            @endif
+                            </div>
 
                             <div class="col-md-6 mb-3 d-flex align-items-center">
                                 <div class="form-check form-switch mt-2">
