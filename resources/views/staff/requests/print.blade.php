@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laboratory Report - {{ $request->visit?->patient?->user?->name ?? 'Patient' }}</title>
+    <title>Clinical Laboratory Report - {{ $request->visit?->patient?->user?->name ?? 'Patient' }}</title>
     <style>
         * {
             margin: 0;
@@ -14,7 +14,7 @@
         body {
             font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
             direction: ltr;
-            background: #f4f6f9;
+            background: #f0f2f5;
             color: #222;
             padding: 20px;
         }
@@ -24,12 +24,62 @@
             min-height: 297mm;
             margin: 0 auto;
             background: #ffffff;
-            padding: 15mm 18mm;
+            padding: 16mm 20mm;
             position: relative;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
-        /* Top Action Buttons */
+        /* Watermark Background */
+        .report-page::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url('{{ asset('images/1.jpg') }}');
+            background-repeat: no-repeat;
+            background-position: center 52%;
+            background-size: 52% auto;
+            opacity: 0.06;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .report-page > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Decorative Border */
+        .decorative-border {
+            position: absolute;
+            top: 8mm;
+            right: 8mm;
+            bottom: 8mm;
+            left: 8mm;
+            border: 1.5px solid #1e7e8f;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .corner-pattern {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            opacity: 0.18;
+        }
+
+        .corner-pattern.top-right {
+            top: 0;
+            right: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%231e7e8f"/></svg>');
+        }
+
+        .corner-pattern.bottom-left {
+            bottom: 0;
+            left: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L0,100 L100,100 Z" fill="%231e7e8f"/></svg>');
+        }
+
+        /* Print Toolbar (Hidden during print) */
         .print-toolbar {
             position: fixed;
             top: 20px;
@@ -40,7 +90,7 @@
         }
 
         .toolbar-btn {
-            padding: 8px 18px;
+            padding: 9px 20px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -50,58 +100,108 @@
             align-items: center;
             gap: 6px;
             text-decoration: none;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
         }
 
-        .btn-print { background: #1e4b88; color: #fff; }
-        .btn-print:hover { background: #153765; }
+        .btn-print { background: #1e7e8f; color: #fff; }
+        .btn-print:hover { background: #145966; }
         .btn-close-window { background: #6c757d; color: #fff; }
+        .btn-close-window:hover { background: #545b62; }
 
-        /* Report Header */
+        /* Header Section */
         .report-header {
-            position: relative;
             text-align: center;
-            margin-bottom: 20px;
-            padding-top: 5px;
+            margin-bottom: 22px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #1e7e8f;
         }
 
-        .header-top-right {
-            position: absolute;
-            top: 0;
-            right: 0;
+        .header-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .lab-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #e8f4f4;
+            color: #1e7e8f;
+            border: 1px solid #1e7e8f;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .lab-badge img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .hospital-logo-container {
+            text-align: center;
+        }
+
+        .hospital-logo-img {
+            height: 95px;
+            max-width: 220px;
+            object-fit: contain;
+        }
+
+        .specialist-credentials {
             text-align: right;
         }
 
         .specialist-title {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 13px;
+            font-size: 13.5px;
             font-weight: bold;
             color: #8b0000;
         }
 
-        .header-sub-qualifications {
-            font-size: 10.5px;
+        .specialist-sub {
+            font-size: 10px;
             color: #555;
-            margin-bottom: 4px;
+            margin-top: 2px;
         }
 
-        .clinical-lab-title {
+        .hospital-name-ar {
+            font-size: 22px;
+            font-weight: bold;
+            color: #222;
+            font-family: 'Tahoma', Arial, sans-serif;
+            margin-bottom: 2px;
+            direction: rtl;
+        }
+
+        .hospital-name-en {
+            font-size: 14px;
+            color: #777;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .clinical-lab-banner {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 34px;
+            font-size: 30px;
             font-weight: bold;
             font-style: italic;
             color: #1e4b88;
             letter-spacing: 0.5px;
-            display: inline-block;
-            margin-top: 5px;
         }
 
-        /* Patient Info Section */
+        /* Patient Info Grid (Matching image exactly) */
         .patient-info-grid {
             display: grid;
             grid-template-columns: 1.15fr 0.85fr;
-            gap: 10px 25px;
-            margin-bottom: 16px;
+            gap: 6px 30px;
+            margin-bottom: 18px;
             font-size: 13px;
         }
 
@@ -114,11 +214,11 @@
 
         .info-pill {
             background-color: #e5e8ec;
-            color: #111;
+            color: #1a1a1a;
             font-weight: bold;
             font-size: 12.5px;
             padding: 2px 8px;
-            border-radius: 3px;
+            border-radius: 4px;
             min-width: 120px;
             display: inline-block;
         }
@@ -149,14 +249,14 @@
             font-size: 13px;
         }
 
-        /* Table Column Headers */
+        /* Test Table Column Headers (Matching image double blue line) */
         .tests-header-bar {
             display: grid;
             grid-template-columns: 2.2fr 1fr 1fr;
             border-top: 1.5px solid #2b5899;
             border-bottom: 1.5px solid #2b5899;
             padding: 6px 4px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .header-col {
@@ -174,7 +274,7 @@
             padding-right: 15px;
         }
 
-        /* Test Items */
+        /* Test Item Card */
         .test-card {
             padding: 6px 4px 8px 4px;
             border-bottom: 1px solid #e1e4e8;
@@ -188,7 +288,7 @@
             display: grid;
             grid-template-columns: 2.2fr 1fr 1fr;
             align-items: baseline;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .test-name {
@@ -231,7 +331,7 @@
             align-items: center;
             font-size: 12.5px;
             color: #222;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .meta-label {
@@ -270,8 +370,9 @@
 
         /* Footer */
         .report-footer {
-            margin-top: 40px;
-            padding-top: 15px;
+            margin-top: 35px;
+            padding-top: 14px;
+            border-top: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -287,8 +388,16 @@
 
         .footer-datetime {
             display: flex;
-            gap: 25px;
+            gap: 20px;
             font-style: italic;
+        }
+
+        .hospital-contact-line {
+            text-align: center;
+            font-size: 11px;
+            color: #777;
+            margin-top: 8px;
+            font-style: normal;
         }
 
         /* Print Media Styles */
@@ -391,23 +500,46 @@
         $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
         $testsCount = $labResults->count();
 
-        // Also check if result details in JSON exist
         if ($testsCount === 0 && !empty($request->result)) {
             $parsedRes = is_string($request->result) ? json_decode($request->result, true) : $request->result;
             $savedArr = $parsedRes['test_results'] ?? [];
             $testsCount = count($savedArr);
         }
+
+        $isBloodBankRequest = $isBloodBankRequest ?? ($request->type === 'blood_bank' || data_get($request->details, 'blood_bank', false));
+        $badgeText = $isBloodBankRequest ? 'Blood Bank' : 'Clinical Laboratory';
+        $badgeIcon = $isBloodBankRequest ? 'blood-bank-icon.svg' : 'lab-icon.svg';
     @endphp
 
     <div class="report-page">
 
-        <!-- Header -->
+        <!-- Decorative Border -->
+        <div class="decorative-border">
+            <div class="corner-pattern top-right"></div>
+            <div class="corner-pattern bottom-left"></div>
+        </div>
+
+        <!-- Header Section with Logo, Badge & Hospital Info -->
         <div class="report-header">
-            <div class="header-top-right">
-                <div class="header-sub-qualifications">Medical Microbiology (UK) - Cert. Med. Immunology (UK)</div>
-                <div class="specialist-title">M.B.Ch.B., F.I.C.M.S.</div>
+            <div class="header-top-row">
+                <div class="lab-badge">
+                    <img src="{{ asset('images/' . $badgeIcon) }}" alt="Lab Icon">
+                    <span>{{ $badgeText }}</span>
+                </div>
+
+                <div class="hospital-logo-container">
+                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img">
+                </div>
+
+                <div class="specialist-credentials">
+                    <div class="specialist-title">M.B.Ch.B., F.I.C.M.S.</div>
+                    <div class="specialist-sub">Medical Microbiology & Immunology</div>
+                </div>
             </div>
-            <div class="clinical-lab-title">Clinical Laboratory</div>
+
+            <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
+            <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
+            <div class="clinical-lab-banner">Clinical Laboratory</div>
         </div>
 
         <!-- Patient Info Box -->
@@ -437,7 +569,7 @@
                 <div class="info-row">
                     <span class="info-pill">Consultant</span>
                     <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $doctorEn }}</span>
+                    <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
                 </div>
             </div>
 
@@ -504,7 +636,6 @@
             @if($labResults->count() > 0)
                 @foreach($labResults as $res)
                     @php
-                        // Optional Category / Parent heading
                         $parentName = $res->parent_test_name;
                         $val = trim($res->value ?? '');
                         $status = strtolower($res->status ?? 'normal');
@@ -523,7 +654,6 @@
                             if (strtolower($unit) === 'g/l') {
                                 $siVal = number_format($num * 100, 1);
                                 $siUnit = 'mg/dl';
-                                // Parse range if format 'X.XX - Y.YY'
                                 if (preg_match('/([\d\.]+)\s*-\s*([\d\.]+)/', $refRange, $m)) {
                                     $siRange = number_format((float)$m[1] * 100, 1) . ' - ' . number_format((float)$m[2] * 100, 1);
                                 }
@@ -628,6 +758,10 @@
                 <span>{{ now()->format('d-m-Y') }}</span>
                 <span>{{ now()->format('g:i:sA') }}</span>
             </div>
+        </div>
+
+        <div class="hospital-contact-line">
+            📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
         </div>
 
     </div>
