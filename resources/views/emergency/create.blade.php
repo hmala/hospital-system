@@ -149,20 +149,30 @@
 
                             <!-- الطبيب المسؤول -->
                             <div class="col-md-6 mb-3">
-                                <label for="doctor_id" class="form-label">الطبيب المسؤول</label>
-                                <select class="form-select @error('doctor_id') is-invalid @enderror"
-                                        id="doctor_id"
-                                        name="doctor_id">
-                                    <option value="">اختر الطبيب (اختياري)</option>
-                                    @foreach($doctors as $doctor)
-                                        <option value="{{ $doctor->id }}" {{ old('doctor_id') == $doctor->id ? 'selected' : '' }}>
-                                            {{ $doctor->user->name ?? 'طبيب بدون بيانات' }} - {{ $doctor->specialization ?? '' }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('doctor_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                @if(isset($currentDoctor) && $currentDoctor)
+                                    <label class="form-label fw-bold">الطبيب المسؤول</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                        <input type="text" class="form-control bg-light fw-bold text-primary" value="د. {{ $currentDoctor->user->name ?? '' }} (أنت)" readonly>
+                                        <input type="hidden" name="doctor_id" value="{{ $currentDoctor->id }}">
+                                    </div>
+                                    <div class="form-text text-muted"><i class="fas fa-check-circle text-success me-1"></i>تم تعيينك تلقائياً كطبيب مسؤول عن هذه الحالة.</div>
+                                @else
+                                    <label for="doctor_id" class="form-label">الطبيب المسؤول</label>
+                                    <select class="form-select @error('doctor_id') is-invalid @enderror"
+                                            id="doctor_id"
+                                            name="doctor_id">
+                                        <option value="">اختر الطبيب (اختياري)</option>
+                                        @foreach($doctors as $doctor)
+                                            <option value="{{ $doctor->id }}" {{ old('doctor_id') == $doctor->id ? 'selected' : '' }}>
+                                                {{ $doctor->user->name ?? 'طبيب بدون بيانات' }} - {{ $doctor->specialization ?? '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('doctor_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                @endif
                             </div>
 
                             <div class="col-md-6 mb-3 d-flex align-items-center">

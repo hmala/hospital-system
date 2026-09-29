@@ -108,6 +108,15 @@ class EmergencyWorkflowTest extends TestCase
         $response->assertDontSee('<select class="form-select @error(\'patient_id\')', false);
     }
 
+    public function test_doctor_visiting_emergency_create_is_auto_assigned_as_responsible_doctor()
+    {
+        $response = $this->actingAs($this->doctorUser)->get(route('emergency.create'));
+
+        $response->assertStatus(200);
+        $response->assertSee('تم تعيينك تلقائياً كطبيب مسؤول عن هذه الحالة');
+        $response->assertSee('value="' . $this->doctor->id . '"', false);
+    }
+
     public function test_emergency_search_patients_ajax_returns_matching_results()
     {
         $response = $this->actingAs($this->admin)->getJson(route('emergency.search-patients', ['query' => 'تجريبي']));

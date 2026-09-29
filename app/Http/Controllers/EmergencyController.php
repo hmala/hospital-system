@@ -205,12 +205,19 @@ class EmergencyController extends Controller
                 ->get();
         }
 
+        $currentDoctor = null;
+        if ($user->doctor) {
+            $currentDoctor = $user->doctor;
+        } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
+            $currentDoctor = Doctor::where('user_id', $user->id)->first();
+        }
+
         $nurses = collect();
         if (\Spatie\Permission\Models\Role::where('name', 'nurse')->where('guard_name', 'web')->exists()) {
             $nurses = User::role('nurse')->where('is_active', true)->get();
         }
 
-        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses'));
+        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses', 'currentDoctor'));
     }
 
     /**
@@ -336,10 +343,22 @@ class EmergencyController extends Controller
             $patientId = null;
         }
 
+        $doctorId = $request->doctor_id;
+        if (empty($doctorId)) {
+            if ($user->doctor) {
+                $doctorId = $user->doctor->id;
+            } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
+                $doc = Doctor::where('user_id', $user->id)->first();
+                if ($doc) {
+                    $doctorId = $doc->id;
+                }
+            }
+        }
+
         $emergency = Emergency::create([
             'patient_id' => $patientId,
             'emergency_patient_id' => $emergencyPatientId,
-            'doctor_id' => $request->doctor_id,
+            'doctor_id' => $doctorId,
             'nurse_id' => $request->nurse_id,
             'priority' => $request->priority,
             // fill unspecified fields with defaults so table constraints are satisfied
