@@ -205,11 +205,13 @@ class EmergencyController extends Controller
                 ->get();
         }
 
-        $currentDoctor = null;
+        $assignedDoctor = null;
         if ($user->doctor) {
-            $currentDoctor = $user->doctor;
+            $assignedDoctor = $user->doctor;
         } elseif (method_exists($user, 'isDoctor') && $user->isDoctor()) {
-            $currentDoctor = Doctor::where('user_id', $user->id)->first();
+            $assignedDoctor = Doctor::where('user_id', $user->id)->first();
+        } else {
+            $assignedDoctor = $doctors->first();
         }
 
         $nurses = collect();
@@ -217,7 +219,7 @@ class EmergencyController extends Controller
             $nurses = User::role('nurse')->where('is_active', true)->get();
         }
 
-        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses', 'currentDoctor'));
+        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses', 'assignedDoctor'));
     }
 
     /**
