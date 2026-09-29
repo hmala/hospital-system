@@ -8,6 +8,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
     <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -23,31 +28,15 @@
         }
 
         .report-page {
+            width: 210mm;
             max-width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
             background: #ffffff;
-            padding: 16mm 20mm;
+            padding: 16mm 20mm 35mm 20mm;
             position: relative;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .report-content-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-spacing: 0;
-            flex: 1 0 auto;
-        }
-
-        .report-content-table > tbody > tr > td {
-            padding: 0;
-            vertical-align: top;
-        }
-
-        .footer-print-space {
-            display: none;
+            box-sizing: border-box;
         }
 
         /* Watermark Background */
@@ -369,9 +358,12 @@
 
         /* Footer */
         .report-footer-wrapper {
-            margin-top: auto;
-            width: 100%;
-            padding-top: 14px;
+            position: absolute !important;
+            bottom: 14mm;
+            left: 20mm;
+            right: 20mm;
+            width: auto;
+            z-index: 10;
         }
 
         .report-footer {
@@ -427,40 +419,43 @@
             }
 
             .report-page {
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-                max-width: 100%;
-                min-height: auto;
+                box-shadow: none !important;
+                margin: 0 auto !important;
+                padding: 16mm 20mm 35mm 20mm !important;
+                width: 210mm !important;
+                max-width: 100% !important;
+                min-height: 297mm !important;
+                position: relative !important;
+                box-sizing: border-box !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                display: block;
+                page-break-after: auto;
             }
 
             .decorative-border {
-                display: none;
+                display: block !important;
+                position: absolute;
+                top: 8mm;
+                right: 8mm;
+                bottom: 8mm;
+                left: 8mm;
+                border: 1.5px solid #1e7e8f;
             }
 
             .report-page::before {
-                position: fixed;
+                position: absolute;
                 inset: 0;
                 opacity: 0.04;
             }
 
-            .footer-print-space {
-                display: block;
-                height: 52px;
-            }
-
             .report-footer-wrapper {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                width: 100%;
-                background: #ffffff;
-                padding: 6px 0 2px 0;
+                position: absolute !important;
+                bottom: 14mm !important;
+                left: 20mm !important;
+                right: 20mm !important;
+                width: auto !important;
                 z-index: 9999;
+                background: transparent !important;
             }
 
             .test-card {
@@ -480,7 +475,7 @@
 
             @page {
                 size: A4 portrait;
-                margin: 10mm 15mm 15mm 15mm;
+                margin: 0;
             }
         }
     </style>
@@ -574,14 +569,8 @@
             <div class="corner-pattern bottom-left"></div>
         </div>
 
-        <!-- Report Content in Layout Table for multi-page print footer support -->
-        <table class="report-content-table">
-            <tbody>
-                <tr>
-                    <td>
-
-                        <!-- Header Section -->
-                        <div class="report-header">
+        <!-- Header Section -->
+        <div class="report-header">
             <div class="header-top-row">
                 <!-- Left: Hospital Logo (in place of Lab Icon badge) -->
                 <div class="hospital-logo-side">
@@ -807,17 +796,6 @@
                 </div>
             @endif
         @endif
-                    </td>
-                </tr>
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td>
-                        <div class="footer-print-space"></div>
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
 
         <!-- Footer: Always at the bottom of every page on print and bottom on screen -->
         <div class="report-footer-wrapper">
