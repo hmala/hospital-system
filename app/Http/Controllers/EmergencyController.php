@@ -126,12 +126,26 @@ class EmergencyController extends Controller
         $icd10Codes = ICD10Code::orderBy('code')->get();
 
         // جلب طلبات الخدمات التمريضية من جدول requests بعد الدفع
-        $nursingRequests = \App\Models\Request::where('type', 'nursing')
+        $nursingQuery = \App\Models\Request::where('type', 'nursing')
             ->where('payment_status', 'paid')
-            ->with(['visit.patient.user', 'visit.doctor.user'])
-            ->whereIn('status', ['pending', 'in_progress', 'completed'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->with(['visit.patient.user', 'visit.doctor.user']);
+
+        if ($date) {
+            $nursingQuery->whereDate('created_at', $date);
+        } else {
+            if ($filter === 'today' || $filter === 'active') {
+                // في حالات اليوم والنشطة: تظهر فقط الطلبات المعلقة وقيد التنفيذ التي تتطلب إجراءً
+                $nursingQuery->whereIn('status', ['pending', 'in_progress']);
+            } elseif ($filter === 'discharged') {
+                // في تبويب المغادرين: تظهر الطلبات المكتملة
+                $nursingQuery->where('status', 'completed');
+            } elseif ($filter === 'all') {
+                // السجل الكامل
+                $nursingQuery->whereIn('status', ['pending', 'in_progress', 'completed']);
+            }
+        }
+
+        $nursingRequests = $nursingQuery->orderBy('created_at', 'desc')->get();
 
         $availableMedicines = Medicine::where('is_active', true)
             ->orderBy('name')
@@ -1338,12 +1352,12 @@ class EmergencyController extends Controller
         }
 
         // تحديث الحالة
-        $request->validate([
+        $validated = request()->validate([
             'status' => 'required|in:pending,in_progress,completed,cancelled'
         ]);
 
         $request->update([
-            'status' => request('status')
+            'status' => $validated['status']
         ]);
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');

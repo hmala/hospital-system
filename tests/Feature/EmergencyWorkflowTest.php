@@ -156,4 +156,52 @@ class EmergencyWorkflowTest extends TestCase
         $this->assertEquals('discharged', $this->emergency->status);
         $this->assertEquals('recovered', $this->emergency->discharge_type);
     }
+
+    public function test_nursing_request_status_update()
+    {
+        $visit = \App\Models\Visit::create([
+            'patient_id' => $this->emergency->patient_id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->doctor->department_id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => now()->toTimeString(),
+            'visit_type' => 'checkup',
+            'chief_complaint' => 'فحص روتيني وسوائل',
+            'status' => 'completed',
+        ]);
+
+        $nursingRequest = \App\Models\Request::create([
+            'visit_id' => $visit->id,
+            'type' => 'nursing',
+            'description' => 'طلب خدمات تمريضية: إعطاء سائل سول',
+            'status' => 'pending',
+            'payment_status' => 'paid',
+            'details' => ['nursing_service_names' => ['إعطاء سائل سول']],
+        ]);
+
+        $response = $this->actingAs($this->admin)->put(route('emergency.nursing-request.update', $nursingRequest), [
+            'status' => 'in_progress',
+        ]);
+
+        $response->assertRedirect();
+        $nursingRequest->refresh();
+        $this->assertEquals('in_progress', $nursingRequest->status);
+
+        $response2 = $this->actingAs($this->admin)->put(route('emergency.nursing-request.update', $nursingRequest), [
+            'status' => 'completed',
+        ]);
+
+        $response2->assertRedirect();
+        $nursingRequest->refresh();
+        $this->assertEquals('completed', $nursingRequest->status);
+
+        // تختفي من حالات اليوم النشطة
+        $todayView = $this->actingAs($this->admin)->get(route('emergency.index', ['filter' => 'today']));
+        $todayView->assertDontSee('إعطاء سائل سول');
+
+        // تظهر في تبويب المغادرين / المكتملين
+        $dischargedView = $this->actingAs($this->admin)->get(route('emergency.index', ['filter' => 'discharged']));
+        $dischargedView->assertSee('إعطاء سائل سول');
+    }
 }
+
