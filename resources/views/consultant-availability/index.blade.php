@@ -194,7 +194,7 @@
                                                     </button>
                                                 </form>
                                             @else
-                                                @can('process payments')
+                                                @canany(['process consultation payments', 'process payments'])
                                                     <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-sm btn-success text-white fw-bold shadow-xs" title="قبض رسوم الكشفية">
                                                         <i class="fas fa-cash-register me-1"></i>
                                                         قبض الكشفية
@@ -300,7 +300,7 @@
                                         {{ number_format($req->total_amount ?? 0) }} د.ع
                                     </td>
                                     <td>
-                                        @can('process payments')
+                                        @canany(['process medical requests payments', 'process payments'])
                                             <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-sm btn-success fw-bold text-white shadow-xs">
                                                 <i class="fas fa-cash-register me-1"></i>
                                                 قبض الرسوم
