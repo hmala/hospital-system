@@ -18,7 +18,9 @@ if exist "%~dp0.git" (
 echo Working directory: %CD%
 echo.
 
-echo [1/2] Pushing local changes to GitHub main branch...
+echo [1/2] Staging, committing and pushing local changes to GitHub main branch...
+git add .
+git diff-index --quiet HEAD || git commit -m "chore(deploy): auto-commit changes before hostinger deploy"
 git push origin main
 if %ERRORLEVEL% NEQ 0 (
     echo.
