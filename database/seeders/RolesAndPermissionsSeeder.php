@@ -318,6 +318,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view occupancy',
             'view cashier',
             'process consultation payments',
+            'process medical requests payments',
             'inquiry.create.checkup',
             // يمكن إضافة صلاحيات الأشعة حسب الحاجة:
             // 'inquiry.create.radiology.ultrasound',

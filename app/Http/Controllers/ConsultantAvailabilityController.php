@@ -66,11 +66,15 @@ class ConsultantAvailabilityController extends Controller
             ->join('users', 'doctors.user_id', '=', 'users.id')
             ->where('doctors.type', 'consultant')
             ->where('doctors.is_active', true)
-            ->workingOnDay($selectedDay)
             ->orderBy('doctors.specialization')
             ->orderBy('users.name')
             ->select('doctors.*')
-            ->get();
+            ->get()
+            ->map(function ($doc) use ($selectedDay) {
+                $doc->is_working_selected_day = $doc->isWorkingOnDay($selectedDay);
+                $doc->is_available_for_view = $doc->is_working_selected_day && (bool)$doc->is_available_today;
+                return $doc;
+            });
 
         // تجميع الأطباء حسب التخصص للعرض
         $groupedDoctors = $consultantDoctors->groupBy('specialization');

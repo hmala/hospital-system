@@ -29,7 +29,7 @@
         <div class="col-md-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center py-4">
-                    <div class="display-4 fw-bold text-success mb-2">{{ $consultantDoctors->where('is_available_today', true)->count() }}</div>
+                    <div class="display-4 fw-bold text-success mb-2">{{ $consultantDoctors->where('is_available_for_view', true)->count() }}</div>
                     <h5 class="text-muted mb-0">متاح اليوم</h5>
                 </div>
             </div>
@@ -37,7 +37,7 @@
         <div class="col-md-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center py-4">
-                    <div class="display-4 fw-bold text-danger mb-2">{{ $consultantDoctors->where('is_available_today', false)->count() }}</div>
+                    <div class="display-4 fw-bold text-danger mb-2">{{ $consultantDoctors->where('is_available_for_view', false)->count() }}</div>
                     <h5 class="text-muted mb-0">غير متاح</h5>
                 </div>
             </div>
@@ -333,12 +333,12 @@
                                 <button type="button" class="btn btn-sm btn-outline-success active fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="available" onclick="filterDoctorsTable('available', this)">
                                     <i class="fas fa-user-check me-1"></i>
                                     المتواجدون
-                                    <span class="badge bg-success ms-1 rounded-pill" id="countAvailable">{{ $consultantDoctors->where('is_available_today', true)->count() }}</span>
+                                    <span class="badge bg-success ms-1 rounded-pill" id="countAvailable">{{ $consultantDoctors->where('is_available_for_view', true)->count() }}</span>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-danger fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="unavailable" onclick="filterDoctorsTable('unavailable', this)">
                                     <i class="fas fa-user-times me-1"></i>
                                     غير المتاحين
-                                    <span class="badge bg-danger ms-1 rounded-pill" id="countUnavailable">{{ $consultantDoctors->where('is_available_today', false)->count() }}</span>
+                                    <span class="badge bg-danger ms-1 rounded-pill" id="countUnavailable">{{ $consultantDoctors->where('is_available_for_view', false)->count() }}</span>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="all" onclick="filterDoctorsTable('all', this)">
                                     <i class="fas fa-users me-1"></i>
@@ -384,7 +384,7 @@
                             @foreach($consultantDoctors as $index => $doctor)
                                 <tr class="doctor-row" 
                                     id="doctor-row-{{ $doctor->id }}" 
-                                    data-status="{{ $doctor->is_available_today ? 'available' : 'unavailable' }}" 
+                                    data-status="{{ $doctor->is_available_for_view ? 'available' : 'unavailable' }}" 
                                     data-search="{{ strtolower($doctor->user->name . ' ' . $doctor->specialization . ' ' . ($doctor->department->name ?? '')) }}">
                                     <td class="text-muted small fw-bold">{{ $index + 1 }}</td>
                                     <td>
@@ -404,9 +404,13 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge {{ $doctor->is_available_today ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">
-                                            {{ $doctor->is_available_today ? 'متاح' : 'غير متاح' }}
-                                        </span>
+                                        @if($doctor->is_available_for_view)
+                                            <span class="badge bg-success fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">متاح</span>
+                                        @elseif($doctor->is_working_selected_day)
+                                            <span class="badge bg-danger fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">غير متاح</span>
+                                        @else
+                                            <span class="badge bg-secondary fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">غير مجدول اليوم</span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
                                         <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="فتح شاشة الانتظار المخصصة للتلفاز">
@@ -422,9 +426,9 @@
                                                    id="switch-doc-{{ $doctor->id }}" 
                                                    data-doctor-id="{{ $doctor->id }}"
                                                    data-doctor-name="{{ $doctor->user->name }}"
-                                                   {{ $doctor->is_available_today ? 'checked' : '' }}
+                                                   {{ $doctor->is_available_for_view ? 'checked' : '' }}
                                                    onchange="toggleDoctorAvailability({{ $doctor->id }}, this.checked, this)"
-                                                   title="{{ $doctor->is_available_today ? 'انقر لجعله غير متاح فوراً' : 'انقر لجعله متاحاً فوراً' }}"
+                                                   title="{{ $doctor->is_available_for_view ? 'انقر لجعله غير متاح فوراً' : 'انقر لجعله متاحاً فوراً' }}"
                                                    style="cursor: pointer;">
                                         </div>
                                     </td>
