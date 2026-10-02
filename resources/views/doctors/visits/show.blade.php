@@ -1474,6 +1474,11 @@ datalist option:hover {
                                                                                 النتائج: {{ is_string($medRequest->result) ? substr($medRequest->result, 0, 200) : json_encode($medRequest->result) }}
                                                                             </div>
                                                                         @endif
+                                                                    @endif
+                                                                @else
+                                                                    <div class="text-center text-muted py-2">
+                                                                        <i class="fas fa-clock me-1"></i> بانتظار إدخال النتائج أو إرفاق التقرير
+                                                                    </div>
                                                                 @endif
                                                             </div>
                                                         </div>
