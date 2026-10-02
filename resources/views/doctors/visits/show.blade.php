@@ -1369,29 +1369,7 @@ datalist option:hover {
                                                                                             </div>
                                                                                         </div>
                                                                                         @if($radReq->result->radiologist)
-                                                                                        <div class="mt-2 pt-2 border-top small text-muted">
-                                                                                            <i class="fas fa-user-md me-1"></i>
-                                                                                            <strong>أخصائي الأشعة:</strong> {{ $radReq->result->radiologist->name ?? $radReq->result->radiologist }}
-                                                                                            @if($radReq->result->reported_at)
-                                                                                            <br><i class="fas fa-calendar me-1"></i>{{ $radReq->result->reported_at->format('Y-m-d H:i') }}
-                                                                                            @endif
-                                                                                        </div>
-                                                                                        @endif
-                                                                                    </div>
-                                                                                @endif
-                                                                                @endforeach
-                                                                            </div>
-                                                                        </div>
-                                                                        @endif
-                                                                    @elseif($medRequest->type == 'lab')
-                                                                        @php
-                                                                            $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
-                                                                            $hasAttachment = !empty($reqDetails['attachment']);
-                                                                            $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
-                                                                            $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
-                                                                        @endphp
-
-                                                                        @if($hasAttachment)
+                                                                                        <div class="m                                                                         @if($hasAttachment)
                                                                             <div class="alert alert-success border-2 border-success shadow-sm rounded-3 mb-3 p-3">
                                                                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                                                                     <div class="d-flex align-items-center gap-3">
@@ -1399,8 +1377,28 @@ datalist option:hover {
                                                                                             <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }}"></i>
                                                                                         </div>
                                                                                         <div>
-                                                                                            <strong class="text-dark d-block fs-6">{{ $reqDetails['attachment_title'] ?? 'تقرير جهاز التحاليل المرفق' }}</strong>
-                                                                                            <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند ممسوح ضوئياً من الجهاز' }}</small>
+                                                                                            <strong class="text-dark d-block fs-6">{{ $reqDetails['attachment_title'] ?? 'ملف / تقرير التحاليل المرفق' }}</strong>
+                                                                                            <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند PDF أو صورة مرفقة' }}</small>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="d-flex gap-2">
+                                                                                        <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-success fw-bold px-3">
+                                                                                            <i class="fas fa-eye me-1"></i> فتح ومعاينة الملف
+                                                                                        </a>
+                                                                                        <a href="{{ $attachmentUrl }}" download class="btn btn-sm btn-outline-secondary">
+                                                                                            <i class="fas fa-download me-1"></i> تنزيل
+                                                                                        </a>
+                                                                                    </div>
+                                                                                </div>
+                                                                                @if($isImageAttachment)
+                                                                                    <div class="mt-2 text-center">
+                                                                                        <a href="{{ $attachmentUrl }}" target="_blank">
+                                                                                            <img src="{{ $attachmentUrl }}" alt="ملف مرفق" style="max-height: 220px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                                                        </a>
+                                                                                    </div>
+                                                                                @endif
+                                                                            </div>
+                                                                        @endif           <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند ممسوح ضوئياً من الجهاز' }}</small>
                                                                                         </div>
                                                                                     </div>
                                                                                     <div class="d-flex gap-2">
@@ -1526,32 +1524,61 @@ datalist option:hover {
                             <div class="accordion-body">
                                 @php
                                     $hasCompletedRequests = $visit->requests->where('status', 'completed')->count() > 0;
-                                    $hasPendingRequests = $visit->requests->where('status', '                                                                 @if($request->type == 'lab')
-                                                                    @php
-                                                                        $reqDetails = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
-                                                                        $hasAttachment = !empty($reqDetails['attachment']);
-                                                                        $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
-                                                                        $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
-                                                                    @endphp
+                                    $hasPendingRequests = $visit->requests->where('status', 'pending')->count() > 0;
+                                    $prescribedMedications = $visit->prescribedMedications->where('item_type', 'medication');
+                                    $otherTreatments = $visit->prescribedMedications->where('item_type', 'treatment');
+                                @endphp
 
+                                <!-- عرض نتائج الطلبات المكتملة أولاً -->
+                                @if($hasCompletedRequests)
+                                    <div class="card border-primary mb-4">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="mb-0">
+                                                <i class="fas fa-flask me-2"></i>
+                                                نتائج التحاليل والفحوصات المكتملة
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                @foreach($visit->requests->where('status', 'completed') as $request)
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="card border-success">
+                                                        <div class="card-header bg-success text-white">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-{{ $request->type == 'lab' ? 'flask' : ($request->type == 'radiology' ? 'x-ray' : 'pills') }} me-2"></i>
+                                                                {{ $request->type_text }} - {{ $request->created_at->format('Y-m-d') }}
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <p class="mb-2"><strong>الوصف:</strong> {{ $request->details['description'] ?? 'غير محدد' }}</p>
+                                                            @if($request->result || !empty($request->details['attachment']))
+                                                                @php
+                                                                    $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
+                                                                    $reqDetails = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
+                                                                    $hasAttachment = !empty($reqDetails['attachment']);
+                                                                    $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
+                                                                    $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
+                                                                @endphp
+
+                                                                @if($request->type == 'lab')
                                                                     @if($hasAttachment)
                                                                         <div class="alert alert-success border-2 border-success shadow-sm rounded-3 mb-3 p-3">
                                                                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                                                                 <div class="d-flex align-items-center gap-2">
                                                                                     <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }} fs-3 text-success"></i>
                                                                                     <div>
-                                                                                        <strong class="text-dark d-block">{{ $reqDetails['attachment_title'] ?? 'تقرير جهاز التحاليل المرفق' }}</strong>
-                                                                                        <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند ممسوح ضوئياً من الجهاز' }}</small>
+                                                                                        <strong class="text-dark d-block">{{ $reqDetails['attachment_title'] ?? 'ملف / تقرير التحاليل المرفق' }}</strong>
+                                                                                        <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند PDF أو صورة مرفقة' }}</small>
                                                                                     </div>
                                                                                 </div>
                                                                                 <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-success fw-bold px-3">
-                                                                                    <i class="fas fa-eye me-1"></i> فتح ومعاينة التقرير
+                                                                                    <i class="fas fa-eye me-1"></i> فتح ومعاينة الملف
                                                                                 </a>
                                                                             </div>
                                                                             @if($isImageAttachment)
                                                                                 <div class="mt-2 text-center">
                                                                                     <a href="{{ $attachmentUrl }}" target="_blank">
-                                                                                        <img src="{{ $attachmentUrl }}" alt="تقرير ممسوح ضوئياً" style="max-height: 180px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                                                        <img src="{{ $attachmentUrl }}" alt="ملف مرفق" style="max-height: 180px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
                                                                                     </a>
                                                                                 </div>
                                                                             @endif
@@ -1581,31 +1608,6 @@ datalist option:hover {
                                                                         </table>
                                                                     </div>
                                                                     @endif
-                                                                @elseif($request->type == 'radiology' && is_array($resultData))                                                          $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-                                                                @endphp
-                                                                
-                                                                @if($request->type == 'lab' && isset($resultData['test_results']) && is_array($resultData['test_results']))
-                                                                    <!-- نتائج التحاليل المخبرية -->
-                                                                    <div class="table-responsive">
-                                                                        <table class="table table-sm table-bordered mb-0">
-                                                                            <thead class="table-light">
-                                                                                <tr>
-                                                                                    <th>الفحص</th>
-                                                                                    <th>القيمة</th>
-                                                                                    <th>الوحدة</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                @foreach($resultData['test_results'] as $testName => $testData)
-                                                                                <tr>
-                                                                                    <td>{{ $testName }}</td>
-                                                                                    <td>{{ (is_array($testData) ? ($testData['value'] ?? '-') : '-') }}</td>
-                                                                                    <td>{{ (is_array($testData) ? ($testData['unit'] ?? '-') : '-') }}</td>
-                                                                                </tr>
-                                                                                @endforeach
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
                                                                 @elseif($request->type == 'radiology' && is_array($resultData))
                                                                     <!-- نتائج الأشعة -->
                                                                     <div class="radiology-results">

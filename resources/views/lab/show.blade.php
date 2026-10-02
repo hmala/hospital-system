@@ -196,10 +196,16 @@ function buildSelectedLabTests($requestDetails) {
 
                     @if(!empty($requestDetails['attachment']))
                         <a href="{{ asset('storage/' . $requestDetails['attachment']) }}" 
-                           class="btn btn-info text-white fw-bold" 
+                           class="btn btn-info text-white fw-bold shadow-sm" 
                            target="_blank">
-                            <i class="fas fa-file-medical me-1"></i>
-                            معاينة / طباعة تقرير الجهاز
+                            <i class="fas fa-print me-1"></i>
+                            طباعة الملف المرفق
+                        </a>
+                        <a href="{{ asset('storage/' . $requestDetails['attachment']) }}" 
+                           class="btn btn-outline-info fw-bold" 
+                           target="_blank">
+                            <i class="fas fa-eye me-1"></i>
+                            معاينة الملف
                         </a>
                     @endif
                     @if($request->type == 'lab' || $isBloodBankRequest)
@@ -847,15 +853,15 @@ function buildSelectedLabTests($requestDetails) {
                             $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
                         @endphp
 
-                        <!-- بطاقة إرفاق تقرير جهاز التحاليل الممسوح ضوئياً -->
+                        <!-- بطاقة إرفاق ملف / تقرير التحاليل (PDF / صور / سكانر) -->
                         <div class="card border-info mb-4 shadow-sm" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
                             <div class="card-header bg-info text-white d-flex align-items-center justify-content-between">
                                 <h6 class="mb-0 fw-bold">
                                     <i class="fas fa-file-medical-alt me-2"></i>
-                                    إرفاق تقرير جهاز التحاليل الممسوح ضوئياً (A4 Scanned Report / PDF)
+                                    إرفاق ملف / تقرير التحاليل (PDF / صور / سكانر / ملف الجهاز)
                                 </h6>
                                 @if($hasAttachment)
-                                    <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i> يوجد تقرير مرفق</span>
+                                    <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i> يوجد ملف مرفق</span>
                                 @endif
                             </div>
                             <div class="card-body">
@@ -867,29 +873,32 @@ function buildSelectedLabTests($requestDetails) {
                                                     <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }}"></i>
                                                 </div>
                                                 <div>
-                                                    <h6 class="fw-bold text-dark mb-1">{{ $reqDetails['attachment_title'] ?? 'تقرير جهاز التحاليل' }}</h6>
+                                                    <h6 class="fw-bold text-dark mb-1">{{ $reqDetails['attachment_title'] ?? 'ملف تقرير التحاليل المرفق' }}</h6>
                                                     <div class="text-muted small">
-                                                        <span><i class="fas fa-paperclip me-1"></i> {{ $reqDetails['attachment_name'] ?? 'مستند مرفق' }}</span>
+                                                        <span><i class="fas fa-paperclip me-1"></i> {{ $reqDetails['attachment_name'] ?? 'ملف مرفق' }}</span>
                                                         @if(!empty($reqDetails['attached_at']))
-                                                            <span class="ms-3"><i class="fas fa-clock me-1"></i> {{ $reqDetails['attached_at'] }}</span>
+                                                             <span class="ms-3"><i class="fas fa-clock me-1"></i> {{ $reqDetails['attached_at'] }}</span>
                                                         @endif
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="d-flex gap-2">
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-info text-white fw-bold shadow-sm">
+                                                    <i class="fas fa-print me-1"></i> طباعة الملف المرفق
+                                                </a>
                                                 <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-primary fw-bold">
-                                                    <i class="fas fa-eye me-1"></i> فتح ومعاينة التقرير
+                                                    <i class="fas fa-eye me-1"></i> معاينة وتكبير
                                                 </a>
                                                 <label class="btn btn-outline-danger" for="removeAttachmentCb" style="cursor: pointer;">
                                                     <input type="checkbox" name="remove_attachment" value="1" id="removeAttachmentCb" class="d-none" onchange="this.checked ? this.closest('label').classList.add('active', 'btn-danger') : this.closest('label').classList.remove('active', 'btn-danger')">
-                                                    <i class="fas fa-trash-alt me-1"></i> حذف المرفق عند الحفظ
+                                                    <i class="fas fa-trash-alt me-1"></i> حذف الملف عند الحفظ
                                                 </label>
                                             </div>
                                         </div>
                                         @if($isImageAttachment)
                                             <div class="mt-3 text-center border-top pt-2">
                                                 <a href="{{ $attachmentUrl }}" target="_blank" title="اضغط للتكبير">
-                                                    <img src="{{ $attachmentUrl }}" alt="تقرير ممسوح ضوئياً" style="max-height: 250px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                    <img src="{{ $attachmentUrl }}" alt="تقرير مرفق" style="max-height: 250px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
                                                 </a>
                                             </div>
                                         @endif
@@ -900,14 +909,14 @@ function buildSelectedLabTests($requestDetails) {
                                     <div class="col-md-7">
                                         <label class="form-label fw-bold text-dark">
                                             <i class="fas fa-upload me-1 text-primary"></i>
-                                            {{ $hasAttachment ? 'استبدال أو رفع تقرير جديد:' : 'اختر ملف التقرير الممسوح ضوئياً من الماسح (Scanner) أو الجهاز:' }}
+                                            {{ $hasAttachment ? 'استبدال أو رفع ملف جديد:' : 'اختر ملف التقرير من الجهاز (ملف PDF، صورة، أو سكانر):' }}
                                         </label>
                                         <input type="file" name="attachment" id="attachmentInput" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
-                                        <div class="form-text small text-muted">الصيغ المدعومة: PDF, JPG, PNG (بحجم أقصى 20 ميغابايت).</div>
+                                        <div class="form-text small text-muted">الملفات المدعومة: PDF, JPG, PNG (تصدير مباشر من الجهاز أو سكنر أو الكمبيوتر بحجم أقصى 20MB).</div>
                                     </div>
                                     <div class="col-md-5">
-                                        <label class="form-label fw-bold text-dark">عنوان أو وصف المرفق (اختياري):</label>
-                                        <input type="text" name="attachment_title" class="form-control" value="{{ old('attachment_title', $reqDetails['attachment_title'] ?? '') }}" placeholder="مثال: تقرير جهاز CBC كامل">
+                                        <label class="form-label fw-bold text-dark">عنوان أو وصف الملف المرفق (اختياري):</label>
+                                        <input type="text" name="attachment_title" class="form-control" value="{{ old('attachment_title', $reqDetails['attachment_title'] ?? '') }}" placeholder="مثال: تقرير CBC كامل / صورة التقرير">
                                     </div>
                                 </div>
                             </div>
@@ -943,13 +952,13 @@ function buildSelectedLabTests($requestDetails) {
                                                 <tbody>
                                                     @foreach($testsList as $index => $test)
                                                         @php
-                                                            $testIcon  = getTestIcon($test);
-                                                            $labTestObj = $labTestMap[$test] ?? null;
-                                                            $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
+                                                             $testIcon  = getTestIcon($test);
+                                                             $labTestObj = $labTestMap[$test] ?? null;
+                                                             $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                         @endphp
 
                                                         @if($hasSubTests)
-                                                            {{-- فحص مركب / فرعي: يتم الاعتماد حصراً على تقرير الجهاز الممسوح ضوئياً بالسكانر --}}
+                                                            {{-- فحص مركب / فرعي: يتم الاعتماد على الملف المرفق (PDF أو صورة أو سكنر) --}}
                                                             <tr class="table-info bg-opacity-25">
                                                                 <td class="text-center text-muted small">{{ $index + 1 }}</td>
                                                                 <td>
@@ -961,25 +970,25 @@ function buildSelectedLabTests($requestDetails) {
                                                                         </span>
                                                                     </div>
                                                                     <div class="small text-muted mt-1">
-                                                                        <i class="fas fa-info-circle me-1"></i> يتم قراءة كافة المعاملات والرسوم البيانية من ورقة الجهاز الممسوحة بالسكانر
+                                                                        <i class="fas fa-info-circle me-1"></i> يتم قراءة كافة المعاملات والرسومات من الملف المرفق (PDF / صورة / سكانر)
                                                                     </div>
                                                                 </td>
                                                                 <td colspan="2">
                                                                     @if($hasAttachment)
                                                                         <div class="d-inline-flex align-items-center gap-2 py-1 px-3 bg-success bg-opacity-10 text-success border border-success rounded-pill fw-bold small">
-                                                                            <i class="fas fa-check-circle"></i> تم إرفاق تقرير الجهاز بالسكانر
+                                                                            <i class="fas fa-check-circle"></i> تم إرفاق ملف التقرير
                                                                         </div>
                                                                     @else
                                                                         <div class="d-inline-flex align-items-center gap-2 py-1 px-3 bg-warning bg-opacity-10 text-dark border border-warning rounded-pill fw-bold small">
-                                                                            <i class="fas fa-upload text-warning"></i> يرجى إرفاق تقرير السكانر من البطاقة أعلاه
+                                                                            <i class="fas fa-upload text-warning"></i> يرجى إرفاق ملف التقرير من البطاقة أعلاه
                                                                         </div>
                                                                     @endif
                                                                 </td>
                                                                 <td>
-                                                                    <span class="badge bg-light text-muted border">مدرج بتقرير الجهاز</span>
+                                                                    <span class="badge bg-light text-muted border">مدرج بالملف المرفق</span>
                                                                 </td>
                                                                 <td class="text-center">
-                                                                    <span class="badge bg-secondary bg-opacity-75">سكانر فقط</span>
+                                                                    <span class="badge bg-secondary bg-opacity-75">ملف مرفق</span>
                                                                 </td>
                                                             </tr>
                                                         @else
