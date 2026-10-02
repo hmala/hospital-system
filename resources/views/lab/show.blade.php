@@ -194,12 +194,20 @@ function buildSelectedLabTests($requestDetails) {
                         $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
                     @endphp
 
+                    @if(!empty($requestDetails['attachment']))
+                        <a href="{{ asset('storage/' . $requestDetails['attachment']) }}" 
+                           class="btn btn-info text-white fw-bold" 
+                           target="_blank">
+                            <i class="fas fa-file-medical me-1"></i>
+                            معاينة / طباعة تقرير الجهاز
+                        </a>
+                    @endif
                     @if($request->type == 'lab' || $isBloodBankRequest)
                         <a href="{{ route('lab.print', $request) }}" 
-                           class="btn btn-success" 
+                           class="btn btn-success fw-bold" 
                            target="_blank">
                             <i class="fas fa-print me-1"></i>
-                            طباعة النتائج
+                            طباعة تقرير النظام
                         </a>
                     @endif
                     @if(!$isBloodBankRequest && in_array($request->status, ['pending', 'in_progress', 'completed']))
@@ -829,9 +837,81 @@ function buildSelectedLabTests($requestDetails) {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('lab.update', $request) }}" method="POST">
+                    <form action="{{ route('lab.update', $request) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
+
+                        @php
+                            $hasAttachment = !empty($reqDetails['attachment']);
+                            $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
+                            $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
+                        @endphp
+
+                        <!-- بطاقة إرفاق تقرير جهاز التحاليل الممسوح ضوئياً -->
+                        <div class="card border-info mb-4 shadow-sm" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                            <div class="card-header bg-info text-white d-flex align-items-center justify-content-between">
+                                <h6 class="mb-0 fw-bold">
+                                    <i class="fas fa-file-medical-alt me-2"></i>
+                                    إرفاق تقرير جهاز التحاليل الممسوح ضوئياً (A4 Scanned Report / PDF)
+                                </h6>
+                                @if($hasAttachment)
+                                    <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i> يوجد تقرير مرفق</span>
+                                @endif
+                            </div>
+                            <div class="card-body">
+                                @if($hasAttachment)
+                                    <div class="alert alert-white bg-white border-2 border-success p-3 rounded-3 mb-3 shadow-sm">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle fs-3">
+                                                    <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }}"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold text-dark mb-1">{{ $reqDetails['attachment_title'] ?? 'تقرير جهاز التحاليل' }}</h6>
+                                                    <div class="text-muted small">
+                                                        <span><i class="fas fa-paperclip me-1"></i> {{ $reqDetails['attachment_name'] ?? 'مستند مرفق' }}</span>
+                                                        @if(!empty($reqDetails['attached_at']))
+                                                            <span class="ms-3"><i class="fas fa-clock me-1"></i> {{ $reqDetails['attached_at'] }}</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-primary fw-bold">
+                                                    <i class="fas fa-eye me-1"></i> فتح ومعاينة التقرير
+                                                </a>
+                                                <label class="btn btn-outline-danger" for="removeAttachmentCb" style="cursor: pointer;">
+                                                    <input type="checkbox" name="remove_attachment" value="1" id="removeAttachmentCb" class="d-none" onchange="this.checked ? this.closest('label').classList.add('active', 'btn-danger') : this.closest('label').classList.remove('active', 'btn-danger')">
+                                                    <i class="fas fa-trash-alt me-1"></i> حذف المرفق عند الحفظ
+                                                </label>
+                                            </div>
+                                        </div>
+                                        @if($isImageAttachment)
+                                            <div class="mt-3 text-center border-top pt-2">
+                                                <a href="{{ $attachmentUrl }}" target="_blank" title="اضغط للتكبير">
+                                                    <img src="{{ $attachmentUrl }}" alt="تقرير ممسوح ضوئياً" style="max-height: 250px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <div class="row align-items-center g-3">
+                                    <div class="col-md-7">
+                                        <label class="form-label fw-bold text-dark">
+                                            <i class="fas fa-upload me-1 text-primary"></i>
+                                            {{ $hasAttachment ? 'استبدال أو رفع تقرير جديد:' : 'اختر ملف التقرير الممسوح ضوئياً من الماسح (Scanner) أو الجهاز:' }}
+                                        </label>
+                                        <input type="file" name="attachment" id="attachmentInput" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+                                        <div class="form-text small text-muted">الصيغ المدعومة: PDF, JPG, PNG (بحجم أقصى 20 ميغابايت).</div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold text-dark">عنوان أو وصف المرفق (اختياري):</label>
+                                        <input type="text" name="attachment_title" class="form-control" value="{{ old('attachment_title', $reqDetails['attachment_title'] ?? '') }}" placeholder="مثال: تقرير جهاز CBC كامل">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         @if($request->type == 'lab')
                         @php

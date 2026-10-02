@@ -185,16 +185,37 @@ class LabStaffController extends Controller
             return redirect()->route('lab.show', $request)->with('success', 'تم حفظ بيانات مصرف الدم بنجاح');
         }
 
-        // 3. حفظ نتائج التحاليل
+        // 3. معالجة المرفق (تقرير جهاز التحاليل ممسوح ضوئياً) وحفظ نتائج التحاليل
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($details)) $details = [];
+
+        $hasNewAttachment = false;
+        if ($httpRequest->hasFile('attachment')) {
+            $file = $httpRequest->file('attachment');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('lab_attachments', $filename, 'public');
+            
+            $details['attachment'] = $path;
+            $details['attachment_name'] = $file->getClientOriginalName();
+            $details['attachment_mime'] = $file->getClientMimeType();
+            $details['attachment_title'] = $httpRequest->attachment_title ?: 'تقرير جهاز التحاليل المرفق';
+            $details['attached_at'] = now()->toDateTimeString();
+            $hasNewAttachment = true;
+        } elseif ($httpRequest->has('remove_attachment') && $httpRequest->remove_attachment == '1') {
+            if (!empty($details['attachment'])) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($details['attachment']);
+            }
+            unset($details['attachment'], $details['attachment_name'], $details['attachment_mime'], $details['attachment_title'], $details['attached_at']);
+        }
+
+        $request->details = $details;
+
+        $savedResults = 0;
         if ($httpRequest->has('test_results') && is_array($httpRequest->test_results)) {
             LabResult::where('request_id', $request->id)->delete();
 
-            $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-            if (!is_array($details)) $details = [];
-
             $sourceType = !empty($details['package_id']) ? 'package' : 'general';
             $packageId = $details['package_id'] ?? null;
-            $savedResults = 0;
 
             foreach ($httpRequest->test_results as $key => $data) {
                 if (!empty($data['value'])) {
@@ -202,6 +223,7 @@ class LabStaffController extends Controller
                     $parentTestName = $data['parent_test_name'] ?? null;
                     $subTestId = $data['sub_test_id'] ?? null;
                     $labTestId = $data['lab_test_id'] ?? null;
+                    $unit = $data['unit'] ?? '';
                     $refRange = $data['reference_range'] ?? ((new LabResult)->getReferenceRange($testName));
                     $status = (new LabResult)->determineStatus($data['value'], $testName, $refRange);
                     if (!empty($data['status']) && in_array($data['status'], ['high', 'low', 'abnormal', 'positive'])) {
@@ -234,12 +256,30 @@ class LabStaffController extends Controller
                     $savedResults++;
                 }
             }
+        }
 
+        // إذا تم إدخال نتائج رقمية أو تم رفع مرفق جديد
+        if ($savedResults > 0 || $hasNewAttachment || !empty($details['attachment'])) {
             $request->status = 'completed';
-            $request->result = json_encode([
-                'test_results' => $httpRequest->test_results,
-                'notes' => $httpRequest->result_notes ?? '',
-            ]);
+            
+            $existingRes = is_string($request->result) ? (json_decode($request->result, true) ?: []) : ($request->result ?: []);
+            if (!is_array($existingRes)) $existingRes = [];
+
+            if ($savedResults > 0) {
+                $existingRes['test_results'] = $httpRequest->test_results;
+            }
+            if (!empty($details['attachment'])) {
+                $existingRes['attachment'] = $details['attachment'];
+                $existingRes['attachment_name'] = $details['attachment_name'] ?? '';
+                $existingRes['attachment_title'] = $details['attachment_title'] ?? '';
+            } elseif (isset($existingRes['attachment']) && empty($details['attachment'])) {
+                unset($existingRes['attachment'], $existingRes['attachment_name'], $existingRes['attachment_title']);
+            }
+            if ($httpRequest->filled('result_notes') || $httpRequest->filled('result')) {
+                $existingRes['notes'] = $httpRequest->result_notes ?? $httpRequest->result;
+            }
+
+            $request->result = json_encode($existingRes);
             $request->save();
 
             $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
@@ -251,7 +291,11 @@ class LabStaffController extends Controller
                 }
             }
 
-            return redirect()->route('lab.show', $request)->with('success', "تم حفظ {$savedResults} نتيجة تحليل بنجاح");
+            $msg = $savedResults > 0
+                ? "تم حفظ {$savedResults} نتيجة تحليل" . ($hasNewAttachment ? " مع تقرير الجهاز المرفق" : "") . " بنجاح"
+                : "تم حفظ واعتماد تقرير جهاز التحاليل المرفق بنجاح";
+
+            return redirect()->route('lab.show', $request)->with('success', $msg);
         }
 
         // 4. تحديث حالة الطلب فقط
