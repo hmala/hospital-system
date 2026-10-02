@@ -22,13 +22,15 @@ class LabTestReferenceController extends Controller
         $data = $request->validate([
             'gender'   => 'required|in:male,female,both',
             'age_min'  => 'required|integer|min:0',
-            'age_max'  => 'required|integer|min:0',
+            'age_max'  => 'nullable|integer|min:0',
             'ref_min'  => 'nullable|numeric',
             'ref_max'  => 'nullable|numeric',
             'ref_text' => 'nullable|string|max:100',
             'unit'     => 'nullable|string|max:50',
             'notes'    => 'nullable|string',
         ]);
+
+        $data['age_max'] = $data['age_max'] !== null && $data['age_max'] !== '' ? (int) $data['age_max'] : 999;
 
         $labTest->references()->create($data);
 
@@ -43,13 +45,15 @@ class LabTestReferenceController extends Controller
         $data = $request->validate([
             'gender'   => 'required|in:male,female,both',
             'age_min'  => 'required|integer|min:0',
-            'age_max'  => 'required|integer|min:0',
+            'age_max'  => 'nullable|integer|min:0',
             'ref_min'  => 'nullable|numeric',
             'ref_max'  => 'nullable|numeric',
             'ref_text' => 'nullable|string|max:100',
             'unit'     => 'nullable|string|max:50',
             'notes'    => 'nullable|string',
         ]);
+
+        $data['age_max'] = $data['age_max'] !== null && $data['age_max'] !== '' ? (int) $data['age_max'] : 999;
 
         $reference->update($data);
 

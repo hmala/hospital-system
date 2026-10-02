@@ -450,7 +450,10 @@ class StaffRequestController extends Controller
                         $labTestId = $data['lab_test_id'] ?? null;
                         $unit = $data['unit'] ?? '';
                         $refRange = $data['reference_range'] ?? ((new LabResult)->getReferenceRange($testName));
-                        $status = $data['status'] ?? ((new LabResult)->determineStatus($data['value'], $testName));
+                        $status = (new LabResult)->determineStatus($data['value'], $testName, $refRange);
+                        if (!empty($data['status']) && in_array($data['status'], ['high', 'low', 'abnormal', 'positive'])) {
+                            $status = $data['status'];
+                        }
 
                         if (!$labTestId && $parentTestName) {
                             $parentTest = \App\Models\LabTest::where('name', $parentTestName)->first();

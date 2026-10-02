@@ -83,41 +83,122 @@
             background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%231e7e8f"/></svg>');
         }
 
-        .corner-pattern.bottom-left {
-            bottom: 0;
-            left: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L0,100 L100,100 Z" fill="%231e7e8f"/></svg>');
+        :root {
+            --letterhead-top: 45mm;
+            --letterhead-bottom: 25mm;
+        }
+
+        /* Letterhead Mode Styles (for pre-printed official hospital letterhead paper) */
+        body.letterhead-mode .report-header,
+        body.letterhead-mode .decorative-border,
+        body.letterhead-mode .corner-pattern,
+        body.letterhead-mode .hospital-contact-line,
+        body.letterhead-mode .report-footer-wrapper {
+            display: none !important;
+        }
+
+        body.letterhead-mode .report-page::before {
+            display: none !important;
+        }
+
+        body.letterhead-mode .report-page {
+            padding-top: var(--letterhead-top, 45mm) !important;
+            padding-bottom: var(--letterhead-bottom, 25mm) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
 
         /* Print Toolbar (Hidden during print) */
         .print-toolbar {
             position: fixed;
-            top: 20px;
+            top: 15px;
             right: 20px;
             display: flex;
+            align-items: center;
             gap: 10px;
-            z-index: 9999;
+            background: rgba(15, 23, 42, 0.94);
+            padding: 7px 14px;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.15);
+            z-index: 99999;
+            direction: rtl;
+            font-family: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
         }
 
         .toolbar-btn {
-            padding: 9px 20px;
+            padding: 8px 16px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: bold;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             text-decoration: none;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
             transition: all 0.2s ease;
         }
 
-        .btn-print { background: #1e7e8f; color: #fff; }
-        .btn-print:hover { background: #145966; }
-        .btn-close-window { background: #6c757d; color: #fff; }
-        .btn-close-window:hover { background: #545b62; }
+        .btn-print { background: #0284c7; color: #fff; }
+        .btn-print:hover { background: #0369a1; transform: translateY(-1px); }
+        .btn-close-window { background: #475569; color: #fff; }
+        .btn-close-window:hover { background: #334155; }
+
+        .mode-toggle-group {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px;
+            border-radius: 6px;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #cbd5e1;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn:hover {
+            color: #fff;
+        }
+
+        .mode-btn.active {
+            background: #1e7e8f;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .margin-control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #e2e8f0;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .margin-control-group input {
+            width: 48px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: #0f172a;
+            color: #38bdf8;
+            font-weight: bold;
+            text-align: center;
+            font-size: 13px;
+        }
 
         /* Header Section */
         .report-header {
@@ -301,12 +382,53 @@
             font-size: 14px;
         }
 
-        .val-abnormal {
-            color: #c00000;
+        .val-high {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
             font-weight: bold;
-            font-size: 14px;
-            text-decoration: underline;
+            font-size: 13.5px;
+            padding: 1px 7px;
+            border-radius: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
+
+        .val-low {
+            display: inline-block;
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fcd34d;
+            font-weight: bold;
+            font-size: 13.5px;
+            padding: 1px 7px;
+            border-radius: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .val-abnormal {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+            font-weight: bold;
+            font-size: 13.5px;
+            padding: 1px 7px;
+            border-radius: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .badge-flag {
+            font-size: 11px;
+            font-weight: 800;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .badge-flag.high { color: #b91c1c; }
+        .badge-flag.low { color: #b45309; }
 
         .unit-label {
             color: #333;
@@ -315,26 +437,30 @@
         }
 
         .test-meta-row {
-            display: flex;
-            align-items: center;
+            display: grid;
+            grid-template-columns: 2.2fr 1fr 1fr;
+            align-items: baseline;
             font-size: 12.5px;
-            color: #222;
+            color: #444;
             margin-bottom: 2px;
         }
 
         .meta-label {
-            min-width: 140px;
-            font-weight: normal;
-            color: #222;
+            font-weight: 600;
+            color: #333;
         }
 
         .meta-conv-range {
-            width: 250px;
-            color: #222;
+            text-align: center;
+            color: #444;
+            font-size: 12.5px;
         }
 
         .meta-si-range {
-            color: #222;
+            text-align: right;
+            padding-right: 15px;
+            color: #444;
+            font-size: 12.5px;
         }
 
         .test-device-row {
@@ -468,9 +594,21 @@
                 page-break-inside: avoid;
             }
 
-            .report-header {
-                break-inside: avoid;
-                page-break-inside: avoid;
+            body.letterhead-mode .report-header,
+            body.letterhead-mode .decorative-border,
+            body.letterhead-mode .corner-pattern,
+            body.letterhead-mode .hospital-contact-line,
+            body.letterhead-mode .report-footer-wrapper {
+                display: none !important;
+            }
+
+            body.letterhead-mode .report-page::before {
+                display: none !important;
+            }
+
+            body.letterhead-mode .report-page {
+                padding-top: var(--letterhead-top, 45mm) !important;
+                padding-bottom: var(--letterhead-bottom, 25mm) !important;
             }
 
             @page {
@@ -485,49 +623,124 @@
     <!-- Action Toolbar (Hidden during print) -->
     <div class="print-toolbar">
         <button class="toolbar-btn btn-print" onclick="window.print()">
-            🖨️ Print Report
+            🖨️ طباعة التقرير
         </button>
+
+        <div class="mode-toggle-group">
+            <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
+                📄 ورق مروس (Letterhead)
+            </button>
+            <button type="button" class="mode-btn" id="btnModeFull" onclick="setPrintMode('full')">
+                📑 ورق أبيض كامل (Full)
+            </button>
+        </div>
+
+        <div class="margin-control-group" id="marginControls">
+            <label for="topMarginInput">المسافة العلوية:</label>
+            <input type="number" id="topMarginInput" min="10" max="120" step="1" value="45" oninput="changeTopMargin(this.value)">
+            <span>مم</span>
+        </div>
+
         <button class="toolbar-btn btn-close-window" onclick="window.history.back()">
-            ✕ Back
+            ✕ رجوع
         </button>
     </div>
 
     @php
         // Helper: Convert Arabic Name to English Transliteration
-        function transliterateArabicName($text) {
-            if (empty($text)) return '';
-            $known = [
-                'محمد' => 'Mohammed', 'احمد' => 'Ahmed', 'أحمد' => 'Ahmed', 'علي' => 'Ali',
-                'حسين' => 'Hussein', 'حسن' => 'Hasan', 'صادق' => 'Sadeq', 'ياسين' => 'Yaseen',
-                'عباس' => 'Abbas', 'فاضل' => 'Fadhel', 'كاظم' => 'Kadhim', 'مهدي' => 'Mahdi',
-                'عمر' => 'Omar', 'عثمان' => 'Othman', 'خالد' => 'Khalid', 'مصطفى' => 'Mustafa',
-                'ابراهيم' => 'Ibrahim', 'إبراهيم' => 'Ibrahim', 'يوسف' => 'Yousif', 'محمود' => 'Mahmoud',
-                'عبدالله' => 'Abdullah', 'عبد الله' => 'Abdullah', 'عبد الرحمن' => 'Abdulrahman',
-                'فاطمة' => 'Fatima', 'زينب' => 'Zainab', 'مريم' => 'Maryam', 'نور' => 'Noor',
-                'سارة' => 'Sara', 'ساره' => 'Sara', 'هدى' => 'Huda', 'حيدر' => 'Haider'
-            ];
-            $words = preg_split('/\s+/', trim($text));
-            $latinWords = [];
-            $charMap = [
-                'ا' => 'a', 'أ' => 'A', 'إ' => 'E', 'آ' => 'Aa', 'ب' => 'b', 'ت' => 't', 'ث' => 'th',
-                'ج' => 'j', 'ح' => 'h', 'خ' => 'kh', 'د' => 'd', 'ذ' => 'dh', 'ر' => 'r', 'ز' => 'z',
-                'س' => 's', 'ش' => 'sh', 'ص' => 's', 'ض' => 'd', 'ط' => 't', 'ظ' => 'dh', 'ع' => 'a',
-                'غ' => 'gh', 'ف' => 'f', 'ق' => 'q', 'ك' => 'k', 'ل' => 'l', 'م' => 'm', 'ن' => 'n',
-                'ه' => 'h', 'ة' => 'a', 'و' => 'w', 'ي' => 'y', 'ى' => 'a', 'ء' => ''
-            ];
-            foreach ($words as $w) {
-                if (isset($known[$w])) {
-                    $latinWords[] = $known[$w];
-                } else {
-                    $chars = mb_str_split($w);
-                    $res = '';
-                    foreach ($chars as $c) {
-                        $res .= $charMap[$c] ?? $c;
+        if (!function_exists('transliterateArabicName')) {
+            function transliterateArabicName($text) {
+                if (empty($text)) return '';
+                $known = [
+                    'محمد' => 'Mohammed', 'احمد' => 'Ahmed', 'أحمد' => 'Ahmed', 'علي' => 'Ali',
+                    'حسين' => 'Hussein', 'حسن' => 'Hasan', 'صادق' => 'Sadeq', 'ياسين' => 'Yaseen',
+                    'عباس' => 'Abbas', 'فاضل' => 'Fadhel', 'كاظم' => 'Kadhim', 'مهدي' => 'Mahdi',
+                    'عمر' => 'Omar', 'عثمان' => 'Othman', 'خالد' => 'Khalid', 'مصطفى' => 'Mustafa',
+                    'ابراهيم' => 'Ibrahim', 'إبراهيم' => 'Ibrahim', 'يوسف' => 'Yousif', 'محمود' => 'Mahmoud',
+                    'عبدالله' => 'Abdullah', 'عبد الله' => 'Abdullah', 'عبد الرحمن' => 'Abdulrahman',
+                    'فاطمة' => 'Fatima', 'زينب' => 'Zainab', 'مريم' => 'Maryam', 'نور' => 'Noor',
+                    'سارة' => 'Sara', 'ساره' => 'Sara', 'هدى' => 'Huda', 'حيدر' => 'Haider'
+                ];
+                $words = preg_split('/\s+/', trim($text));
+                $latinWords = [];
+                $charMap = [
+                    'ا' => 'a', 'أ' => 'A', 'إ' => 'E', 'آ' => 'Aa', 'ب' => 'b', 'ت' => 't', 'ث' => 'th',
+                    'ج' => 'j', 'ح' => 'h', 'خ' => 'kh', 'د' => 'd', 'ذ' => 'dh', 'ر' => 'r', 'ز' => 'z',
+                    'س' => 's', 'ش' => 'sh', 'ص' => 's', 'ض' => 'd', 'ط' => 't', 'ظ' => 'dh', 'ع' => 'a',
+                    'غ' => 'gh', 'ف' => 'f', 'ق' => 'q', 'ك' => 'k', 'ل' => 'l', 'م' => 'm', 'ن' => 'n',
+                    'ه' => 'h', 'ة' => 'a', 'و' => 'w', 'ي' => 'y', 'ى' => 'a', 'ء' => ''
+                ];
+                foreach ($words as $w) {
+                    if (isset($known[$w])) {
+                        $latinWords[] = $known[$w];
+                    } else {
+                        $chars = mb_str_split($w);
+                        $res = '';
+                        foreach ($chars as $c) {
+                            $res .= $charMap[$c] ?? $c;
+                        }
+                        $latinWords[] = ucfirst($res);
                     }
-                    $latinWords[] = ucfirst($res);
                 }
+                return implode(' ', $latinWords);
             }
-            return implode(' ', $latinWords);
+        }
+
+        // Helper: Dynamically Evaluate Lab Test Value Against Reference Range
+        if (!function_exists('calcLabStatus')) {
+            function calcLabStatus($value, $refRange, $fallbackStatus = 'normal') {
+                $valStr = trim((string)$value);
+                if ($valStr === '') return 'normal';
+
+                $ref = trim((string)$refRange);
+                $ref = str_replace(["\xc2\xa0", '–', '—', '−', '[', ']', '(', ')'], [' ', '-', '-', '-', '', '', '', ''], $ref);
+                $ref = trim($ref);
+
+                $numVal = null;
+                if (is_numeric($valStr)) {
+                    $numVal = (float)$valStr;
+                } else {
+                    $cleanVal = preg_replace('/[^\d\.\-\+]/', '', $valStr);
+                    if (is_numeric($cleanVal)) {
+                        $numVal = (float)$cleanVal;
+                    }
+                }
+
+                if ($numVal !== null && !empty($ref)) {
+                    // Pattern 1: Range "12.3 - 20.2" or "-2 to +2" or "8-16"
+                    if (preg_match('/([+\-]?\d+(?:\.\d+)?)\s*(?:-|to|\.\.)\s*([+\-]?\d+(?:\.\d+)?)/i', $ref, $m)) {
+                        $min = (float)$m[1];
+                        $max = (float)$m[2];
+                        if ($min > $max) { $t = $min; $min = $max; $max = $t; }
+                        if ($numVal < $min) return 'low';
+                        if ($numVal > $max) return 'high';
+                        return 'normal';
+                    }
+                    // Pattern 2: Upper bound "< 10" or "<= 10" or "≤ 10"
+                    if (preg_match('/(?:<|<=|≤)\s*([+\-]?\d+(?:\.\d+)?)/i', $ref, $m)) {
+                        $max = (float)$m[1];
+                        if ($numVal > $max) return 'high';
+                        return 'normal';
+                    }
+                    // Pattern 3: Lower bound "> 0.75" or ">= 0.75" or "≥ 0.75"
+                    if (preg_match('/(?:>|>=|≥)\s*([+\-]?\d+(?:\.\d+)?)/i', $ref, $m)) {
+                        $min = (float)$m[1];
+                        if ($numVal < $min) return 'low';
+                        return 'normal';
+                    }
+                }
+
+                $lower = strtolower($valStr);
+                if (str_contains($lower, 'pos') || str_contains($lower, 'react') || str_contains($lower, 'high')) return 'high';
+                if (str_contains($lower, 'low')) return 'low';
+
+                $fallback = strtolower((string)$fallbackStatus);
+                if (in_array($fallback, ['high', 'low', 'abnormal', 'positive'])) {
+                    return $fallback;
+                }
+
+                return 'normal';
+            }
         }
 
         $rawName = $request->visit?->patient?->user?->name ?? 'Patient';
@@ -686,29 +899,42 @@
                     @php
                         $parentName = $res->parent_test_name;
                         $val = trim($res->value ?? '');
-                        $status = strtolower($res->status ?? 'normal');
                         $unit = trim($res->unit ?? '');
                         $refRange = trim($res->reference_range ?? '');
-                        $isAbnormal = in_array($status, ['high', 'low', 'abnormal', 'positive']);
+
+                        // تقييم الحالة ديناميكياً بدقة
+                        $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
+
+                        $valClass = 'val-normal';
+                        $flagBadge = '';
+                        if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
+                            $valClass = 'val-high';
+                            $flagBadge = '<span class="badge-flag high">↑ High</span>';
+                        } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
+                            $valClass = 'val-low';
+                            $flagBadge = '<span class="badge-flag low">↓ Low</span>';
+                        } elseif ($status === 'abnormal') {
+                            $valClass = 'val-abnormal';
+                            $flagBadge = '<span class="badge-flag high">Abnormal</span>';
+                        }
 
                         // Secondary SI Unit computation or alternate display
                         $siVal = '';
                         $siUnit = '';
                         $siRange = '';
 
-                        // Auto-calculate common dual units if standard
                         if (is_numeric($val)) {
                             $num = (float)$val;
                             if (strtolower($unit) === 'g/l') {
                                 $siVal = number_format($num * 100, 1);
                                 $siUnit = 'mg/dl';
-                                if (preg_match('/([\d\.]+)\s*-\s*([\d\.]+)/', $refRange, $m)) {
+                                if (preg_match('/([+\-]?\d+(?:\.\d+)?)\s*(?:-|to)\s*([+\-]?\d+(?:\.\d+)?)/i', $refRange, $m)) {
                                     $siRange = number_format((float)$m[1] * 100, 1) . ' - ' . number_format((float)$m[2] * 100, 1);
                                 }
                             } elseif (strtolower($unit) === 'mg/dl' && $num > 10) {
                                 $siVal = number_format($num / 100, 2);
                                 $siUnit = 'g/l';
-                                if (preg_match('/([\d\.]+)\s*-\s*([\d\.]+)/', $refRange, $m)) {
+                                if (preg_match('/([+\-]?\d+(?:\.\d+)?)\s*(?:-|to)\s*([+\-]?\d+(?:\.\d+)?)/i', $refRange, $m)) {
                                     $siRange = number_format((float)$m[1] / 100, 2) . ' - ' . number_format((float)$m[2] / 100, 2);
                                 }
                             }
@@ -729,14 +955,16 @@
                                 {{ $res->test_name }}
                             </div>
                             <div class="test-value-cell">
-                                <span class="{{ $isAbnormal ? 'val-abnormal' : 'val-normal' }}">{{ $val ?: '—' }}</span>
+                                <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
+                                {!! $flagBadge !!}
                                 @if($unit)
                                     <span class="unit-label">{{ $unit }}</span>
                                 @endif
                             </div>
                             <div class="test-value-cell right">
                                 @if($siVal)
-                                    <span class="{{ $isAbnormal ? 'val-abnormal' : 'val-normal' }}">{{ $siVal }}</span>
+                                    <span class="{{ $valClass }}">{{ $siVal }}</span>
+                                    {!! $flagBadge !!}
                                     <span class="unit-label">{{ $siUnit }}</span>
                                 @endif
                             </div>
@@ -745,11 +973,9 @@
                         <!-- Reference Range Row -->
                         @if($refRange || $siRange)
                         <div class="test-meta-row">
-                            <span class="meta-label">Normal Range :</span>
-                            <span class="meta-conv-range">{{ $refRange ?: '—' }}</span>
-                            @if($siRange)
-                                <span class="meta-si-range">{{ $siRange }}</span>
-                            @endif
+                            <div class="meta-label">Normal Range :</div>
+                            <div class="meta-conv-range">{{ $refRange ?: '—' }}</div>
+                            <div class="meta-si-range">{{ $siRange ?: '' }}</div>
                         </div>
                         @endif
 
@@ -769,22 +995,36 @@
                         $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : $tVal;
                         $unitStr = is_array($tVal) ? ($tVal['unit'] ?? '') : '';
                         $refStr = is_array($tVal) ? ($tVal['reference_range'] ?? '') : '';
-                        $statusStr = is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal';
-                        $isAbn = in_array(strtolower($statusStr), ['high', 'low', 'abnormal']);
+                        $statusStr = calcLabStatus($valStr, $refStr, is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal');
+
+                        $valClass = 'val-normal';
+                        $flagBadge = '';
+                        if ($statusStr === 'high' || $statusStr === 'positive' || str_contains($statusStr, 'high') || str_contains($statusStr, 'pos')) {
+                            $valClass = 'val-high';
+                            $flagBadge = '<span class="badge-flag high">↑ High</span>';
+                        } elseif ($statusStr === 'low' || str_contains($statusStr, 'low')) {
+                            $valClass = 'val-low';
+                            $flagBadge = '<span class="badge-flag low">↓ Low</span>';
+                        } elseif ($statusStr === 'abnormal') {
+                            $valClass = 'val-abnormal';
+                            $flagBadge = '<span class="badge-flag high">Abnormal</span>';
+                        }
                     @endphp
                     <div class="test-card">
                         <div class="test-main-row">
                             <div class="test-name">{{ is_numeric($tName) ? 'Test #' . ($tName + 1) : $tName }}</div>
                             <div class="test-value-cell">
-                                <span class="{{ $isAbn ? 'val-abnormal' : 'val-normal' }}">{{ $valStr }}</span>
+                                <span class="{{ $valClass }}">{{ $valStr }}</span>
+                                {!! $flagBadge !!}
                                 @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
                             </div>
                             <div class="test-value-cell right"></div>
                         </div>
                         @if($refStr)
                         <div class="test-meta-row">
-                            <span class="meta-label">Normal Range :</span>
-                            <span class="meta-conv-range">{{ $refStr }}</span>
+                            <div class="meta-label">Normal Range :</div>
+                            <div class="meta-conv-range">{{ $refStr }}</div>
+                            <div class="meta-si-range"></div>
                         </div>
                         @endif
                         <div class="test-device-row">By Cobas Integra 400 plus (Roche Diagnostics)</div>
@@ -815,5 +1055,54 @@
 
     </div>
 
+    <script>
+        function setPrintMode(mode) {
+            const body = document.body;
+            const btnLetterhead = document.getElementById('btnModeLetterhead');
+            const btnFull = document.getElementById('btnModeFull');
+            const marginControls = document.getElementById('marginControls');
+
+            if (mode === 'letterhead') {
+                body.classList.add('letterhead-mode');
+                if (btnLetterhead) btnLetterhead.classList.add('active');
+                if (btnFull) btnFull.classList.remove('active');
+                if (marginControls) marginControls.style.display = 'flex';
+            } else {
+                body.classList.remove('letterhead-mode');
+                if (btnFull) btnFull.classList.add('active');
+                if (btnLetterhead) btnLetterhead.classList.remove('active');
+                if (marginControls) marginControls.style.display = 'none';
+            }
+
+            try {
+                localStorage.setItem('lab_print_mode', mode);
+            } catch (e) {}
+        }
+
+        function changeTopMargin(val) {
+            val = parseInt(val) || 45;
+            document.documentElement.style.setProperty('--letterhead-top', val + 'mm');
+            try {
+                localStorage.setItem('lab_print_top_margin', val);
+            } catch (e) {}
+        }
+
+        // Initialize user preference on load
+        (function() {
+            let savedMode = 'letterhead';
+            let savedTop = 45;
+            try {
+                savedMode = localStorage.getItem('lab_print_mode') || 'letterhead';
+                savedTop = parseInt(localStorage.getItem('lab_print_top_margin')) || 45;
+            } catch (e) {}
+
+            const topInput = document.getElementById('topMarginInput');
+            if (topInput) {
+                topInput.value = savedTop;
+            }
+            changeTopMargin(savedTop);
+            setPrintMode(savedMode);
+        })();
+    </script>
 </body>
 </html>
