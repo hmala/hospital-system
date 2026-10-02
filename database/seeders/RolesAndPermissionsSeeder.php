@@ -59,6 +59,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
             'manage health insurance',        // إدارة فئات ونسب استقطاع الضمان الصحي الوطني
+            'manage doctor commissions',      // إعدادات وتخصيص عمولات ونسب الأطباء
+            'view consultant financial movements', // عرض الحركات والقيود المالية للاستشارية
+            'view account statements',        // عرض كشوفات الحسابات العامة
+            'view doctor accounts',           // عرض حسابات ومستحقات أرباح الأطباء الاستشاريين
+            'view emergency analytics',       // عرض تحليلات وإحصاءات الطوارئ
+            'view emergency financial movements', // عرض الحركات والقيود المالية للطوارئ
+            'view emergency statements',      // عرض كشوفات حسابات الطوارئ
+            'view emergency doctor accounts', // عرض وصرف حسابات أطباء الطوارئ
+            'view diagnostic analytics',      // عرض تحليلات وإحصاءات المختبر والأشعة والمفراس
             
             // صلاحيات الزيارات
             'view visits',
@@ -301,6 +310,15 @@ class RolesAndPermissionsSeeder extends Seeder
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
         $accountantRole->givePermissionTo([
             'view cashier reports',
+            'view consultant financial movements',
+            'view account statements',
+            'view doctor accounts',
+            'view emergency analytics',
+            'view emergency financial movements',
+            'view emergency statements',
+            'view emergency doctor accounts',
+            'view diagnostic analytics',
+            'manage doctor commissions',
             'view patients',
             'review surgery prices',
             'manage health insurance',

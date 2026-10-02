@@ -771,7 +771,20 @@
                         @endcanany
 
                         <!-- قسم الحسابات العامة والمالية الموحد -->
-                        @canany(['review surgery prices', 'view cashier reports', 'manage health insurance'])
+                        @canany([
+                            'review surgery prices', 
+                            'manage health insurance', 
+                            'manage doctor commissions',
+                            'view cashier reports', 
+                            'view consultant financial movements', 
+                            'view account statements', 
+                            'view doctor accounts', 
+                            'view emergency analytics', 
+                            'view emergency financial movements', 
+                            'view emergency statements', 
+                            'view emergency doctor accounts', 
+                            'view diagnostic analytics'
+                        ])
                         @php
                             $isSurgeryReviewActive = request()->routeIs('accountant.surgeries.*');
                             $isInsuranceActive = request()->routeIs('health-insurance-categories.*');
@@ -816,69 +829,91 @@
                         </li>
                         @endcan
 
-                        @can('view cashier reports')
                         <!-- القسم الفرعي: الاستشارية والعيادات -->
+                        @canany(['manage doctor commissions', 'view cashier reports', 'view consultant financial movements', 'view account statements', 'view doctor accounts'])
                         <div class="sidebar-section-title {{ $isConsultantAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#consultantSubSection" aria-expanded="{{ $isConsultantAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
                             <span><i class="fas fa-clinic-medical me-1"></i> حسابات الاستشارية</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isConsultantAccountsActive ? 'show' : '' }} ps-2" id="consultantSubSection">
+                            @can('manage doctor commissions')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
                                     <i class="fas fa-file-invoice-dollar"></i><span> إعدادات العمولات</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view cashier reports')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
                                     <i class="fas fa-chart-line text-success"></i><span> سجل وتقارير الفواتير</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view consultant financial movements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('consultant-availability.financial-movements') ? 'active' : '' }}" href="{{ route('consultant-availability.financial-movements') }}">
                                     <i class="fas fa-money-bill-wave"></i><span> الحركات المالية</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view account statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.statements') ? 'active' : '' }}" href="{{ route('cashier.statements') }}">
                                     <i class="fas fa-file-invoice-dollar"></i><span> كشوفات الحسابات</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view doctor accounts')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('consultant-availability.doctor-accounts') ? 'active' : '' }}" href="{{ route('consultant-availability.doctor-accounts') }}">
                                     <i class="fas fa-wallet"></i><span> حسابات الأطباء</span>
                                 </a>
                             </li>
+                            @endcan
                         </div>
+                        @endcanany
 
                         <!-- القسم الفرعي: الطوارئ -->
+                        @canany(['view emergency analytics', 'view emergency financial movements', 'view emergency statements', 'view emergency doctor accounts'])
                         <div class="sidebar-section-title {{ $isEmergencyAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#emergencySubSection" aria-expanded="{{ $isEmergencyAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
                             <span><i class="fas fa-ambulance me-1"></i> حسابات الطوارئ</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isEmergencyAccountsActive ? 'show' : '' }} ps-2" id="emergencySubSection">
+                            @can('view emergency analytics')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('accountant.emergency.analytics') ? 'active' : '' }}" href="{{ route('accountant.emergency.analytics') }}">
                                     <i class="fas fa-chart-bar text-danger"></i><span> تحليلات إحصاءات الطوارئ</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view emergency financial movements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.emergency.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.emergency.financial-movements') }}">
                                     <i class="fas fa-money-bill-wave text-danger"></i><span> الحركات المالية للطوارئ</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view emergency statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.emergency.statements') ? 'active' : '' }}" href="{{ route('cashier.emergency.statements') }}">
                                     <i class="fas fa-file-invoice-dollar text-danger"></i><span> كشوفات الطوارئ</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view emergency doctor accounts')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.emergency.doctor-accounts') || request()->routeIs('cashier.emergency.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.emergency.doctor-accounts') }}">
                                     <i class="fas fa-wallet text-danger"></i><span> حسابات أطباء الطوارئ</span>
                                 </a>
                             </li>
+                            @endcan
                         </div>
+                        @endcanany
 
                         <!-- القسم الفرعي: التشخيص (المختبر والأشعة والمفراس والإيكو) -->
+                        @can('view diagnostic analytics')
                         <div class="sidebar-section-title {{ $isDiagnosticsAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#diagnosticsSubSection" aria-expanded="{{ $isDiagnosticsAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.05); color: #10b981; border-radius: 4px; cursor: pointer;">
                             <span><i class="fas fa-microscope me-1"></i> حسابات المختبر والأشعّة</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
@@ -1260,12 +1295,14 @@
                         </li>
                         @endcan
 
-                        @canany(['manage users', 'manage roles'])
+                        @canany(['manage users', 'manage roles', 'manage doctor commissions'])
+                        @can('manage doctor commissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
                                 <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
                             </a>
                         </li>
+                        @endcan
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.pricing-settings.*') ? 'active' : '' }}" href="{{ route('lab-tests.pricing-settings.index') }}">
                                 <i class="fas fa-tags"></i><span> تسعير وتصنيف التحاليل</span>

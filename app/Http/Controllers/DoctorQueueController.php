@@ -197,6 +197,10 @@ class DoctorQueueController extends Controller
                 ];
             }
 
+            $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->count() > 0;
+            $isUnpaidAppointment = ($v->appointment && $v->appointment->payment_status !== 'paid' && !$v->appointment->emergency_id);
+            $hasUnpaidTests = $hasUnpaidRequests || $isUnpaidAppointment;
+
             $allReady = ($totalTests > 0) && ($completedCount === $totalTests);
 
             return [
@@ -204,6 +208,7 @@ class DoctorQueueController extends Controller
                 'patient_name' => $pName,
                 'queue_number' => $qNum,
                 'all_ready' => $allReady,
+                'has_unpaid_tests' => $hasUnpaidTests,
                 'has_substitution_alert' => $hasSubstitutionAlert,
                 'substitutions' => $substitutionsList,
                 'total_tests' => $totalTests,
@@ -480,6 +485,18 @@ class DoctorQueueController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'لا يمكن استدعاء المراجع حالياً، بانتظار اكتمال كافة الفحوصات الطبية من المختبر / الأشعة.'
+            ], 422);
+        }
+
+        // التحقق من تسديد أجور الفحوصات والكشفية بالكاشير
+        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->exists();
+        $isUnpaidAppointment = ($visit->appointment && $visit->appointment->payment_status !== 'paid' && !$visit->appointment->emergency_id);
+
+        if ($hasUnpaidLab || $isUnpaidAppointment) {
+            $pTitle = $visit->patient && $visit->patient->user ? $visit->patient->user->name : 'المراجع';
+            return response()->json([
+                'success' => false,
+                'message' => 'تنبيه: توجد فحوصات طبية غير مسددة في الكاشير للمراجع (' . $pTitle . '). يرجى توجيهه لتسديد الرسوم في الكاشير أولاً.'
             ], 422);
         }
 

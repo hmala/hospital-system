@@ -25,7 +25,25 @@ class ConsultantAvailabilityController extends Controller
             
             $user = auth()->user();
             $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-            if (!$isAdmin && (!$user || (!$user->can('manage consultant availability') && !$user->can('view cashier reports') && !$user->can('view doctor profits') && !$user->can('view appointments')))) {
+            $allowedPerms = [
+                'manage consultant availability',
+                'view cashier reports',
+                'view consultant financial movements',
+                'view account statements',
+                'view doctor accounts',
+                'view doctor profits',
+                'view appointments'
+            ];
+            $hasPerm = false;
+            if ($user) {
+                foreach ($allowedPerms as $p) {
+                    if ($user->can($p)) {
+                        $hasPerm = true;
+                        break;
+                    }
+                }
+            }
+            if (!$isAdmin && (!$user || !$hasPerm)) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
             }
             return $next($request);
@@ -69,12 +87,63 @@ class ConsultantAvailabilityController extends Controller
             ->orderBy('doctors.specialization')
             ->orderBy('users.name')
             ->select('doctors.*')
+            ->get();
+
+        // 1. جلب جميع الزيارات النشطة اليوم للأطباء الاستشاريين
+        $today = today();
+        $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
+            ->whereDate('visit_date', $today)
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->get()
-            ->map(function ($doc) use ($selectedDay) {
-                $doc->is_working_selected_day = $doc->isWorkingOnDay($selectedDay);
-                $doc->is_available_for_view = $doc->is_working_selected_day && (bool)$doc->is_available_today;
-                return $doc;
-            });
+            ->groupBy('doctor_id');
+
+        // 2. جلب المواعيد قيد الاستدعاء أو الكشف
+        $inConsultationAppointments = \App\Models\Appointment::with('patient.user')
+            ->whereDate('appointment_date', $today)
+            ->whereIn('status', ['calling', 'in_consultation'])
+            ->get()
+            ->groupBy('doctor_id');
+
+        // 3. جلب عدد المنتظرين لكل طبيب (الذين دفعوا ولم يدخلوا بعد)
+        $waitingCounts = \App\Models\Appointment::whereDate('appointment_date', $today)
+            ->where(function($q) {
+                $q->where('payment_status', 'paid')
+                  ->orWhereNotNull('emergency_id');
+            })
+            ->whereDoesntHave('visit')
+            ->whereIn('status', ['scheduled', 'confirmed'])
+            ->selectRaw('doctor_id, count(*) as count')
+            ->groupBy('doctor_id')
+            ->pluck('count', 'doctor_id');
+
+        $consultantDoctors = $consultantDoctors->map(function ($doc) use ($selectedDay, $activeVisits, $inConsultationAppointments, $waitingCounts) {
+            $doc->is_working_selected_day = $doc->isWorkingOnDay($selectedDay);
+            $doc->is_available_for_view = $doc->is_working_selected_day && (bool)$doc->is_available_today;
+
+            $activeVisit = $activeVisits->get($doc->id)?->first();
+            $inConsultApp = $inConsultationAppointments->get($doc->id)?->first();
+
+            $doc->current_patient_name = null;
+            $doc->current_patient_queue = null;
+            $doc->current_status = 'free'; // 'free', 'in_consultation', 'calling'
+            $doc->current_since = null;
+
+            if ($activeVisit) {
+                $doc->current_patient_name = optional(optional($activeVisit->patient)->user)->name ?? optional($activeVisit->patient)->name ?? 'مريض بالداخل';
+                $doc->current_status = 'in_consultation';
+                $doc->current_since = $activeVisit->created_at ? $activeVisit->created_at->diffForHumans(null, true) : null;
+                $doc->current_patient_queue = optional($activeVisit->appointment)->queue_number;
+            } elseif ($inConsultApp) {
+                $doc->current_patient_name = optional(optional($inConsultApp->patient)->user)->name ?? optional($inConsultApp->patient)->name ?? 'مريض قيد الاستدعاء';
+                $doc->current_status = $inConsultApp->status;
+                $doc->current_since = $inConsultApp->called_at ? \Carbon\Carbon::parse($inConsultApp->called_at)->diffForHumans(null, true) : null;
+                $doc->current_patient_queue = $inConsultApp->queue_number;
+            }
+
+            $doc->waiting_patients_count = $waitingCounts->get($doc->id, 0);
+
+            return $doc;
+        });
 
         // تجميع الأطباء حسب التخصص للعرض
         $groupedDoctors = $consultantDoctors->groupBy('specialization');
@@ -116,7 +185,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
+        if (!$isAdmin && (!$user || !$user->can('view consultant financial movements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للاستشارية');
         }
 
@@ -172,6 +241,12 @@ class ConsultantAvailabilityController extends Controller
 
     public function exportFinancialMovements(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view consultant financial movements'))) {
+            abort(403, 'غير مصرح لك بتصدير الحركات المالية للاستشارية');
+        }
+
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
         $filterType = $request->query('filter_type');
@@ -184,6 +259,12 @@ class ConsultantAvailabilityController extends Controller
 
     public function exportDoctorAccount(Request $request, Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بتصدير حسابات الأطباء');
+        }
+
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
 
@@ -197,7 +278,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
+        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى حسابات الأطباء');
         }
 
@@ -215,6 +296,12 @@ class ConsultantAvailabilityController extends Controller
 
     public function doctorAccount(Request $request, Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كشف حساب الطبيب');
+        }
+
         $doctor->load(['user', 'department', 'financialAccount']);
 
         $filterType = $request->query('filter_type');
@@ -276,6 +363,12 @@ class ConsultantAvailabilityController extends Controller
 
     public function doctorPayout(Request $request, Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بصرف مستحقات الأطباء');
+        }
+
         $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string|max:1000',

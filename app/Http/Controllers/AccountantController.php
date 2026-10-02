@@ -16,9 +16,13 @@ class AccountantController extends Controller
             $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
             $currentAction = $request->route() ? $request->route()->getActionMethod() : '';
 
-            if (in_array($currentAction, ['emergencyAnalytics', 'diagnosticAnalytics'])) {
-                if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('review surgery prices')))) {
-                    abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات الحسابات.');
+            if ($currentAction === 'emergencyAnalytics') {
+                if (!$isAdmin && (!$user || !$user->can('view emergency analytics'))) {
+                    abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات الطوارئ.');
+                }
+            } elseif ($currentAction === 'diagnosticAnalytics') {
+                if (!$isAdmin && (!$user || !$user->can('view diagnostic analytics'))) {
+                    abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات المختبر والأشعة.');
                 }
             } else {
                 if (!$isAdmin && (!$user || !$user->can('review surgery prices'))) {

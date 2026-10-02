@@ -280,9 +280,54 @@ class RolePermissionsMatrixTest extends TestCase
         $cashierRole->givePermissionTo('process consultation payments');
         $this->actingAs($cashierUser)->get(route('cashier.payment.form', $appointment->id))->assertStatus(200);
 
-        // 4. Reports without 'view cashier reports' => 403
+        // 4. Reports without specific permissions => 403
         $this->actingAs($cashierUser)->get(route('cashier.report'))->assertStatus(403);
         $this->actingAs($cashierUser)->get(route('cashier.statements'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('consultant-availability.financial-movements'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('consultant-availability.doctor-accounts'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('accountant.emergency.analytics'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('cashier.emergency.financial-movements'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('cashier.emergency.statements'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('cashier.emergency.doctor-accounts'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('accountant.diagnostics.analytics'))->assertStatus(403);
+        $this->actingAs($cashierUser)->get(route('admin.doctor-commission-settings.index'))->assertStatus(403);
+
+        // Grant individual permissions one by one and assert 200
+        Permission::firstOrCreate(['name' => 'view account statements', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view account statements');
+        $this->actingAs($cashierUser)->get(route('cashier.statements'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view consultant financial movements', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view consultant financial movements');
+        $this->actingAs($cashierUser)->get(route('consultant-availability.financial-movements'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view doctor accounts', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view doctor accounts');
+        $this->actingAs($cashierUser)->get(route('consultant-availability.doctor-accounts'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view emergency analytics', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view emergency analytics');
+        $this->actingAs($cashierUser)->get(route('accountant.emergency.analytics'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view emergency financial movements', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view emergency financial movements');
+        $this->actingAs($cashierUser)->get(route('cashier.emergency.financial-movements'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view emergency statements', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view emergency statements');
+        $this->actingAs($cashierUser)->get(route('cashier.emergency.statements'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view emergency doctor accounts', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view emergency doctor accounts');
+        $this->actingAs($cashierUser)->get(route('cashier.emergency.doctor-accounts'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'view diagnostic analytics', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('view diagnostic analytics');
+        $this->actingAs($cashierUser)->get(route('accountant.diagnostics.analytics'))->assertStatus(200);
+
+        Permission::firstOrCreate(['name' => 'manage doctor commissions', 'guard_name' => 'web']);
+        $cashierRole->givePermissionTo('manage doctor commissions');
+        $this->actingAs($cashierUser)->get(route('admin.doctor-commission-settings.index'))->assertStatus(200);
 
         // 5. Surgery cashier without 'view cashier surgeries' => 403
         $this->actingAs($cashierUser)->get(route('cashier.surgeries.index'))->assertStatus(403);

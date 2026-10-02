@@ -3,364 +3,87 @@
 
 @section('content')
 <div class="container-fluid py-4" style="background-color: #f8f9fa; min-height: 100vh;">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="text-center">
-                <h1 class="display-5 fw-bold text-primary mb-2">
-                    <i class="fas fa-calendar-check me-3"></i>
-                    توفر الأطباء الاستشاريين
-                </h1>
-                <p class="lead text-muted">إدارة وتحديث توفر الأطباء الاستشاريين بسهولة</p>
-            </div>
-        </div>
-    </div>
+    <!-- Compact Header & Day Selector Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-calendar-check fs-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 fw-bold text-dark">توفر الأطباء والاستشارية</h4>
+                        <small class="text-muted">متابعة توفر الاستشاريين والعيادات الجارية وطابور المرضى</small>
+                    </div>
+                </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4 g-3">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <div class="display-4 fw-bold text-primary mb-2">{{ $consultantDoctors->count() }}</div>
-                    <h5 class="text-muted mb-0">إجمالي الأطباء</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <div class="display-4 fw-bold text-success mb-2">{{ $consultantDoctors->where('is_available_for_view', true)->count() }}</div>
-                    <h5 class="text-muted mb-0">متاح اليوم</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <div class="display-4 fw-bold text-danger mb-2">{{ $consultantDoctors->where('is_available_for_view', false)->count() }}</div>
-                    <h5 class="text-muted mb-0">غير متاح</h5>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Day Tabs -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <ul class="nav nav-pills justify-content-center" role="tablist">
-                @foreach($weekDays as $day)
-                    <li class="nav-item me-2" role="presentation">
-                        <a href="?day={{ urlencode($day) }}" class="nav-link {{ $day === $selectedDay ? 'active' : '' }}">
+                <!-- Day Tabs -->
+                <div class="d-flex align-items-center gap-1 flex-wrap">
+                    @foreach($weekDays as $day)
+                        <a href="?day={{ urlencode($day) }}" class="btn btn-sm {{ $day === $selectedDay ? 'btn-primary shadow-xs fw-bold' : 'btn-light text-secondary' }} px-3 py-1 rounded-pill">
                             {{ $day }}
                         </a>
-                    </li>
-                @endforeach
-            </ul>
+                    @endforeach
+                </div>
+
+                <!-- Quick Status Stats -->
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small">
+                        <i class="fas fa-user-check me-1"></i> متاح اليوم: <strong>{{ $consultantDoctors->where('is_available_for_view', true)->count() }}</strong>
+                    </span>
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded-pill small">
+                        <i class="fas fa-user-times me-1"></i> غير متاح: <strong>{{ $consultantDoctors->where('is_available_for_view', false)->count() }}</strong>
+                    </span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1 rounded-pill small">
+                        <i class="fas fa-users me-1"></i> الإجمالي: <strong>{{ $consultantDoctors->count() }}</strong>
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 
-
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show mx-auto" style="max-width: 600px;" role="alert">
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
             <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show mx-auto" style="max-width: 600px;" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <!-- Today's Appointments Section -->
-    @if(isset($todayAppointments) && $todayAppointments->count() > 0)
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-calendar-day me-2"></i>
-                        المواعيد وطابور اليوم
-                        <span class="badge bg-light text-primary ms-2">{{ $todayAppointments->count() }}</span>
-                    </h4>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 60px;"># الدور</th>
-                                    <th>الوقت</th>
-                                    <th>المريض</th>
-                                    <th>الطبيب</th>
-                                    <th>المصدر</th>
-                                    <th>السبب</th>
-                                    <th>حالة الدفع</th>
-                                    <th>حالة الطابور</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($todayAppointments as $appointment)
-                                <tr class="{{ $appointment->status === 'calling' ? 'table-primary' : '' }}">
-                                    <td class="text-center">
-                                        <span class="badge bg-dark fs-6">{{ $appointment->queue_number ?: $appointment->id }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">
-                                            <i class="fas fa-clock me-1 text-primary"></i>
-                                            {{ $appointment->appointment_date ? $appointment->appointment_date->format('H:i') : '-' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if($appointment->patient && $appointment->patient->user)
-                                            <div class="fw-bold">{{ $appointment->patient->user->name }}</div>
-                                            <small class="text-muted">{{ $appointment->patient->user->phone ?? '' }}</small>
-                                        @elseif($appointment->emergency && $appointment->emergency->emergencyPatient)
-                                            <div class="fw-bold text-danger">{{ $appointment->emergency->emergencyPatient->name }}</div>
-                                            <small class="text-muted">(طوارئ)</small>
-                                        @else
-                                            <span class="text-muted">مريض غير محدد</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold">د. {{ $appointment->doctor->user->name ?? 'غير محدد' }}</div>
-                                        <small class="text-muted">{{ $appointment->doctor->specialization ?? '' }}</small>
-                                        @if($appointment->doctor_id)
-                                            <div>
-                                                <a href="{{ route('queue.doctor.display', $appointment->doctor_id) }}" target="_blank" class="badge bg-light text-primary border text-decoration-none mt-1" title="فتح شاشة التلفاز الخاصة بهذا الطبيب">
-                                                    <i class="fas fa-tv me-1"></i> شاشة العيادة
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($appointment->emergency_id)
-                                            <span class="badge bg-danger">
-                                                <i class="fas fa-ambulance me-1"></i> استشارة طوارئ
-                                            </span>
-                                        @elseif(str_contains($appointment->reason ?? '', 'سونار') || optional($appointment->doctor)->specialization === 'سونار')
-                                            <span class="badge bg-primary text-white">
-                                                <i class="fas fa-wave-square me-1"></i> حجز سونار
-                                            </span>
-                                        @else
-                                            <span class="badge bg-info text-dark">
-                                                <i class="fas fa-calendar-check me-1"></i> حجز استشارية
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <small>{{ $appointment->reason ?? '-' }}</small>
-                                    </td>
-                                    <td>
-                                        @if($appointment->payment_status === 'paid')
-                                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
-                                        @elseif($appointment->payment_status === 'refunded')
-                                            <span class="badge bg-secondary"><i class="fas fa-undo me-1"></i> مسترجع</span>
-                                        @else
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $appointment->status_color }}">
-                                            {{ $appointment->status_text }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-2 flex-wrap">
-                                            @if($appointment->payment_status === 'paid' || $appointment->emergency_id)
-                                                <!-- Call / Recall Button -->
-                                                @if($appointment->status === 'calling')
-                                                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" onclick="callPatient({{ $appointment->id }}, this)" title="إعادة مناداة المريض للشاشة الخارجية">
-                                                        <i class="fas fa-redo me-1"></i>
-                                                        إعادة استدعاء 📢
-                                                    </button>
-                                                @else
-                                                    <button type="button" class="btn btn-sm btn-primary" onclick="callPatient({{ $appointment->id }}, this)" title="استدعاء المريض للشاشة الخارجية">
-                                                        <i class="fas fa-bullhorn me-1"></i>
-                                                        استدعاء
-                                                    </button>
-                                                @endif
-
-                                                <!-- Convert / Admit Button -->
-                                                <form method="POST" action="{{ route('appointments.convert', $appointment) }}" class="d-inline">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <button type="submit" class="btn btn-sm btn-success" title="إدخال المريض للطبيب">
-                                                        <i class="fas fa-sign-in-alt me-1"></i>
-                                                        إدخال
-                                                    </button>
-                                                </form>
-                                            @else
-                                                @canany(['process consultation payments', 'process payments'])
-                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-sm btn-success text-white fw-bold shadow-xs" title="قبض رسوم الكشفية">
-                                                        <i class="fas fa-cash-register me-1"></i>
-                                                        قبض الكشفية
-                                                    </a>
-                                                @else
-                                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="يجب دفع الرسوم أولاً">
-                                                        <i class="fas fa-sign-in-alt me-1"></i>
-                                                        غير مدفوع
-                                                    </button>
-                                                @endcan
-                                            @endif
-
-                                            @if($appointment->canBeCancelled())
-                                                <form method="POST" action="{{ route('appointments.cancel', $appointment) }}" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')" title="إلغاء الحجز">
-                                                        <i class="fas fa-times me-1"></i>
-                                                        إلغاء
-                                                    </button>
-                                                </form>
-                                            @endif
-
-                                            @if($appointment->doctor_id)
-                                                <a href="{{ route('queue.doctor.display', $appointment->doctor_id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="فتح شاشة التلفاز الخاصة بهذا الطبيب">
-                                                    <i class="fas fa-tv me-1"></i>
-                                                    الشاشة
-                                                </a>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Pending Clinic Medical Requests Section (فحوصات وسونار العيادات بانتظار السداد) -->
-    @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm border-start border-4 border-warning">
-                <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center py-3">
-                    <h5 class="mb-0 text-dark fw-bold">
-                        <i class="fas fa-wave-square text-primary me-2"></i>
-                        طلبات السونار والفحوصات المحولة من العيادات اليوم (بانتظار السداد)
-                        <span class="badge bg-warning text-dark ms-2">{{ $pendingConsultantRequests->count() }}</span>
-                    </h5>
-                    <span class="text-muted small">يتم إدخال المريض فورياً في طابور السونار بعد قبض الرسوم</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 80px;" class="text-center"># الطلب</th>
-                                    <th>الوقت</th>
-                                    <th>المريض</th>
-                                    <th>الطبيب المحيل</th>
-                                    <th>نوع الفحص المطلوب</th>
-                                    <th>التفاصيل والملاحظات</th>
-                                    <th>المبلغ المطلوب</th>
-                                    <th>الإجراء</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($pendingConsultantRequests as $req)
-                                <tr>
-                                    <td class="text-center">
-                                        <span class="badge bg-dark fs-6">#{{ $req->id }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">
-                                            <i class="fas fa-clock me-1 text-primary"></i>
-                                            {{ $req->created_at ? $req->created_at->format('H:i') : '-' }}
-                                        </span>
-                                    </td>
-                                    <td class="fw-bold text-dark">
-                                        <i class="fas fa-user text-secondary me-1"></i>
-                                        {{ optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض غير مسجل' }}
-                                    </td>
-                                    <td class="text-primary fw-semibold">
-                                        <i class="fas fa-user-md me-1"></i>
-                                        د. {{ optional(optional($req->doctor)->user)->name ?? (optional(optional($req->visit)->doctor)->user->name ?? 'العيادة') }}
-                                    </td>
-                                    <td>
-                                        @if($req->subtype === 'ultrasound')
-                                            <span class="badge bg-info text-dark"><i class="fas fa-wave-square me-1"></i>سونار (Ultrasound)</span>
-                                        @elseif($req->type === 'radiology')
-                                            <span class="badge bg-primary"><i class="fas fa-x-ray me-1"></i>أشعة</span>
-                                        @else
-                                            <span class="badge bg-secondary">{{ $req->type }}</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ Str::limit($req->description ?? $req->notes ?? '-', 50) }}</small>
-                                    </td>
-                                    <td class="fw-bold text-success fs-6">
-                                        {{ number_format($req->total_amount ?? 0) }} د.ع
-                                    </td>
-                                    <td>
-                                        @canany(['process medical requests payments', 'process payments'])
-                                            <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-sm btn-success fw-bold text-white shadow-xs">
-                                                <i class="fas fa-cash-register me-1"></i>
-                                                قبض الرسوم
-                                            </a>
-                                        @else
-                                            <span class="badge bg-secondary">بانتظار الصندوق</span>
-                                        @endcan
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Unified Doctors Section with Quick Filters & Live Search -->
-    <div class="row g-4">
-        <div class="col-12">
+    <!-- 1. TOP PRIMARY SECTION: Doctors Availability Table (Right - Compact) + Live Clinics & Queue (Left - Wide & Bold) -->
+    <div class="row g-3 mb-4">
+        <!-- Main Doctors Availability Table (Right Side - Compact) -->
+        <div class="col-xl-5 col-lg-5">
             @if($consultantDoctors->count() > 0)
                 <!-- Filter Pills & Live Search Bar -->
                 <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-body p-3">
-                        <div class="d-flex flex-wrap flex-lg-nowrap gap-2 align-items-center justify-content-between">
+                    <div class="card-body p-2 px-3">
+                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
                             <div class="d-flex flex-wrap gap-1 align-items-center">
-                                <span class="text-muted fw-bold small me-1"><i class="fas fa-filter me-1 text-primary"></i>فلترة:</span>
-                                <button type="button" class="btn btn-sm btn-outline-success active fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="available" onclick="filterDoctorsTable('available', this)">
-                                    <i class="fas fa-user-check me-1"></i>
-                                    المتواجدون
+                                <button type="button" class="btn btn-xs btn-outline-success active fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" data-filter="available" onclick="filterDoctorsTable('available', this)">
+                                    <i class="fas fa-user-check me-1"></i>المتواجدون
                                     <span class="badge bg-success ms-1 rounded-pill" id="countAvailable">{{ $consultantDoctors->where('is_available_for_view', true)->count() }}</span>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="unavailable" onclick="filterDoctorsTable('unavailable', this)">
-                                    <i class="fas fa-user-times me-1"></i>
-                                    غير المتاحين
+                                <button type="button" class="btn btn-xs btn-outline-danger fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" data-filter="unavailable" onclick="filterDoctorsTable('unavailable', this)">
+                                    <i class="fas fa-user-times me-1"></i>غير المتاحين
                                     <span class="badge bg-danger ms-1 rounded-pill" id="countUnavailable">{{ $consultantDoctors->where('is_available_for_view', false)->count() }}</span>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" data-filter="all" onclick="filterDoctorsTable('all', this)">
-                                    <i class="fas fa-users me-1"></i>
-                                    الجميع
+                                <button type="button" class="btn btn-xs btn-outline-secondary fw-bold doctor-filter-btn px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" data-filter="all" onclick="filterDoctorsTable('all', this)">
+                                    <i class="fas fa-users me-1"></i>الجميع
                                     <span class="badge bg-secondary ms-1 rounded-pill" id="countAll">{{ $consultantDoctors->count() }}</span>
                                 </button>
-                                <span class="text-muted d-none d-md-inline mx-1">|</span>
-                                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-sm btn-outline-primary px-2 py-1 rounded-pill shadow-xs d-inline-flex align-items-center gap-1" title="عرض سجل الحركات المالية">
-                                    <i class="fas fa-chart-line"></i>
-                                    <span class="fw-semibold">حركات مالية</span>
-                                </a>
-                                <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-sm btn-outline-info px-2 py-1 rounded-pill shadow-xs d-inline-flex align-items-center gap-1" title="عرض طابور كافة العيادات">
-                                    <i class="fas fa-tv"></i>
-                                    <span class="fw-semibold">شاشة الصالة</span>
-                                </a>
                             </div>
-                            <div style="width: 220px; min-width: 180px;">
+                            <div style="width: 130px;">
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white border-end-0 text-muted py-1"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="doctorQuickSearch" class="form-control border-start-0 py-1" placeholder="بحث سريع..." oninput="handleDoctorSearch(this.value)">
-                                    <button class="btn btn-outline-secondary py-1" type="button" onclick="clearDoctorSearch()" id="clearDoctorSearchBtn" style="display: none;" title="مسح">
-                                        <i class="fas fa-times"></i>
+                                    <input type="text" id="doctorQuickSearch" class="form-control py-0" style="font-size: 0.75rem;" placeholder="بحث..." oninput="handleDoctorSearch(this.value)">
+                                    <button class="btn btn-outline-secondary py-0 px-1" type="button" onclick="clearDoctorSearch()" id="clearDoctorSearchBtn" style="display: none;" title="مسح">
+                                        <i class="fas fa-times" style="font-size: 0.7rem;"></i>
                                     </button>
                                 </div>
                             </div>
@@ -372,12 +95,11 @@
                     <table class="table table-hover align-middle mb-0" id="doctorsAvailabilityTable">
                         <thead class="table-light">
                             <tr class="text-muted small text-uppercase">
-                                <th style="width: 4rem;">#</th>
-                                <th>الطبيب</th>
-                                <th>التخصص / العيادة</th>
-                                <th style="width: 9rem;" class="text-center">الحالة</th>
-                                <th style="width: 10rem;" class="text-center">شاشة الانتظار</th>
-                                <th style="width: 8rem;" class="text-center">التوفر اللحظي</th>
+                                <th style="width: 2.5rem;">#</th>
+                                <th>الطبيب والعيادة</th>
+                                <th style="width: 5rem;" class="text-center">الحالة</th>
+                                <th style="width: 4.5rem;" class="text-center">شاشة</th>
+                                <th style="width: 4.5rem;" class="text-center">التوفر</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -388,39 +110,35 @@
                                     data-search="{{ strtolower($doctor->user->name . ' ' . $doctor->specialization . ' ' . ($doctor->department->name ?? '')) }}">
                                     <td class="text-muted small fw-bold">{{ $index + 1 }}</td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.85rem; flex-shrink: 0;">
                                                 {{ mb_substr($doctor->user->name, 0, 1) }}
                                             </span>
                                             <div>
-                                                <div class="fw-bold text-dark fs-6">د. {{ $doctor->user->name }}</div>
-                                                <div class="text-muted small">{{ $doctor->department->name ?? 'غير محدد' }}</div>
+                                                <div class="fw-bold text-dark" style="font-size: 0.88rem;">د. {{ $doctor->user->name }}</div>
+                                                <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                                    {{ $doctor->specialization ?: ($doctor->department->name ?? 'استشاري') }}
+                                                </small>
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
-                                        <span class="badge bg-light text-primary border px-2 py-1 fs-6">
-                                            {{ $doctor->specialization ?: ($doctor->department->name ?? 'استشاري') }}
-                                        </span>
-                                    </td>
                                     <td class="text-center">
                                         @if($doctor->is_available_for_view)
-                                            <span class="badge bg-success fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">متاح</span>
+                                            <span class="badge bg-success small px-2 py-1 doctor-status-badge" style="font-size: 0.72rem;" id="badge-doc-{{ $doctor->id }}">متاح</span>
                                         @elseif($doctor->is_working_selected_day)
-                                            <span class="badge bg-danger fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">غير متاح</span>
+                                            <span class="badge bg-danger small px-2 py-1 doctor-status-badge" style="font-size: 0.72rem;" id="badge-doc-{{ $doctor->id }}">غير متاح</span>
                                         @else
-                                            <span class="badge bg-secondary fs-6 px-3 py-2 doctor-status-badge" id="badge-doc-{{ $doctor->id }}">غير مجدول اليوم</span>
+                                            <span class="badge bg-secondary small px-2 py-1 doctor-status-badge" style="font-size: 0.72rem;" id="badge-doc-{{ $doctor->id }}">غير مجدول</span>
                                         @endif
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="فتح شاشة الانتظار المخصصة للتلفاز">
-                                            <i class="fas fa-tv me-1"></i>
-                                            شاشة العيادة
+                                        <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-xs btn-outline-primary py-1 px-2" style="font-size: 0.75rem;" title="فتح شاشة التلفاز">
+                                            <i class="fas fa-tv"></i>
                                         </a>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block m-0 p-0" style="min-height: auto;">
-                                            <input class="form-check-input doctor-toggle-switch fs-4 m-0" 
+                                            <input class="form-check-input doctor-toggle-switch fs-5 m-0" 
                                                    type="checkbox" 
                                                    role="switch" 
                                                    id="switch-doc-{{ $doctor->id }}" 
@@ -428,7 +146,7 @@
                                                    data-doctor-name="{{ $doctor->user->name }}"
                                                    {{ $doctor->is_available_for_view ? 'checked' : '' }}
                                                    onchange="toggleDoctorAvailability({{ $doctor->id }}, this.checked, this)"
-                                                   title="{{ $doctor->is_available_for_view ? 'انقر لجعله غير متاح فوراً' : 'انقر لجعله متاحاً فوراً' }}"
+                                                   title="{{ $doctor->is_available_for_view ? 'انقر لجعله غير متاح' : 'انقر لجعله متاحاً' }}"
                                                    style="cursor: pointer;">
                                         </div>
                                     </td>
@@ -437,10 +155,9 @@
                         </tbody>
                     </table>
 
-                    <div id="noDoctorsMatchingFilter" class="text-center py-5" style="display: none;">
-                        <i class="fas fa-user-slash fa-3x text-muted mb-3 d-block"></i>
-                        <h6 class="text-muted fw-bold">لا يوجد أطباء مطابقين لهذا الفلتر أو البحث</h6>
-                        <small class="text-secondary">جرّب اختيار فلتر آخر أو تفريغ شريط البحث أعلاه</small>
+                    <div id="noDoctorsMatchingFilter" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-user-slash fa-2x text-muted mb-2 d-block"></i>
+                        <h6 class="text-muted fw-bold small">لا يوجد أطباء مطابقين</h6>
                     </div>
                 </div>
             @else
@@ -448,6 +165,231 @@
                     <i class="fas fa-user-md fa-4x text-muted mb-4"></i>
                     <h4 class="text-muted mb-3">لا توجد أطباء استشاريين</h4>
                     <p class="text-muted">لم يتم العثور على أطباء استشاريين نشطين في النظام لهذا اليوم</p>
+                </div>
+            @endif
+        </div>
+
+        <!-- Live Clinic Consultation Monitor & Compact Patient Queue (Left Side Panel - Wide & Bold Table) -->
+        <div class="col-xl-7 col-lg-7">
+            <!-- 1. Live Active Consultations Bold Table Card -->
+            <div class="card border-0 shadow-sm rounded-3 bg-white mb-3">
+                <div class="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="spinner-grow spinner-grow-sm text-success" role="status" aria-hidden="true"></span>
+                        <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-stethoscope text-primary me-2"></i>العيادات الجارية الآن</h5>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-xs btn-outline-primary px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" title="عرض سجل الحركات المالية">
+                            <i class="fas fa-chart-line me-1"></i>حركات مالية
+                        </a>
+                        <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" title="عرض شاشة الصالة الرئيسية">
+                            <i class="fas fa-tv me-1"></i>شاشة الصالة
+                        </a>
+                        <span class="badge bg-primary text-white px-2 py-1 small">
+                            {{ $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling'])->count() }} عيادة جارية الآن
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-0 overflow-auto" style="max-height: 340px;">
+                    @php
+                        $activeRunningDocs = $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling']);
+                    @endphp
+                    @if($activeRunningDocs->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr class="text-muted small text-uppercase">
+                                        <th>الطبيب والعيادة</th>
+                                        <th>المريض الحالي (بالداخل)</th>
+                                        <th style="width: 6.5rem;" class="text-center">الحالة</th>
+                                        <th style="width: 5rem;" class="text-center">طابور الانتظار</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($activeRunningDocs as $doc)
+                                        <tr class="{{ $doc->current_status === 'in_consultation' ? 'table-primary bg-opacity-25' : ($doc->current_status === 'calling' ? 'table-warning bg-opacity-25' : '') }}">
+                                            <!-- Doctor Name & Clinic -->
+                                            <td>
+                                                <div class="fw-bold text-dark fs-6">د. {{ $doc->user->name }}</div>
+                                                <small class="text-muted"><i class="fas fa-clinic-medical text-secondary me-1"></i>{{ $doc->department->name ?? 'العيادة' }}</small>
+                                            </td>
+
+                                            <!-- Current Patient -->
+                                            <td>
+                                                @if($doc->current_status === 'in_consultation')
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-primary text-white rounded-pill px-2 fs-6 shadow-xs">#{{ $doc->current_patient_queue ?? '—' }}</span>
+                                                        <div>
+                                                            <div class="fw-bold text-primary fs-6">{{ $doc->current_patient_name }}</div>
+                                                            <small class="text-muted"><i class="fas fa-clock text-info me-1"></i>داخل منذ <strong>{{ $doc->current_since }}</strong></small>
+                                                        </div>
+                                                    </div>
+                                                @elseif($doc->current_status === 'calling')
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-warning text-dark rounded-pill px-2 fs-6 shadow-xs">#{{ $doc->current_patient_queue ?? '—' }}</span>
+                                                        <div>
+                                                            <div class="fw-bold text-dark fs-6">{{ $doc->current_patient_name }}</div>
+                                                            <small class="text-warning fw-bold"><i class="fas fa-bullhorn me-1"></i>تم النداء للشاشة</small>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            </td>
+
+                                            <!-- Status Badge -->
+                                            <td class="text-center">
+                                                @if($doc->current_status === 'in_consultation')
+                                                    <span class="badge bg-success text-white px-2 py-1 shadow-xs fw-bold">
+                                                        <i class="fas fa-user-check me-1"></i> قيد الفحص
+                                                    </span>
+                                                @elseif($doc->current_status === 'calling')
+                                                    <span class="badge bg-warning text-dark px-2 py-1 shadow-xs fw-bold">
+                                                        <i class="fas fa-bell me-1"></i> استدعاء
+                                                    </span>
+                                                @endif
+                                            </td>
+
+                                            <!-- Waiting Count -->
+                                            <td class="text-center">
+                                                <span class="badge {{ $doc->waiting_patients_count > 0 ? 'bg-primary' : 'bg-light text-secondary border' }} rounded-pill px-2 py-1 fs-6">
+                                                    {{ $doc->waiting_patients_count }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-stethoscope fa-2x mb-2 text-secondary"></i>
+                            <p class="mb-0 fw-bold">لا توجد كشوفات جارية حالياً</p>
+                            <small class="text-secondary">ستظهر هنا العيادة فور بدء الكشف على مريض أو استدعائه من قبل الطبيب</small>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- 2. Compact Today's Patient Queue & Payment Actions Card -->
+            <div class="card border-0 shadow-sm rounded-3 bg-white mb-3">
+                <div class="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-users-line text-success fs-5"></i>
+                        <h6 class="mb-0 fw-bold text-dark">طابور الحجوزات والقبض</h6>
+                    </div>
+                    @if(isset($todayAppointments))
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small">
+                            {{ $todayAppointments->count() }} مريض
+                        </span>
+                    @endif
+                </div>
+                <div class="card-body p-2 overflow-auto" style="max-height: 380px;">
+                    @if(isset($todayAppointments) && $todayAppointments->count() > 0)
+                        <div class="list-group list-group-flush">
+                            @foreach($todayAppointments as $appointment)
+                                <div class="list-group-item px-2 py-2 border rounded-2 mb-2 {{ $appointment->status === 'calling' ? 'border-primary bg-primary bg-opacity-10' : ($appointment->payment_status === 'paid' ? 'border-light bg-light' : 'border-warning bg-warning bg-opacity-10') }}">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <!-- Patient Info -->
+                                        <div class="d-flex align-items-center gap-2 text-truncate">
+                                            <span class="badge {{ $appointment->payment_status === 'paid' ? 'bg-success' : 'bg-warning text-dark' }} rounded-pill px-2 flex-shrink-0" style="font-size: 0.8rem;">
+                                                #{{ $appointment->queue_number ?: $appointment->id }}
+                                            </span>
+                                            <div class="text-truncate">
+                                                <div class="fw-bold text-dark small text-truncate">
+                                                    @if($appointment->patient && $appointment->patient->user)
+                                                        {{ $appointment->patient->user->name }}
+                                                    @elseif($appointment->emergency && $appointment->emergency->emergencyPatient)
+                                                        {{ $appointment->emergency->emergencyPatient->name }} <span class="badge bg-danger p-1" style="font-size: 0.65rem;">طوارئ</span>
+                                                    @else
+                                                        مريض غير محدد
+                                                    @endif
+                                                </div>
+                                                <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                                    د. {{ $appointment->doctor->user->name ?? 'غير محدد' }}
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <!-- Quick Action Button -->
+                                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                            @if($appointment->payment_status === 'paid' || $appointment->emergency_id)
+                                                @if($appointment->status === 'calling')
+                                                    <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2" style="font-size: 0.75rem;" onclick="callPatient({{ $appointment->id }}, this)" title="إعادة النداء للشاشة الخارجية">
+                                                        <i class="fas fa-redo me-1"></i> إعادة نداء
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-xs btn-primary text-white py-1 px-2" style="font-size: 0.75rem;" onclick="callPatient({{ $appointment->id }}, this)" title="استدعاء للشاشة الخارجية">
+                                                        <i class="fas fa-bullhorn me-1"></i> استدعاء
+                                                    </button>
+                                                @endif
+                                            @else
+                                                @canany(['process consultation payments', 'process payments'])
+                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="قبض رسوم الكشفية فوراً">
+                                                        <i class="fas fa-cash-register me-1"></i> قبض
+                                                    </a>
+                                                @else
+                                                    <span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>
+                                                @endcan
+                                            @endif
+
+                                            @if($appointment->canBeCancelled())
+                                                <form method="POST" action="{{ route('appointments.cancel', $appointment) }}" class="d-inline m-0">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-xs btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')" title="إلغاء الحجز">
+                                                        <i class="fas fa-times me-1"></i> إلغاء
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-calendar-check fa-2x mb-2 text-secondary"></i>
+                            <p class="mb-0 small">لا توجد حجوزات مسجلة اليوم</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- 3. Compact Ultrasound / Lab Requests Card (If Any) -->
+            @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning">
+                    <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-1">
+                            <i class="fas fa-wave-square text-primary small"></i>
+                            <h6 class="mb-0 fw-bold text-dark small">فحوصات وسونار بانتظار السداد</h6>
+                        </div>
+                        <span class="badge bg-warning text-dark small">{{ $pendingConsultantRequests->count() }}</span>
+                    </div>
+                    <div class="card-body p-2 overflow-auto" style="max-height: 240px;">
+                        <div class="list-group list-group-flush">
+                            @foreach($pendingConsultantRequests as $req)
+                                <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark small text-truncate">
+                                                {{ optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض' }}
+                                            </div>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                                {{ $req->subtype === 'ultrasound' ? 'سونار' : ($req->type === 'radiology' ? 'أشعة' : $req->type) }} — <strong class="text-success">{{ number_format($req->total_amount ?? 0) }} د.ع</strong>
+                                            </small>
+                                        </div>
+                                        <div>
+                                            @canany(['process medical requests payments', 'process payments'])
+                                                <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;">
+                                                    <i class="fas fa-cash-register me-1"></i> قبض
+                                                </a>
+                                            @else
+                                                <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
             @endif
         </div>

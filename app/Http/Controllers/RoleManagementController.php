@@ -245,7 +245,7 @@ class RoleManagementController extends Controller
                 'name' => 'الحسابات العامة والمالية',
                 'icon' => 'fa-file-invoice-dollar',
                 'color' => 'secondary',
-                'description' => 'مراجعة وتدقيق أسعار العمليات، التقارير واليوميات المالية، وإدارة نسب استقطاع الضمان'
+                'description' => 'مراجعة أسعار العمليات، الضمان، سجل وتقارير الفواتير، الحركات المالية، كشوفات الحسابات، وحسابات الأطباء'
             ],
             'radiology' => [
                 'name' => 'الأشعة والسونار والإيكو',
@@ -340,8 +340,17 @@ class RoleManagementController extends Controller
 
             // 📊 4. الحسابات العامة والمالية
             'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار وتكاليف العمليات (محاسب)', 'action' => 'مراجعة', 'badge' => 'warning'],
-            'view cashier reports' => ['label' => 'عرض كشوفات الحسابات واليوميات والتقارير المالية', 'action' => 'عرض', 'badge' => 'info'],
             'manage health insurance' => ['label' => 'إدارة نسب وفئات استقطاع الضمان الصحي الوطني', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage doctor commissions' => ['label' => 'إعدادات وتخصيص عمولات ونسب الأطباء', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view cashier reports' => ['label' => 'عرض سجل وتقارير الفواتير والإيرادات', 'action' => 'عرض', 'badge' => 'info'],
+            'view consultant financial movements' => ['label' => 'عرض الحركات والقيود المالية للاستشارية', 'action' => 'عرض', 'badge' => 'info'],
+            'view account statements' => ['label' => 'عرض كشوفات الحسابات العامة وتصديرها', 'action' => 'عرض', 'badge' => 'info'],
+            'view doctor accounts' => ['label' => 'عرض حسابات ومستحقات وأرباح الأطباء الاستشاريين', 'action' => 'عرض', 'badge' => 'info'],
+            'view emergency analytics' => ['label' => 'عرض تحليلات وإحصاءات قسم الطوارئ', 'action' => 'عرض', 'badge' => 'info'],
+            'view emergency financial movements' => ['label' => 'عرض الحركات والقيود المالية للطوارئ', 'action' => 'عرض', 'badge' => 'info'],
+            'view emergency statements' => ['label' => 'عرض كشوفات حسابات الطوارئ وتفاصيلها', 'action' => 'عرض', 'badge' => 'info'],
+            'view emergency doctor accounts' => ['label' => 'عرض وصرف حسابات وأجور أطباء الطوارئ', 'action' => 'عرض', 'badge' => 'info'],
+            'view diagnostic analytics' => ['label' => 'عرض تحليلات وإحصاءات التشخيص (مختبر وأشعة)', 'action' => 'عرض', 'badge' => 'info'],
 
             // 〰️ 4. الأشعة والسونار والإيكو
             'view radiology' => ['label' => 'عرض قسم الأشعة والسونار وقائمة الفحوصات', 'action' => 'عرض', 'badge' => 'info'],
@@ -436,9 +445,18 @@ class RoleManagementController extends Controller
         // 2. Accounting & Financial Management
         if (in_array($permissionName, [
             'review surgery prices', 
-            'view cashier reports', 
             'manage health insurance',
-            'view doctor profits'
+            'manage doctor commissions',
+            'view cashier reports', 
+            'view consultant financial movements',
+            'view account statements',
+            'view doctor accounts',
+            'view emergency analytics',
+            'view emergency financial movements',
+            'view emergency statements',
+            'view emergency doctor accounts',
+            'view diagnostic analytics',
+            'view doctor profits',
         ]) || str_contains($permissionName, 'insurance')) {
             return 'accounting';
         }

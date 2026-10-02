@@ -61,6 +61,48 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-02 — المرحلة 7: تنظيم شاشة الكاشير بتبويبات وفلتر تاريخ وإحكام استدعاء الفحوصات غير المسددة)
+
+### Done
+- **إصلاح وتنظيم شاشة الكاشير (`CashierController.php`, `resources/views/cashier/index.blade.php`)**:
+  * ربط عرض المعاملات بصلاحيات الدفع الحصرية (`process consultation payments`, `process medical requests payments`, `process emergency payments`).
+  * تقسيم جدول المعاملات المعلقة إلى 4 تبويبات علوية سريعة (Tabs/Pills) مع عدادات حية: (الكل، كشفية الاستشارية، التحاليل والأشعة، خدمات الطوارئ).
+  * إضافة فلتر نطاق التاريخ في رأس صفحة الكاشير: `[ معلقات اليوم ]` (افتراضي)، `[ المعلقات السابقة ]` مع شارة بعددها، و `[ كافة التواريخ ]`؛ لضبط توافق عرض اليوم مع شاشة الاستشارية وتجنب خلط مراجعي الأمس باليوم.
+- **إحكام استدعاء نتائج الفحوصات في محطة الطبيب وطابور العيادة (`DoctorQueueController.php`, `resources/views/doctors/visits/index.blade.php`)**:
+  * إضافة فحص حالة السداد المالي للفحوصات والزيارة قبل السماح للطبيب باستدعاء المراجع للنتائج (`callForResults`).
+  * إظهار شارة تحذيرية في طابور محطة الطبيب: **«⚠️ غير مقبوض / غير مسدد»** ومنع استدعاء المريض أو إرجاع رسالة خطأ صريحة تنبه الطبيب بضرورة توجيه المراجع للكاشير أولاً.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات النظام العامة: 70 passed (451 assertions).
+  * اجتياز اختبارات مصفوفة الصلاحيات: 11 passed (157 assertions).
+
+## Session log (2026-10-02 — المرحلة 6: فصل وتخصيص صلاحيات قسم الحسابات العامة والمالية)
+
+### Done
+- **فصل وتخصيص كافة شاشات وتقارير الحسابات بصلاحيات حصرية ومستقلة (`RoleManagementController`, `ConsultantAvailabilityController`, `CashierController`, `AccountantController`, `DoctorCommissionSettingController`, `layouts/app.blade.php`)**:
+  * فصل الصلاحية المجمعة القديمة إلى 12 صلاحية دقيقة ومستقلة تماماً في لوحة الأدوار وقاعدة البيانات:
+    1. `review surgery prices`: مراجعة وتأكيد أسعار وتكاليف العمليات.
+    2. `manage health insurance`: إدارة نسب وفئات استقطاع الضمان الصحي الوطني.
+    3. `manage doctor commissions`: إعدادات وتخصيص عمولات ونسب الأطباء.
+    4. `view cashier reports`: سجل وتقارير الفواتير والإيرادات.
+    5. `view consultant financial movements`: سجل الحركات والقيود المالية للعيادات الاستشارية وتصديرها.
+    6. `view account statements`: كشوفات الحسابات العامة وتصديرها.
+    7. `view doctor accounts`: كشوفات حسابات وأرباح الأطباء الاستشاريين وصرف مستحقاتهم وتصديرها.
+    8. `view emergency analytics`: تحليلات وإحصاءات قسم الطوارئ.
+    9. `view emergency financial movements`: سجل الحركات والقيود المالية للطوارئ.
+    10. `view emergency statements`: كشوفات حسابات وإحالات الطوارئ.
+    11. `view emergency doctor accounts`: كشوفات حسابات وأجور أطباء الطوارئ وصرف مستحقاتهم.
+    12. `view diagnostic analytics`: تحليلات وإحصاءات التشخيص (المختبر والأشعة والمفراس).
+  * حماية كل Controller ومسار وواجهة بالقفل الحصري المناسب.
+  * تحديث القائمة الجانبية [layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php) بحيث يظهر للمستخدم فقط الروابط والأقسام الفرعية التي يمتلك صلاحيتها.
+  * إنشاء ميغريشن آمن [2026_10_02_140000_split_accounting_and_financial_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_02_140000_split_accounting_and_financial_permissions.php) لتطبيق الفصل ومنح الصلاحيات للأدوار دون كسر الوصول.
+- **إعادة هيكلة واختزال لوحة توفر الأطباء والاستشارية (`ConsultantAvailabilityController`, `consultant-availability/index.blade.php`)**:
+  * تصميم لوحة حية جانبية على اليسار تجمع «العيادات الجارية الآن» (اسم المريض بالداخل ووقت الدخول وشارة الفحص) وأسفلها مباشرة «طابور الحجوزات والقبض» (اسم المريض + زر القبض/الاستدعاء السريع).
+  * اختزال وتبسيط جدول الأطباء الرئيسي على اليمين بدمج العيادة مع اسم الطبيب وحصر الأعمدة في 5 أعمدة أساسية وسريعة (`#`، `الطبيب والعيادة`، `الحالة`، `شاشة الانتظار`، `مفتاح التوفر`).
+  * تحسين انسيابية الصفحة وسرعة وصول موظفي الاستعلامات والصندوق لإجراءات القبض والنداء.
+- **الاختبارات الآلية (Automated Tests)**:
+  * تحديث واجتياز اختبارات الصلاحيات في [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) بنجاح 100%: 11 passed (157 assertions).
+  * اجتياز كامل اختبارات النظام العامة: 70 passed (451 assertions).
+
 ## Session log (2026-09-29 — المرحلة 5: تطهير وإحكام صلاحيات العمليات الجراحية والرقود ومحطات الصالات والغرف)
 
 ### Done

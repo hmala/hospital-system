@@ -36,17 +36,45 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى لوحة الكاشير');
         }
 
+        $today = Carbon::today();
+        $dateFilter = request('date_filter', 'today'); // 'today' (default), 'previous', 'all'
+
+        // إجمالي المعلقات السابقة (قبل اليوم)
+        $previousPendingAptsCount = Appointment::where('payment_status', 'pending')
+            ->whereIn('status', ['scheduled', 'confirmed'])
+            ->whereDate('appointment_date', '<', $today)
+            ->whereNull('emergency_id')
+            ->whereHas('patient')
+            ->count();
+
+        $previousPendingReqsCount = MedicalRequest::where('payment_status', 'pending')
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('created_at', '<', $today)
+            ->whereHas('visit.patient')
+            ->whereDoesntHave('visit.surgery')
+            ->count();
+
+        $previousPendingCount = $previousPendingAptsCount + $previousPendingReqsCount;
+
         // جلب المواعيد المعلقة (غير المدفوعة)
-        $pendingAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
+        $pendingAppointmentsQuery = Appointment::with(['patient.user', 'doctor.user', 'department'])
             ->where('payment_status', 'pending')
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->whereNull('emergency_id')
-            ->whereHas('patient') // التأكد من وجود مريض مرتبط
-            ->orderBy('appointment_date')
-            ->paginate(15);
+            ->whereHas('patient');
+
+        if ($dateFilter === 'today') {
+            $pendingAppointmentsQuery->whereDate('appointment_date', $today);
+        } elseif ($dateFilter === 'previous') {
+            $pendingAppointmentsQuery->whereDate('appointment_date', '<', $today);
+        }
+
+        $pendingAppointments = $pendingAppointmentsQuery
+            ->orderBy('appointment_date', 'asc')
+            ->paginate(15, ['*'], 'appointments_page');
 
         // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات
-        $pendingRequests = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
+        $pendingRequestsQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')
             ->whereHas('visit', function($q) {
@@ -56,22 +84,37 @@ class CashierController extends Controller
                             ->orWhereNull('visit_type');
                   });
             })
-            ->whereHas('visit.patient') // التأكد من وجود مريض مرتبط بالزيارة
-            ->whereDoesntHave('visit.surgery')
+            ->whereHas('visit.patient')
+            ->whereDoesntHave('visit.surgery');
+
+        if ($dateFilter === 'today') {
+            $pendingRequestsQuery->whereDate('created_at', $today);
+        } elseif ($dateFilter === 'previous') {
+            $pendingRequestsQuery->whereDate('created_at', '<', $today);
+        }
+
+        $pendingRequests = $pendingRequestsQuery
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'requests_page');
 
         // جلب خدمات الطوارئ المعلقة الدفع
-        $pendingEmergencyPayments = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'emergency.services', 'appointment.doctor.user'])
+        $pendingEmergencyQuery = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'emergency.services', 'appointment.doctor.user'])
             ->where('payment_type', 'emergency')
-            ->whereNull('appointment_id') // الاستشاري يُحسب كموعد مستقل
-            ->whereNull('paid_at') // لم يتم الدفع بعد
-            ->whereHas('emergency') // التأكد من وجود حالة طوارئ مرتبطة
+            ->whereNull('appointment_id')
+            ->whereNull('paid_at')
+            ->whereHas('emergency');
+
+        if ($dateFilter === 'today') {
+            $pendingEmergencyQuery->whereDate('created_at', $today);
+        } elseif ($dateFilter === 'previous') {
+            $pendingEmergencyQuery->whereDate('created_at', '<', $today);
+        }
+
+        $pendingEmergencyPayments = $pendingEmergencyQuery
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'emergency_page');
 
         // إحصائيات اليوم المحسنة
-        $today = Carbon::today();
         $todayPayments = Payment::whereDate('paid_at', $today)
             ->with(['appointment.doctor', 'appointment.patient.user', 'request.visit.patient.user', 'request.visit.doctor.user', 'patient.user'])
             ->get();
@@ -87,6 +130,7 @@ class CashierController extends Controller
             'pending_appointments_count' => $pendingAppointmentsCount,
             'pending_requests_count' => $pendingRequestsCount,
             'pending_emergency_count' => $pendingEmergencyCount,
+            'previous_pending_count' => $previousPendingCount,
             'doctor_fees' => 0,
             'hospital_profit' => 0,
         ];
@@ -112,12 +156,6 @@ class CashierController extends Controller
             'avg_daily' => $monthlyPayments->count() > 0 ? $monthlyPayments->sum('amount') / Carbon::now()->daysInMonth : 0,
         ];
 
-
-        // Debug: تأكد من نوع المتغير قبل إرساله
-        \Log::info('CashierController - pendingRequests type: ' . gettype($pendingRequests));
-        \Log::info('CashierController - pendingRequests class: ' . (is_object($pendingRequests) ? get_class($pendingRequests) : 'not object'));
-        \Log::info('CashierController - pendingRequests count: ' . (is_object($pendingRequests) ? $pendingRequests->count() : 'not object'));
-
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
 
@@ -127,7 +165,9 @@ class CashierController extends Controller
             'pendingEmergencyPayments', 
             'todayStats', 
             'todayPayments', 
-            'monthlyStats'
+            'monthlyStats',
+            'dateFilter',
+            'previousPendingCount'
         ));
     }
 
@@ -827,7 +867,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view cashier reports'))) {
+        if (!$isAdmin && (!$user || !$user->can('view account statements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى كشوفات الحسابات');
         }
 
@@ -840,7 +880,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view cashier reports'))) {
+        if (!$isAdmin && (!$user || !$user->can('view account statements'))) {
             abort(403, 'غير مصرح لك بتصدير كشوفات الحسابات');
         }
 
@@ -911,8 +951,12 @@ class CashierController extends Controller
             12 => 'ديسمبر',
         ];
 
+        $monthExpression = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%m', appointments.appointment_date) AS INTEGER) as month_number"
+            : "MONTH(appointments.appointment_date) as month_number";
+
         $monthlyDoctorRevenues = ConsultationRevenue::selectRaw(
-                'consultation_revenues.doctor_id, MONTH(appointments.appointment_date) as month_number, COUNT(*) as examination_count'
+                "consultation_revenues.doctor_id, {$monthExpression}, COUNT(*) as examination_count"
             )
             ->join('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id')
             ->where('consultation_revenues.movement_type', 'payment')
@@ -1769,8 +1813,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || !$user->can('view emergency financial movements'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للطوارئ');
         }
 
         $fromDate = $request->query('from_date');
@@ -1818,8 +1862,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || !$user->can('view emergency statements'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كشوفات حسابات الطوارئ');
         }
 
         $fromDate = $request->query('from_date');
@@ -2190,8 +2234,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || !$user->can('view emergency statements'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى تقرير إحالات الطوارئ');
         }
 
         $doctorId = $request->query('doctor_id');
@@ -2319,8 +2363,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || (!$user->can('view emergency doctor accounts') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى حسابات أطباء الطوارئ');
         }
 
         $doctors = \App\Models\Doctor::with(['user', 'department'])
@@ -2369,8 +2413,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || (!$user->can('view emergency doctor accounts') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى تفاصيل حساب طبيب الطوارئ');
         }
 
         $doctor->load(['user', 'department']);
@@ -2422,8 +2466,8 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier reports') && !$user->can('view doctor profits')))) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || (!$user->can('view emergency doctor accounts') && !$user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بصرف مستحقات طبيب الطوارئ');
         }
 
         $request->validate([
