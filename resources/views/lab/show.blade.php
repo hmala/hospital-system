@@ -949,64 +949,39 @@ function buildSelectedLabTests($requestDetails) {
                                                         @endphp
 
                                                         @if($hasSubTests)
-                                                            {{-- ترويسة الفحص المركب الذي يحتوي فحوصات فرعية --}}
-                                                            <tr class="table-light">
-                                                                <td colspan="6" class="fw-bold py-2 bg-primary bg-opacity-10 text-primary border-primary">
-                                                                    <div class="d-flex align-items-center justify-content-between">
-                                                                        <div>
-                                                                            <i class="fas fa-layer-group me-2"></i>
-                                                                            <span class="fs-6">{{ $test }}</span>
-                                                                            <span class="badge bg-primary ms-2">{{ $labTestObj->subTests->count() }} معايير فرعية</span>
-                                                                        </div>
-                                                                        <small class="text-muted">{{ $labTestObj->main_category }}</small>
+                                                            {{-- فحص مركب / فرعي: يتم الاعتماد حصراً على تقرير الجهاز الممسوح ضوئياً بالسكانر --}}
+                                                            <tr class="table-info bg-opacity-25">
+                                                                <td class="text-center text-muted small">{{ $index + 1 }}</td>
+                                                                <td>
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <i class="{{ $testIcon }} text-primary"></i>
+                                                                        <strong>{{ $test }}</strong>
+                                                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-1">
+                                                                            <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="small text-muted mt-1">
+                                                                        <i class="fas fa-info-circle me-1"></i> يتم قراءة كافة المعاملات والرسوم البيانية من ورقة الجهاز الممسوحة بالسكانر
                                                                     </div>
                                                                 </td>
-                                                            </tr>
-
-                                                            @foreach($labTestObj->subTests as $sIdx => $subTest)
-                                                                @php
-                                                                    $subSavedVal = $dbResults[$subTest->name]->value ?? ($savedTestResults[$subTest->name]['value'] ?? '');
-                                                                    $subSavedStatus = $dbResults[$subTest->name]->status ?? ($savedTestResults[$subTest->name]['status'] ?? '');
-                                                                @endphp
-                                                                <tr class="test-row subtest-row" data-test="{{ $subTest->name }}"
-                                                                    data-ref-min="{{ $subTest->ref_min ?? '' }}"
-                                                                    data-ref-max="{{ $subTest->ref_max ?? '' }}">
-                                                                    <td class="text-center text-muted small">{{ $index + 1 }}.{{ $sIdx + 1 }}</td>
-                                                                    <td class="ps-4">
-                                                                        <div class="d-flex align-items-center gap-2">
-                                                                            <i class="fas fa-level-down-alt text-primary opacity-50 ms-2"></i>
-                                                                            <strong>{{ $subTest->name }}</strong>
+                                                                <td colspan="2">
+                                                                    @if($hasAttachment)
+                                                                        <div class="d-inline-flex align-items-center gap-2 py-1 px-3 bg-success bg-opacity-10 text-success border border-success rounded-pill fw-bold small">
+                                                                            <i class="fas fa-check-circle"></i> تم إرفاق تقرير الجهاز بالسكانر
                                                                         </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="text"
-                                                                               class="form-control form-control-sm test-value"
-                                                                               name="test_results[{{ $subTest->name }}][value]"
-                                                                               value="{{ old('test_results.' . $subTest->name . '.value', $subSavedVal) }}"
-                                                                               placeholder="أدخل النتيجة"
-                                                                               data-test="{{ $subTest->name }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
-                                                                    </td>
-                                                                    <td class="text-muted small">{{ $subTest->unit ?: '—' }}</td>
-                                                                    <td>
-                                                                        @if($subTest->reference_range)
-                                                                            <span class="badge bg-light text-dark border">{{ $subTest->reference_range }}</span>
-                                                                        @else
-                                                                            <span class="text-muted small">—</span>
-                                                                        @endif
-                                                                    </td>
-                                                                    <td class="text-center">
-                                                                        <span class="result-flag" id="flag-{{ $index }}-{{ $sIdx }}">
-                                                                            <i class="fas fa-circle text-muted small"></i>
-                                                                        </span>
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
+                                                                    @else
+                                                                        <div class="d-inline-flex align-items-center gap-2 py-1 px-3 bg-warning bg-opacity-10 text-dark border border-warning rounded-pill fw-bold small">
+                                                                            <i class="fas fa-upload text-warning"></i> يرجى إرفاق تقرير السكانر من البطاقة أعلاه
+                                                                        </div>
+                                                                    @endif
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge bg-light text-muted border">مدرج بتقرير الجهاز</span>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <span class="badge bg-secondary bg-opacity-75">سكانر فقط</span>
+                                                                </td>
+                                                            </tr>
                                                         @else
                                                             {{-- فحص فردي مباشر --}}
                                                             @php
