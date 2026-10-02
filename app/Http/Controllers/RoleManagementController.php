@@ -307,6 +307,11 @@ class RoleManagementController extends Controller
             'inquiry.create.lab' => ['label' => 'حجز تحاليل مختبرية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.pharmacy' => ['label' => 'طلب صيدلية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.blood_bank' => ['label' => 'حجز طلب مصرف الدم', 'action' => 'حجز', 'badge' => 'primary'],
+            'view bed reservations' => ['label' => 'عرض سجل وقائمة حجوزات الأسرّة والرقود', 'action' => 'عرض', 'badge' => 'info'],
+            'create bed reservations' => ['label' => 'حجز وتسكين سرير أو رقود مبدئي لمريض', 'action' => 'حجز', 'badge' => 'success'],
+            'view incubator reservations' => ['label' => 'عرض سجل وقائمة حجوزات حاضنات الخُدّج', 'action' => 'عرض', 'badge' => 'info'],
+            'create incubator reservations' => ['label' => 'حجز وتسكين حاضنة خُدّج جديدة (NICU)', 'action' => 'حجز', 'badge' => 'pink'],
+            'manage incubator reservations' => ['label' => 'إدارة وإجراءات الدخول والخروج للحاضنات', 'action' => 'إدارة', 'badge' => 'primary'],
 
             // 🩺 2. العيادات والاستشارية ومحطة الأطباء
             'manage consultant availability' => ['label' => 'دخول شاشة جدول توفر الاستشاريين والعيادات', 'action' => 'إدارة', 'badge' => 'primary'],
@@ -433,11 +438,13 @@ class RoleManagementController extends Controller
 
     private function permissionGroup(string $permissionName): string
     {
-        // 1. Inquiry & Bookings
+        // 1. Inquiry & Bookings (All Reception & Inpatient Booking Types)
         if (str_starts_with($permissionName, 'inquiry.') || in_array($permissionName, [
             'view inquiries', 'create inquiries', 'manage inquiries', 
             'view patient history', 'view occupancy', 
-            'view patients', 'create patients', 'edit patients', 'delete patients'
+            'view patients', 'create patients', 'edit patients', 'delete patients',
+            'view bed reservations', 'create bed reservations',
+            'view incubator reservations', 'create incubator reservations', 'manage incubator reservations',
         ])) {
             return 'inquiry';
         }
@@ -488,7 +495,7 @@ class RoleManagementController extends Controller
             return 'emergency';
         }
 
-        // 7. Surgeries & Inpatient & Rooms
+        // 7. Surgeries & Operating Theaters & Stations
         if (str_contains($permissionName, 'surg') || str_contains($permissionName, 'station') || $permissionName === 'manage rooms' || str_contains($permissionName, 'device')) {
             return 'surgeries';
         }

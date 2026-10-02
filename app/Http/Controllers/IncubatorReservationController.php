@@ -18,9 +18,10 @@ class IncubatorReservationController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('view incubator reservations'))) {
+            abort(403, 'غير مصرح لك بعرض حجوزات الحاضنات');
         }
 
         $reservations = IncubatorReservation::with([
@@ -41,9 +42,10 @@ class IncubatorReservationController extends Controller
     public function create(Request $request)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('create incubator reservations'))) {
+            abort(403, 'غير مصرح لك بإنشاء حجز حاضنة خدج');
         }
 
         // الحصول على المريض إذا تم تمريره
@@ -116,9 +118,10 @@ class IncubatorReservationController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('create incubator reservations'))) {
+            abort(403, 'غير مصرح لك بحفظ حجز حاضنة خدج');
         }
 
         $validated = $request->validate([
@@ -196,9 +199,10 @@ class IncubatorReservationController extends Controller
     public function show(IncubatorReservation $incubatorReservation)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('view incubator reservations'))) {
+            abort(403, 'غير مصرح لك بعرض تفاصيل حجز الحاضنة');
         }
 
         $incubatorReservation->load([
@@ -217,9 +221,10 @@ class IncubatorReservationController extends Controller
     public function admit(IncubatorReservation $incubatorReservation)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('manage incubator reservations'))) {
+            abort(403, 'غير مصرح لك بتسجيل دخول الطفل للحاضنة');
         }
 
         if ($incubatorReservation->status !== IncubatorReservation::STATUS_PENDING) {
@@ -243,9 +248,10 @@ class IncubatorReservationController extends Controller
     public function discharge(Request $request, IncubatorReservation $incubatorReservation)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('manage incubator reservations'))) {
+            abort(403, 'غير مصرح لك بتسجيل خروج الطفل من الحاضنة');
         }
 
         if ($incubatorReservation->status !== IncubatorReservation::STATUS_ADMITTED) {
@@ -275,9 +281,10 @@ class IncubatorReservationController extends Controller
     public function cancel(IncubatorReservation $incubatorReservation)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('manage incubator reservations'))) {
+            abort(403, 'غير مصرح لك بإلغاء حجز الحاضنة');
         }
 
         if (in_array($incubatorReservation->status, [
@@ -302,9 +309,10 @@ class IncubatorReservationController extends Controller
     public function transfer(Request $request, IncubatorReservation $incubatorReservation)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('manage incubator reservations'))) {
+            abort(403, 'غير مصرح لك بنقل الطفل بين الحاضنات');
         }
 
         $validated = $request->validate([
@@ -325,7 +333,7 @@ class IncubatorReservationController extends Controller
             'discharge_date' => now()->toDateString(),
             'discharge_time' => now()->format('H:i'),
             'discharge_notes' => 'تم النقل إلى حاضنة رقم ' . $newIncubator->incubator_number . 
-                               ': ' . ($validated['transfer_reason'] ?? ''),
+                                ': ' . ($validated['transfer_reason'] ?? ''),
         ]);
 
         // إنشاء حجز جديد
@@ -355,9 +363,10 @@ class IncubatorReservationController extends Controller
     public function occupied()
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
-            abort(403);
+        if (!$isAdmin && (!$user || !$user->can('view incubator reservations'))) {
+            abort(403, 'غير مصرح لك بعرض الحاضنات المشغولة');
         }
 
         $activeReservations = IncubatorReservation::with([

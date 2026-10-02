@@ -17,7 +17,7 @@ class BedReservationController extends Controller
         // list only bed reservations
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view occupancy') && !$user->can('manage rooms')))) {
+        if (!$isAdmin && (!$user || (!$user->can('view bed reservations') && !$user->can('view occupancy') && !$user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بالوصول لحجوزات الأسرّة');
         }
 
@@ -38,7 +38,7 @@ class BedReservationController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('manage inquiries')))) {
+        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بإنشاء حجز سرير');
         }
         $patients = Patient::with('user')->get()->sortBy(fn($p) => optional($p->user)->name);
@@ -65,7 +65,7 @@ class BedReservationController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('manage inquiries')))) {
+        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بحفظ حجز سرير');
         }
 
@@ -97,7 +97,7 @@ class BedReservationController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('manage inquiries')))) {
+        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بتأكيد حجز سرير');
         }
 

@@ -61,6 +61,22 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-02 — المرحلة 8: تخصيص صلاحيات مستقلة لحجز العمليات والرقود وحاضنات الخدج بالاستعلامات)
+
+### Done
+- **تخصيص وإحكام صلاحيات بطاقات الحجز السريري والجراحي (`Inquiry`, `BedReservation`, `IncubatorReservation`, `RoleManagementController`)**:
+  * إضافة وتفعيل صلاحيات مستقلة تماماً ومفاتيح تحكم فورية في لوحة الأدوار:
+    1. `create surgeries`: حجز وإدراج عملية جراحية.
+    2. `create bed reservations`: حجز وتسكين سرير أو رقود مبدئي لمريض.
+    3. `view bed reservations`: عرض سجل وقائمة حجوزات الأسرّة والرقود.
+    4. `create incubator reservations`: حجز وتسكين حاضنة خُدّج جديدة (NICU).
+    5. `view incubator reservations`: عرض سجل وقائمة حجوزات حاضنات الخُدّج.
+    6. `manage incubator reservations`: إدارة وإجراءات الدخول والخروج والنقل للحاضنات.
+  * ربط بطاقات الحجز في واجهة الاستعلامات [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php) مباشرة بتوجيهات `@can('create surgeries')`, `@can('create bed reservations')`, `@can('create incubator reservations')` لتمكين الإدارة من تشغيل أو إطفاء أي منها لأي موظف بضغطة زر.
+  * إنشاء ميغريشن آمن [2026_10_02_150000_add_bed_and_incubator_reservation_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_02_150000_add_bed_and_incubator_reservation_permissions.php) لتطبيق الصلاحيات الجديدة وتعيينها التلقائي للأدوار القياسية دون كسر المسارات.
+- **الاختبارات الآلية (Automated Tests)**:
+  * تحديث وتوسيع [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) لاختبار الحماية الصارمة لمسارات الرقود والحاضنات وإرجاع `403` فورياً عند سحب الصلاحية (11 passed, 172 assertions).
+
 ## Session log (2026-10-02 — المرحلة 7: تنظيم شاشة الكاشير بتبويبات وفلتر تاريخ وإحكام استدعاء الفحوصات غير المسددة)
 
 ### Done

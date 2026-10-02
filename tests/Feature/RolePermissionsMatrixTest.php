@@ -532,5 +532,26 @@ class RolePermissionsMatrixTest extends TestCase
 
         $role->givePermissionTo('view nursing station');
         $this->actingAs($user)->get(route('nursing-station.index'))->assertStatus(200);
+
+        // 8. Bed & Incubator reservations
+        $role->syncPermissions([]);
+        $this->actingAs($user)->get(route('bed-reservations.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('bed-reservations.create'))->assertStatus(403);
+        $this->actingAs($user)->get(route('incubator-reservations.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('incubator-reservations.create'))->assertStatus(403);
+
+        $role->givePermissionTo('view bed reservations');
+        $this->actingAs($user)->get(route('bed-reservations.index'))->assertStatus(200);
+        $this->actingAs($user)->get(route('bed-reservations.create'))->assertStatus(403);
+
+        $role->givePermissionTo('create bed reservations');
+        $this->actingAs($user)->get(route('bed-reservations.create'))->assertStatus(200);
+
+        $role->givePermissionTo('view incubator reservations');
+        $this->actingAs($user)->get(route('incubator-reservations.index'))->assertStatus(200);
+        $this->actingAs($user)->get(route('incubator-reservations.create'))->assertStatus(403);
+
+        $role->givePermissionTo('create incubator reservations');
+        $this->actingAs($user)->get(route('incubator-reservations.create'))->assertStatus(200);
     }
 }

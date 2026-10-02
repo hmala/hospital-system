@@ -208,7 +208,7 @@
                 </div>
             @endforeach
 
-            @unless($isConsultationReceptionist)
+            @can('create surgeries')
                 <!-- بطاقة حجز عملية جراحية -->
                 <div class="col-md-6 col-lg-3">
                     <a href="{{ route('surgeries.create', [
@@ -236,9 +236,9 @@
                         </div>
                     </a>
                 </div>
-            @endunless
+            @endcan
 
-            @unless($isConsultationReceptionist)
+            @can('create bed reservations')
                 <!-- بطاقة رقود مبدئي -->
                 <div class="col-md-6 col-lg-3">
                     <a href="{{ route('bed-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
@@ -261,9 +261,9 @@
                         </div>
                     </a>
                 </div>
-            @endunless
+            @endcan
 
-            @unless($isConsultationReceptionist)
+            @can('create incubator reservations')
                 <!-- بطاقة حجز حاضنة خدج -->
                 <div class="col-md-6 col-lg-3">
                     @if($patient->age < 1)
@@ -306,7 +306,7 @@
                         </div>
                     @endif
                 </div>
-            @endunless
+            @endcan
         </div>
 
         <!-- نموذج التفاصيل -->
