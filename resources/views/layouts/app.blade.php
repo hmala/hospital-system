@@ -1064,10 +1064,12 @@
                         @can('view surgeries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeries.*') && !request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.index') }}">
-                                <i class="fas fa-procedures"></i><span> العمليات</span>
+                                <i class="fas fa-procedures"></i><span> جدول وسجل العمليات</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeries }}</span>
                             </a>
                         </li>
+                        @endcan
+                        @can('manage surgery waiting list')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
                                 <i class="fas fa-clock"></i><span> قائمة انتظار العمليات</span>

@@ -618,7 +618,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage surgery waiting list') && !$user->can('view surgeries')))) {
+        if (!$isAdmin && (!$user || !$user->can('manage surgery waiting list'))) {
             abort(403, 'غير مصرح لك بالوصول إلى قائمة الانتظار');
         }
 
