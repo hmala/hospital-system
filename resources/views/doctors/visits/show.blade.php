@@ -1369,7 +1369,29 @@ datalist option:hover {
                                                                                             </div>
                                                                                         </div>
                                                                                         @if($radReq->result->radiologist)
-                                                                                        <div class="m                                                                         @if($hasAttachment)
+                                                                                        <div class="mt-2 pt-2 border-top small text-muted">
+                                                                                            <i class="fas fa-user-md me-1"></i>
+                                                                                            <strong>أخصائي الأشعة:</strong> {{ $radReq->result->radiologist->name ?? $radReq->result->radiologist }}
+                                                                                            @if($radReq->result->reported_at)
+                                                                                            <br><i class="fas fa-calendar me-1"></i>{{ $radReq->result->reported_at->format('Y-m-d H:i') }}
+                                                                                            @endif
+                                                                                        </div>
+                                                                                        @endif
+                                                                                    </div>
+                                                                                @endif
+                                                                                @endforeach
+                                                                            </div>
+                                                                        </div>
+                                                                        @endif
+                                                                    @elseif($medRequest->type == 'lab')
+                                                                        @php
+                                                                            $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
+                                                                            $hasAttachment = !empty($reqDetails['attachment']);
+                                                                            $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
+                                                                            $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
+                                                                        @endphp
+
+                                                                        @if($hasAttachment)
                                                                             <div class="alert alert-success border-2 border-success shadow-sm rounded-3 mb-3 p-3">
                                                                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                                                                     <div class="d-flex align-items-center gap-3">
@@ -1394,26 +1416,6 @@ datalist option:hover {
                                                                                     <div class="mt-2 text-center">
                                                                                         <a href="{{ $attachmentUrl }}" target="_blank">
                                                                                             <img src="{{ $attachmentUrl }}" alt="ملف مرفق" style="max-height: 220px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
-                                                                                        </a>
-                                                                                    </div>
-                                                                                @endif
-                                                                            </div>
-                                                                        @endif           <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند ممسوح ضوئياً من الجهاز' }}</small>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div class="d-flex gap-2">
-                                                                                        <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-success fw-bold px-3">
-                                                                                            <i class="fas fa-eye me-1"></i> فتح ومعاينة التقرير
-                                                                                        </a>
-                                                                                        <a href="{{ $attachmentUrl }}" download class="btn btn-sm btn-outline-secondary">
-                                                                                            <i class="fas fa-download me-1"></i> تنزيل
-                                                                                        </a>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @if($isImageAttachment)
-                                                                                    <div class="mt-2 text-center">
-                                                                                        <a href="{{ $attachmentUrl }}" target="_blank">
-                                                                                            <img src="{{ $attachmentUrl }}" alt="تقرير ممسوح ضوئياً" style="max-height: 220px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
                                                                                         </a>
                                                                                     </div>
                                                                                 @endif
