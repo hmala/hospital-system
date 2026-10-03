@@ -22,6 +22,14 @@ class TelegramBotController extends Controller
      */
     public function handleWebhook(Request $request)
     {
+        if ($request->isMethod('get')) {
+            return response()->json([
+                'ok' => true,
+                'status' => 'active',
+                'message' => 'Telegram Bot Webhook is running active and listening for updates!'
+            ]);
+        }
+
         $update = $request->all();
         Log::info('Telegram Webhook received: ' . json_encode($update));
 

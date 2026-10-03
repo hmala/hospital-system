@@ -720,6 +720,7 @@ Route::prefix('queue')->name('queue.')->group(function () {
 });
 
 // مسار بوت التيليجرام لاستقبال التحديثات
-Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook'])->name('telegram.webhook');
+Route::match(['get', 'post'], '/api/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook'])->name('telegram.webhook');
+Route::match(['get', 'post'], '/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook']);
 
 
