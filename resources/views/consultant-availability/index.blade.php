@@ -541,13 +541,13 @@ function playDeskChime() {
 
 async function playDeskVoice(text) {
     try {
-        const baseUrl = "{{ rtrim(request()->root(), '/') }}" || (window.location.origin + (window.location.pathname.includes('/hearmz') ? '/hearmz' : ''));
+        const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
         const res = await fetch(`${baseUrl}/queue/tts?text=${encodeURIComponent(text)}`);
         if (res.ok) {
             const blob = await res.blob();
             if (blob && blob.size > 500) {
                 const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
+                audio = new Audio(url);
                 audio.play().catch(() => {});
                 audio.onended = () => URL.revokeObjectURL(url);
                 return;
@@ -575,7 +575,7 @@ function callPatient(appointmentId, btnElement) {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري النداء...';
     }
 
-    const baseUrl = "{{ url('/') }}";
+    const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
     fetch(`${baseUrl}/queue/appointment/${appointmentId}/recall`, {
         method: 'POST',
         headers: {

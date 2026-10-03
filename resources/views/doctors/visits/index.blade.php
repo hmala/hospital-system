@@ -646,7 +646,7 @@
 @if(auth()->user()->isDoctor() && isset($doctor))
 <script>
     const currentDoctorId = {{ $doctor->id }};
-    const baseUrl = "{{ rtrim(request()->root(), '/') }}" || (window.location.origin + (window.location.pathname.includes('/hearmz') ? '/hearmz' : ''));
+    const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
     let currentAppointmentId = null;
 
     async function syncDoctorQueue() {
