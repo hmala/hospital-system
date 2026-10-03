@@ -474,9 +474,14 @@
 
         <!-- Patient and Doctor Line -->
         <div class="patient-doctor-row">
-            اسم المريض <strong>{{ $patientName }}</strong>
+            اسم المريض: <strong>{{ $patientName }}</strong>
             @if($doctorName)
-                - <span>د. {{ $doctorName }}</span>
+                <br>الطبيب: <span>د. {{ $doctorName }}</span>
+            @endif
+            @if($payment->insurance_type && $payment->insurance_type !== 'none')
+                <div style="font-size: 11px; font-weight: 700; color: #000; margin-top: 2px;">
+                    التغطية: {{ $payment->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن' }}
+                </div>
             @endif
         </div>
 
@@ -486,7 +491,7 @@
                 <tr>
                     <th class="col-service">الخدمة الطبية</th>
                     <th class="col-qty">عدد</th>
-                    <th class="col-price">السعر</th>
+                    <th class="col-price">المبلغ</th>
                 </tr>
             </thead>
             <tbody>
@@ -494,35 +499,21 @@
                     <tr>
                         <td class="col-service">{{ $item['name'] }}</td>
                         <td class="col-qty">{{ $item['qty'] }}</td>
-                        <td class="col-price">{{ number_format($item['price'], 0) }}</td>
+                        <td class="col-price">{{ number_format($item['price'] > 0 && empty($payment->patient_share) ? $item['price'] : $payment->amount, 0) }}</td>
                     </tr>
                 @endforeach
 
-                @if($payment->insurance_type && $payment->insurance_type !== 'none')
-                    <tr>
-                        <td colspan="2" class="col-service" style="font-size: 11px; background: #fafafa;">
-                            {{ $payment->insurance_type_name }} (تحمل {{ number_format($payment->copay_percentage, 0) }}%)
-                            @if($payment->insurance_card_no)<br><small>بطاقة: {{ $payment->insurance_card_no }}</small>@endif
-                        </td>
-                        <td class="col-price" style="font-size: 11px; color: #1e40af;">حصة: {{ number_format($payment->insurance_share, 0) }}</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td colspan="2" class="total-label">المدفوع نقداً (المريض)</td>
-                        <td class="total-val">{{ number_format($payment->patient_share ?: $payment->amount, 0) }}</td>
-                    </tr>
-                @else
-                    <tr class="total-row">
-                        <td colspan="2" class="total-label">المجموع</td>
-                        <td class="total-val">{{ number_format($payment->amount, 0) }}</td>
-                    </tr>
-                @endif
+                <tr class="total-row">
+                    <td colspan="2" class="total-label">المبلغ المدفوع</td>
+                    <td class="total-val">{{ number_format($payment->amount, 0) }}</td>
+                </tr>
             </tbody>
         </table>
 
-        <!-- Bottom Payment / Dollar Box -->
+        <!-- Bottom Payment Box -->
         <table class="footer-amount-box">
             <tr>
-                <td class="box-label">طريقة الدفع: {{ $payment->payment_method_name }}</td>
+                <td class="box-label">طريقة الدفع: {{ $payment->payment_method === 'card' ? 'دفع إلكتروني (POS)' : 'نقدي (Cash)' }}</td>
                 <td class="box-val">{{ number_format($payment->amount, 0) }} IQD</td>
             </tr>
         </table>
