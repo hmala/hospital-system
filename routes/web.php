@@ -723,4 +723,42 @@ Route::prefix('queue')->name('queue.')->group(function () {
 Route::match(['get', 'post'], '/api/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook'])->name('telegram.webhook');
 Route::match(['get', 'post'], '/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook']);
 
+// فحص تشخيصي مباشر للنداء
+Route::get('/api/telegram/test-call', function () {
+    $lastWithChat = \App\Models\Appointment::with(['patient.user', 'doctor.user'])
+        ->whereNotNull('telegram_chat_id')
+        ->latest('id')
+        ->first();
+
+    $latestAppt = \App\Models\Appointment::with(['patient.user', 'doctor.user'])->latest('id')->first();
+    
+    $target = $lastWithChat ?: $latestAppt;
+    
+    if (!$target) {
+        return response()->json(['error' => 'No appointments found in database']);
+    }
+
+    $chatId = $target->telegram_chat_id 
+        ?? optional($target->patient)->telegram_chat_id
+        ?? 677648429;
+
+    $target->telegram_chat_id = $chatId;
+    
+    $sent = app(\App\Services\TelegramService::class)->sendTurnAlert($target);
+
+    return response()->json([
+        'success' => $sent,
+        'target_appointment_id' => $target->id,
+        'patient_name' => optional(optional($target->patient)->user)->name,
+        'doctor_name' => optional(optional($target->doctor)->user)->name,
+        'chat_id_used' => $chatId,
+        'latest_appointment_in_db' => $latestAppt ? [
+            'id' => $latestAppt->id,
+            'status' => $latestAppt->status,
+            'telegram_chat_id' => $latestAppt->telegram_chat_id,
+            'patient_chat_id' => optional($latestAppt->patient)->telegram_chat_id
+        ] : null,
+    ]);
+});
+
 
