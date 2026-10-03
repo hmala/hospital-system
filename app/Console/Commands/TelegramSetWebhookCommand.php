@@ -34,6 +34,7 @@ class TelegramSetWebhookCommand extends Command
 
         $appUrl = $this->argument('url') ?? config('app.url');
         $appUrl = rtrim($appUrl, '/');
+        $webhookUrl = "{$appUrl}/api/telegram/webhook";
         
         if (!str_starts_with($webhookUrl, 'https://')) {
             $this->warn("⚠️ Skipping Telegram Webhook registration: HTTPS is required for webhooks (Current URL: {$webhookUrl})");
