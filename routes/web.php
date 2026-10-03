@@ -716,5 +716,10 @@ Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/all-clinics', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all-clinics.display');
     Route::get('/all-clinics/data', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsData'])->name('all-clinics.data');
     Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');
+    Route::get('/track/{appointment}', [\App\Http\Controllers\DoctorQueueController::class, 'patientLiveTracker'])->name('patient.track');
 });
+
+// مسار بوت التيليجرام لاستقبال التحديثات
+Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook'])->name('telegram.webhook');
+
 

@@ -425,6 +425,25 @@ class DoctorQueueController extends Controller
         $nextAppointment->called_at = now();
         $nextAppointment->save();
 
+        // إرسال نداء فوري على تيليجرام للمريض المستدعى
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($nextAppointment);
+
+            // تنبيه المريض الذي يليه في الطابور باقتراب الدور
+            $followingAppointment = Appointment::where('doctor_id', $doctor->id)
+                ->whereDate('appointment_date', $today)
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->where('queue_number', '>', $nextAppointment->queue_number ?? 0)
+                ->orderBy('queue_number', 'asc')
+                ->first();
+
+            if ($followingAppointment) {
+                app(\App\Services\TelegramService::class)->sendNearTurnAlert($followingAppointment);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Telegram notification failed: ' . $e->getMessage());
+        }
+
         $pName = $nextAppointment->patient && $nextAppointment->patient->user ? $nextAppointment->patient->user->name : 'المريض';
 
         return response()->json([
@@ -452,6 +471,11 @@ class DoctorQueueController extends Controller
         $appointment->status = 'calling';
         $appointment->called_at = now();
         $appointment->save();
+
+        // إعادة إرسال نداء تيليجرام
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+        } catch (\Throwable $e) {}
 
         $pName = $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'المريض';
         $docName = $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'الطبيب';
@@ -680,5 +704,14 @@ class DoctorQueueController extends Controller
         } catch (\Exception $e) {}
 
         return response('', 404);
+    }
+
+    /**
+     * Mobile Patient Live Queue Tracker View
+     */
+    public function patientLiveTracker(Appointment $appointment)
+    {
+        $appointment->load(['patient.user', 'doctor.user', 'department']);
+        return view('queue.patient-tracker', compact('appointment'));
     }
 }

@@ -282,6 +282,12 @@ class LabStaffController extends Controller
             $request->result = json_encode($existingRes);
             $request->save();
 
+            try {
+                app(\App\Services\TelegramService::class)->sendResultsReady($request);
+            } catch (\Throwable $te) {
+                Log::warning('Telegram lab notification error: ' . $te->getMessage());
+            }
+
             $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
             if ($request->visit && !$isDoctorVisit) {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();

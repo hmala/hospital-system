@@ -272,6 +272,12 @@ class RadiologyStaffController extends Controller
             $request->status = 'completed';
             $request->save();
 
+            try {
+                app(\App\Services\TelegramService::class)->sendResultsReady($request);
+            } catch (\Throwable $te) {
+                \Illuminate\Support\Facades\Log::warning('Telegram radiology notification error: ' . $te->getMessage());
+            }
+
             $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
             if ($request->visit && !$isDoctorVisit) {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();

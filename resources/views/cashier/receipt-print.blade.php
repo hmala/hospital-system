@@ -518,6 +518,24 @@
             </tr>
         </table>
 
+        @if($payment->appointment)
+            @php
+                $botUsername = config('services.telegram.bot_username', 'Kafathospitalbot');
+                $deepLink = "https://t.me/{$botUsername}?start=appt_" . $payment->appointment->id;
+                $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=1&data=" . urlencode($deepLink);
+            @endphp
+            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <img src="{{ $qrUrl }}" alt="QR" style="width: 60px; height: 60px; border: 1px solid #000;">
+                    <div style="text-align: right; font-size: 10px; font-weight: 800; line-height: 1.3;">
+                        <span>📱 امسح الرمز بهاتفك</span><br>
+                        <span style="color: #0088cc;">لمتابعة الدور واستلام نداء التيليجرام</span><br>
+                        <small style="color: #555;">@Kafathospitalbot</small>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if($payment->notes)
             <div style="font-size: 11px; margin-top: 5px; padding: 3px; border: 1px dashed #ccc;">
                 <strong>ملاحظة:</strong> {{ $payment->notes }}
