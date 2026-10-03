@@ -556,6 +556,10 @@ class DoctorQueueController extends Controller
             $appointment->status = 'calling';
             $appointment->called_at = now();
             $appointment->save();
+
+            try {
+                app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+            } catch (\Throwable $e) {}
         }
 
         return response()->json([
