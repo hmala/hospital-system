@@ -1,23 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>
-                    <i class="fas fa-money-bill-wave me-2 text-success"></i>
-                    تسديد رسوم الموعد
-                </h2>
-                <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>العودة
-                </a>
-            </div>
-        </div>
-    </div>
-
+<div class="container-fluid py-2">
+    <!-- تنبيه الخطأ إن وجد -->
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 rounded-3 mb-3" role="alert">
             <i class="fas fa-times-circle me-2"></i>
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -73,365 +60,297 @@
     @endphp
 
     @if((!$appointment->doctor && !$scanType) || $regularPrice <= 0)
-        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-radius: 12px; background-color: #fff3cd;">
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-3 rounded-3" role="alert">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fs-3 text-warning me-3"></i>
+                    <i class="fas fa-exclamation-triangle fs-4 text-warning me-2"></i>
                     <div>
-                        <h6 class="fw-bold mb-1 text-dark">تنبيه: أجور الخدمة غير محددة (0 د.ع)</h6>
-                        <small class="text-secondary">يرجى إدخال المبلغ المستحق يدوياً في حقل "المبلغ المستلم".</small>
+                        <strong class="text-dark">أجور الخدمة غير محددة (0 د.ع)</strong>
+                        <span class="text-muted ms-2 small">يرجى كتابة المبلغ المستلم يدوياً.</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-auto fw-bold" data-bs-toggle="modal" data-bs-target="#doctorFeeErrorModal">
-                    <i class="fas fa-exclamation-circle me-1"></i>عرض سبب التنبيه
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#doctorFeeErrorModal">
+                    عرض سبب التنبيه
                 </button>
             </div>
         </div>
     @endif
 
-    <!-- بطاقة تفاصيل الخدمة / الفحص البارزة -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%); border-left: 5px solid #0d6efd !important;">
-        <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-white p-3 shadow-sm me-3 text-primary d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        @if($scanType)
-                            <i class="fas fa-wave-square fs-4"></i>
-                        @else
-                            <i class="fas fa-stethoscope fs-4"></i>
-                        @endif
+    <!-- شريط معلومات المريض والعيادة العلوي الموحد والأنيق -->
+    <div class="card border-0 shadow-sm rounded-4 mb-3" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff;">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <!-- المريض -->
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                        <i class="fas fa-user-injured"></i>
                     </div>
                     <div>
-                        <span class="badge bg-primary mb-1">{{ $serviceCategory }}</span>
-                        @if($serviceCode)
-                            <span class="badge bg-dark mb-1">{{ $serviceCode }}</span>
-                        @endif
-                        <h5 class="fw-bold mb-0 text-dark">{{ $serviceName }}</h5>
-                        <small class="text-muted">{{ $appointment->notes ?? '' }}</small>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h4 class="fw-bold mb-0 text-white">{{ optional(optional($patient)->user)->name ?? 'مريض غير محدد' }}</h4>
+                            <span class="badge bg-primary px-2 py-1 rounded-pill">موعد #{{ $appointment->id }}</span>
+                        </div>
+                        <div class="text-white-50 small d-flex flex-wrap gap-3">
+                            <span><i class="fas fa-id-card me-1"></i>{{ $patient->national_id ?? 'بدون رقم هوية' }}</span>
+                            <span><i class="fas fa-phone me-1"></i>{{ optional(optional($patient)->user)->phone ?? 'بدون هاتف' }}</span>
+                            <span><i class="fas fa-clock me-1"></i>{{ $appointment->appointment_date ? $appointment->appointment_date->format('Y-m-d H:i') : '' }}</span>
+                        </div>
                     </div>
                 </div>
-                <div class="text-end">
-                    <span class="text-muted small d-block">السعر الأساسي المعتمد:</span>
-                    <span class="fs-4 fw-bold text-success">{{ number_format($regularPrice) }} د.ع</span>
+
+                <!-- الطبيب والخدمة -->
+                <div class="d-flex align-items-center gap-3 bg-white bg-opacity-10 p-2 px-3 rounded-3">
+                    <div class="text-end">
+                        <span class="badge {{ $scanType ? 'bg-info text-dark' : 'bg-success' }} mb-1">{{ $serviceCategory }}</span>
+                        <div class="fw-bold text-white">{{ $serviceName }}</div>
+                        <small class="text-white-50">
+                            @if($doctor)
+                                د. {{ optional($doctor->user)->name }} ({{ $doctor->specialization ?? 'عام' }})
+                            @else
+                                قسم: {{ optional($appointment->department)->name ?? 'عام' }}
+                            @endif
+                        </small>
+                    </div>
+                    <div class="rounded-circle bg-white bg-opacity-20 text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.2rem;">
+                        <i class="fas {{ $scanType ? 'fa-wave-square' : 'fa-stethoscope' }}"></i>
+                    </div>
                 </div>
+
+                <!-- زر الرجوع -->
+                <a href="{{ route('cashier.index') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <i class="fas fa-arrow-right me-1"></i> قائمة الانتظار
+                </a>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-gradient-success text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-invoice-dollar me-2"></i>
-                        تسوية ودفع رسوم {{ $scanType ? 'فحص السونار' : 'الاستشارية' }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('cashier.payment.process', $appointment->id) }}" id="appointmentPaymentForm">
-                        @csrf
+    <!-- نموذج الدفع الرئيسي المبسط -->
+    <form method="POST" action="{{ route('cashier.payment.process', $appointment->id) }}" id="appointmentPaymentForm">
+        @csrf
 
-                        <!-- قسم الضمان الصحي ونسبة التحمل الخماسية المباشرة للكاشير -->
-                        <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold text-primary mb-0">
-                                    <i class="fas fa-shield-alt me-2"></i>
-                                    تغطية الضمان ونسبة التحمل (Co-payment)
-                                </h6>
-                                <span class="badge bg-secondary" id="copayBadge">تحكم مباشر للكاشير</span>
+        <div class="row g-3">
+            <!-- البطاقة المالية المركزية -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                    <div class="card-body p-4">
+                        
+                        <!-- 1. شريط الأرقام المالية الثلاثية المباشرة -->
+                        <div class="row g-3 mb-4 text-center" id="live_pricing_summary">
+                            <div class="col-md-4">
+                                <div class="p-3 rounded-3 border bg-light">
+                                    <span class="text-muted small d-block mb-1">السعر المعتمد للخدمة</span>
+                                    <h4 class="fw-bold mb-0 text-dark" id="display_approved_price">0 د.ع</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 rounded-3 border bg-primary bg-opacity-10 border-primary">
+                                    <span class="text-primary fw-bold small d-block mb-1">
+                                        <i class="fas fa-shield-alt me-1"></i>تغطية الضمان (ذمة)
+                                    </span>
+                                    <h4 class="fw-bold mb-0 text-primary" id="display_insurance_share">0 د.ع</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 rounded-3 border bg-success bg-opacity-10 border-success shadow-sm">
+                                    <span class="text-success fw-bold small d-block mb-1">
+                                        <i class="fas fa-hand-holding-usd me-1"></i>المطلوب من المريض
+                                    </span>
+                                    <h4 class="fw-bold mb-0 text-success" id="display_patient_share">0 د.ع</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. قسم التغطية التأمينية التلقائية -->
+                        <div class="p-3 rounded-3 border mb-4" style="background-color: #f8fafc;">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-file-medical-alt text-primary fs-5"></i>
+                                    <h6 class="fw-bold text-dark mb-0">حالة التغطية والضمان الصحي</h6>
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge {{ $defaultInsurance !== 'none' ? 'bg-success' : 'bg-secondary' }} px-3 py-2 fs-7" id="copayBadge">
+                                        {{ $defaultInsurance === 'hi' ? 'مشمول بالضمان الصحي الوطني' : ($defaultInsurance === 'moi' ? 'مشمول بضمان الداخلية' : 'دفع نقدي كامل (100%)') }}
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" onclick="toggleInsuranceEdit()">
+                                        <i class="fas fa-lock me-1" id="lock_icon"></i><span id="lock_text">تثبيت آلي</span>
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="row g-3">
-                                <!-- اختيار جهة الضمان -->
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold small text-muted">جهة الضمان / التأمين *</label>
-                                    <select class="form-select" id="insurance_type" name="insurance_type">
+                            <!-- تفاصيل الضمان المثبتة -->
+                            <div class="row g-2 align-items-center mt-1">
+                                <div class="col-md-6" id="insurance_type_wrapper">
+                                    <div class="p-2 px-3 rounded-2 bg-white border text-secondary small d-flex justify-content-between align-items-center" id="locked_insurance_display">
+                                        <span>جهة التغطية: <strong class="text-dark">{{ $defaultInsurance === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : ($defaultInsurance === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'بدون ضمان') }}</strong></span>
+                                        @if($defaultInsurance !== 'none')
+                                            <i class="fas fa-check-circle text-success"></i>
+                                        @endif
+                                    </div>
+                                    <select class="form-select d-none" id="insurance_type" name="insurance_type">
                                         <option value="none" {{ old('insurance_type', $defaultInsurance) == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل 100%)</option>
                                         <option value="moi" {{ old('insurance_type', $defaultInsurance) == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
                                         <option value="hi" {{ old('insurance_type', $defaultInsurance) == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
                                     </select>
                                 </div>
 
-                                <!-- رقم بطاقة الضمان -->
-                                <div class="col-md-6" id="insurance_card_col">
-                                    <label class="form-label fw-bold small text-muted">رقم بطاقة / دفتر الضمان</label>
-                                    <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
-                                           value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر">
+                                <div class="col-md-6" id="insurance_card_col" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white small text-muted"><i class="fas fa-id-badge me-1"></i>رقم البطاقة / الدفتر:</span>
+                                        <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
+                                               value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية">
+                                    </div>
                                 </div>
 
                                 @if($hiCategory)
-                                <div class="col-12" id="patient_hi_category_badge">
-                                    <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                        <div>
-                                            <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
-                                            <small class="text-muted">نسبة استقطاع الاستشارية المعتمدة: <strong class="text-primary">{{ (float)$hiCategory->consultation_copay }}%</strong></small>
+                                    <div class="col-12" id="patient_hi_category_badge">
+                                        <div class="p-2 rounded-2 bg-info bg-opacity-10 border border-info border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+                                            <span class="text-dark">
+                                                <i class="fas fa-layer-group text-primary me-1"></i>
+                                                الفئة المعتمدة: <strong>{{ $hiCategory->name }} ({{ $hiCategory->code }})</strong> — نسبة التحمل: <strong class="text-primary fs-7">{{ (float)$hiCategory->consultation_copay }}%</strong>
+                                            </span>
+                                            @if($hiCategory->requires_thermal_stamp)
+                                                <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
+                                            @endif
                                         </div>
-                                        @if($hiCategory->requires_thermal_stamp)
-                                            <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
-                                        @endif
                                     </div>
-                                </div>
                                 @endif
 
-                                <!-- أزرار النسب الخماسية ونسبة التحمل -->
-                                <div class="col-12" id="copay_section">
-                                    <label class="form-label fw-bold small text-muted mb-1">
-                                        نسبة التحمل على المريض (Co-payment %)
-                                    </label>
-                                    
-                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
-                                        <span class="small text-muted me-2">خيارات خماسية سريعة:</span>
-                                        @foreach([0, 5, 10, 15, 20, 25, 30, 50, 100] as $pct)
-                                            <button type="button" class="btn btn-sm btn-outline-primary copay-btn" data-pct="{{ $pct }}">{{ $pct }}%</button>
-                                        @endforeach
-                                    </div>
-
-                                    <div class="input-group" style="max-width: 250px;">
-                                        <span class="input-group-text bg-light fw-bold">النسبة المعتمدة:</span>
-                                        <input type="number" step="1" min="0" max="100" class="form-control text-center fw-bold" 
-                                               id="copay_percentage" name="copay_percentage" value="{{ old('copay_percentage', $defaultCopay) }}">
-                                        <span class="input-group-text bg-light fw-bold">%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- بطاقة معاينة الحسبة المالية المباشرة -->
-                            <div class="row g-2 mt-3 pt-3 border-top text-center" id="live_pricing_summary">
-                                <div class="col-4">
-                                    <div class="bg-white p-2 rounded border">
-                                        <small class="text-muted d-block">السعر المعتمد</small>
-                                        <strong class="text-dark fs-6" id="display_approved_price">0 د.ع</strong>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="bg-white p-2 rounded border border-success">
-                                        <small class="text-success fw-bold d-block">تحمل المريض (نقداً)</small>
-                                        <strong class="text-success fs-6" id="display_patient_share">0 د.ع</strong>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="bg-white p-2 rounded border border-primary">
-                                        <small class="text-primary fw-bold d-block">حصة الضمان (ذمة)</small>
-                                        <strong class="text-primary fs-6" id="display_insurance_share">0 د.ع</strong>
+                                <div class="col-12" id="copay_section" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <span class="small text-muted">نسبة التحمل المقررة على المريض: <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
+                                        <div class="input-group" id="manual_copay_input_group" style="max-width: 140px; display: none !important;">
+                                            <input type="number" step="1" min="0" max="100" class="form-control form-control-sm text-center fw-bold" 
+                                                   id="copay_percentage" name="copay_percentage" value="{{ old('copay_percentage', $defaultCopay) }}">
+                                            <span class="input-group-text bg-light">%</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">
-                                    <i class="fas fa-money-bill-wave me-1 text-success"></i>
-                                    طريقة الدفع *
-                                </label>
-                                <div class="payment-methods-group">
-                                    <div class="form-check form-check-lg mb-2">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" 
-                                               value="cash" {{ old('payment_method', ($defaultInsurance !== 'none' ? 'insurance' : 'cash')) == 'cash' ? 'checked' : '' }} required>
-                                        <label class="form-check-label fw-semibold" for="payment_cash">
-                                            💵 نقدي (Cash)
-                                        </label>
-                                    </div>
-                                    <div class="form-check form-check-lg mb-2">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_card" 
-                                               value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-semibold" for="payment_card">
-                                            💳 بطاقة ائتمان (Card)
-                                        </label>
-                                    </div>
-                                    <div class="form-check form-check-lg">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_insurance" 
-                                               value="insurance" {{ old('payment_method', ($defaultInsurance !== 'none' ? 'insurance' : 'cash')) == 'insurance' ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-semibold" for="payment_insurance">
-                                            🏥 تأمين / ضمان صحي (Insurance / Copay)
-                                        </label>
-                                    </div>
-                                </div>
-                                @error('payment_method')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">المبلغ المحصّل نقداً من المريض (IQD) *</label>
-                                <input type="number" 
-                                       name="amount" 
-                                       id="amount_input"
-                                       class="form-control form-control-lg fw-bold text-success @error('amount') is-invalid @enderror" 
-                                       value="{{ old('amount', $regularPrice) }}"
-                                       step="0.01"
-                                       min="0"
-                                       required>
-                                <small class="text-muted">المبلغ الفعلي المستلم في الصندوق من المريض.</small>
-                                @error('amount')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
+                        <!-- 3. طريقة الدفع (نقدي / إلكتروني فقط) -->
                         <div class="mb-4">
-                            <label class="form-label fw-bold">ملاحظات</label>
-                            <textarea name="notes" 
-                                      class="form-control @error('notes') is-invalid @enderror" 
-                                      rows="3">{{ old('notes') }}</textarea>
-                            @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                            <label class="form-label fw-bold small text-muted mb-2">طريقة تحصيل حصة المريض *</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="payment_method" id="payment_cash" value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
+                                    <label class="btn btn-outline-success w-100 p-3 rounded-3 text-start d-flex align-items-center justify-content-between payment-method-card" for="payment_cash">
+                                        <div>
+                                            <div class="fw-bold fs-6">💵 نقدي (Cash)</div>
+                                            <small class="text-muted">استلام المبلغ نقداً في الصندوق</small>
+                                        </div>
+                                        <i class="fas fa-check-circle check-icon fs-5"></i>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="payment_method" id="payment_card" value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
+                                    <label class="btn btn-outline-primary w-100 p-3 rounded-3 text-start d-flex align-items-center justify-content-between payment-method-card" for="payment_card">
+                                        <div>
+                                            <div class="fw-bold fs-6">💳 دفع إلكتروني (POS / Card)</div>
+                                            <small class="text-muted">بطاقة مصرفية أو جهاز الدفع</small>
+                                        </div>
+                                        <i class="fas fa-check-circle check-icon fs-5"></i>
+                                    </label>
+                                </div>
+                            </div>
+                            @error('payment_method')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            سيتم إصدار إيصال دفع فوراً بعد إتمام العملية
+                        <!-- 4. ملاحظات إضافية اختيارية -->
+                        <div class="mb-2">
+                            <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#notesCollapse" role="button">
+                                <i class="fas fa-comment-alt me-1"></i> إضافة ملاحظة على السند (اختياري)
+                            </a>
+                            <div class="collapse mt-2" id="notesCollapse">
+                                <textarea name="notes" class="form-control" rows="2" placeholder="اكتب أي ملاحظة للمحاسبة أو الإيصال...">{{ old('notes') }}</textarea>
+                            </div>
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-check-circle me-2"></i>
-                                تأكيد الدفع
-                            </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- الجانب الأيسر: خانة المبلغ النهائي وزر التأكيد والطباعة -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 bg-white h-100 d-flex flex-column justify-content-between p-4">
+                    <div>
+                        <div class="text-center pb-3 mb-3 border-bottom">
+                            <span class="text-muted small d-block mb-1">المبلغ الصافي المطلوب قبضه</span>
+                            <div class="input-group input-group-lg justify-content-center">
+                                <input type="number" 
+                                       name="amount" 
+                                       id="amount_input"
+                                       class="form-control text-center fw-bold text-success border-success fs-3 @error('amount') is-invalid @enderror" 
+                                       value="{{ old('amount', $regularPrice) }}"
+                                       step="0.01"
+                                       min="0"
+                                       style="max-width: 240px; border-radius: 12px;"
+                                       required>
+                                <span class="input-group-text bg-success text-white fw-bold rounded-3 ms-2">د.ع</span>
+                            </div>
+                            @error('amount')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted d-block mt-2">يُعدل آلياً حسب نسبة التحمل للضمان</small>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
 
-        <div class="col-md-4">
-            <!-- تفاصيل الموعد -->
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-calendar-check me-2"></i>
-                        تفاصيل الموعد
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted">رقم الموعد:</small>
-                        <div class="fw-bold">#{{ $appointment->id }}</div>
+                        <!-- ملخص سريع للعملية -->
+                        <div class="bg-light p-3 rounded-3 mb-4 small">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">نوع الخدمة:</span>
+                                <strong class="text-dark">{{ $serviceCategory }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">الطبيب:</span>
+                                <strong class="text-dark">{{ $doctor ? optional($doctor->user)->name : 'عام' }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">الجهة الضامنة:</span>
+                                <strong class="text-dark">{{ $defaultInsurance !== 'none' ? ($defaultInsurance === 'hi' ? 'الضمان الصحي' : 'الداخلية') : 'نقدي 100%' }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">الإيصال:</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">تلقائي فور الدفع</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <small class="text-muted">التاريخ والوقت:</small>
-                        <div class="fw-bold">{{ $appointment->appointment_date->format('Y-m-d H:i') }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">الخدمة / الفحص:</small>
-                        <div class="fw-bold text-primary">{{ $serviceName }}</div>
-                        @if($serviceCode)
-                            <span class="badge bg-light text-dark border mt-1">{{ $serviceCode }}</span>
-                        @endif
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">الأجر المعتمد:</small>
-                        <div class="fw-bold text-success">{{ number_format($regularPrice) }} د.ع</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">القسم:</small>
-                        <div class="fw-bold">{{ $appointment->department ? $appointment->department->name : 'غير محدد' }}</div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- معلومات المريض -->
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-user me-2"></i>
-                        معلومات المريض
-                    </h6>
-                </div>
-                <div class="card-body">
-                    @php
-                        $p = $appointment->patient;
-                    @endphp
-                    <div class="mb-3">
-                        <small class="text-muted">الاسم:</small>
-                        <div class="fw-bold">{{ optional(optional($p)->user)->name ?? 'غير محدد' }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">الرقم الوطني:</small>
-                        <div class="fw-bold">{{ optional($p)->national_id ?? 'غير محدد' }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">رقم الهاتف:</small>
-                        <div class="fw-bold">{{ optional(optional($p)->user)->phone ?? 'غير محدد' }}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- معلومات الطبيب -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-user-md me-2"></i>
-                        معلومات الطبيب
-                    </h6>
-                </div>
-                <div class="card-body">
-                    @php
-                        $d = $appointment->doctor;
-                    @endphp
-                    <div class="mb-3">
-                        <small class="text-muted">الاسم:</small>
-                        <div class="fw-bold">د. {{ optional(optional($d)->user)->name ?? 'غير محدد' }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">التخصص:</small>
-                        <div class="fw-bold">{{ optional($d)->specialization ?? 'غير محدد' }}</div>
+                    <!-- زر التأكيد والطباعة الكبير -->
+                    <div>
+                        <button type="submit" class="btn btn-success btn-lg w-100 py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" style="font-size: 1.15rem;">
+                            <i class="fas fa-print fs-5"></i>
+                            <span>تأكيد القبض وإصدار الوصل</span>
+                        </button>
+                        <small class="text-center text-muted d-block mt-2">
+                            <i class="fas fa-bolt text-warning me-1"></i> يُحدث طابور الطبيب تلقائياً بالدخول
+                        </small>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
 
-<!-- Modal تنبيه خطأ أجور الطبيب / الدفع -->
-<div class="modal fade" id="doctorFeeErrorModal" tabindex="-1" aria-labelledby="doctorFeeErrorModalLabel" aria-hidden="true" style="z-index: 1060 !important;">
+<!-- Modal تنبيه خطأ أجور الطبيب -->
+<div class="modal fade" id="doctorFeeErrorModal" tabindex="-1" aria-labelledby="doctorFeeErrorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-header bg-danger text-white" style="border-radius: 20px 20px 0 0;">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4">
                 <h5 class="modal-title fw-bold" id="doctorFeeErrorModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>تنبيه: خطأ في أجور الكشف للطبيب
+                    <i class="fas fa-exclamation-triangle me-2"></i>أجور الكشف غير محددة
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 75px; height: 75px; background-color: #fee2e2;">
-                    <i class="fas fa-user-md text-danger fs-1"></i>
-                </div>
-                <h5 class="fw-bold text-dark mb-2" id="modalErrorTitle">لم يتم تحديد أجور الكشف لهذا الطبيب!</h5>
-                <p class="text-muted mb-3" id="modalErrorMessage">
-                    تنبيه: أجور الكشف المسجلة لهذا الموعد غير محددة أو تساوي <strong>0 د.ع</strong>. يرجى التأكد من المبلغ وتحديده يدوياً في الخانة المخصصة قبل إتمام العملية.
+                <h6 class="fw-bold text-dark mb-2" id="modalErrorTitle">لم يتم تسجيل تسعيرة لهذا الطبيب</h6>
+                <p class="text-muted small mb-3" id="modalErrorMessage">
+                    يرجى كتابة المبلغ المستحق المطلوب قبضه يدوياً في خانة المبلغ.
                 </p>
-                
-                <div class="card bg-light border-0 p-3 text-start mb-3" style="border-radius: 12px;">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted fs-7">الطبيب المعالج:</span>
-                        <span class="fw-bold fs-7">د. {{ optional(optional($appointment->doctor)->user)->name ?? 'غير محدد' }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted fs-7">أجر الكشف المسجل:</span>
-                        <span class="badge bg-danger fs-7">{{ number_format($appointment->consultation_fee ?? 0) }} د.ع</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted fs-7">اسم المريض:</span>
-                        <span class="fw-bold fs-7">{{ optional(optional($appointment->patient)->user)->name ?? 'غير محدد' }}</span>
-                    </div>
-                </div>
-
-                <div class="alert alert-warning text-start fs-7 mb-0">
-                    <i class="fas fa-lightbulb me-1"></i> <strong>تلميح:</strong> يمكنك إدخال المبلغ يدويًا في حقل "المبلغ (IQD)" في نموذج الدفع، أو تعديل الأجر الثابت للطبيب من صفحة الأطباء.
-                </div>
-            </div>
-            <div class="modal-footer bg-light border-0 justify-content-between p-3" style="border-radius: 0 0 20px 20px;">
-                @if($appointment->doctor)
-                    <a href="{{ route('doctors.edit', $appointment->doctor->id) }}" target="_blank" class="btn btn-outline-danger rounded-pill px-3">
-                        <i class="fas fa-user-edit me-1"></i>تعديل بيانات الطبيب
-                    </a>
-                @else
-                    <div></div>
-                @endif
                 <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-dismiss="modal" onclick="focusAmountInput()">
-                    <i class="fas fa-pen me-1"></i>إدخال المبلغ يدوياً
+                    إدخال المبلغ يدوياً
                 </button>
             </div>
         </div>
@@ -452,11 +371,30 @@ function focusAmountInput() {
 function showDoctorFeeModal() {
     const modalElement = document.getElementById('doctorFeeErrorModal');
     if (modalElement && typeof bootstrap !== 'undefined') {
-        if (modalElement.parentElement !== document.body) {
-            document.body.appendChild(modalElement);
-        }
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
+    }
+}
+
+function toggleInsuranceEdit() {
+    const lockedDisplay = document.getElementById('locked_insurance_display');
+    const selectElem = document.getElementById('insurance_type');
+    const manualGroup = document.getElementById('manual_copay_input_group');
+    const lockIcon = document.getElementById('lock_icon');
+    const lockText = document.getElementById('lock_text');
+
+    if (selectElem && selectElem.classList.contains('d-none')) {
+        selectElem.classList.remove('d-none');
+        if (lockedDisplay) lockedDisplay.classList.add('d-none');
+        if (manualGroup) manualGroup.style.display = 'flex';
+        if (lockIcon) lockIcon.className = 'fas fa-unlock text-warning me-1';
+        if (lockText) lockText.textContent = 'تعديل مفتوح';
+    } else if (selectElem) {
+        selectElem.classList.add('d-none');
+        if (lockedDisplay) lockedDisplay.classList.remove('d-none');
+        if (manualGroup) manualGroup.style.display = 'none';
+        if (lockIcon) lockIcon.className = 'fas fa-lock me-1';
+        if (lockText) lockText.textContent = 'تثبيت آلي';
     }
 }
 
@@ -475,32 +413,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const insuranceTypeSelect = document.getElementById('insurance_type');
     const copayInput = document.getElementById('copay_percentage');
-    const copayBtns = document.querySelectorAll('.copay-btn');
     const amountInput = document.getElementById('amount_input');
     const displayApproved = document.getElementById('display_approved_price');
     const displayPatientShare = document.getElementById('display_patient_share');
     const displayInsuranceShare = document.getElementById('display_insurance_share');
+    const displayCopayBadge = document.getElementById('display_copay_badge');
     const insuranceCardCol = document.getElementById('insurance_card_col');
     const copaySection = document.getElementById('copay_section');
     const copayBadge = document.getElementById('copayBadge');
-    const paymentInsuranceRadio = document.getElementById('payment_insurance');
-    const paymentCashRadio = document.getElementById('payment_cash');
+    const hiBadge = document.getElementById('patient_hi_category_badge');
 
     function formatNumber(num) {
         return Math.round(num).toLocaleString('en-US') + ' د.ع';
-    }
-
-    function updateCopayButtonsActive(val) {
-        copayBtns.forEach(btn => {
-            const btnPct = parseFloat(btn.getAttribute('data-pct'));
-            if (btnPct === val) {
-                btn.classList.remove('btn-outline-primary');
-                btn.classList.add('btn-primary', 'active');
-            } else {
-                btn.classList.remove('btn-primary', 'active');
-                btn.classList.add('btn-outline-primary');
-            }
-        });
     }
 
     function recalculate() {
@@ -520,8 +444,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
             if (copaySection) copaySection.style.display = 'block';
             if (copayBadge) {
-                copayBadge.className = 'badge bg-primary';
-                copayBadge.textContent = 'ضمان الداخلية';
+                copayBadge.className = 'badge bg-primary px-3 py-2 fs-7';
+                copayBadge.textContent = 'ضمان قوى الأمن الداخلي';
             }
         } else if (insType === 'hi') {
             if (isHiActive) {
@@ -531,8 +455,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
             if (copaySection) copaySection.style.display = 'block';
             if (copayBadge) {
-                copayBadge.className = 'badge bg-info text-dark';
-                copayBadge.textContent = 'الضمان الصحي الوطني';
+                copayBadge.className = 'badge bg-success px-3 py-2 fs-7';
+                copayBadge.textContent = 'هيئة الضمان الصحي الوطني';
             }
         } else {
             // none
@@ -542,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insuranceCardCol) insuranceCardCol.style.display = 'none';
             if (copaySection) copaySection.style.display = 'none';
             if (copayBadge) {
-                copayBadge.className = 'badge bg-secondary';
+                copayBadge.className = 'badge bg-secondary px-3 py-2 fs-7';
                 copayBadge.textContent = 'دفع نقدي كامل (100%)';
             }
         }
@@ -561,45 +485,30 @@ document.addEventListener('DOMContentLoaded', function() {
         if (displayApproved) displayApproved.textContent = formatNumber(approvedPrice);
         if (displayPatientShare) displayPatientShare.textContent = formatNumber(patientShare);
         if (displayInsuranceShare) displayInsuranceShare.textContent = formatNumber(insuranceShare);
+        if (displayCopayBadge) displayCopayBadge.textContent = copayPct + '%';
 
         if (amountInput) {
             amountInput.value = patientShare;
         }
-
-        updateCopayButtonsActive(copayPct);
     }
 
     const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('consultation') : 15.0);
     const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
-    const hiBadge = document.getElementById('patient_hi_category_badge');
 
     if (insuranceTypeSelect) {
         insuranceTypeSelect.addEventListener('change', function() {
             if (this.value === 'hi') {
-                if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
                 if (copayInput) copayInput.value = hiCategoryCopay;
                 if (hiBadge) hiBadge.style.display = 'block';
             } else if (this.value === 'moi') {
-                if (paymentInsuranceRadio) paymentInsuranceRadio.checked = true;
                 if (copayInput) copayInput.value = moiCopay;
                 if (hiBadge) hiBadge.style.display = 'none';
             } else {
-                if (paymentCashRadio) paymentCashRadio.checked = true;
                 if (hiBadge) hiBadge.style.display = 'none';
             }
             recalculate();
         });
     }
-
-    copayBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const pct = parseFloat(this.getAttribute('data-pct'));
-            if (copayInput) {
-                copayInput.value = pct;
-            }
-            recalculate();
-        });
-    });
 
     if (copayInput) {
         copayInput.addEventListener('input', recalculate);
@@ -616,12 +525,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
             const copayVal = parseFloat(copayInput?.value || 0);
 
-            // السماح بـ 0 إذا كانت نسبة التحمل 0% تحت الضمان
             if (val <= 0 && !(insType !== 'none' && copayVal === 0)) {
                 e.preventDefault();
-                document.getElementById('modalErrorTitle').textContent = 'مبلغ الدفع غير صحيح (0 د.ع)';
-                document.getElementById('modalErrorMessage').innerHTML = 'لا يمكن تأكيد الدفع بمبلغ <strong>0 د.ع</strong> ما لم تكن نسبة التحمل 0% تحت الضمان. يرجى كتابة المبلغ المستحق أولاً.';
-                showDoctorFeeModal();
+                alert('يرجى التأكد من كتابة المبلغ المستحق المطلوب قبضه.');
             }
         });
     }
