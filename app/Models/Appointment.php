@@ -33,7 +33,8 @@ class Appointment extends Model
         'called_at',
         'confirmed_at',
         'completed_at',
-        'cancelled_at'
+        'cancelled_at',
+        'telegram_chat_id'
     ];
 
     // أسباب الزيارة المحددة

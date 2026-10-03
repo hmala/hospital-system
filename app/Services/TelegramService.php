@@ -162,15 +162,17 @@ class TelegramService
         $chatId = $appointment->telegram_chat_id 
             ?? optional($appointment->patient)->telegram_chat_id;
 
+        Log::info("Telegram sendTurnAlert triggered for Appointment #{$appointment->id}, ChatId: " . ($chatId ?? 'NULL'));
+
         if (!$chatId) {
             return false;
         }
 
         $patient = $appointment->patient;
         $doctor = $appointment->doctor;
-        $patientName = optional($patient->user)->name ?? 'المراجع';
-        $doctorName = optional($doctor->user)->name ?? 'الاستشاري';
-        $specialization = $doctor->specialization ?? 'العيادة';
+        $patientName = optional(optional($patient)->user)->name ?? 'المراجع';
+        $doctorName = optional(optional($doctor)->user)->name ?? 'الاستشاري';
+        $specialization = optional($doctor)->specialization ?? 'العيادة';
         $queueNum = $appointment->queue_number ?? $appointment->id;
 
         $text = "🔔 <b>حان دورك الآن! يرجى الدخول للعيادة</b> 🔔\n";
@@ -193,12 +195,14 @@ class TelegramService
         $chatId = $appointment->telegram_chat_id 
             ?? optional($appointment->patient)->telegram_chat_id;
 
+        Log::info("Telegram sendNearTurnAlert triggered for Appointment #{$appointment->id}, ChatId: " . ($chatId ?? 'NULL'));
+
         if (!$chatId) {
             return false;
         }
 
         $doctor = $appointment->doctor;
-        $doctorName = optional($doctor->user)->name ?? 'الاستشاري';
+        $doctorName = optional(optional($doctor)->user)->name ?? 'الاستشاري';
         $queueNum = $appointment->queue_number ?? $appointment->id;
 
         $text = "⏳ <b>تنبيه: اقترب موعد دخولك!</b>\n";
