@@ -969,7 +969,6 @@
                             </div>
                             <div class="test-value-cell">
                                 <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
-                                {!! $flagBadge !!}
                                 @if($unit)
                                     <span class="unit-label">{{ $unit }}</span>
                                 @endif
@@ -1034,7 +1033,6 @@
                             <div class="test-name">{{ is_numeric($tName) ? 'Test #' . ($tName + 1) : $tName }}</div>
                             <div class="test-value-cell">
                                 <span class="{{ $valClass }}">{{ $valStr }}</span>
-                                {!! $flagBadge !!}
                                 @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
                             </div>
                             <div class="test-value-cell right">
