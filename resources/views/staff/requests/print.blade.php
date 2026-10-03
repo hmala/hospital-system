@@ -339,8 +339,8 @@
         }
 
         .header-col.right {
-            text-align: right;
-            padding-right: 15px;
+            text-align: center;
+            padding-right: 0;
         }
 
         /* Test Item Card */
@@ -372,8 +372,8 @@
         }
 
         .test-value-cell.right {
-            text-align: right;
-            padding-right: 15px;
+            text-align: center;
+            padding-right: 0;
         }
 
         .val-normal {
@@ -421,6 +421,48 @@
             print-color-adjust: exact;
         }
 
+        .val-status-high {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+            font-weight: 800;
+            font-size: 12px;
+            padding: 1px 12px;
+            border-radius: 4px;
+            letter-spacing: 0.4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .val-status-low {
+            display: inline-block;
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fcd34d;
+            font-weight: 800;
+            font-size: 12px;
+            padding: 1px 12px;
+            border-radius: 4px;
+            letter-spacing: 0.4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .val-status-normal {
+            display: inline-block;
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 1px 12px;
+            border-radius: 4px;
+            letter-spacing: 0.4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         .badge-flag {
             font-size: 11px;
             font-weight: 800;
@@ -452,13 +494,6 @@
 
         .meta-conv-range {
             text-align: center;
-            color: #444;
-            font-size: 12.5px;
-        }
-
-        .meta-si-range {
-            text-align: right;
-            padding-right: 15px;
             color: #444;
             font-size: 12.5px;
         }
@@ -886,7 +921,7 @@
             <div class="tests-header-bar">
                 <div class="header-col">Laboratory Test Results</div>
                 <div class="header-col center">Conventional Units</div>
-                <div class="header-col right">SI Units</div>
+                <div class="header-col right">Status</div>
             </div>
 
             <!-- Test Items List -->
@@ -917,28 +952,6 @@
                             $valClass = 'val-abnormal';
                             $flagBadge = '<span class="badge-flag high">Abnormal</span>';
                         }
-
-                        // Secondary SI Unit computation or alternate display
-                        $siVal = '';
-                        $siUnit = '';
-                        $siRange = '';
-
-                        if (is_numeric($val)) {
-                            $num = (float)$val;
-                            if (strtolower($unit) === 'g/l') {
-                                $siVal = number_format($num * 100, 1);
-                                $siUnit = 'mg/dl';
-                                if (preg_match('/([+\-]?\d+(?:\.\d+)?)\s*(?:-|to)\s*([+\-]?\d+(?:\.\d+)?)/i', $refRange, $m)) {
-                                    $siRange = number_format((float)$m[1] * 100, 1) . ' - ' . number_format((float)$m[2] * 100, 1);
-                                }
-                            } elseif (strtolower($unit) === 'mg/dl' && $num > 10) {
-                                $siVal = number_format($num / 100, 2);
-                                $siUnit = 'g/l';
-                                if (preg_match('/([+\-]?\d+(?:\.\d+)?)\s*(?:-|to)\s*([+\-]?\d+(?:\.\d+)?)/i', $refRange, $m)) {
-                                    $siRange = number_format((float)$m[1] / 100, 2) . ' - ' . number_format((float)$m[2] / 100, 2);
-                                }
-                            }
-                        }
                     @endphp
 
                     @if($parentName && $parentName !== $currentGroup)
@@ -962,20 +975,26 @@
                                 @endif
                             </div>
                             <div class="test-value-cell right">
-                                @if($siVal)
-                                    <span class="{{ $valClass }}">{{ $siVal }}</span>
-                                    {!! $flagBadge !!}
-                                    <span class="unit-label">{{ $siUnit }}</span>
+                                @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
+                                    <span class="val-status-high">High</span>
+                                @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
+                                    <span class="val-status-low">Low</span>
+                                @elseif($status === 'abnormal')
+                                    <span class="val-status-high">Abnormal</span>
+                                @elseif($val !== '' && $val !== '—')
+                                    <span class="val-status-normal">Normal</span>
+                                @else
+                                    <span class="text-muted">—</span>
                                 @endif
                             </div>
                         </div>
 
                         <!-- Reference Range Row -->
-                        @if($refRange || $siRange)
+                        @if($refRange)
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
-                            <div class="meta-conv-range">{{ $refRange ?: '—' }}</div>
-                            <div class="meta-si-range">{{ $siRange ?: '' }}</div>
+                            <div class="meta-conv-range">{{ $refRange }}</div>
+                            <div class="meta-status-blank"></div>
                         </div>
                         @endif
 
@@ -1018,13 +1037,25 @@
                                 {!! $flagBadge !!}
                                 @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
                             </div>
-                            <div class="test-value-cell right"></div>
+                            <div class="test-value-cell right">
+                                @if($statusStr === 'high' || $statusStr === 'positive' || str_contains($statusStr, 'high') || str_contains($statusStr, 'pos'))
+                                    <span class="val-status-high">High</span>
+                                @elseif($statusStr === 'low' || str_contains($statusStr, 'low'))
+                                    <span class="val-status-low">Low</span>
+                                @elseif($statusStr === 'abnormal')
+                                    <span class="val-status-high">Abnormal</span>
+                                @elseif($valStr !== '' && $valStr !== '—')
+                                    <span class="val-status-normal">Normal</span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </div>
                         </div>
                         @if($refStr)
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $refStr }}</div>
-                            <div class="meta-si-range"></div>
+                            <div class="meta-status-blank"></div>
                         </div>
                         @endif
                         <div class="test-device-row">By Cobas Integra 400 plus (Roche Diagnostics)</div>
