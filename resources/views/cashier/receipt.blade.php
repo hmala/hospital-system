@@ -1,840 +1,286 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>
-                    <i class="fas fa-receipt me-2 text-success"></i>
-                    إيصال الدفع
-                </h2>
-                <div>
-                    <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary me-2" target="_blank">
-                        <i class="fas fa-print me-2"></i>طباعة
-                    </a>
-                    <a href="{{ auth()->user()->hasRole('consultation_receptionist') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-right me-2"></i>العودة
-                    </a>
-                </div>
-            </div>
+<div class="container py-3">
+    <!-- شريط التحكم العلوي -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="fas fa-receipt text-success me-2"></i>
+                إيصال قبض رسمي
+            </h4>
+            <span class="text-muted small">رقم الإيصال: <strong class="text-dark">{{ $payment->receipt_number }}</strong></span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary px-4 rounded-pill shadow-sm" target="_blank">
+                <i class="fas fa-print me-1"></i> طباعة الوصل
+            </a>
+            <a href="{{ auth()->user()->hasRole('consultation_receptionist') && !auth()->user()->hasRole('admin') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-outline-secondary px-3 rounded-pill">
+                <i class="fas fa-arrow-right me-1"></i> العودة للكاشير
+            </a>
         </div>
     </div>
 
+    @php
+        // استخراج بيانات المريض
+        $p = $payment->patient;
+        if(!$p && $payment->emergency) {
+            $ep = $payment->emergency->emergencyPatient;
+            $pname = $ep ? $ep->name : 'غير محدد';
+            $pphone = $ep ? ($ep->phone ?? 'غير محدد') : 'غير محدد';
+            $pid = '(طوارئ)';
+        } else {
+            $pname = $p ? ($p->user->name ?? 'غير محدد') : 'غير محدد';
+            $pphone = $p ? ($p->user->phone ?? 'غير محدد') : 'غير محدد';
+            $pid = $p ? ($p->national_id ?? '#'.$p->id) : '-';
+        }
+
+        // استخراج تفاصيل الخدمات المسددة
+        $lineItems = [];
+        $isInsured = $payment->insurance_type && $payment->insurance_type !== 'none';
+        $copayPct = (float)($payment->copay_percentage ?? 0);
+
+        // 1. كشف استشارية أو سونار
+        if ($payment->appointment) {
+            $serviceTitle = 'رسوم كشف العيادة الاستشارية';
+            $scanType = null;
+            if ($payment->appointment->visit) {
+                $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
+                if ($medReq) {
+                    $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                    $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                    if ($radTypeId) {
+                        $scanType = \App\Models\RadiologyType::find($radTypeId);
+                    }
+                }
+            }
+            if ($scanType) {
+                $serviceTitle = 'فحص سونار: ' . $scanType->name;
+            } elseif (!empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
+                $serviceTitle = $payment->appointment->reason;
+            }
+
+            $approvedPrice = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
+            $patientShare = (float)($payment->patient_share > 0 ? $payment->patient_share : $payment->amount);
+            $insuranceShare = (float)($payment->insurance_share ?? max(0, $approvedPrice - $patientShare));
+
+            $lineItems[] = [
+                'name' => $serviceTitle,
+                'category' => $scanType ? 'سونار' : 'استشارية',
+                'doctor' => $payment->appointment->doctor ? ('د. ' . optional($payment->appointment->doctor->user)->name) : 'عام',
+                'approved' => $approvedPrice,
+                'patient' => $patientShare,
+                'insurance' => $insuranceShare,
+            ];
+        }
+
+        // 2. طلبات الفحوصات الطبية
+        if ($payment->request) {
+            $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
+            $doctorName = $payment->request->visit && $payment->request->visit->doctor ? ('د. ' . optional($payment->request->visit->doctor->user)->name) : 'المختبر / الأشعة';
+
+            if ($payment->request->type === 'lab' && isset($details['lab_test_ids'])) {
+                foreach ($details['lab_test_ids'] as $testId) {
+                    $test = \App\Models\LabTest::find($testId);
+                    if ($test) {
+                        $base = (float)$test->price;
+                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $lineItems[] = [
+                            'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                            'category' => 'تحاليل مختبرية',
+                            'doctor' => $doctorName,
+                            'approved' => $base,
+                            'patient' => $pat,
+                            'insurance' => max(0, $base - $pat),
+                        ];
+                    }
+                }
+            } elseif ($payment->request->type === 'radiology' && isset($details['radiology_type_ids'])) {
+                foreach ($details['radiology_type_ids'] as $typeId) {
+                    $type = \App\Models\RadiologyType::find($typeId);
+                    if ($type) {
+                        $base = (float)$type->base_price;
+                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $lineItems[] = [
+                            'name' => 'أشعة: ' . $type->name,
+                            'category' => 'فحص إشعاعي',
+                            'doctor' => $doctorName,
+                            'approved' => $base,
+                            'patient' => $pat,
+                            'insurance' => max(0, $base - $pat),
+                        ];
+                    }
+                }
+            }
+        }
+
+        // إذا لم توجد تفاصيل متعددة نستخدم السجل المباشر
+        if (empty($lineItems)) {
+            $approvedPrice = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
+            $patientShare = (float)($payment->patient_share > 0 ? $payment->patient_share : $payment->amount);
+            $insuranceShare = (float)($payment->insurance_share ?? max(0, $approvedPrice - $patientShare));
+
+            $lineItems[] = [
+                'name' => $payment->description ?: 'خدمة طبية عامة',
+                'category' => $payment->payment_type ?? 'عام',
+                'doctor' => optional(optional($payment->appointment)->doctor)->user->name ? 'د. ' . $payment->appointment->doctor->user->name : 'الكادر الطبي',
+                'approved' => $approvedPrice,
+                'patient' => $patientShare,
+                'insurance' => $insuranceShare,
+            ];
+        }
+
+        $totalApprovedSum = (float)($payment->total_amount > 0 ? $payment->total_amount : collect($lineItems)->sum('approved'));
+        $totalPatientSum = (float)($payment->amount);
+        $totalInsuranceSum = (float)($payment->insurance_share ?? max(0, $totalApprovedSum - $totalPatientSum));
+    @endphp
+
+    <!-- بطاقة الإيصال المصممة بنمط السند الرقمي المتقن -->
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-lg" id="receipt">
-                <!-- Header -->
-                <div class="card-header bg-gradient-success text-white text-center py-4" 
-                     style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-                    <h3 class="mb-1">
-                        <i class="fas fa-hospital-alt me-2"></i>
-                        مستشفى الكفاءات الأهلي
-                    </h3>
-                    <p class="mb-0">إيصال دفع رسوم الخدمات الطبية</p>
+        <div class="col-lg-9 col-xl-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white" id="receipt_card">
+                
+                <!-- ترويسة الإيصال الأنيقة -->
+                <div class="p-4 border-bottom text-center" style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div class="text-start">
+                            <h5 class="fw-bold text-dark mb-0">مستشفى الكفاءات الأهلي</h5>
+                            <small class="text-muted">قسم الصندوق والحسابات الطبية</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success px-3 py-2 fs-6 rounded-pill">
+                                <i class="fas fa-check-circle me-1"></i> تم القبض بنجاح
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <span class="text-muted small d-block">رقم السند:</span>
+                            <strong class="text-primary fs-5">{{ $payment->receipt_number }}</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted small d-block">تاريخ ووقت القبض:</span>
+                            <strong class="text-dark">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d h:i A') : now()->format('Y-m-d h:i A') }}</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted small d-block">أمين الصندوق (الكاشير):</span>
+                            <strong class="text-dark">{{ optional($payment->cashier)->name ?? 'النظام' }}</strong>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card-body p-4">
-                    <!-- معلومات الإيصال -->
-                    <div class="row mb-4">
-                        <div class="col-6">
-                            <div class="border-bottom pb-2 mb-2">
-                                <small class="text-muted">رقم الإيصال:</small>
-                                <h5 class="mb-0 text-success">{{ $payment->receipt_number }}</h5>
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <div class="border-bottom pb-2 mb-2">
-                                <small class="text-muted">تاريخ ووقت الدفع:</small>
-                                <h6 class="mb-0">{{ $payment->paid_at->format('Y-m-d H:i') }}</h6>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mb-4">
+                    <!-- بيانات المريض والتغطية -->
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <small class="text-muted">طريقة الدفع:</small>
-                            <div class="fw-bold">{{ ucfirst($payment->payment_method) }}</div>
-                        </div>
-                        @if($payment->notes)
-                        <div class="col-md-6 text-end">
-                            <small class="text-muted">ملاحظات:</small>
-                            <div class="fw-bold">{{ $payment->notes }}</div>
-                        </div>
-                        @endif
-                    </div>
-
-                    <!-- معلومات المريض -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-user me-2 text-primary"></i>
-                            معلومات المريض
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">الاسم:</small>
-                                @php
-                            $p = $payment->patient;
-                            if(!$p && $payment->emergency) {
-                                $ep = $payment->emergency->emergencyPatient;
-                                if($ep) {
-                                    $pname = $ep->name;
-                                    $pphone = $ep->phone ?? 'غير محدد';
-                                    $pid = '(طوارئ)';
-                                } else {
-                                    $pname = 'غير محدد';
-                                    $pphone = 'غير محدد';
-                                    $pid = '-';
-                                }
-                            } else {
-                                $pname = $p ? ($p->user->name ?? 'غير محدد') : 'غير محدد';
-                                $pphone = $p ? ($p->user->phone ?? 'غير محدد') : 'غير محدد';
-                                $pid = $p ? '#'.$p->id : '-';
-                            }
-                        @endphp
-                        <div class="fw-bold">{{ $pname }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">الرقم الوطني:</small>
-                                <div class="fw-bold">{{ $pid }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">رقم الهاتف:</small>
-                                <div class="fw-bold">{{ $pphone }}</div>
+                            <div class="p-3 rounded-3 border bg-light h-100">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-user text-primary me-1"></i>بيانات المريض:</span>
+                                <h6 class="fw-bold mb-1 text-dark">{{ $pname }}</h6>
+                                <div class="text-muted small">
+                                    <span>الهوية: <strong>{{ $pid }}</strong></span> | 
+                                    <span>الهاتف: <strong>{{ $pphone }}</strong></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    @php
-                        // بناء جدول خدمات/عناصر للتفصيل
-                        $lineItems = [];
-
-                        // حالة الدفع المرتبط مباشرةً بطوارئ (دون طلب med)
-                        if ($payment->emergency) {
-                            // 1. الخدمات التمريضية المدفوعة في هذا السند
-                            $paidServices = \DB::table('emergency_emergency_service')
-                                ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
-                                ->where('emergency_emergency_service.payment_id', $payment->id)
-                                ->select('emergency_services.name', 'emergency_services.price')
-                                ->get();
-                            foreach ($paidServices as $svc) {
-                                $lineItems[] = ['الخدمة' => 'خدمة طوارئ: ' . $svc->name, 'السعر' => $svc->price ?? 0];
-                            }
-
-                            // 2. التحاليل الطبية المدفوعة في هذا السند
-                            $labRequestIds = \DB::table('emergency_lab_requests')
-                                ->where('payment_id', $payment->id)
-                                ->pluck('id');
-                            if ($labRequestIds->isNotEmpty()) {
-                                $labTests = \DB::table('emergency_lab_request_tests')
-                                    ->join('lab_tests', 'emergency_lab_request_tests.lab_test_id', '=', 'lab_tests.id')
-                                    ->whereIn('emergency_lab_request_tests.emergency_lab_request_id', $labRequestIds)
-                                    ->select('lab_tests.name', 'lab_tests.price')
-                                    ->get();
-                                foreach ($labTests as $test) {
-                                    $lineItems[] = ['الخدمة' => 'تحليل طوارئ: ' . $test->name, 'السعر' => $test->price ?? 0];
-                                }
-                            }
-
-                            // 3. الأشعة المدفوعة في هذا السند
-                            $radiologyRequestIds = \DB::table('emergency_radiology_requests')
-                                ->where('payment_id', $payment->id)
-                                ->pluck('id');
-                            if ($radiologyRequestIds->isNotEmpty()) {
-                                $radiologyTests = \DB::table('emergency_radiology_request_types')
-                                    ->join('radiology_types', 'emergency_radiology_request_types.radiology_type_id', '=', 'radiology_types.id')
-                                    ->whereIn('emergency_radiology_request_types.emergency_radiology_request_id', $radiologyRequestIds)
-                                    ->select('radiology_types.name', 'radiology_types.base_price')
-                                    ->get();
-                                foreach ($radiologyTests as $rad) {
-                                    $lineItems[] = ['الخدمة' => 'أشعة طوارئ: ' . $rad->name, 'السعر' => $rad->base_price ?? 0];
-                                }
-                            }
-
-                            // 4. أجور متابعة الطبيب المدفوعة في هذا السند
-                            if ($payment->emergency->follow_up_payment_id == $payment->id && $payment->emergency->doctor_follow_up_fee > 0) {
-                                $lineItems[] = ['الخدمة' => 'متابعة طبيب (طوارئ)', 'السعر' => $payment->emergency->doctor_follow_up_fee];
-                            }
-                        }
-
-                        // 1. تفاصيل الموعد أو الخدمة
-                        if ($payment->appointment) {
-                            $consultFee = $payment->appointment->consultation_fee ?? ($payment->total_amount ?: $payment->amount);
-                            $serviceTitle = 'رسوم كشف العيادة الاستشارية';
-                            
-                            $scanType = null;
-                            if ($payment->appointment->visit) {
-                                $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
-                                if ($medReq) {
-                                    $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
-                                    $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
-                                    if ($radTypeId) {
-                                        $scanType = \App\Models\RadiologyType::find($radTypeId);
-                                    }
-                                }
-                            }
-
-                            if ($scanType) {
-                                $serviceTitle = 'فحص سونار: ' . $scanType->name . ($scanType->code ? ' (' . $scanType->code . ')' : '');
-                            } elseif (preg_match('/دفع رسوم\s+(.+)/u', $payment->description, $m) && !str_contains($m[1], 'موعد #')) {
-                                $serviceTitle = trim($m[1]);
-                            } elseif (!empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
-                                $serviceTitle = $payment->appointment->reason;
-                            }
-
-                            $lineItems[] = ['الخدمة' => $serviceTitle, 'السعر' => $consultFee];
-                        }
-
-                        // 2. طلبات طبية (تحاليل، أشعة، صيدلية، طوارئ)
-                        if ($payment->request) {
-                            $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
-
-                            if ($payment->request->type === 'lab' && isset($details['lab_test_ids'])) {
-                                foreach ($details['lab_test_ids'] as $testId) {
-                                    $test = \App\Models\LabTest::find($testId);
-                                    if ($test) {
-                                        $lineItems[] = ['الخدمة' => 'تحاليل: ' . $test->name, 'السعر' => $test->price ?? 0];
-                                    }
-                                }
-                            } elseif ($payment->request->type === 'radiology' && isset($details['radiology_type_ids'])) {
-                                foreach ($details['radiology_type_ids'] as $typeId) {
-                                    $type = \App\Models\RadiologyType::find($typeId);
-                                    if ($type) {
-                                        $lineItems[] = ['الخدمة' => 'أشعة: ' . $type->name, 'السعر' => $type->base_price ?? 0];
-                                    }
-                                }
-                            } elseif ($payment->request->type === 'pharmacy') {
-                                // إذا كانت هناك قائمة بأسماء أدوية في التفاصيل
-                                if (isset($details['tests']) && is_array($details['tests'])) {
-                                    foreach ($details['tests'] as $drugName) {
-                                        $lineItems[] = ['الخدمة' => 'صيدلية: ' . $drugName, 'السعر' => 0];
-                                    }
-                                }
-                            } elseif ($payment->request->type === 'emergency') {
-                                if ($payment->request->visit && $payment->request->visit->emergency) {
-                                    foreach($payment->request->visit->emergency->services as $svc) {
-                                        $lineItems[] = ['الخدمة' => 'خدمة طوارئ: ' . $svc->name, 'السعر' => $svc->price ?? 0];
-                                    }
-                                }
-                            }
-                        }
-
-                        // 3. عمليات جراحية
-                        if ($payment->payment_type === 'surgery') {
-                            $surgery = $payment->surgery;
-                            if (!$surgery && preg_match('/ID: #(\d+)/', $payment->description, $matches)) {
-                                $surgery = \App\Models\Surgery::with(['room', 'patient.user', 'doctor.user', 'department', 'labTests.labTest', 'radiologyTests.radiologyType'])->find($matches[1]);
-                            }
-                            if ($surgery) {
-                                if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description, $descMatches)) {
-                                    $itemLines = explode("\n", trim($descMatches[1]));
-                                    foreach ($itemLines as $line) {
-                                        $line = trim(str_replace('- ', '', $line));
-                                        if (empty($line) || str_starts_with($line, 'تغطية الضمان:') || str_starts_with($line, 'حصة المريض:')) {
-                                            continue;
-                                        }
-
-                                        $price = 0;
-                                        $serviceName = $line;
-
-                                        if (str_contains($line, 'رسوم العملية')) {
-                                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
-                                                $price = (float)str_replace(',', '', $pm[1]);
-                                            } else {
-                                                $price = $surgery->surgery_fee ?? 0;
-                                            }
-                                            $serviceName = 'رسوم العملية الجراحية: ' . $surgery->surgery_type;
-                                        } elseif (str_contains($line, 'أجور الغرفة')) {
-                                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
-                                                $price = (float)str_replace(',', '', $pm[1]);
-                                            } else {
-                                                $price = $surgery->room_fee ?? 0;
-                                            }
-                                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
-                                            $serviceName = 'أجور الغرفة' . $roomInfo;
-                                        } elseif (str_contains($line, 'تحليل:')) {
-                                            if (preg_match('/تحليل:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $lm)) {
-                                                $serviceName = 'تحليل: ' . trim($lm[1]);
-                                                $price = (float)str_replace(',', '', $lm[2]);
-                                            } else {
-                                                $name = trim(str_replace('تحليل:', '', $line));
-                                                $serviceName = 'تحليل: ' . $name;
-                                                foreach ($surgery->labTests as $labTest) {
-                                                    if ($labTest->labTest && (str_contains($name, $labTest->labTest->name) || $labTest->labTest->name === $name)) {
-                                                        $price = $labTest->labTest->price ?? 0;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        } elseif (str_contains($line, 'أشعة:')) {
-                                            if (preg_match('/أشعة:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $rm)) {
-                                                $serviceName = 'أشعة: ' . trim($rm[1]);
-                                                $price = (float)str_replace(',', '', $rm[2]);
-                                            } else {
-                                                $name = trim(str_replace('أشعة:', '', $line));
-                                                $serviceName = 'أشعة: ' . $name;
-                                                foreach ($surgery->radiologyTests as $rad) {
-                                                    if ($rad->radiologyType && (str_contains($name, $rad->radiologyType->name) || $rad->radiologyType->name === $name)) {
-                                                        $price = $rad->radiologyType->base_price ?? 0;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        $lineItems[] = ['الخدمة' => $serviceName, 'السعر' => $price];
-                                    }
-                                }
-                            }
-                        }
-                    @endphp
-
-                    @if(count($lineItems) > 0)
-                        <div class="bg-light p-3 rounded mb-4">
-                            <h6 class="mb-3">
-                                <i class="fas fa-list-check me-2 text-success"></i>
-                                تفاصيل كل خدمة واجرها
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>الخدمة</th>
-                                            <th class="text-end">السعر (IQD)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    @foreach($lineItems as $idx => $ln)
-                                        <tr>
-                                            <td>{{ $idx + 1 }}</td>
-                                            <td>{{ $ln['الخدمة'] }}</td>
-                                            <td class="text-end">{{ number_format($ln['السعر'],2) }}</td>
-                                        </tr>
-                                    @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    @else
-                        <div class="bg-light p-3 rounded mb-4">
-                            <h6 class="mb-3">
-                                <i class="fas fa-list-check me-2 text-success"></i>
-                                تفاصيل الخدمة المدفوعة
-                            </h6>
-                            <p class="mb-0">{{ number_format($payment->amount,2) }} IQD</p>
-                        </div>
-                    @endif
-
-                    @if($payment->appointment)
-                    <!-- معلومات الموعد -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-calendar-check me-2 text-info"></i>
-                            تفاصيل الموعد
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">رقم الموعد:</small>
-                                <div class="fw-bold">#{{ $payment->appointment->id }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">التاريخ:</small>
-                                <div class="fw-bold">{{ $payment->appointment->appointment_date->format('Y-m-d H:i') }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">الطبيب:</small>
-                                <div class="fw-bold">د. {{ $payment->appointment->doctor->user->name }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">القسم:</small>
-                                <div class="fw-bold">{{ $payment->appointment->department->name }}</div>
-                            </div>
-                            <div class="col-12 mb-2">
-                                <small class="text-muted">الخدمة / الفحص المطلوب:</small>
-                                <div class="fw-bold text-primary">{{ $serviceTitle ?? ($payment->appointment->reason ?? 'كشف طبي عام') }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    @endif
-
-                    @if($payment->request)
-                    <!-- معلومات الطلب -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-file-medical me-2 text-warning"></i>
-                            تفاصيل الطلب الطبي
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">رقم الطلب:</small>
-                                <div class="fw-bold">#{{ $payment->request->id }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">النوع:</small>
-                                <div class="fw-bold">
-                                    @if($payment->request->type === 'lab')
-                                        <span class="badge bg-primary">تحاليل</span>
-                                    @elseif($payment->request->type === 'radiology')
-                                        <span class="badge bg-info">أشعة</span>
-                                    @elseif($payment->request->type === 'pharmacy')
-                                        <span class="badge bg-success">صيدلية</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $payment->request->type }}</span>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 border bg-light h-100">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-shield-alt text-success me-1"></i>التغطية والضمان:</span>
+                                @if($isInsured)
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-success">{{ $payment->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن الداخلي' }}</span>
+                                        <span class="badge bg-light text-dark border">تحمل المريض: {{ number_format($copayPct, 0) }}%</span>
+                                    </div>
+                                    @if($payment->insurance_card_no)
+                                        <small class="text-muted">رقم البطاقة/الدفتر: <strong class="text-dark">{{ $payment->insurance_card_no }}</strong></small>
                                     @endif
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">التاريخ:</small>
-                                <div class="fw-bold">{{ $payment->request->created_at->format('Y-m-d H:i') }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">الطبيب:</small>
-                                <div class="fw-bold">{{ $payment->request->visit->doctor ? 'د. ' . $payment->request->visit->doctor->user->name : 'غير محدد' }}</div>
+                                @else
+                                    <h6 class="fw-bold mb-0 text-secondary">دفع نقدي كامل (خاص / 100%)</h6>
+                                    <small class="text-muted">غير مشمول بالتغطية التأمينية</small>
+                                @endif
                             </div>
                         </div>
                     </div>
 
-                    @php
-                        $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
-                    @endphp
-
-                    @if($payment->request->type === 'lab' && isset($details['lab_test_ids']))
-                    <!-- Lab Tests Details -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-flask me-2 text-primary"></i>
-                            تفاصيل التحاليل المطلوبة
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-primary">
+                    <!-- جدول الخدمات المسددة -->
+                    <div class="mb-4">
+                        <div class="table-responsive border rounded-3 overflow-hidden">
+                            <table class="table table-bordered table-hover mb-0 align-middle">
+                                <thead class="table-light text-muted small">
                                     <tr>
-                                        <th style="width: 60px;">#</th>
-                                        <th>اسم التحليل</th>
-                                        <th>الرمز</th>
-                                        <th style="width: 150px;" class="text-end">السعر (IQD)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @php $totalAmount = 0; @endphp
-                                    @foreach($details['lab_test_ids'] as $index => $testId)
-                                        @php
-                                            $test = \App\Models\LabTest::find($testId);
-                                            if($test) {
-                                                $price = $test->price ?? 0;
-                                                $totalAmount += $price;
-                                            }
-                                        @endphp
-                                        @if($test)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>
-                                                <i class="fas fa-vial text-primary me-1"></i>
-                                                {{ $test->name }}
-                                            </td>
-                                            <td>{{ $test->code }}</td>
-                                            <td class="text-end fw-bold">{{ number_format($price, 2) }}</td>
-                                        </tr>
+                                        <th width="40" class="text-center">#</th>
+                                        <th>الخدمة / الفحص</th>
+                                        <th>الطبيب / القسم</th>
+                                        <th width="120" class="text-end">السعر المعتمد</th>
+                                        @if($isInsured)
+                                            <th width="120" class="text-end text-primary">حصة الضمان</th>
                                         @endif
-                                    @endforeach
-                                </tbody>
-                                <tfoot class="table-light">
-                                    <tr>
-                                        <td colspan="3" class="text-end fw-bold">الإجمالي:</td>
-                                        <td class="text-end fw-bold text-success">{{ number_format($totalAmount, 2) }}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                    @elseif($payment->request->type === 'radiology' && isset($details['radiology_type_ids']))
-                    <!-- Radiology Types Details -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-x-ray me-2 text-info"></i>
-                            تفاصيل الفحوصات الإشعاعية المطلوبة
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-info">
-                                    <tr>
-                                        <th style="width: 60px;">#</th>
-                                        <th>نوع الأشعة</th>
-                                        <th>الوصف</th>
-                                        <th style="width: 150px;" class="text-end">السعر (IQD)</th>
+                                        <th width="130" class="text-end text-success">المقبوض من المريض</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @php $totalAmount = 0; @endphp
-                                    @foreach($details['radiology_type_ids'] as $index => $typeId)
-                                        @php
-                                            $radiologyType = \App\Models\RadiologyType::find($typeId);
-                                            if($radiologyType) {
-                                                $price = $radiologyType->base_price ?? 0;
-                                                $totalAmount += $price;
-                                            }
-                                        @endphp
-                                        @if($radiologyType)
+                                    @foreach($lineItems as $idx => $item)
                                         <tr>
-                                            <td>{{ $index + 1 }}</td>
+                                            <td class="text-center text-muted">{{ $idx + 1 }}</td>
                                             <td>
-                                                <i class="fas fa-camera text-info me-1"></i>
-                                                {{ $radiologyType->name }}
+                                                <strong class="text-dark">{{ $item['name'] }}</strong>
+                                                <span class="badge bg-light text-dark border ms-1">{{ $item['category'] }}</span>
                                             </td>
-                                            <td>{{ $radiologyType->description ?? '-' }}</td>
-                                            <td class="text-end fw-bold">{{ number_format($price, 2) }}</td>
-                                        </tr>
-                                        @endif
-                                    @endforeach
-                                </tbody>
-                                <tfoot class="table-light">
-                                    <tr>
-                                        <td colspan="3" class="text-end fw-bold">الإجمالي:</td>
-                                        <td class="text-end fw-bold text-success">{{ number_format($totalAmount, 2) }}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                    @endif
-                    @endif
-
-                    @php
-                        // محاولة الحصول على العملية الجراحية من الوصف
-                        $surgery = null;
-                        if ($payment->payment_type === 'surgery' && preg_match('/ID: #(\d+)/', $payment->description, $matches)) {
-                            $surgery = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'department', 'labTests.labTest', 'radiologyTests.radiologyType'])->find($matches[1]);
-                        }
-                    @endphp
-
-                    @if($payment->payment_type === 'surgery' && $surgery)
-                    <!-- معلومات العملية الجراحية -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-procedures me-2 text-danger"></i>
-                            تفاصيل العملية الجراحية
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">رقم العملية:</small>
-                                <div class="fw-bold">#{{ $surgery->id }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">نوع العملية:</small>
-                                <div class="fw-bold">{{ $surgery->surgery_type }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">تاريخ العملية:</small>
-                                <div class="fw-bold">{{ $surgery->scheduled_date->format('Y-m-d') }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">وقت العملية:</small>
-                                <div class="fw-bold">{{ $surgery->scheduled_time->format('H:i') }}</div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">الجراح:</small>
-                                <div class="fw-bold">
-                                    @if($surgery->doctor && $surgery->doctor->user)
-                                        د. {{ $surgery->doctor->user->name }}
-                                    @elseif($surgery->surgeon_name)
-                                        {{ $surgery->surgeon_name }} <span class="badge bg-secondary">خارجي</span>
-                                    @else
-                                        غير محدد
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">القسم:</small>
-                                <div class="fw-bold">{{ $surgery->department->name ?? 'غير محدد' }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- تفاصيل العناصر المدفوعة -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-list-check me-2 text-success"></i>
-                            تفصيل العناصر المدفوعة في هذا الإيصال
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered mb-0">
-                                <thead class="table-success">
-                                    <tr>
-                                        <th style="width: 50px;">#</th>
-                                        <th>البند</th>
-                                        <th>التفاصيل</th>
-                                        <th class="text-end" style="width: 150px;">التكلفة (IQD)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @php
-                                        $itemIndex = 0;
-                                        $calculatedTotal = 0;
-                                        // تحليل الوصف لمعرفة العناصر المدفوعة
-                                        $paidItemsFromDesc = [];
-                                        if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description, $descMatches)) {
-                                            $itemLines = explode("\n", trim($descMatches[1]));
-                                            foreach ($itemLines as $line) {
-                                                $line = trim(str_replace('- ', '', $line));
-                                                if (!empty($line) && !str_starts_with($line, 'تغطية الضمان:') && !str_starts_with($line, 'حصة المريض:')) {
-                                                    $paidItemsFromDesc[] = $line;
-                                                }
-                                            }
-                                        }
-                                    @endphp
-
-                                    @foreach($paidItemsFromDesc as $item)
-                                        @php
-                                            $itemIndex++;
-                                            $itemPrice = 0;
-                                            $itemType = 'other';
-                                            $itemIcon = 'fas fa-circle';
-                                            $itemClass = 'text-secondary';
-                                            $itemTitle = 'خدمة طبية';
-                                            $itemDetails = $item;
-                                            
-                                            if (str_contains($item, 'رسوم العملية')) {
-                                                if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $item, $pm)) {
-                                                    $itemPrice = (float)str_replace(',', '', $pm[1]);
-                                                } else {
-                                                    $itemPrice = $surgery->surgery_fee ?? 0;
-                                                }
-                                                $itemType = 'surgery';
-                                                $itemIcon = 'fas fa-procedures';
-                                                $itemClass = 'text-danger';
-                                                $itemTitle = 'رسوم العملية الجراحية';
-                                                $itemDetails = $surgery->surgery_type;
-                                            } elseif (str_contains($item, 'أجور الغرفة')) {
-                                                if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $item, $pm)) {
-                                                    $itemPrice = (float)str_replace(',', '', $pm[1]);
-                                                } else {
-                                                    $itemPrice = $surgery->room_fee ?? 0;
-                                                }
-                                                $itemType = 'room';
-                                                $itemIcon = 'fas fa-bed';
-                                                $itemClass = 'text-warning';
-                                                $itemTitle = 'أجور الغرفة والإقامة';
-                                                $itemDetails = $surgery->room ? ($surgery->room->room_type_name . ' (رقم ' . $surgery->room->room_number . ')') : 'إقامة فندقية';
-                                            } elseif (str_contains($item, 'تحليل:')) {
-                                                $itemType = 'lab';
-                                                $itemIcon = 'fas fa-vial';
-                                                $itemClass = 'text-primary';
-                                                $itemTitle = 'تحليل مخبري';
-                                                if (preg_match('/تحليل:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $item, $lm)) {
-                                                    $itemDetails = trim($lm[1]);
-                                                    $itemPrice = (float)str_replace(',', '', $lm[2]);
-                                                } else {
-                                                    $itemDetails = trim(str_replace('تحليل:', '', $item));
-                                                    foreach ($surgery->labTests as $labTest) {
-                                                        if ($labTest->labTest && (str_contains($itemDetails, $labTest->labTest->name) || $labTest->labTest->name === $itemDetails)) {
-                                                            $itemPrice = $labTest->labTest->price ?? 0;
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                            } elseif (str_contains($item, 'أشعة:')) {
-                                                $itemType = 'radiology';
-                                                $itemIcon = 'fas fa-x-ray';
-                                                $itemClass = 'text-info';
-                                                $itemTitle = 'فحص إشعاعي';
-                                                if (preg_match('/أشعة:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $item, $rm)) {
-                                                    $itemDetails = trim($rm[1]);
-                                                    $itemPrice = (float)str_replace(',', '', $rm[2]);
-                                                } else {
-                                                    $itemDetails = trim(str_replace('أشعة:', '', $item));
-                                                    foreach ($surgery->radiologyTests as $radTest) {
-                                                        if ($radTest->radiologyType && (str_contains($itemDetails, $radTest->radiologyType->name) || $radTest->radiologyType->name === $itemDetails)) {
-                                                            $itemPrice = $radTest->radiologyType->base_price ?? 0;
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            $calculatedTotal += $itemPrice;
-                                        @endphp
-                                        <tr>
-                                            <td>{{ $itemIndex }}</td>
-                                            <td>
-                                                <i class="{{ $itemIcon }} {{ $itemClass }} me-2"></i>
-                                                {{ $itemTitle }}
-                                            </td>
-                                            <td>
-                                                {{ $itemDetails }}
-                                            </td>
-                                            <td class="text-end fw-bold">{{ number_format($itemPrice, 0) }}</td>
+                                            <td class="text-muted small">{{ $item['doctor'] }}</td>
+                                            <td class="text-end fw-semibold">{{ number_format($item['approved']) }} د.ع</td>
+                                            @if($isInsured)
+                                                <td class="text-end text-primary fw-semibold">{{ number_format($item['insurance']) }} د.ع</td>
+                                            @endif
+                                            <td class="text-end text-success fw-bold">{{ number_format($item['patient']) }} د.ع</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
-                                <tfoot class="table-success">
-                                    <tr>
-                                        <td colspan="3" class="text-end fw-bold">إجمالي هذا الإيصال:</td>
-                                        <td class="text-end fw-bold text-success" style="font-size: 1.1rem;">{{ number_format($payment->amount, 0) }} IQD</td>
-                                    </tr>
-                                </tfoot>
                             </table>
                         </div>
                     </div>
 
-                    <!-- ملخص حالة دفع العملية -->
-                    @php
-                        $surgeryFee = $surgery->surgery_fee ?? 0;
-                        $surgeryFeePaid = $surgery->surgery_fee_paid === 'paid';
-                        
-                        $totalLabFee = $surgery->labTests->sum(function($test) {
-                            return $test->labTest->price ?? 0;
-                        });
-                        $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
-                            return $test->labTest->price ?? 0;
-                        });
-                        
-                        $totalRadFee = $surgery->radiologyTests->sum(function($test) {
-                            return $test->radiologyType->base_price ?? 0;
-                        });
-                        $paidRadFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
-                            return $test->radiologyType->base_price ?? 0;
-                        });
-                        
-                        $totalSurgeryAmount = $surgeryFee + $totalLabFee + $totalRadFee;
-                        $totalPaidAmount = ($surgeryFeePaid ? $surgeryFee : 0) + $paidLabFee + $paidRadFee;
-                        $remainingAmount = $totalSurgeryAmount - $totalPaidAmount;
-                    @endphp
-
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-chart-pie me-2 text-primary"></i>
-                            ملخص حالة دفع العملية الكاملة
-                        </h6>
-                        <div class="row text-center">
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 bg-white">
-                                    <small class="text-muted d-block">إجمالي العملية</small>
-                                    <h5 class="mb-0 text-primary">{{ number_format($totalSurgeryAmount, 0) }} IQD</h5>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 bg-white">
-                                    <small class="text-muted d-block">المدفوع حتى الآن</small>
-                                    <h5 class="mb-0 text-success">{{ number_format($totalPaidAmount, 0) }} IQD</h5>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 bg-white">
-                                    <small class="text-muted d-block">المتبقي</small>
-                                    <h5 class="mb-0 {{ $remainingAmount > 0 ? 'text-warning' : 'text-success' }}">
-                                        {{ number_format($remainingAmount, 0) }} IQD
-                                        @if($remainingAmount <= 0)
-                                            <i class="fas fa-check-circle ms-1"></i>
+                    <!-- بطاقة المجموع والتسوية المالية -->
+                    <div class="p-3 rounded-4 border mb-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);">
+                        <div class="row align-items-center g-3 text-center text-md-start">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
+                                    <span class="text-muted small">طريقة الدفع:</span>
+                                    <span class="badge bg-white text-dark border px-3 py-2 fs-7 fw-bold">
+                                        @if($payment->payment_method === 'card')
+                                            💳 بطاقة دفع إلكتروني (POS / Card)
+                                        @else
+                                            💵 نقدي (Cash)
                                         @endif
-                                    </h5>
+                                    </span>
+                                </div>
+                                @if($payment->notes)
+                                    <div class="text-muted small mt-2">
+                                        <i class="fas fa-comment-alt me-1"></i>ملاحظات: {{ $payment->notes }}
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="col-md-6 text-md-end">
+                                @if($isInsured)
+                                    <div class="text-muted small mb-1">
+                                        إجمالي التسعيرة: {{ number_format($totalApprovedSum) }} د.ع | تغطية الضمان: <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
+                                    </div>
+                                @endif
+                                <div class="d-inline-block bg-white p-2 px-4 rounded-3 border border-success shadow-sm">
+                                    <span class="text-muted small d-block">المبلغ المقبوض نقداً من المريض:</span>
+                                    <span class="fs-3 fw-bold text-success">{{ number_format($totalPatientSum) }} د.ع</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        @if($remainingAmount > 0)
-                        <div class="alert alert-warning mt-3 mb-0 py-2">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>ملاحظة:</strong> يوجد مبلغ متبقي {{ number_format($remainingAmount, 0) }} IQD سيُدفع لاحقاً.
-                        </div>
-                        @else
-                        <div class="alert alert-success mt-3 mb-0 py-2">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>تم سداد جميع رسوم العملية بالكامل!</strong>
-                        </div>
-                        @endif
-                    </div>
-                    @endif
-
-                    <!-- ملخص الدفع والضمان -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-3">
-                            <i class="fas fa-money-bill-wave me-2 text-success"></i>
-                            ملخص الدفع والتسوية المالية
-                        </h6>
-
-                        @if($payment->insurance_type && $payment->insurance_type !== 'none')
-                            <div class="p-3 mb-3 bg-white border border-primary rounded-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                                    <div>
-                                        <span class="badge bg-primary fs-6"><i class="fas fa-shield-alt me-1"></i> {{ $payment->insurance_type_name }}</span>
-                                        @if($payment->insurance_card_no)
-                                            <span class="badge bg-dark ms-1">رقم البطاقة: {{ $payment->insurance_card_no }}</span>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <span class="badge bg-info text-dark">نسبة التحمل: {{ number_format($payment->copay_percentage, 0) }}%</span>
-                                    </div>
-                                </div>
-                                <div class="row text-center g-2">
-                                    <div class="col-4">
-                                        <div class="p-2 bg-light rounded">
-                                            <small class="text-muted d-block">السعر الإجمالي المعتمد</small>
-                                            <h6 class="mb-0 fw-bold text-dark">{{ number_format($payment->total_amount ?: $payment->amount, 2) }} IQD</h6>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="p-2 bg-light rounded">
-                                            <small class="text-muted d-block">المدفوع نقداً (تحمل المريض)</small>
-                                            <h6 class="mb-0 fw-bold text-success">{{ number_format($payment->patient_share ?: $payment->amount, 2) }} IQD</h6>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="p-2 bg-light rounded">
-                                            <small class="text-muted d-block">المطالبة على جهة الضمان</small>
-                                            <h6 class="mb-0 fw-bold text-primary">{{ number_format($payment->insurance_share, 2) }} IQD</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">طريقة الدفع:</small>
-                                <div class="fw-bold">
-                                    <span class="badge bg-primary">{{ $payment->payment_method_name }}</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <small class="text-muted">المبلغ المحصل نقداً في الصندوق:</small>
-                                <div class="fw-bold text-success" style="font-size: 1.5rem;">{{ number_format($payment->amount, 2) }} IQD</div>
-                            </div>
-                        </div>
                     </div>
 
-                    @if($payment->notes)
-                    <!-- ملاحظات -->
-                    <div class="alert alert-info mb-4">
-                        <strong>ملاحظات:</strong> {{ $payment->notes }}
-                    </div>
-                    @endif
-
-                    <!-- معلومات الكاشير -->
-                    <div class="border-top pt-3">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <small class="text-muted">تم الاستلام بواسطة:</small>
-                                <div class="fw-bold">{{ $payment->cashier->name }}</div>
-                            </div>
-                        </div>
+                    <!-- تذييل الوصل الرسمي -->
+                    <div class="text-center pt-2 border-top text-muted small">
+                        <p class="mb-1">هذا الإيصال سند مالي رسمي صادر إلكترونياً ولا يحتاج إلى ختم يدوي إضافي ما لم يُطلب رسمياً.</p>
+                        <small class="text-muted">مستشفى الكفاءات الأهلي — نتمنى لكم دوام الصحة والعافية</small>
                     </div>
 
-                    <!-- Footer -->
-                    <div class="text-center mt-4 pt-3 border-top">
-                        <p class="text-muted mb-0">
-                            <small>هذا إيصال رسمي صادر من نظام إدارة المستشفى</small>
-                        </p>
-                        <p class="text-muted mb-0">
-                            <small>للاستفسارات يرجى الاتصال على: 0790-XXX-XXXX</small>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-center mt-3">
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle me-2"></i>
-                    تم تسديد المبلغ بنجاح. يمكنك الآن التوجه إلى القسم المعني.
                 </div>
             </div>
         </div>
