@@ -42,7 +42,7 @@ class TelegramPollCommand extends Command
 
         while (true) {
             try {
-                $response = Http::timeout(25)->get("{$apiUrl}/getUpdates", [
+                $response = Http::withoutVerifying()->timeout(25)->get("{$apiUrl}/getUpdates", [
                     'offset' => $offset,
                     'timeout' => 20,
                 ]);
@@ -56,7 +56,7 @@ class TelegramPollCommand extends Command
 
                         $this->line("Received update #{$updateId}: " . json_encode($update, JSON_UNESCAPED_UNICODE));
 
-                        $fakeRequest = new Request($update);
+                        $fakeRequest = Request::create('/api/telegram/webhook', 'POST', $update);
                         $controller->handleWebhook($fakeRequest);
                     }
                 }

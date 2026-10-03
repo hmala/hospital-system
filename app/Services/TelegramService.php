@@ -63,7 +63,7 @@ class TelegramService
                 $payload['reply_markup'] = json_encode(['inline_keyboard' => $inlineKeyboard]);
             }
 
-            $response = Http::timeout(10)->post("{$this->apiUrl}/sendMessage", $payload);
+            $response = Http::withoutVerifying()->timeout(10)->post("{$this->apiUrl}/sendMessage", $payload);
 
             if (!$response->successful()) {
                 Log::error('Telegram sendMessage failed: ' . $response->body());
@@ -84,14 +84,14 @@ class TelegramService
     {
         try {
             if (filter_var($filePathOrUrl, FILTER_VALIDATE_URL)) {
-                $response = Http::timeout(15)->post("{$this->apiUrl}/sendDocument", [
+                $response = Http::withoutVerifying()->timeout(15)->post("{$this->apiUrl}/sendDocument", [
                     'chat_id' => $chatId,
                     'document' => $filePathOrUrl,
                     'caption' => $caption,
                     'parse_mode' => 'HTML',
                 ]);
             } elseif (file_exists($filePathOrUrl)) {
-                $response = Http::timeout(30)->attach(
+                $response = Http::withoutVerifying()->timeout(30)->attach(
                     'document',
                     file_get_contents($filePathOrUrl),
                     $fileName ?? basename($filePathOrUrl)
