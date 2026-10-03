@@ -162,6 +162,11 @@ class TelegramService
         $chatId = $appointment->telegram_chat_id 
             ?? optional($appointment->patient)->telegram_chat_id;
 
+        if (!$chatId && $appointment->patient_id) {
+            $chatId = Patient::where('id', $appointment->patient_id)->value('telegram_chat_id')
+                ?? Appointment::where('patient_id', $appointment->patient_id)->whereNotNull('telegram_chat_id')->latest()->value('telegram_chat_id');
+        }
+
         Log::info("Telegram sendTurnAlert triggered for Appointment #{$appointment->id}, ChatId: " . ($chatId ?? 'NULL'));
 
         if (!$chatId) {

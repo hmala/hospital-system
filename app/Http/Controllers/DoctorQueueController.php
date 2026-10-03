@@ -612,6 +612,10 @@ class DoctorQueueController extends Controller
         $appointment->status = 'in_consultation';
         $appointment->save();
 
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+        } catch (\Throwable $e) {}
+
         return response()->json([
             'success' => true,
             'message' => 'تم إدخال المريض وبدء الكشف بنجاح.',
