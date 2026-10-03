@@ -541,7 +541,7 @@ function playDeskChime() {
 
 async function playDeskVoice(text) {
     try {
-        const baseUrl = "{{ url('/') }}";
+        const baseUrl = "{{ rtrim(request()->root(), '/') }}" || (window.location.origin + (window.location.pathname.includes('/hearmz') ? '/hearmz' : ''));
         const res = await fetch(`${baseUrl}/queue/tts?text=${encodeURIComponent(text)}`);
         if (res.ok) {
             const blob = await res.blob();

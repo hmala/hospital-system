@@ -661,7 +661,7 @@
 
     <script>
         const doctorId = {{ $doctor->id }};
-        const baseUrl = "{{ url('/') }}";
+        const baseUrl = "{{ rtrim(request()->root(), '/') }}" || (window.location.origin + (window.location.pathname.includes('/hearmz') ? '/hearmz' : ''));
         const apiUrl = "{{ route('queue.doctor.data', $doctor->id) }}";
         const docFullName = "{{ $doctor->user ? $doctor->user->name : 'الطبيب' }}";
         let lastCallKey = null;
