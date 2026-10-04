@@ -10,8 +10,8 @@
                     <i class="fas fa-edit me-2"></i>
                     تعديل بيانات المريض
                 </h2>
-                <a href="{{ route('patients.show', $patient) }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>العودة للتفاصيل
+                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('patients.show', $patient) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>العودة
                 </a>
             </div>
         </div>
@@ -332,7 +332,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>حفظ التعديلات
                             </button>
-                            <a href="{{ route('patients.show', $patient) }}" class="btn btn-secondary">
+                            <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('patients.show', $patient) }}" class="btn btn-secondary">
                                 <i class="fas fa-times me-2"></i>إلغاء
                             </a>
                         </div>
