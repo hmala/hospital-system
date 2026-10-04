@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>شاشة الانتظار - عيادة {{ $doctor->user ? $doctor->user->name : 'الطبيب' }}</title>
+    <title>شاشة الانتظار - {{ $doctor ? 'عيادة د. ' . optional($doctor->user)->name : (isset($roomNumber) ? 'عيادة ' . $roomNumber : 'شاشة العيادات') }}</title>
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -56,241 +56,6 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.4);
             gap: 15px;
             flex-wrap: wrap;
-        }
-
-        .header-switcher-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(11, 19, 43, 0.7);
-            border: 1px solid rgba(58, 134, 255, 0.4);
-            padding: 4px 10px;
-            border-radius: 12px;
-        }
-
-        .header-switcher-select {
-            background: transparent;
-            color: #ffffff;
-            border: none;
-            outline: none;
-            font-size: 0.9rem;
-            font-weight: 800;
-            cursor: pointer;
-            padding: 4px 8px;
-            direction: rtl;
-        }
-
-        .header-switcher-select option {
-            background: #1c2541;
-            color: #ffffff;
-        }
-
-        /* Doctor Selection Modal */
-        #doctor-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(11, 19, 43, 0.88);
-            backdrop-filter: blur(16px);
-            z-index: 999999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .doctor-modal-card {
-            background: linear-gradient(145deg, #1c2541, #131b31);
-            border: 2px solid rgba(58, 134, 255, 0.5);
-            border-radius: 24px;
-            width: 100%;
-            max-width: 920px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(58, 134, 255, 0.2);
-            overflow: hidden;
-            animation: modalPop 0.3s ease-out;
-        }
-
-        @keyframes modalPop {
-            0% { transform: scale(0.92); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .doctor-modal-header {
-            padding: 20px 28px;
-            border-bottom: 1px solid rgba(58, 134, 255, 0.25);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(11, 19, 43, 0.5);
-        }
-
-        .doctor-modal-body {
-            padding: 24px 28px;
-            overflow-y: auto;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .modal-search-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .modal-search-input {
-            flex: 1;
-            background: rgba(11, 19, 43, 0.8);
-            border: 1px solid rgba(58, 134, 255, 0.4);
-            border-radius: 12px;
-            padding: 12px 18px;
-            color: #ffffff;
-            font-size: 1rem;
-            font-weight: 700;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-
-        .modal-search-input:focus {
-            border-color: #38bdf8;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
-        }
-
-        .filter-pills-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .filter-pill-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #cbd5e1;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .filter-pill-btn.active {
-            background: rgba(58, 134, 255, 0.3);
-            border-color: var(--primary);
-            color: #ffffff;
-            box-shadow: 0 0 10px rgba(58, 134, 255, 0.3);
-        }
-
-        .doctors-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 14px;
-            margin-top: 6px;
-        }
-
-        .doctor-card-item {
-            background: rgba(11, 19, 43, 0.6);
-            border: 1px solid rgba(58, 134, 255, 0.25);
-            border-radius: 16px;
-            padding: 16px;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .doctor-card-item:hover {
-            transform: translateY(-3px);
-            border-color: #38bdf8;
-            background: rgba(58, 134, 255, 0.18);
-            box-shadow: 0 8px 25px rgba(0, 240, 255, 0.2);
-        }
-
-        .doctor-card-item.selected {
-            border-color: var(--success);
-            background: rgba(16, 185, 129, 0.15);
-            box-shadow: 0 0 20px var(--success-glow);
-        }
-
-        .doc-card-top {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-
-        .doc-avatar-circle {
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3a86ff, #10b981);
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            font-weight: 900;
-            flex-shrink: 0;
-            box-shadow: 0 0 12px rgba(58, 134, 255, 0.4);
-        }
-
-        .doc-card-meta h3 {
-            font-size: 1.05rem;
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.2;
-        }
-
-        .doc-card-meta p {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            font-weight: 600;
-            margin-top: 2px;
-        }
-
-        .doc-card-badges {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 6px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 0.78rem;
-            font-weight: 700;
-        }
-
-        .avail-badge-live {
-            color: #34d399;
-            background: rgba(16, 185, 129, 0.15);
-            padding: 3px 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .avail-badge-off {
-            color: #94a3b8;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 3px 8px;
-            border-radius: 12px;
-        }
-
-        .waiting-badge-live {
-            color: #60a5fa;
-            background: rgba(58, 134, 255, 0.15);
-            padding: 3px 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(58, 134, 255, 0.3);
         }
 
         .hospital-brand {
@@ -775,46 +540,6 @@
 </head>
 <body>
 
-    <!-- Doctor Selection Modal Overlay -->
-    <div id="doctor-modal-overlay" style="{{ $doctor ? 'display: none;' : 'display: flex;' }}">
-        <div class="doctor-modal-card">
-            <div class="doctor-modal-header">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <i class="fas fa-tv" style="color: #38bdf8; font-size: 1.5rem;"></i>
-                    <div>
-                        <h2 style="font-size: 1.25rem; font-weight: 900; color: #ffffff;">شاشة الانتظار الموحدة - اختر الطبيب أو العيادة</h2>
-                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">اختر الطبيب لعرض شاشة الدور والنداء الصوتي المباشر</p>
-                    </div>
-                </div>
-                <button type="button" id="modal-close-btn" onclick="closeDoctorSelectModal()" class="tool-btn" style="{{ $doctor ? '' : 'display: none;' }}">
-                    <i class="fas fa-times"></i> إغلاق
-                </button>
-            </div>
-
-            <div class="doctor-modal-body">
-                <div class="modal-search-row">
-                    <input type="text" id="doctor-search-input" class="modal-search-input" placeholder="🔍 اكتب اسم الطبيب، التخصص، أو اسم العيادة للبحث السريع..." oninput="filterDoctorsGrid()">
-                </div>
-
-                <div class="filter-pills-row">
-                    <button type="button" class="filter-pill-btn active" data-filter="available" onclick="setDoctorFilter('available', this)">
-                        <i class="fas fa-check-circle" style="color: #34d399;"></i> المتوفرون اليوم فقط 🟢 (<span id="count-available">0</span>)
-                    </button>
-                    <button type="button" class="filter-pill-btn" data-filter="waiting" onclick="setDoctorFilter('waiting', this)">
-                        <i class="fas fa-user-clock" style="color: #60a5fa;"></i> لديهم مرضى في الانتظار 👥 (<span id="count-waiting">0</span>)
-                    </button>
-                    <button type="button" class="filter-pill-btn" data-filter="all" onclick="setDoctorFilter('all', this)">
-                        <i class="fas fa-users"></i> كافة الاستشاريين (<span id="count-all">0</span>)
-                    </button>
-                </div>
-
-                <div class="doctors-grid" id="doctors-cards-grid">
-                    <!-- Cards populated via JS -->
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Audio Enable Banner for Browser Autoplay Policy -->
     <div id="audio-enable-banner" onclick="enableAudio()">
         <i class="fas fa-volume-high"></i> انقر هنا لتفعيل النداء الصوتي والتنبيهات للشاشة
@@ -830,48 +555,28 @@
             </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <div class="clinic-info-badge" id="header-clinic-badge">
-                <div class="doc-name" id="header-doc-name">{{ $doctor && $doctor->user ? 'د. ' . $doctor->user->name : 'اختر الطبيب' }}</div>
-                <div class="doc-spec" id="header-doc-spec">
-                    <span class="room-pill" id="header-room-pill"><i class="fas fa-door-open me-1"></i> {{ $doctor && $doctor->department ? $doctor->department->name : 'العيادة' }}</span>
-                    <span id="header-spec-text">{{ $doctor ? ($doctor->specialization ?: 'استشاري') : '' }}</span>
-                </div>
+        <div class="clinic-info-badge">
+            <div class="doc-name" id="top-doc-name">
+                @if($doctor)
+                    د. {{ optional($doctor->user)->name ?? 'طبيب' }}
+                @elseif(isset($roomNumber))
+                    عيادة رقم {{ $roomNumber }}
+                @else
+                    شاشة الانتظار
+                @endif
             </div>
-
-            <!-- Quick Doctor Switcher Dropdown in Header -->
-            <div class="header-switcher-box">
-                <i class="fas fa-user-doctor" style="color: #38bdf8; font-size: 0.9rem;"></i>
-                <select id="header-doctor-select" class="header-switcher-select" onchange="switchDoctor(this.value)">
-                    <option value="">-- اختر عيادة الطبيب --</option>
-                    @php
-                        $availDocs = collect($doctorsList ?? [])->filter(fn($d) => $d['is_available_today'])->values();
-                        $otherDocs = collect($doctorsList ?? [])->filter(fn($d) => !$d['is_available_today'])->values();
-                    @endphp
-                    @if($availDocs->count() > 0)
-                        <optgroup label="🟢 المتوفرون اليوم ({{ $availDocs->count() }})">
-                            @foreach($availDocs as $d)
-                                <option value="{{ $d['id'] }}" {{ $doctor && $doctor->id == $d['id'] ? 'selected' : '' }}>
-                                    د. {{ $d['name'] }} ({{ $d['specialization'] }}) {{ $d['waiting_count'] > 0 ? "[{$d['waiting_count']} انتظار]" : '' }}
-                                </option>
-                            @endforeach
-                        </optgroup>
-                    @endif
-                    @if($otherDocs->count() > 0)
-                        <optgroup label="⚪ باقي الاستشاريين ({{ $otherDocs->count() }})">
-                            @foreach($otherDocs as $d)
-                                <option value="{{ $d['id'] }}" {{ $doctor && $doctor->id == $d['id'] ? 'selected' : '' }}>
-                                    د. {{ $d['name'] }} ({{ $d['specialization'] }})
-                                </option>
-                            @endforeach
-                        </optgroup>
-                    @endif
-                </select>
+            <div class="doc-spec" id="top-doc-spec">
+                @if($doctor)
+                    <span class="room-pill"><i class="fas fa-door-open me-1"></i> {{ $doctor->current_room ? 'عيادة ' . $doctor->current_room : (optional($doctor->department)->name ?? 'العيادة') }}</span>
+                    <span>{{ $doctor->specialization ?: 'استشاري' }}</span>
+                @elseif(isset($roomNumber))
+                    <span class="room-pill"><i class="fas fa-door-open me-1"></i> عيادة رقم {{ $roomNumber }}</span>
+                    <span class="text-warning">في انتظار تعيين الطبيب من الاستعلامات</span>
+                @else
+                    <span class="room-pill"><i class="fas fa-door-open me-1"></i> الاستشارية</span>
+                    <span>قسم العيادات التخصصية</span>
+                @endif
             </div>
-
-            <button type="button" class="tool-btn" onclick="openDoctorSelectModal()" title="اختيار طبيب آخر من شبكة البطاقات">
-                <i class="fas fa-th-large"></i> تغيير العيادة
-            </button>
         </div>
 
         <div class="header-tools">
@@ -907,7 +612,7 @@
             <div class="serving-body">
                 <div class="ticket-number-label" id="ticket-number-label">رقم المريض في الدور</div>
                 <div class="ticket-number-badge" id="serving-ticket-num">-</div>
-                <div class="serving-patient-name" id="serving-patient-name">العيادة جاهزة لاستقبال المريض القادم</div>
+                <div class="serving-patient-name" id="serving-patient-name">لا يوجد مريض حالياً</div>
                 <div class="serving-instructions" id="serving-instructions">
                     <i class="fas fa-door-open text-emerald-400"></i> تفضل بالدخول إلى غرفة الكشف
                 </div>
@@ -972,10 +677,14 @@
 
     <script>
         const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
+        const currentRoomNumber = @json($roomNumber ?? null);
         const allDoctors = @json($doctorsList ?? []);
         let currentDoctorId = {{ $doctor ? $doctor->id : 'null' }};
         let docFullName = "{{ $doctor && $doctor->user ? $doctor->user->name : '' }}";
-        let apiUrl = currentDoctorId ? `${baseUrl}/queue/doctor/${currentDoctorId}/data` : null;
+        
+        let apiUrl = currentRoomNumber 
+            ? `${baseUrl}/queue/room/${currentRoomNumber}/data` 
+            : (currentDoctorId ? `${baseUrl}/queue/doctor/${currentDoctorId}/data` : null);
         
         let activeFilter = 'available';
         let lastCallKey = null;
@@ -1015,7 +724,6 @@
                 return true;
             });
 
-            // Update Counts in Filter Pills
             const countAll = allDoctors.length;
             const countAvail = allDoctors.filter(d => d.is_available_today).length;
             const countWait = allDoctors.filter(d => d.waiting_count > 0).length;
@@ -1038,6 +746,8 @@
                     ? `<span class="waiting-badge-live"><i class="fas fa-user-clock"></i> ${doc.waiting_count} بالانتظار</span>`
                     : `<span style="color: #94a3b8;"><i class="fas fa-check"></i> لا يوجد انتظار</span>`;
 
+                const roomBadge = doc.current_room ? `<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 6px; font-size: 0.72rem;">عيادة ${doc.current_room}</span>` : '';
+
                 return `
                     <div class="doctor-card-item ${isSelected ? 'selected' : ''}" onclick="switchDoctor(${doc.id})">
                         <div class="doc-card-top">
@@ -1045,7 +755,7 @@
                                 <i class="fas fa-user-doctor"></i>
                             </div>
                             <div class="doc-card-meta">
-                                <h3>د. ${doc.name}</h3>
+                                <h3>د. ${doc.name} ${roomBadge}</h3>
                                 <p><i class="fas fa-door-open me-1 text-sky-400"></i> ${doc.department} - ${doc.specialization}</p>
                             </div>
                         </div>
@@ -1076,7 +786,7 @@
         }
 
         function closeDoctorSelectModal() {
-            if (!currentDoctorId) return;
+            if (!currentDoctorId && !currentRoomNumber) return;
             const modal = document.getElementById('doctor-modal-overlay');
             if (modal) modal.style.display = 'none';
         }
@@ -1123,7 +833,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             renderDoctorsGrid();
 
-            if (!currentDoctorId) {
+            // If in room mode, we don't force opening modal unless room has no doctor
+            if (currentRoomNumber) {
+                const headerRoom = document.getElementById('header-room-pill');
+                if (headerRoom) headerRoom.innerHTML = `<i class="fas fa-door-open me-1"></i> عيادة رقم ${currentRoomNumber}`;
+            } else if (!currentDoctorId) {
                 const savedId = localStorage.getItem('selected_queue_doctor_id');
                 if (savedId && allDoctors.some(d => d.id == savedId)) {
                     switchDoctor(savedId);
@@ -1135,7 +849,7 @@
             }
         });
 
-        // Audio Context & Voice Chime
+        // Audio Chime & Speech Logic
         function getAudioContext() {
             if (!globalAudioCtx) {
                 const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -1280,9 +994,10 @@
             if (isAnnouncing) return;
             isAnnouncing = true;
 
+            const roomText = currentRoomNumber ? `في عيادة رقم ${currentRoomNumber}` : '';
             const announcementText = queueNumber 
-                ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لعيادة دكتور ${docFullName}.`
-                : `المراجع ${patientName}، تفضل لعيادة دكتور ${docFullName}.`;
+                ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لعيادة دكتور ${docFullName} ${roomText}.`
+                : `المراجع ${patientName}، تفضل لعيادة دكتور ${docFullName} ${roomText}.`;
 
             try {
                 const blobUrl = await getAudioBlobUrl(announcementText);
@@ -1386,9 +1101,9 @@
             triggerCallAnnouncement(testName === 'العيادة جاهزة لاستقبال المريض القادم' ? 'محمد علي حسن' : testName, testNum === '-' ? '1' : testNum);
         }
 
-        // Fetch Queue Data in Real Time
+        // Fetch Queue Data in Real Time with dynamic room doctor tracking
         async function fetchQueueData() {
-            if (!apiUrl || !currentDoctorId) return;
+            if (!apiUrl) return;
 
             try {
                 const res = await fetch(apiUrl + '?_t=' + new Date().getTime(), {
@@ -1411,6 +1126,24 @@
         }
 
         function renderScreen(data) {
+            // In room mode, check if doctor changed
+            if (currentRoomNumber) {
+                if (data.has_doctor === false) {
+                    document.getElementById('header-doc-name').textContent = `عيادة رقم ${currentRoomNumber}`;
+                    document.getElementById('header-spec-text').textContent = 'في انتظار تعيين طبيب من الاستعلامات';
+                    document.getElementById('serving-ticket-num').textContent = '-';
+                    document.getElementById('serving-patient-name').textContent = `العيادة رقم ${currentRoomNumber} غير مشغولة حالياً`;
+                    document.getElementById('serving-instructions').textContent = 'يرجى مراجعة موظف الاستعلامات لمعرفة الطبيب المناوب';
+                    document.getElementById('queue-list').innerHTML = '<div class="empty-queue-msg">في انتظار تعيين الطبيب للعيادة</div>';
+                    return;
+                } else if (data.has_doctor === true && data.doctor_name) {
+                    docFullName = data.doctor_name;
+                    currentDoctorId = data.doctor_id;
+                    document.getElementById('header-doc-name').textContent = 'د. ' + data.doctor_name;
+                    document.getElementById('header-spec-text').textContent = (data.department_name || 'العيادة') + (data.specialization ? ' - ' + data.specialization : '');
+                }
+            }
+
             const current = data.current_patient;
             const waiting = data.waiting_list || [];
             const stats = data.stats || {};
@@ -1511,7 +1244,7 @@
         }
 
         setInterval(fetchQueueData, 1500);
-        if (currentDoctorId) {
+        if (apiUrl) {
             fetchQueueData();
         }
     </script>

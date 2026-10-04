@@ -56,6 +56,9 @@ Route::get('/departments', [DepartmentController::class, 'publicIndex'])
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
     Route::get('/doctor', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay']);
+    Route::get('/room/{roomNumber}', [\App\Http\Controllers\DoctorQueueController::class, 'roomDisplay'])->name('room.display');
+    Route::get('/room/{roomNumber}/data', [\App\Http\Controllers\DoctorQueueController::class, 'roomQueueData'])->name('room.data');
+    Route::post('/assign-room', [\App\Http\Controllers\DoctorQueueController::class, 'assignDoctorRoom'])->name('assign-room');
     Route::get('/available-doctors', [\App\Http\Controllers\DoctorQueueController::class, 'availableDoctorsList'])->name('available-doctors');
     Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
     Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');

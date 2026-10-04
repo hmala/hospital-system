@@ -29,7 +29,8 @@ class Doctor extends Model
         'working_days',
         'is_active',
         'is_available_today',
-        'available_date'
+        'available_date',
+        'current_room'
     ];
 
     protected $casts = [

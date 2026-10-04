@@ -95,11 +95,12 @@
                     <table class="table table-hover align-middle mb-0" id="doctorsAvailabilityTable">
                         <thead class="table-light">
                             <tr class="text-muted small text-uppercase">
-                                <th style="width: 2.5rem;">#</th>
+                                <th style="width: 2.2rem;">#</th>
                                 <th>الطبيب والعيادة</th>
-                                <th style="width: 5rem;" class="text-center">الحالة</th>
-                                <th style="width: 4.5rem;" class="text-center">شاشة</th>
-                                <th style="width: 4.5rem;" class="text-center">التوفر</th>
+                                <th style="width: 4.5rem;" class="text-center">الحالة</th>
+                                <th style="width: 5.5rem;" class="text-center" title="تحديد رقم العيادة وشاشة التلفاز المعلقة خارج الباب">الغرفة / الشاشة</th>
+                                <th style="width: 3.5rem;" class="text-center">شاشة</th>
+                                <th style="width: 4.2rem;" class="text-center">التوفر</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -130,6 +131,22 @@
                                         @else
                                             <span class="badge bg-secondary small px-2 py-1 doctor-status-badge" style="font-size: 0.72rem;" id="badge-doc-{{ $doctor->id }}">غير مجدول</span>
                                         @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <select class="form-select form-select-sm py-0 px-1 text-center fw-bold text-primary border-primary" 
+                                                style="font-size: 0.75rem; border-radius: 6px; cursor: pointer; background-color: #f0fdf4;" 
+                                                onchange="assignDoctorToRoom({{ $doctor->id }}, this.value)"
+                                                title="تعيين شاشة التلفاز المعلقة خارج الغرفة لهذا الطبيب">
+                                            <option value="">-- بدون --</option>
+                                            @php
+                                                $assignedRoom = $doctor->current_room ?: optional($doctor->department)->room_number;
+                                            @endphp
+                                            @for($r = 1; $r <= 15; $r++)
+                                                <option value="{{ $r }}" {{ $assignedRoom == (string)$r ? 'selected' : '' }}>
+                                                    عيادة {{ $r }}
+                                                </option>
+                                            @endfor
+                                        </select>
                                     </td>
                                     <td class="text-center">
                                         <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-xs btn-outline-primary py-1 px-2" style="font-size: 0.75rem;" title="فتح شاشة التلفاز">
@@ -751,6 +768,31 @@ function updateAvailabilityCounts() {
     if (elAvail) elAvail.textContent = avail;
     if (elUnavail) elUnavail.textContent = unavail;
     if (elAll) elAll.textContent = rows.length;
+}
+
+function assignDoctorToRoom(doctorId, room) {
+    const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
+    fetch(`${baseUrl}/queue/assign-room`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ doctor_id: doctorId, room: room })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showQuickToast(data.message, 'success');
+        } else {
+            alert(data.message || 'فشل تعيين الغرفة');
+        }
+    })
+    .catch(err => {
+        console.error('Error assigning room:', err);
+        alert('حدث خطأ أثناء تعيين الغرفة');
+    });
 }
 
 function showQuickToast(msg, type = 'success') {

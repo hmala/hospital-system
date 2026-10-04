@@ -25,7 +25,6 @@ class DoctorQueueController extends Controller
 
         $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
 
-        // Check if doctor is requested via parameter, or if auth user is a doctor
         $doctorId = $request->query('doctor_id') ?? $request->query('doctor');
         if (!$doctorId && auth()->check() && auth()->user()->doctor) {
             $doctorId = auth()->user()->doctor->id;
@@ -37,6 +36,112 @@ class DoctorQueueController extends Controller
         }
 
         return view('queue.doctor-display', compact('doctor', 'doctorsList'));
+    }
+
+    /**
+     * Show fixed clinic room TV display (e.g. /queue/room/1)
+     */
+    public function roomDisplay($roomNumber)
+    {
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where('type', 'consultant')
+            ->get();
+
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        // Find doctor currently assigned to this room
+        $doctor = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function($q) use ($roomNumber) {
+                $q->where('current_room', $roomNumber)
+                  ->orWhere(function($sub) use ($roomNumber) {
+                      $sub->whereNull('current_room')
+                          ->whereHas('department', function($d) use ($roomNumber) {
+                              $d->where('room_number', $roomNumber);
+                          });
+                  });
+            })
+            ->first();
+
+        return view('queue.doctor-display', compact('doctor', 'doctorsList', 'roomNumber'));
+    }
+
+    /**
+     * Realtime JSON data for a specific room display (auto switches doctor dynamically)
+     */
+    public function roomQueueData($roomNumber)
+    {
+        $doctor = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function($q) use ($roomNumber) {
+                $q->where('current_room', $roomNumber)
+                  ->orWhere(function($sub) use ($roomNumber) {
+                      $sub->whereNull('current_room')
+                          ->whereHas('department', function($d) use ($roomNumber) {
+                              $d->where('room_number', $roomNumber);
+                          });
+                  });
+            })
+            ->first();
+
+        if (!$doctor) {
+            return response()->json([
+                'success' => true,
+                'has_doctor' => false,
+                'room_number' => $roomNumber,
+                'doctor_id' => null,
+                'doctor_name' => null,
+                'message' => "في انتظار تعيين طبيب للغرفة رقم {$roomNumber} من الاستعلامات",
+                'current_patient' => null,
+                'waiting_list' => [],
+                'stats' => ['waiting_count' => 0, 'completed_count' => 0, 'total_today' => 0],
+            ]);
+        }
+
+        // Delegate to standard queueData
+        $queueResponse = $this->queueData($doctor->id);
+        $data = json_decode($queueResponse->getContent(), true);
+        $data['has_doctor'] = true;
+        $data['room_number'] = $roomNumber;
+        $data['doctor_id'] = $doctor->id;
+        $data['doctor_name'] = optional($doctor->user)->name;
+        $data['department_name'] = optional($doctor->department)->name;
+        $data['specialization'] = $doctor->specialization;
+
+        return response()->json($data);
+    }
+
+    /**
+     * Assign doctor to a specific clinic room (called from inquiry/reception screen)
+     */
+    public function assignDoctorRoom(Request $request)
+    {
+        $request->validate([
+            'doctor_id' => 'required|exists:doctors,id',
+            'room' => 'nullable|string|max:50',
+        ]);
+
+        $doctor = Doctor::findOrFail($request->doctor_id);
+        
+        // If room is specified, clear any other doctor on that same room
+        if ($request->filled('room')) {
+            Doctor::where('current_room', $request->room)
+                ->where('id', '!=', $doctor->id)
+                ->update(['current_room' => null]);
+        }
+
+        $doctor->update(['current_room' => $request->room ?: null]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $request->filled('room') 
+                ? "تم تعيين د. " . optional($doctor->user)->name . " على عيادة {$request->room} بنجاح" 
+                : "تم إلغاء تعيين الغرفة للطبيب",
+            'doctor_id' => $doctor->id,
+            'room' => $doctor->current_room,
+        ]);
     }
 
     /**
@@ -95,7 +200,6 @@ class DoctorQueueController extends Controller
                 ->whereIn('status', ['calling', 'in_consultation'])
                 ->count();
 
-            // Direct check for today's active consultant availability
             $isAvailableToday = (bool) ($doc->is_available_today && (!$doc->available_date || $doc->available_date->isToday()));
 
             return [
@@ -103,6 +207,7 @@ class DoctorQueueController extends Controller
                 'name' => optional($doc->user)->name ?? 'طبيب #' . $doc->id,
                 'specialization' => $doc->specialization ?? 'استشاري',
                 'department' => optional($doc->department)->name ?? 'العيادات الاستشارية',
+                'current_room' => $doc->current_room ?: optional($doc->department)->room_number,
                 'type' => $doc->type ?? 'consultant',
                 'is_available_today' => $isAvailableToday,
                 'waiting_count' => $waitingCount,
@@ -110,7 +215,6 @@ class DoctorQueueController extends Controller
             ];
         })
         ->sortByDesc(function ($doc) {
-            // Sort: Available Consultants first -> Then doctors with active waiting list -> Then by ID
             return ($doc['is_available_today'] ? 1000 : 0) 
                  + ($doc['waiting_count'] > 0 ? 500 : 0) 
                  + ($doc['calling_count'] > 0 ? 200 : 0);
