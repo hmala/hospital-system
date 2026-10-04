@@ -649,6 +649,11 @@ Route::middleware(['auth'])->group(function () {
         // إعدادات العقوبات والمكافآت
         Route::resource('action_settings', \App\Http\Controllers\HR\HrActionSettingController::class)->except(['create', 'show', 'edit']);
 
+        // نظام الرواتب
+        Route::resource('payrolls', \App\Http\Controllers\HR\HrPayrollController::class)->except(['edit', 'update', 'destroy']);
+        Route::post('payrolls/{payroll}/approve', [\App\Http\Controllers\HR\HrPayrollController::class, 'approve'])->name('payrolls.approve');
+        Route::post('payrolls/slip/{slip}', [\App\Http\Controllers\HR\HrPayrollController::class, 'updateSlip'])->name('payrolls.slip.update');
+
         // إعدادات وقوائم الموارد البشرية والحقول
         Route::prefix('settings')->name('settings.')->group(function () {
             Route::get('/', [\App\Http\Controllers\HR\HrSettingsController::class, 'index'])->name('index');
@@ -765,6 +770,7 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
 
 
 

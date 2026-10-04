@@ -19,6 +19,7 @@ class HrEmployeeAction extends Model
         'financial_amount',
         'status',
         'created_by',
+        'hr_payroll_cycle_id',
     ];
 
     protected $casts = [
@@ -40,5 +41,10 @@ class HrEmployeeAction extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function payrollCycle()
+    {
+        return $this->belongsTo(HrPayrollCycle::class, 'hr_payroll_cycle_id');
     }
 }
