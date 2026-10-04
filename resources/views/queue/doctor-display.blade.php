@@ -797,14 +797,14 @@
                 </div>
 
                 <div class="filter-pills-row">
-                    <button type="button" class="filter-pill-btn active" data-filter="all" onclick="setDoctorFilter('all', this)">
-                        <i class="fas fa-users"></i> كافة الأطباء (<span id="count-all">0</span>)
-                    </button>
-                    <button type="button" class="filter-pill-btn" data-filter="available" onclick="setDoctorFilter('available', this)">
-                        <i class="fas fa-check-circle" style="color: #34d399;"></i> المتوفرون اليوم 🟢 (<span id="count-available">0</span>)
+                    <button type="button" class="filter-pill-btn active" data-filter="available" onclick="setDoctorFilter('available', this)">
+                        <i class="fas fa-check-circle" style="color: #34d399;"></i> المتوفرون اليوم فقط 🟢 (<span id="count-available">0</span>)
                     </button>
                     <button type="button" class="filter-pill-btn" data-filter="waiting" onclick="setDoctorFilter('waiting', this)">
                         <i class="fas fa-user-clock" style="color: #60a5fa;"></i> لديهم مرضى في الانتظار 👥 (<span id="count-waiting">0</span>)
+                    </button>
+                    <button type="button" class="filter-pill-btn" data-filter="all" onclick="setDoctorFilter('all', this)">
+                        <i class="fas fa-users"></i> كافة الاستشاريين (<span id="count-all">0</span>)
                     </button>
                 </div>
 
@@ -844,11 +844,28 @@
                 <i class="fas fa-user-doctor" style="color: #38bdf8; font-size: 0.9rem;"></i>
                 <select id="header-doctor-select" class="header-switcher-select" onchange="switchDoctor(this.value)">
                     <option value="">-- اختر عيادة الطبيب --</option>
-                    @foreach($doctorsList ?? [] as $d)
-                        <option value="{{ $d['id'] }}" {{ $doctor && $doctor->id == $d['id'] ? 'selected' : '' }}>
-                            د. {{ $d['name'] }} ({{ $d['specialization'] }}) {{ $d['is_available_today'] ? '🟢' : '' }} {{ $d['waiting_count'] > 0 ? "[{$d['waiting_count']} انتظار]" : '' }}
-                        </option>
-                    @endforeach
+                    @php
+                        $availDocs = collect($doctorsList ?? [])->filter(fn($d) => $d['is_available_today'])->values();
+                        $otherDocs = collect($doctorsList ?? [])->filter(fn($d) => !$d['is_available_today'])->values();
+                    @endphp
+                    @if($availDocs->count() > 0)
+                        <optgroup label="🟢 المتوفرون اليوم ({{ $availDocs->count() }})">
+                            @foreach($availDocs as $d)
+                                <option value="{{ $d['id'] }}" {{ $doctor && $doctor->id == $d['id'] ? 'selected' : '' }}>
+                                    د. {{ $d['name'] }} ({{ $d['specialization'] }}) {{ $d['waiting_count'] > 0 ? "[{$d['waiting_count']} انتظار]" : '' }}
+                                </option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($otherDocs->count() > 0)
+                        <optgroup label="⚪ باقي الاستشاريين ({{ $otherDocs->count() }})">
+                            @foreach($otherDocs as $d)
+                                <option value="{{ $d['id'] }}" {{ $doctor && $doctor->id == $d['id'] ? 'selected' : '' }}>
+                                    د. {{ $d['name'] }} ({{ $d['specialization'] }})
+                                </option>
+                            @endforeach
+                        </optgroup>
+                    @endif
                 </select>
             </div>
 
@@ -960,7 +977,7 @@
         let docFullName = "{{ $doctor && $doctor->user ? $doctor->user->name : '' }}";
         let apiUrl = currentDoctorId ? `${baseUrl}/queue/doctor/${currentDoctorId}/data` : null;
         
-        let activeFilter = 'all';
+        let activeFilter = 'available';
         let lastCallKey = null;
         let isInitialLoad = true;
         let isAnnouncing = false;
