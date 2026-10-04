@@ -27,6 +27,7 @@
                     <form method="POST" action="{{ route('patients.update', $patient) }}">
                         @csrf
                         @method('PUT')
+                        <input type="hidden" name="return_url" value="{{ old('return_url', (url()->previous() !== url()->current() ? url()->previous() : route('patients.show', $patient))) }}">
 
                         @if($errors->any())
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">

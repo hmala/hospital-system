@@ -113,7 +113,7 @@ class RadiologyTypeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:radiology_types,code',
-            'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
+            'subcategory' => 'required|string|max:100|in:أشعة,سونار,مفراس,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',
@@ -180,7 +180,7 @@ class RadiologyTypeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:radiology_types,code,' . $type->id,
-            'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
+            'subcategory' => 'required|string|max:100|in:أشعة,سونار,مفراس,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',

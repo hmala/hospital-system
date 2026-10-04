@@ -39,6 +39,7 @@
                                     <option value="">اختر قسم الإشعة</option>
                                     <option value="أشعة" {{ old('subcategory', $type->subcategory) === 'أشعة' ? 'selected' : '' }}>أشعة عامة</option>
                                     <option value="سونار" {{ old('subcategory', $type->subcategory) === 'سونار' ? 'selected' : '' }}>سونار</option>
+                                    <option value="مفراس" {{ old('subcategory', $type->subcategory) === 'مفراس' ? 'selected' : '' }}>مفراس</option>
                                     <option value="الرنين" {{ old('subcategory', $type->subcategory) === 'الرنين' ? 'selected' : '' }}>رنين مغناطيسي</option>
                                     <option value="إيكو" {{ old('subcategory', $type->subcategory) === 'إيكو' ? 'selected' : '' }}>إيكو</option>
                                 </select>
