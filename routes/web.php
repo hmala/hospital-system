@@ -390,14 +390,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 
-    // ======= مسارات قسم المختبر     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
+    // ======= مسارات قسم المختبر =======
+    Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\LabStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
     });
 
-    // ======= مسارات قسم الأشعة     Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
+    // ======= مسارات قسم الأشعة =======
+    Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
@@ -760,6 +762,8 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
+
 
 
 
