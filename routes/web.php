@@ -707,6 +707,7 @@ Route::middleware(['auth'])->group(function () {
 
     // مسارات التحكم بالطابور والاستدعاء (تحتاج تسجيل دخول)
     Route::prefix('queue')->name('queue.')->group(function () {
+        Route::post('/assign-room', [\App\Http\Controllers\DoctorQueueController::class, 'assignDoctorRoom'])->name('assign-room');
         Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('doctor.call-next');
         Route::post('/appointment/{appointment}/recall', [\App\Http\Controllers\DoctorQueueController::class, 'recall'])->name('appointment.recall');
         Route::post('/appointment/{appointment}/start-consultation', [\App\Http\Controllers\DoctorQueueController::class, 'startConsultation'])->name('appointment.start-consultation');
@@ -717,8 +718,13 @@ Route::middleware(['auth'])->group(function () {
 
 // مسارات شاشات الطابور العامة والصوت (يمكن فتحها على التلفاز دون جلسة كاشير)
 Route::prefix('queue')->name('queue.')->group(function () {
+    Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
+    Route::get('/doctor', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay']);
+    Route::get('/room/{roomNumber}', [\App\Http\Controllers\DoctorQueueController::class, 'roomDisplay'])->name('room');
+    Route::get('/room/{roomNumber}/data', [\App\Http\Controllers\DoctorQueueController::class, 'roomQueueData'])->name('room.data');
     Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
     Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');
+    Route::get('/available-doctors', [\App\Http\Controllers\DoctorQueueController::class, 'availableDoctorsList'])->name('available-doctors');
     Route::get('/all-clinics', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all-clinics.display');
     Route::get('/all-clinics/data', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsData'])->name('all-clinics.data');
     Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');
