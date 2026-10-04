@@ -16,7 +16,7 @@ class TelegramService
 
     public function __construct()
     {
-        $this->token = config('services.telegram.bot_token') ?? env('TELEGRAM_BOT_TOKEN', '8926886048:AAFrT7bBwq4Nqus56eOxPbYqHhCJO5XE3lg');
+        $this->token = config('services.telegram.bot_token') ?? env('TELEGRAM_BOT_TOKEN', '8926886048:AAGS5-ccGtMCB07bX7VVvRAivXofWOFJ_x0');
         $this->botUsername = config('services.telegram.bot_username') ?? env('TELEGRAM_BOT_USERNAME', 'Kafathospitalbot');
         $this->apiUrl = "https://api.telegram.org/bot{$this->token}";
     }
