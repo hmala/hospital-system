@@ -151,6 +151,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{role}/edit', [RoleManagementController::class, 'rolesEdit'])->name('edit');
         Route::put('/{role}', [RoleManagementController::class, 'rolesUpdate'])->name('update');
         Route::delete('/{role}', [RoleManagementController::class, 'rolesDestroy'])->name('destroy');
+        Route::post('/{role}/toggle-permission', [RoleManagementController::class, 'togglePermission'])->name('toggle-permission');
     });
     
     Route::prefix('permissions')->name('permissions.')->group(function () {
@@ -389,16 +390,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 
-    // ======= مسارات قسم المختبر =======
-    Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
+    // ======= مسارات قسم المختبر     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\LabStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
     });
 
-    // ======= مسارات قسم الأشعة =======
-    Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
+    // ======= مسارات قسم الأشعة     Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
@@ -597,6 +596,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\EmergencyController::class, 'index'])->name('index');
         Route::get('/dashboard', [\App\Http\Controllers\EmergencyController::class, 'dashboard'])->name('dashboard');
         Route::get('/create', [\App\Http\Controllers\EmergencyController::class, 'create'])->name('create');
+        Route::get('/search-patients', [\App\Http\Controllers\EmergencyController::class, 'searchPatients'])->name('search-patients');
         Route::post('/', [\App\Http\Controllers\EmergencyController::class, 'store'])->name('store');
         Route::get('/{emergency}', [\App\Http\Controllers\EmergencyController::class, 'show'])->name('show');
         Route::get('/{emergency}/edit', [\App\Http\Controllers\EmergencyController::class, 'edit'])->name('edit');
@@ -714,9 +714,53 @@ Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/all-clinics', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all-clinics.display');
     Route::get('/all-clinics/data', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsData'])->name('all-clinics.data');
     Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');
+    Route::get('/track/{appointment}', [\App\Http\Controllers\DoctorQueueController::class, 'patientLiveTracker'])->name('patient.track');
 });
 
 // تضمين مسارات مركز العيون
 require base_path('routes/eye.php');
+// مسار بوت التيليجرام لاستقبال التحديثات
+Route::match(['get', 'post'], '/api/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook'])->name('telegram.webhook');
+Route::match(['get', 'post'], '/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook']);
+
+// فحص تشخيصي مباشر للنداء
+Route::get('/api/telegram/test-call', function () {
+    $lastWithChat = \App\Models\Appointment::with(['patient.user', 'doctor.user'])
+        ->whereNotNull('telegram_chat_id')
+        ->latest('id')
+        ->first();
+
+    $latestAppt = \App\Models\Appointment::with(['patient.user', 'doctor.user'])->latest('id')->first();
+    
+    $target = $lastWithChat ?: $latestAppt;
+    
+    if (!$target) {
+        return response()->json(['error' => 'No appointments found in database']);
+    }
+
+    $chatId = $target->telegram_chat_id 
+        ?? optional($target->patient)->telegram_chat_id
+        ?? 677648429;
+
+    $target->telegram_chat_id = $chatId;
+    
+    $sent = app(\App\Services\TelegramService::class)->sendTurnAlert($target);
+
+    return response()->json([
+        'success' => $sent,
+        'target_appointment_id' => $target->id,
+        'patient_name' => optional(optional($target->patient)->user)->name,
+        'doctor_name' => optional(optional($target->doctor)->user)->name,
+        'chat_id_used' => $chatId,
+        'latest_appointment_in_db' => $latestAppt ? [
+            'id' => $latestAppt->id,
+            'status' => $latestAppt->status,
+            'telegram_chat_id' => $latestAppt->telegram_chat_id,
+            'patient_chat_id' => optional($latestAppt->patient)->telegram_chat_id
+        ] : null,
+    ]);
+});
+
+
 
 

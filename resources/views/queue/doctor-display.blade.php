@@ -628,6 +628,21 @@
             <div class="queue-list-container" id="queue-list">
                 <div class="empty-queue-msg">لا يوجد مرضى بالانتظار</div>
             </div>
+
+            <!-- Mobile Telegram Live Tracker QR Widget -->
+            <div style="background: rgba(11, 19, 43, 0.85); border-top: 1px solid rgba(58, 134, 255, 0.25); padding: 12px 16px; display: flex; align-items: center; gap: 14px; border-radius: 0 0 16px 16px;">
+                <div style="background: #ffffff; padding: 4px; border-radius: 8px; flex-shrink: 0; box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=0&data=https://t.me/Kafathospitalbot" alt="Telegram Bot QR" style="width: 58px; height: 58px; display: block; border-radius: 4px;">
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 0.88rem; font-weight: 900; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                        <i class="fab fa-telegram" style="color: #229ED9; font-size: 1.1rem;"></i> تابع دورك بهاتفك وتجول بحرية
+                    </div>
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; line-height: 1.3; margin-top: 2px;">
+                        امسح الرمز بكاميرا هاتفك أو افتح <b style="color: #f1f5f9;">@Kafathospitalbot</b> لتصلك إشعارات نداء الدور مباشرة.
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -646,8 +661,8 @@
 
     <script>
         const doctorId = {{ $doctor->id }};
-        const baseUrl = "{{ url('/') }}";
-        const apiUrl = "{{ route('queue.doctor.data', $doctor->id) }}";
+        const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
+        const apiUrl = `${baseUrl}/queue/doctor/${doctorId}/data`;
         const docFullName = "{{ $doctor->user ? $doctor->user->name : 'الطبيب' }}";
         let lastCallKey = null;
         let isInitialLoad = true;

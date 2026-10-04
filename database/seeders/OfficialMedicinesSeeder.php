@@ -65,19 +65,23 @@ class OfficialMedicinesSeeder extends Seeder
                     $barcode = 'MED' . str_pad(mt_rand(10000000, 99999999), 8, '0', STR_PAD_LEFT);
                 }
 
-                $med = Medicine::firstOrCreate(
+                // توليد حجم التعبئة تلقائياً
+                $packSize = $subUnitsCount . ' ' . $subUnit;
+
+                $med = Medicine::updateOrCreate(
                     [
                         'name' => $tradeName,
                         'national_code' => $nationalCode ?: null,
+                        'sub_units_count' => $subUnitsCount,
                     ],
                     [
                         'generic_name' => $genericName,
                         'dosage_form' => $dosageForm,
                         'strength' => $strength,
+                        'pack_size' => $packSize,
                         'barcode' => $barcode,
                         'main_unit' => $mainUnit,
                         'sub_unit' => $subUnit,
-                        'sub_units_count' => $subUnitsCount,
                         'cost_price' => $costPrice,
                         'sale_price' => $salePrice,
                         'sub_unit_sale_price' => $subUnitSalePrice,

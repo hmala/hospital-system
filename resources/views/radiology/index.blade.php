@@ -15,11 +15,11 @@
                     <span class="badge bg-success">
                         <i class="fas fa-circle fa-xs me-1"></i> مباشر
                     </span>
-                    @if(Auth::user()->isAdmin() || Auth::user()->isReceptionist() || Auth::user()->isDoctor())
+                    @can('create radiology')
                     <a href="{{ route('radiology.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus me-1"></i>طلب إشعة جديد
                     </a>
-                    @endif
+                    @endcan
                 </div>
             </div>
         </div>
@@ -275,11 +275,15 @@
                                             </a>
                                             @endif
 
-                                            @if(Auth::user()->isAdmin() || Auth::user()->isReceptionist())
+                                            @can('edit radiology')
                                                 @if($request->status === 'pending')
                                                 <a href="{{ route('radiology.edit', $request) }}" class="btn btn-warning" title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
+                                                @endif
+                                            @endcan
+                                            @can('delete radiology')
+                                                @if($request->status === 'pending')
                                                 <form action="{{ route('radiology.destroy', $request) }}" method="POST" class="d-inline">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب؟')">
@@ -287,7 +291,7 @@
                                                     </button>
                                                 </form>
                                                 @endif
-                                            @endif
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>

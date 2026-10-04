@@ -646,7 +646,7 @@
 @if(auth()->user()->isDoctor() && isset($doctor))
 <script>
     const currentDoctorId = {{ $doctor->id }};
-    const baseUrl = "{{ url('/') }}";
+    const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
     let currentAppointmentId = null;
 
     async function syncDoctorQueue() {
@@ -808,10 +808,16 @@
                     } else {
                         pendingTbody.innerHTML = pendingTestsList.map(item => {
                             const isReady = item.all_ready;
+                            const isUnpaid = item.has_unpaid_tests;
+
                             let readyBadge = isReady 
                                 ? '<span class="status-badge status-completed fw-bold" style="background: #bbf7d0; color: #14532d; border-color: #86efac;"><i class="fas fa-check-double text-success me-1"></i> جاهز للمراجعة</span>'
                                 : `<span class="status-badge status-pending fw-semibold" style="background: #fef08a; color: #854d0e; border-color: #fde047;"><i class="fas fa-hourglass-half me-1"></i> قيد الإجراء (${item.completed_tests}/${item.total_tests})</span>`;
                             
+                            if (isUnpaid) {
+                                readyBadge += ' <span class="badge bg-warning text-dark border border-warning ms-1" title="توجد رسوم غير مسددة في الكاشير"><i class="fas fa-exclamation-triangle text-danger me-1"></i>غير مقبوض</span>';
+                            }
+
                             if (item.has_substitution_alert) {
                                 readyBadge = '<span class="status-badge bg-danger text-white fw-bold shadow-sm"><i class="fas fa-exchange-alt fa-spin me-1"></i> بديل بانتظار موافقتك</span>';
                             }
@@ -849,6 +855,7 @@
                                             <div class="ms-2">
                                                 <strong class="text-dark fs-6">${item.patient_name}</strong>
                                                 ${isReady ? '<span class="badge bg-success ms-1 small">جاهز</span>' : ''}
+                                                ${isUnpaid ? '<span class="badge bg-danger ms-1 small">غير مسدد</span>' : ''}
                                                 ${item.has_substitution_alert ? '<span class="badge bg-danger ms-1 small">بديل دوائي</span>' : ''}
                                             </div>
                                         </div>
@@ -865,11 +872,15 @@
                                                 <a href="{{ url('/doctor/visits') }}/${item.visit_id}" class="action-btn btn-danger fw-bold shadow-sm" title="البت في بديل الدواء">
                                                     <i class="fas fa-exchange-alt"></i> مراجعة البديل
                                                 </a>
-                                            ` : (isReady ? `
+                                            ` : (isReady ? (isUnpaid ? `
+                                                <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-sm" onclick="doctorCallResults(${item.visit_id})" title="تنبيه: غير مسدد بالكاشير">
+                                                    <i class="fas fa-exclamation-triangle text-danger"></i> غير مسدد
+                                                </button>
+                                            ` : `
                                                 <button type="button" class="action-btn btn-success fw-bold shadow-sm" onclick="doctorCallResults(${item.visit_id})">
                                                     <i class="fas fa-bullhorn"></i> استدعاء
                                                 </button>
-                                            ` : `
+                                            `) : `
                                                 <button type="button" class="action-btn btn-secondary" disabled title="لا يمكن الاستدعاء حتى تكتمل جميع الفحوصات أو الصرف" style="cursor: not-allowed; opacity: 0.65;">
                                                     <i class="fas fa-hourglass-half"></i> بالانتظار
                                                 </button>

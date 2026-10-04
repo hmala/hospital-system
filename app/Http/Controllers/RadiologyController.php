@@ -22,20 +22,25 @@ class RadiologyController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى قسم الأشعة والسونار');
+        }
+
         $newSystemRequests = collect(); // متغير افتراضي فارغ
 
-        if ($user->hasAnyRole(['admin', 'receptionist'])) {
+        if ($isAdmin || $user->hasRole('receptionist')) {
             // الإداريون والاستقبال يرون جميع الطلبات
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
-        } elseif ($user->hasRole('doctor')) {
+        } elseif ($user->hasRole('doctor') && $user->doctor) {
             // الأطباء يرون طلباتهم فقط
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->where('doctor_id', $user->doctor->id)
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
-        } elseif ($user->hasRole('patient')) {
+        } elseif ($user->hasRole('patient') && $user->patient) {
             // المرضى يرون طلباتهم فقط
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->where('patient_id', $user->patient->id)
@@ -74,15 +79,13 @@ class RadiologyController extends Controller
             $requests = $query->orderBy('priority', 'desc')
                 ->orderBy('requested_date', 'desc')
                 ->paginate(15);
-        } elseif ($user->hasRole('radiology_staff')) {
-            // موظفو الإشعة يرون جميع الطلبات من الجدول القديم فقط (ليس هناك جديدة)
+        } else {
+            // موظفو الأشعة أو أي مستخدم يملك صلاحية view radiology
             $requests = RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType'])
                 ->whereIn('status', ['pending', 'scheduled', 'in_progress', 'completed'])
                 ->orderBy('priority', 'desc')
                 ->orderBy('requested_date', 'desc')
                 ->paginate(15);
-        } else {
-            $requests = collect();
         }
 
         $emergencyRadiologyRequests = collect();
@@ -127,9 +130,10 @@ class RadiologyController extends Controller
     public function create(Request $request)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
         // التحقق من الصلاحيات
-        if (!$user->can('create radiology')) {
+        if (!$isAdmin && (!$user || !$user->can('create radiology'))) {
             abort(403, 'غير مصرح لك بإنشاء طلبات إشعة');
         }
 
@@ -160,6 +164,12 @@ class RadiologyController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create radiology'))) {
+            abort(403, 'غير مصرح لك بإنشاء طلبات إشعة');
+        }
+
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
@@ -196,6 +206,15 @@ class RadiologyController extends Controller
      */
     public function show(RadiologyRequest $radiology)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isOwningDoctor = $user && $user->hasRole('doctor') && $user->doctor && $radiology->doctor_id === $user->doctor->id;
+        $isOwningPatient = $user && $user->hasRole('patient') && $user->patient && $radiology->patient_id === $user->patient->id;
+
+        if (!$isAdmin && !$isOwningDoctor && !$isOwningPatient && (!$user || !$user->can('view radiology'))) {
+            abort(403, 'غير مصرح لك بعرض تفاصيل هذا الفحص الإشعاعي');
+        }
+
         $radiology->load(['patient.user', 'doctor.user', 'radiologyType', 'visit', 'performer', 'result.radiologist']);
 
         return view('radiology.show', compact('radiology'));
@@ -207,14 +226,15 @@ class RadiologyController extends Controller
     public function edit(RadiologyRequest $radiology)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
         // التحقق من الصلاحيات
-        if (!$user->can('edit radiology')) {
+        if (!$isAdmin && (!$user || !$user->can('edit radiology'))) {
             abort(403, 'غير مصرح لك بتعديل هذا الطلب');
         }
 
-        // الأطباء يعدلون طلباتهم فقط
-        if ($user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
+        // الأطباء يعدلون طلباتهم فقط ما لم يكونوا إدارة
+        if (!$isAdmin && $user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
             abort(403, 'غير مصرح لك بتعديل هذا الطلب');
         }
 
@@ -233,6 +253,16 @@ class RadiologyController extends Controller
      */
     public function update(Request $request, RadiologyRequest $radiology)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit radiology'))) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب');
+        }
+
+        if (!$isAdmin && $user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب');
+        }
+
         $request->validate([
             'radiology_type_id' => 'required|exists:radiology_types,id',
             'doctor_id' => 'required|exists:doctors,id',
@@ -268,14 +298,15 @@ class RadiologyController extends Controller
     public function destroy(RadiologyRequest $radiology)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
         // التحقق من الصلاحيات
-        if (!$user->can('delete radiology')) {
+        if (!$isAdmin && (!$user || !$user->can('delete radiology'))) {
             abort(403, 'غير مصرح لك بحذف هذا الطلب');
         }
 
-        // الأطباء يحذفون طلباتهم فقط
-        if ($user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
+        // الأطباء يحذفون طلباتهم فقط ما لم يكونوا إدارة
+        if (!$isAdmin && $user->hasRole('doctor') && $radiology->doctor_id !== $user->doctor->id) {
             abort(403, 'غير مصرح لك بحذف هذا الطلب');
         }
 
@@ -293,6 +324,12 @@ class RadiologyController extends Controller
      */
     public function schedule(Request $request, RadiologyRequest $radiology)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+            abort(403, 'غير مصرح لك بجدولة مواعيد الأشعة');
+        }
+
         $request->validate([
             'scheduled_date' => 'required|date|after:now'
         ]);
@@ -308,9 +345,10 @@ class RadiologyController extends Controller
     public function startProcedure(RadiologyRequest $radiology)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
-            abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء');
+        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+            abort(403, 'غير مصرح لك ببدء تنفيذ إجراء الأشعة');
         }
 
         if (!$radiology->canBePerformed()) {
@@ -328,9 +366,10 @@ class RadiologyController extends Controller
     public function complete(RadiologyRequest $radiology)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
-            abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء');
+        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+            abort(403, 'غير مصرح لك بإكمال طلب الأشعة');
         }
 
         $radiology->complete();
@@ -343,6 +382,13 @@ class RadiologyController extends Controller
      */
     public function cancel(Request $request, RadiologyRequest $radiology)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('delete radiology') && !$user->can('process radiology requests')))) {
+            abort(403, 'غير مصرح لك بإلغاء طلب الأشعة');
+        }
+
         $request->validate([
             'cancellation_reason' => 'required|string|max:500'
         ]);
@@ -361,9 +407,10 @@ class RadiologyController extends Controller
     public function saveResults(Request $request, RadiologyRequest $radiology)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
         // التحقق من الصلاحيات
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
+        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
             abort(403, 'غير مصرح لك بحفظ نتائج الأشعة');
         }
 

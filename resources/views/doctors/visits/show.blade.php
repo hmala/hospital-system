@@ -1383,58 +1383,102 @@ datalist option:hover {
                                                                             </div>
                                                                         </div>
                                                                         @endif
-                                                                    @elseif($medRequest->type == 'lab' && isset($resultData['test_results']))
-                                                                        <div class="card shadow-sm">
-                                                                            <div class="card-header bg-primary text-white">
-                                                                                <h6 class="mb-0">
-                                                                                    <i class="fas fa-flask me-2"></i>نتائج التحاليل
-                                                                                </h6>
+                                                                    @elseif($medRequest->type == 'lab')
+                                                                        @php
+                                                                            $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
+                                                                            $hasAttachment = !empty($reqDetails['attachment']);
+                                                                            $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
+                                                                            $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
+                                                                        @endphp
+
+                                                                        @if($hasAttachment)
+                                                                            <div class="alert alert-success border-2 border-success shadow-sm rounded-3 mb-3 p-3">
+                                                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                                                                    <div class="d-flex align-items-center gap-3">
+                                                                                        <div class="p-2 bg-success bg-opacity-10 text-success rounded fs-3">
+                                                                                            <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }}"></i>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <strong class="text-dark d-block fs-6">{{ $reqDetails['attachment_title'] ?? 'ملف / تقرير التحاليل المرفق' }}</strong>
+                                                                                            <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند PDF أو صورة مرفقة' }}</small>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="d-flex gap-2">
+                                                                                        <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-success fw-bold px-3">
+                                                                                            <i class="fas fa-eye me-1"></i> فتح ومعاينة الملف
+                                                                                        </a>
+                                                                                        <a href="{{ $attachmentUrl }}" download class="btn btn-sm btn-outline-secondary">
+                                                                                            <i class="fas fa-download me-1"></i> تنزيل
+                                                                                        </a>
+                                                                                    </div>
+                                                                                </div>
+                                                                                @if($isImageAttachment)
+                                                                                    <div class="mt-2 text-center">
+                                                                                        <a href="{{ $attachmentUrl }}" target="_blank">
+                                                                                            <img src="{{ $attachmentUrl }}" alt="ملف مرفق" style="max-height: 220px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                                                        </a>
+                                                                                    </div>
+                                                                                @endif
                                                                             </div>
-                                                                            <div class="card-body">
-                                                                                <div class="table-responsive">
-                                                                                    <table class="table table-sm table-bordered mb-0">
-                                                                                        <thead class="table-light">
-                                                                                            <tr>
-                                                                                                <th><i class="fas fa-vial me-1"></i>الفحص</th>
-                                                                                                <th><i class="fas fa-chart-line me-1"></i>القيمة</th>
-                                                                                                <th><i class="fas fa-ruler me-1"></i>الوحدة</th>
-                                                                                                <th><i class="fas fa-info-circle me-1"></i>المرجع</th>
-                                                                                                <th class="text-center"><i class="fas fa-flag me-1"></i>الحالة</th>
-                                                                                            </tr>
-                                                                                        </thead>
-                                                                                        <tbody>
-                                                                                            @foreach($resultData['test_results'] as $testName => $testData)
-                                                                                            @php
-                                                                                                $value = is_array($testData) ? ($testData['value'] ?? '-') : $testData;
-                                                                                                $unit = is_array($testData) ? ($testData['unit'] ?? '-') : '-';
-                                                                                                $reference = is_array($testData) ? ($testData['reference'] ?? '-') : '-';
-                                                                                                $isAbnormal = is_array($testData) && isset($testData['abnormal']) && $testData['abnormal'];
-                                                                                            @endphp
-                                                                                            <tr class="{{ $isAbnormal ? 'table-warning' : '' }}">
-                                                                                                <td><strong>{{ $testName }}</strong></td>
-                                                                                                <td><span class="badge bg-{{ $isAbnormal ? 'warning' : 'success' }} text-dark">{{ $value }}</span></td>
-                                                                                                <td>{{ $unit }}</td>
-                                                                                                <td><small class="text-muted">{{ $reference }}</small></td>
-                                                                                                <td class="text-center">
-                                                                                                    @if($isAbnormal)
-                                                                                                        <i class="fas fa-exclamation-triangle text-warning" title="غير طبيعي"></i>
-                                                                                                    @else
-                                                                                                        <i class="fas fa-check-circle text-success" title="طبيعي"></i>
-                                                                                                    @endif
-                                                                                                </td>
-                                                                                            </tr>
-                                                                                            @endforeach
-                                                                                        </tbody>
-                                                                                    </table>
+                                                                        @endif
+
+                                                                        @if(isset($resultData['test_results']) && count((array)$resultData['test_results']) > 0)
+                                                                            <div class="card shadow-sm">
+                                                                                <div class="card-header bg-primary text-white">
+                                                                                    <h6 class="mb-0">
+                                                                                        <i class="fas fa-flask me-2"></i>نتائج التحاليل الرقمية
+                                                                                    </h6>
+                                                                                </div>
+                                                                                <div class="card-body">
+                                                                                    <div class="table-responsive">
+                                                                                        <table class="table table-sm table-bordered mb-0">
+                                                                                            <thead class="table-light">
+                                                                                                <tr>
+                                                                                                    <th><i class="fas fa-vial me-1"></i>الفحص</th>
+                                                                                                    <th><i class="fas fa-chart-line me-1"></i>القيمة</th>
+                                                                                                    <th><i class="fas fa-ruler me-1"></i>الوحدة</th>
+                                                                                                    <th><i class="fas fa-info-circle me-1"></i>المرجع</th>
+                                                                                                    <th class="text-center"><i class="fas fa-flag me-1"></i>الحالة</th>
+                                                                                                </tr>
+                                                                                            </thead>
+                                                                                            <tbody>
+                                                                                                @foreach($resultData['test_results'] as $testName => $testData)
+                                                                                                @php
+                                                                                                    $value = is_array($testData) ? ($testData['value'] ?? '-') : $testData;
+                                                                                                    $unit = is_array($testData) ? ($testData['unit'] ?? '-') : '-';
+                                                                                                    $reference = is_array($testData) ? ($testData['reference'] ?? ($testData['reference_range'] ?? '-')) : '-';
+                                                                                                    $isAbnormal = is_array($testData) && isset($testData['abnormal']) && $testData['abnormal'];
+                                                                                                @endphp
+                                                                                                <tr class="{{ $isAbnormal ? 'table-warning' : '' }}">
+                                                                                                    <td><strong>{{ $testName }}</strong></td>
+                                                                                                    <td><span class="badge bg-{{ $isAbnormal ? 'warning' : 'success' }} text-dark">{{ $value }}</span></td>
+                                                                                                    <td>{{ $unit }}</td>
+                                                                                                    <td><small class="text-muted">{{ $reference }}</small></td>
+                                                                                                    <td class="text-center">
+                                                                                                        @if($isAbnormal)
+                                                                                                            <i class="fas fa-exclamation-triangle text-warning" title="غير طبيعي"></i>
+                                                                                                        @else
+                                                                                                            <i class="fas fa-check-circle text-success" title="طبيعي"></i>
+                                                                                                        @endif
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                                @endforeach
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
-                                                                        </div>
-                                                                    @else
-                                                                        <div class="alert alert-info mb-0">
-                                                                            <i class="fas fa-info-circle me-2"></i>
-                                                                            النتائج: {{ is_string($medRequest->result) ? substr($medRequest->result, 0, 200) : json_encode($medRequest->result) }}
-                                                                        </div>
+                                                                        @elseif(!$hasAttachment)
+                                                                            <div class="alert alert-info mb-0">
+                                                                                <i class="fas fa-info-circle me-2"></i>
+                                                                                النتائج: {{ is_string($medRequest->result) ? substr($medRequest->result, 0, 200) : json_encode($medRequest->result) }}
+                                                                            </div>
+                                                                        @endif
                                                                     @endif
+                                                                @else
+                                                                    <div class="text-center text-muted py-2">
+                                                                        <i class="fas fa-clock me-1"></i> بانتظار إدخال النتائج أو إرفاق التقرير
+                                                                    </div>
                                                                 @endif
                                                             </div>
                                                         </div>
@@ -1514,13 +1558,42 @@ datalist option:hover {
                                                         </div>
                                                         <div class="card-body">
                                                             <p class="mb-2"><strong>الوصف:</strong> {{ $request->details['description'] ?? 'غير محدد' }}</p>
-                                                            @if($request->result)
+                                                            @if($request->result || !empty($request->details['attachment']))
                                                                 @php
                                                                     $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
+                                                                    $reqDetails = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
+                                                                    $hasAttachment = !empty($reqDetails['attachment']);
+                                                                    $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
+                                                                    $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
                                                                 @endphp
-                                                                
-                                                                @if($request->type == 'lab' && isset($resultData['test_results']) && is_array($resultData['test_results']))
-                                                                    <!-- نتائج التحاليل المخبرية -->
+
+                                                                @if($request->type == 'lab')
+                                                                    @if($hasAttachment)
+                                                                        <div class="alert alert-success border-2 border-success shadow-sm rounded-3 mb-3 p-3">
+                                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                                                                <div class="d-flex align-items-center gap-2">
+                                                                                    <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }} fs-3 text-success"></i>
+                                                                                    <div>
+                                                                                        <strong class="text-dark d-block">{{ $reqDetails['attachment_title'] ?? 'ملف / تقرير التحاليل المرفق' }}</strong>
+                                                                                        <small class="text-muted">{{ $reqDetails['attachment_name'] ?? 'مستند PDF أو صورة مرفقة' }}</small>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-success fw-bold px-3">
+                                                                                    <i class="fas fa-eye me-1"></i> فتح ومعاينة الملف
+                                                                                </a>
+                                                                            </div>
+                                                                            @if($isImageAttachment)
+                                                                                <div class="mt-2 text-center">
+                                                                                    <a href="{{ $attachmentUrl }}" target="_blank">
+                                                                                        <img src="{{ $attachmentUrl }}" alt="ملف مرفق" style="max-height: 180px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                                                    </a>
+                                                                                </div>
+                                                                            @endif
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(isset($resultData['test_results']) && is_array($resultData['test_results']) && count($resultData['test_results']) > 0)
+                                                                    <!-- نتائج التحاليل المخبرية الرقمية -->
                                                                     <div class="table-responsive">
                                                                         <table class="table table-sm table-bordered mb-0">
                                                                             <thead class="table-light">
@@ -1541,6 +1614,7 @@ datalist option:hover {
                                                                             </tbody>
                                                                         </table>
                                                                     </div>
+                                                                    @endif
                                                                 @elseif($request->type == 'radiology' && is_array($resultData))
                                                                     <!-- نتائج الأشعة -->
                                                                     <div class="radiology-results">

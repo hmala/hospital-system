@@ -190,12 +190,21 @@ input[type="radio"]:checked + .frequency-btn {
                     إدارة العمليات الجراحية
                 </h2>
                 <div>
+                    @can('create surgeries')
+                    <a href="{{ route('surgeries.create') }}" class="btn btn-primary me-2 shadow-sm">
+                        <i class="fas fa-plus me-1"></i>حجز عملية جديدة
+                    </a>
+                    @endcan
+                    @canany(['manage surgery waiting list', 'view surgeries'])
                     <a href="{{ route('surgeries.waiting') }}" class="btn btn-warning text-white me-2">
                         <i class="fas fa-clock me-2"></i>قائمة الانتظار
                     </a>
+                    @endcanany
+                    @canany(['manage rooms', 'view occupancy'])
                     <a href="{{ route('rooms.index') }}" class="btn btn-danger text-white me-2">
                         <i class="fas fa-bed me-2"></i>إدارة الغرف
                     </a>
+                    @endcanany
                 </div>
             </div>
         </div>
@@ -392,23 +401,21 @@ input[type="radio"]:checked + .frequency-btn {
                                             @endif
                                             <td class="text-center">
                                                 <div class="d-flex gap-1 justify-content-center align-items-center">
-                                                    @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2" title="تفاصيل العملية">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                    @endif
+                                                    <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2" title="تفاصيل العملية">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
 
-                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
+                                                    @can('edit surgeries')
                                                         <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2" title="تعديل الحجز">
                                                             <i class="fas fa-edit text-warning"></i>
                                                         </a>
-                                                    @endif
+                                                    @endcan
 
                                                     <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="طباعة الوصل">
                                                         <i class="fas fa-print"></i>
                                                     </a>
 
-                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
+                                                    @can('delete surgeries')
                                                         <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
                                                             @csrf
                                                             @method('DELETE')
@@ -416,7 +423,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                 <i class="fas fa-trash-alt"></i>
                                                             </button>
                                                         </form>
-                                                    @endif
+                                                    @endcan
                                                 </div>
                                             </td>
                                         </tr>
@@ -853,23 +860,21 @@ input[type="radio"]:checked + .frequency-btn {
                                             </td>
                                             <td class="text-center">
                                                 <div class="d-flex gap-1 justify-content-center align-items-center">
-                                                    @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2" title="تفاصيل العملية">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                    @endif
+                                                    <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2" title="تفاصيل العملية">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
 
-                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist']))
+                                                    @can('edit surgeries')
                                                         <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2" title="تعديل الحجز">
                                                             <i class="fas fa-edit text-warning"></i>
                                                         </a>
-                                                    @endif
+                                                    @endcan
 
                                                     <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="طباعة الوصل">
                                                         <i class="fas fa-print"></i>
                                                     </a>
 
-                                                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'inquiry_staff', 'surgery_staff', 'staff', 'consultation_receptionist']))
+                                                    @can('delete surgeries')
                                                         <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
                                                             @csrf
                                                             @method('DELETE')
@@ -877,7 +882,7 @@ input[type="radio"]:checked + .frequency-btn {
                                                                 <i class="fas fa-trash-alt"></i>
                                                             </button>
                                                         </form>
-                                                    @endif
+                                                    @endcan
                                                 </div>
                                             </td>
                                         </tr>

@@ -156,9 +156,11 @@
                             </a>
 
                             {{-- زر إنشاء طلب استعلامات --}}
+                            @can('create inquiries')
                             <a href="{{ route('inquiry.create', ['patient_id' => $patient->id]) }}" class="btn btn-primary rounded-pill shadow-sm">
                                 <i class="fas fa-plus me-1"></i> طلب جديد
                             </a>
+                            @endcan
                         </div>
                     </div>
                 </div>

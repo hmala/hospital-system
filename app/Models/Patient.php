@@ -15,7 +15,8 @@ class Patient extends Model
         'current_medications', 'insurance_company', 'insurance_number',
         'insurance_type', 'health_insurance_category_id', 'insurance_card_no', 'copay_percentage',
         'national_id', 'first_visit_date', 'notes', 'mother_name', 'country_id',
-        'governorate', 'district', 'neighborhood', 'marital_status', 'covered_by_insurance', 'insurance_booklet_number'
+        'governorate', 'district', 'neighborhood', 'marital_status', 'covered_by_insurance', 'insurance_booklet_number',
+        'telegram_chat_id', 'telegram_username'
     ];
 
     protected $casts = [
@@ -90,6 +91,11 @@ class Patient extends Model
     public function radiologyRequests()
     {
         return $this->hasMany(\App\Models\RadiologyRequest::class);
+    }
+
+    public function getNameAttribute()
+    {
+        return $this->user ? $this->user->name : null;
     }
 
     public function getFileNumberAttribute()

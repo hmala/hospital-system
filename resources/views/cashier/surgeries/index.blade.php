@@ -332,18 +332,34 @@
                                                         <td class="text-success">{{ number_format($paidAmount, 0) }} IQD</td>
                                                         <td class="text-danger fw-bold">{{ number_format($pendingAmount, 0) }} IQD</td>
                                                         <td class="text-center">
+                                                            @php
+                                                                $canPaySurgeries = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process surgery payments');
+                                                                $canRefund = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process refunds') || auth()->user()->can('process surgery payments');
+                                                            @endphp
                                                             @if($isCancelled && $excessAmount > 0)
-                                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-danger btn-sm px-3 fw-bold shadow-sm">
-                                                                    <i class="fas fa-undo me-1"></i> إرجاع المبلغ للمريض ({{ number_format($excessAmount, 0) }} د.ع)
-                                                                </a>
+                                                                @if($canRefund)
+                                                                    <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-danger btn-sm px-3 fw-bold shadow-sm">
+                                                                        <i class="fas fa-undo me-1"></i> إرجاع المبلغ للمريض ({{ number_format($excessAmount, 0) }} د.ع)
+                                                                    </a>
+                                                                @else
+                                                                    <span class="badge bg-secondary">غير مصرح بالاسترجاع</span>
+                                                                @endif
                                                             @elseif($pendingAmount > 0)
-                                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-success btn-sm px-3">
-                                                                    <i class="fas fa-money-bill-wave me-1"></i> تسديد الرسوم
-                                                                </a>
+                                                                @if($canPaySurgeries)
+                                                                    <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-success btn-sm px-3">
+                                                                        <i class="fas fa-money-bill-wave me-1"></i> تسديد الرسوم
+                                                                    </a>
+                                                                @else
+                                                                    <span class="badge bg-secondary">غير مصرح بالقبض</span>
+                                                                @endif
                                                             @elseif($excessAmount > 0)
-                                                                <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-warning btn-sm px-3 text-dark fw-bold">
-                                                                    <i class="fas fa-undo me-1"></i> إرجاع الفارق ({{ number_format($excessAmount, 0) }} د.ع)
-                                                                </a>
+                                                                @if($canRefund)
+                                                                    <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-warning btn-sm px-3 text-dark fw-bold">
+                                                                        <i class="fas fa-undo me-1"></i> إرجاع الفارق ({{ number_format($excessAmount, 0) }} د.ع)
+                                                                    </a>
+                                                                @else
+                                                                    <span class="badge bg-secondary">غير مصرح بالاسترجاع</span>
+                                                                @endif
                                                             @else
                                                                 <span class="text-success"><i class="fas fa-check-double me-1"></i> مدفوع بالكامل</span>
                                                             @endif

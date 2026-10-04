@@ -85,6 +85,21 @@ class Doctor extends Model
         });
     }
 
+    public function isWorkingOnDay($day)
+    {
+        if (empty($day)) {
+            return true;
+        }
+        if (is_null($this->working_days)) {
+            return true;
+        }
+        $days = is_array($this->working_days) ? $this->working_days : json_decode($this->working_days, true);
+        if (!is_array($days)) {
+            return str_contains((string)$this->working_days, $day);
+        }
+        return in_array($day, $days);
+    }
+
     public function scopeAnesthesia($query)
     {
         return $query->where('is_active', true)

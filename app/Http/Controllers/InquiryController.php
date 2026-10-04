@@ -35,8 +35,9 @@ class InquiryController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view inquiries'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى صفحة الاستعلامات');
         }
 
         // جلب آخر الزيارات في الاستعلامات ومصرف الدم (اليوم)
@@ -97,9 +98,23 @@ class InquiryController extends Controller
     public function create(HttpRequest $httpRequest)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canBookAny = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$canBookAny) {
+            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
         // البحث عن المريض
@@ -121,18 +136,20 @@ class InquiryController extends Controller
         $requestTypes = [];
         foreach ($serviceTypes as $serviceType) {
             // التحقق من الصلاحية إذا كانت محددة
-            if ($serviceType->required_permission) {
-                $hasPermission = $user->can($serviceType->required_permission);
-                
-                // للأشعة: تحقق إضافي من الصلاحيات المحددة لكل نوع
-                if (!$hasPermission && $serviceType->name === 'radiology') {
-                    $hasPermission = $user->can('inquiry.create.radiology.general') ||
-                                   $user->can('inquiry.create.radiology.ultrasound') ||
-                                   $user->can('inquiry.create.radiology.mri') ||
-                                   $user->can('inquiry.create.radiology.echo');
+            $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if ($serviceType->name === 'radiology') {
+                // للأشعة: تظهر فقط إذا كان لدى المستخدم صلاحية نوع واحد على الأقل من الفحوصات الأربعة
+                $hasRadiologyModality = $isAdmin ||
+                                       $user->can('inquiry.create.radiology.general') ||
+                                       $user->can('inquiry.create.radiology.ultrasound') ||
+                                       $user->can('inquiry.create.radiology.mri') ||
+                                       $user->can('inquiry.create.radiology.echo');
+
+                if (!$hasRadiologyModality) {
+                    continue;
                 }
-                
-                if (!$hasPermission) {
+            } else {
+                if ($serviceType->required_permission && !$isAdmin && !$user->can($serviceType->required_permission)) {
                     continue;
                 }
             }
@@ -166,11 +183,22 @@ class InquiryController extends Controller
             })
             ->where('is_active', true)
             ->where('type', 'consultant')
-            ->whereJsonContains('working_days', [$todayArabic])
-            ->where('is_available_today', true)
+            ->orderByDesc('is_available_today')
             ->orderBy('specialization')
             ->orderBy('user_id')
             ->get();
+
+        $doctorsJson = $doctors->map(function($doc) {
+            return [
+                'id' => $doc->id,
+                'name' => 'د. ' . (optional($doc->user)->name ?? 'طبيب'),
+                'raw_name' => optional($doc->user)->name ?? '',
+                'specialization' => $doc->specialization ?? 'استشاري',
+                'department_id' => $doc->department_id,
+                'department_name' => optional($doc->department)->name ?? '',
+                'is_available' => (bool)$doc->is_available_today,
+            ];
+        })->values();
 
         // جلب أطباء الطوارئ المتاحين
         $emergencyDoctors = Doctor::with(['user', 'department'])
@@ -193,8 +221,19 @@ class InquiryController extends Controller
         $labTests = LabTest::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $radiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         
-        // جلب موظفي السونار من جدول المستخدمين حسب الدور
-        $ultrasoundStaff = User::role('radiology_ultrasound')->get();
+        // جلب موظفي وأطباء السونار من جدول المستخدمين حسب الدور أو التخصص
+        $ultrasoundStaff = User::where(function($query) {
+            $query->whereHas('roles', function($q) {
+                $q->where('name', 'radiology_ultrasound');
+            })->orWhereHas('doctor', function($q) {
+                $q->where('specialization', 'LIKE', '%سونار%')
+                  ->where('is_active', true);
+            });
+        })->get();
+
+        if ($ultrasoundStaff->isEmpty()) {
+            $ultrasoundStaff = User::role('radiology_ultrasound')->get();
+        }
         
         // جلب موظفي الإيكو من جدول المستخدمين حسب الدور
         $echoStaff = User::role('radiology_echo')->get();
@@ -206,15 +245,16 @@ class InquiryController extends Controller
         
         // لا نحتاج لتقييد requestTypes هنا - الصلاحيات تم التحقق منها مسبقاً في السطر 83-96
 
-        // التحقق من صلاحيات حجز أنواع الأشعة
+        // التحقق من صلاحيات حجز أنواع الأشعة المحددة بدقة
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $radiologyPermissions = [
-            'general' => $user->can('inquiry.create.radiology.general') || $user->can('inquiry.create.radiology'),
-            'ultrasound' => $user->can('inquiry.create.radiology.ultrasound') || $user->can('inquiry.create.radiology'),
-            'mri' => $user->can('inquiry.create.radiology.mri') || $user->can('inquiry.create.radiology'),
-            'echo' => $user->can('inquiry.create.radiology.echo') || $user->can('inquiry.create.radiology'),
+            'general' => $isAdmin || $user->can('inquiry.create.radiology.general'),
+            'ultrasound' => $isAdmin || $user->can('inquiry.create.radiology.ultrasound'),
+            'mri' => $isAdmin || $user->can('inquiry.create.radiology.mri'),
+            'echo' => $isAdmin || $user->can('inquiry.create.radiology.echo'),
         ];
 
-        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist', 'ultrasoundStaff', 'echoStaff', 'radiologyPermissions'));
+        return view('inquiry.create', compact('patient', 'requestTypes', 'doctors', 'doctorsJson', 'labTests', 'radiologyTypes', 'emergencyDoctors', 'isConsultationReceptionist', 'ultrasoundStaff', 'echoStaff', 'radiologyPermissions'));
     }
 
     /**
@@ -223,9 +263,23 @@ class InquiryController extends Controller
     public function store(HttpRequest $httpRequest)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canBookAny = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$canBookAny) {
+            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
         // جلب أنواع الخدمات المتاحة للمستخدم للتحقق من الصلاحيات
@@ -257,6 +311,7 @@ class InquiryController extends Controller
             'radiology_type_ids' => 'nullable|array',  // اختياري - سيحدده موظف الأشعة لاحقاً
             'radiology_type_ids.*' => 'exists:radiology_types,id',
             'radiology_category' => 'nullable|in:radiology,echo,ultrasound,mri',
+            'ultrasound_type_id' => 'required_if:radiology_category,ultrasound|nullable|exists:radiology_types,id',  // نوع فحص السونار المحدد - مطلوب إذا كانت الفئة ultrasound
             'ultrasound_staff_id' => 'required_if:radiology_category,ultrasound|nullable|exists:users,id',  // الموظف المسؤول عن السونار - مطلوب إذا كانت الفئة ultrasound
             'echo_type_id' => 'required_if:radiology_category,echo|nullable|exists:radiology_types,id',  // نوع الإيكو المحدد - مطلوب إذا كانت الفئة echo
             'echo_staff_id' => 'required_if:radiology_category,echo|nullable|exists:users,id',  // الموظف المسؤول عن الإيكو - مطلوب إذا كانت الفئة echo
@@ -275,35 +330,36 @@ class InquiryController extends Controller
         $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
 
         // التحقق من الصلاحيات لكل نوع طلب
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         foreach ($requestTypes as $requestType) {
             $serviceType = ServiceType::where('name', $requestType)->first();
             if (!$serviceType || !$serviceType->is_active) {
                 abort(403, 'نوع الخدمة غير متاح: ' . $requestType);
             }
-            if ($serviceType->required_permission && !$user->can($serviceType->required_permission)) {
-                abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
-            }
-            
-            // التحقق من صلاحيات الأشعة حسب النوع المحدد
+
             if ($requestType === 'radiology') {
                 $radiologyCategory = $httpRequest->radiology_category ?? 'radiology';
-                $radiologyCategoryPermission = 'inquiry.create.radiology.' . $radiologyCategory;
-                
-                // إذا كانت الفئة 'radiology' (أشعة عامة)، نتحقق من 'inquiry.create.radiology.general'
-                if ($radiologyCategory === 'radiology') {
-                    $radiologyCategoryPermission = 'inquiry.create.radiology.general';
-                }
-                
-                // التحقق من الصلاحية المحددة أو الصلاحية العامة
-                if (!$user->can($radiologyCategoryPermission) && !$user->can('inquiry.create.radiology')) {
+                $categoryPerm = match($radiologyCategory) {
+                    'ultrasound' => 'inquiry.create.radiology.ultrasound',
+                    'mri' => 'inquiry.create.radiology.mri',
+                    'echo' => 'inquiry.create.radiology.echo',
+                    default => 'inquiry.create.radiology.general',
+                };
+
+                if (!$isAdmin && !$user->can($categoryPerm)) {
                     $categoryNames = [
-                        'general' => 'الأشعة العامة',
-                        'ultrasound' => 'السونار',
-                        'mri' => 'الرنين المغناطيسي',
-                        'echo' => 'الإيكو'
+                        'general' => 'الأشعة العامة (X-Ray)',
+                        'ultrasound' => 'السونار (Ultrasound)',
+                        'mri' => 'الرنين المغناطيسي (MRI)',
+                        'echo' => 'إيكو القلب (Echocardiogram)',
+                        'radiology' => 'الأشعة العامة (X-Ray)',
                     ];
-                    $categoryName = $categoryNames[$radiologyCategory] ?? 'هذا النوع من الأشعة';
+                    $categoryName = $categoryNames[$radiologyCategory] ?? 'هذا النوع من الفحوصات';
                     abort(403, 'ليس لديك صلاحية حجز ' . $categoryName);
+                }
+            } else {
+                if ($serviceType->required_permission && !$isAdmin && !$user->can($serviceType->required_permission)) {
+                    abort(403, 'ليس لديك صلاحية إنشاء طلب من نوع: ' . $serviceType->label);
                 }
             }
         }
@@ -623,7 +679,8 @@ class InquiryController extends Controller
         // تحديد حالة الزيارة بناءً على ما إذا تم تحديد الخدمات أم لا
         $hasServices = ($requestType === 'lab' && $httpRequest->lab_test_ids) || 
                        ($requestType === 'radiology' && $httpRequest->radiology_type_ids) ||
-                       ($requestType === 'radiology' && $radiologyCategory === 'echo' && $httpRequest->echo_type_id);
+                       ($requestType === 'radiology' && $radiologyCategory === 'echo' && $httpRequest->echo_type_id) ||
+                       ($requestType === 'radiology' && $radiologyCategory === 'ultrasound' && $httpRequest->ultrasound_type_id);
         
         $visitStatus = $hasServices ? 'pending_payment' : 'pending_service_selection';
         
@@ -675,12 +732,111 @@ class InquiryController extends Controller
         
         // معلومات خاصة بالسونار
         if ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') {
+            $sonarDoc = null;
             if ($httpRequest->ultrasound_staff_id) {
                 $details['ultrasound_staff_id'] = $httpRequest->ultrasound_staff_id;
-                // تعيين الطبيب المسؤول عن السونار
-                $visit->doctor_id = $httpRequest->ultrasound_staff_id;
-                $visit->save();
+                // تعيين الطبيب المسؤول إن وجد سجل طبيب مرتبط بالمستخدم المختار
+                $sonarDoc = \App\Models\Doctor::where('user_id', $httpRequest->ultrasound_staff_id)->first();
+                if (!$sonarDoc) {
+                    $staffUser = \App\Models\User::find($httpRequest->ultrasound_staff_id);
+                    if ($staffUser) {
+                        $doctorData = [
+                            'phone' => $staffUser->phone ?? '07700000000',
+                            'department_id' => $inquiryDept->id,
+                            'type' => 'consultant',
+                            'specialization' => 'سونار',
+                            'consultation_fee' => 0,
+                            'is_active' => true,
+                            'is_available_today' => true,
+                        ];
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'qualification')) {
+                            $doctorData['qualification'] = 'أخصائي سونار';
+                        }
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'license_number')) {
+                            $doctorData['license_number'] = 'SONAR-' . $staffUser->id;
+                        }
+                        $sonarDoc = \App\Models\Doctor::firstOrCreate(
+                            ['user_id' => $staffUser->id],
+                            $doctorData
+                        );
+                    }
+                }
             }
+            // إذا لم يتم العثور على سجل طبيب، البحث عن طبيب استشاري سونار
+            if (!$sonarDoc) {
+                $sonarDoc = \App\Models\Doctor::where('specialization', 'LIKE', '%سونار%')->where('is_active', true)->first();
+            }
+            if (!$sonarDoc) {
+                $sonarDoc = \App\Models\Doctor::where('type', 'consultant')->where('is_active', true)->first();
+            }
+            if (!$sonarDoc) {
+                $defaultUser = \App\Models\User::where('role', 'doctor')->first() ?? $user;
+                $defaultDocData = [
+                    'phone' => $defaultUser->phone ?? '07700000000',
+                    'department_id' => $inquiryDept->id,
+                    'type' => 'consultant',
+                    'specialization' => 'سونار',
+                    'consultation_fee' => 0,
+                    'is_active' => true,
+                    'is_available_today' => true,
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'qualification')) {
+                    $defaultDocData['qualification'] = 'أخصائي سونار';
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('doctors', 'license_number')) {
+                    $defaultDocData['license_number'] = 'DOC-DEF-' . $defaultUser->id;
+                }
+                $sonarDoc = \App\Models\Doctor::firstOrCreate(
+                    ['user_id' => $defaultUser->id],
+                    $defaultDocData
+                );
+            }
+
+            if ($sonarDoc) {
+                $visit->doctor_id = $sonarDoc->id;
+            }
+
+            $sonarTypeObj = null;
+            if ($httpRequest->ultrasound_type_id) {
+                $details['ultrasound_type_id'] = $httpRequest->ultrasound_type_id;
+                $sonarTypeObj = \App\Models\RadiologyType::find($httpRequest->ultrasound_type_id);
+                // إضافة نوع السونار إلى radiology_type_ids ليتم تسعيره فوراً في الكاشير
+                if (!isset($details['radiology_type_ids'])) {
+                    $details['radiology_type_ids'] = [];
+                }
+                if (!in_array($httpRequest->ultrasound_type_id, $details['radiology_type_ids'])) {
+                    $details['radiology_type_ids'][] = $httpRequest->ultrasound_type_id;
+                }
+                $details['services_selected'] = true; // تم تحديد نوع الفحص بنجاح
+                $hasServices = true; // مؤهل للدفع الفوري
+                $visit->status = 'pending_payment'; // تحويل الزيارة مباشرة للكاشير للدفع قبل الدخول
+            }
+
+            // إنشاء موعد في طابور الأطباء الاستشاريين ليظهر في شاشة توفر الاستشاريين
+            $sonarTypeName = $sonarTypeObj ? $sonarTypeObj->name : 'فحص سونار';
+            $sonarFee = $sonarTypeObj ? ($sonarTypeObj->base_price ?? 0) : ($sonarDoc->consultation_fee ?? 0);
+
+            $maxQueue = \App\Models\Appointment::where('doctor_id', $sonarDoc?->id)
+                ->whereDate('appointment_date', today())
+                ->max('queue_number') ?? 0;
+
+            $sonarAppointment = \App\Models\Appointment::create([
+                'patient_id' => $patient->id,
+                'doctor_id' => $sonarDoc?->id,
+                'department_id' => $sonarDoc?->department_id ?? $inquiryDept->id,
+                'appointment_date' => Carbon::today(),
+                'queue_number' => $maxQueue + 1,
+                'reason' => 'حجز سونار - ' . $sonarTypeName,
+                'notes' => 'حجز سونار من الاستعلامات' . ($sonarTypeObj ? ' (كود: ' . $sonarTypeObj->code . ')' : ''),
+                'consultation_fee' => $sonarFee,
+                'duration' => 20,
+                'status' => 'scheduled',
+                'payment_status' => 'pending',
+                'insurance_type' => 'none' // حجز عادي نقدي دائماً للسونار المباشر من الاستعلامات
+            ]);
+
+            $visit->appointment_id = $sonarAppointment->id;
+            $visit->save();
         }
         
         // معلومات خاصة بالإيكو
@@ -700,8 +856,11 @@ class InquiryController extends Controller
             }
             if ($httpRequest->echo_staff_id) {
                 $details['echo_staff_id'] = $httpRequest->echo_staff_id;
-                // تعيين الطبيب المسؤول عن الإيكو
-                $visit->doctor_id = $httpRequest->echo_staff_id;
+                // تعيين الطبيب المسؤول عن الإيكو إن وجد سجل طبيب مرتبط
+                $echoDoc = \App\Models\Doctor::where('user_id', $httpRequest->echo_staff_id)->first();
+                if ($echoDoc) {
+                    $visit->doctor_id = $echoDoc->id;
+                }
             }
             // حفظ التغييرات على الزيارة
             $visit->save();
@@ -710,6 +869,8 @@ class InquiryController extends Controller
         // تحديد الحالة: إذا تم تحديد الخدمات -> pending للدفع، وإلا -> pending_service_selection
         $requestStatus = $hasServices ? 'pending' : 'pending_service_selection';
         
+        $requestInsuranceType = ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') ? 'none' : $bookingInsuranceType;
+
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,
             'type' => $requestType,
@@ -718,7 +879,7 @@ class InquiryController extends Controller
             'status' => $requestStatus,
             'payment_status' => $hasServices ? 'pending' : 'not_applicable',
             'details' => json_encode($details),
-            'insurance_type' => $bookingInsuranceType
+            'insurance_type' => $requestInsuranceType
         ]);
 
         // رسالة نجاح مفصلة
@@ -760,6 +921,13 @@ class InquiryController extends Controller
         // تجميع جميع الرسائل
         $finalMessage = 'تم إنشاء ' . $totalRequests . ' طلبات بنجاح';
 
+        // إذا كان الحجز لسونار أو المستخدم موظف استعلامات استشارية، تحويله إلى شاشة توفر الاستشاريين
+        $hasUltrasound = in_array('radiology', $requestTypes) && (($httpRequest->radiology_category ?? '') === 'ultrasound');
+        if ($hasUltrasound || $user->hasRole('consultation_receptionist')) {
+            return redirect()->route('consultant-availability.index')
+                ->with('success', 'تم حجز السونار بنجاح وإدراجه في طابور اليوم! يرجى توجيه المريض للكاشير لدفع الأجور.');
+        }
+
         // إرجاع إلى صفحة الاستعلامات مع الرسالة
         return redirect()->route('inquiry.index')
             ->with('success', $finalMessage);
@@ -771,9 +939,9 @@ class InquiryController extends Controller
     public function search()
     {
         $user = Auth::user();
-
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create inquiries'))) {
+            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
         return view('inquiry.search');
@@ -784,6 +952,11 @@ class InquiryController extends Controller
      */
     public function searchPatients(HttpRequest $httpRequest)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create inquiries'))) {
+            abort(403, 'غير مصرح لك بالبحث لإنشاء طلبات استعلامات');
+        }
         $query = $httpRequest->get('query');
 
         if (empty($query)) {
@@ -808,8 +981,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view inquiries') && !$user->can('manage inquiries')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى تفاصيل الاستعلام');
         }
 
         // البحث عن الزيارة في قسم الاستعلامات
@@ -840,8 +1014,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage inquiries'))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الاستعلام');
         }
 
         // البحث عن الزيارة في قسم الاستعلامات
@@ -907,8 +1082,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage inquiries'))) {
+            abort(403, 'غير مصرح لك بتحديث بيانات الاستعلام');
         }
 
         $httpRequest->validate([
@@ -954,8 +1130,9 @@ class InquiryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage inquiries'))) {
+            abort(403, 'غير مصرح لك بحذف الاستعلام');
         }
 
         // البحث عن الزيارة في قسم الاستعلامات
@@ -995,8 +1172,9 @@ class InquiryController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->can('view occupancy') && !$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor', 'surgery_staff'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view occupancy'))) {
+            abort(403, 'غير مصرح لك بعرض المرضى المقيمين');
         }
 
         $search = $request->query('search');
@@ -1138,7 +1316,7 @@ class InquiryController extends Controller
     public function patientHistory(HttpRequest $request, Patient $patient = null)
     {
         $user = Auth::user();
-        if ($user && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patient history'))) {
             abort(403, 'غير مصرح لك بالوصول إلى سجل وأرشيف المرضى الشامل');
         }
 
@@ -1326,7 +1504,7 @@ class InquiryController extends Controller
     public function serveDocumentFile(PatientDocument $document)
     {
         $user = Auth::user();
-        if ($user && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff', 'consultation_receptionist', 'doctor']) && !$user->hasAnyPermission(['view patient history', 'view inquiries', 'view patients'])) {
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patient history'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذا المستند');
         }
 

@@ -112,14 +112,14 @@
                             <a href="{{ route('rooms.show', $room) }}" class="btn btn-outline-primary" title="عرض السجل والنزلاء">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            @if(auth()->user()->hasRole('admin'))
+                            @can('manage rooms')
                             <a href="{{ route('rooms.edit', $room) }}" class="btn btn-outline-secondary" title="تعديل الغرفة">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            @endif
+                            @endcan
                         </div>
 
-                        @if(auth()->user()->hasRole(['admin', 'surgery_staff', 'receptionist']))
+                        @canany(['manage rooms', 'view occupancy'])
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" title="تغيير الحالة سريعاً">
                                 <i class="fas fa-sync-alt"></i>
@@ -142,7 +142,7 @@
                                 </li>
                             </ul>
                         </div>
-                        @endif
+                        @endcanany
                     </div>
                 </td>
             </tr>

@@ -8,9 +8,11 @@
             <small class="text-muted">مراقبة ومتابعة العمليات الجراحية المجدولة والجارية</small>
         </div>
         <div class="d-flex gap-2">
+            @can('create surgeries')
             <a href="{{ route('surgeries.create') }}" class="btn btn-primary rounded-pill px-3 shadow-sm">
                 <i class="fas fa-plus me-1"></i> عملية جديدة
             </a>
+            @endcan
             <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm bg-white">
                 <i class="fas fa-list me-1"></i> جميع العمليات
             </a>
@@ -188,27 +190,33 @@
                     </a>
 
                     @if($surgery->list_type === 'scheduled')
+                        @can('manage surgery waiting list')
                         <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline">
                             @csrf
                             <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
                                 <i class="fas fa-sign-in-alt me-1"></i> دخول
                             </button>
                         </form>
+                        @endcan
                     @else
                         @if($surgery->status == 'waiting' || $surgery->status == 'checked_in')
+                            @can('control surgeries')
                             <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm">
                                     <i class="fas fa-play me-1"></i> بدء
                                 </button>
                             </form>
+                            @endcan
                         @elseif($surgery->status == 'in_progress')
+                            @can('control surgeries')
                             <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm" onclick="return confirm('هل أنت متأكد من إنهاء العملية؟')">
                                     <i class="fas fa-stop me-1"></i> إنهاء
                                 </button>
                             </form>
+                            @endcan
                         @endif
                     @endif
                 </div>

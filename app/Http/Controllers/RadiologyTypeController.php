@@ -14,8 +14,9 @@ class RadiologyTypeController extends Controller
         $this->middleware('auth');
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
-            if (!$user || (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('view radiology types') && !$user->hasRole('radiology_staff'))) {
-                abort(403, 'غير مصرح لك بالوصول إلى إدارة أنواع الأشعة');
+            $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+                abort(403, 'غير مصرح لك بالوصول إلى إدارة أنواع وأسعار الأشعة');
             }
             return $next($request);
         });
@@ -91,7 +92,8 @@ class RadiologyTypeController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('create radiology types') && !$user->hasRole('radiology_staff')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
             abort(403, 'غير مصرح لك بإضافة أنواع الأشعة');
         }
         return view('radiology.types.create');
@@ -103,7 +105,8 @@ class RadiologyTypeController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('create radiology types') && !$user->hasRole('radiology_staff')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
             abort(403, 'غير مصرح لك بإضافة أنواع الأشعة');
         }
 
@@ -155,7 +158,8 @@ class RadiologyTypeController extends Controller
     public function edit(RadiologyType $type)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('edit radiology types') && !$user->hasRole('radiology_staff')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
             abort(403, 'غير مصرح لك بتعديل أنواع الأشعة');
         }
 
@@ -168,7 +172,8 @@ class RadiologyTypeController extends Controller
     public function update(Request $request, RadiologyType $type)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('edit radiology types') && !$user->hasRole('radiology_staff')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
             abort(403, 'غير مصرح لك بتعديل أنواع الأشعة');
         }
 
@@ -210,7 +215,8 @@ class RadiologyTypeController extends Controller
     public function destroy(RadiologyType $type)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('delete radiology types')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
             abort(403, 'غير مصرح لك بحذف أنواع الأشعة');
         }
 
@@ -230,7 +236,8 @@ class RadiologyTypeController extends Controller
     public function toggleStatus(RadiologyType $type)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage radiology types') && !$user->can('edit radiology types') && !$user->hasRole('radiology_staff')) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
             abort(403, 'غير مصرح لك بتعديل حالة أنواع الأشعة');
         }
 

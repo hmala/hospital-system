@@ -12,8 +12,14 @@ class RadiologyTypesSeeder extends Seeder
      */
     public function run(): void
     {
-        // حذف جميع البيانات القديمة
-        DB::table('radiology_types')->truncate();
+        // معالجة آمنة: لا يتم حذف السجلات السابقة للحفاظ على بيانات الأشعة وأسعار الضمان
+        // تصحيح التصنيف الرئيسي للأشعة الموجودة مسبقاً إن كان فارغاً
+        DB::table('radiology_types')
+            ->where('subcategory', 'أشعة')
+            ->where(function($q) {
+                $q->whereNull('main_category')->orWhere('main_category', '');
+            })
+            ->update(['main_category' => 'أشعة']);
 
         // البيانات الجديدة من الصورة - 144 صف كامل مع الأسماء الصحيحة
         $radiologyTypes = [
@@ -171,13 +177,14 @@ class RadiologyTypesSeeder extends Seeder
 ['main_category' => 'سونار', 'subcategory' => 'سونار', 'name' => 'سونار يوم الجمعة أستدعاء', 'code' => 'US-048', 'base_price' => 50000, 'estimated_duration' => 20],
        ];
 
-        // إضافة البيانات مع الحقول الإضافية
+        $hasInsuranceCols = \Illuminate\Support\Facades\Schema::hasColumn('radiology_types', 'hi_price');
+
+        // إضافة وتحديث البيانات مع ضمان تحديث الأسعار والتصنيفات
         foreach ($radiologyTypes as $type) {
-            DB::table('radiology_types')->insert([
+            $data = [
                 'main_category' => $type['main_category'],
                 'subcategory' => $type['subcategory'],
                 'name' => $type['name'],
-                'code' => $type['code'],
                 'description' => null,
                 'base_price' => $type['base_price'],
                 'estimated_duration' => $type['estimated_duration'],
@@ -186,9 +193,20 @@ class RadiologyTypesSeeder extends Seeder
                 'preparation_instructions' => null,
                 'is_active' => true,
                 'notes' => null,
-                'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+
+            if ($hasInsuranceCols) {
+                $data['moi_price'] = $type['base_price'];
+                $data['is_moi_active'] = true;
+                $data['hi_price'] = $type['base_price'];
+                $data['is_hi_active'] = true;
+            }
+
+            DB::table('radiology_types')->updateOrInsert(
+                ['code' => $type['code']],
+                $data
+            );
         }
     }
 }

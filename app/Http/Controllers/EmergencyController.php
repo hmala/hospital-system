@@ -126,12 +126,26 @@ class EmergencyController extends Controller
         $icd10Codes = ICD10Code::orderBy('code')->get();
 
         // جلب طلبات الخدمات التمريضية من جدول requests بعد الدفع
-        $nursingRequests = \App\Models\Request::where('type', 'nursing')
+        $nursingQuery = \App\Models\Request::where('type', 'nursing')
             ->where('payment_status', 'paid')
-            ->with(['visit.patient.user', 'visit.doctor.user'])
-            ->whereIn('status', ['pending', 'in_progress', 'completed'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->with(['visit.patient.user', 'visit.doctor.user']);
+
+        if ($date) {
+            $nursingQuery->whereDate('created_at', $date);
+        } else {
+            if ($filter === 'today' || $filter === 'active') {
+                // في حالات اليوم والنشطة: تظهر فقط الطلبات المعلقة وقيد التنفيذ التي تتطلب إجراءً
+                $nursingQuery->whereIn('status', ['pending', 'in_progress']);
+            } elseif ($filter === 'discharged') {
+                // في تبويب المغادرين: تظهر الطلبات المكتملة
+                $nursingQuery->where('status', 'completed');
+            } elseif ($filter === 'all') {
+                // السجل الكامل
+                $nursingQuery->whereIn('status', ['pending', 'in_progress', 'completed']);
+            }
+        }
+
+        $nursingRequests = $nursingQuery->orderBy('created_at', 'desc')->get();
 
         $availableMedicines = Medicine::where('is_active', true)
             ->orderBy('name')
@@ -151,7 +165,11 @@ class EmergencyController extends Controller
             abort(403, 'غير مصرح لك بإنشاء حالات طوارئ');
         }
 
-        $patients = Patient::with('user')->get();
+        $selectedPatient = null;
+        $selectedPatientId = old('patient_id', request('patient_id'));
+        if ($selectedPatientId) {
+            $selectedPatient = Patient::with('user')->find($selectedPatientId);
+        }
 
         $daysMap = [
             'Saturday' => 'السبت',
@@ -164,7 +182,7 @@ class EmergencyController extends Controller
         ];
         $todayArabic = $daysMap[date('l')] ?? 'السبت';
 
-        $doctors = Doctor::with('user')
+        $doctors = Doctor::has('user')->with('user')
             ->where('is_active', true)
             ->where('is_available_today', true)
             ->whereJsonContains('working_days', [$todayArabic])
@@ -175,9 +193,9 @@ class EmergencyController extends Controller
             })
             ->get();
 
-        // إذا القائمة فارغة، عرض جميع أطباء الطوارئ (ليتم اختيار الطبيب المسؤول بدون تعطيل الحالة)
+        // إذا القائمة فارغة، عرض جميع أطباء الطوارئ الفعالين
         if ($doctors->isEmpty()) {
-            $doctors = Doctor::with('user')
+            $doctors = Doctor::has('user')->with('user')
                 ->where('is_active', true)
                 ->where(function($query) {
                     $query->where('specialization', 'LIKE', '%طوارئ%')
@@ -187,9 +205,79 @@ class EmergencyController extends Controller
                 ->get();
         }
 
-        $nurses = User::role('nurse')->where('is_active', true)->get();
+        // إذا لم يتوفر طبيب طوارئ محدد، استخدام الأطباء الفعالين
+        if ($doctors->isEmpty()) {
+            $doctors = Doctor::has('user')->with('user')
+                ->where('is_active', true)
+                ->get();
+        }
 
-        return view('emergency.create', compact('patients', 'doctors', 'nurses'));
+        $assignedDoctor = $user->doctor ?: Doctor::where('user_id', $user->id)->first();
+
+        $nurses = collect();
+        if (\Spatie\Permission\Models\Role::where('name', 'nurse')->where('guard_name', 'web')->exists()) {
+            $nurses = User::role('nurse')->where('is_active', true)->get();
+        }
+
+        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses', 'assignedDoctor'));
+    }
+
+    /**
+     * البحث التفاعلي المباشر عن المرضى لحالات الطوارئ (AJAX)
+     */
+    public function searchPatients(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            abort(401, 'غير مسجل الدخول');
+        }
+
+        if (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && 
+            !$user->can('create emergencies') && 
+            !$user->can('view emergencies') && 
+            !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
+            abort(403, 'غير مصرح لك بالبحث عن المرضى');
+        }
+
+        $query = trim($request->get('query', ''));
+        if (empty($query) || mb_strlen($query) < 1) {
+            return response()->json([]);
+        }
+
+        $patients = Patient::with('user')
+            ->where(function($pQuery) use ($query) {
+                $pQuery->where('national_id', 'LIKE', "%{$query}%")
+                       ->orWhere('id', $query)
+                       ->orWhereHas('user', function($q) use ($query) {
+                           $q->where('name', 'LIKE', "%{$query}%")
+                             ->orWhere('phone', 'LIKE', "%{$query}%");
+                       });
+            })
+            ->limit(15)
+            ->get()
+            ->map(function($patient) {
+                $u = $patient->user;
+                $dob = $u->date_of_birth ?? null;
+                $age = null;
+                if ($dob) {
+                    try {
+                        $age = \Carbon\Carbon::parse($dob)->age;
+                    } catch (\Exception $e) {
+                        $age = null;
+                    }
+                }
+                return [
+                    'id' => $patient->id,
+                    'name' => $u->name ?? 'مريض بدون اسم',
+                    'phone' => $u->phone ?? 'لا يوجد هاتف',
+                    'national_id' => $patient->national_id ?? '',
+                    'gender' => ($u->gender ?? null) === 'male' ? 'ذكر' : (($u->gender ?? null) === 'female' ? 'أنثى' : 'غير محدد'),
+                    'age' => $age ? $age : '',
+                ];
+            });
+
+        return response()->json($patients);
     }
 
     /**
@@ -257,10 +345,16 @@ class EmergencyController extends Controller
             $patientId = null;
         }
 
+        $doctorId = $request->doctor_id;
+        if (empty($doctorId)) {
+            $assignedDoc = $user->doctor ?: Doctor::where('user_id', $user->id)->first();
+            $doctorId = $assignedDoc?->id;
+        }
+
         $emergency = Emergency::create([
             'patient_id' => $patientId,
             'emergency_patient_id' => $emergencyPatientId,
-            'doctor_id' => $request->doctor_id,
+            'doctor_id' => $doctorId,
             'nurse_id' => $request->nurse_id,
             'priority' => $request->priority,
             // fill unspecified fields with defaults so table constraints are satisfied
@@ -1338,12 +1432,12 @@ class EmergencyController extends Controller
         }
 
         // تحديث الحالة
-        $request->validate([
+        $validated = request()->validate([
             'status' => 'required|in:pending,in_progress,completed,cancelled'
         ]);
 
         $request->update([
-            'status' => request('status')
+            'status' => $validated['status']
         ]);
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');

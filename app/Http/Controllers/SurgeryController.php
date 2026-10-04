@@ -24,7 +24,8 @@ class SurgeryController extends Controller
     public function index()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view surgeries') && !$user->hasRole(['receptionist', 'doctor', 'surgery_staff', 'inquiry_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view surgeries'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -119,7 +120,8 @@ class SurgeryController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create surgeries') && !$user->hasRole(['surgery_staff', 'receptionist', 'inquiry_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create surgeries'))) {
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
@@ -148,7 +150,8 @@ class SurgeryController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('create surgeries') && !$user->hasRole(['surgery_staff', 'receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create surgeries'))) {
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
@@ -353,10 +356,14 @@ class SurgeryController extends Controller
     public function show(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && 
-            !$user->can('view surgeries') &&
-            !$user->hasRole(['surgery_staff', 'receptionist', 'doctor', 'الجراح', 'التخدير']) && 
-            !$user->hasAnyPermission(['view surgeries', 'view resident station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view operation theater station'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $hasStationAccess = $user && $user->hasAnyPermission([
+            'view surgeries', 'view resident station', 'view surgeon station', 
+            'view anesthesia station', 'view nursing station', 'view operation theater station'
+        ]);
+        $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id || $user->doctor->id == $surgery->anesthesiologist_id);
+
+        if (!$isAdmin && !$hasStationAccess && !$isAssignedDoctor) {
             abort(403, 'غير مصرح لك باستعراض تفاصيل العمليات الجراحية');
         }
 
@@ -389,7 +396,8 @@ class SurgeryController extends Controller
     public function edit(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit surgeries') && !$user->hasRole(['receptionist', 'inquiry_staff', 'surgery_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
@@ -427,10 +435,11 @@ class SurgeryController extends Controller
     public function print(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && 
-            !$user->can('view surgeries') &&
-            !$user->hasRole(['surgery_staff', 'receptionist', 'inquiry_staff', 'doctor', 'الجراح']) && 
-            !$user->hasAnyPermission(['view surgeries', 'view surgeon station'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canView = $user && ($user->can('view surgeries') || $user->can('view surgeon station'));
+        $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id);
+
+        if (!$isAdmin && !$canView && !$isAssignedDoctor) {
             abort(403, 'غير مصرح لك بطباعة تفاصيل العملية');
         }
 
@@ -445,7 +454,8 @@ class SurgeryController extends Controller
     public function update(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit surgeries') && !$user->hasRole(['receptionist', 'inquiry_staff', 'surgery_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
@@ -607,7 +617,8 @@ class SurgeryController extends Controller
     public function waiting()
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('view surgeries') && !$user->hasRole(['surgery_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage surgery waiting list'))) {
             abort(403, 'غير مصرح لك بالوصول إلى قائمة الانتظار');
         }
 
@@ -642,7 +653,8 @@ class SurgeryController extends Controller
     public function checkIn(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage surgeries') && !$user->can('edit surgeries') && !$user->hasRole(['surgery_staff', 'receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage surgery waiting list') && !$user->can('control surgeries') && !$user->can('edit surgeries')))) {
             abort(403, 'غير مصرح لك بتسجيل دخول المريض');
         }
 
@@ -657,7 +669,8 @@ class SurgeryController extends Controller
     public function start(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage surgeries') && !$user->can('edit surgeries') && !$user->hasRole(['surgery_staff', 'receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('control surgeries'))) {
             abort(403, 'غير مصرح لك ببدء العملية');
         }
 
@@ -684,7 +697,8 @@ class SurgeryController extends Controller
     public function complete(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage surgeries') && !$user->can('edit surgeries') && !$user->hasRole(['surgery_staff', 'receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('control surgeries'))) {
             abort(403, 'غير مصرح لك بإكمال العملية');
         }
 
@@ -718,7 +732,8 @@ class SurgeryController extends Controller
     public function discharge(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage surgeries') && !$user->can('edit surgeries') && !$user->hasRole(['surgery_staff', 'receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('control surgeries'))) {
             abort(403, 'غير مصرح لك بإخراج المريض');
         }
 
@@ -751,7 +766,8 @@ class SurgeryController extends Controller
     public function cancel(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('cancel surgeries') && !$user->can('manage surgeries') && !$user->can('delete surgeries') && !$user->hasRole(['surgery_staff', 'receptionist', 'inquiry_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('delete surgeries') && !$user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإلغاء العملية');
         }
 
@@ -806,7 +822,8 @@ class SurgeryController extends Controller
     public function returnToWaiting(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('manage surgeries') && !$user->can('edit surgeries') && !$user->hasRole(['surgery_staff', 'receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage surgery waiting list') && !$user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإعادة العملية إلى الانتظار');
         }
 
@@ -821,11 +838,11 @@ class SurgeryController extends Controller
     public function updateDetails(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') &&
-            !$user->can('edit surgeries') &&
-            !$user->hasRole(['doctor', 'surgery_staff', 'الجراح']) && 
-            !$user->hasAnyPermission(['edit surgeries', 'view surgeon station']) && 
-            !($user->doctor && $user->doctor->id == $surgery->doctor_id)) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canEdit = $user && ($user->can('edit surgeries') || $user->can('view surgeon station'));
+        $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id);
+
+        if (!$isAdmin && !$canEdit && !$isAssignedDoctor) {
             abort(403, 'غير مصرح لك بتحديث تفاصيل العملية');
         }
 
@@ -910,8 +927,8 @@ class SurgeryController extends Controller
             $validated['follow_up_date'] = null;
         }
 
-        // If the current user is surgery staff, allow only team, timing, supplies and location fields to be updated.
-        if ($user->hasRole('surgery_staff')) {
+        // If the current user does not have surgeon station access or admin, allow only team, timing, supplies and location fields to be updated.
+        if (!$isAdmin && !$user->can('view surgeon station')) {
             $validated = Arr::only($validated, [
                 'anesthesiologist_id',
                 'anesthesiologist_2_id',
@@ -1036,8 +1053,9 @@ class SurgeryController extends Controller
     public function updateSurgeryType(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$user->hasRole('admin') && !$user->can('edit surgeries') && !$user->hasRole(['surgery_staff', 'inquiry_staff'])) {
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'غير مصرح لك'], 403)
                 : abort(403, 'غير مصرح لك بتغيير نوع العملية');
@@ -1088,6 +1106,12 @@ class SurgeryController extends Controller
     public function addOperation(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'غير مصرح لك'], 403)
+                : abort(403, 'غير مصرح لك بإضافة عمليات إضافية');
+        }
 
         $validated = $request->validate([
             'surgical_operation_ids' => 'required|array',
@@ -1119,6 +1143,11 @@ class SurgeryController extends Controller
 
     public function removeOperation(Surgery $surgery, \App\Models\SurgeryAdditionalOperation $additionalOp)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+            abort(403, 'غير مصرح لك بحذف العملية الإضافية');
+        }
         $additionalOp->delete();
 
         $surgery->billing_status = 'pending_review';
@@ -1130,7 +1159,8 @@ class SurgeryController extends Controller
     public function addDevice(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit surgeries') && !$user->can('manage surgeries') && !$user->hasRole(['surgery_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'غير مصرح لك'], 403)
                 : abort(403, 'غير مصرح لك بإضافة أجهزة طبية');
@@ -1167,7 +1197,8 @@ class SurgeryController extends Controller
     public function removeDevice(Surgery $surgery, \App\Models\MedicalDevice $device)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('edit surgeries') && !$user->can('manage surgeries') && !$user->hasRole(['surgery_staff'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بإزالة أجهزة طبية');
         }
 
@@ -1185,7 +1216,8 @@ class SurgeryController extends Controller
     public function destroy(Surgery $surgery)
     {
         $user = auth()->user();
-        if (!$user->hasRole('admin') && !$user->can('delete surgeries') && !$user->hasRole(['surgery_staff', 'receptionist', 'inquiry_staff', 'staff', 'consultation_receptionist'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('delete surgeries'))) {
             abort(403, 'غير مصرح لك بحذف العملية');
         }
 

@@ -332,6 +332,12 @@ class ResidentStationController extends Controller
 
     public function administerTreatment(Request $request, SurgeryTreatment $treatment)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view resident station') && !$user->can('view nursing station')))) {
+            abort(403, 'غير مصرح لك بإعطاء العلاجات السريرية');
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:administered,cancelled',
             'admin_notes' => 'nullable|string|max:1000',

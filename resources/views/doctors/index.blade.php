@@ -7,9 +7,11 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="fas fa-user-md me-2"></i>إدارة الأطباء</h2>
+                @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create doctors'))
                 <a href="{{ route('doctors.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>إضافة طبيب جديد
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -130,33 +132,46 @@
                                     <td>@if($doctor->is_active)<span class="badge bg-success">نشط</span>@else<span class="badge bg-danger">غير نشط</span>@endif</td>
                                     <td>
                                         <div class="d-flex align-items-center">
+                                            @php
+                                                $canEditAvailability = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('edit doctors') || auth()->user()->can('manage consultant availability');
+                                            @endphp
                                             @if($doctor->is_available_today)
                                                 <span class="badge bg-success me-2">متوفر</span>
+                                                @if($canEditAvailability)
                                                 <button type="button" class="btn btn-sm btn-outline-danger toggle-availability" 
                                                         data-doctor-id="{{ $doctor->id }}" 
                                                         data-available="0"
                                                         title="إلغاء التوفر">
                                                     <i class="fas fa-times"></i>
                                                 </button>
+                                                @endif
                                             @else
                                                 <span class="badge bg-danger me-2">غير متوفر</span>
+                                                @if($canEditAvailability)
                                                 <button type="button" class="btn btn-sm btn-outline-success toggle-availability" 
                                                         data-doctor-id="{{ $doctor->id }}" 
                                                         data-available="1"
                                                         title="تفعيل التوفر">
                                                     <i class="fas fa-check"></i>
                                                 </button>
+                                                @endif
                                             @endif
                                         </div>
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('view doctors'))
                                             <a href="{{ route('doctors.show', $doctor) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
+                                            @endif
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('edit doctors'))
                                             <a href="{{ route('doctors.edit', $doctor) }}" class="btn btn-warning" title="تعديل"><i class="fas fa-edit"></i></a>
+                                            @endif
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('delete doctors'))
                                             <form action="{{ route('doctors.destroy', $doctor) }}" method="POST" class="d-inline">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="btn btn-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف الطبيب؟')"><i class="fas fa-trash"></i></button>
                                             </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

@@ -14,8 +14,9 @@ class RoomController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff', 'inquiry_staff'])) {
+        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('view occupancy') && !$user->can('view surgeries')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -70,8 +71,9 @@ class RoomController extends Controller
     public function create()
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin'])) {
+        if (!$isAdmin && (!$user || !$user->can('manage rooms'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -84,8 +86,9 @@ class RoomController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin'])) {
+        if (!$isAdmin && (!$user || !$user->can('manage rooms'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -120,8 +123,9 @@ class RoomController extends Controller
     public function show(Room $room)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff'])) {
+        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('view occupancy') && !$user->can('view surgeries')))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -141,8 +145,9 @@ class RoomController extends Controller
     public function edit(Room $room)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin'])) {
+        if (!$isAdmin && (!$user || !$user->can('manage rooms'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -155,8 +160,9 @@ class RoomController extends Controller
     public function update(Request $request, Room $room)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin'])) {
+        if (!$isAdmin && (!$user || !$user->can('manage rooms'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -191,8 +197,9 @@ class RoomController extends Controller
     public function destroy(Room $room)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin'])) {
+        if (!$isAdmin && (!$user || !$user->can('manage rooms'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -214,8 +221,9 @@ class RoomController extends Controller
     public function changeStatus(Request $request, Room $room)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->can('view occupancy') && !$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff', 'inquiry_staff', 'consultation_receptionist', 'doctor'])) {
+        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('view occupancy')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك بتغيير حالة الغرفة'], 403);
         }
 
@@ -282,8 +290,9 @@ class RoomController extends Controller
     public function syncOccupancy(Request $request)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         
-        if (!$user->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff'])) {
+        if (!$isAdmin && (!$user || (!$user->can('manage rooms') && !$user->can('view occupancy')))) {
             return response()->json(['error' => 'غير مصرح لك بالوصول'], 403);
         }
 

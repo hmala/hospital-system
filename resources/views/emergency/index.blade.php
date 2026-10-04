@@ -403,12 +403,15 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="card shadow-sm border-success">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-heartbeat me-2"></i>
-                        طلبات الخدمات التمريضية
+                        طلبات الخدمات التمريضية {{ request('filter') === 'discharged' ? '(المكتملة)' : (request('filter') === 'all' ? '(كافة الحالات)' : '(الجارية والمعلقة)') }}
                         <span class="badge bg-light text-success ms-2">{{ $nursingRequests->count() }}</span>
                     </h5>
+                    @if(request('filter') !== 'discharged')
+                        <small class="text-white-50"><i class="fas fa-check-circle me-1"></i>تختفي الحالات تلقائياً فور إنهاء الخدمة وتنتقل إلى تبويب المغادرين</small>
+                    @endif
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">

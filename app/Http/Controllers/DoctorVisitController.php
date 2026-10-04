@@ -23,11 +23,9 @@ class DoctorVisitController extends Controller
     public function index()
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            $todayVisits = collect();
-            $upcomingVisits = collect();
-            $appointments = collect();
-            return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments'))->with('error', 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view own visits'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى محطة كشف الطبيب');
         }
 
         $doctor = $user->doctor;
@@ -94,10 +92,9 @@ class DoctorVisitController extends Controller
     public function convertAppointmentToVisit(Appointment $appointment)
     {
         $user = Auth::user();
-
-        // التحقق من الصلاحيات - الأطباء أو موظفي الاستقبال أو موظفي الاستشارية أو admin
-        if (!$user->hasRole(['admin', 'doctor', 'receptionist', 'consultation_receptionist'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الوظيفة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability') && !$user->can('create visits')))) {
+            abort(403, 'غير مصرح لك بتحويل الموعد إلى زيارة');
         }
 
         // التحقق من وجود علاقة الطبيب للأطباء
@@ -110,14 +107,19 @@ class DoctorVisitController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذا الموعد');
         }
 
-        // التحقق من أن الموعد لم يتم تحويله إلى زيارة بعد
-        if ($appointment->visit) {
-            return redirect()->back()->with('error', 'هذا الموعد تم تحويله إلى زيارة بالفعل');
-        }
-
         // التحقق من دفع رسوم الكشف قبل إدخال المريض للطبيب
         if ($appointment->payment_status !== 'paid') {
             return redirect()->back()->with('error', 'لا يمكن إدخال المريض للطبيب قبل اكتمال الدفع');
+        }
+
+        // إذا كان الموعد مرتبطاً بزيارة مسبقاً (مثل حجوزات السونار من الاستعلامات)
+        if ($appointment->visit) {
+            $appointment->visit->update(['status' => 'in_progress']);
+            $appointment->update(['status' => 'confirmed']);
+            if ($user->hasRole('consultation_receptionist') || $user->hasRole('admin')) {
+                return redirect()->route('consultant-availability.index')->with('success', 'تم إدخال المريض بنجاح');
+            }
+            return redirect()->route('doctor.visits.show', $appointment->visit->id)->with('success', 'تم إدخال المريض بنجاح');
         }
 
         // إنشاء زيارة من الموعد
@@ -143,17 +145,18 @@ class DoctorVisitController extends Controller
     public function show(Visit $visit)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view own visits') && !$user->can('view visits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى ملف الكشف الطبي');
         }
 
         // Admin can view all visits
-        if ($user->hasRole('admin')) {
+        if ($isAdmin) {
             // continue
         }
         // Doctor can view their own visits OR any visit in read-only mode
-        elseif ($user->hasRole('doctor')) {
-            if ($user->doctor && $visit->doctor_id !== $user->doctor->id) {
+        elseif ($user->doctor) {
+            if ($visit->doctor_id !== $user->doctor->id) {
                 // This is NOT this doctor's visit, allow read-only view
                 $visit->load([
                     'patient.user', 
@@ -445,18 +448,14 @@ class DoctorVisitController extends Controller
     public function update(HttpRequest $request, Visit $visit)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
-        }
-
-        // التحقق من وجود علاقة الطبيب
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('edit visits')))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الزيارة');
         }
 
         // التحقق من أن الزيارة تخص الطبيب الحالي
-        if ($visit->doctor_id !== $user->doctor->id) {
-            abort(403, 'غير مصرح لك بتعديل هذه الزيارة');
+        if (!$isAdmin && $user->doctor && $visit->doctor_id !== $user->doctor->id) {
+            abort(403, 'غير مصرح لك بتعديل كشف طبيب آخر');
         }
 
         // تحقق مشروط حسب البيانات المرسلة
@@ -670,21 +669,14 @@ class DoctorVisitController extends Controller
     public function cancel(Visit $visit)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['doctor', 'receptionist', 'admin'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('cancel appointments') && !$user->can('delete visits')))) {
             abort(403, 'غير مصرح لك بإلغاء هذه الزيارة');
         }
 
-        // التحقق من الصلاحيات حسب نوع المستخدم
-        if ($user->hasRole('doctor')) {
-            // التحقق من وجود علاقة الطبيب
-            if (!$user->doctor) {
-                abort(403, 'لم يتم العثور على بيانات الطبيب');
-            }
-
-            // التحقق من أن الزيارة تخص الطبيب الحالي
-            if ($visit->doctor_id !== $user->doctor->id) {
-                abort(403, 'غير مصرح لك بإلغاء هذه الزيارة');
-            }
+        // التحقق من أن الزيارة تخص الطبيب الحالي
+        if (!$isAdmin && $user->doctor && $visit->doctor_id !== $user->doctor->id) {
+            abort(403, 'غير مصرح لك بإلغاء زيارة طبيب آخر');
         }
 
         // التحقق من أن الزيارة لم تكتمل بعد
@@ -748,11 +740,12 @@ class DoctorVisitController extends Controller
     public function referToDoctor(HttpRequest $request, Visit $visit)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
             abort(403, 'غير مصرح لك بإحالة المريض إلى طبيب آخر');
         }
 
-        if ($user->hasRole('doctor') && (!$user->doctor || $visit->doctor_id !== $user->doctor->id)) {
+        if (!$isAdmin && $user->doctor && $visit->doctor_id !== $user->doctor->id) {
             abort(403, 'غير مصرح لك بإحالة هذا المريض');
         }
 
@@ -794,13 +787,9 @@ class DoctorVisitController extends Controller
     public function storeRequest(HttpRequest $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
-        }
-
-        // التحقق من وجود علاقة الطبيب
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بطلب الفحوصات الطبية');
         }
 
         $request->validate([
@@ -846,17 +835,33 @@ class DoctorVisitController extends Controller
             $details['nursing_service_names'] = $nursingServiceNames;
         }
         
+        $detectedSubtype = null;
         if ($request->type === 'radiology' && $request->radiology_types) {
             $details['radiology_types'] = $request->radiology_types;
             $details['radiology_type_ids'] = $request->radiology_types;
             
-            // إنشاء وصف يتضمن أسماء الأشعة
+            // إنشاء وصف يتضمن أسماء الأشعة وتحديد الفئة الفرعية (سونار / رنين / إيكو)
             $radiologyTypeNames = [];
             foreach ($request->radiology_types as $typeId) {
                 $radiologyType = \App\Models\RadiologyType::find($typeId);
                 if ($radiologyType) {
                     $radiologyTypeNames[] = $radiologyType->name;
                     $details['radiology_type_id'] = $typeId; // حفظ أول نوع لاستخدامه لاحقاً
+
+                    if (!$detectedSubtype) {
+                        $cat = mb_strtolower($radiologyType->main_category ?? '');
+                        $sub = mb_strtolower($radiologyType->subcategory ?? '');
+                        $name = mb_strtolower($radiologyType->name ?? '');
+                        if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') || str_contains($cat, 'ultrasound') || str_contains($name, 'doppler') || str_contains($name, 'sonar')) {
+                            $detectedSubtype = 'ultrasound';
+                        } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($name, 'رنين') || str_contains($cat, 'mri')) {
+                            $detectedSubtype = 'mri';
+                        } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($name, 'إيكو') || str_contains($cat, 'echo')) {
+                            $detectedSubtype = 'echo';
+                        } else {
+                            $detectedSubtype = 'general';
+                        }
+                    }
                 }
             }
             $radiologyDescription = !empty($radiologyTypeNames) 
@@ -875,6 +880,7 @@ class DoctorVisitController extends Controller
         $medicalRequest = MedicalRequest::create([
             'visit_id' => $visit->id,
             'type' => $request->type,
+            'subtype' => $detectedSubtype,
             'description' => ($request->type === 'radiology' && isset($radiologyDescription)) 
                 ? $radiologyDescription 
                 : (($request->type === 'nursing' && isset($nursingDescription)) 
@@ -903,13 +909,9 @@ class DoctorVisitController extends Controller
     public function updateRequestStatus(MedicalRequest $request, HttpRequest $httpRequest)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
-        }
-
-        // التحقق من وجود علاقة الطبيب
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بتحديث حالة الطلب');
         }
 
         // تسجيل معلومات الطلب للتشخيص قبل أي فحص
@@ -999,16 +1001,9 @@ class DoctorVisitController extends Controller
     public function showSurgeryForm(Visit $visit)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
-        }
-
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
-        }
-
-        if ($visit->doctor_id !== $user->doctor->id) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الزيارة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى نموذج حجز العملية');
         }
 
         if ($visit->status === 'cancelled') {
@@ -1023,16 +1018,9 @@ class DoctorVisitController extends Controller
     public function markNeedsSurgery(HttpRequest $request, Visit $visit)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
-        }
-
-        if (!$user->doctor) {
-            abort(403, 'لم يتم العثور على بيانات الطبيب');
-        }
-
-        if ($visit->doctor_id !== $user->doctor->id) {
-            abort(403, 'غير مصرح لك بتعديل هذه الزيارة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بتحويل المريض للعمليات');
         }
 
         $request->validate([
@@ -1058,8 +1046,9 @@ class DoctorVisitController extends Controller
     public function showPatientHistory(\App\Models\Patient $patient)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'doctor'])) {
-            abort(403, 'يجب أن تكون طبيباً للوصول إلى هذه الصفحة');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view patient history') && !$user->can('view own visits')))) {
+            abort(403, 'غير مصرح لك بعرض السجل الطبي للمريض');
         }
 
         $patient->load('user');
@@ -1245,6 +1234,11 @@ class DoctorVisitController extends Controller
      */
     public function respondToSubstitution(HttpRequest $request, PrescriptionItem $item)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بالرد على طلبات استبدال الأدوية');
+        }
         $request->validate([
             'action' => 'required|in:approve,reject',
             'response_notes' => 'nullable|string|max:255',

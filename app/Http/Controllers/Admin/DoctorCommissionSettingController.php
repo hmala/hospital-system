@@ -13,6 +13,14 @@ class DoctorCommissionSettingController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
+        $this->middleware(function ($request, $next) {
+            $user = auth()->user();
+            $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if (!$isAdmin && (!$user || !$user->can('manage doctor commissions'))) {
+                abort(403, 'غير مصرح لك بإدارة إعدادات عمولات الأطباء.');
+            }
+            return $next($request);
+        });
     }
 
     public function index(Request $request)

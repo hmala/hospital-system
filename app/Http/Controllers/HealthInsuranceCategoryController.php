@@ -7,6 +7,19 @@ use Illuminate\Http\Request;
 
 class HealthInsuranceCategoryController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware(function ($request, $next) {
+            $user = auth()->user();
+            $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if (!$isAdmin && (!$user || !$user->can('manage health insurance'))) {
+                abort(403, 'غير مصرح لك بالوصول إلى إدارة نسب استقطاع الضمان الصحي.');
+            }
+            return $next($request);
+        })->except(['getCategoriesJson']);
+    }
+
     public function index()
     {
         $categories = HealthInsuranceCategory::orderBy('sort_order')->orderBy('code')->get();

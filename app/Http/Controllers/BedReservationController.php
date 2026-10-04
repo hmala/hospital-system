@@ -16,8 +16,9 @@ class BedReservationController extends Controller
     {
         // list only bed reservations
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            abort(403);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view bed reservations') && !$user->can('view occupancy') && !$user->can('manage rooms')))) {
+            abort(403, 'غير مصرح لك بالوصول لحجوزات الأسرّة');
         }
 
         $query = BedReservation::with(['patient.user', 'doctor.user', 'department', 'room']);
@@ -36,8 +37,9 @@ class BedReservationController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            abort(403);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
+            abort(403, 'غير مصرح لك بإنشاء حجز سرير');
         }
         $patients = Patient::with('user')->get()->sortBy(fn($p) => optional($p->user)->name);
         $doctors = Doctor::with('user')
@@ -62,8 +64,9 @@ class BedReservationController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            abort(403);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
+            abort(403, 'غير مصرح لك بحفظ حجز سرير');
         }
 
         $request->validate([
@@ -93,8 +96,9 @@ class BedReservationController extends Controller
     public function confirm(Request $request, BedReservation $reservation)
     {
         $user = auth()->user();
-        if (!$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            abort(403);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
+            abort(403, 'غير مصرح لك بتأكيد حجز سرير');
         }
 
         $reservation->status = 'confirmed';

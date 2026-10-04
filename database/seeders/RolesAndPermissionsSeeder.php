@@ -58,6 +58,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'view cashier reports',           // عرض تقارير المدفوعات
             'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
+            'manage health insurance',        // إدارة فئات ونسب استقطاع الضمان الصحي الوطني
+            'manage doctor commissions',      // إعدادات وتخصيص عمولات ونسب الأطباء
+            'view consultant financial movements', // عرض الحركات والقيود المالية للاستشارية
+            'view account statements',        // عرض كشوفات الحسابات العامة
+            'view doctor accounts',           // عرض حسابات ومستحقات أرباح الأطباء الاستشاريين
+            'view emergency analytics',       // عرض تحليلات وإحصاءات الطوارئ
+            'view emergency financial movements', // عرض الحركات والقيود المالية للطوارئ
+            'view emergency statements',      // عرض كشوفات حسابات الطوارئ
+            'view emergency doctor accounts', // عرض وصرف حسابات أطباء الطوارئ
+            'view diagnostic analytics',      // عرض تحليلات وإحصاءات المختبر والأشعة والمفراس
             
             // صلاحيات الزيارات
             'view visits',
@@ -76,6 +86,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'view bed reservations',
+            'create bed reservations',
+            'view incubator reservations',
+            'create incubator reservations',
+            'manage incubator reservations',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -208,10 +223,9 @@ class RolesAndPermissionsSeeder extends Seeder
         $doctorRole = Role::firstOrCreate(['name' => 'doctor']);
         $doctorRole->givePermissionTo([
             'view patients',
+            'view own visits',
             'manage own visits',
             'view visits',
-            'create visits',
-            'edit visits',
             'view surgeries',
             'create surgeries',
             'edit surgeries',
@@ -233,8 +247,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $patientRole = Role::firstOrCreate(['name' => 'patient']);
         $patientRole->givePermissionTo([
             'view own visits',
-            'view appointments',
-            'create appointments',
             'cancel appointments',
             'view departments',
             'view doctors',
@@ -248,19 +260,19 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit patients',
             'view doctors',
             'view departments',
-            'view appointments',
-            'create appointments',
-            'edit appointments',
-            'delete appointments',
+            'cancel appointments',
             'view visits',
-            'create visits',
-            'edit visits',
             'view surgeries',
             'create surgeries',
             'edit surgeries',
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'view bed reservations',
+            'create bed reservations',
+            'view incubator reservations',
+            'create incubator reservations',
+            'manage incubator reservations',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -295,15 +307,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
         $cashierRole->givePermissionTo([
             'view cashier',
-            'view cashier appointments',
             'process consultation payments',
-            'view cashier medical requests',
             'process medical requests payments',
-            'view cashier emergency',
             'process emergency payments',
             'view cashier surgeries',
             'process surgery payments',
-            'view cashier reports',
+            'process refunds',
             'view patients',
         ]);
 
@@ -311,8 +320,18 @@ class RolesAndPermissionsSeeder extends Seeder
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
         $accountantRole->givePermissionTo([
             'view cashier reports',
+            'view consultant financial movements',
+            'view account statements',
+            'view doctor accounts',
+            'view emergency analytics',
+            'view emergency financial movements',
+            'view emergency statements',
+            'view emergency doctor accounts',
+            'view diagnostic analytics',
+            'manage doctor commissions',
             'view patients',
             'review surgery prices',
+            'manage health insurance',
         ]);
 
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)
@@ -326,8 +345,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view doctors',
             'view occupancy',
             'view cashier',
-            'view cashier appointments',
             'process consultation payments',
+            'process medical requests payments',
             'inquiry.create.checkup',
             // يمكن إضافة صلاحيات الأشعة حسب الحاجة:
             // 'inquiry.create.radiology.ultrasound',
@@ -435,8 +454,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $nurseRole->givePermissionTo([
             'view patients',
             'view visits',
-            'create visits',
-            'edit visits',
             'view emergencies',
             'create emergencies',
             'edit emergencies',
@@ -455,8 +472,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $residentRole->givePermissionTo([
             'view patients',
             'view visits',
-            'create visits',
-            'edit visits',
             'view surgeries',
             'view resident station', // محطة المقيم فقط
             'view lab tests',

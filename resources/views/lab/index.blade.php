@@ -113,17 +113,21 @@
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         @endif
-                                        @if(in_array($request->status, ['completed', 'in_progress']) && $request->payment_status == 'paid')
+                                        @if(!empty($det['attachment']))
+                                            <a href="{{ asset('storage/' . $det['attachment']) }}"
+                                               class="btn btn-outline-info"
+                                               target="_blank"
+                                               title="طباعة / معاينة الملف المرفق">
+                                                <i class="fas fa-file-medical"></i>
+                                            </a>
+                                        @endif
+                                        @if(in_array($request->status, ['completed', 'in_progress']))
                                             <a href="{{ route('lab.print', $request) }}"
                                                class="btn btn-outline-success"
                                                target="_blank"
-                                               title="طباعة النتائج">
+                                               title="طباعة تقرير النظام">
                                                 <i class="fas fa-print"></i>
                                             </a>
-                                        @elseif(in_array($request->status, ['completed', 'in_progress']) && $request->payment_status != 'paid')
-                                            <button class="btn btn-outline-secondary" disabled title="يجب الدفع أولاً">
-                                                <i class="fas fa-print"></i>
-                                            </button>
                                         @endif
                                     </div>
                                 </td>

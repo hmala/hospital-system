@@ -18,6 +18,7 @@ class Medicine extends Model
         'generic_name',
         'dosage_form',
         'strength',
+        'pack_size',
         'barcode',
         'sub_barcode',
         'main_unit',

@@ -194,12 +194,26 @@ function buildSelectedLabTests($requestDetails) {
                         $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
                     @endphp
 
-                    @if($request->payment_status == 'paid' && ($request->type == 'lab' || $isBloodBankRequest))
-                        <a href="{{ route('lab.print', $request) }}" 
-                           class="btn btn-success" 
+                    @if(!empty($requestDetails['attachment']))
+                        <a href="{{ asset('storage/' . $requestDetails['attachment']) }}" 
+                           class="btn btn-info text-white fw-bold shadow-sm" 
                            target="_blank">
                             <i class="fas fa-print me-1"></i>
-                            طباعة النتائج
+                            طباعة الملف المرفق
+                        </a>
+                        <a href="{{ asset('storage/' . $requestDetails['attachment']) }}" 
+                           class="btn btn-outline-info fw-bold" 
+                           target="_blank">
+                            <i class="fas fa-eye me-1"></i>
+                            معاينة الملف
+                        </a>
+                    @endif
+                    @if($request->type == 'lab' || $isBloodBankRequest)
+                        <a href="{{ route('lab.print', $request) }}" 
+                           class="btn btn-success fw-bold" 
+                           target="_blank">
+                            <i class="fas fa-print me-1"></i>
+                            طباعة تقرير النظام
                         </a>
                     @endif
                     @if(!$isBloodBankRequest && in_array($request->status, ['pending', 'in_progress', 'completed']))
@@ -829,9 +843,84 @@ function buildSelectedLabTests($requestDetails) {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('lab.update', $request) }}" method="POST">
+                    <form action="{{ route('lab.update', $request) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
+
+                        @php
+                            $hasAttachment = !empty($reqDetails['attachment']);
+                            $attachmentUrl = $hasAttachment ? asset('storage/' . $reqDetails['attachment']) : '';
+                            $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
+                        @endphp
+
+                        <!-- بطاقة إرفاق ملف / تقرير التحاليل (PDF / صور / سكانر) -->
+                        <div class="card border-info mb-4 shadow-sm" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                            <div class="card-header bg-info text-white d-flex align-items-center justify-content-between">
+                                <h6 class="mb-0 fw-bold">
+                                    <i class="fas fa-file-medical-alt me-2"></i>
+                                    إرفاق ملف / تقرير التحاليل (PDF / صور / سكانر / ملف الجهاز)
+                                </h6>
+                                @if($hasAttachment)
+                                    <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i> يوجد ملف مرفق</span>
+                                @endif
+                            </div>
+                            <div class="card-body">
+                                @if($hasAttachment)
+                                    <div class="alert alert-white bg-white border-2 border-success p-3 rounded-3 mb-3 shadow-sm">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle fs-3">
+                                                    <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }}"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold text-dark mb-1">{{ $reqDetails['attachment_title'] ?? 'ملف تقرير التحاليل المرفق' }}</h6>
+                                                    <div class="text-muted small">
+                                                        <span><i class="fas fa-paperclip me-1"></i> {{ $reqDetails['attachment_name'] ?? 'ملف مرفق' }}</span>
+                                                        @if(!empty($reqDetails['attached_at']))
+                                                             <span class="ms-3"><i class="fas fa-clock me-1"></i> {{ $reqDetails['attached_at'] }}</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-info text-white fw-bold shadow-sm">
+                                                    <i class="fas fa-print me-1"></i> طباعة الملف المرفق
+                                                </a>
+                                                <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-primary fw-bold">
+                                                    <i class="fas fa-eye me-1"></i> معاينة وتكبير
+                                                </a>
+                                                <label class="btn btn-outline-danger" for="removeAttachmentCb" style="cursor: pointer;">
+                                                    <input type="checkbox" name="remove_attachment" value="1" id="removeAttachmentCb" class="d-none" onchange="this.checked ? this.closest('label').classList.add('active', 'btn-danger') : this.closest('label').classList.remove('active', 'btn-danger')">
+                                                    <i class="fas fa-trash-alt me-1"></i> حذف الملف عند الحفظ
+                                                </label>
+                                            </div>
+                                        </div>
+                                        @if($isImageAttachment)
+                                            <div class="mt-3 text-center border-top pt-2">
+                                                <a href="{{ $attachmentUrl }}" target="_blank" title="اضغط للتكبير">
+                                                    <img src="{{ $attachmentUrl }}" alt="تقرير مرفق" style="max-height: 250px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <div class="row align-items-center g-3">
+                                    <div class="col-md-7">
+                                        <label class="form-label fw-bold text-dark">
+                                            <i class="fas fa-upload me-1 text-primary"></i>
+                                            {{ $hasAttachment ? 'استبدال أو رفع ملف جديد:' : 'اختر ملف التقرير من الجهاز (ملف PDF، صورة، أو سكانر):' }}
+                                        </label>
+                                        <input type="file" name="attachment" id="attachmentInput" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+                                        <div class="form-text small text-muted">الملفات المدعومة: PDF, JPG, PNG (تصدير مباشر من الجهاز أو سكنر أو الكمبيوتر بحجم أقصى 20MB).</div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold text-dark">عنوان أو وصف الملف المرفق (اختياري):</label>
+                                        <input type="text" name="attachment_title" class="form-control" value="{{ old('attachment_title', $reqDetails['attachment_title'] ?? '') }}" placeholder="مثال: تقرير CBC كامل / صورة التقرير">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         @if($request->type == 'lab')
                         @php
@@ -863,70 +952,45 @@ function buildSelectedLabTests($requestDetails) {
                                                 <tbody>
                                                     @foreach($testsList as $index => $test)
                                                         @php
-                                                            $testIcon  = getTestIcon($test);
-                                                            $labTestObj = $labTestMap[$test] ?? null;
-                                                            $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
+                                                             $testIcon  = getTestIcon($test);
+                                                             $labTestObj = $labTestMap[$test] ?? null;
+                                                             $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                         @endphp
 
                                                         @if($hasSubTests)
-                                                            {{-- ترويسة الفحص المركب الذي يحتوي فحوصات فرعية --}}
-                                                            <tr class="table-light">
-                                                                <td colspan="6" class="fw-bold py-2 bg-primary bg-opacity-10 text-primary border-primary">
-                                                                    <div class="d-flex align-items-center justify-content-between">
-                                                                        <div>
-                                                                            <i class="fas fa-layer-group me-2"></i>
-                                                                            <span class="fs-6">{{ $test }}</span>
-                                                                            <span class="badge bg-primary ms-2">{{ $labTestObj->subTests->count() }} معايير فرعية</span>
-                                                                        </div>
-                                                                        <small class="text-muted">{{ $labTestObj->main_category }}</small>
+                                                            {{-- فحص مركب / فرعي: يتم الاعتماد على الملف المرفق (PDF أو صورة أو سكنر) --}}
+                                                            <tr class="table-info bg-opacity-25">
+                                                                <td class="text-center text-muted small">{{ $index + 1 }}</td>
+                                                                <td>
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <i class="{{ $testIcon }} text-primary"></i>
+                                                                        <strong>{{ $test }}</strong>
+                                                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-1">
+                                                                            <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="small text-muted mt-1">
+                                                                        <i class="fas fa-info-circle me-1"></i> يتم قراءة كافة المعاملات والرسومات من الملف المرفق (PDF / صورة / سكانر)
                                                                     </div>
                                                                 </td>
-                                                            </tr>
-
-                                                            @foreach($labTestObj->subTests as $sIdx => $subTest)
-                                                                @php
-                                                                    $subSavedVal = $dbResults[$subTest->name]->value ?? ($savedTestResults[$subTest->name]['value'] ?? '');
-                                                                    $subSavedStatus = $dbResults[$subTest->name]->status ?? ($savedTestResults[$subTest->name]['status'] ?? '');
-                                                                @endphp
-                                                                <tr class="test-row subtest-row" data-test="{{ $subTest->name }}"
-                                                                    data-ref-min="{{ $subTest->ref_min ?? '' }}"
-                                                                    data-ref-max="{{ $subTest->ref_max ?? '' }}">
-                                                                    <td class="text-center text-muted small">{{ $index + 1 }}.{{ $sIdx + 1 }}</td>
-                                                                    <td class="ps-4">
-                                                                        <div class="d-flex align-items-center gap-2">
-                                                                            <i class="fas fa-level-down-alt text-primary opacity-50 ms-2"></i>
-                                                                            <strong>{{ $subTest->name }}</strong>
+                                                                <td colspan="2">
+                                                                    @if($hasAttachment)
+                                                                        <div class="d-inline-flex align-items-center gap-2 py-1 px-3 bg-success bg-opacity-10 text-success border border-success rounded-pill fw-bold small">
+                                                                            <i class="fas fa-check-circle"></i> تم إرفاق ملف التقرير
                                                                         </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="text"
-                                                                               class="form-control form-control-sm test-value"
-                                                                               name="test_results[{{ $subTest->name }}][value]"
-                                                                               value="{{ old('test_results.' . $subTest->name . '.value', $subSavedVal) }}"
-                                                                               placeholder="أدخل النتيجة"
-                                                                               data-test="{{ $subTest->name }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
-                                                                        <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
-                                                                    </td>
-                                                                    <td class="text-muted small">{{ $subTest->unit ?: '—' }}</td>
-                                                                    <td>
-                                                                        @if($subTest->reference_range)
-                                                                            <span class="badge bg-light text-dark border">{{ $subTest->reference_range }}</span>
-                                                                        @else
-                                                                            <span class="text-muted small">—</span>
-                                                                        @endif
-                                                                    </td>
-                                                                    <td class="text-center">
-                                                                        <span class="result-flag" id="flag-{{ $index }}-{{ $sIdx }}">
-                                                                            <i class="fas fa-circle text-muted small"></i>
-                                                                        </span>
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
+                                                                    @else
+                                                                        <div class="d-inline-flex align-items-center gap-2 py-1 px-3 bg-warning bg-opacity-10 text-dark border border-warning rounded-pill fw-bold small">
+                                                                            <i class="fas fa-upload text-warning"></i> يرجى إرفاق ملف التقرير من البطاقة أعلاه
+                                                                        </div>
+                                                                    @endif
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge bg-light text-muted border">مدرج بالملف المرفق</span>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <span class="badge bg-secondary bg-opacity-75">ملف مرفق</span>
+                                                                </td>
+                                                            </tr>
                                                         @else
                                                             {{-- فحص فردي مباشر --}}
                                                             @php

@@ -58,28 +58,67 @@ class LabResult extends Model
     /**
      * تحديد حالة نتيجة التحليل (طبيعي، مرتفع، منخفض)
      */
-    public function determineStatus($value, $testName): string
+    public function determineStatus($value, $testName, ?string $referenceRange = null): string
     {
-        // تحليل القيمة ومقارنتها بالقيم المرجعية
+        $valStr = trim((string)$value);
+        if ($valStr === '') {
+            return 'normal';
+        }
+
+        $ref = trim((string)$referenceRange);
+        $ref = str_replace(["\xc2\xa0", '–', '—', '−', '[', ']', '(', ')'], [' ', '-', '-', '-', '', '', '', ''], $ref);
+        $ref = trim($ref);
+
+        $numVal = null;
+        if (is_numeric($valStr)) {
+            $numVal = (float)$valStr;
+        } else {
+            $cleanVal = preg_replace('/[^\d\.\-\+]/', '', $valStr);
+            if (is_numeric($cleanVal)) {
+                $numVal = (float)$cleanVal;
+            }
+        }
+
+        if ($numVal !== null && !empty($ref)) {
+            if (preg_match('/([+\-]?\d+(?:\.\d+)?)\s*(?:-|to|\.\.)\s*([+\-]?\d+(?:\.\d+)?)/i', $ref, $m)) {
+                $min = (float)$m[1];
+                $max = (float)$m[2];
+                if ($min > $max) { $t = $min; $min = $max; $max = $t; }
+                if ($numVal < $min) return 'low';
+                if ($numVal > $max) return 'high';
+                return 'normal';
+            } elseif (preg_match('/(?:<|<=|≤)\s*([+\-]?\d+(?:\.\d+)?)/i', $ref, $m)) {
+                $max = (float)$m[1];
+                if ($numVal > $max) return 'high';
+                return 'normal';
+            } elseif (preg_match('/(?:>|>=|≥)\s*([+\-]?\d+(?:\.\d+)?)/i', $ref, $m)) {
+                $min = (float)$m[1];
+                if ($numVal < $min) return 'low';
+                return 'normal';
+            }
+        }
+
+        $lower = strtolower($valStr);
+        if (str_contains($lower, 'pos') || str_contains($lower, 'react') || str_contains($lower, 'high')) return 'high';
+        if (str_contains($lower, 'low')) return 'low';
+
         $testName = strtolower($testName);
 
         if (strpos($testName, 'سكر') !== false || strpos($testName, 'glucose') !== false) {
-            if ($value < 70) return 'low';
-            if ($value > 140) return 'high';
+            if ($numVal !== null && $numVal < 70) return 'low';
+            if ($numVal !== null && $numVal > 140) return 'high';
             return 'normal';
         }
 
         if (strpos($testName, 'ضغط') !== false || strpos($testName, 'pressure') !== false) {
-            if ($value > 140) return 'high';
+            if ($numVal !== null && $numVal > 140) return 'high';
             return 'normal';
         }
 
         if (strpos($testName, 'كوليسترول') !== false || strpos($testName, 'cholesterol') !== false) {
-            if ($value > 200) return 'high';
+            if ($numVal !== null && $numVal > 200) return 'high';
             return 'normal';
         }
-
-        // يمكن إضافة المزيد من التحليلات حسب الحاجة
 
         return 'normal';
     }

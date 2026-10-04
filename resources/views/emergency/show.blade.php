@@ -426,16 +426,28 @@
                                                             </select>
                                                         </div>
                                                         <div class="mb-2">
-                                                            <label class="form-label small fw-bold">التحاليل المطلوبة</label>
-                                                            <div class="border rounded p-2 bg-white" style="max-height: 180px; overflow-y: auto;">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <label class="form-label small fw-bold mb-0">التحاليل المطلوبة</label>
+                                                                <span id="labSelectedCount" class="badge bg-primary-subtle text-primary border border-primary-subtle small d-none">0 محدد</span>
+                                                            </div>
+                                                            <div class="input-group input-group-sm mb-2">
+                                                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                                                <input type="text" id="labSearchInput" class="form-control" placeholder="ابحث باسم التحليل أو الفحص...">
+                                                                <button class="btn btn-outline-secondary d-none" type="button" id="clearLabSearch"><i class="fas fa-times"></i></button>
+                                                            </div>
+                                                            <div class="border rounded p-2 bg-white" id="labTestsContainer" style="max-height: 200px; overflow-y: auto;">
                                                                 @foreach($labTests as $test)
-                                                                <div class="form-check">
-                                                                    <input class="form-check-input" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="lab_chk_{{ $test->id }}">
-                                                                    <label class="form-check-label small" for="lab_chk_{{ $test->id }}">
-                                                                        {{ $test->name }} <span class="text-muted">({{ number_format($test->price) }} IQD)</span>
+                                                                <div class="form-check lab-test-item py-1 border-bottom border-light">
+                                                                    <input class="form-check-input lab-checkbox" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="lab_chk_{{ $test->id }}">
+                                                                    <label class="form-check-label small d-flex justify-content-between cursor-pointer w-100 mb-0" for="lab_chk_{{ $test->id }}">
+                                                                        <span class="lab-name fw-medium">{{ $test->name }}</span>
+                                                                        <span class="text-muted">({{ number_format($test->price) }} IQD)</span>
                                                                     </label>
                                                                 </div>
                                                                 @endforeach
+                                                                <div id="noLabTestsFound" class="text-muted small text-center py-3 d-none">
+                                                                    <i class="fas fa-info-circle me-1"></i> لا توجد تحاليل مطابقة للبحث
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div class="mb-2">
@@ -514,16 +526,28 @@
                                                             </select>
                                                         </div>
                                                         <div class="mb-2">
-                                                            <label class="form-label small fw-bold">أنواع الفحوصات المطلوبة</label>
-                                                            <div class="border rounded p-2 bg-white" style="max-height: 180px; overflow-y: auto;">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <label class="form-label small fw-bold mb-0">أنواع الفحوصات المطلوبة</label>
+                                                                <span id="radSelectedCount" class="badge bg-info-subtle text-info border border-info-subtle small d-none">0 محدد</span>
+                                                            </div>
+                                                            <div class="input-group input-group-sm mb-2">
+                                                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                                                <input type="text" id="radSearchInput" class="form-control" placeholder="ابحث بنوع الأشعة أو السونار...">
+                                                                <button class="btn btn-outline-secondary d-none" type="button" id="clearRadSearch"><i class="fas fa-times"></i></button>
+                                                            </div>
+                                                            <div class="border rounded p-2 bg-white" id="radTypesContainer" style="max-height: 200px; overflow-y: auto;">
                                                                 @foreach($radiologyTypes as $radType)
-                                                                <div class="form-check">
-                                                                    <input class="form-check-input" type="checkbox" name="radiology_type_ids[]" value="{{ $radType->id }}" id="rad_chk_{{ $radType->id }}">
-                                                                    <label class="form-check-label small" for="rad_chk_{{ $radType->id }}">
-                                                                        {{ $radType->name }} <span class="text-muted">({{ number_format($radType->price) }} IQD)</span>
+                                                                <div class="form-check rad-type-item py-1 border-bottom border-light">
+                                                                    <input class="form-check-input rad-checkbox" type="checkbox" name="radiology_type_ids[]" value="{{ $radType->id }}" id="rad_chk_{{ $radType->id }}">
+                                                                    <label class="form-check-label small d-flex justify-content-between cursor-pointer w-100 mb-0" for="rad_chk_{{ $radType->id }}">
+                                                                        <span class="rad-name fw-medium">{{ $radType->name }}</span>
+                                                                        <span class="text-muted">({{ number_format($radType->price) }} IQD)</span>
                                                                     </label>
                                                                 </div>
                                                                 @endforeach
+                                                                <div id="noRadTypesFound" class="text-muted small text-center py-3 d-none">
+                                                                    <i class="fas fa-info-circle me-1"></i> لا توجد فحوصات مطابقة للبحث
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div class="mb-2">
@@ -1371,6 +1395,81 @@ document.addEventListener('DOMContentLoaded', function() {
     // فحص فوري عند تحميل الصفحة ثم كل 30 ثانية
     checkSubstitutions();
     setInterval(checkSubstitutions, 30000);
+})();
+
+// البحث التفاعلي المباشر لتحاليل المختبر والأشعة
+(function() {
+    function initLiveFilter(inputId, clearBtnId, itemSelector, nameSelector, emptyId, countId, chkSelector) {
+        const input = document.getElementById(inputId);
+        const clearBtn = document.getElementById(clearBtnId);
+        const items = document.querySelectorAll(itemSelector);
+        const emptyMsg = document.getElementById(emptyId);
+        const countBadge = document.getElementById(countId);
+        const checkboxes = document.querySelectorAll(chkSelector);
+
+        if (!input) return;
+
+        function normalizeArabic(text) {
+            return (text || '')
+                .toLowerCase()
+                .replace(/[أإآء]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[\u064B-\u065F]/g, '')
+                .trim();
+        }
+
+        input.addEventListener('input', function() {
+            const query = normalizeArabic(this.value);
+            let visibleCount = 0;
+
+            if (clearBtn) {
+                clearBtn.classList.toggle('d-none', !this.value);
+            }
+
+            items.forEach(item => {
+                const nameEl = item.querySelector(nameSelector);
+                const name = normalizeArabic(nameEl ? nameEl.textContent : '');
+                const chk = item.querySelector('input[type="checkbox"]');
+                
+                if (!query || name.includes(query) || (chk && chk.checked)) {
+                    item.classList.remove('d-none');
+                    visibleCount++;
+                } else {
+                    item.classList.add('d-none');
+                }
+            });
+
+            if (emptyMsg) {
+                emptyMsg.classList.toggle('d-none', visibleCount > 0);
+            }
+        });
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                input.value = '';
+                input.dispatchEvent(new Event('input'));
+                input.focus();
+            });
+        }
+
+        function updateSelected() {
+            if (!countBadge || !checkboxes.length) return;
+            const checkedCount = Array.from(checkboxes).filter(c => c.checked).length;
+            if (checkedCount > 0) {
+                countBadge.textContent = `${checkedCount} محدد`;
+                countBadge.classList.remove('d-none');
+            } else {
+                countBadge.classList.add('d-none');
+            }
+        }
+
+        checkboxes.forEach(chk => chk.addEventListener('change', updateSelected));
+        updateSelected();
+    }
+
+    initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox');
+    initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox');
 })();
 </script>
 @endpush

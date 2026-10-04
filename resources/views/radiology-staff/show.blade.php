@@ -209,6 +209,25 @@ function getTestUnit($testName, $labTests) {
         }
         $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
     @endphp
+    <!-- تنبيه الدفع والتصريح بالدخول للمريض -->
+    @if($request->payment_status === 'paid')
+        <div class="alert alert-success d-flex align-items-center mb-3 shadow-sm rounded-3 py-2 px-3 border border-success">
+            <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+            <div>
+                <h6 class="fw-bold mb-0 text-success"><i class="fas fa-door-open me-1"></i>مصرح بالدخول وإجراء الفحص (تم تسديد الأجور في الكاشير)</h6>
+                <small class="text-muted">تم استيفاء الرسوم المالية بالكامل برقم وصل مالي معتمد.</small>
+            </div>
+        </div>
+    @elseif($request->payment_status === 'pending')
+        <div class="alert alert-danger d-flex align-items-center mb-3 shadow-sm rounded-3 py-2 px-3 border border-danger">
+            <i class="fas fa-hand-paper fa-2x text-danger me-3"></i>
+            <div>
+                <h6 class="fw-bold mb-0 text-danger"><i class="fas fa-exclamation-triangle me-1"></i>تنبيه مالي: الفحص غير مدفوع — يجب إكمال الدفع قبل دخول المريض</h6>
+                <small class="text-dark">المريض لم يقم بسداد أجور الفحص في الكاشير بعد. يرجى توجيهه للكاشير لسداد الوصل المالي أولاً.</small>
+            </div>
+        </div>
+    @endif
+
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
@@ -234,6 +253,15 @@ function getTestUnit($testName, $labTests) {
                                 <span class="badge bg-{{ $request->status == 'completed' ? 'success' : ($request->status == 'pending' ? 'warning' : 'info') }}">
                                     {{ $request->status_text }}
                                 </span>
+                            </p>
+                            <p><strong>حالة الدفع:</strong>
+                                @if($request->payment_status === 'paid')
+                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>مدفوع</span>
+                                @elseif($request->payment_status === 'pending')
+                                    <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>غير مدفوع (بانتظار الكاشير)</span>
+                                @else
+                                    <span class="badge bg-secondary">-</span>
+                                @endif
                             </p>
                             <p><strong>الأولوية:</strong>
                                 <span class="badge bg-{{ ($requestDetails['priority'] ?? 'normal') == 'urgent' ? 'danger' : (($requestDetails['priority'] ?? 'normal') == 'emergency' ? 'dark' : 'secondary') }}">

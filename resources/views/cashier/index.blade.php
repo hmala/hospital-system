@@ -4,19 +4,38 @@
 <div class="container-fluid" id="cashier-content">
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <div>
-                    <h2>
+                    <h2 class="mb-1">
                         <i class="fas fa-cash-register me-2 text-success"></i>
                         محطة الكاشير
                         <span class="badge bg-success" id="live-indicator">
                             <i class="fas fa-circle fa-xs"></i> مباشر
                         </span>
                     </h2>
-                    <p class="text-muted">
+                    <p class="text-muted mb-0">
                         إدارة المدفوعات والإيصالات - 
                         <small id="last-update">آخر تحديث: الآن</small>
                     </p>
+                </div>
+
+                <!-- فلتر نطاق التاريخ للمقبوضات المعلقة -->
+                <div class="btn-group bg-white p-1 rounded-pill shadow-sm border" role="group">
+                    <a href="{{ route('cashier.index', ['date_filter' => 'today']) }}" 
+                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? 'today') === 'today' ? 'btn-primary text-white' : 'btn-light text-dark' }}">
+                        <i class="fas fa-calendar-day me-1"></i> معلقات اليوم
+                    </a>
+                    <a href="{{ route('cashier.index', ['date_filter' => 'previous']) }}" 
+                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'previous' ? 'btn-warning text-dark' : 'btn-light text-dark' }}">
+                        <i class="fas fa-history me-1"></i> المعلقات السابقة
+                        @if(($previousPendingCount ?? 0) > 0)
+                            <span class="badge bg-danger rounded-pill ms-1">{{ $previousPendingCount }}</span>
+                        @endif
+                    </a>
+                    <a href="{{ route('cashier.index', ['date_filter' => 'all']) }}" 
+                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'all' ? 'btn-secondary text-white' : 'btn-light text-dark' }}">
+                        <i class="fas fa-infinity me-1"></i> كافة التواريخ
+                    </a>
                 </div>
             </div>
         </div>
@@ -106,14 +125,9 @@
                     <div class="card border rounded-3 shadow-sm h-100">
                         <div class="card-body py-3 px-3 d-flex align-items-center justify-content-between gap-3">
                             <div>
-                                @if(auth()->user()->can('view cashier appointments'))
-                                    <p class="text-muted small mb-1">المعاملات المعلقة</p>
-                                    <h5 class="mb-0 text-warning fw-bold">{{ $todayStats['pending_appointments_count'] + $todayStats['pending_requests_count'] }}</h5>
-                                    <small class="text-muted">مواعيد: {{ $todayStats['pending_appointments_count'] }} | طلبات: {{ $todayStats['pending_requests_count'] }}</small>
-                                @else
-                                    <p class="text-muted small mb-1">المعاملات المعلقة</p>
-                                    <h5 class="mb-0 text-warning fw-bold">{{ $todayStats['pending_appointments_count'] + $todayStats['pending_requests_count'] }}</h5>
-                                @endif
+                                <p class="text-muted small mb-1">المعاملات المعلقة</p>
+                                <h5 class="mb-0 text-warning fw-bold">{{ $todayStats['pending_appointments_count'] + $todayStats['pending_requests_count'] + ($todayStats['pending_emergency_count'] ?? 0) }}</h5>
+                                <small class="text-muted">مواعيد: {{ $todayStats['pending_appointments_count'] }} | طلبات: {{ $todayStats['pending_requests_count'] }}</small>
                             </div>
                             <div class="bg-warning bg-opacity-15 p-2 rounded-circle">
                                 <i class="fas fa-clock fa-lg text-warning"></i>
@@ -123,269 +137,436 @@
                 </div>
             </div>
 
-<!-- عرض المعاملات المعلقة بجدول واحد -->
+<!-- عرض المعاملات المعلقة بتبويبات منظمة -->
                     <div class="row mb-4">
                         <div class="col-12">
+                            @php
+                                $canConsultation = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process consultation payments');
+                                $canMedicalRequests = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process medical requests payments');
+                                $canEmergency = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process emergency payments');
+
+                                $appointmentsCount = ($canConsultation && isset($pendingAppointments)) ? $pendingAppointments->total() : 0;
+                                $requestsCount = ($canMedicalRequests && isset($pendingMedicalRequests)) ? $pendingMedicalRequests->total() : 0;
+                                $emergencyCount = ($canEmergency && isset($pendingEmergencyPayments)) ? $pendingEmergencyPayments->total() : 0;
+                                $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount;
+                            @endphp
+
                             <div class="card border-0 shadow-sm">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">
-                                        <i class="fas fa-table me-2"></i>
-                                        المعاملات المعلقة - بانتظار الدفع
-                                        @php
-                                            $combinedCount = 0;
-                                            if(auth()->user()->can('view cashier appointments') && isset($pendingAppointments)) {
-                                                $combinedCount += $pendingAppointments->total();
-                                            }
-                                            if(auth()->user()->can('view cashier medical requests') && isset($pendingMedicalRequests)) {
-                                                $combinedCount += $pendingMedicalRequests->total();
-                                            }
-                                            if(auth()->user()->can('view cashier emergency') && isset($pendingEmergencyPayments)) {
-                                                $combinedCount += $pendingEmergencyPayments->total();
-                                            }
-                                        @endphp
-                                        <span class="badge bg-warning">{{ $combinedCount }}</span>
-                                    </h5>
-                                    <p class="text-muted small mb-0">الجدول الموحد يعرض المواعيد والطلبات الطبية وخدمات الطوارئ في صف واحد.</p>
+                                <div class="card-header bg-white border-bottom p-3">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                        <div>
+                                            <h5 class="mb-1 text-dark fw-bold">
+                                                <i class="fas fa-cash-register me-2 text-primary"></i>
+                                                المعاملات المعلقة بانتظار الدفع
+                                            </h5>
+                                            <p class="text-muted small mb-0">يمكنك استعراض كافة الطلبات معاً أو فرزها حسب التبويب المطلوب</p>
+                                        </div>
+                                        
+                                        <ul class="nav nav-pills bg-light p-1 rounded-pill border" id="pendingTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active fw-bold px-3 py-1-5 rounded-pill" id="tab-all-btn" data-bs-toggle="pill" data-bs-target="#tab-all" type="button" role="tab">
+                                                    <i class="fas fa-layer-group me-1"></i> الكل
+                                                    <span class="badge bg-secondary ms-1 rounded-pill">{{ $combinedCount }}</span>
+                                                </button>
+                                            </li>
+                                            @if($canConsultation)
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-appointments-btn" data-bs-toggle="pill" data-bs-target="#tab-appointments" type="button" role="tab">
+                                                    <i class="fas fa-calendar-check me-1 text-warning"></i> كشفية الاستشارية
+                                                    <span class="badge bg-warning text-dark ms-1 rounded-pill">{{ $appointmentsCount }}</span>
+                                                </button>
+                                            </li>
+                                            @endif
+                                            @if($canMedicalRequests)
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-requests-btn" data-bs-toggle="pill" data-bs-target="#tab-requests" type="button" role="tab">
+                                                    <i class="fas fa-flask me-1 text-primary"></i> التحاليل والأشعة
+                                                    <span class="badge bg-primary ms-1 rounded-pill">{{ $requestsCount }}</span>
+                                                </button>
+                                            </li>
+                                            @endif
+                                            @if($canEmergency)
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-emergency-btn" data-bs-toggle="pill" data-bs-target="#tab-emergency" type="button" role="tab">
+                                                    <i class="fas fa-ambulance me-1 text-danger"></i> الطوارئ
+                                                    <span class="badge bg-danger ms-1 rounded-pill">{{ $emergencyCount }}</span>
+                                                </button>
+                                            </li>
+                                            @endif
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    @php
-                                        $hasRows = false;
-                                        if(auth()->user()->can('view cashier appointments') && isset($pendingAppointments) && $pendingAppointments->count() > 0) {
-                                            $hasRows = true;
-                                        }
-                                        if(auth()->user()->can('view cashier medical requests') && isset($pendingMedicalRequests) && $pendingMedicalRequests->count() > 0) {
-                                            $hasRows = true;
-                                        }
-                                        if(auth()->user()->can('view cashier emergency') && isset($pendingEmergencyPayments) && $pendingEmergencyPayments->count() > 0) {
-                                            $hasRows = true;
-                                        }
-                                    @endphp
+                                <div class="card-body p-0">
+                                    <div class="tab-content" id="pendingTabsContent">
 
-                                    @if($hasRows)
-                                        <div class="table-responsive">
-                                            <table class="table table-hover align-middle">
-                                                <thead>
-                                                    <tr>
-                                                        <th>رقم</th>
-                                                        <th>النوع</th>
-                                                        <th>المريض</th>
-                                                        <th>التفاصيل</th>
-                                                        <th class="text-end">السعر</th>
-                                                        <th>التاريخ</th>
-                                                        <th>الإجراءات</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @if(auth()->user()->can('view cashier appointments'))
-                                                        @foreach($pendingAppointments ?? [] as $appointment)
-                                                            @php
-                                                                $patientName = optional(optional($appointment->patient)->user)->name ?? 'غير محدد';
-                                                                $patientId = optional($appointment->patient)->national_id ?? '---';
-                                                                $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
-                                                                $department = optional($appointment->department)->name ?? 'غير محدد';
-                                                                $amount = $appointment->consultation_fee ?? 0;
-                                                            @endphp
+                                        <!-- تبويب الكل -->
+                                        <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
+                                            @if($combinedCount > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
                                                             <tr>
-                                                                <td><strong>#{{ $appointment->id }}</strong></td>
-                                                                <td>
-                                                                    <span class="badge bg-warning">
-                                                                        <i class="fas fa-calendar-check"></i> موعد
-                                                                    </span>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="fw-semibold">
-                                                                        {{ $patientName }}
-                                                                        @if(optional($appointment->patient)->insurance_type === 'moi')
-                                                                            <span class="badge bg-primary fs-8 ms-1" title="ضمان قوى الأمن الداخلي"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                        @elseif(optional($appointment->patient)->insurance_type === 'hi')
-                                                                            <span class="badge bg-info text-dark fs-8 ms-1" title="الضمان الصحي الوطني"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
-                                                                        @endif
-                                                                    </div>
-                                                                    <small class="text-muted">{{ $patientId }}</small>
-                                                                </td>
-                                                                <td>
-                                                                    <small class="text-muted">
-                                                                        @if($doctorName !== 'غير محدد')
-                                                                            د. {{ $doctorName }}
-                                                                            <br>
-                                                                        @endif
-                                                                        {{ $department }}
-                                                                    </small>
-                                                                </td>
-                                                                <td class="text-end text-success fw-bold">{{ number_format($amount, 2) }} IQD</td>
-                                                                <td>
-                                                                    <small>{{ $appointment->created_at->format('Y-m-d') }}</small>
-                                                                    <br>
-                                                                    <small class="text-muted">{{ $appointment->created_at->format('H:i') }}</small>
-                                                                </td>
-                                                                <td>
-                                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                                                        تسديد
-                                                                    </a>
-                                                                </td>
+                                                                <th>رقم</th>
+                                                                <th>النوع</th>
+                                                                <th>المريض</th>
+                                                                <th>التفاصيل والعيادة</th>
+                                                                <th class="text-end">المبلغ</th>
+                                                                <th>التاريخ والوقت</th>
+                                                                <th class="text-center">الإجراء</th>
                                                             </tr>
-                                                        @endforeach
-                                                    @endif
+                                                        </thead>
+                                                        <tbody>
+                                                            {{-- المواعيد --}}
+                                                            @if($canConsultation)
+                                                                @foreach($pendingAppointments ?? [] as $appointment)
+                                                                    @php
+                                                                        $patientName = optional(optional($appointment->patient)->user)->name ?? 'غير محدد';
+                                                                        $patientId = optional($appointment->patient)->national_id ?? '---';
+                                                                        $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
+                                                                        $department = optional($appointment->department)->name ?? 'غير محدد';
+                                                                        $amount = $appointment->consultation_fee ?? 0;
+                                                                    @endphp
+                                                                    <tr>
+                                                                        <td><strong>#{{ $appointment->id }}</strong></td>
+                                                                        <td><span class="badge bg-warning"><i class="fas fa-calendar-check me-1"></i> كشفية</span></td>
+                                                                        <td>
+                                                                            <div class="fw-semibold">{{ $patientName }}
+                                                                                @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                                @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                                @endif
+                                                                            </div>
+                                                                            <small class="text-muted">{{ $patientId }}</small>
+                                                                        </td>
+                                                                        <td>
+                                                                            <small class="text-muted">
+                                                                                @if($doctorName !== 'غير محدد') د. {{ $doctorName }}<br> @endif
+                                                                                {{ $department }}
+                                                                            </small>
+                                                                        </td>
+                                                                        <td class="text-end text-success fw-bold">{{ number_format($amount, 2) }} IQD</td>
+                                                                        <td>
+                                                                            <small>{{ $appointment->created_at->format('Y-m-d') }}</small><br>
+                                                                            <small class="text-muted">{{ $appointment->created_at->format('H:i') }}</small>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                                <i class="fas fa-money-bill-wave me-1"></i> تسديد
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            @endif
 
-                                                    @if(auth()->user()->can('view cashier medical requests'))
-                                                        @foreach($pendingMedicalRequests ?? [] as $request)
-                                                            @php
-                                                                $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                                                $amount = $request->total_amount;
-                                                            @endphp
+                                                            {{-- الطلبات الطبية --}}
+                                                            @if($canMedicalRequests)
+                                                                @foreach($pendingMedicalRequests ?? [] as $request)
+                                                                    @php
+                                                                        $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                                                        $amount = $request->total_amount;
+                                                                        $reqPatient = optional(optional($request->visit)->patient);
+                                                                        $docName = optional(optional(optional($request->visit)->doctor)->user)->name;
+                                                                    @endphp
+                                                                    <tr>
+                                                                        <td><strong>#{{ $request->id }}</strong></td>
+                                                                        <td>
+                                                                            @if($request->type === 'lab')
+                                                                                <span class="badge bg-primary"><i class="fas fa-flask me-1"></i> تحاليل</span>
+                                                                            @elseif($request->type === 'radiology')
+                                                                                <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة</span>
+                                                                            @elseif($request->type === 'pharmacy')
+                                                                                <span class="badge bg-success"><i class="fas fa-pills me-1"></i> صيدلية</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary">{{ $request->type }}</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td>
+                                                                            <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
+                                                                                @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                                @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                                @endif
+                                                                            </div>
+                                                                            <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
+                                                                        </td>
+                                                                        <td>
+                                                                            @if($request->type === 'lab' && isset($details['lab_test_ids']))
+                                                                                <small class="text-muted">
+                                                                                    <i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل
+                                                                                    @if($docName) <br>طلب: د. {{ $docName }} @endif
+                                                                                </small>
+                                                                            @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
+                                                                                <small class="text-muted">
+                                                                                    <i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} فحص شعاعي
+                                                                                    @if($docName) <br>طلب: د. {{ $docName }} @endif
+                                                                                </small>
+                                                                            @else
+                                                                                <small class="text-muted">{{ $request->description }}</small>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td class="text-end text-success fw-bold">{{ $amount !== null ? number_format($amount, 2) . ' IQD' : '-' }}</td>
+                                                                        <td>
+                                                                            <small>{{ $request->created_at->format('Y-m-d') }}</small><br>
+                                                                            <small class="text-muted">{{ $request->created_at->format('H:i') }}</small>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                                <i class="fas fa-money-bill-wave me-1"></i> تسديد
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            @endif
+
+                                                            {{-- الطوارئ --}}
+                                                            @if($canEmergency)
+                                                                @foreach($pendingEmergencyPayments ?? [] as $payment)
+                                                                    @php
+                                                                        $em = $payment->emergency;
+                                                                        $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
+                                                                        $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                    @endphp
+                                                                    <tr>
+                                                                        <td><strong>#{{ $payment->id }}</strong></td>
+                                                                        <td><span class="badge bg-danger"><i class="fas fa-ambulance me-1"></i> طوارئ</span></td>
+                                                                        <td>
+                                                                            <div class="fw-semibold">{{ $patientName }}</div>
+                                                                            <small class="text-muted">{{ $patientId }}</small>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="badge bg-{{ $payment->emergency->priority_color }}">{{ $payment->emergency->priority_text }}</span>
+                                                                            <small class="text-muted d-block mt-1">خدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                        </td>
+                                                                        <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
+                                                                        <td>
+                                                                            <small>{{ $payment->created_at->format('Y-m-d') }}</small><br>
+                                                                            <small class="text-muted">{{ $payment->created_at->format('H:i') }}</small>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                                <i class="fas fa-money-bill-wave me-1"></i> تسديد
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            @endif
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد معاملات معلقة حالياً</p>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <!-- تبويب كشفية الاستشارية -->
+                                        @if($canConsultation)
+                                        <div class="tab-pane fade" id="tab-appointments" role="tabpanel">
+                                            @if($appointmentsCount > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
                                                             <tr>
-                                                                <td><strong>#{{ $request->id }}</strong></td>
-                                                                <td>
-                                                                    @if($request->type === 'lab')
-                                                                        <span class="badge bg-primary"><i class="fas fa-flask"></i> تحاليل</span>
-                                                                    @elseif($request->type === 'radiology')
-                                                                        <span class="badge bg-info"><i class="fas fa-x-ray"></i> أشعة</span>
-                                                                    @elseif($request->type === 'pharmacy')
-                                                                        <span class="badge bg-success"><i class="fas fa-pills"></i> صيدلية</span>
-                                                                    @elseif($request->type === 'emergency')
-                                                                        <span class="badge bg-danger"><i class="fas fa-ambulance"></i> طوارئ</span>
-                                                                    @else
-                                                                        <span class="badge bg-secondary">{{ $request->type }}</span>
-                                                                    @endif
-                                                                </td>
+                                                                <th>رقم الموعد</th>
+                                                                <th>المريض</th>
+                                                                <th>الطبيب المعالج</th>
+                                                                <th>العيادة / التخصص</th>
+                                                                <th class="text-end">أجور الكشفية</th>
+                                                                <th>تاريخ الحجز</th>
+                                                                <th class="text-center">الإجراء</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($pendingAppointments ?? [] as $appointment)
                                                                 @php
-                                                                    $reqPatient = optional(optional($request->visit)->patient);
+                                                                    $patientName = optional(optional($appointment->patient)->user)->name ?? 'غير محدد';
+                                                                    $patientId = optional($appointment->patient)->national_id ?? '---';
+                                                                    $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
+                                                                    $department = optional($appointment->department)->name ?? 'غير محدد';
+                                                                    $amount = $appointment->consultation_fee ?? 0;
                                                                 @endphp
-                                                                <td>
-                                                                    <div class="fw-semibold">
-                                                                        {{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
-                                                                        @if($reqPatient && $reqPatient->insurance_type === 'moi')
-                                                                            <span class="badge bg-primary fs-8 ms-1" title="ضمان قوى الأمن الداخلي"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                        @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
-                                                                            <span class="badge bg-info text-dark fs-8 ms-1" title="الضمان الصحي الوطني"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
-                                                                        @endif
-                                                                    </div>
-                                                                    <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
-                                                                </td>
-                                                                <td>
-                                                                    @if($request->type === 'lab' && isset($details['lab_test_ids']))
-                                                                        <small class="text-muted">
-                                                                            <i class="fas fa-vial"></i>
-                                                                            عدد الخدمات: {{ count($details['lab_test_ids']) }} تحليل
-                                                                            @if(!empty($details['package_id']))
-                                                                                <br>باقة: #{{ $details['package_id'] }}
+                                                                <tr>
+                                                                    <td><strong>#{{ $appointment->id }}</strong></td>
+                                                                    <td>
+                                                                        <div class="fw-semibold">{{ $patientName }}
+                                                                            @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                            @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                             @endif
-                                                                        </small>
-                                                                    @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
-                                                                        <small class="text-muted">
-                                                                            <i class="fas fa-camera"></i>
-                                                                            عدد الخدمات: {{ count($details['radiology_type_ids']) }} نوع إشعة
-                                                                        </small>
-                                                                    @elseif($request->type === 'pharmacy' && isset($details['tests']))
-                                                                        <small class="text-muted">
-                                                                            <i class="fas fa-pills"></i>
-                                                                            عدد الخدمات: {{ count($details['tests']) }} منتج
-                                                                            @if(is_array($details['tests']) && count($details['tests']) > 0)
-                                                                                <br>{{ implode(', ', array_slice($details['tests'], 0, 3)) }}@if(count($details['tests']) > 3) ... @endif
-                                                                            @endif
-                                                                        </small>
-                                                                    @elseif($request->type === 'emergency' && isset($details['emergency_priority']))
-                                                                        <small class="text-muted">
-                                                                            <i class="fas fa-exclamation-triangle"></i>
-                                                                            <strong>الأولوية:</strong>
-                                                                            {{ $details['emergency_priority'] }}
-                                                                            @if(isset($details['emergency_type']))
-                                                                                <br><strong>النوع:</strong> {{ \App\Models\Emergency::getEmergencyTypeText($details['emergency_type']) }}
-                                                                            @endif
-                                                                            @if(isset($details['services']) && is_array($details['services']))
-                                                                                <br>عدد الخدمات: {{ count($details['services']) }}
-                                                                            @endif
-                                                                        </small>
-                                                                    @else
-                                                                        <small class="text-muted">{{ $request->description }}</small>
-                                                                    @endif
-                                                                </td>
-                                                                <td class="text-end text-success fw-bold">
-                                                                    @if($amount !== null)
-                                                                        {{ number_format($amount, 2) }} IQD
-                                                                    @else
-                                                                        -
-                                                                    @endif
-                                                                </td>
-                                                                <td>
-                                                                    <small>{{ $request->created_at->format('Y-m-d') }}</small>
-                                                                    <br>
-                                                                    <small class="text-muted">{{ $request->created_at->format('H:i') }}</small>
-                                                                </td>
-                                                                <td>
-                                                                    <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                                                        تسديد
-                                                                    </a>
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
-                                                    @endif
+                                                                        </div>
+                                                                        <small class="text-muted">{{ $patientId }}</small>
+                                                                    </td>
+                                                                    <td>د. {{ $doctorName }}</td>
+                                                                    <td>{{ $department }}</td>
+                                                                    <td class="text-end text-success fw-bold">{{ number_format($amount, 2) }} IQD</td>
+                                                                    <td>{{ $appointment->created_at->format('Y-m-d H:i') }}</td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الكشفية
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد مواعيد استشارية معلقة بانتظار الدفع</p>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        @endif
 
-                                                    @if(auth()->user()->can('view cashier emergency'))
-                                                        @foreach($pendingEmergencyPayments ?? [] as $payment)
-                                                            @php
-                                                                $em = $payment->emergency;
-                                                                if ($em->patient) {
-                                                                    $patientName = optional(optional($em->patient)->user)->name ?? 'غير محدد';
-                                                                    $patientId = optional(optional($em->patient)->user)->phone ?? '---';
-                                                                } elseif ($em->emergencyPatient) {
-                                                                    $patientName = $em->emergencyPatient->name;
-                                                                    $patientId = $em->emergencyPatient->phone ?? '---';
-                                                                } else {
-                                                                    $patientName = 'غير محدد';
-                                                                    $patientId = '---';
-                                                                }
-                                                            @endphp
+                                        <!-- تبويب التحاليل والأشعة -->
+                                        @if($canMedicalRequests)
+                                        <div class="tab-pane fade" id="tab-requests" role="tabpanel">
+                                            @if($requestsCount > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
                                                             <tr>
-                                                                <td><strong>#{{ $payment->id }}</strong></td>
-                                                                <td>
-                                                                    <span class="badge bg-danger"><i class="fas fa-ambulance"></i> طوارئ</span>
-                                                                </td>
-                                                                <td>
-                                                                    <div>{{ $patientName }}</div>
-                                                                    <small class="text-muted">{{ $patientId }}</small>
-                                                                </td>
-                                                                <td>
-                                                                    <small>
-                                                                        <span class="badge bg-{{ $payment->emergency->priority_color }}">{{ $payment->emergency->priority_text }}</span>
-                                                                        @php
-                                                                            $serviceCount = $payment->emergency->services->count();
-                                                                        @endphp
-                                                                        @if($serviceCount > 0)
-                                                                            <br>
-                                                                            عدد الخدمات: {{ $serviceCount }}
-                                                                        @else
-                                                                            <br>
-                                                                            <span class="text-muted">لا توجد خدمات محددة</span>
-                                                                        @endif
-                                                                    </small>
-                                                                </td>
-                                                                <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
-                                                                <td>
-                                                                    <small>{{ $payment->created_at->format('Y-m-d') }}</small>
-                                                                    <br>
-                                                                    <small class="text-muted">{{ $payment->created_at->format('H:i') }}</small>
-                                                                </td>
-                                                                <td>
-                                                                    <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                                                        تسديد
-                                                                    </a>
-                                                                </td>
+                                                                <th>رقم الطلب</th>
+                                                                <th>القسم</th>
+                                                                <th>المريض</th>
+                                                                <th>تفاصيل الفحص / التحليل</th>
+                                                                <th>الطبيب الطالب</th>
+                                                                <th class="text-end">المبلغ الإجمالي</th>
+                                                                <th>التاريخ والوقت</th>
+                                                                <th class="text-center">الإجراء</th>
                                                             </tr>
-                                                        @endforeach
-                                                    @endif
-                                                </tbody>
-                                            </table>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($pendingMedicalRequests ?? [] as $request)
+                                                                @php
+                                                                    $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                                                    $amount = $request->total_amount;
+                                                                    $reqPatient = optional(optional($request->visit)->patient);
+                                                                    $docName = optional(optional(optional($request->visit)->doctor)->user)->name ?? '---';
+                                                                @endphp
+                                                                <tr>
+                                                                    <td><strong>#{{ $request->id }}</strong></td>
+                                                                    <td>
+                                                                        @if($request->type === 'lab')
+                                                                            <span class="badge bg-primary px-2 py-1"><i class="fas fa-flask me-1"></i> المختبر</span>
+                                                                        @elseif($request->type === 'radiology')
+                                                                            <span class="badge bg-info text-dark px-2 py-1"><i class="fas fa-x-ray me-1"></i> الأشعة</span>
+                                                                        @elseif($request->type === 'pharmacy')
+                                                                            <span class="badge bg-success px-2 py-1"><i class="fas fa-pills me-1"></i> الصيدلية</span>
+                                                                        @else
+                                                                            <span class="badge bg-secondary px-2 py-1">{{ $request->type }}</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
+                                                                            @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                            @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                            @endif
+                                                                        </div>
+                                                                        <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($request->type === 'lab' && isset($details['lab_test_ids']))
+                                                                            <span class="text-dark fw-bold"><i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل</span>
+                                                                            @if(!empty($details['package_id']))
+                                                                                <small class="badge bg-light text-dark border ms-1">باقة #{{ $details['package_id'] }}</small>
+                                                                            @endif
+                                                                        @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
+                                                                            <span class="text-dark fw-bold"><i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} فحص أشعة</span>
+                                                                        @else
+                                                                            <span>{{ $request->description }}</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>د. {{ $docName }}</td>
+                                                                    <td class="text-end text-success fw-bold">{{ $amount !== null ? number_format($amount, 2) . ' IQD' : '-' }}</td>
+                                                                    <td>{{ $request->created_at->format('Y-m-d H:i') }}</td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الفحوصات
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد طلبات فحوصات أو تحاليل معلقة بانتظار الدفع</p>
+                                                </div>
+                                            @endif
                                         </div>
-                                    @else
-                                        <div class="text-center py-5">
-                                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                                            <p class="text-muted">لا توجد معاملات معلقة حالياً</p>
+                                        @endif
+
+                                        <!-- تبويب الطوارئ -->
+                                        @if($canEmergency)
+                                        <div class="tab-pane fade" id="tab-emergency" role="tabpanel">
+                                            @if($emergencyCount > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>رقم الإشعار</th>
+                                                                <th>المريض</th>
+                                                                <th>درجة الخطورة</th>
+                                                                <th>الخدمات</th>
+                                                                <th class="text-end">المبلغ المطلوب</th>
+                                                                <th>التاريخ والوقت</th>
+                                                                <th class="text-center">الإجراء</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($pendingEmergencyPayments ?? [] as $payment)
+                                                                @php
+                                                                    $em = $payment->emergency;
+                                                                    $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
+                                                                    $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td><strong>#{{ $payment->id }}</strong></td>
+                                                                    <td>
+                                                                        <div class="fw-semibold">{{ $patientName }}</div>
+                                                                        <small class="text-muted">{{ $patientId }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-{{ $payment->emergency->priority_color }} px-2 py-1">
+                                                                            {{ $payment->emergency->priority_text }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                    </td>
+                                                                    <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
+                                                                    <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الطوارئ
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد خدمات طوارئ معلقة بانتظار الدفع</p>
+                                                </div>
+                                            @endif
                                         </div>
-                                    @endif
+                                        @endif
+
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -401,9 +582,8 @@
 
 @section('scripts')
 <script>
-// تحديث تلقائي للصفحة كل 5 ثواني
+// تحديث تلقائي للصفحة كل 5 ثواني مع الحفاظ على التبويب النشط
 setInterval(function() {
-    // تحديث الإحصائيات والجدول بدون إعادة تحميل كامل
     $.ajax({
         url: window.location.href,
         type: 'GET',
@@ -413,11 +593,21 @@ setInterval(function() {
             const newContent = doc.getElementById('cashier-content');
             
             if (newContent) {
+                const activeTabBtnId = $('#pendingTabs button.active').attr('id');
                 const currentScroll = window.scrollY;
+                
                 $('#cashier-content').html($(newContent).html());
+                
+                if (activeTabBtnId) {
+                    var tabToActivate = document.getElementById(activeTabBtnId);
+                    if (tabToActivate) {
+                        var tabInstance = new bootstrap.Tab(tabToActivate);
+                        tabInstance.show();
+                    }
+                }
+                
                 window.scrollTo(0, currentScroll);
                 
-                // تحديث الوقت
                 const now = new Date();
                 const time = now.toLocaleTimeString('ar-IQ');
                 $('#last-update').text('آخر تحديث: ' + time);
@@ -427,7 +617,7 @@ setInterval(function() {
             console.error('خطأ في التحديث:', error);
         }
     });
-}, 5000); // 5 ثواني
+}, 5000);
 
 $(document).ready(function() {
     const now = new Date();

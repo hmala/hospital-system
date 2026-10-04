@@ -13,6 +13,12 @@ class DoctorController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view doctors'))) {
+            abort(403, 'غير مصرح لك بعرض قائمة الأطباء');
+        }
+
         $query = Doctor::with(['user', 'department'])
             ->withCount(['appointments as today_appointments_count' => function($query) {
                 $query->whereDate('appointment_date', today());
@@ -52,12 +58,24 @@ class DoctorController extends Controller
 
     public function create()
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create doctors'))) {
+            abort(403, 'غير مصرح لك بإضافة طبيب جديد');
+        }
+
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         return view('doctors.create', compact('departments'));
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('create doctors'))) {
+            abort(403, 'غير مصرح لك بإضافة طبيب جديد');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -110,6 +128,12 @@ class DoctorController extends Controller
 
     public function show(Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view doctors'))) {
+            abort(403, 'غير مصرح لك بعرض بيانات الطبيب');
+        }
+
         $doctor->load(['user', 'department', 'appointments' => function($query) {
             $query->whereDate('appointment_date', '>=', today())
                   ->orderBy('appointment_date');
@@ -120,6 +144,12 @@ class DoctorController extends Controller
 
     public function edit(Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit doctors'))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الطبيب');
+        }
+
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         $doctor->load('user');
         return view('doctors.edit', compact('doctor', 'departments'));
@@ -127,6 +157,12 @@ class DoctorController extends Controller
 
     public function update(Request $request, Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('edit doctors'))) {
+            abort(403, 'غير مصرح لك بتعديل بيانات الطبيب');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $doctor->user_id,
@@ -182,6 +218,12 @@ class DoctorController extends Controller
 
     public function updateAvailability(Request $request, Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('edit doctors') && !$user->can('manage consultant availability')))) {
+            abort(403, 'غير مصرح لك بتعديل توفر الطبيب');
+        }
+
         $request->validate([
             'is_available_today' => 'required|boolean',
         ]);
@@ -200,6 +242,12 @@ class DoctorController extends Controller
 
     public function destroy(Doctor $doctor)
     {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('delete doctors'))) {
+            abort(403, 'غير مصرح لك بحذف الطبيب');
+        }
+
         // حذف المستخدم المرتبط (اختياري حسب متطلباتك)
         // $doctor->user->delete();
         

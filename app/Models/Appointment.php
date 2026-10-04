@@ -33,7 +33,8 @@ class Appointment extends Model
         'called_at',
         'confirmed_at',
         'completed_at',
-        'cancelled_at'
+        'cancelled_at',
+        'telegram_chat_id'
     ];
 
     // أسباب الزيارة المحددة
@@ -160,7 +161,8 @@ class Appointment extends Model
 
     public function canBeCancelled()
     {
-        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed', 'calling']) && !$this->visit;
+        $visitCompleted = $this->visit && ($this->visit->status === 'completed' || $this->visit->is_completed);
+        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed', 'calling']) && !$visitCompleted;
     }
 
     protected function cancellationSourceLabel($user)
@@ -228,6 +230,13 @@ class Appointment extends Model
 
                 $this->update(['payment_status' => 'refunded']);
             });
+        }
+
+        // إلغاء الزيارة والطلبات الطبية غير المكتملة المرتبطة بالموعد إن وجدت
+        if ($this->visit && $this->visit->status !== 'completed' && !$this->visit->is_completed) {
+            $this->visit->update(['status' => 'cancelled']);
+            \App\Models\Request::where('visit_id', $this->visit->id)->where('status', '!=', 'completed')->update(['status' => 'cancelled']);
+            \App\Models\RadiologyRequest::where('visit_id', $this->visit->id)->where('status', '!=', 'completed')->update(['status' => 'cancelled']);
         }
 
         $this->update([

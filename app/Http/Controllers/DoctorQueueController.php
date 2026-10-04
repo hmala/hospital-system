@@ -76,8 +76,17 @@ class DoctorQueueController extends Controller
             'prescriptions.items.suggestedMedicine',
         ])
         ->where('doctor_id', $doctor->id)
-        ->whereDate('visit_date', $today)
         ->whereNotIn('status', ['completed', 'cancelled'])
+        ->where(function($q) use ($today) {
+            $q->whereDate('visit_date', $today)
+              ->orWhereDate('updated_at', $today)
+              ->orWhereHas('requests', function($rq) use ($today) {
+                  $rq->whereDate('created_at', $today);
+              })
+              ->orWhereHas('radiologyRequests', function($rq) use ($today) {
+                  $rq->whereDate('created_at', $today);
+              });
+        })
         ->where(function($q) {
             $q->whereHas('radiologyRequests')
               ->orWhereHas('requests', function($rq) {
@@ -94,6 +103,7 @@ class DoctorQueueController extends Controller
             $qNum = $v->appointment ? $v->appointment->queue_number : $v->id;
 
             $radRequests = $v->radiologyRequests;
+            $medicalRadRequests = $v->requests->where('type', 'radiology');
             $labRequests = $v->requests->where('type', 'lab');
             $prescriptions = $v->prescriptions;
 
@@ -113,6 +123,20 @@ class DoctorQueueController extends Controller
                     'type' => 'radiology',
                     'name' => $typeName,
                     'status' => $rr->status,
+                    'is_ready' => $isReady
+                ];
+            }
+
+            foreach ($medicalRadRequests as $mr) {
+                $isReady = ($mr->status === 'completed');
+                $totalTests++;
+                if ($isReady) $completedCount++;
+
+                $testsList[] = [
+                    'type' => 'radiology',
+                    'name' => $mr->description ?: 'فحص أشعة / سونار',
+                    'status' => $mr->status,
+                    'payment_status' => $mr->payment_status,
                     'is_ready' => $isReady
                 ];
             }
@@ -173,6 +197,10 @@ class DoctorQueueController extends Controller
                 ];
             }
 
+            $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->count() > 0;
+            $isUnpaidAppointment = ($v->appointment && $v->appointment->payment_status !== 'paid' && !$v->appointment->emergency_id);
+            $hasUnpaidTests = $hasUnpaidRequests || $isUnpaidAppointment;
+
             $allReady = ($totalTests > 0) && ($completedCount === $totalTests);
 
             return [
@@ -180,6 +208,7 @@ class DoctorQueueController extends Controller
                 'patient_name' => $pName,
                 'queue_number' => $qNum,
                 'all_ready' => $allReady,
+                'has_unpaid_tests' => $hasUnpaidTests,
                 'has_substitution_alert' => $hasSubstitutionAlert,
                 'substitutions' => $substitutionsList,
                 'total_tests' => $totalTests,
@@ -342,6 +371,12 @@ class DoctorQueueController extends Controller
      */
     public function callNext(Request $request, $doctorId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المرضى من الطابور.'], 403);
+        }
+
         $doctor = Doctor::findOrFail($doctorId);
         $today = today();
 
@@ -390,6 +425,25 @@ class DoctorQueueController extends Controller
         $nextAppointment->called_at = now();
         $nextAppointment->save();
 
+        // إرسال نداء فوري على تيليجرام للمريض المستدعى
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($nextAppointment);
+
+            // تنبيه المريض الذي يليه في الطابور باقتراب الدور
+            $followingAppointment = Appointment::where('doctor_id', $doctor->id)
+                ->whereDate('appointment_date', $today)
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->where('queue_number', '>', $nextAppointment->queue_number ?? 0)
+                ->orderBy('queue_number', 'asc')
+                ->first();
+
+            if ($followingAppointment) {
+                app(\App\Services\TelegramService::class)->sendNearTurnAlert($followingAppointment);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Telegram notification failed: ' . $e->getMessage());
+        }
+
         $pName = $nextAppointment->patient && $nextAppointment->patient->user ? $nextAppointment->patient->user->name : 'المريض';
 
         return response()->json([
@@ -406,11 +460,22 @@ class DoctorQueueController extends Controller
      */
     public function recall(Request $request, $appointmentId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بإعادة المناداة على المريض.'], 403);
+        }
+
         $appointment = Appointment::with(['patient.user', 'doctor.user'])->findOrFail($appointmentId);
         
         $appointment->status = 'calling';
         $appointment->called_at = now();
         $appointment->save();
+
+        // إعادة إرسال نداء تيليجرام
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+        } catch (\Throwable $e) {}
 
         $pName = $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'المريض';
         $docName = $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'الطبيب';
@@ -430,6 +495,12 @@ class DoctorQueueController extends Controller
      */
     public function callForResults(Request $request, $visitId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المراجعين للنتائج.'], 403);
+        }
+
         $visit = Visit::with(['patient.user', 'doctor.user', 'appointment', 'radiologyRequests', 'requests'])->findOrFail($visitId);
         
         $hasPendingRad = $visit->radiologyRequests()->where('status', '!=', 'completed')->exists();
@@ -438,6 +509,18 @@ class DoctorQueueController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'لا يمكن استدعاء المراجع حالياً، بانتظار اكتمال كافة الفحوصات الطبية من المختبر / الأشعة.'
+            ], 422);
+        }
+
+        // التحقق من تسديد أجور الفحوصات والكشفية بالكاشير
+        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->exists();
+        $isUnpaidAppointment = ($visit->appointment && $visit->appointment->payment_status !== 'paid' && !$visit->appointment->emergency_id);
+
+        if ($hasUnpaidLab || $isUnpaidAppointment) {
+            $pTitle = $visit->patient && $visit->patient->user ? $visit->patient->user->name : 'المراجع';
+            return response()->json([
+                'success' => false,
+                'message' => 'تنبيه: توجد فحوصات طبية غير مسددة في الكاشير للمراجع (' . $pTitle . '). يرجى توجيهه لتسديد الرسوم في الكاشير أولاً.'
             ], 422);
         }
 
@@ -473,6 +556,10 @@ class DoctorQueueController extends Controller
             $appointment->status = 'calling';
             $appointment->called_at = now();
             $appointment->save();
+
+            try {
+                app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+            } catch (\Throwable $e) {}
         }
 
         return response()->json([
@@ -491,6 +578,12 @@ class DoctorQueueController extends Controller
      */
     public function startConsultation(Request $request, $appointmentId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك ببدء الكشف الطبي.'], 403);
+        }
+
         $appointment = Appointment::with(['patient.user', 'doctor.user'])->findOrFail($appointmentId);
 
         if ($appointment->payment_status !== 'paid' && !$appointment->emergency_id) {
@@ -519,6 +612,10 @@ class DoctorQueueController extends Controller
         $appointment->status = 'in_consultation';
         $appointment->save();
 
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+        } catch (\Throwable $e) {}
+
         return response()->json([
             'success' => true,
             'message' => 'تم إدخال المريض وبدء الكشف بنجاح.',
@@ -532,6 +629,12 @@ class DoctorQueueController extends Controller
      */
     public function skip(Request $request, $appointmentId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتأخير دور المريض.'], 403);
+        }
+
         $appointment = Appointment::findOrFail($appointmentId);
         
         // Put at the end of queue
@@ -609,5 +712,14 @@ class DoctorQueueController extends Controller
         } catch (\Exception $e) {}
 
         return response('', 404);
+    }
+
+    /**
+     * Mobile Patient Live Queue Tracker View
+     */
+    public function patientLiveTracker(Appointment $appointment)
+    {
+        $appointment->load(['patient.user', 'doctor.user', 'department']);
+        return view('queue.patient-tracker', compact('appointment'));
     }
 }

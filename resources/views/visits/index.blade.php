@@ -7,9 +7,11 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="fas fa-history me-2"></i>سجل الزيارات</h2>
+                @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create visits'))
                 <a href="{{ route('visits.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>تسجيل زيارة جديدة
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -145,8 +147,12 @@
                                     <td>@if($visit->diagnosis && isset($visit->diagnosis['description']))<small class="text-success">{{ Str::limit($visit->diagnosis['description'], 50) }}</small>@else<span class="text-muted">---</span>@endif</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('view visits'))
                                             <a href="{{ route('visits.show', $visit) }}" class="btn btn-info" title="عرض"><i class="fas fa-eye"></i></a>
+                                            @endif
+                                            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('edit visits'))
                                             <a href="{{ route('visits.edit', $visit) }}" class="btn btn-warning" title="تعديل"><i class="fas fa-edit"></i></a>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

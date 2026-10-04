@@ -31,8 +31,12 @@ class PrescriptionWorkflowTest extends TestCase
 
         // إنشاء الأدوار والصلاحيات
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'doctor', 'guard_name' => 'web']);
+        $doctorRole = Role::firstOrCreate(['name' => 'doctor', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'pharmacy_staff', 'guard_name' => 'web']);
+
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view own visits', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'manage own visits', 'guard_name' => 'web']);
+        $doctorRole->givePermissionTo(['view own visits', 'manage own visits']);
 
         $this->admin = User::factory()->create();
         $this->admin->assignRole('admin');

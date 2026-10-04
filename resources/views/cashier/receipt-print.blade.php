@@ -308,10 +308,32 @@
             // Line Items Extraction
             $lineItems = [];
 
-            // 1. Consultation
+            // 1. Consultation / Appointment Service
             if ($payment->appointment || $payment->payment_type === 'appointment' || $payment->payment_type === 'consultation') {
                 $consultFee = $payment->appointment->consultation_fee ?? ($payment->total_amount ?: $payment->amount);
-                $lineItems[] = ['name' => 'اجور كشف استشارية', 'qty' => 1, 'price' => $consultFee];
+                
+                $serviceTitle = 'اجور كشف استشارية';
+                $scanType = null;
+                if ($payment->appointment && $payment->appointment->visit) {
+                    $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
+                    if ($medReq) {
+                        $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                        $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                        if ($radTypeId) {
+                            $scanType = \App\Models\RadiologyType::find($radTypeId);
+                        }
+                    }
+                }
+
+                if ($scanType) {
+                    $serviceTitle = 'فحص سونار: ' . $scanType->name;
+                } elseif (preg_match('/دفع رسوم\s+(.+)/u', $payment->description, $m) && !str_contains($m[1], 'موعد #')) {
+                    $serviceTitle = trim($m[1]);
+                } elseif ($payment->appointment && !empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
+                    $serviceTitle = $payment->appointment->reason;
+                }
+
+                $lineItems[] = ['name' => $serviceTitle, 'qty' => 1, 'price' => $consultFee];
             }
 
             // 2. Surgery
@@ -452,9 +474,14 @@
 
         <!-- Patient and Doctor Line -->
         <div class="patient-doctor-row">
-            اسم المريض <strong>{{ $patientName }}</strong>
+            اسم المريض: <strong>{{ $patientName }}</strong>
             @if($doctorName)
-                - <span>د. {{ $doctorName }}</span>
+                <br>الطبيب: <span>د. {{ $doctorName }}</span>
+            @endif
+            @if($payment->insurance_type && $payment->insurance_type !== 'none')
+                <div style="font-size: 11px; font-weight: 700; color: #000; margin-top: 2px;">
+                    التغطية: {{ $payment->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن' }}
+                </div>
             @endif
         </div>
 
@@ -464,7 +491,7 @@
                 <tr>
                     <th class="col-service">الخدمة الطبية</th>
                     <th class="col-qty">عدد</th>
-                    <th class="col-price">السعر</th>
+                    <th class="col-price">المبلغ</th>
                 </tr>
             </thead>
             <tbody>
@@ -472,38 +499,42 @@
                     <tr>
                         <td class="col-service">{{ $item['name'] }}</td>
                         <td class="col-qty">{{ $item['qty'] }}</td>
-                        <td class="col-price">{{ number_format($item['price'], 0) }}</td>
+                        <td class="col-price">{{ number_format($item['price'] > 0 && empty($payment->patient_share) ? $item['price'] : $payment->amount, 0) }}</td>
                     </tr>
                 @endforeach
 
-                @if($payment->insurance_type && $payment->insurance_type !== 'none')
-                    <tr>
-                        <td colspan="2" class="col-service" style="font-size: 11px; background: #fafafa;">
-                            {{ $payment->insurance_type_name }} (تحمل {{ number_format($payment->copay_percentage, 0) }}%)
-                            @if($payment->insurance_card_no)<br><small>بطاقة: {{ $payment->insurance_card_no }}</small>@endif
-                        </td>
-                        <td class="col-price" style="font-size: 11px; color: #1e40af;">حصة: {{ number_format($payment->insurance_share, 0) }}</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td colspan="2" class="total-label">المدفوع نقداً (المريض)</td>
-                        <td class="total-val">{{ number_format($payment->patient_share ?: $payment->amount, 0) }}</td>
-                    </tr>
-                @else
-                    <tr class="total-row">
-                        <td colspan="2" class="total-label">المجموع</td>
-                        <td class="total-val">{{ number_format($payment->amount, 0) }}</td>
-                    </tr>
-                @endif
+                <tr class="total-row">
+                    <td colspan="2" class="total-label">المبلغ المدفوع</td>
+                    <td class="total-val">{{ number_format($payment->amount, 0) }}</td>
+                </tr>
             </tbody>
         </table>
 
-        <!-- Bottom Payment / Dollar Box -->
+        <!-- Bottom Payment Box -->
         <table class="footer-amount-box">
             <tr>
-                <td class="box-label">طريقة الدفع: {{ $payment->payment_method_name }}</td>
+                <td class="box-label">طريقة الدفع: {{ $payment->payment_method === 'card' ? 'دفع إلكتروني (POS)' : 'نقدي (Cash)' }}</td>
                 <td class="box-val">{{ number_format($payment->amount, 0) }} IQD</td>
             </tr>
         </table>
+
+        @if($payment->appointment)
+            @php
+                $botUsername = config('services.telegram.bot_username', 'Kafathospitalbot');
+                $deepLink = "https://t.me/{$botUsername}?start=appt_" . $payment->appointment->id;
+                $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=1&data=" . urlencode($deepLink);
+            @endphp
+            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <img src="{{ $qrUrl }}" alt="QR" style="width: 60px; height: 60px; border: 1px solid #000;">
+                    <div style="text-align: right; font-size: 10px; font-weight: 800; line-height: 1.3;">
+                        <span>📱 امسح الرمز بهاتفك</span><br>
+                        <span style="color: #0088cc;">لمتابعة الدور واستلام نداء التيليجرام</span><br>
+                        <small style="color: #555;">@Kafathospitalbot</small>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         @if($payment->notes)
             <div style="font-size: 11px; margin-top: 5px; padding: 3px; border: 1px dashed #ccc;">

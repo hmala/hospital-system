@@ -16,22 +16,22 @@
                     <p class="text-muted mb-0">سجل وحالة غرف الرقود مقسمة حسب الطوابق ونسبة الإشغال</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    @if(auth()->user()->hasRole(['admin', 'receptionist', 'staff', 'surgery_staff']))
+                    @can('manage rooms')
                     <form action="{{ route('rooms.sync-occupancy') }}" method="POST" class="d-inline" onsubmit="return confirm('هل تريد فحص كافة الغرف وتحرير الغرف التي لا يوجد بها مريض فعلي؟')">
                         @csrf
                         <button type="submit" class="btn btn-outline-success shadow-sm" title="تحرير الغرف المحجوزة بدون مريض">
                             <i class="fas fa-sync-alt me-1"></i> فحص ومزامنة الشاغر
                         </button>
                     </form>
-                    @endif
+                    @endcan
                     <button onclick="window.print()" class="btn btn-outline-secondary shadow-sm">
                         <i class="fas fa-print me-1"></i> طباعة الجدول
                     </button>
-                    @if(auth()->user()->hasRole('admin'))
+                    @can('manage rooms')
                     <a href="{{ route('rooms.create') }}" class="btn btn-primary shadow-sm">
                         <i class="fas fa-plus-circle me-1"></i> إضافة غرفة جديدة
                     </a>
-                    @endif
+                    @endcan
                 </div>
             </div>
         </div>

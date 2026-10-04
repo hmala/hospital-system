@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN', '8926886048:AAFrT7bBwq4Nqus56eOxPbYqHhCJO5XE3lg'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME', 'Kafathospitalbot'),
+    ],
+
 ];

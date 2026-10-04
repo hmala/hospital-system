@@ -1,395 +1,321 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="mb-4">
-        <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-right"></i> رجوع
-        </a>
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-1"></i> رجوع لقائمة الأدوار
+            </a>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div id="autoSaveBadge" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 fs-6 shadow-sm d-flex align-items-center gap-2">
+                <i class="fas fa-bolt text-warning" id="autoSaveIcon"></i>
+                <span id="autoSaveText">الحفظ اللحظي التلقائي مفعّل</span>
+            </div>
+            <button type="submit" form="rolePermissionsForm" class="btn btn-outline-primary px-3 fw-bold shadow-sm">
+                <i class="fas fa-save me-1"></i> حفظ يدوي
+            </button>
+        </div>
     </div>
 
     <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">
-                        <i class="fas fa-edit"></i> تعديل صلاحيات: 
-                        @switch($role->name)
-                            @case('admin') مدير النظام @break
-                            @case('admin-hsop') مدير المستشفى @break
-                            @case('hospital_admin') مدير المستشفى @break
-                            @case('doctor') طبيب @break
-                            @case('patient') مريض @break
-                            @case('receptionist') موظف استقبال @break
-                            @case('cashier') كاشير @break
-                            @case('lab_staff') موظف مختبر @break
-                            @case('radiology_staff') موظف أشعة @break
-                            @case('pharmacy_staff') موظف صيدلية @break
-                            @case('surgery_staff') موظف عمليات @break
-                            @case('nurse') ممرض @break
-                            @case('emergency_staff') موظف طوارئ @break
-                            @case('consultation_receptionist') موظف استعلامات استشارية @break
-                            @default {{ $role->name }}
-                        @endswitch
-                    </h4>
+        <div class="col-xl-11 col-lg-12">
+            <div class="card shadow border-0 rounded-3 overflow-hidden">
+                <div class="card-header bg-gradient bg-primary text-white py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h4 class="mb-1 fw-bold">
+                                <i class="fas fa-user-shield me-2"></i> تعديل صلاحيات الدور: 
+                                <span class="badge bg-light text-primary px-3 py-2 ms-2 fs-6">
+                                    @switch($role->name)
+                                        @case('admin') مدير النظام @break
+                                        @case('admin-hsop') مدير المستشفى @break
+                                        @case('hospital_admin') مدير المستشفى @break
+                                        @case('doctor') طبيب استشاري @break
+                                        @case('patient') مريض @break
+                                        @case('receptionist') موظف استقبال @break
+                                        @case('cashier') كاشير الصندوق @break
+                                        @case('lab_staff') موظف مختبر @break
+                                        @case('radiology_staff') موظف أشعة وسونار @break
+                                        @case('pharmacy_staff') موظف صيدلية @break
+                                        @case('surgery_staff') موظف عمليات @break
+                                        @case('nurse') كادر تمريضي @break
+                                        @case('emergency_staff') موظف طوارئ @break
+                                        @case('consultation_receptionist') موظف استعلامات الاستشارية @break
+                                        @default {{ $role->name }}
+                                    @endswitch
+                                </span>
+                            </h4>
+                            <small class="text-white-50">تحديد وتخصيص الصلاحيات التشغيلية والإدارية الممنوحة لهذا الدور</small>
+                        </div>
+                        <div class="text-white-50 small">
+                            رمز الدور: <code class="text-white bg-dark bg-opacity-25 px-2 py-1 rounded">{{ $role->name }}</code>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form action="{{ route('roles.update', $role) }}" method="POST">
+
+                <div class="card-body p-4 bg-light bg-opacity-50">
+                    <form id="rolePermissionsForm" action="{{ route('roles.update', $role) }}" method="POST">
                         @csrf
                         @method('PUT')
+                        <input type="hidden" name="display_name" value="{{ $role->name }}">
 
-                        <div class="mb-3">
-                            <label class="form-label">اسم الدور</label>
-                            <input type="text" class="form-control" value="{{ $role->name }}" disabled>
-                            <input type="hidden" name="display_name" value="{{ $role->name }}">
-                            <small class="text-muted">لا يمكن تعديل اسم الدور</small>
+                        <!-- لوحة الإحصائيات السريعة -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm rounded-3 bg-white">
+                                    <div class="card-body d-flex align-items-center p-3">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 p-3 text-primary me-3">
+                                            <i class="fas fa-check-circle fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-0 fw-bold text-primary" id="selectedCount">0</h4>
+                                            <span class="text-muted small">صلاحية ممنوحة لهذا الدور</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm rounded-3 bg-white">
+                                    <div class="card-body d-flex align-items-center p-3">
+                                        <div class="rounded-circle bg-info bg-opacity-10 p-3 text-info me-3">
+                                            <i class="fas fa-layer-group fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-0 fw-bold text-info" id="totalCount">0</h4>
+                                            <span class="text-muted small">إجمالي صلاحيات النظام</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm rounded-3 bg-white">
+                                    <div class="card-body d-flex align-items-center p-3">
+                                        <div class="rounded-circle bg-success bg-opacity-10 p-3 text-success me-3">
+                                            <i class="fas fa-percentage fa-2x"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <h4 class="mb-0 fw-bold text-success" id="percentageCount">0%</h4>
+                                                <span class="badge bg-success bg-opacity-10 text-success small">نسبة الوصول</span>
+                                            </div>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-success" id="progressBar" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <label class="form-label fw-bold fs-5 mb-0">
-                                    <i class="fas fa-shield-alt text-primary"></i> إدارة الصلاحيات
-                                </label>
-                                <div class="d-flex gap-2">
-                                    <div class="input-group input-group-sm" style="max-width: 250px;">
-                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                        <input type="text" class="form-control" id="searchPermissions" placeholder="البحث في الصلاحيات...">
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="expandCollapseAll">
-                                        <i class="fas fa-expand-alt"></i> توسيع الكل
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- إحصائيات الصلاحيات -->
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-4">
-                                    <div class="card border-primary shadow-sm">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
-                                            <h5 class="mb-0" id="selectedCount">0</h5>
-                                            <small class="text-muted">صلاحية محددة</small>
+                        <!-- شريط التصفية والبحث السريع -->
+                        <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+                            <div class="card-body p-3">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-lg-5 col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 text-muted"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control bg-light border-0" id="searchPermissions" placeholder="بحث فوري في الصلاحيات بالاسم أو الوظيفة...">
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card border-info shadow-sm">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-list fa-2x text-info mb-2"></i>
-                                            <h5 class="mb-0" id="totalCount">0</h5>
-                                            <small class="text-muted">إجمالي الصلاحيات</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card border-success shadow-sm">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-percentage fa-2x text-success mb-2"></i>
-                                            <h5 class="mb-0" id="percentageCount">0%</h5>
-                                            <small class="text-muted">نسبة الاكتمال</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- أزرار التحديد السريع -->
-                            <div class="card mb-3 border-secondary">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <div>
-                                            <small class="text-muted fw-bold">
-                                                <i class="fas fa-bolt"></i> تحديد سريع:
-                                            </small>
-                                        </div>
-                                        <div class="btn-group btn-group-sm" role="group">
+                                    <div class="col-lg-7 col-md-6 text-md-end">
+                                        <div class="btn-group btn-group-sm flex-wrap" role="group">
+                                            <button type="button" class="btn btn-outline-primary quick-select" data-action="all">
+                                                <i class="fas fa-check-double me-1"></i> تفعيل الكل
+                                            </button>
                                             <button type="button" class="btn btn-outline-info quick-select" data-action="view">
-                                                <i class="fas fa-eye"></i> عرض فقط
+                                                <i class="fas fa-eye me-1"></i> عرض فقط
                                             </button>
                                             <button type="button" class="btn btn-outline-success quick-select" data-action="create">
-                                                <i class="fas fa-plus"></i> إنشاء فقط
+                                                <i class="fas fa-plus me-1"></i> إضافة فقط
                                             </button>
                                             <button type="button" class="btn btn-outline-warning quick-select" data-action="edit">
-                                                <i class="fas fa-edit"></i> تعديل فقط
+                                                <i class="fas fa-edit me-1"></i> تعديل فقط
                                             </button>
                                             <button type="button" class="btn btn-outline-danger quick-select" data-action="delete">
-                                                <i class="fas fa-trash"></i> حذف فقط
-                                            </button>
-                                            <button type="button" class="btn btn-outline-success quick-select" data-action="all">
-                                                <i class="fas fa-check-double"></i> تحديد الكل
+                                                <i class="fas fa-trash me-1"></i> حذف فقط
                                             </button>
                                             <button type="button" class="btn btn-outline-secondary quick-select" data-action="none">
-                                                <i class="fas fa-times"></i> إلغاء الكل
+                                                <i class="fas fa-times me-1"></i> إلغاء التحديد
                                             </button>
                                         </div>
+                                        <button type="button" class="btn btn-sm btn-light border ms-2" id="expandCollapseAll">
+                                            <i class="fas fa-expand-alt"></i> <span>توسيع الكل</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                            
-                            @error('permissions')
-                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                    <i class="fas fa-exclamation-triangle"></i> {{ $message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            @enderror
-                            
+                        </div>
+
+                        @error('permissions')
+                            <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i> {{ $message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @enderror
+
+                        @php
+                            // ترتيب الأقسام التشغيلية الـ 9
+                            $sections = $moduleOrder ?? \App\Http\Controllers\RoleManagementController::getModuleOrder();
+                            $defs = $permissionDefinitions ?? \App\Http\Controllers\RoleManagementController::getPermissionDefinitions();
+                        @endphp
+
+                        <!-- أقسام الصلاحيات الـ 9 -->
+                        <div class="accordion" id="permissionsAccordion">
+                            @foreach($sections as $moduleKey => $moduleInfo)
                             @php
-                                // ترتيب الأقسام حسب الأولوية
-                                $moduleOrder = [
-                                    'section' => ['name' => 'الأقسام الرئيسية', 'icon' => 'fa-th-large', 'color' => 'primary'],
-                                    'patients' => ['name' => 'المرضى', 'icon' => 'fa-user-injured', 'color' => 'info'],
-                                    'doctors' => ['name' => 'الأطباء', 'icon' => 'fa-user-md', 'color' => 'success'],
-                                    'departments' => ['name' => 'العيادات', 'icon' => 'fa-clinic-medical', 'color' => 'teal'],
-                                    'appointments' => ['name' => 'المواعيد', 'icon' => 'fa-calendar-check', 'color' => 'warning'],
-                                    'visits' => ['name' => 'الزيارات', 'icon' => 'fa-notes-medical', 'color' => 'indigo'],
-                                    'emergencies' => ['name' => 'الطوارئ', 'icon' => 'fa-ambulance', 'color' => 'danger'],
-                                    'surgeries' => ['name' => 'العمليات الجراحية', 'icon' => 'fa-procedures', 'color' => 'purple'],
-                                    'radiology' => ['name' => 'الأشعة', 'icon' => 'fa-x-ray', 'color' => 'cyan'],
-                                    'tests' => ['name' => 'التحاليل المخبرية', 'icon' => 'fa-vial', 'color' => 'pink'],
-                                    'inquiries' => ['name' => 'الاستعلامات', 'icon' => 'fa-question-circle', 'color' => 'secondary'],
-                                    'cashier' => ['name' => 'الكاشير والمدفوعات', 'icon' => 'fa-cash-register', 'color' => 'success'],
-                                    'accounting' => ['name' => 'الحسابات والتقارير المالية', 'icon' => 'fa-calculator', 'color' => 'primary'],
-                                    'pharmacy' => ['name' => 'الصيدلية', 'icon' => 'fa-pills', 'color' => 'green'],
-                                    'rooms' => ['name' => 'إدارة الغرف', 'icon' => 'fa-bed', 'color' => 'orange'],
-                                    'consultant' => ['name' => 'الأطباء الاستشاريين', 'icon' => 'fa-user-tie', 'color' => 'dark'],
-                                    'system' => ['name' => 'إدارة النظام', 'icon' => 'fa-cogs', 'color' => 'dark'],
-                                    'list' => ['name' => 'قوائم الانتظار', 'icon' => 'fa-list-ol', 'color' => 'purple'],
-                                    'types' => ['name' => 'إعدادات الأشعة والتحاليل', 'icon' => 'fa-cog', 'color' => 'cyan'],
-                                    'requests' => ['name' => 'طلبات الفحوصات والصيدلية', 'icon' => 'fa-file-medical', 'color' => 'pink'],
-                                    'referrals' => ['name' => 'التحويلات الطبية', 'icon' => 'fa-share-square', 'color' => 'info'],
-                                    'payments' => ['name' => 'سندات الدفع والقبض', 'icon' => 'fa-money-bill', 'color' => 'success'],
-                                    'availability' => ['name' => 'توفر الاستشاريين', 'icon' => 'fa-clock', 'color' => 'dark'],
-                                    'vitals' => ['name' => 'العلامات الحيوية', 'icon' => 'fa-heartbeat', 'color' => 'danger'],
-                                    'users' => ['name' => 'إدارة المستخدمين', 'icon' => 'fa-users', 'color' => 'dark'],
-                                    'roles' => ['name' => 'إدارة الأدوار', 'icon' => 'fa-user-tag', 'color' => 'dark'],
-                                    'permissions' => ['name' => 'إدارة الصلاحيات الخاصة', 'icon' => 'fa-key', 'color' => 'dark'],
-                                    'occupancy' => ['name' => 'إشغال الأسرة والأقسام', 'icon' => 'fa-bed', 'color' => 'purple'],
-                                    'operations' => ['name' => 'العمليات الجراحية المتاحة', 'icon' => 'fa-procedures', 'color' => 'purple'],
-                                    'packages' => ['name' => 'الباقات والخدمات', 'icon' => 'fa-cubes', 'color' => 'info'],
-                                    'suppliers' => ['name' => 'الموردين والشركات', 'icon' => 'fa-truck', 'color' => 'teal'],
-                                    'purchases' => ['name' => 'فواتير المشتريات', 'icon' => 'fa-shopping-cart', 'color' => 'teal'],
-                                    'inventory' => ['name' => 'المخزون والمستودع', 'icon' => 'fa-warehouse', 'color' => 'teal'],
-                                    'products' => ['name' => 'المواد والمنتجات الطبية', 'icon' => 'fa-box', 'color' => 'teal'],
-                                    'stock_batches' => ['name' => 'دفعات الشحنات', 'icon' => 'fa-boxes', 'color' => 'teal'],
-                                    'stock_movements' => ['name' => 'حركات المخزن', 'icon' => 'fa-dolly', 'color' => 'teal'],
-                                    'transfers' => ['name' => 'نقل المواد بين المخازن', 'icon' => 'fa-exchange-alt', 'color' => 'teal'],
-                                    'groups' => ['name' => 'مجموعات الفحوصات المفضلة', 'icon' => 'fa-folder-plus', 'color' => 'pink'],
-                                    'station' => ['name' => 'محطات الكادر الطبي والتمريضي', 'icon' => 'fa-laptop-medical', 'color' => 'primary'],
-                                    'devices' => ['name' => 'الأجهزة والمستلزمات الطبية', 'icon' => 'fa-tools', 'color' => 'purple'],
-                                    'radiology_inquiry' => ['name' => 'حجوزات الأشعة والسونار', 'icon' => 'fa-x-ray', 'color' => 'cyan'],
-                                ];
-                                
-                                // ترتيب الأقسام
-                                $sortedPermissions = [];
-                                foreach ($moduleOrder as $key => $value) {
-                                    if (isset($permissions[$key])) {
-                                        $sortedPermissions[$key] = $permissions[$key];
-                                    }
-                                }
-                                // إضافة أي أقسام أخرى غير مدرجة
-                                foreach ($permissions as $key => $value) {
-                                    if (!isset($sortedPermissions[$key])) {
-                                        $sortedPermissions[$key] = $value;
+                                $perms = $permissions[$moduleKey] ?? collect();
+                                $collapseId = "collapse_" . $moduleKey;
+                                $headerId = "heading_" . $moduleKey;
+                                $totalInModule = count($perms);
+                                if ($totalInModule === 0) continue;
+
+                                $checkedInModule = 0;
+                                foreach($perms as $p) {
+                                    if (in_array($p->name, $rolePermissions)) {
+                                        $checkedInModule++;
                                     }
                                 }
                             @endphp
-                            
-                            <div class="accordion" id="permissionsAccordion">
-                                @foreach($sortedPermissions as $module => $perms)
-                                @php
-                                    $moduleInfo = $moduleOrder[$module] ?? ['name' => $module, 'icon' => 'fa-folder', 'color' => 'secondary'];
-                                    $collapseId = "collapse_" . str_replace([' ', '-'], '_', $module);
-                                @endphp
-                                <div class="accordion-item border shadow-sm mb-3 rounded">
-                                    <h2 class="accordion-header" id="heading_{{ $module }}">
-                                        <button class="accordion-button collapsed bg-light" type="button" 
-                                                data-bs-toggle="collapse" 
-                                                data-bs-target="#{{ $collapseId }}" 
-                                                aria-expanded="false" 
-                                                aria-controls="{{ $collapseId }}">
-                                            <div class="d-flex justify-content-between align-items-center w-100 pe-3">
-                                                <div>
-                                                    <i class="fas {{ $moduleInfo['icon'] }} text-{{ $moduleInfo['color'] }} me-2"></i>
-                                                    <span class="fw-bold">{{ $moduleInfo['name'] }}</span>
-                                                    <span class="badge bg-{{ $moduleInfo['color'] }} ms-2">{{ count($perms) }}</span>
+                            <div class="accordion-item border-0 shadow-sm rounded-3 mb-3 overflow-hidden permission-module-item" data-module="{{ $moduleKey }}">
+                                <h2 class="accordion-header" id="{{ $headerId }}">
+                                    <div class="accordion-button collapsed py-3 px-3 px-md-4 bg-white d-flex align-items-center justify-content-between flex-nowrap" 
+                                         type="button" 
+                                         data-bs-toggle="collapse" 
+                                         data-bs-target="#{{ $collapseId }}" 
+                                         aria-expanded="false" 
+                                         aria-controls="{{ $collapseId }}">
+                                        
+                                        <!-- عنوان وأيقونة القسم والوصف -->
+                                        <div class="d-flex align-items-center min-w-0 me-3">
+                                            <div class="module-icon-box rounded-3 bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} d-flex align-items-center justify-content-center me-3 flex-shrink-0">
+                                                <i class="fas {{ $moduleInfo['icon'] }} fs-5"></i>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                                    <span class="fw-bold fs-6 text-dark text-truncate">{{ $moduleInfo['name'] }}</span>
+                                                    <span class="badge bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} border border-{{ $moduleInfo['color'] }} border-opacity-25 rounded-pill px-2 py-1 module-badge" id="badge_{{ $moduleKey }}">
+                                                        {{ $checkedInModule }} / {{ $totalInModule }}
+                                                    </span>
                                                 </div>
-                                                <div class="form-check form-switch" onclick="event.stopPropagation();">
+                                                <small class="text-muted d-block text-truncate" style="max-width: 620px;" title="{{ $moduleInfo['description'] }}">
+                                                    {{ $moduleInfo['description'] }}
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <!-- مفتاح تفعيل/إطفاء القسم وسهم الطي والتوسيع -->
+                                        <div class="d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 ms-auto">
+                                            <div class="module-toggle-capsule d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                                <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
                                                     <input class="form-check-input select-all-module" 
                                                            type="checkbox" 
-                                                           role="switch"
-                                                           id="select_all_{{ $module }}"
-                                                           data-module="{{ $module }}">
-                                                    <label class="form-check-label fw-bold text-{{ $moduleInfo['color'] }}" for="select_all_{{ $module }}">
-                                                        <i class="fas fa-check-double"></i> تحديد الكل
-                                                    </label>
+                                                           role="switch" 
+                                                           id="switch_{{ $moduleKey }}"
+                                                           data-module="{{ $moduleKey }}"
+                                                           {{ $checkedInModule === $totalInModule ? 'checked' : '' }}
+                                                           title="تفعيل أو إطفاء كافة صلاحيات هذا القسم">
                                                 </div>
+                                                <label class="form-check-label small fw-bold {{ $checkedInModule === $totalInModule ? 'text-success' : ($checkedInModule > 0 ? 'text-warning' : 'text-muted') }} cursor-pointer user-select-none mb-0 d-none d-sm-inline" 
+                                                       for="switch_{{ $moduleKey }}" 
+                                                       id="switch_label_{{ $moduleKey }}"
+                                                       style="min-width: 85px; text-align: center;">
+                                                    {{ $checkedInModule === $totalInModule ? 'مفعل بالكامل' : ($checkedInModule > 0 ? "تفعيل جزئي ({$checkedInModule})" : 'معطل بالكامل') }}
+                                                </label>
                                             </div>
-                                        </button>
-                                    </h2>
-                                    <div id="{{ $collapseId }}" 
-                                         class="accordion-collapse collapse" 
-                                         aria-labelledby="heading_{{ $module }}" 
-                                         data-bs-parent="#permissionsAccordion">
-                                        <div class="accordion-body bg-light bg-opacity-25">
-                                            <div class="row g-3">
-                                                @foreach($perms as $permission)
-                                                @php
-                                                    // ترجمة صلاحيات الأقسام الرئيسية
-                                                    $sectionPermissions = [
-                                                        'view patient management section' => ['label' => 'عرض قسم إدارة المرضى', 'icon' => 'fa-eye', 'color' => 'info'],
-                                                        'view emergency section' => ['label' => 'عرض قسم الطوارئ', 'icon' => 'fa-eye', 'color' => 'danger'],
-                                                        'view doctors section' => ['label' => 'عرض قسم الأطباء والعيادات', 'icon' => 'fa-eye', 'color' => 'success'],
-                                                        'view appointments section' => ['label' => 'عرض قسم المواعيد والزيارات', 'icon' => 'fa-eye', 'color' => 'warning'],
-                                                        'view surgeries section' => ['label' => 'عرض قسم العمليات الجراحية', 'icon' => 'fa-eye', 'color' => 'purple'],
-                                                        'view lab section' => ['label' => 'عرض قسم المختبر والأشعة', 'icon' => 'fa-eye', 'color' => 'cyan'],
-                                                        'view settings section' => ['label' => 'عرض قسم الإعدادات', 'icon' => 'fa-eye', 'color' => 'dark'],
-                                                        'view stock transfers' => ['label' => 'عرض نقل المخزون', 'icon' => 'fa-exchange-alt', 'color' => 'teal'],
-                                                        'view stock transfer requests' => ['label' => 'عرض طلبات نقل المخزون', 'icon' => 'fa-clipboard-list', 'color' => 'teal'],
-                                                        'view resident station' => ['label' => 'عرض محطة الطبيب المقيم', 'icon' => 'fa-user-graduate', 'color' => 'primary'],
-                                                        'view operation theater station' => ['label' => 'عرض صالة العمليات', 'icon' => 'fa-procedures', 'color' => 'danger'],
-                                                        'view surgeon station' => ['label' => 'عرض محطة الطبيب الجراح', 'icon' => 'fa-user-md', 'color' => 'info'],
-                                                        'view anesthesia station' => ['label' => 'عرض محطة التخدير', 'icon' => 'fa-syringe', 'color' => 'warning'],
-                                                        'view nursing station' => ['label' => 'عرض محطة التمريض', 'icon' => 'fa-user-nurse', 'color' => 'success'],
-                                                        
-                                                        // صلاحيات المختبر
-                                                        'view lab tests' => ['label' => 'عرض قائمة الفحوصات المختبرية', 'icon' => 'fa-eye', 'color' => 'pink'],
-                                                        'create lab tests' => ['label' => 'إضافة فحص مختبري جديد', 'icon' => 'fa-plus-circle', 'color' => 'success'],
-                                                        'edit lab tests' => ['label' => 'تعديل بيانات وأسعار الفحوصات', 'icon' => 'fa-edit', 'color' => 'warning'],
-                                                        'delete lab tests' => ['label' => 'حذف فحص مختبري', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
-                                                        'toggle lab tests' => ['label' => 'تفعيل / إلغاء تفعيل الفحوصات', 'icon' => 'fa-toggle-on', 'color' => 'info'],
-                                                        'process lab requests' => ['label' => 'معالجة طلبات المختبر وإدخال النتائج', 'icon' => 'fa-vial', 'color' => 'primary'],
-                                                        'manage surgery lab tests' => ['label' => 'إدارة تحاليل العمليات الجراحية', 'icon' => 'fa-procedures', 'color' => 'purple'],
-                                                        'view lab test groups' => ['label' => 'عرض مجموعات التحاليل المفضلة', 'icon' => 'fa-folder', 'color' => 'pink'],
-                                                        'create lab test groups' => ['label' => 'إنشاء مجموعة تحاليل مفضلة', 'icon' => 'fa-plus-circle', 'color' => 'success'],
-                                                        'edit lab test groups' => ['label' => 'تعديل مجموعة تحاليل مفضلة', 'icon' => 'fa-edit', 'color' => 'warning'],
-                                                        'delete lab test groups' => ['label' => 'حذف مجموعة تحاليل مفضلة', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
 
-                                                        // صلاحيات الأشعة
-                                                        'view radiology' => ['label' => 'عرض قسم الأشعة والسونار', 'icon' => 'fa-eye', 'color' => 'cyan'],
-                                                        'create radiology' => ['label' => 'إنشاء طلب أشعة جديد', 'icon' => 'fa-plus-circle', 'color' => 'success'],
-                                                        'edit radiology' => ['label' => 'تعديل طلبات الأشعة', 'icon' => 'fa-edit', 'color' => 'warning'],
-                                                        'delete radiology' => ['label' => 'حذف طلبات الأشعة', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
-                                                        'manage radiology types' => ['label' => 'إدارة أنواع وخدمات الأشعة والسونار', 'icon' => 'fa-cogs', 'color' => 'primary'],
-                                                        'create radiology types' => ['label' => 'إضافة نوع خدمة إشعاعية جديدة', 'icon' => 'fa-plus-circle', 'color' => 'success'],
-                                                        'edit radiology types' => ['label' => 'تعديل نوع وسعر الخدمة الإشعاعية', 'icon' => 'fa-edit', 'color' => 'warning'],
-                                                        'delete radiology types' => ['label' => 'حذف نوع خدمة إشعاعية', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
-                                                        'process radiology requests' => ['label' => 'معالجة وكتابة تقارير الأشعة', 'icon' => 'fa-x-ray', 'color' => 'info'],
-
-                                                        // صلاحيات الكاشير والحسابات
-                                                        'view cashier' => ['label' => 'عرض لوحة الكاشير العامة', 'icon' => 'fa-wallet', 'color' => 'danger'],
-                                                        'view cashier appointments' => ['label' => 'عرض مواعيد الاستشارية (كاشير)', 'icon' => 'fa-calendar-alt', 'color' => 'danger'],
-                                                        'process consultation payments' => ['label' => 'معالجة دفع الاستشارية', 'icon' => 'fa-check-circle', 'color' => 'danger'],
-                                                        'view cashier medical requests' => ['label' => 'عرض الطلبات الطبية (كاشير)', 'icon' => 'fa-file-invoice', 'color' => 'danger'],
-                                                        'process medical requests payments' => ['label' => 'معالجة دفع الطلبات الطبية', 'icon' => 'fa-check-circle', 'color' => 'danger'],
-                                                        'view cashier emergency' => ['label' => 'عرض كاشير الطوارئ', 'icon' => 'fa-ambulance', 'color' => 'danger'],
-                                                        'process emergency payments' => ['label' => 'معالجة دفع الطوارئ', 'icon' => 'fa-check-circle', 'color' => 'danger'],
-                                                        'view cashier surgeries' => ['label' => 'عرض كاشير العمليات', 'icon' => 'fa-procedures', 'color' => 'danger'],
-                                                        'process surgery payments' => ['label' => 'معالجة دفع العمليات الجراحية', 'icon' => 'fa-check-circle', 'color' => 'danger'],
-                                                        'process refunds' => ['label' => 'معالجة الاسترجاع المالي (Refund)', 'icon' => 'fa-undo', 'color' => 'danger'],
-                                                        'process payments' => ['label' => 'معالجة المدفوعات العامة', 'icon' => 'fa-money-bill-wave', 'color' => 'danger'],
-                                                        'view cashier reports' => ['label' => 'عرض تقارير الحسابات والمدفوعات', 'icon' => 'fa-chart-line', 'color' => 'danger'],
-                                                        'view doctor profits' => ['label' => 'عرض أرباح وحسابات الأطباء', 'icon' => 'fa-user-md', 'color' => 'success'],
-                                                        'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار العمليات الجراحية', 'icon' => 'fa-calculator', 'color' => 'danger'],
-                                                        
-                                                        // صلاحيات حجز الاستعلامات
-                                                        'view patient history' => ['label' => 'عرض سجل وأرشيف المرضى الشامل', 'icon' => 'fa-folder-open', 'color' => 'info'],
-                                                        'inquiry.create.lab' => ['label' => 'حجز استعلامات مختبر', 'icon' => 'fa-vial', 'color' => 'secondary'],
-                                                        'inquiry.create.radiology' => ['label' => 'حجز استعلامات أشعة', 'icon' => 'fa-x-ray', 'color' => 'secondary'],
-                                                        'inquiry.create.pharmacy' => ['label' => 'حجز استعلامات صيدلية', 'icon' => 'fa-pills', 'color' => 'secondary'],
-                                                        'inquiry.create.checkup' => ['label' => 'حجز استعلامات فحص طبي', 'icon' => 'fa-stethoscope', 'color' => 'secondary'],
-                                                        'inquiry.create.blood_bank' => ['label' => 'حجز استعلامات مصرف الدم', 'icon' => 'fa-tint', 'color' => 'secondary'],
-                                                        'inquiry.create.radiology.general' => ['label' => 'حجز أشعة عامة', 'icon' => 'fa-x-ray', 'color' => 'cyan'],
-                                                        'inquiry.create.radiology.ultrasound' => ['label' => 'حجز سونار', 'icon' => 'fa-wave-square', 'color' => 'cyan'],
-                                                        'inquiry.create.radiology.mri' => ['label' => 'حجز رنين مغناطيسي', 'icon' => 'fa-magnet', 'color' => 'cyan'],
-                                                        'inquiry.create.radiology.echo' => ['label' => 'حجز إيكو (فحص قلب)', 'icon' => 'fa-heartbeat', 'color' => 'cyan'],
-                                                        // خدمات الطوارئ
-                                                        'manage emergency services' => ['label' => 'إدارة خدمات وأسعار الطوارئ', 'icon' => 'fa-hand-holding-medical', 'color' => 'danger'],
-                                                    ];
-                                                    
-                                                    if (isset($sectionPermissions[$permission->name])) {
-                                                        $permLabel = $sectionPermissions[$permission->name]['label'];
-                                                        $permIcon = $sectionPermissions[$permission->name]['icon'];
-                                                        $permColor = $sectionPermissions[$permission->name]['color'];
-                                                    } else {
-                                                        $parts = explode(' ', $permission->name);
-                                                        $verb = $parts[0] ?? '';
-                                                        $res = $parts[1] ?? '';
-                                                        
-                                                        $verbMap = [
-                                                            'view' => ['label' => 'عرض', 'icon' => 'fa-eye', 'color' => 'info'],
-                                                            'create' => ['label' => 'إنشاء', 'icon' => 'fa-plus-circle', 'color' => 'success'],
-                                                            'edit' => ['label' => 'تعديل', 'icon' => 'fa-edit', 'color' => 'warning'],
-                                                            'delete' => ['label' => 'حذف', 'icon' => 'fa-trash-alt', 'color' => 'danger'],
-                                                            'manage' => ['label' => 'إدارة', 'icon' => 'fa-tasks', 'color' => 'primary'],
-                                                            'cancel' => ['label' => 'إلغاء', 'icon' => 'fa-times-circle', 'color' => 'danger'],
-                                                            'process' => ['label' => 'معالجة', 'icon' => 'fa-cog', 'color' => 'secondary'],
-                                                            'control' => ['label' => 'التحكم في', 'icon' => 'fa-sliders-h', 'color' => 'dark'],
-                                                        ];
-                                                        
-                                                        $resourceMap = [
-                                                            'patients' => 'المرضى',
-                                                            'doctors' => 'الأطباء',
-                                                            'departments' => 'العيادات',
-                                                            'appointments' => 'المواعيد',
-                                                            'visits' => 'الزيارات',
-                                                            'surgeries' => 'العمليات',
-                                                            'radiology' => 'الأشعة',
-                                                            'tests' => 'التحاليل',
-                                                            'inquiries' => 'الاستعلامات',
-                                                            'lab' => 'المختبر',
-                                                            'pharmacy' => 'الصيدلية',
-                                                            'referrals' => 'التحويلات',
-                                                            'consultant' => 'الاستشاريين',
-                                                            'cashier' => 'الكاشير',
-                                                            'types' => 'أنواع التحاليل',
-                                                            'rooms' => 'الغرف',
-                                                            'emergencies' => 'الطوارئ',
-                                                            'users' => 'المستخدمين',
-                                                            'roles' => 'الأدوار',
-                                                            'permissions' => 'الصلاحيات',
-                                                            'own' => 'الخاصة',
-                                                            'surgery' => 'العمليات',
-                                                            'emergency' => 'الطوارئ',
-                                                        ];
-                                                        
-                                                        $verbInfo = $verbMap[$verb] ?? ['label' => $verb, 'icon' => 'fa-circle', 'color' => 'secondary'];
-                                                        $permLabel = $verbInfo['label'] . ' ' . ($resourceMap[$res] ?? $res);
-                                                        $permIcon = $verbInfo['icon'];
-                                                        $permColor = $verbInfo['color'];
-                                                    }
-                                                @endphp
-                                                <div class="col-md-6 col-lg-4">
-                                                    <div class="permission-item p-2 rounded border border-{{ $permColor }} border-opacity-25">
-                                                        <div class="form-check">
-                                                            <input class="form-check-input permission-checkbox" 
-                                                                   type="checkbox" 
-                                                                   name="permissions[]" 
-                                                                   value="{{ $permission->name }}" 
-                                                                   id="perm_{{ $permission->id }}"
-                                                                   data-module="{{ $module }}"
-                                                                   {{ in_array($permission->name, $rolePermissions) ? 'checked' : '' }}>
-                                                            <label class="form-check-label d-flex align-items-center" for="perm_{{ $permission->id }}">
-                                                                <i class="fas {{ $permIcon }} text-{{ $permColor }} me-2"></i>
-                                                                <span class="permission-label">{{ $permLabel }}</span>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                @endforeach
+                                            <div class="chevron-box rounded-circle bg-light d-flex align-items-center justify-content-center text-secondary">
+                                                <i class="fas fa-chevron-down fs-7 chevron-icon"></i>
                                             </div>
                                         </div>
                                     </div>
+                                </h2>
+
+                                <div id="{{ $collapseId }}" 
+                                     class="accordion-collapse collapse" 
+                                     aria-labelledby="{{ $headerId }}" 
+                                     data-bs-parent="#permissionsAccordion">
+                                    <div class="accordion-body p-0 border-top bg-white">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="table-light text-muted small">
+                                                    <tr>
+                                                        <th style="width: 50px;" class="text-center">#</th>
+                                                        <th>اسم الصلاحية والوظيفة السريرية / الإدارية</th>
+                                                        <th style="width: 140px;" class="text-center">نوع الإجراء</th>
+                                                        <th style="width: 130px;" class="text-center">الحالة والتفعيل</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($perms as $index => $permission)
+                                                    @php
+                                                        $def = $defs[$permission->name] ?? null;
+                                                        $permLabel = $def['label'] ?? $permission->name;
+                                                        $permAction = $def['action'] ?? 'إجراء';
+                                                        $permBadge = $def['badge'] ?? 'secondary';
+                                                        $isChecked = in_array($permission->name, $rolePermissions);
+                                                    @endphp
+                                                    <tr class="permission-row {{ $isChecked ? 'table-active-row' : '' }}">
+                                                        <td class="text-center text-muted small fw-semibold">
+                                                            {{ $loop->iteration }}
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="me-2 text-{{ $permBadge }}">
+                                                                    <i class="fas fa-check-circle fs-6"></i>
+                                                                </div>
+                                                                <div>
+                                                                    <label for="perm_{{ $permission->id }}" class="fw-bold text-dark mb-0 d-block cursor-pointer permission-label">
+                                                                        {{ $permLabel }}
+                                                                    </label>
+                                                                    <code class="text-muted small user-select-all" style="font-size: 0.78rem;">{{ $permission->name }}</code>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-{{ $permBadge }} bg-opacity-10 text-{{ $permBadge }} border border-{{ $permBadge }} border-opacity-25 px-2 py-1">
+                                                                {{ $permAction }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <div class="form-check form-switch d-inline-block m-0">
+                                                                <input class="form-check-input permission-checkbox" 
+                                                                       type="checkbox" 
+                                                                       name="permissions[]" 
+                                                                       value="{{ $permission->name }}" 
+                                                                       id="perm_{{ $permission->id }}"
+                                                                       data-module="{{ $moduleKey }}"
+                                                                       {{ $isChecked ? 'checked' : '' }}
+                                                                       style="cursor: pointer; width: 2.5em; height: 1.3em;">
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                @endforeach
                             </div>
+                            @endforeach
                         </div>
 
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{{ route('roles.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> إلغاء
-                            </a>
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-save"></i> حفظ التعديلات
-                            </button>
+                        <!-- أزرار الحفظ السفلية -->
+                        <div class="card border-0 shadow-sm rounded-3 mt-4 bg-white">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="text-muted small">
+                                    <i class="fas fa-info-circle text-primary me-1"></i> عند الحفظ، سيتم تحديث الصلاحيات فوراً وتفريغ الكاش لجميع مستخدمي هذا الدور.
+                                </span>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary px-3">
+                                        <i class="fas fa-times me-1"></i> إلغاء
+                                    </a>
+                                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                                        <i class="fas fa-save me-1"></i> حفظ التعديلات
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -398,152 +324,104 @@
     </div>
 </div>
 
+<!-- حاوية التنبيه اللحظي الفوري -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div id="permissionLiveToast" class="toast align-items-center text-white bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2 py-2 px-3" id="liveToastMessage">
+                <i class="fas fa-check-circle text-success fs-5"></i>
+                <span>تم تحديث الصلاحية فورياً</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 <style>
-    /* تحسين تصميم الأكورديون */
-    .accordion-button:not(.collapsed) {
-        background-color: #f8f9fa;
-        color: #212529;
-        box-shadow: none;
+    .cursor-pointer { cursor: pointer; }
+    .table-active-row {
+        background-color: rgba(13, 110, 253, 0.04) !important;
     }
-    
-    .accordion-button:focus {
-        box-shadow: none;
-        border-color: rgba(0,0,0,.125);
-    }
-    
-    .accordion-item {
-        border: 1px solid rgba(0,0,0,.125) !important;
-        overflow: hidden;
-    }
-    
     .accordion-button::after {
-        margin-right: auto;
-        margin-left: 0;
+        display: none !important;
     }
-    
-    /* تصميم عناصر الصلاحيات */
-    .permission-item {
-        background-color: #fff;
-        transition: all 0.3s ease;
+    .accordion-button {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
     }
-    
-    .permission-item:hover {
-        background-color: #f8f9fa;
-        transform: translateY(-2px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .accordion-button:hover {
+        background-color: #f8fafc !important;
     }
-    
-    .permission-item .form-check {
-        margin-bottom: 0;
+    .accordion-button:not(.collapsed) {
+        background-color: #f8fafc !important;
+        box-shadow: none !important;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
     }
-    
-    .permission-item .form-check-input:checked ~ .form-check-label {
-        font-weight: 600;
+    .accordion-button:focus {
+        box-shadow: none !important;
     }
-    
-    .permission-item .form-check-input:checked ~ .form-check-label .permission-label {
-        color: #0d6efd;
+    .module-icon-box {
+        width: 44px;
+        height: 44px;
     }
-    
-    .permission-label {
-        font-size: 0.9rem;
-        line-height: 1.4;
+    .module-toggle-capsule {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 50rem;
+        padding: 4px 12px;
+        transition: all 0.2s ease;
     }
-    
-    /* تحسين مظهر المفتاح */
-    .form-check-input[type="checkbox"]:checked {
+    .module-toggle-capsule:hover {
+        background-color: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    .module-toggle-capsule .form-check-input {
+        width: 2.3em !important;
+        height: 1.25em !important;
+        cursor: pointer;
+        margin: 0 !important;
+        float: none !important;
+    }
+    .chevron-box {
+        width: 32px;
+        height: 32px;
+        transition: background-color 0.2s ease;
+    }
+    .accordion-button:not(.collapsed) .chevron-box {
+        background-color: #e0edff !important;
+        color: #0d6efd !important;
+    }
+    .accordion-button:not(.collapsed) .chevron-icon {
+        transform: rotate(180deg);
+        color: #0d6efd !important;
+    }
+    .chevron-icon {
+        transition: transform 0.25s ease;
+    }
+    .form-switch .form-check-input:checked {
         background-color: #0d6efd;
         border-color: #0d6efd;
     }
-    
-    .form-switch .form-check-input {
-        cursor: pointer;
-        width: 3em;
-        height: 1.5em;
-    }
-    
-    .form-switch .form-check-input:checked {
-        background-color: #198754;
-        border-color: #198754;
-    }
-    
-    /* ألوان مخصصة */
-    .text-teal { color: #20c997; }
-    .text-indigo { color: #6610f2; }
-    .text-purple { color: #6f42c1; }
-    .text-pink { color: #d63384; }
-    .text-cyan { color: #0dcaf0; }
-    .text-green { color: #198754; }
-    .text-orange { color: #fd7e14; }
-    
-    .bg-teal { background-color: #20c997; }
-    .bg-indigo { background-color: #6610f2; }
-    .bg-purple { background-color: #6f42c1; }
-    .bg-pink { background-color: #d63384; }
-    .bg-cyan { background-color: #0dcaf0; }
-    .bg-green { background-color: #198754; }
-    .bg-orange { background-color: #fd7e14; }
-    
-    .border-teal { border-color: #20c997 !important; }
-    .border-indigo { border-color: #6610f2 !important; }
-    .border-purple { border-color: #6f42c1 !important; }
-    .border-pink { border-color: #d63384 !important; }
-    .border-cyan { border-color: #0dcaf0 !important; }
-    .border-green { border-color: #198754 !important; }
-    .border-orange { border-color: #fd7e14 !important; }
-    
-    /* شريط التقدم */
-    .permission-progress {
-        height: 4px;
-        background: linear-gradient(90deg, #0d6efd 0%, #198754 100%);
-        border-radius: 2px;
-        margin-top: 0.5rem;
-    }
-    
-    /* تحسين الشارات */
-    .badge {
-        font-weight: 500;
-        padding: 0.35em 0.65em;
-    }
-    
-    /* رسوم متحركة */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .accordion-item {
-        animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    /* تمييز نتائج البحث */
     mark {
-        background-color: #fff3cd;
-        color: #856404;
+        background-color: #fef08a;
+        color: #854d0e;
         padding: 0.1em 0.3em;
         border-radius: 3px;
-        font-weight: 600;
+        font-weight: 700;
     }
-    
-    /* تحسين حقل البحث */
-    #searchPermissions:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
+    .text-teal { color: #0d9488 !important; }
+    .bg-teal { background-color: #0d9488 !important; }
+    .border-teal { border-color: #0d9488 !important; }
+    .text-purple { color: #7c3aed !important; }
+    .bg-purple { background-color: #7c3aed !important; }
+    .border-purple { border-color: #7c3aed !important; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // تحديث حالة "تحديد الكل" عند تحميل الصفحة
-    updateSelectAllStatus();
-    
-    // زر توسيع/طي الكل
+    updateAllCounters();
+
+    // 1. زر توسيع / طي الكل
     let allExpanded = false;
     const expandCollapseBtn = document.getElementById('expandCollapseAll');
     const allCollapses = document.querySelectorAll('.accordion-collapse');
@@ -551,259 +429,307 @@ document.addEventListener('DOMContentLoaded', function() {
     if (expandCollapseBtn) {
         expandCollapseBtn.addEventListener('click', function() {
             allExpanded = !allExpanded;
-            
             allCollapses.forEach(function(collapse) {
-                const bsCollapse = new bootstrap.Collapse(collapse, {
-                    toggle: false
-                });
-                
+                const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false });
                 if (allExpanded) {
                     bsCollapse.show();
-                    expandCollapseBtn.innerHTML = '<i class="fas fa-compress-alt"></i> طي الكل';
+                    expandCollapseBtn.innerHTML = '<i class="fas fa-compress-alt"></i> <span>طي الكل</span>';
                 } else {
                     bsCollapse.hide();
-                    expandCollapseBtn.innerHTML = '<i class="fas fa-expand-alt"></i> توسيع الكل';
+                    expandCollapseBtn.innerHTML = '<i class="fas fa-expand-alt"></i> <span>توسيع الكل</span>';
                 }
             });
         });
     }
-    
-    // عند النقر على "تحديد الكل" لقسم معين
-    document.querySelectorAll('.select-all-module').forEach(function(selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function(e) {
-            e.stopPropagation(); // منع فتح/إغلاق الأكورديون
-            
-            const module = this.dataset.module;
-            const isChecked = this.checked;
-            
-            // تحديد/إلغاء تحديد جميع الصلاحيات في هذا القسم
-            document.querySelectorAll(`.permission-checkbox[data-module="${module}"]`).forEach(function(checkbox) {
-                checkbox.checked = isChecked;
+
+    // إعدادات الحفظ اللحظي الفوري عبر AJAX
+    const toggleUrl = "{{ route('roles.toggle-permission', $role) }}";
+    const csrfToken = "{{ csrf_token() }}";
+    const autoSaveIcon = document.getElementById('autoSaveIcon');
+    const autoSaveText = document.getElementById('autoSaveText');
+    const liveToastEl = document.getElementById('permissionLiveToast');
+    const liveToast = liveToastEl ? new bootstrap.Toast(liveToastEl, { delay: 2000 }) : null;
+    const liveToastMsg = document.getElementById('liveToastMessage');
+
+    function setSavingState(isSaving, message, isError = false) {
+        if (!autoSaveIcon || !autoSaveText) return;
+        if (isSaving) {
+            autoSaveIcon.className = 'fas fa-spinner fa-spin text-primary';
+            autoSaveText.textContent = message || 'جاري الحفظ الفوري...';
+        } else if (isError) {
+            autoSaveIcon.className = 'fas fa-exclamation-circle text-danger';
+            autoSaveText.textContent = message || 'فشل الحفظ!';
+        } else {
+            autoSaveIcon.className = 'fas fa-check-circle text-success';
+            autoSaveText.textContent = message || 'تم الحفظ فورياً وتفريغ الكاش';
+            setTimeout(() => {
+                autoSaveIcon.className = 'fas fa-bolt text-warning';
+                autoSaveText.textContent = 'الحفظ اللحظي التلقائي مفعّل';
+            }, 2500);
+        }
+    }
+
+    function showToast(text, isSuccess = true) {
+        if (!liveToast || !liveToastMsg) return;
+        liveToastMsg.innerHTML = isSuccess 
+            ? `<i class="fas fa-check-circle text-success fs-5"></i> <span>${text}</span>`
+            : `<i class="fas fa-times-circle text-danger fs-5"></i> <span>${text}</span>`;
+        liveToast.show();
+    }
+
+    async function sendToggleRequest(payload, onFailCallback) {
+        setSavingState(true);
+        try {
+            const res = await fetch(toggleUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(payload)
             });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'حدث خطأ في السيرفر');
+            }
+            setSavingState(false, data.message);
+            showToast(data.message, true);
+            return data;
+        } catch (err) {
+            setSavingState(false, err.message, true);
+            showToast('خطأ: ' + err.message, false);
+            if (typeof onFailCallback === 'function') {
+                onFailCallback();
+            }
+            return null;
+        }
+    }
+
+    // 2. مفتاح تحديد كامل القسم (Switch لكل قسم) مع الحفظ اللحظي
+    document.querySelectorAll('.select-all-module').forEach(function(switchElem) {
+        switchElem.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const moduleKey = this.dataset.module;
+            const isChecked = this.checked;
+            const perms = [];
             
-            // إضافة تأثير بصري
-            const accordionBody = this.closest('.accordion-item').querySelector('.accordion-body');
-            if (accordionBody) {
-                accordionBody.style.transition = 'background-color 0.3s';
-                accordionBody.style.backgroundColor = isChecked ? '#d4edda' : '';
-                setTimeout(() => {
-                    accordionBody.style.backgroundColor = '';
-                }, 500);
+            document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).forEach(function(checkbox) {
+                checkbox.checked = isChecked;
+                perms.push(checkbox.value);
+                const row = checkbox.closest('tr');
+                if (row) {
+                    if (isChecked) row.classList.add('table-active-row');
+                    else row.classList.remove('table-active-row');
+                }
+            });
+
+            updateModuleCounter(moduleKey);
+            updateGlobalCounter();
+
+            // حفظ فوري للقسم كامل
+            if (perms.length > 0) {
+                sendToggleRequest({
+                    permissions: perms,
+                    status: isChecked
+                }, () => {
+                    // تراجع عند الفشل
+                    switchElem.checked = !isChecked;
+                    document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).forEach(function(cb) {
+                        cb.checked = !isChecked;
+                        const r = cb.closest('tr');
+                        if (r) {
+                            if (!isChecked) r.classList.add('table-active-row');
+                            else r.classList.remove('table-active-row');
+                        }
+                    });
+                    updateModuleCounter(moduleKey);
+                    updateGlobalCounter();
+                });
             }
         });
     });
-    
-    // عند تغيير أي صلاحية، تحديث حالة "تحديد الكل"
+
+    // 3. عند تغيير أي Checkbox فردي (حفظ فوري لحظي)
     document.querySelectorAll('.permission-checkbox').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
-            updateSelectAllStatus();
-            
-            // إضافة تأثير بصري للعنصر المحدد
-            const permItem = this.closest('.permission-item');
-            if (permItem) {
-                if (this.checked) {
-                    permItem.style.backgroundColor = '#e7f3ff';
-                    setTimeout(() => {
-                        permItem.style.backgroundColor = '';
-                    }, 300);
-                }
+            const moduleKey = this.dataset.module;
+            const isChecked = this.checked;
+            const row = this.closest('tr');
+            if (row) {
+                if (isChecked) row.classList.add('table-active-row');
+                else row.classList.remove('table-active-row');
             }
+            updateModuleCounter(moduleKey);
+            updateGlobalCounter();
+
+            // إرسال طلب الحفظ اللحظي التلقائي
+            sendToggleRequest({
+                permission: this.value,
+                status: isChecked
+            }, () => {
+                // تراجع عند الفشل
+                checkbox.checked = !isChecked;
+                if (row) {
+                    if (checkbox.checked) row.classList.add('table-active-row');
+                    else row.classList.remove('table-active-row');
+                }
+                updateModuleCounter(moduleKey);
+                updateGlobalCounter();
+            });
         });
     });
-    
-    // أزرار التحديد السريع
+
+    // 4. أزرار التحديد السريع مع الحفظ اللحظي
     document.querySelectorAll('.quick-select').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const action = this.dataset.action;
             const allCheckboxes = document.querySelectorAll('.permission-checkbox');
-            
+            const targetPerms = [];
+            const isEnable = (action !== 'none');
+
             allCheckboxes.forEach(function(checkbox) {
                 const permName = checkbox.value.toLowerCase();
-                
+                let shouldCheck = false;
+
                 if (action === 'all') {
-                    checkbox.checked = true;
+                    shouldCheck = true;
                 } else if (action === 'none') {
-                    checkbox.checked = false;
+                    shouldCheck = false;
                 } else if (action === 'view') {
-                    checkbox.checked = permName.startsWith('view');
+                    shouldCheck = permName.startsWith('view') || permName.includes('.view');
                 } else if (action === 'create') {
-                    checkbox.checked = permName.startsWith('create');
+                    shouldCheck = permName.startsWith('create') || permName.includes('.create');
                 } else if (action === 'edit') {
-                    checkbox.checked = permName.startsWith('edit');
+                    shouldCheck = permName.startsWith('edit') || permName.includes('.edit');
                 } else if (action === 'delete') {
-                    checkbox.checked = permName.startsWith('delete');
+                    shouldCheck = permName.startsWith('delete') || permName.includes('.delete');
+                }
+
+                if (shouldCheck || action === 'none') {
+                    targetPerms.push(checkbox.value);
+                }
+
+                checkbox.checked = shouldCheck;
+                const row = checkbox.closest('tr');
+                if (row) {
+                    if (shouldCheck) row.classList.add('table-active-row');
+                    else row.classList.remove('table-active-row');
                 }
             });
-            
-            updateSelectAllStatus();
-            
-            // إضافة تأثير بصري
-            const accordionBody = document.getElementById('permissionsAccordion');
-            if (accordionBody) {
-                accordionBody.style.transition = 'opacity 0.2s';
-                accordionBody.style.opacity = '0.7';
-                setTimeout(() => {
-                    accordionBody.style.opacity = '1';
-                }, 200);
+
+            updateAllCounters();
+
+            // حفظ فوري للتحديد السريع
+            if (targetPerms.length > 0) {
+                sendToggleRequest({
+                    permissions: targetPerms,
+                    status: isEnable
+                });
             }
         });
     });
-    
-    // دالة لتحديث حالة "تحديد الكل" لكل قسم
-    function updateSelectAllStatus() {
-        document.querySelectorAll('.select-all-module').forEach(function(selectAllCheckbox) {
-            const module = selectAllCheckbox.dataset.module;
-            const moduleCheckboxes = document.querySelectorAll(`.permission-checkbox[data-module="${module}"]`);
-            const checkedCount = document.querySelectorAll(`.permission-checkbox[data-module="${module}"]:checked`).length;
-            const totalCount = moduleCheckboxes.length;
-            
-            // تحديث الشارة بعدد الصلاحيات المحددة
-            const badge = selectAllCheckbox.closest('.accordion-item')?.querySelector('.badge');
-            if (badge && checkedCount > 0) {
-                badge.textContent = `${checkedCount}/${totalCount}`;
-            } else if (badge) {
-                badge.textContent = totalCount;
-            }
-            
-            // إذا كانت جميع الصلاحيات محددة
-            if (checkedCount === totalCount && totalCount > 0) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            }
-            // إذا كان بعضها محدد
-            else if (checkedCount > 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = true;
-            }
-            // إذا لم يكن أي منها محدد
-            else {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            }
-        });
-        
-        // تحديث عداد إجمالي الصلاحيات المحددة
-        updateTotalPermissionsCount();
-    }
-    
-    // دالة لتحديث العداد الإجمالي
-    function updateTotalPermissionsCount() {
-        const totalChecked = document.querySelectorAll('.permission-checkbox:checked').length;
-        const totalPermissions = document.querySelectorAll('.permission-checkbox').length;
-        const percentage = totalPermissions > 0 ? Math.round((totalChecked / totalPermissions) * 100) : 0;
-        
-        // تحديث عناصر الإحصائيات
-        const selectedCountElem = document.getElementById('selectedCount');
-        const totalCountElem = document.getElementById('totalCount');
-        const percentageCountElem = document.getElementById('percentageCount');
-        
-        if (selectedCountElem) selectedCountElem.textContent = totalChecked;
-        if (totalCountElem) totalCountElem.textContent = totalPermissions;
-        if (percentageCountElem) percentageCountElem.textContent = percentage + '%';
-        
-        // تغيير لون البطاقة حسب النسبة
-        const percentageCard = percentageCountElem?.closest('.card');
-        if (percentageCard) {
-            percentageCard.classList.remove('border-success', 'border-warning', 'border-danger');
-            if (percentage >= 80) {
-                percentageCard.classList.add('border-success');
-            } else if (percentage >= 50) {
-                percentageCard.classList.add('border-warning');
-            } else {
-                percentageCard.classList.add('border-danger');
-            }
-        }
-    }
-    
-    // فتح القسم الأول تلقائياً إذا لم يكن هناك صلاحيات محددة
-    const firstCollapse = document.querySelector('.accordion-collapse');
-    if (firstCollapse) {
-        const totalChecked = document.querySelectorAll('.permission-checkbox:checked').length;
-        if (totalChecked === 0) {
-            new bootstrap.Collapse(firstCollapse, {
-                show: true
-            });
-        }
-    }
-    
-    // وظيفة البحث في الصلاحيات
+
+    // 5. البحث الفوري في الصلاحيات
     const searchInput = document.getElementById('searchPermissions');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
-            const accordionItems = document.querySelectorAll('.accordion-item');
-            
-            accordionItems.forEach(function(item) {
-                const permissionItems = item.querySelectorAll('.permission-item');
-                let hasVisibleItems = false;
-                
-                permissionItems.forEach(function(permItem) {
-                    const label = permItem.querySelector('.permission-label');
-                    if (label) {
-                        const text = label.textContent.toLowerCase();
-                        
-                        if (searchTerm === '' || text.includes(searchTerm)) {
-                            permItem.style.display = '';
-                            permItem.closest('.col-md-6').style.display = '';
-                            hasVisibleItems = true;
-                            
-                            // تمييز النص المطابق
-                            if (searchTerm !== '') {
-                                const originalText = label.textContent;
-                                const regex = new RegExp(`(${searchTerm})`, 'gi');
-                                label.innerHTML = originalText.replace(regex, '<mark>$1</mark>');
-                            } else {
-                                label.innerHTML = label.textContent;
+            const moduleItems = document.querySelectorAll('.permission-module-item');
+
+            moduleItems.forEach(function(moduleItem) {
+                const rows = moduleItem.querySelectorAll('.permission-row');
+                let moduleHasMatch = false;
+
+                rows.forEach(function(row) {
+                    const labelElem = row.querySelector('.permission-label');
+                    const codeElem = row.querySelector('code');
+                    const text = ((labelElem ? labelElem.textContent : '') + ' ' + (codeElem ? codeElem.textContent : '')).toLowerCase();
+
+                    if (searchTerm === '' || text.includes(searchTerm)) {
+                        row.style.display = '';
+                        moduleHasMatch = true;
+
+                        if (searchTerm !== '' && labelElem) {
+                            const originalText = labelElem.getAttribute('data-original') || labelElem.textContent;
+                            if (!labelElem.getAttribute('data-original')) {
+                                labelElem.setAttribute('data-original', originalText);
                             }
-                        } else {
-                            permItem.style.display = 'none';
-                            permItem.closest('.col-md-6').style.display = 'none';
+                            const regex = new RegExp(`(${searchTerm})`, 'gi');
+                            labelElem.innerHTML = originalText.replace(regex, '<mark>$1</mark>');
+                        } else if (labelElem && labelElem.getAttribute('data-original')) {
+                            labelElem.innerHTML = labelElem.getAttribute('data-original');
                         }
+                    } else {
+                        row.style.display = 'none';
                     }
                 });
-                
-                // إخفاء/إظهار القسم بالكامل
-                if (hasVisibleItems) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-                
-                // فتح الأقسام التي تحتوي على نتائج بحث
-                if (searchTerm !== '' && hasVisibleItems) {
-                    const collapse = item.querySelector('.accordion-collapse');
-                    if (collapse && !collapse.classList.contains('show')) {
-                        new bootstrap.Collapse(collapse, {
-                            show: true
-                        });
+
+                if (moduleHasMatch) {
+                    moduleItem.style.display = '';
+                    if (searchTerm !== '') {
+                        const collapse = moduleItem.querySelector('.accordion-collapse');
+                        if (collapse) {
+                            bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).show();
+                        }
                     }
+                } else {
+                    moduleItem.style.display = 'none';
                 }
             });
-            
-            // عرض رسالة إذا لم يتم العثور على نتائج
-            const visibleItems = document.querySelectorAll('.accordion-item[style=""]').length;
-            let noResultsMsg = document.getElementById('noSearchResults');
-            
-            if (visibleItems === 0 && searchTerm !== '') {
-                if (!noResultsMsg) {
-                    noResultsMsg = document.createElement('div');
-                    noResultsMsg.id = 'noSearchResults';
-                    noResultsMsg.className = 'alert alert-info text-center';
-                    noResultsMsg.innerHTML = '<i class="fas fa-info-circle"></i> لم يتم العثور على صلاحيات مطابقة للبحث';
-                    document.getElementById('permissionsAccordion').appendChild(noResultsMsg);
-                }
-            } else if (noResultsMsg) {
-                noResultsMsg.remove();
-            }
         });
-        
-        // مسح البحث عند الضغط على Escape
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                this.value = '';
-                this.dispatchEvent(new Event('input'));
+    }
+
+    // دوال الحساب والتحديث
+    function updateModuleCounter(moduleKey) {
+        const total = document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]`).length;
+        const checked = document.querySelectorAll(`.permission-checkbox[data-module="${moduleKey}"]:checked`).length;
+        const badge = document.getElementById(`badge_${moduleKey}`);
+        const switchElem = document.getElementById(`switch_${moduleKey}`);
+        const statusLabel = document.getElementById(`switch_label_${moduleKey}`);
+
+        if (badge) {
+            badge.textContent = `${checked} / ${total}`;
+        }
+        if (switchElem) {
+            switchElem.checked = (checked === total && total > 0);
+            switchElem.indeterminate = (checked > 0 && checked < total);
+        }
+        if (statusLabel) {
+            if (checked === total && total > 0) {
+                statusLabel.textContent = 'مفعل بالكامل';
+                statusLabel.className = 'form-check-label small fw-bold text-success cursor-pointer user-select-none mb-0 d-none d-sm-inline';
+            } else if (checked === 0) {
+                statusLabel.textContent = 'معطل بالكامل';
+                statusLabel.className = 'form-check-label small fw-bold text-muted cursor-pointer user-select-none mb-0 d-none d-sm-inline';
+            } else {
+                statusLabel.textContent = `تفعيل جزئي (${checked})`;
+                statusLabel.className = 'form-check-label small fw-bold text-warning cursor-pointer user-select-none mb-0 d-none d-sm-inline';
             }
+        }
+    }
+
+    function updateGlobalCounter() {
+        const total = document.querySelectorAll('.permission-checkbox').length;
+        const checked = document.querySelectorAll('.permission-checkbox:checked').length;
+        const percentage = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+        const selCount = document.getElementById('selectedCount');
+        const totCount = document.getElementById('totalCount');
+        const perCount = document.getElementById('percentageCount');
+        const progBar  = document.getElementById('progressBar');
+
+        if (selCount) selCount.textContent = checked;
+        if (totCount) totCount.textContent = total;
+        if (perCount) perCount.textContent = `${percentage}%`;
+        if (progBar)  progBar.style.width = `${percentage}%`;
+    }
+
+    function updateAllCounters() {
+        document.querySelectorAll('.select-all-module').forEach(function(switchElem) {
+            updateModuleCounter(switchElem.dataset.module);
         });
+        updateGlobalCounter();
     }
 });
 </script>

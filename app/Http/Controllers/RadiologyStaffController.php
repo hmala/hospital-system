@@ -11,9 +11,10 @@ class RadiologyStaffController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$user->hasAnyRole(['radiology_staff', 'admin', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى طلبات الأشعة');
         }
 
         $category = $this->getRadiologyCategoryForUser($user);
@@ -110,7 +111,7 @@ class RadiologyStaffController extends Controller
 
         $emergencyRadiologyRequests = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
             ->whereIn('status', ['pending', 'in_progress', 'completed'])
-            ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+            ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
             ->orderBy('requested_at', 'asc')
             ->get();
 
@@ -178,8 +179,9 @@ class RadiologyStaffController extends Controller
     public function show(MedicalRequest $request)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$user->hasAnyRole(['radiology_staff', 'admin', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general'])) {
+        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -209,6 +211,12 @@ class RadiologyStaffController extends Controller
     public function update(HttpRequest $httpRequest, MedicalRequest $request)
     {
         $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+            abort(403, 'غير مصرح لك بتحديث ومعالجة طلب الأشعة');
+        }
+
         $request->load(['visit']);
 
         // 1. اختيار أنواع الأشعة (pending_service_selection)
@@ -263,6 +271,12 @@ class RadiologyStaffController extends Controller
             ]);
             $request->status = 'completed';
             $request->save();
+
+            try {
+                app(\App\Services\TelegramService::class)->sendResultsReady($request);
+            } catch (\Throwable $te) {
+                \Illuminate\Support\Facades\Log::warning('Telegram radiology notification error: ' . $te->getMessage());
+            }
 
             $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
             if ($request->visit && !$isDoctorVisit) {
