@@ -1004,8 +1004,13 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('queue.live') ? 'active' : '' }}" href="{{ route('queue.live') }}" target="_blank">
+                                <i class="fas fa-desktop"></i><span> شاشة انتظار العيادات (الموحدة)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('queue.all.display') ? 'active' : '' }}" href="{{ route('queue.all.display') }}" target="_blank">
-                                <i class="fas fa-tv"></i><span> شاشة طابور الانتظار</span>
+                                <i class="fas fa-tv"></i><span> شاشة الصالة المركزية</span>
                             </a>
                         </li>
                         @endcan

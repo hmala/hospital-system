@@ -13,12 +13,106 @@ use Carbon\Carbon;
 class DoctorQueueController extends Controller
 {
     /**
+     * Show unified live queue display screen with dynamic doctor selection
+     */
+    public function liveDisplay(Request $request)
+    {
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->get();
+
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        // Check if doctor is requested via parameter, or if auth user is a doctor
+        $doctorId = $request->query('doctor_id') ?? $request->query('doctor');
+        if (!$doctorId && auth()->check() && auth()->user()->doctor) {
+            $doctorId = auth()->user()->doctor->id;
+        }
+
+        $doctor = null;
+        if ($doctorId) {
+            $doctor = Doctor::with(['user', 'department'])->find($doctorId);
+        }
+
+        return view('queue.doctor-display', compact('doctor', 'doctorsList'));
+    }
+
+    /**
      * Show external TV queue display screen for a specific doctor
      */
     public function display($doctorId)
     {
         $doctor = Doctor::with(['user', 'department'])->findOrFail($doctorId);
-        return view('queue.doctor-display', compact('doctor'));
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->get();
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        return view('queue.doctor-display', compact('doctor', 'doctorsList'));
+    }
+
+    /**
+     * Return JSON list of available doctors with today's queue counts
+     */
+    public function availableDoctorsList(Request $request)
+    {
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->get();
+
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        return response()->json([
+            'ok' => true,
+            'doctors' => $doctorsList,
+        ]);
+    }
+
+    /**
+     * Helper to compute queue counts and availability for doctors list
+     */
+    protected function getDoctorsListWithCounts($doctors, $today)
+    {
+        return $doctors->map(function ($doc) use ($today) {
+            $waitingCount = Appointment::where('doctor_id', $doc->id)
+                ->whereDate('appointment_date', $today)
+                ->where(function ($q) {
+                    $q->where('payment_status', 'paid')
+                      ->orWhereNotNull('emergency_id');
+                })
+                ->whereDoesntHave('visit')
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->count();
+
+            $callingCount = Appointment::where('doctor_id', $doc->id)
+                ->whereDate('appointment_date', $today)
+                ->whereIn('status', ['calling', 'in_consultation'])
+                ->count();
+
+            // Direct check for today's active consultant availability
+            $isAvailableToday = (bool) ($doc->is_available_today && (!$doc->available_date || $doc->available_date->isToday()));
+
+            return [
+                'id' => $doc->id,
+                'name' => optional($doc->user)->name ?? 'طبيب #' . $doc->id,
+                'specialization' => $doc->specialization ?? 'استشاري',
+                'department' => optional($doc->department)->name ?? 'العيادات الاستشارية',
+                'type' => $doc->type ?? 'consultant',
+                'is_available_today' => $isAvailableToday,
+                'waiting_count' => $waitingCount,
+                'calling_count' => $callingCount,
+            ];
+        })
+        ->sortByDesc(function ($doc) {
+            // Sort: Available Consultants first -> Then doctors with active waiting list -> Then by ID
+            return ($doc['is_available_today'] ? 1000 : 0) 
+                 + ($doc['waiting_count'] > 0 ? 500 : 0) 
+                 + ($doc['calling_count'] > 0 ? 200 : 0);
+        })
+        ->values();
     }
 
     /**

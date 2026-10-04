@@ -54,6 +54,9 @@ Route::get('/departments', [DepartmentController::class, 'publicIndex'])
 
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
+    Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
+    Route::get('/doctor', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay']);
+    Route::get('/available-doctors', [\App\Http\Controllers\DoctorQueueController::class, 'availableDoctorsList'])->name('available-doctors');
     Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
     Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');
     Route::get('/all', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all.display');
