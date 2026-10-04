@@ -771,7 +771,7 @@ function updateAvailabilityCounts() {
 }
 
 function assignDoctorToRoom(doctorId, room) {
-    const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
+    const baseUrl = @json(url('/'));
     fetch(`${baseUrl}/queue/assign-room`, {
         method: 'POST',
         headers: {

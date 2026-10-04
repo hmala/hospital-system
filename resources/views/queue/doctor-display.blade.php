@@ -676,7 +676,7 @@
     </footer>
 
     <script>
-        const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
+        const baseUrl = @json(url('/'));
         const currentRoomNumber = @json($roomNumber ?? null);
         const allDoctors = @json($doctorsList ?? []);
         let currentDoctorId = {{ $doctor ? $doctor->id : 'null' }};
@@ -1128,9 +1128,12 @@
         function renderScreen(data) {
             // In room mode, check if doctor changed
             if (currentRoomNumber) {
+                const nameEl = document.getElementById('top-doc-name');
+                const specEl = document.getElementById('top-doc-spec');
+                
                 if (data.has_doctor === false) {
-                    document.getElementById('header-doc-name').textContent = `عيادة رقم ${currentRoomNumber}`;
-                    document.getElementById('header-spec-text').textContent = 'في انتظار تعيين طبيب من الاستعلامات';
+                    if (nameEl) nameEl.textContent = `عيادة رقم ${currentRoomNumber}`;
+                    if (specEl) specEl.innerHTML = `<span class="room-pill"><i class="fas fa-door-open me-1"></i> عيادة رقم ${currentRoomNumber}</span> <span class="text-warning">في انتظار تعيين الطبيب من الاستعلامات</span>`;
                     document.getElementById('serving-ticket-num').textContent = '-';
                     document.getElementById('serving-patient-name').textContent = `العيادة رقم ${currentRoomNumber} غير مشغولة حالياً`;
                     document.getElementById('serving-instructions').textContent = 'يرجى مراجعة موظف الاستعلامات لمعرفة الطبيب المناوب';
@@ -1139,8 +1142,11 @@
                 } else if (data.has_doctor === true && data.doctor_name) {
                     docFullName = data.doctor_name;
                     currentDoctorId = data.doctor_id;
-                    document.getElementById('header-doc-name').textContent = 'د. ' + data.doctor_name;
-                    document.getElementById('header-spec-text').textContent = (data.department_name || 'العيادة') + (data.specialization ? ' - ' + data.specialization : '');
+                    if (nameEl) nameEl.textContent = 'د. ' + data.doctor_name;
+                    if (specEl) {
+                        const roomBadge = `<span class="room-pill"><i class="fas fa-door-open me-1"></i> عيادة ${currentRoomNumber}</span>`;
+                        specEl.innerHTML = `${roomBadge} <span>${(data.department_name || 'العيادة')} - ${(data.specialization || 'استشاري')}</span>`;
+                    }
                 }
             }
 
