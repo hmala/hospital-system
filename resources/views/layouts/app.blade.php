@@ -1411,6 +1411,11 @@
                                     <i class="fas fa-sliders-h"></i><span> إعدادات وقوائم HR</span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.action_settings.*') ? 'active' : '' }}" href="{{ route('hr.action_settings.index') }}">
+                                    <i class="fas fa-balance-scale"></i><span> ????? ???????? ?????????</span>
+                                </a>
+                            </li>
                         </div>
                         @endcanany
 

@@ -52,43 +52,75 @@ class HrEmployee extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     public function department()
     {
         return $this->belongsTo(Department::class);
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     public function documents()
     {
         return $this->hasMany(HrEmployeeDocument::class, 'employee_id');
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     // التحقق من طبيعة الكادر
     public function isMedicalStaff(): bool
     {
         return in_array($this->staff_type, ['medical', 'nursing', 'technical']);
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     // فحص قرب انتهاء إجازة ممارسة المهنة
     public function isLicenseExpiringSoon(int $days = 30): bool
     {
         if (!$this->license_expiry_date) {
             return false;
-        }
+            public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+}
 
         return $this->license_expiry_date->isFuture() && $this->license_expiry_date->diffInDays(now()) <= $days;
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     // فحص انتهاء الرخصة
     public function isLicenseExpired(): bool
     {
         if (!$this->license_expiry_date) {
             return false;
-        }
+            public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+}
 
         return $this->license_expiry_date->isPast();
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     // مسميات الأنواع بالعربية
     public function getStaffTypeNameAttribute(): string
@@ -100,8 +132,16 @@ class HrEmployee extends Model
             'administrative' => 'كادر إداري ومالي',
             'service' => 'خدمات وصيانة',
             default => $this->staff_type,
-        };
+            public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+};
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+}
 
     public function getEmploymentTypeNameAttribute(): string
     {
@@ -111,8 +151,16 @@ class HrEmployee extends Model
             'contract' => 'عقد محدد المدة',
             'daily_shift' => 'أجر يومي / خفارات',
             default => $this->employment_type,
-        };
+            public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+};
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+}
 
     public function getStatusNameAttribute(): string
     {
@@ -123,23 +171,48 @@ class HrEmployee extends Model
             'resigned' => 'مستقيل',
             'terminated' => 'منهي خدماته',
             default => $this->status,
-        };
+            public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+};
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+}
 
     // Scopes للفلترة السريعة
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     public function scopeMedical($query)
     {
         return $query->whereIn('staff_type', ['medical', 'nursing', 'technical']);
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
+}
 
     public function scopeByDepartment($query, $departmentId)
     {
         return $query->where('department_id', $departmentId);
+        public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
 }
+    public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+}
+
 

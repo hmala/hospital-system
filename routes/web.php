@@ -646,6 +646,9 @@ Route::middleware(['auth'])->group(function () {
         // إدارة الموظفين
         Route::resource('employees', \App\Http\Controllers\HR\HrEmployeeController::class);
 
+        // إعدادات العقوبات والمكافآت
+        Route::resource('action_settings', \App\Http\Controllers\HR\HrActionSettingController::class)->except(['create', 'show', 'edit']);
+
         // إعدادات وقوائم الموارد البشرية والحقول
         Route::prefix('settings')->name('settings.')->group(function () {
             Route::get('/', [\App\Http\Controllers\HR\HrSettingsController::class, 'index'])->name('index');
@@ -762,6 +765,7 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
 
 
 
