@@ -58,6 +58,14 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-09-29 — إصلاح خطأ مسار البحث في جراحة العيون)
+
+### Done
+- **إصلاح مسار البحث (Route Fix)**: تم حل مشكلة `RouteNotFoundException` التي كانت تظهر عند البحث عن مريض في واجهة إضافة جراحة عيون جديدة (`resources/views/eye/surgeries/eye_surgery_create.blade.php`).
+- **تحديث معاملات البحث (Search Parameters)**: تم تصحيح اسم المسار إلى `route('eye.reception.searchPatients')` وتحديث معامل البحث المرسل إلى `term=` ليتطابق مع `EyeReceptionController`.
+- **معالجة مخرجات JSON (Data Mapping)**: تم تغيير المتغير المستخدم في الواجهة من `p.mrn` إلى `p.national_id` لضمان عرض بيانات المريض بالشكل الصحيح بدلاً من `undefined`.
+- **تأكيد الجودة**: اجتياز جميع اختبارات `EyeCenterWorkflowTest` بنجاح 100%.
+
 ## Session log (2026-09-28 — عزل عرض المستخدمين في شاشة صلاحيات العيون)
 
 ### Done

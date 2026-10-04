@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             debounceTimer = setTimeout(() => {
-                fetch(`{{ route('eye.reception.searchPatient') }}?query=${encodeURIComponent(query)}`)
+                fetch(`{{ route('eye.reception.searchPatients') }}?term=${encodeURIComponent(query)}`)
                     .then(res => res.json())
                     .then(data => {
                         patientSearchResults.innerHTML = '';
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 item.innerHTML = `
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold text-primary">${p.name}</span>
-                                        <span class="badge bg-light text-muted border">${p.mrn}</span>
+                                        <span class="badge bg-light text-muted border">${p.national_id || ''}</span>
                                     </div>
                                     <div class="small text-muted">${p.phone || 'بدون هاتف'} • ${p.age ? p.age + ' سنة' : ''}</div>
                                 `;
