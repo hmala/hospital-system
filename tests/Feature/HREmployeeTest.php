@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\Employee;
-use App\Models\EmployeeDocument;
+use App\Models\HrEmployee;
+use App\Models\HrEmployeeDocument;
 use App\Models\Department;
 use App\Models\Hospital;
 use App\Models\HrFieldRequirement;
@@ -88,14 +88,14 @@ class HREmployeeTest extends TestCase
 
         $response = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeData);
 
-        $this->assertDatabaseHas('employees', [
+        $this->assertDatabaseHas('hr_employees', [
             'employee_code' => 'EMP-TEST-001',
             'full_name' => 'د. حيدر جاسم الكعبي',
             'medical_license_number' => 'MOH-IQ-98765',
             'staff_type' => 'medical',
         ]);
 
-        $employee = Employee::where('employee_code', 'EMP-TEST-001')->first();
+        $employee = HrEmployee::where('employee_code', 'EMP-TEST-001')->first();
         $this->assertNotNull($employee);
         $this->assertTrue($employee->isMedicalStaff());
         $this->assertFalse($employee->isLicenseExpired());
@@ -114,7 +114,7 @@ class HREmployeeTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $admin->assignRole('admin');
 
-        $employee = Employee::create([
+        $employee = HrEmployee::create([
             'employee_code' => 'EMP-TEST-DOC',
             'full_name' => 'زينب كريم',
             'gender' => 'female',
@@ -134,19 +134,19 @@ class HREmployeeTest extends TestCase
             'notes' => 'مستمسك أصلي مصدق',
         ]);
 
-        $this->assertDatabaseHas('employee_documents', [
+        $this->assertDatabaseHas('hr_employee_documents', [
             'employee_id' => $employee->id,
             'employee_code' => 'EMP-TEST-DOC',
             'document_type' => 'بطاقة السكن',
         ]);
 
-        $doc = EmployeeDocument::where('employee_id', $employee->id)->first();
+        $doc = HrEmployeeDocument::where('employee_id', $employee->id)->first();
         $this->assertStringContainsString('EMP-TEST-DOC', $doc->file_name);
         Storage::disk('public')->assertExists($doc->file_path);
 
         // تجربة حذف المستمسك
         $deleteResponse = $this->actingAs($admin)->delete(route('hr.employees.documents.destroy', $doc->id));
-        $this->assertDatabaseMissing('employee_documents', ['id' => $doc->id]);
+        $this->assertDatabaseMissing('hr_employee_documents', ['id' => $doc->id]);
         Storage::disk('public')->assertMissing($doc->file_path);
     }
 

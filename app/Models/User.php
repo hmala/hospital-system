@@ -68,7 +68,7 @@ class User extends Authenticatable
 
     public function employee()
     {
-        return $this->hasOne(\App\Models\Employee::class);
+        return $this->hasOne(\App\Models\HrEmployee::class);
     }
 
     public function visits()
@@ -145,3 +145,4 @@ class User extends Authenticatable
         return $this->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']);
     }
 }
+

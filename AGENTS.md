@@ -568,14 +568,14 @@ Consult these files before making changes or proposing fixes:
   * إضافة صلاحيات الموارد البشرية: `view hr`, `view employees`, `create employees`, `edit employees`, `delete employees`.
   * إنشاء دور `hr_manager` وتعيين الصلاحيات له في `RolesAndPermissionsSeeder.php`.
 - **الواجهات والتحكم**:
-  * إنشاء [EmployeeController.php](file:///d:/ali%20altimimi/hospital-system/app/Http/Controllers/HR/EmployeeController.php) مع البحث المتقدم، الفلاتر (نوع الكادر، القسم، الحالة، وتراخيص الممارسة)، وبطاقات الإحصائيات الفورية.
+  * إنشاء [HrEmployeeController.php](file:///d:/ali%20altimimi/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php) مع البحث المتقدم، الفلاتر (نوع الكادر، القسم، الحالة، وتراخيص الممارسة)، وبطاقات الإحصائيات الفورية.
   * واجهة القائمة [index.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/index.blade.php).
   * واجهة التسجيل الذكية [create.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/create.blade.php) المزودة بـ Dynamic UI لإظهار قسم التراخيص الطبية تلقائياً عند اختيار الكادر الطبي/التمريضي/الفني وإخفائه للإداريين والخدمات.
   * واجهة التعديل [edit.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/edit.blade.php).
   * واجهة الإضبارة الشاملة [show.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/show.blade.php) مع تنبيهات صلاحية التراخيص ودعم الطباعة المباشرة.
   * إضافة قسم «الموارد البشرية» في القائمة الجانبية بـ [resources/views/layouts/app.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/layouts/app.blade.php).
 - **نظام المستمسكات والوثائق الرسمية المورثة للرمز الوظيفي**:
-  * إنشاء جدول `employee_documents` وموديل [EmployeeDocument.php](file:///d:/ali%20altimimi/hospital-system/app/Models/EmployeeDocument.php) لتخزين كافة أنواع المستمسكات (بطاقة موحدة، بطاقة سكن، عقد عمل، وثيقة تخرج، ترخيص مهنة، وغيرها).
+  * إنشاء جدول `employee_documents` وموديل [HrEmployeeDocument.php](file:///d:/ali%20altimimi/hospital-system/app/Models/HrEmployeeDocument.php) لتخزين كافة أنواع المستمسكات (بطاقة موحدة، بطاقة سكن، عقد عمل، وثيقة تخرج، ترخيص مهنة، وغيرها).
   * خوارزمية تسمية وتخزين منظمة تتبع الرمز الوظيفي ونوع المستمسك: `{$employee_code}_{$document_type}_{$timestamp}.{$ext}` في مجلدات مفهرسة بالرمز الوظيفي لكل موظف.
   * واجهة ديناميكية تفاعلية في شاشتي التسجيل والتعديل تتيح رفع عدة مستمسكات معاً مع فتح سطر جديد تلقائياً عند اختيار أي ملف أو بالضغط على إضافة مستمسك.
   * إضافة جدول المستمسكات المؤرشفة في الإضبارة [show.blade.php](file:///d:/ali%20altimimi/hospital-system/resources/views/hr/employees/show.blade.php) مع نافذة Modal للرفع السريع في أي وقت لاحق من قبل مسؤول الـ HR حصراً، ودعم التحميل والمعاينة والحذف الآمن.

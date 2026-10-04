@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 
-class Employee extends Model
+class HrEmployee extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -61,7 +61,7 @@ class Employee extends Model
 
     public function documents()
     {
-        return $this->hasMany(EmployeeDocument::class);
+        return $this->hasMany(HrEmployeeDocument::class, 'employee_id');
     }
 
     // التحقق من طبيعة الكادر
@@ -142,3 +142,4 @@ class Employee extends Model
         return $query->where('department_id', $departmentId);
     }
 }
+

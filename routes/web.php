@@ -639,12 +639,12 @@ Route::middleware(['auth'])->group(function () {
     // إدارة الموارد البشرية (HR Management)
     Route::prefix('hr')->name('hr.')->middleware(['permission:view hr'])->group(function () {
         // إدارة المستمسكات
-        Route::post('employees/{employee}/documents', [\App\Http\Controllers\HR\EmployeeController::class, 'uploadDocument'])->name('employees.documents.upload');
-        Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\EmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
-        Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\EmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
+        Route::post('employees/{employee}/documents', [\App\Http\Controllers\HR\HrEmployeeController::class, 'uploadDocument'])->name('employees.documents.upload');
+        Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\HrEmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
+        Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
 
         // إدارة الموظفين
-        Route::resource('employees', \App\Http\Controllers\HR\EmployeeController::class);
+        Route::resource('employees', \App\Http\Controllers\HR\HrEmployeeController::class);
 
         // إعدادات وقوائم الموارد البشرية والحقول
         Route::prefix('settings')->name('settings.')->group(function () {
@@ -762,6 +762,7 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
 
 
 

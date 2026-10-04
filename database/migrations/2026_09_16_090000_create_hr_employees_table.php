@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('employees', function (Blueprint $table) {
+        Schema::create('hr_employees', function (Blueprint $table) {
             $table->id();
             $table->string('employee_code', 30)->unique()->comment('الرقم الوظيفي أو كود الباجة');
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete()->comment('ربط اختياري بحساب الدخول للنظام');
@@ -77,6 +77,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('employees');
+        Schema::dropIfExists('hr_employees');
     }
 };

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\HR;
 
 use App\Http\Controllers\Controller;
-use App\Models\Employee;
-use App\Models\EmployeeDocument;
+use App\Models\HrEmployee;
+use App\Models\HrEmployeeDocument;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\HrLookupOption;
@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
-class EmployeeController extends Controller
+class HrEmployeeController extends Controller
 {
     public function __construct()
     {
@@ -29,7 +29,7 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Employee::with(['department', 'user', 'documents']);
+        $query = HrEmployee::with(['department', 'user', 'documents']);
 
         // البحث بالنص (الاسم، الرقم الوظيفي، الهاتف، رقم الهوية)
         if ($request->filled('search')) {
@@ -79,11 +79,11 @@ class EmployeeController extends Controller
 
         // إحصائيات سريعة للبطاقات العلوية
         $stats = [
-            'total' => Employee::count(),
-            'active' => Employee::where('status', 'active')->count(),
-            'medical_staff' => Employee::whereIn('staff_type', ['medical', 'nursing', 'technical'])->count(),
-            'admin_staff' => Employee::whereIn('staff_type', ['administrative', 'service'])->count(),
-            'license_expiring' => Employee::whereNotNull('license_expiry_date')
+            'total' => HrEmployee::count(),
+            'active' => HrEmployee::where('status', 'active')->count(),
+            'medical_staff' => HrEmployee::whereIn('staff_type', ['medical', 'nursing', 'technical'])->count(),
+            'admin_staff' => HrEmployee::whereIn('staff_type', ['administrative', 'service'])->count(),
+            'license_expiring' => HrEmployee::whereNotNull('license_expiry_date')
                 ->where('license_expiry_date', '>=', now())
                 ->where('license_expiry_date', '<=', now()->addDays(30))
                 ->count(),
@@ -101,7 +101,7 @@ class EmployeeController extends Controller
     public function create()
     {
         $departments = Department::orderBy('name')->get();
-        $linkedUserIds = Employee::whereNotNull('user_id')->pluck('user_id')->toArray();
+        $linkedUserIds = HrEmployee::whereNotNull('user_id')->pluck('user_id')->toArray();
         $users = User::whereNotIn('id', $linkedUserIds)->orderBy('name')->get();
 
         // جلب خيارات القوائم المنسدلة النشطة
@@ -112,7 +112,7 @@ class EmployeeController extends Controller
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
 
         // توليد رقم وظيفي افتراضي تلقائياً
-        $latestId = Employee::withTrashed()->max('id') ?? 0;
+        $latestId = HrEmployee::withTrashed()->max('id') ?? 0;
         $nextCode = 'EMP-' . str_pad($latestId + 1, 4, '0', STR_PAD_LEFT);
 
         return view('hr.employees.create', compact('departments', 'users', 'employmentTypes', 'documentTypes', 'reqMap', 'nextCode'));
@@ -127,7 +127,7 @@ class EmployeeController extends Controller
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
 
         $rules = [
-            'employee_code' => 'required|string|max:30|unique:employees,employee_code',
+            'employee_code' => 'required|string|max:30|unique:hr_employees,employee_code',
             'full_name' => 'required|string|max:255',
             'national_id' => ($reqMap['national_id'] ?? false) ? 'required|string|max:50' : 'nullable|string|max:50',
             'gender' => ($reqMap['gender'] ?? true) ? 'required|in:male,female' : 'nullable|in:male,female',
@@ -140,7 +140,7 @@ class EmployeeController extends Controller
             'staff_type' => 'required|in:medical,nursing,technical,administrative,service',
             'job_title' => ($reqMap['job_title'] ?? true) ? 'required|string|max:255' : 'nullable|string|max:255',
             'department_id' => ($reqMap['department_id'] ?? true) ? 'required|exists:departments,id' : 'nullable|exists:departments,id',
-            'user_id' => 'nullable|exists:users,id|unique:employees,user_id',
+            'user_id' => 'nullable|exists:users,id|unique:hr_employees,user_id',
             'employment_type' => ($reqMap['employment_type'] ?? true) ? 'required|string|max:100' : 'nullable|string|max:100',
             'hire_date' => ($reqMap['hire_date'] ?? true) ? 'required|date' : 'nullable|date',
             'contract_end_date' => ($reqMap['contract_end_date'] ?? false) ? 'required|date|after_or_equal:hire_date' : 'nullable|date|after_or_equal:hire_date',
@@ -180,7 +180,7 @@ class EmployeeController extends Controller
             $validated['profile_photo'] = $path;
         }
 
-        $employee = Employee::create($validated);
+        $employee = HrEmployee::create($validated);
 
         // معالجة ورفع المستمسكات المرفقة
         $this->processDocumentsUpload($request, $employee);
@@ -192,7 +192,7 @@ class EmployeeController extends Controller
     /**
      * عرض إضبارة الموظف الشاملة مع مستمسكاته
      */
-    public function show(Employee $employee)
+    public function show(HrEmployee $employee)
     {
         $employee->load(['department', 'user', 'documents.uploader']);
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
@@ -203,11 +203,11 @@ class EmployeeController extends Controller
     /**
      * شاشة تعديل بيانات الموظف
      */
-    public function edit(Employee $employee)
+    public function edit(HrEmployee $employee)
     {
         $employee->load('documents');
         $departments = Department::orderBy('name')->get();
-        $linkedUserIds = Employee::whereNotNull('user_id')
+        $linkedUserIds = HrEmployee::whereNotNull('user_id')
             ->where('id', '!=', $employee->id)
             ->pluck('user_id')
             ->toArray();
@@ -223,12 +223,12 @@ class EmployeeController extends Controller
     /**
      * تحديث بيانات الموظف
      */
-    public function update(Request $request, Employee $employee)
+    public function update(Request $request, HrEmployee $employee)
     {
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
 
         $rules = [
-            'employee_code' => 'required|string|max:30|unique:employees,employee_code,' . $employee->id,
+            'employee_code' => 'required|string|max:30|unique:hr_employees,employee_code,' . $employee->id,
             'full_name' => 'required|string|max:255',
             'national_id' => ($reqMap['national_id'] ?? false) ? 'required|string|max:50' : 'nullable|string|max:50',
             'gender' => ($reqMap['gender'] ?? true) ? 'required|in:male,female' : 'nullable|in:male,female',
@@ -241,7 +241,7 @@ class EmployeeController extends Controller
             'staff_type' => 'required|in:medical,nursing,technical,administrative,service',
             'job_title' => ($reqMap['job_title'] ?? true) ? 'required|string|max:255' : 'nullable|string|max:255',
             'department_id' => ($reqMap['department_id'] ?? true) ? 'required|exists:departments,id' : 'nullable|exists:departments,id',
-            'user_id' => 'nullable|exists:users,id|unique:employees,user_id,' . $employee->id,
+            'user_id' => 'nullable|exists:users,id|unique:hr_employees,user_id,' . $employee->id,
             'employment_type' => ($reqMap['employment_type'] ?? true) ? 'required|string|max:100' : 'nullable|string|max:100',
             'hire_date' => ($reqMap['hire_date'] ?? true) ? 'required|date' : 'nullable|date',
             'contract_end_date' => ($reqMap['contract_end_date'] ?? false) ? 'required|date|after_or_equal:hire_date' : 'nullable|date|after_or_equal:hire_date',
@@ -280,7 +280,7 @@ class EmployeeController extends Controller
     /**
      * رفع مستمسك جديد مباشرة من شاشة إضبارة الموظف
      */
-    public function uploadDocument(Request $request, Employee $employee)
+    public function uploadDocument(Request $request, HrEmployee $employee)
     {
         $request->validate([
             'document_type' => 'required|string|max:100',
@@ -303,7 +303,7 @@ class EmployeeController extends Controller
 
         $storedPath = $file->storeAs("employees/documents/{$employee->employee_code}", $fileName, 'public');
 
-        EmployeeDocument::create([
+        HrEmployeeDocument::create([
             'employee_id' => $employee->id,
             'employee_code' => $employee->employee_code,
             'document_type' => $docType,
@@ -322,7 +322,7 @@ class EmployeeController extends Controller
     /**
      * تحميل أو معاينة المستمسك
      */
-    public function downloadDocument(EmployeeDocument $document)
+    public function downloadDocument(HrEmployeeDocument $document)
     {
         if (!Storage::disk('public')->exists($document->file_path)) {
             abort(404, 'الملف غير موجود في الخادم.');
@@ -334,7 +334,7 @@ class EmployeeController extends Controller
     /**
      * حذف مستمسك رسمي للموظف
      */
-    public function destroyDocument(EmployeeDocument $document)
+    public function destroyDocument(HrEmployeeDocument $document)
     {
         $employeeId = $document->employee_id;
         $docType = $document->document_type;
@@ -352,7 +352,7 @@ class EmployeeController extends Controller
     /**
      * دالة مساعدة لمعالجة ورفع مصفوفة المستمسكات من نماذج التسجيل والتعديل
      */
-    private function processDocumentsUpload(Request $request, Employee $employee)
+    private function processDocumentsUpload(Request $request, HrEmployee $employee)
     {
         if ($request->has('documents') && is_array($request->documents)) {
             foreach ($request->documents as $index => $docData) {
@@ -367,7 +367,7 @@ class EmployeeController extends Controller
 
                     $storedPath = $file->storeAs("employees/documents/{$employee->employee_code}", $fileName, 'public');
 
-                    EmployeeDocument::create([
+                    HrEmployeeDocument::create([
                         'employee_id' => $employee->id,
                         'employee_code' => $employee->employee_code,
                         'document_type' => $docType,
@@ -386,7 +386,7 @@ class EmployeeController extends Controller
     /**
      * حذف أو أرشفة الموظف
      */
-    public function destroy(Employee $employee)
+    public function destroy(HrEmployee $employee)
     {
         $name = $employee->full_name;
         $employee->delete();
@@ -395,3 +395,5 @@ class EmployeeController extends Controller
             ->with('success', "تم أرشفة/حذف ملف الموظف '{$name}' بنجاح.");
     }
 }
+
+

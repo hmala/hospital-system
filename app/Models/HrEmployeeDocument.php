@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
-class EmployeeDocument extends Model
+class HrEmployeeDocument extends Model
 {
     use HasFactory;
 
@@ -24,7 +24,7 @@ class EmployeeDocument extends Model
 
     public function employee()
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(HrEmployee::class, 'employee_id');
     }
 
     public function uploader()
@@ -55,3 +55,4 @@ class EmployeeDocument extends Model
         return in_array(strtolower($this->file_extension), ['jpg', 'jpeg', 'png', 'webp']);
     }
 }
+
