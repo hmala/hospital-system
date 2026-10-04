@@ -1228,8 +1228,6 @@
                         </div>
                         @endcanany
 
-                        <!-- قسم المختبر والأشعة -->
-                        @canany(['view radiology', 'manage radiology types', 'create radiology', 'view lab tests', 'create lab tests', 'process pharmacy requests', 'manage surgery lab tests', 'view lab test groups'])
                         <!-- قسم الأشعة والسونار -->
                         @canany(['view radiology', 'manage radiology types'])
                         @php
@@ -1794,4 +1792,5 @@
     @stack('scripts')
 </body>
 </html>
+
 
