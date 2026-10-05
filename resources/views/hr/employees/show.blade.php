@@ -325,6 +325,93 @@
                 </div>
             @endif
 
+            
+            <!-- 3.5. سجل العقوبات والمكافآت والإنذارات -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="card-title fw-bold text-dark mb-0">
+                        <i class="fas fa-balance-scale text-warning me-2"></i>سجل العقوبات والمكافآت
+                    </h6>
+                    <button type="button" class="btn btn-outline-warning btn-sm text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#addActionModal">
+                        <i class="fas fa-gavel me-1"></i> تسجيل إجراء جديد
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-center">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>نوع الإجراء</th>
+                                    <th>اسم اللائحة / السبب</th>
+                                    <th>التأثير المالي (د.ع)</th>
+                                    <th>حالة الترحيل للراتب</th>
+                                    <th>مسجل بواسطة</th>
+                                    <th>حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small">
+                                @forelse($employee->actions()->latest('action_date')->get() as $action)
+                                    <tr>
+                                        <td>{{ $action->action_date->format('Y-m-d') }}</td>
+                                        <td>
+                                            @if($action->actionSetting->category == 'penalty')
+                                                <span class="badge bg-danger"><i class="fas fa-minus-circle"></i> عقوبة</span>
+                                            @elseif($action->actionSetting->category == 'bonus')
+                                                <span class="badge bg-success"><i class="fas fa-plus-circle"></i> مكافأة</span>
+                                            @else
+                                                <span class="badge bg-secondary"><i class="fas fa-exclamation-triangle"></i> إنذار</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-start">
+                                            <strong>{{ $action->actionSetting->title }}</strong><br>
+                                            <span class="text-muted">{{ Str::limit($action->reason, 40) }}</span>
+                                        </td>
+                                        <td>
+                                            @if($action->financial_amount == 0)
+                                                <span class="text-muted">بدون تأثير مالي</span>
+                                            @elseif($action->financial_amount > 0)
+                                                <span class="text-success fw-bold">+{{ number_format($action->financial_amount, 0) }}</span>
+                                            @else
+                                                <span class="text-danger fw-bold">{{ number_format($action->financial_amount, 0) }}</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($action->status == 'pending')
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half"></i> بانتظار الراتب</span>
+                                            @else
+                                                <span class="badge bg-success"><i class="fas fa-check-double"></i> مُرحّل ({{ $action->payrollCycle->cycle_month ?? '' }})</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $action->creator->name ?? 'النظام' }}</td>
+                                        <td>
+                                            @if($action->status == 'pending')
+                                            <form action="{{ route('hr.employees.actions.destroy', $action->id) }}" method="POST" class="d-inline-block">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('هل أنت متأكد من الحذف؟')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            @else
+                                                <i class="fas fa-lock text-muted" title="لا يمكن حذفه لأنه مرحّل للرواتب"></i>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-50"></i>
+                                            <p class="mb-0">سجل الموظف نظيف، لا توجد عقوبات أو مكافآت مسجلة.</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- 4. جدول المستمسكات والوثائق الرسمية (Documents Table) -->
             <div class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
@@ -476,4 +563,70 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Add Action (Penalty/Bonus) -->
+<div class="modal fade" id="addActionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('hr.employees.actions.store', $employee->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-warning bg-opacity-10">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-gavel text-warning me-2"></i> تسجيل إجراء جديد للموظف</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اختر نوع الإجراء من اللائحة <span class="text-danger">*</span></label>
+                        <select name="hr_action_setting_id" class="form-select" required>
+                            <option value="">-- اختر الإجراء --</option>
+                            @php
+                                $penalties = $actionSettings->where('category', 'penalty');
+                                $bonuses = $actionSettings->where('category', 'bonus');
+                                $warnings = $actionSettings->where('category', 'warning');
+                            @endphp
+                            
+                            @if($penalties->count() > 0)
+                                <optgroup label="🔴 العقوبات والخصومات">
+                                    @foreach($penalties as $s)
+                                        <option value="{{ $s->id }}">{{ $s->title }} ({{ $s->effect_type == 'none' ? 'بدون تأثير مالي' : 'تأثير مالي' }})</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            
+                            @if($bonuses->count() > 0)
+                                <optgroup label="🟢 المكافآت والحوافز">
+                                    @foreach($bonuses as $s)
+                                        <option value="{{ $s->id }}">{{ $s->title }} ({{ $s->effect_type == 'none' ? 'بدون تأثير مالي' : 'تأثير مالي' }})</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            
+                            @if($warnings->count() > 0)
+                                <optgroup label="⚪ إنذارات وتوبيخ">
+                                    @foreach($warnings as $s)
+                                        <option value="{{ $s->id }}">{{ $s->title }} ({{ $s->effect_type == 'none' ? 'بدون تأثير مالي' : 'تأثير مالي' }})</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                        </select>
+                        <small class="text-muted d-block mt-1">سيقوم النظام باحتساب قيمة الخصم/المكافأة آلياً بناءً على الراتب الأساسي وإعدادات اللائحة وإدراجها في راتب الشهر الحالي.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">تاريخ الإجراء/المخالفة <span class="text-danger">*</span></label>
+                        <input type="date" name="action_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">السبب التفصيلي والملاحظات <span class="text-danger">*</span></label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="اكتب تفاصيل المخالفة أو المكافأة لحفظها في الملف..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark"><i class="fas fa-save me-1"></i> حفظ الإجراء وتطبيق التأثير</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endpush

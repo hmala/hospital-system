@@ -643,6 +643,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\HrEmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
         Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
 
+        // ???????? ????????? ??????
+        Route::post('employees/{employee}/actions', [\App\Http\Controllers\HR\HrEmployeeController::class, 'storeAction'])->name('employees.actions.store');
+        Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
+
         // إدارة الموظفين
         Route::resource('employees', \App\Http\Controllers\HR\HrEmployeeController::class);
 
@@ -770,6 +774,7 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
 
 
 

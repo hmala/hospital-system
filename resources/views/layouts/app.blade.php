@@ -1413,7 +1413,12 @@
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.action_settings.*') ? 'active' : '' }}" href="{{ route('hr.action_settings.index') }}">
-                                    <i class="fas fa-balance-scale"></i><span> ????? ???????? ?????????</span>
+                                    <i class="fas fa-balance-scale"></i><span> لائحة العقوبات والمكافآت</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.payrolls.*') ? 'active' : '' }}" href="{{ route('hr.payrolls.index') }}">
+                                    <i class="fas fa-money-check-alt"></i><span> مسير الرواتب والأجور</span>
                                 </a>
                             </li>
                         </div>

@@ -196,8 +196,9 @@ class HrEmployeeController extends Controller
     {
         $employee->load(['department', 'user', 'documents.uploader']);
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
+        $actionSettings = \App\Models\HrActionSetting::where('is_active', true)->orderBy('category')->get();
 
-        return view('hr.employees.show', compact('employee', 'documentTypes'));
+        return view('hr.employees.show', compact('employee', 'documentTypes', 'actionSettings'));
     }
 
     /**
@@ -334,6 +335,57 @@ class HrEmployeeController extends Controller
     /**
      * حذف مستمسك رسمي للموظف
      */
+    public function storeAction(\Illuminate\Http\Request $request, HrEmployee $employee)
+    {
+        $request->validate([
+            'hr_action_setting_id' => 'required|exists:hr_action_settings,id',
+            'action_date' => 'required|date',
+            'reason' => 'required|string',
+        ]);
+
+        $setting = \App\Models\HrActionSetting::findOrFail($request->hr_action_setting_id);
+        
+        // ???? ?????? ??????
+        $financial_amount = 0;
+        if ($setting->effect_type == 'amount') {
+            $financial_amount = $setting->effect_value;
+        } elseif ($setting->effect_type == 'days') {
+            // ????? ?????? = ?????? ??????? / 30
+            $dayValue = $employee->basic_salary / 30;
+            $financial_amount = $dayValue * $setting->effect_value;
+        } elseif ($setting->effect_type == 'percentage') {
+            $financial_amount = $employee->basic_salary * ($setting->effect_value / 100);
+        }
+
+        // ??? ???? ?????? ?????? ???? ???????
+        if ($setting->category == 'penalty' && $financial_amount > 0) {
+            $financial_amount = -$financial_amount;
+        }
+
+        \App\Models\HrEmployeeAction::create([
+            'hr_employee_id' => $employee->id,
+            'hr_action_setting_id' => $setting->id,
+            'action_date' => $request->action_date,
+            'reason' => $request->reason,
+            'applied_effect_type' => $setting->effect_type,
+            'applied_effect_value' => $setting->effect_value,
+            'financial_amount' => $financial_amount,
+            'status' => 'pending',
+            'created_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('hr.employees.show', $employee->id)->with('success', '?? ????? ??????? (?????/??????) ?????.');
+    }
+
+    public function destroyAction(\App\Models\HrEmployeeAction $action)
+    {
+        if ($action->status == 'processed') {
+            return back()->with('error', '?? ???? ??? ????? ?? ?????? ?????? ?? ???????.');
+        }
+        $action->delete();
+        return back()->with('success', '?? ??? ??????? ?????.');
+    }
+
     public function destroyDocument(HrEmployeeDocument $document)
     {
         $employeeId = $document->employee_id;
@@ -395,5 +447,7 @@ class HrEmployeeController extends Controller
             ->with('success', "تم أرشفة/حذف ملف الموظف '{$name}' بنجاح.");
     }
 }
+
+
 
 
