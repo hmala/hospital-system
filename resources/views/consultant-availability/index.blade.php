@@ -133,23 +133,30 @@
                                         @endif
                                     </td>
                                     <td class="text-center">
-                                        <select class="form-select form-select-sm py-0 px-1 text-center fw-bold text-primary border-primary" 
-                                                style="font-size: 0.75rem; border-radius: 6px; cursor: pointer; background-color: #f0fdf4;" 
-                                                onchange="assignDoctorToRoom({{ $doctor->id }}, this.value)"
-                                                title="تعيين شاشة التلفاز المعلقة خارج الغرفة لهذا الطبيب">
-                                            <option value="">-- بدون --</option>
-                                            @php
-                                                $assignedRoom = $doctor->current_room ?: optional($doctor->department)->room_number;
-                                            @endphp
-                                            @for($r = 1; $r <= 15; $r++)
-                                                <option value="{{ $r }}" {{ $assignedRoom == (string)$r ? 'selected' : '' }}>
-                                                    عيادة {{ $r }}
-                                                </option>
-                                            @endfor
-                                        </select>
+                                        @php
+                                            $assignedRoom = $doctor->current_room ?: optional($doctor->department)->room_number;
+                                        @endphp
+                                        <div class="d-inline-flex align-items-center">
+                                            <select class="form-select form-select-sm room-select-pill text-center fw-bold {{ $assignedRoom ? 'has-room' : 'no-room' }}" 
+                                                    id="room-select-{{ $doctor->id }}"
+                                                    onchange="assignDoctorToRoom({{ $doctor->id }}, this.value, this)"
+                                                    title="تحديد رقم العيادة لربط شاشة التلفاز التلقائية">
+                                                <option value="" class="text-muted">-- بدون عيادة --</option>
+                                                @for($r = 1; $r <= 15; $r++)
+                                                    <option value="{{ $r }}" {{ (string)$assignedRoom === (string)$r ? 'selected' : '' }}>
+                                                        🚪 عيادة {{ $r }}
+                                                    </option>
+                                                @endfor
+                                            </select>
+                                        </div>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-xs btn-outline-primary py-1 px-2" style="font-size: 0.75rem;" title="فتح شاشة التلفاز">
+                                        <a href="{{ $assignedRoom ? route('queue.room', $assignedRoom) : route('queue.doctor.display', $doctor->id) }}" 
+                                           id="tv-link-{{ $doctor->id }}"
+                                           target="_blank" 
+                                           class="btn btn-xs rounded-circle p-0 d-inline-flex align-items-center justify-content-center {{ $assignedRoom ? 'btn-primary shadow-xs' : 'btn-outline-secondary' }}" 
+                                           style="width: 28px; height: 28px; font-size: 0.75rem;" 
+                                           title="{{ $assignedRoom ? 'معاينة شاشة عيادة ' . $assignedRoom : 'معاينة شاشة الطبيب' }}">
                                             <i class="fas fa-tv"></i>
                                         </a>
                                     </td>
@@ -414,6 +421,37 @@
 </div>
 
 <style>
+/* Modern Room Selector Pill Styling */
+.room-select-pill {
+    padding: 3px 18px 3px 8px;
+    font-size: 0.76rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-weight: 800;
+    min-width: 95px;
+}
+.room-select-pill.has-room {
+    background-color: #ecfdf5;
+    color: #047857;
+    border: 1px solid #10b981;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
+}
+.room-select-pill.has-room:hover {
+    background-color: #d1fae5;
+    border-color: #059669;
+}
+.room-select-pill.no-room {
+    background-color: #f8fafc;
+    color: #64748b;
+    border: 1px dashed #cbd5e1;
+}
+.room-select-pill.no-room:hover {
+    background-color: #f1f5f9;
+    color: #334155;
+    border-style: solid;
+}
+
 /* Clean and Simple Design */
 body {
     background-color: #f8f9fa !important;
@@ -770,8 +808,33 @@ function updateAvailabilityCounts() {
     if (elAll) elAll.textContent = rows.length;
 }
 
-function assignDoctorToRoom(doctorId, room) {
+function assignDoctorToRoom(doctorId, room, selectEl) {
     const baseUrl = @json(url('/'));
+    
+    // Optimistic UI state
+    if (selectEl) {
+        if (room) {
+            selectEl.classList.remove('no-room');
+            selectEl.classList.add('has-room');
+        } else {
+            selectEl.classList.remove('has-room');
+            selectEl.classList.add('no-room');
+        }
+    }
+
+    const tvLink = document.getElementById(`tv-link-${doctorId}`);
+    if (tvLink) {
+        if (room) {
+            tvLink.href = `${baseUrl}/queue/room/${room}`;
+            tvLink.className = 'btn btn-xs rounded-circle p-0 d-inline-flex align-items-center justify-content-center btn-primary shadow-xs';
+            tvLink.title = `معاينة شاشة عيادة ${room}`;
+        } else {
+            tvLink.href = `${baseUrl}/queue/doctor/${doctorId}`;
+            tvLink.className = 'btn btn-xs rounded-circle p-0 d-inline-flex align-items-center justify-content-center btn-outline-secondary';
+            tvLink.title = `معاينة شاشة الطبيب`;
+        }
+    }
+
     fetch(`${baseUrl}/queue/assign-room`, {
         method: 'POST',
         headers: {
