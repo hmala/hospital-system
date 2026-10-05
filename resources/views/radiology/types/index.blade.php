@@ -129,16 +129,43 @@
         </div>
     </div>
 
-    <!-- Main Listing Table Card -->
+    <!-- Main Listing Table Card with Unified Top Actions Toolbar -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom">
-            <div class="d-flex align-items-center gap-2">
+        <!-- Unified Top Header Bar -->
+        <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fas fa-list text-primary me-2"></i> قائمة الفحوصات والتسعير
+                </h5>
                 <span class="badge bg-primary rounded-pill px-3 py-2">{{ $types->total() }} فحص</span>
-                <span class="text-muted small">إجمالي الفحوصات المتاحة في النظام</span>
+                <span id="topSelectedBadge" class="badge bg-dark rounded-pill px-3 py-2 d-none">
+                    <i class="fas fa-check-double text-warning me-1"></i> تم تحديد <b id="topSelectedCount">0</b> فحص
+                </span>
             </div>
+
+            <!-- Top Bulk & Quick Action Buttons -->
             @can('manage radiology types')
-            <div class="small text-muted">
-                <i class="fas fa-info-circle text-info me-1"></i> يمكنك تحديد عدة عناصر واستخدام شريط الإجراءات السفلي للحذف أو التفعيل الجماعي.
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Group of bulk buttons (shown when rows are selected) -->
+                <div id="topBulkActionsGroup" class="d-none d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-xs" onclick="submitBulkStatus('active')" title="تفعيل الفحوصات المحددة">
+                        <i class="fas fa-check-circle me-1"></i> تفعيل المحدد
+                    </button>
+                    <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold shadow-xs" onclick="submitBulkStatus('inactive')" title="تعطيل الفحوصات المحددة">
+                        <i class="fas fa-ban me-1"></i> تعطيل المحدد
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-xs" onclick="openBulkDeleteModal()" title="حذف الفحوصات المحددة">
+                        <i class="fas fa-trash-alt me-1"></i> حذف المحدد
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2" onclick="clearAllSelections()" title="إلغاء التحديد">
+                        <i class="fas fa-times me-1"></i> إلغاء
+                    </button>
+                    <div class="vr mx-1"></div>
+                </div>
+
+                <a href="{{ route('radiology.types.create') }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-xs">
+                    <i class="fas fa-plus me-1"></i> إضافة فحص جديد
+                </a>
             </div>
             @endcan
         </div>
@@ -319,39 +346,6 @@
     </div>
 </div>
 
-<!-- Floating Bulk Actions Toolbar (شريط الإجراءات الجماعية العائم) -->
-@can('manage radiology types')
-<div id="bulkActionBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 shadow-lg rounded-pill px-4 py-3 bg-dark text-white d-none" style="z-index: 1050; min-width: 380px; max-width: 90vw; backdrop-filter: blur(10px); background: rgba(15, 23, 42, 0.95) !important; border: 1px solid rgba(255, 255, 255, 0.15);">
-    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary rounded-circle p-2" id="selectedCountBadge">0</span>
-            <span class="fw-bold" style="font-size: 0.92rem;">تم تحديد <span id="selectedCountText" class="text-warning">0</span> نوع أشعة</span>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <!-- Bulk Activate -->
-            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="submitBulkStatus('active')">
-                <i class="fas fa-check-circle me-1"></i> تفعيل المحدد
-            </button>
-
-            <!-- Bulk Deactivate -->
-            <button type="button" class="btn btn-sm btn-outline-warning text-warning rounded-pill px-3 fw-bold" onclick="submitBulkStatus('inactive')">
-                <i class="fas fa-ban me-1"></i> تعطيل المحدد
-            </button>
-
-            <!-- Bulk Delete -->
-            <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold" onclick="openBulkDeleteModal()">
-                <i class="fas fa-trash-alt me-1"></i> حذف المحدد
-            </button>
-
-            <!-- Clear Selection -->
-            <button type="button" class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0;" onclick="clearAllSelections()" title="إلغاء التحديد">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- Bulk Delete Confirmation Modal -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -393,7 +387,6 @@
     <input type="hidden" name="status" id="bulkStatusValue" value="active">
     <div id="bulkStatusInputs"></div>
 </form>
-@endcan
 
 <style>
 .bg-purple {
@@ -415,20 +408,21 @@
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-    const bulkActionBar = document.getElementById('bulkActionBar');
-    const selectedCountBadge = document.getElementById('selectedCountBadge');
-    const selectedCountText = document.getElementById('selectedCountText');
+    const topBulkActionsGroup = document.getElementById('topBulkActionsGroup');
+    const topSelectedBadge = document.getElementById('topSelectedBadge');
+    const topSelectedCount = document.getElementById('topSelectedCount');
 
     function updateBulkToolbar() {
         const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
         const count = checkedBoxes.length;
 
         if (count > 0) {
-            if (bulkActionBar) bulkActionBar.classList.remove('d-none');
-            if (selectedCountBadge) selectedCountBadge.textContent = count;
-            if (selectedCountText) selectedCountText.textContent = count;
+            if (topBulkActionsGroup) topBulkActionsGroup.classList.remove('d-none');
+            if (topSelectedBadge) topSelectedBadge.classList.remove('d-none');
+            if (topSelectedCount) topSelectedCount.textContent = count;
         } else {
-            if (bulkActionBar) bulkActionBar.classList.add('d-none');
+            if (topBulkActionsGroup) topBulkActionsGroup.classList.add('d-none');
+            if (topSelectedBadge) topSelectedBadge.classList.add('d-none');
         }
 
         if (selectAllCheckbox) {
