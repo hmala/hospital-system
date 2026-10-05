@@ -877,6 +877,8 @@ class DoctorVisitController extends Controller
             $nursingDescription = 'طلب خدمات تمريضية: ' . implode(', ', $details['nursing_service_names']);
         }
 
+        $insuranceType = optional($visit->appointment)->insurance_type ?? optional($visit->patient)->insurance_type ?? 'none';
+
         $medicalRequest = MedicalRequest::create([
             'visit_id' => $visit->id,
             'type' => $request->type,
@@ -889,7 +891,8 @@ class DoctorVisitController extends Controller
 
             'details' => $details,
             'status' => 'pending',
-            'payment_status' => 'pending' // يجب الدفع عند الكاشير قبل الإرسال للقسم المختص
+            'payment_status' => 'pending', // يجب الدفع عند الكاشير قبل الإرسال للقسم المختص
+            'insurance_type' => $insuranceType
         ]);
 
         // التحقق من نوع الطلب (AJAX أو عادي)
