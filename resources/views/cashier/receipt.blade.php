@@ -30,8 +30,8 @@
             $pphone = $ep ? ($ep->phone ?? 'غير محدد') : 'غير محدد';
             $pid = '(طوارئ)';
         } else {
-            $pname = $p ? ($p->user->name ?? 'غير محدد') : 'غير محدد';
-            $pphone = $p ? ($p->user->phone ?? 'غير محدد') : 'غير محدد';
+            $pname = $p ? ($p->user?->name ?? 'غير محدد') : 'غير محدد';
+            $pphone = $p ? ($p->user?->phone ?? 'غير محدد') : 'غير محدد';
             $pid = $p ? ($p->national_id ?? '#'.$p->id) : '-';
         }
 
@@ -67,7 +67,7 @@
             $lineItems[] = [
                 'name' => $serviceTitle,
                 'category' => $scanType ? 'سونار' : 'استشارية',
-                'doctor' => $payment->appointment->doctor ? ('د. ' . optional($payment->appointment->doctor->user)->name) : 'عام',
+                'doctor' => $payment->appointment->doctor?->user?->name ? ('د. ' . $payment->appointment->doctor->user->name) : 'عام',
                 'approved' => $approvedPrice,
                 'patient' => $patientShare,
                 'insurance' => $insuranceShare,
@@ -77,7 +77,7 @@
         // 2. طلبات الفحوصات الطبية
         if ($payment->request) {
             $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
-            $doctorName = $payment->request->visit && $payment->request->visit->doctor ? ('د. ' . optional($payment->request->visit->doctor->user)->name) : 'المختبر / الأشعة';
+            $doctorName = $payment->request->visit?->doctor?->user?->name ? ('د. ' . $payment->request->visit->doctor->user->name) : 'المختبر / الأشعة';
 
             if ($payment->request->type === 'lab' && isset($details['lab_test_ids'])) {
                 foreach ($details['lab_test_ids'] as $testId) {
@@ -120,10 +120,14 @@
             $patientShare = (float)($payment->patient_share > 0 ? $payment->patient_share : $payment->amount);
             $insuranceShare = (float)($payment->insurance_share ?? max(0, $approvedPrice - $patientShare));
 
+            $docTitle = $payment->appointment?->doctor?->user?->name 
+                ? ('د. ' . $payment->appointment->doctor->user->name) 
+                : ($payment->emergency?->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'الكادر الطبي');
+
             $lineItems[] = [
                 'name' => $payment->description ?: 'خدمة طبية عامة',
                 'category' => $payment->payment_type ?? 'عام',
-                'doctor' => optional(optional($payment->appointment)->doctor)->user->name ? 'د. ' . $payment->appointment->doctor->user->name : 'الكادر الطبي',
+                'doctor' => $docTitle,
                 'approved' => $approvedPrice,
                 'patient' => $patientShare,
                 'insurance' => $insuranceShare,
