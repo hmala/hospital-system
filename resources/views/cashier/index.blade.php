@@ -282,10 +282,13 @@
                                                                             @endif
                                                                         </td>
                                                                         <td>
+                                                                            @php
+                                                                                $insType = $request->insurance_type ?? optional(optional($request->visit)->appointment)->insurance_type ?? optional($reqPatient)->insurance_type;
+                                                                            @endphp
                                                                             <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
-                                                                                @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                                @if($insType === 'moi')
                                                                                     <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                                @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                                @elseif($insType === 'hi')
                                                                                     <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                                 @endif
                                                                             </div>
@@ -464,10 +467,13 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
+                                                                        @php
+                                                                            $insType = $request->insurance_type ?? optional(optional($request->visit)->appointment)->insurance_type ?? optional($reqPatient)->insurance_type;
+                                                                        @endphp
                                                                         <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
-                                                                            @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                            @if($insType === 'moi')
                                                                                 <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                            @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                            @elseif($insType === 'hi')
                                                                                 <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                             @endif
                                                                         </div>
