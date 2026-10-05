@@ -136,18 +136,48 @@
                                         @php
                                             $assignedRoom = $doctor->current_room ?: optional($doctor->department)->room_number;
                                         @endphp
-                                        <div class="d-inline-flex align-items-center">
-                                            <select class="form-select form-select-sm room-select-pill text-center fw-bold {{ $assignedRoom ? 'has-room' : 'no-room' }}" 
-                                                    id="room-select-{{ $doctor->id }}"
-                                                    onchange="assignDoctorToRoom({{ $doctor->id }}, this.value, this)"
-                                                    title="تحديد رقم العيادة لربط شاشة التلفاز التلقائية">
-                                                <option value="" class="text-muted">-- بدون عيادة --</option>
-                                                @for($r = 1; $r <= 15; $r++)
-                                                    <option value="{{ $r }}" {{ (string)$assignedRoom === (string)$r ? 'selected' : '' }}>
-                                                        🚪 عيادة {{ $r }}
-                                                    </option>
-                                                @endfor
-                                            </select>
+                                        <div class="dropdown d-inline-block">
+                                            <button type="button" 
+                                                    class="btn btn-sm room-badge-btn rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 dropdown-toggle {{ $assignedRoom ? 'btn-success-soft' : 'btn-light text-secondary border-dashed' }}" 
+                                                    id="room-dropdown-btn-{{ $doctor->id }}" 
+                                                    data-bs-toggle="dropdown" 
+                                                    data-bs-auto-close="outside"
+                                                    aria-expanded="false"
+                                                    title="تخصيص شاشة العيادة لهذا الطبيب">
+                                                <i class="fas {{ $assignedRoom ? 'fa-door-open text-success' : 'fa-plus-circle text-muted' }}" id="room-icon-{{ $doctor->id }}"></i>
+                                                <span id="room-text-{{ $doctor->id }}">{{ $assignedRoom ? 'عيادة ' . $assignedRoom : 'تعيين عيادة' }}</span>
+                                            </button>
+
+                                            <div class="dropdown-menu p-3 shadow-lg border-0 rounded-4 room-grid-menu text-end" aria-labelledby="room-dropdown-btn-{{ $doctor->id }}" style="min-width: 275px; z-index: 1060;">
+                                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                                    <span class="small fw-bold text-dark"><i class="fas fa-tv text-primary me-1"></i> اختر شاشة العيادة:</span>
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary small px-2 py-1">د. {{ $doctor->user->name }}</span>
+                                                </div>
+
+                                                <!-- Room Grid Buttons 1 to 15 -->
+                                                <div class="room-buttons-grid mb-2">
+                                                    @for($r = 1; $r <= 15; $r++)
+                                                        @php
+                                                            $isCurrent = ((string)$assignedRoom === (string)$r);
+                                                        @endphp
+                                                        <button type="button" 
+                                                                class="btn btn-xs room-cell-btn {{ $isCurrent ? 'btn-success active fw-bold text-white shadow-xs' : 'btn-outline-primary' }}"
+                                                                data-room="{{ $r }}"
+                                                                onclick="selectDoctorRoom({{ $doctor->id }}, '{{ $r }}', this)"
+                                                                title="تعيين عيادة {{ $r }}">
+                                                            🚪 عيادة {{ $r }}
+                                                        </button>
+                                                    @endfor
+                                                </div>
+
+                                                <div class="border-top pt-2">
+                                                    <button type="button" 
+                                                            class="btn btn-xs btn-outline-danger w-100 rounded-pill py-1 fw-bold" 
+                                                            onclick="selectDoctorRoom({{ $doctor->id }}, '', this)">
+                                                        <i class="fas fa-times-circle me-1"></i> تفريغ / إلغاء تعيين العيادة
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="text-center">
@@ -421,35 +451,53 @@
 </div>
 
 <style>
-/* Modern Room Selector Pill Styling */
-.room-select-pill {
-    padding: 3px 18px 3px 8px;
-    font-size: 0.76rem;
-    border-radius: 20px;
+/* Modern Room Badge & Interactive Grid Styling (Option 1) */
+.room-badge-btn {
+    font-size: 0.78rem;
+    transition: all 0.2s ease;
     cursor: pointer;
-    transition: all 0.25s ease;
-    font-weight: 800;
-    min-width: 95px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-.room-select-pill.has-room {
-    background-color: #ecfdf5;
-    color: #047857;
-    border: 1px solid #10b981;
-    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
+.room-badge-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
 }
-.room-select-pill.has-room:hover {
-    background-color: #d1fae5;
-    border-color: #059669;
+.btn-success-soft {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border: 1px solid #10b981 !important;
 }
-.room-select-pill.no-room {
-    background-color: #f8fafc;
-    color: #64748b;
-    border: 1px dashed #cbd5e1;
+.btn-success-soft:hover {
+    background-color: #d1fae5 !important;
+    border-color: #059669 !important;
+    color: #065f46 !important;
 }
-.room-select-pill.no-room:hover {
-    background-color: #f1f5f9;
-    color: #334155;
-    border-style: solid;
+.border-dashed {
+    border: 1px dashed #cbd5e1 !important;
+    background-color: #f8fafc !important;
+}
+.border-dashed:hover {
+    background-color: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+}
+.room-grid-menu {
+    border-radius: 16px !important;
+    box-shadow: 0 14px 35px rgba(0,0,0,0.18) !important;
+}
+.room-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.room-cell-btn {
+    font-size: 0.74rem;
+    padding: 6px 4px;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: all 0.15s ease;
+}
+.room-cell-btn:hover {
+    transform: translateY(-1px);
 }
 
 /* Clean and Simple Design */
@@ -808,20 +856,46 @@ function updateAvailabilityCounts() {
     if (elAll) elAll.textContent = rows.length;
 }
 
-function assignDoctorToRoom(doctorId, room, selectEl) {
+function selectDoctorRoom(doctorId, room, btnEl) {
     const baseUrl = @json(url('/'));
     
-    // Optimistic UI state
-    if (selectEl) {
-        if (room) {
-            selectEl.classList.remove('no-room');
-            selectEl.classList.add('has-room');
-        } else {
-            selectEl.classList.remove('has-room');
-            selectEl.classList.add('no-room');
+    // Close dropdown safely
+    const dropdownToggle = document.getElementById(`room-dropdown-btn-${doctorId}`);
+    if (dropdownToggle && window.bootstrap && bootstrap.Dropdown) {
+        const bsDropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
+        if (bsDropdown) {
+            bsDropdown.hide();
         }
     }
 
+    // Optimistic UI state for the badge button
+    const textEl = document.getElementById(`room-text-${doctorId}`);
+    const iconEl = document.getElementById(`room-icon-${doctorId}`);
+    if (textEl && iconEl && dropdownToggle) {
+        if (room) {
+            textEl.textContent = `عيادة ${room}`;
+            iconEl.className = 'fas fa-door-open text-success me-1';
+            dropdownToggle.className = 'btn btn-sm room-badge-btn rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 dropdown-toggle btn-success-soft';
+        } else {
+            textEl.textContent = 'تعيين عيادة';
+            iconEl.className = 'fas fa-plus-circle text-muted me-1';
+            dropdownToggle.className = 'btn btn-sm room-badge-btn rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 dropdown-toggle btn-light text-secondary border-dashed';
+        }
+    }
+
+    // Update active state in grid buttons
+    const parentMenu = dropdownToggle ? dropdownToggle.nextElementSibling : null;
+    if (parentMenu) {
+        parentMenu.querySelectorAll('.room-cell-btn').forEach(b => {
+            if (room && b.getAttribute('data-room') === String(room)) {
+                b.className = 'btn btn-xs room-cell-btn btn-success active fw-bold text-white shadow-xs';
+            } else {
+                b.className = 'btn btn-xs room-cell-btn btn-outline-primary';
+            }
+        });
+    }
+
+    // Update TV preview link
     const tvLink = document.getElementById(`tv-link-${doctorId}`);
     if (tvLink) {
         if (room) {
@@ -835,6 +909,7 @@ function assignDoctorToRoom(doctorId, room, selectEl) {
         }
     }
 
+    // Server AJAX Request
     fetch(`${baseUrl}/queue/assign-room`, {
         method: 'POST',
         headers: {
