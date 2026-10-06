@@ -274,9 +274,13 @@ class LabStaffController extends Controller
                 $existingRes['attachment_title'] = $details['attachment_title'] ?? '';
             } elseif (isset($existingRes['attachment']) && empty($details['attachment'])) {
                 unset($existingRes['attachment'], $existingRes['attachment_name'], $existingRes['attachment_title']);
-            }
             if ($httpRequest->filled('result_notes') || $httpRequest->filled('result')) {
-                $existingRes['notes'] = $httpRequest->result_notes ?? $httpRequest->result;
+                $rawNote = trim((string)($httpRequest->result_notes ?? $httpRequest->result));
+                if (!str_starts_with($rawNote, '{') && !str_starts_with($rawNote, '[')) {
+                    $existingRes['notes'] = $rawNote;
+                }
+            } elseif ($httpRequest->has('result') && empty($httpRequest->result)) {
+                unset($existingRes['notes']);
             }
 
             $request->result = json_encode($existingRes);

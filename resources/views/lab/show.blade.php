@@ -576,7 +576,20 @@ $age = $patient?->age ?? null;
                 
                 $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);
                 $savedTestResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
-                $savedNotes = is_array($resultData) ? ($resultData['notes'] ?? (is_string($request->result) ? $request->result : '')) : (is_string($request->result) ? $request->result : '');
+                
+                // استخراج الملاحظات النصية الصافية وتجنب ظهور كود JSON الخام
+                $savedNotes = '';
+                if (is_array($resultData) && isset($resultData['notes']) && is_string($resultData['notes'])) {
+                    $trimmed = trim($resultData['notes']);
+                    if (!str_starts_with($trimmed, '{') && !str_starts_with($trimmed, '[')) {
+                        $savedNotes = $trimmed;
+                    }
+                } elseif (is_string($request->result)) {
+                    $trimmed = trim($request->result);
+                    if (!str_starts_with($trimmed, '{') && !str_starts_with($trimmed, '[')) {
+                        $savedNotes = $trimmed;
+                    }
+                }
             @endphp
 
             <div class="card shadow-sm border-0 bg-white mb-3 rounded-3 overflow-hidden">
