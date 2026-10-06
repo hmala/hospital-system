@@ -880,11 +880,8 @@ datalist option:hover {
                                                     </div>
                                                     <div class="d-flex align-items-center gap-2">
                                                         <a href="{{ route('lab-tests.groups.index') }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="إدارة باقاتي ومفضلاتي">
-                                                            <i class="fas fa-cog me-1"></i> إدارة الباقات
+                                                            <i class="fas fa-cog me-1"></i> إدارة باقات المفضلات
                                                         </a>
-                                                        <button type="submit" id="btnSubmitLabRequest" class="btn btn-primary btn-sm px-3 shadow-sm fw-bold">
-                                                            <i class="fas fa-paper-plane me-1"></i> إرسال الطلب (<span class="doc-lab-selected-count">0</span>)
-                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -3390,7 +3387,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const submitBtn = document.getElementById('btnSubmitLabRequest');
+            const submitBtn = labForm.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جارٍ الحفظ...';
