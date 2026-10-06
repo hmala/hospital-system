@@ -536,28 +536,129 @@ datalist option:hover {
         </div>
     </div>
 
-    <!-- معلومات المريض -->
+    <!-- بطاقة معلومات المريض الشاملة -->
+    @php
+        $patient = $visit->patient;
+        $patientUser = optional($patient)->user;
+        $gender = $patientUser->gender ?? $patient->gender ?? null;
+        $age = $patient->age ?? ($patientUser && $patientUser->date_of_birth ? \Carbon\Carbon::parse($patientUser->date_of_birth)->age : null);
+        $insuranceType = optional($visit->appointment)->insurance_type ?? $patient->insurance_type ?? 'none';
+        $insuranceCategory = $patient?->healthInsuranceCategory;
+    @endphp
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user me-2"></i>
-                        معلومات المريض
-                    </h5>
+            <div class="card shadow-sm border-0 bg-white">
+                <div class="card-header bg-gradient bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-id-card fs-5"></i>
+                        <h6 class="mb-0 fw-bold">بيانات المريض والملف الطبي</h6>
+                    </div>
+                    <div>
+                        <span class="badge bg-white text-primary fw-bold font-monospace">
+                            ملف رقم: #{{ $patient->national_id ?: ($patient->id ?? $visit->patient_id) }}
+                        </span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <p><strong>الاسم:</strong> {{ optional($visit->patient)->user->name ?? 'غير محدد' }}</p>
+                <div class="card-body p-3">
+                    <div class="row g-3 align-items-center">
+                        <!-- الاسم -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-primary-subtle text-primary rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">اسم المريض</small>
+                                    <strong class="text-dark fs-6">{{ $patientUser->name ?? 'غير محدد' }}</strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <p><strong>العمر:</strong> {{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</p>
+
+                        <!-- العمر والجنس -->
+                        <div class="col-xl-2 col-md-3 col-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-info-subtle text-info rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas {{ $gender === 'female' ? 'fa-venus text-danger' : 'fa-mars text-primary' }}"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">العمر / الجنس</small>
+                                    <strong class="text-dark">
+                                        {{ $age ? ($age . ' سنة') : 'غير محدد' }} / 
+                                        {{ $gender === 'male' ? 'ذكر' : ($gender === 'female' ? 'أنثى' : 'غير محدد') }}
+                                    </strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <p><strong>الجنس:</strong> {{ optional($visit->patient)->gender == 'male' ? 'ذكر' : 'أنثى' }}</p>
+
+                        <!-- فصيلة الدم -->
+                        <div class="col-xl-2 col-md-3 col-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-danger-subtle text-danger rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-tint"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">فصيلة الدم</small>
+                                    <strong class="text-danger fw-bold">{{ $patient->blood_type ?: 'غير محددة' }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- نوع التأمين / الضمان الصحي -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-success-subtle text-success rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">نوع التغطية والضمان</small>
+                                    @if($insuranceType === 'hi')
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold">
+                                            ضمان صحي وطني {{ $insuranceCategory ? '(' . $insuranceCategory->name . ')' : '' }}
+                                        </span>
+                                    @elseif($insuranceType === 'insurance')
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle fw-semibold">
+                                            تأمين خاص ({{ $patient->insurance_company ?: 'معتمد' }})
+                                        </span>
+                                    @else
+                                        <span class="badge bg-secondary-subtle text-secondary border fw-semibold">
+                                            دفع نقدي (Cash)
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الهاتف / الطوارئ -->
+                        <div class="col-xl-2 col-md-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-secondary-subtle text-secondary rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">الهاتف</small>
+                                    <strong class="text-dark font-monospace small">{{ $patientUser->phone ?: ($patient->emergency_contact ?: 'غير مسجل') }}</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- شريط تنبيه الحساسية والأمراض المزمنة إن وجدت -->
+                    @if(!empty($patient->allergies) || !empty($patient->medical_history))
+                        <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top">
+                            @if(!empty($patient->allergies))
+                                <div class="alert alert-danger py-1 px-2 mb-0 d-inline-flex align-items-center gap-1 small">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>تنبيه حساسية:</strong> {{ $patient->allergies }}
+                                </div>
+                            @endif
+                            @if(!empty($patient->medical_history))
+                                <div class="alert alert-warning py-1 px-2 mb-0 d-inline-flex align-items-center gap-1 small">
+                                    <i class="fas fa-notes-medical"></i>
+                                    <strong>سوابق مرضية:</strong> {{ Str::limit($patient->medical_history, 80) }}
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
