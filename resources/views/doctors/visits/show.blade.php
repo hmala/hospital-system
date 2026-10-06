@@ -882,6 +882,9 @@ datalist option:hover {
                                                         <a href="{{ route('lab-tests.groups.index') }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="إدارة باقاتي ومفضلاتي">
                                                             <i class="fas fa-cog me-1"></i> إدارة باقات المفضلات
                                                         </a>
+                                                        <button type="submit" id="btnSubmitLabRequest" class="btn btn-primary btn-sm px-3 shadow-sm fw-bold">
+                                                            <i class="fas fa-paper-plane me-1"></i> إرسال الطلب (<span class="doc-lab-selected-count">0</span>)
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -1003,17 +1006,6 @@ datalist option:hover {
                                                     </div>
                                                 </div>
 
-                                                <!-- شريط التأكيد والزر السفلي -->
-                                                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="fw-bold text-dark small">المجموع المحدد:</span>
-                                                        <span class="badge bg-primary fs-6 px-3 py-1 rounded-pill">
-                                                            <span class="doc-lab-selected-count">0</span> تحليل
-                                                        </span>
-                                                    </div>
-                                                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
-                                                        <i class="fas fa-plus-circle me-1"></i> تأكيد وإرسال طلب التحاليل
-                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
