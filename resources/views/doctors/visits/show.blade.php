@@ -479,62 +479,12 @@ datalist option:hover {
         </div>
     @endif
 
-    <!-- شريط التقدم -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0">
-                            <i class="fas fa-tasks text-primary me-2"></i>
-                            حالة إكمال الفحص
-                        </h6>
-                        <small class="text-muted">
-                            @php
-                                $examinationComplete = !empty($visit->vital_signs);
-                                $diagnosisComplete = $visit->diagnosis && isset($visit->diagnosis['code']) && !empty($visit->diagnosis['code']);
-                                $treatmentComplete = $visit->prescribedMedications->count() > 0 || !empty($visit->treatment_plan);
-                                $requestsComplete = $visit->requests->count() > 0;
-
-                                // حساب نسبة الإكمال بناءً على العناصر الأساسية فقط
-                                $totalItems = 3; // العلامات الحيوية، التشخيص، العلاج
-                                $completedItems = 0;
-                                
-                                if($examinationComplete) $completedItems++;
-                                if($diagnosisComplete) $completedItems++;
-                                if($treatmentComplete) $completedItems++;
-                                
-                                $progress = round(($completedItems / $totalItems) * 100);
-                            @endphp
-                            {{ $progress }}% مكتمل
-                        </small>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $progress }}%"
-                             aria-valuenow="{{ $progress }}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2">
-                        <small class="text-success">
-                            <i class="fas fa-check-circle me-1"></i>
-                            الفحص السريري: {{ $examinationComplete ? 'مكتمل' : 'غير مكتمل' }}
-                        </small>
-                        <small class="text-info">
-                            <i class="fas fa-check-circle me-1"></i>
-                            التشخيص: {{ $diagnosisComplete ? 'مكتمل' : 'غير مكتمل' }}
-                        </small>
-                        <small class="text-warning">
-                            <i class="fas fa-check-circle me-1"></i>
-                            الطلبات الطبية: {{ $visit->requests->count() > 0 ? $visit->requests->count() . ' طلب' : 'لا توجد' }} (اختياري)
-                        </small>
-                        <small class="text-primary">
-                            <i class="fas fa-check-circle me-1"></i>
-                            خطة العلاج: {{ $treatmentComplete ? 'مكتمل' : 'غير مكتمل' }}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    @php
+        $examinationComplete = !empty($visit->vital_signs);
+        $diagnosisComplete = $visit->diagnosis && isset($visit->diagnosis['code']) && !empty($visit->diagnosis['code']);
+        $treatmentComplete = $visit->prescribedMedications->count() > 0 || !empty($visit->treatment_plan);
+        $requestsComplete = $visit->requests->count() > 0;
+    @endphp
 
     <!-- بطاقة معلومات المريض الشاملة -->
     @php
