@@ -860,119 +860,162 @@ datalist option:hover {
                                     <!-- محتوى التبويبات -->
                                     <div class="tab-content border rounded p-4 bg-light" id="requestTypeContent">
                                         
-                                        <!-- تبويب التحاليل -->
+                                        <!-- تبويب التحاليل (النسخة السريعة والذكية) -->
                                         <div class="tab-pane fade show active" id="lab-content" role="tabpanel" aria-labelledby="lab-tab">
-                                            <form action="{{ route('doctor.requests.store') }}" method="POST">
+                                            <form id="doctorLabRequestForm" action="{{ route('doctor.requests.store') }}" method="POST">
                                                 @csrf
                                                 <input type="hidden" name="visit_id" value="{{ $visit->id }}">
                                                 <input type="hidden" name="type" value="lab">
                                                 <input type="hidden" name="priority" value="normal">
                                                 
-                                                <h5 class="mb-3 text-primary">
-                                                    <i class="fas fa-microscope me-2"></i>
-                                                    اختر التحاليل المطلوبة
-                                                </h5>
+                                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-primary-subtle text-primary p-2 rounded-circle fs-6">
+                                                            <i class="fas fa-microscope"></i>
+                                                        </span>
+                                                        <div>
+                                                            <h5 class="mb-0 fw-bold text-primary">طلب فحوصات المختبر</h5>
+                                                            <small class="text-muted">ابحث واضغط Enter أو اختر من الباقات والمفضلات السريعة</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <a href="{{ route('lab-tests.groups.index') }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="إدارة باقاتي ومفضلاتي">
+                                                            <i class="fas fa-cog me-1"></i> إدارة الباقات
+                                                        </a>
+                                                        <button type="submit" id="btnSubmitLabRequest" class="btn btn-primary btn-sm px-3 shadow-sm fw-bold">
+                                                            <i class="fas fa-paper-plane me-1"></i> إرسال الطلب (<span class="doc-lab-selected-count">0</span>)
+                                                        </button>
+                                                    </div>
+                                                </div>
 
+                                                <!-- 1. شريط باقات المفضلات السريعة بنقرة واحدة -->
                                                 @if(isset($labTestGroups) && $labTestGroups->isNotEmpty())
-                                                    <div class="mb-3">
-                                                        <strong><i class="fas fa-layer-group me-1 text-secondary"></i>مجموعات التحاليل:</strong>
-                                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                                            <span class="small fw-bold text-dark">
+                                                                <i class="fas fa-bolt text-warning me-1"></i> باقاتي السريعة (نقرة واحدة للإضافة):
+                                                            </span>
+                                                        </div>
+                                                        <div class="d-flex flex-wrap gap-2">
                                                             @foreach($labTestGroups as $group)
-                                                                <div class="border rounded p-2 bg-light" style="min-width: 150px; max-width: 250px;">
-                                                                    <div class="fw-bold mb-1">
-                                                                        {{ $group->name }}
-                                                                        <span class="badge bg-secondary ms-1">{{ $group->labTests->count() }}</span>
-                                                                    </div>
-                                                                    <button type="button" class="btn btn-sm btn-outline-primary w-100 select-lab-group-btn"
-                                                                            data-test-ids="{{ $group->labTests->pluck('id')->join(',') }}">
-                                                                        <i class="fas fa-check me-1"></i>تحديد المجموعة
-                                                                    </button>
-                                                                </div>
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                @endif
-
-                                                @if(isset($favoriteLabTests) && $favoriteLabTests->isNotEmpty())
-                                                    <div class="mb-3">
-                                                        <strong><i class="fas fa-star text-warning me-1"></i>التحاليل المفضلة:</strong>
-                                                        <div class="d-flex flex-wrap gap-2 mt-2">
-                                                            @foreach($favoriteLabTests as $favorite)
-                                                                @if(optional($favorite->labTest)->name)
-                                                                    <span class="select-favorite-test-btn"
-                                                                          data-test-id="{{ $favorite->lab_test_id }}"
-                                                                          style="cursor:pointer; color:#0d6efd; text-decoration:underline;">
-                                                                        {{ $favorite->labTest->name }}
-                                                                    </span>
-                                                                    @if(!$loop->last)<span class="text-muted">،</span>@endif
-                                                                @endif
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                @endif
-
-                                                <!-- حقل البحث والفلترة -->
-                                                <div class="mb-4">
-                                                    <div class="row g-3">
-                                                        <div class="col-md-8">
-                                                            <div class="input-group">
-                                                                <span class="input-group-text bg-light">
-                                                                    <i class="fas fa-search text-primary"></i>
-                                                                </span>
-                                                                <input type="text" id="labSearchInput" class="form-control" placeholder="ابحث عن تحليل...">
-                                                                <button type="button" id="labSearchBtn" class="btn btn-primary">
-                                                                    <i class="fas fa-search"></i>
+                                                                <button type="button" 
+                                                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 doc-quick-group-btn"
+                                                                        data-test-names="{{ $group->labTests->pluck('name')->join('|||') }}"
+                                                                        data-group-id="{{ $group->id }}">
+                                                                    <i class="fas fa-layer-group me-1"></i> {{ $group->name }}
+                                                                    <span class="badge bg-primary-subtle text-primary ms-1">{{ $group->labTests->count() }}</span>
                                                                 </button>
-                                                            </div>
+                                                            @endforeach
                                                         </div>
-                                                        <div class="col-md-4">
-                                                            <select id="labCategoryFilter" class="form-select">
-                                                                <option value="">جميع الفئات</option>
-                                                                @php
-                                                                    $grouped = $labTests->groupBy('category');
-                                                                @endphp
-                                                                @foreach($grouped as $category => $tests)
-                                                                    <option value="{{ $category }}">{{ $category }} ({{ $tests->count() }})</option>
-                                                                @endforeach
-                                                            </select>
+                                                    </div>
+                                                @endif
+
+                                                <!-- 2. حقل البحث الذكي الفوري مع الإكمال التلقائي -->
+                                                <div class="mb-3 position-relative">
+                                                    <div class="input-group input-group-lg shadow-sm">
+                                                        <span class="input-group-text bg-white border-end-0 text-primary">
+                                                            <i class="fas fa-search"></i>
+                                                        </span>
+                                                        <input type="text" 
+                                                               id="docLabFastSearch" 
+                                                               class="form-control border-start-0 border-end-0 bg-white" 
+                                                               placeholder="اكتب اسم التحليل أو الكود (مثل CBC, TSH, سكر, كلى...) واضغط Enter للطلب الفوري..." 
+                                                               autocomplete="off">
+                                                        <button type="button" class="btn btn-light border border-start-0 text-muted d-none" id="docLabClearSearch">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <!-- قائمة اقتراحات البحث الفورية -->
+                                                    <div id="docLabSearchDropdown" class="list-group position-absolute w-100 shadow-lg border-0 rounded-3 d-none" style="z-index: 1050; max-height: 280px; overflow-y: auto; top: 100%; margin-top: 4px;">
+                                                        <!-- Filled via JS -->
+                                                    </div>
+                                                </div>
+
+                                                <!-- 3. سلة الفحوصات المختارة حالياً (Selected Chips Tray) -->
+                                                <div class="card border-primary-subtle mb-3" id="docLabSelectedTray" style="display: none; background-color: #f0f7ff;">
+                                                    <div class="card-body p-2 px-3">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <span class="small fw-bold text-primary">
+                                                                <i class="fas fa-check-circle me-1"></i> الفحوصات المختارة في هذا الطلب (<span class="doc-lab-selected-count">0</span>)
+                                                            </span>
+                                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="docLabClearAllSelected">
+                                                                <i class="fas fa-trash-alt me-1"></i> إفراغ الكل
+                                                            </button>
+                                                        </div>
+                                                        <div class="d-flex flex-wrap gap-1" id="docLabSelectedChips">
+                                                            <!-- Chips rendered dynamically -->
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
-                                                <!-- قائمة التحاليل -->
-                                                <div id="labTestsContainer" style="max-height: 450px; overflow-y: auto;">
+
+                                                <!-- 4. تبويبات تصفية الأقسام -->
+                                                @php
+                                                    $grouped = $labTests->groupBy('category');
+                                                @endphp
+                                                <div class="d-flex align-items-center gap-1 overflow-x-auto pb-2 mb-3 border-bottom" id="docLabCategoryPills" style="white-space: nowrap;">
+                                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 doc-cat-pill active" data-category="ALL">
+                                                        الكل <span class="badge bg-white text-primary ms-1">{{ $labTests->count() }}</span>
+                                                    </button>
                                                     @foreach($grouped as $category => $tests)
-                                                        <div class="mb-3 lab-category" data-category="{{ $category }}">
-                                                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                                                                <h6 class="mb-0 text-primary">
-                                                                    <i class="fas fa-vial me-2"></i>{{ $category }}
-                                                                    <span class="badge bg-primary ms-2">{{ $tests->count() }}</span>
-                                                                </h6>
-                                                                <button type="button" class="btn btn-sm btn-outline-primary select-all-category" data-category="{{ $category }}" style="font-size: 0.75rem; padding: 2px 8px;">
-                                                                    <i class="fas fa-check-double me-1"></i>تحديد الكل
-                                                                </button>
-                                                            </div>
-                                                            <div class="list-group">
-                                                                @foreach($tests as $test)
-                                                                    <label class="list-group-item list-group-item-action d-flex align-items-center lab-test-item hover-lab-item" data-test-name="{{ strtolower($test->name) }}" style="cursor: pointer; padding: 10px 15px; border-left: 3px solid #dee2e6; transition: all 0.2s;">
-                                                                        <input class="form-check-input me-3 flex-shrink-0" type="checkbox" name="tests[]" value="{{ $test->name }}" id="inline_test_{{ $test->id }}" data-test-id="{{ $test->id }}" style="width: 20px; height: 20px; cursor: pointer;">
-                                                                        <span class="flex-grow-1" style="font-size: 0.95rem;">{{ $test->name }}</span>
-                                                                    </label>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-cat-pill" data-category="{{ $category }}">
+                                                            {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $tests->count() }}</span>
+                                                        </button>
                                                     @endforeach
                                                 </div>
-                                                
-                                                <!-- عداد التحاليل المختارة -->
-                                                <div class="alert alert-info mt-3" id="selectedLabCount" style="display: none;">
-                                                    <i class="fas fa-check-circle me-2"></i>
-                                                    تم اختيار <strong id="labCountNumber">0</strong> تحليل
+
+                                                <!-- 5. شبكة بطاقات التحاليل (Compact Grid) -->
+                                                <div id="docLabTestsGridContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                                                    <div class="row g-2" id="docLabItemsGrid">
+                                                        @foreach($labTests as $test)
+                                                            <div class="col-xl-4 col-md-6 col-12 doc-lab-col" 
+                                                                 data-test-name="{{ strtolower($test->name) }}"
+                                                                 data-test-code="{{ strtolower($test->code ?? '') }}"
+                                                                 data-category="{{ $test->category }}"
+                                                                 data-id="{{ $test->id }}">
+                                                                <label for="inline_test_{{ $test->id }}" 
+                                                                       class="doc-lab-card p-2 rounded-3 border bg-white d-flex align-items-center justify-content-between h-100 mb-0 w-100 user-select-none" 
+                                                                       style="cursor: pointer; transition: all 0.15s ease;">
+                                                                    <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+                                                                        <input class="form-check-input doc-lab-chk flex-shrink-0 m-0" 
+                                                                               type="checkbox" 
+                                                                               name="tests[]" 
+                                                                               value="{{ $test->name }}" 
+                                                                               id="inline_test_{{ $test->id }}" 
+                                                                               data-test-id="{{ $test->id }}"
+                                                                               data-test-name="{{ $test->name }}"
+                                                                               data-test-code="{{ $test->code ?? '' }}"
+                                                                               data-test-category="{{ $test->category }}"
+                                                                               style="cursor: pointer; width: 1.1em; height: 1.1em;">
+                                                                        <div class="text-truncate">
+                                                                            <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $test->name }}">{{ $test->name }}</span>
+                                                                            <div class="d-flex align-items-center gap-1">
+                                                                                @if($test->code)
+                                                                                    <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.68rem;">{{ $test->code }}</span>
+                                                                                @endif
+                                                                                <span class="text-muted" style="font-size: 0.68rem;">{{ Str::limit($test->category, 18) }}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span class="doc-lab-check-icon text-primary ms-1 d-none">
+                                                                        <i class="fas fa-check-circle"></i>
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
-                                                
-                                                <div class="mt-3">
-                                                    <button type="submit" class="btn btn-primary">
-                                                        <i class="fas fa-plus me-1"></i>إضافة طلب التحاليل
+
+                                                <!-- شريط التأكيد والزر السفلي -->
+                                                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="fw-bold text-dark small">المجموع المحدد:</span>
+                                                        <span class="badge bg-primary fs-6 px-3 py-1 rounded-pill">
+                                                            <span class="doc-lab-selected-count">0</span> تحليل
+                                                        </span>
+                                                    </div>
+                                                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                                                        <i class="fas fa-plus-circle me-1"></i> تأكيد وإرسال طلب التحاليل
                                                     </button>
                                                 </div>
                                             </form>
@@ -3046,137 +3089,322 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Search system initialized');
     
-    // عداد التحاليل المختارة
-    const labCheckboxes = document.querySelectorAll('input[name="tests[]"]');
-    const selectedLabCount = document.getElementById('selectedLabCount');
-    const labCountNumber = document.getElementById('labCountNumber');
-    
-    labCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateLabCount);
-    });
-    
-    function updateLabCount() {
-        const checkedCount = document.querySelectorAll('input[name="tests[]"]:checked').length;
-        if (labCountNumber) {
-            labCountNumber.textContent = checkedCount;
-        }
-        if (selectedLabCount) {
-            selectedLabCount.style.display = checkedCount > 0 ? 'block' : 'none';
-        }
-    }
-    
-    // عداد فحوصات الأشعة المختارة
-    const radiologyCheckboxes = document.querySelectorAll('.radiology-checkbox');
-    const selectedRadiologyCount = document.getElementById('selectedRadiologyCount');
-    const radiologyCountNumber = document.getElementById('radiologyCountNumber');
-    
-    radiologyCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateRadiologyCount);
-    });
-    
-    function updateRadiologyCount() {
-        const checkedCount = document.querySelectorAll('.radiology-checkbox:checked').length;
-        if (radiologyCountNumber) {
-            radiologyCountNumber.textContent = checkedCount;
-        }
-        if (selectedRadiologyCount) {
-            selectedRadiologyCount.style.display = checkedCount > 0 ? 'block' : 'none';
-        }
-    }
+    // ====== نظام اختيار الفحوصات المخبرية السريع والذكي للطبيب ======
+    function setupFastDoctorLabSelection() {
+        const searchInput = document.getElementById('docLabFastSearch');
+        const clearSearchBtn = document.getElementById('docLabClearSearch');
+        const searchDropdown = document.getElementById('docLabSearchDropdown');
+        const categoryPills = document.querySelectorAll('.doc-cat-pill');
+        const labCols = Array.from(document.querySelectorAll('.doc-lab-col'));
+        const labCheckboxes = Array.from(document.querySelectorAll('.doc-lab-chk'));
+        const selectedTray = document.getElementById('docLabSelectedTray');
+        const selectedChipsContainer = document.getElementById('docLabSelectedChips');
+        const countBadges = document.querySelectorAll('.doc-lab-selected-count');
+        const clearAllBtn = document.getElementById('docLabClearAllSelected');
+        const groupBtns = document.querySelectorAll('.doc-quick-group-btn');
+        const labForm = document.getElementById('doctorLabRequestForm');
 
-    // عداد خدمات التمريض المختارة
-    const nursingCheckboxes = document.querySelectorAll('input[name="nursing_services[]"]');
-    const selectedNursingCount = document.getElementById('selectedNursingCount');
-    const nursingCountNumber = document.getElementById('nursingCountNumber');
-    
-    nursingCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateNursingCount);
-    });
-    
-    function updateNursingCount() {
-        const checkedCount = document.querySelectorAll('input[name="nursing_services[]"]:checked').length;
-        if (nursingCountNumber) {
-            nursingCountNumber.textContent = checkedCount;
-        }
-        if (selectedNursingCount) {
-            selectedNursingCount.style.display = checkedCount > 0 ? 'block' : 'none';
-        }
-    }
-    
-    // ====== أزرار "تحديد الكل" للتحاليل ======
-    document.querySelectorAll('.select-all-category').forEach(button => {
-        button.addEventListener('click', function() {
-            const category = this.getAttribute('data-category');
-            const categoryDiv = this.closest('.lab-category');
-            const checkboxes = categoryDiv.querySelectorAll('input[name="tests[]"]');
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = !allChecked;
-            });
-            
-            // تحديث النص والأيقونة
-            if (allChecked) {
-                this.innerHTML = '<i class="fas fa-check-double me-1"></i>تحديد الكل';
-                this.classList.remove('btn-success');
-                this.classList.add('btn-outline-primary');
+        if (!searchInput || !labForm) return;
+
+        let activeCategory = 'ALL';
+
+        // 1. تحديث حالة البطاقة والشارة
+        function updateCardVisual(chk) {
+            const card = chk.closest('.doc-lab-card');
+            if (!card) return;
+            const icon = card.querySelector('.doc-lab-check-icon');
+            if (chk.checked) {
+                card.classList.add('border-primary', 'bg-primary-subtle');
+                card.classList.remove('bg-white');
+                if (icon) icon.classList.remove('d-none');
             } else {
-                this.innerHTML = '<i class="fas fa-times me-1"></i>إلغاء الكل';
-                this.classList.remove('btn-outline-primary');
-                this.classList.add('btn-success');
+                card.classList.remove('border-primary', 'bg-primary-subtle');
+                card.classList.add('bg-white');
+                if (icon) icon.classList.add('d-none');
             }
-            
-            updateLabCount();
+        }
+
+        // 2. تحديث شريط الفحوصات المختارة والعداد
+        function renderSelectedChips() {
+            const checkedBoxes = labCheckboxes.filter(cb => cb.checked);
+            const count = checkedBoxes.length;
+
+            countBadges.forEach(b => b.textContent = count);
+
+            if (count === 0) {
+                if (selectedTray) selectedTray.style.display = 'none';
+                if (selectedChipsContainer) selectedChipsContainer.innerHTML = '';
+                return;
+            }
+
+            if (selectedTray) selectedTray.style.display = 'block';
+            if (selectedChipsContainer) {
+                selectedChipsContainer.innerHTML = '';
+                checkedBoxes.forEach(chk => {
+                    const id = chk.getAttribute('data-test-id');
+                    const name = chk.getAttribute('data-test-name') || chk.value;
+                    const code = chk.getAttribute('data-test-code') || '';
+
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-white text-dark border p-1 px-2 d-inline-flex align-items-center gap-1 shadow-sm';
+                    chip.style.fontSize = '0.8rem';
+                    chip.innerHTML = `
+                        <span class="fw-semibold text-primary">${name}</span>
+                        ${code ? `<span class="text-muted small">(${code})</span>` : ''}
+                        <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.55rem;" aria-label="إزالة"></button>
+                    `;
+
+                    chip.querySelector('.btn-close').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        chk.checked = false;
+                        updateCardVisual(chk);
+                        renderSelectedChips();
+                    });
+
+                    selectedChipsContainer.appendChild(chip);
+                });
+            }
+        }
+
+        // 3. ربط تغيير مربعات الاختيار
+        labCheckboxes.forEach(chk => {
+            chk.addEventListener('change', function() {
+                updateCardVisual(this);
+                renderSelectedChips();
+            });
         });
-    });
 
-    // ====== اختيار مجموعات التحاليل ======
-    function findLabCheckbox(testId) {
-        return document.querySelector(`#inline_test_${testId}`) ||
-               document.querySelector(`#test_${testId}`) ||
-               document.querySelector(`input[name="tests[]"][data-test-id="${testId}"]`);
-    }
+        // 4. فلترة بطاقات التحاليل حسب القسم والبحث
+        function filterGrid() {
+            const q = normalizeText(searchInput.value);
+            labCols.forEach(col => {
+                const name = normalizeText(col.getAttribute('data-test-name') || '');
+                const code = normalizeText(col.getAttribute('data-test-code') || '');
+                const cat = col.getAttribute('data-category') || '';
 
-    let activeGroupBtn = null;
+                const matchesCat = (activeCategory === 'ALL' || cat === activeCategory);
+                const matchesSearch = (!q || name.includes(q) || code.includes(q));
 
-    document.querySelectorAll('.select-lab-group-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            // إلغاء تحديد جميع التحاليل أولاً
-            document.querySelectorAll('input[name="tests[]"]').forEach(cb => cb.checked = false);
+                col.style.display = (matchesCat && matchesSearch) ? '' : 'none';
+            });
+        }
 
-            // إلغاء تمييز الزر السابق
-            if (activeGroupBtn) {
-                activeGroupBtn.classList.remove('btn-primary');
-                activeGroupBtn.classList.add('btn-outline-primary');
+        // 5. اقتراحات البحث الذكية السريعة (Autocomplete Dropdown)
+        function renderSearchDropdown(q) {
+            if (!searchDropdown) return;
+            if (!q || q.length < 1) {
+                searchDropdown.classList.add('d-none');
+                searchDropdown.innerHTML = '';
+                return;
             }
 
-            // تحديد تحاليل المجموعة الجديدة
-            const testIds = this.getAttribute('data-test-ids').split(',').map(id => id.trim()).filter(Boolean);
-            testIds.forEach(id => {
-                const checkbox = findLabCheckbox(id);
-                if (checkbox) checkbox.checked = true;
+            const matches = labCheckboxes.filter(chk => {
+                const name = normalizeText(chk.getAttribute('data-test-name') || '');
+                const code = normalizeText(chk.getAttribute('data-test-code') || '');
+                return name.includes(q) || code.includes(q);
+            }).slice(0, 8);
+
+            if (matches.length === 0) {
+                searchDropdown.innerHTML = `<div class="list-group-item text-muted small p-2 text-center">لا توجد نتائج مطابقة</div>`;
+                searchDropdown.classList.remove('d-none');
+                return;
+            }
+
+            searchDropdown.innerHTML = '';
+            matches.forEach(chk => {
+                const isChecked = chk.checked;
+                const name = chk.getAttribute('data-test-name') || chk.value;
+                const code = chk.getAttribute('data-test-code') || '';
+                const cat = chk.getAttribute('data-test-category') || '';
+
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2 px-3 ${isChecked ? 'bg-light text-muted' : ''}`;
+                item.innerHTML = `
+                    <div>
+                        <span class="fw-bold text-dark">${name}</span>
+                        ${code ? `<span class="badge bg-light text-muted border ms-1 font-monospace">${code}</span>` : ''}
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">${cat}</small>
+                    </div>
+                    <span>
+                        ${isChecked 
+                            ? `<span class="badge bg-success-subtle text-success"><i class="fas fa-check me-1"></i>محدد</span>` 
+                            : `<span class="badge bg-primary-subtle text-primary">+ إضافة</span>`}
+                    </span>
+                `;
+
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    chk.checked = !chk.checked;
+                    updateCardVisual(chk);
+                    renderSelectedChips();
+                    searchInput.value = '';
+                    if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                    searchDropdown.classList.add('d-none');
+                    filterGrid();
+                    searchInput.focus();
+                });
+
+                searchDropdown.appendChild(item);
             });
 
-            // تمييز الزر المحدد
-            this.classList.remove('btn-outline-primary');
-            this.classList.add('btn-primary');
-            activeGroupBtn = this;
+            searchDropdown.classList.remove('d-none');
+        }
 
-            updateLabCount();
+        // أحدث البحث
+        searchInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (clearSearchBtn) {
+                clearSearchBtn.classList.toggle('d-none', val.length === 0);
+            }
+            renderSearchDropdown(normalizeText(val));
+            filterGrid();
         });
-    });
 
-    document.querySelectorAll('.select-favorite-test-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const testId = this.getAttribute('data-test-id');
-            const checkbox = findLabCheckbox(testId);
-            if (checkbox) {
-                checkbox.checked = !checkbox.checked;
-                updateLabCount();
-                checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // الضغط على Enter في حقل البحث لاختيار أول نتيجة فوراً
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const q = normalizeText(this.value.trim());
+                if (!q) return;
+
+                const firstMatch = labCheckboxes.find(chk => {
+                    const name = normalizeText(chk.getAttribute('data-test-name') || '');
+                    const code = normalizeText(chk.getAttribute('data-test-code') || '');
+                    return name.includes(q) || code.includes(q);
+                });
+
+                if (firstMatch) {
+                    firstMatch.checked = true;
+                    updateCardVisual(firstMatch);
+                    renderSelectedChips();
+                    this.value = '';
+                    if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                    if (searchDropdown) searchDropdown.classList.add('d-none');
+                    filterGrid();
+                }
+            } else if (e.key === 'Escape') {
+                if (searchDropdown) searchDropdown.classList.add('d-none');
             }
         });
-    });
+
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                clearSearchBtn.classList.add('d-none');
+                if (searchDropdown) searchDropdown.classList.add('d-none');
+                filterGrid();
+                searchInput.focus();
+            });
+        }
+
+        // إغلاق القائمة المنسدلة عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            if (searchDropdown && !searchDropdown.contains(e.target) && e.target !== searchInput) {
+                searchDropdown.classList.add('d-none');
+            }
+        });
+
+        // 6. أزرار تصفية الأقسام (Category Pills)
+        categoryPills.forEach(pill => {
+            pill.addEventListener('click', function() {
+                categoryPills.forEach(p => {
+                    p.classList.remove('btn-primary', 'active');
+                    p.classList.add('btn-outline-secondary');
+                    const b = p.querySelector('.badge');
+                    if (b) {
+                        b.classList.remove('bg-white', 'text-primary');
+                        b.classList.add('bg-secondary-subtle', 'text-secondary');
+                    }
+                });
+
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-primary', 'active');
+                const badge = this.querySelector('.badge');
+                if (badge) {
+                    badge.classList.remove('bg-secondary-subtle', 'text-secondary');
+                    badge.classList.add('bg-white', 'text-primary');
+                }
+
+                activeCategory = this.getAttribute('data-category');
+                filterGrid();
+            });
+        });
+
+        // 7. باقات المفضلات السريعة (Quick Groups)
+        groupBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const namesStr = this.getAttribute('data-test-names') || '';
+                const targetNames = namesStr.split('|||').map(s => normalizeText(s)).filter(Boolean);
+
+                let allAlreadyChecked = true;
+                targetNames.forEach(tName => {
+                    const match = labCheckboxes.find(cb => normalizeText(cb.getAttribute('data-test-name') || cb.value) === tName);
+                    if (match && !match.checked) allAlreadyChecked = false;
+                });
+
+                const newCheckedState = !allAlreadyChecked;
+
+                targetNames.forEach(tName => {
+                    const match = labCheckboxes.find(cb => normalizeText(cb.getAttribute('data-test-name') || cb.value) === tName);
+                    if (match) {
+                        match.checked = newCheckedState;
+                        updateCardVisual(match);
+                    }
+                });
+
+                if (newCheckedState) {
+                    this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-primary');
+                } else {
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-outline-primary');
+                }
+
+                renderSelectedChips();
+            });
+        });
+
+        // 8. إفراغ الكل
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', function() {
+                labCheckboxes.forEach(chk => {
+                    chk.checked = false;
+                    updateCardVisual(chk);
+                });
+                groupBtns.forEach(b => {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-outline-primary');
+                });
+                renderSelectedChips();
+            });
+        }
+
+        // 9. الإرسال الفوري للطلب (Instant AJAX Submit)
+        labForm.addEventListener('submit', function(e) {
+            const checkedBoxes = labCheckboxes.filter(cb => cb.checked);
+            if (checkedBoxes.length === 0) {
+                e.preventDefault();
+                alert('يرجى اختيار تحليل واحد على الأقل قبل إرسال الطلب');
+                return;
+            }
+
+            const submitBtn = document.getElementById('btnSubmitLabRequest');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جارٍ الحفظ...';
+            }
+        });
+
+        // التهيئة الأولية
+        labCheckboxes.forEach(chk => {
+            if (chk.checked) updateCardVisual(chk);
+        });
+        renderSelectedChips();
+    }
+
+    setupFastDoctorLabSelection();
     
     // ====== أزرار "تحديد الكل" للأشعة ======
     document.querySelectorAll('.select-all-radiology').forEach(button => {
