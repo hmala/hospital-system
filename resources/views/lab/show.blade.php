@@ -739,16 +739,31 @@ $age = $patient?->age ?? null;
                 </div>
             </div>
 
-            <!-- البطاقة ج: الملاحظات الطبية والتوصيات -->
-            <div class="card shadow-sm border-0 bg-white mb-4 rounded-3">
-                <div class="card-header bg-light py-2 px-3 border-bottom">
-                    <h6 class="mb-0 fw-bold text-dark">
-                        <i class="fas fa-comment-medical text-secondary me-2"></i>
-                        الملاحظات والتوصيات المخبرية (Lab Notes & Impression)
-                    </h6>
+            <!-- البطاقة ج: الملاحظات والتوصيات المخبرية (منسدلة اختيارية لتوفير المساحة) -->
+            @php
+                $hasNotes = !empty(trim($savedNotes ?? ''));
+            @endphp
+            <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 fw-semibold" 
+                            type="button" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#labNotesCollapse" 
+                            aria-expanded="{{ $hasNotes ? 'true' : 'false' }}">
+                        <i class="fas fa-comment-medical text-primary"></i>
+                        <span>{{ $hasNotes ? 'تعديل الملاحظات والتوصيات المخبرية' : '+ إضافة ملاحظة أو توصية مخبرية (اختياري)' }}</span>
+                        @if($hasNotes)
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-2">يوجد ملاحظة</span>
+                        @endif
+                    </button>
                 </div>
-                <div class="card-body p-3">
-                    <textarea class="form-control" id="result" name="result" rows="2" placeholder="اكتب أي ملاحظات فنية أو توصيات طبية إضافية تظهر في التقرير المطبوع...">{{ old('result', $savedNotes) }}</textarea>
+                <div class="collapse {{ $hasNotes ? 'show' : '' }}" id="labNotesCollapse">
+                    <div class="card shadow-sm border-0 bg-white rounded-3 p-3">
+                        <label for="result" class="form-label small fw-bold text-muted mb-1">
+                            <i class="fas fa-edit me-1"></i> نص الملاحظات والتوصيات (يظهر أسفل تقرير النتائج المطبوع):
+                        </label>
+                        <textarea class="form-control form-control-sm" id="result" name="result" rows="2" placeholder="اكتب أي ملاحظات فنية (مثل: عينة متحللة، توصية بإعادة الفحص...)">{{ old('result', $savedNotes) }}</textarea>
+                    </div>
                 </div>
             </div>
 
