@@ -3,128 +3,219 @@
 namespace App\Http\Controllers\HR;
 
 use App\Http\Controllers\Controller;
-use App\Models\HrPayrollCycle;
-use App\Models\HrPayroll;
 use App\Models\HrEmployee;
+use App\Models\HrPayroll;
+use App\Models\HrPayrollCycle;
 use App\Models\HrEmployeeAction;
+use App\Models\HrAbsence;
+use App\Models\HrOvertime;
+use App\Models\HrLoan;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class HrPayrollController extends Controller
 {
+    // قائمة دورات الرواتب
     public function index()
     {
-        $cycles = HrPayrollCycle::orderBy('cycle_month', 'desc')->get();
+        $cycles = HrPayrollCycle::latest()->paginate(12);
         return view('hr.payrolls.index', compact('cycles'));
     }
 
+    // نموذج توليد دورة جديدة
     public function create()
     {
         return view('hr.payrolls.create');
     }
 
+    // توليد مسير الرواتب
     public function store(Request $request)
     {
         $request->validate([
-            'cycle_month' => 'required|date_format:Y-m|unique:hr_payroll_cycles,cycle_month',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'cycle_month' => 'required|string',
+            'start_date'  => 'required|date',
+            'end_date'    => 'required|date|after_or_equal:start_date',
         ]);
 
-        try {
-            DB::beginTransaction();
+        // تأكد أنه لا يوجد مسير لنفس الشهر
+        if (HrPayrollCycle::where('cycle_month', $request->cycle_month)->exists()) {
+            return back()->with('error', 'يوجد مسير رواتب لهذا الشهر بالفعل. لا يمكن إنشاء مسير مكرر.');
+        }
 
-            $cycle = HrPayrollCycle::create([
-                'cycle_month' => $request->cycle_month,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-                'status' => 'draft',
-                'created_by' => auth()->id(),
-            ]);
+        $cycle = HrPayrollCycle::create([
+            'cycle_month' => $request->cycle_month,
+            'start_date'  => $request->start_date,
+            'end_date'    => $request->end_date,
+            'status'      => 'draft',
+            'created_by'  => auth()->id(),
+        ]);
 
-            // جلب الموظفين الفعالين
-            $activeEmployees = HrEmployee::where('status', 'active')->get();
+        $employees = HrEmployee::where('status', 'active')
+            ->with(['activeAllowances', 'activeLoans', 'actions', 'absences', 'overtimes'])
+            ->get();
 
-            foreach ($activeEmployees as $employee) {
-                // حساب إجمالي المكافآت والعقوبات غير المرحلة
-                $pendingActions = HrEmployeeAction::where('hr_employee_id', $employee->id)
-                    ->where('status', 'pending')
-                    ->where('action_date', '<=', $request->end_date)
-                    ->get();
+        foreach ($employees as $emp) {
 
-                $bonuses = 0;
-                $penalties = 0;
+            // ① المخصصات الثابتة
+            $totalAllowances = $emp->activeAllowances->sum('amount');
 
-                foreach ($pendingActions as $action) {
-                    if ($action->financial_amount > 0) {
-                        $bonuses += $action->financial_amount;
-                    } else {
-                        $penalties += abs($action->financial_amount);
-                    }
-                    
-                    // تحديث الإجراء لربطه بهذه الدورة
-                    $action->update([
-                        'hr_payroll_cycle_id' => $cycle->id,
-                        'status' => 'processed'
-                    ]);
-                }
+            // ② العقوبات والمكافآت (pending)
+            $pendingActions = HrEmployeeAction::where('hr_employee_id', $emp->id)
+                ->where('status', 'pending')->get();
+            $bonuses   = $pendingActions->where('financial_amount', '>', 0)->sum('financial_amount');
+            $penalties = abs($pendingActions->where('financial_amount', '<', 0)->sum('financial_amount'));
 
-                $netSalary = $employee->basic_salary + $bonuses - $penalties; // المخصصات تحسب لاحقاً من الواجهة أو يمكن إضافتها هنا إن كانت ثابتة
+            // ③ الغيابات (pending)
+            $pendingAbsences = HrAbsence::where('hr_employee_id', $emp->id)
+                ->where('status', 'pending')
+                ->whereBetween('absence_date', [$request->start_date, $request->end_date])
+                ->get();
+            $absenceDeduction = $pendingAbsences->sum('deduction_amount');
 
-                HrPayroll::create([
-                    'hr_payroll_cycle_id' => $cycle->id,
-                    'hr_employee_id' => $employee->id,
-                    'basic_salary' => $employee->basic_salary,
-                    'allowances' => 0,
-                    'bonuses_amount' => $bonuses,
-                    'penalties_amount' => $penalties,
-                    'net_salary' => $netSalary,
-                    'status' => 'pending'
-                ]);
+            // ④ العمل الإضافي (pending)
+            $pendingOvertimes = HrOvertime::where('hr_employee_id', $emp->id)
+                ->where('status', 'pending')
+                ->whereBetween('overtime_date', [$request->start_date, $request->end_date])
+                ->get();
+            $overtimeAmount = $pendingOvertimes->sum('total_amount');
+
+            // ⑤ السلف النشطة
+            $activeLoan = $emp->activeLoans()->where('start_date', '<=', $request->end_date)->first();
+            $loanDeduction = 0;
+            if ($activeLoan && $activeLoan->remaining_amount > 0) {
+                $loanDeduction = min($activeLoan->monthly_installment, $activeLoan->remaining_amount);
             }
 
-            DB::commit();
+            // ⑥ الضمان الاجتماعي
+            $socialSecurity = 0;
+            if ($emp->subject_to_social_security) {
+                $socialSecurity = round($emp->basic_salary * ($emp->social_security_percentage / 100), 2);
+            }
 
-            return redirect()->route('hr.payrolls.show', $cycle->id)->with('success', 'تم توليد مسير الرواتب بنجاح، يمكنك الآن تعديل المخصصات لكل موظف.');
+            // ⑦ الضريبة
+            $tax = 0;
+            if ($emp->subject_to_tax) {
+                $tax = round($emp->basic_salary * ($emp->tax_percentage / 100), 2);
+            }
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'حدث خطأ أثناء توليد مسير الرواتب: ' . $e->getMessage());
+            // ⑧ الراتب الصافي النهائي
+            $netSalary = $emp->basic_salary
+                + $totalAllowances
+                + $bonuses
+                + $overtimeAmount
+                - $penalties
+                - $absenceDeduction
+                - $loanDeduction
+                - $socialSecurity
+                - $tax;
+
+            // إنشاء سجل الراتب
+            $slip = HrPayroll::create([
+                'hr_payroll_cycle_id'    => $cycle->id,
+                'hr_employee_id'         => $emp->id,
+                'basic_salary'           => $emp->basic_salary,
+                'allowances'             => $totalAllowances,
+                'bonuses_amount'         => $bonuses,
+                'penalties_amount'       => $penalties,
+                'overtime_amount'        => $overtimeAmount,
+                'absence_deduction'      => $absenceDeduction,
+                'loan_deduction'         => $loanDeduction,
+                'social_security_amount' => $socialSecurity,
+                'tax_amount'             => $tax,
+                'net_salary'             => max(0, $netSalary),
+                'payment_method'         => $emp->payment_method ?? 'cash',
+                'status'                 => 'draft',
+            ]);
+
+            // ترحيل العقوبات/المكافآت
+            $pendingActions->each(fn($a) => $a->update([
+                'status'               => 'processed',
+                'hr_payroll_cycle_id'  => $cycle->id,
+            ]));
+
+            // ترحيل الغيابات
+            $pendingAbsences->each(fn($a) => $a->update([
+                'status'              => 'processed',
+                'hr_payroll_cycle_id' => $cycle->id,
+            ]));
+
+            // ترحيل الإضافي
+            $pendingOvertimes->each(fn($o) => $o->update([
+                'status'              => 'processed',
+                'hr_payroll_cycle_id' => $cycle->id,
+            ]));
+
+            // خصم قسط السلفة
+            if ($activeLoan && $loanDeduction > 0) {
+                $activeLoan->payInstallment($loanDeduction);
+            }
         }
+
+        return redirect()->route('hr.payrolls.show', $cycle->id)
+            ->with('success', 'تم توليد مسير رواتب شهر ' . $request->cycle_month . ' بنجاح لـ ' . $employees->count() . ' موظف.');
     }
 
+    // عرض تفاصيل مسير الرواتب
     public function show(HrPayrollCycle $payroll)
     {
-        $cycle = $payroll->load(['payrolls.employee.department']);
-        return view('hr.payrolls.show', compact('cycle'));
+        $payroll->load(['payrolls.employee.department', 'payrolls.employee']);
+
+        $summary = [
+            'total_basic'          => $payroll->payrolls->sum('basic_salary'),
+            'total_allowances'     => $payroll->payrolls->sum('allowances'),
+            'total_bonuses'        => $payroll->payrolls->sum('bonuses_amount'),
+            'total_overtime'       => $payroll->payrolls->sum('overtime_amount'),
+            'total_penalties'      => $payroll->payrolls->sum('penalties_amount'),
+            'total_absence'        => $payroll->payrolls->sum('absence_deduction'),
+            'total_loans'          => $payroll->payrolls->sum('loan_deduction'),
+            'total_social'         => $payroll->payrolls->sum('social_security_amount'),
+            'total_tax'            => $payroll->payrolls->sum('tax_amount'),
+            'total_net'            => $payroll->payrolls->sum('net_salary'),
+            'cash_count'           => $payroll->payrolls->where('payment_method', 'cash')->count(),
+            'bank_count'           => $payroll->payrolls->where('payment_method', 'bank')->count(),
+            'total_cash_amount'    => $payroll->payrolls->where('payment_method', 'cash')->sum('net_salary'),
+            'total_bank_amount'    => $payroll->payrolls->where('payment_method', 'bank')->sum('net_salary'),
+        ];
+
+        return view('hr.payrolls.show', compact('payroll', 'summary'));
     }
 
-    public function updateSlip(Request $request, HrPayroll $slip)
-    {
-        $request->validate([
-            'allowances' => 'required|numeric|min:0',
-        ]);
-
-        $allowances = $request->allowances;
-        
-        $netSalary = $slip->basic_salary + $allowances + $slip->bonuses_amount - $slip->penalties_amount;
-
-        $slip->update([
-            'allowances' => $allowances,
-            'net_salary' => $netSalary
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'net_salary' => $netSalary,
-            'message' => 'تم تحديث الراتب بنجاح'
-        ]);
-    }
-
+    // اعتماد المسير
     public function approve(HrPayrollCycle $payroll)
     {
-        $payroll->update(['status' => 'approved']);
-        return redirect()->route('hr.payrolls.show', $payroll->id)->with('success', 'تم اعتماد مسير الرواتب.');
+        if ($payroll->status !== 'draft') {
+            return back()->with('error', 'هذا المسير ليس في حالة مسودة.');
+        }
+        $payroll->update(['status' => 'approved', 'approved_by' => auth()->id(), 'approved_at' => now()]);
+
+        // إطلاق الحدث الخاص بالحسابات
+        event(new \App\Events\HR\PayrollApprovedEvent($payroll));
+
+        return back()->with('success', 'تم اعتماد مسير رواتب شهر ' . $payroll->cycle_month . ' بنجاح، وتم إرسال الإشعار لقسم الحسابات.');
+    }
+
+    // تعديل مخصصات الموظف في المسير (Ajax)
+    public function updateSlip(Request $request, HrPayroll $slip)
+    {
+        if ($slip->payrollCycle->status !== 'draft') {
+            return response()->json(['success' => false, 'message' => 'المسير معتمد ولا يمكن التعديل.'], 403);
+        }
+
+        $slip->allowances = $request->allowances ?? $slip->allowances;
+
+        // إعادة حساب الصافي
+        $slip->net_salary = max(0,
+            $slip->basic_salary
+            + $slip->allowances
+            + $slip->bonuses_amount
+            + $slip->overtime_amount
+            - $slip->penalties_amount
+            - $slip->absence_deduction
+            - $slip->loan_deduction
+            - $slip->social_security_amount
+            - $slip->tax_amount
+        );
+        $slip->save();
+
+        return response()->json(['success' => true, 'net_salary' => $slip->net_salary]);
     }
 }

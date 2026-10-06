@@ -496,6 +496,309 @@
                 </div>
             </div>
 
+            
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- 📊 إعدادات هيكلة الراتب -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 border-start border-4 border-info">
+                <div class="card-header bg-info bg-opacity-10 py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="card-title fw-bold text-info mb-0">
+                        <i class="fas fa-cog me-2"></i>إعدادات هيكلة الراتب والدفع
+                    </h6>
+                    <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#editPayrollSettingsModal">
+                        <i class="fas fa-edit"></i> تعديل الإعدادات
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="row g-0 text-center">
+                        <div class="col-md-3 border-end p-3">
+                            <div class="text-muted small">الراتب الأساسي</div>
+                            <div class="fw-bold fs-5 text-primary">{{ number_format($employee->basic_salary, 0) }} <small class="text-muted">د.ع</small></div>
+                        </div>
+                        <div class="col-md-3 border-end p-3">
+                            <div class="text-muted small">إجمالي المخصصات الثابتة</div>
+                            <div class="fw-bold fs-5 text-success">{{ number_format($employee->activeAllowances->sum('amount'), 0) }} <small class="text-muted">د.ع</small></div>
+                        </div>
+                        <div class="col-md-3 border-end p-3">
+                            <div class="text-muted small">طريقة صرف الراتب</div>
+                            <div class="fw-bold">
+                                @if($employee->payment_method == 'bank')
+                                    <span class="badge bg-primary"><i class="fas fa-university"></i> بنك</span>
+                                    <div class="small text-muted mt-1">{{ $employee->bank_name }} - {{ $employee->bank_account_number }}</div>
+                                @else
+                                    <span class="badge bg-success"><i class="fas fa-money-bill-wave"></i> كاش</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-3 p-3">
+                            <div class="text-muted small">الاستقطاعات</div>
+                            <div class="small mt-1">
+                                @if($employee->subject_to_social_security)
+                                    <span class="badge bg-warning text-dark">ضمان {{ $employee->social_security_percentage }}%</span>
+                                @endif
+                                @if($employee->subject_to_tax)
+                                    <span class="badge bg-danger">ضريبة {{ $employee->tax_percentage }}%</span>
+                                @endif
+                                @if(!$employee->subject_to_social_security && !$employee->subject_to_tax)
+                                    <span class="text-muted">بدون استقطاعات</span>
+                                @endif
+                            </div>
+                            @if($employee->overtime_hourly_rate > 0)
+                                <div class="small text-muted mt-1">سعر الإضافي: {{ number_format($employee->overtime_hourly_rate, 0) }} د.ع/ساعة</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- 💰 المخصصات الثابتة -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="card-title fw-bold text-dark mb-0">
+                        <i class="fas fa-layer-group text-success me-2"></i>المخصصات والعلاوات الثابتة
+                        <span class="badge bg-success ms-1">{{ $employee->activeAllowances->count() }}</span>
+                    </h6>
+                    <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#addAllowanceModal">
+                        <i class="fas fa-plus"></i> إضافة مخصص
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @forelse($employee->allowances as $allowance)
+                    <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom {{ $allowance->is_active ? '' : 'bg-light opacity-50' }}">
+                        <div>
+                            <span class="fw-bold">{{ $allowance->title }}</span>
+                            @if(!$allowance->is_active) <span class="badge bg-secondary ms-2">معطّل</span> @endif
+                            @if($allowance->notes) <div class="text-muted small">{{ $allowance->notes }}</div> @endif
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fw-bold text-success fs-6">{{ number_format($allowance->amount, 0) }} د.ع</span>
+                            <form action="{{ route('hr.employees.allowances.destroy', $allowance->id) }}" method="POST" class="d-inline-block">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('حذف هذا المخصص؟')">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2 opacity-25"></i>
+                        <p class="mb-0 small">لم يتم إضافة أي مخصصات ثابتة لهذا الموظف بعد.</p>
+                    </div>
+                    @endforelse
+                    @if($employee->activeAllowances->count() > 0)
+                    <div class="bg-success-subtle d-flex justify-content-between align-items-center px-4 py-2 fw-bold">
+                        <span>إجمالي المخصصات الشهرية</span>
+                        <span class="text-success fs-6">{{ number_format($employee->activeAllowances->sum('amount'), 0) }} د.ع</span>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- 🏦 السلف والأقساط -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="card-title fw-bold text-dark mb-0">
+                        <i class="fas fa-hand-holding-usd text-warning me-2"></i>السلف والأقساط
+                    </h6>
+                    <button class="btn btn-outline-warning btn-sm text-dark" data-bs-toggle="modal" data-bs-target="#addLoanModal">
+                        <i class="fas fa-plus"></i> تسجيل سلفة جديدة
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0 small text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>تاريخ البدء</th>
+                                <th>إجمالي السلفة</th>
+                                <th>القسط الشهري</th>
+                                <th>المسدد</th>
+                                <th>المتبقي</th>
+                                <th>الحالة</th>
+                                <th>السبب</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($employee->loans()->latest()->get() as $loan)
+                            <tr>
+                                <td>{{ $loan->start_date->format('Y-m-d') }}</td>
+                                <td class="fw-bold">{{ number_format($loan->total_amount, 0) }}</td>
+                                <td class="text-warning fw-bold">{{ number_format($loan->monthly_installment, 0) }}</td>
+                                <td class="text-success">{{ number_format($loan->paid_amount, 0) }}</td>
+                                <td class="text-danger fw-bold">{{ number_format($loan->remaining_amount, 0) }}</td>
+                                <td>
+                                    @if($loan->status == 'active')
+                                        <span class="badge bg-primary">نشطة</span>
+                                    @elseif($loan->status == 'completed')
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> مكتملة</span>
+                                    @else
+                                        <span class="badge bg-secondary">ملغاة</span>
+                                    @endif
+                                </td>
+                                <td>{{ $loan->reason ?? '—' }}</td>
+                                <td>
+                                    @if($loan->status == 'active')
+                                    <form action="{{ route('hr.employees.loans.cancel', $loan->id) }}" method="POST" class="d-inline-block">
+                                        @csrf
+                                        <button type="submit" class="btn btn-xs btn-outline-secondary border-0 small" onclick="return confirm('إلغاء هذه السلفة؟')">
+                                            إلغاء
+                                        </button>
+                                    </form>
+                                    @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="8" class="text-center text-muted py-3">لا توجد سلف مسجلة.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- 📅 الغيابات والتأخيرات -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="card-title fw-bold text-dark mb-0">
+                        <i class="fas fa-calendar-times text-danger me-2"></i>سجل الغيابات والتأخيرات
+                    </h6>
+                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#addAbsenceModal">
+                        <i class="fas fa-plus"></i> تسجيل غياب / تأخير
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0 small text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>الأيام</th>
+                                <th>بعذر؟</th>
+                                <th>مبلغ الخصم</th>
+                                <th>الحالة</th>
+                                <th>السبب</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($employee->absences()->latest('absence_date')->limit(20)->get() as $abs)
+                            <tr>
+                                <td>{{ $abs->absence_date->format('Y-m-d') }}</td>
+                                <td>
+                                    @if($abs->type == 'absence') <span class="badge bg-danger">غياب</span>
+                                    @elseif($abs->type == 'late') <span class="badge bg-warning text-dark">تأخير</span>
+                                    @else <span class="badge bg-secondary">انصراف مبكر</span>
+                                    @endif
+                                </td>
+                                <td>{{ $abs->days_count }}</td>
+                                <td>
+                                    @if($abs->is_excused) <span class="badge bg-success">بعذر</span>
+                                    @else <span class="badge bg-danger">بدون عذر</span>
+                                    @endif
+                                </td>
+                                <td class="{{ $abs->deduction_amount > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
+                                    {{ $abs->deduction_amount > 0 ? number_format($abs->deduction_amount, 0) . ' د.ع' : 'بدون خصم' }}
+                                </td>
+                                <td>
+                                    @if($abs->status == 'pending')
+                                        <span class="badge bg-warning text-dark">بانتظار الراتب</span>
+                                    @else
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> مُرحّل</span>
+                                    @endif
+                                </td>
+                                <td>{{ Str::limit($abs->reason ?? '—', 30) }}</td>
+                                <td>
+                                    @if($abs->status == 'pending')
+                                    <form action="{{ route('hr.employees.absences.destroy', $abs->id) }}" method="POST" class="d-inline-block">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('حذف؟')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    @else <i class="fas fa-lock text-muted"></i> @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="8" class="text-center text-muted py-3">لا توجد غيابات مسجلة.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- ⏰ العمل الإضافي -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="card-title fw-bold text-dark mb-0">
+                        <i class="fas fa-clock text-primary me-2"></i>سجل العمل الإضافي
+                    </h6>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addOvertimeModal">
+                        <i class="fas fa-plus"></i> تسجيل إضافي
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0 small text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>طريقة الحساب</th>
+                                <th>الساعات</th>
+                                <th>سعر الساعة</th>
+                                <th>المبلغ الإجمالي</th>
+                                <th>الحالة</th>
+                                <th>الوصف</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($employee->overtimes()->latest('overtime_date')->limit(20)->get() as $ot)
+                            <tr>
+                                <td>{{ $ot->overtime_date->format('Y-m-d') }}</td>
+                                <td>
+                                    @if($ot->input_type == 'hours')
+                                        <span class="badge bg-info text-dark">بالساعات</span>
+                                    @else
+                                        <span class="badge bg-secondary">مبلغ مقطوع</span>
+                                    @endif
+                                </td>
+                                <td>{{ $ot->hours_count ?? '—' }}</td>
+                                <td>{{ $ot->hourly_rate_used ? number_format($ot->hourly_rate_used, 0) . ' د.ع' : '—' }}</td>
+                                <td class="text-success fw-bold">{{ number_format($ot->total_amount, 0) }} د.ع</td>
+                                <td>
+                                    @if($ot->status == 'pending')
+                                        <span class="badge bg-warning text-dark">بانتظار الراتب</span>
+                                    @else
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> مُرحّل</span>
+                                    @endif
+                                </td>
+                                <td>{{ Str::limit($ot->description ?? '—', 30) }}</td>
+                                <td>
+                                    @if($ot->status == 'pending')
+                                    <form action="{{ route('hr.employees.overtimes.destroy', $ot->id) }}" method="POST" class="d-inline-block">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('حذف؟')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    @else <i class="fas fa-lock text-muted"></i> @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="8" class="text-center text-muted py-3">لا يوجد عمل إضافي مسجل.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 5. الملاحظات -->
             @if($employee->notes)
                 <div class="card border-0 shadow-sm rounded-3 mb-4">
@@ -628,5 +931,314 @@
         </div>
     </div>
 </div>
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- MODALS: Payroll Settings, Allowances, Loans, Absences, Overtime -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+
+<!-- Modal: إعدادات هيكلة الراتب -->
+<div class="modal fade" id="editPayrollSettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('hr.employees.update', $employee->id) }}" method="POST">
+                @csrf @method('PUT')
+                <input type="hidden" name="_section" value="payroll_settings">
+                <div class="modal-header bg-info bg-opacity-10">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-cog text-info me-2"></i> تعديل إعدادات الراتب</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">طريقة صرف الراتب</label>
+                            <select name="payment_method" class="form-select" id="paymentMethodSelect">
+                                <option value="cash" {{ $employee->payment_method == 'cash' ? 'selected' : '' }}>💵 كاش (نقداً)</option>
+                                <option value="bank" {{ $employee->payment_method == 'bank' ? 'selected' : '' }}>🏦 بنك (توطين)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">سعر ساعة الإضافي (د.ع)</label>
+                            <input type="number" name="overtime_hourly_rate" class="form-control" value="{{ $employee->overtime_hourly_rate }}" step="500" min="0">
+                        </div>
+                        <div id="bankFields" class="{{ $employee->payment_method == 'bank' ? '' : 'd-none' }} col-12 row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">اسم البنك</label>
+                                <input type="text" name="bank_name" class="form-control" value="{{ $employee->bank_name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">رقم الحساب</label>
+                                <input type="text" name="bank_account_number" class="form-control" value="{{ $employee->bank_account_number }}">
+                            </div>
+                        </div>
+                        <div class="col-12"><hr class="my-2"><p class="fw-bold mb-2">الاستقطاعات الإلزامية</p></div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="subject_to_social_security" id="ssCheck" value="1" {{ $employee->subject_to_social_security ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold" for="ssCheck">مشمول بالضمان الاجتماعي</label>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="social_security_percentage" class="form-control" value="{{ $employee->social_security_percentage }}" step="0.5" min="0" max="25">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="subject_to_tax" id="taxCheck" value="1" {{ $employee->subject_to_tax ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold" for="taxCheck">مشمول بالضريبة</label>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="tax_percentage" class="form-control" value="{{ $employee->tax_percentage }}" step="0.5" min="0" max="50">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-info fw-bold text-white"><i class="fas fa-save me-1"></i> حفظ الإعدادات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: إضافة مخصص -->
+<div class="modal fade" id="addAllowanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('hr.employees.allowances.store', $employee->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-success bg-opacity-10">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-layer-group text-success me-2"></i> إضافة مخصص ثابت</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">نوع المخصص <span class="text-danger">*</span></label>
+                        <select name="title" class="form-select" required>
+                            <option value="">-- اختر نوع المخصص --</option>
+                            <optgroup label="مخصصات عائلية">
+                                <option>مخصص زوجية</option>
+                                <option>مخصص أطفال</option>
+                            </optgroup>
+                            <optgroup label="مخصصات وظيفية">
+                                <option>مخصص خطورة</option>
+                                <option>مخصص نقل</option>
+                                <option>مخصص شهادة</option>
+                                <option>مخصص امتياز</option>
+                                <option>مخصص تفرغ</option>
+                                <option>مخصص مناوبة</option>
+                                <option>علاوة سنوية</option>
+                            </optgroup>
+                            <option value="_custom">أخرى (كتابة يدوية)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="customTitleDiv" style="display:none;">
+                        <label class="form-label">اسم المخصص (مخصص)</label>
+                        <input type="text" name="title_custom" class="form-control" placeholder="أدخل اسم المخصص...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ الشهري (د.ع) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control" step="1000" min="0" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">ملاحظات</label>
+                        <input type="text" name="notes" class="form-control" placeholder="اختياري...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success fw-bold"><i class="fas fa-plus me-1"></i> إضافة المخصص</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: تسجيل سلفة -->
+<div class="modal fade" id="addLoanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('hr.employees.loans.store', $employee->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-warning bg-opacity-10">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-hand-holding-usd text-warning me-2"></i> تسجيل سلفة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        الراتب الأساسي للموظف: <strong>{{ number_format($employee->basic_salary, 0) }} د.ع</strong>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">إجمالي مبلغ السلفة <span class="text-danger">*</span></label>
+                            <input type="number" name="total_amount" class="form-control" step="50000" min="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">قيمة القسط الشهري <span class="text-danger">*</span></label>
+                            <input type="number" name="monthly_installment" class="form-control" step="50000" min="0" required>
+                            <small class="text-muted">0 = دفعة واحدة</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">تاريخ بدء الاستقطاع <span class="text-danger">*</span></label>
+                            <input type="date" name="start_date" class="form-control" value="{{ date('Y-m-01') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">سبب السلفة</label>
+                            <input type="text" name="reason" class="form-control" placeholder="اختياري...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark"><i class="fas fa-save me-1"></i> تسجيل السلفة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: تسجيل غياب -->
+<div class="modal fade" id="addAbsenceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('hr.employees.absences.store', $employee->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-danger bg-opacity-10">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-calendar-times text-danger me-2"></i> تسجيل غياب / تأخير</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning py-2 small">
+                        <i class="fas fa-calculator me-1"></i>
+                        قيمة اليوم الواحد: <strong>{{ number_format($employee->basic_salary / 30, 0) }} د.ع</strong>
+                        (الراتب الأساسي {{ number_format($employee->basic_salary, 0) }} ÷ 30 يوم)
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">تاريخ الغياب <span class="text-danger">*</span></label>
+                            <input type="date" name="absence_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">نوع الغياب <span class="text-danger">*</span></label>
+                            <select name="type" class="form-select" required>
+                                <option value="absence">غياب كامل</option>
+                                <option value="late">تأخير</option>
+                                <option value="early_leave">انصراف مبكر</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">عدد الأيام <span class="text-danger">*</span></label>
+                            <input type="number" name="days_count" class="form-control" step="0.25" min="0.25" max="30" value="1" required>
+                            <small class="text-muted">يمكن كسر (0.5 = نصف يوم)</small>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" name="is_excused" id="isExcusedCheck" value="1">
+                                <label class="form-check-label fw-bold" for="isExcusedCheck">غياب بعذر (بدون خصم مالي)</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">السبب</label>
+                            <input type="text" name="reason" class="form-control" placeholder="اكتب سبب الغياب...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger fw-bold"><i class="fas fa-save me-1"></i> تسجيل الغياب</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: تسجيل عمل إضافي -->
+<div class="modal fade" id="addOvertimeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('hr.employees.overtimes.store', $employee->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-primary bg-opacity-10">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-clock text-primary me-2"></i> تسجيل عمل إضافي</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    @if($employee->overtime_hourly_rate > 0)
+                    <div class="alert alert-info py-2 small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        سعر الساعة المسجل: <strong>{{ number_format($employee->overtime_hourly_rate, 0) }} د.ع/ساعة</strong>
+                    </div>
+                    @else
+                    <div class="alert alert-warning py-2 small">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        لم يتم تحديد سعر ساعة الإضافي. سيتم استخدام المبلغ المقطوع فقط.
+                        <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#editPayrollSettingsModal" class="ms-1">تحديث السعر</a>
+                    </div>
+                    @endif
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">طريقة الحساب <span class="text-danger">*</span></label>
+                        <select name="input_type" class="form-select" id="overtimeInputType" required>
+                            <option value="hours">⏱️ بالساعات (ساعات × سعر الساعة)</option>
+                            <option value="manual_amount">💰 مبلغ مقطوع يدوي</option>
+                        </select>
+                    </div>
+                    <div id="hoursDiv" class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label">عدد الساعات</label>
+                            <input type="number" name="hours_count" class="form-control" step="0.5" min="0.5">
+                        </div>
+                        <div class="col">
+                            <label class="form-label">التاريخ</label>
+                            <input type="date" name="overtime_date" class="form-control" value="{{ date('Y-m-d') }}">
+                        </div>
+                    </div>
+                    <div id="manualDiv" class="mb-3 d-none">
+                        <label class="form-label fw-bold">المبلغ (د.ع)</label>
+                        <input type="number" name="manual_amount" class="form-control" step="5000" min="0">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">وصف / ملاحظة</label>
+                        <input type="text" name="description" class="form-control" placeholder="مثال: خفارة ليلية، عمل عطلة رسمية...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary fw-bold"><i class="fas fa-save me-1"></i> تسجيل الإضافي</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Bank fields toggle
+document.getElementById("paymentMethodSelect")?.addEventListener("change", function() {
+    document.getElementById("bankFields").classList.toggle("d-none", this.value !== "bank");
+});
+
+// Overtime type toggle
+document.getElementById("overtimeInputType")?.addEventListener("change", function() {
+    const isHours = this.value === "hours";
+    document.getElementById("hoursDiv").classList.toggle("d-none", !isHours);
+    document.getElementById("manualDiv").classList.toggle("d-none", isHours);
+});
+
+// Allowance custom title
+document.querySelector("select[name='title']")?.addEventListener("change", function() {
+    const custom = document.getElementById("customTitleDiv");
+    if (this.value === "_custom") {
+        custom.style.display = "block";
+        this.name = "title_dropdown";
+        custom.querySelector("input").name = "title";
+    } else {
+        custom.style.display = "none";
+        this.name = "title";
+        custom.querySelector("input").name = "title_custom";
+    }
+});
+</script>
 
 @endpush

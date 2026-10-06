@@ -658,6 +658,23 @@ Route::middleware(['auth'])->group(function () {
         Route::post('payrolls/{payroll}/approve', [\App\Http\Controllers\HR\HrPayrollController::class, 'approve'])->name('payrolls.approve');
         Route::post('payrolls/slip/{slip}', [\App\Http\Controllers\HR\HrPayrollController::class, 'updateSlip'])->name('payrolls.slip.update');
 
+        // المخصصات الثابتة
+        Route::post('employees/{employee}/allowances', [\App\Http\Controllers\HR\HrAllowanceController::class, 'store'])->name('employees.allowances.store');
+        Route::put('employees/allowances/{allowance}', [\App\Http\Controllers\HR\HrAllowanceController::class, 'update'])->name('employees.allowances.update');
+        Route::delete('employees/allowances/{allowance}', [\App\Http\Controllers\HR\HrAllowanceController::class, 'destroy'])->name('employees.allowances.destroy');
+
+        // السلف
+        Route::post('employees/{employee}/loans', [\App\Http\Controllers\HR\HrLoanController::class, 'store'])->name('employees.loans.store');
+        Route::post('employees/loans/{loan}/cancel', [\App\Http\Controllers\HR\HrLoanController::class, 'cancel'])->name('employees.loans.cancel');
+
+        // الغيابات
+        Route::post('employees/{employee}/absences', [\App\Http\Controllers\HR\HrAbsenceController::class, 'store'])->name('employees.absences.store');
+        Route::delete('employees/absences/{absence}', [\App\Http\Controllers\HR\HrAbsenceController::class, 'destroy'])->name('employees.absences.destroy');
+
+        // العمل الإضافي
+        Route::post('employees/{employee}/overtimes', [\App\Http\Controllers\HR\HrOvertimeController::class, 'store'])->name('employees.overtimes.store');
+        Route::delete('employees/overtimes/{overtime}', [\App\Http\Controllers\HR\HrOvertimeController::class, 'destroy'])->name('employees.overtimes.destroy');
+
         // إعدادات وقوائم الموارد البشرية والحقول
         Route::prefix('settings')->name('settings.')->group(function () {
             Route::get('/', [\App\Http\Controllers\HR\HrSettingsController::class, 'index'])->name('index');

@@ -226,6 +226,28 @@ class HrEmployeeController extends Controller
      */
     public function update(Request $request, HrEmployee $employee)
     {
+        if ($request->input('_section') === 'payroll_settings') {
+            $validated = $request->validate([
+                'payment_method' => 'required|in:cash,bank',
+                'bank_name' => 'nullable|string|max:255',
+                'bank_account_number' => 'nullable|string|max:255',
+                'overtime_hourly_rate' => 'required|numeric|min:0',
+                'social_security_percentage' => 'nullable|numeric|min:0|max:100',
+                'tax_percentage' => 'nullable|numeric|min:0|max:100',
+            ]);
+
+            $validated['subject_to_social_security'] = $request->boolean('subject_to_social_security');
+            $validated['subject_to_tax'] = $request->boolean('subject_to_tax');
+
+            if ($validated['payment_method'] === 'cash') {
+                $validated['bank_name'] = null;
+                $validated['bank_account_number'] = null;
+            }
+
+            $employee->update($validated);
+            return back()->with('success', 'تم تحديث إعدادات هيكلة الراتب بنجاح.');
+        }
+
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
 
         $rules = [

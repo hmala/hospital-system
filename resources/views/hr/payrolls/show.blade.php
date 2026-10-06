@@ -1,194 +1,146 @@
 @extends('layouts.app')
+@section('title', 'شيت الرواتب المركزي - HR')
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h3 class="mb-0 text-primary">
-                <i class="fas fa-file-invoice-dollar text-success me-2"></i> مسير رواتب شهر {{ $cycle->cycle_month }}
-            </h3>
-            <div class="text-muted mt-1">
-                الفترة من {{ $cycle->start_date->format('Y-m-d') }} إلى {{ $cycle->end_date->format('Y-m-d') }}
-            </div>
+            <h4 class="fw-bold text-dark mb-1"><i class="fas fa-file-excel text-success me-2"></i>شيت الرواتب المركزي: {{ $payroll->cycle_month }}</h4>
+            <p class="text-muted small mb-0">الفترة من {{ $payroll->start_date->format('Y-m-d') }} إلى {{ $payroll->end_date->format('Y-m-d') }}</p>
         </div>
-        <div>
-            <a href="{{ route('hr.payrolls.index') }}" class="btn btn-outline-secondary me-2">
-                <i class="fas fa-arrow-right"></i> عودة
-            </a>
-            @if($cycle->status == 'draft')
-            <form action="{{ route('hr.payrolls.approve', $cycle->id) }}" method="POST" class="d-inline-block">
+        <div class="d-flex gap-2">
+            <a href="{{ route('hr.payrolls.index') }}" class="btn btn-outline-secondary">عودة</a>
+            <button class="btn btn-outline-success" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
+            @if($payroll->status === 'draft')
+            <form action="{{ route('hr.payrolls.approve', $payroll->id) }}" method="POST" class="d-inline-block">
                 @csrf
-                <button type="submit" class="btn btn-success shadow-sm" onclick="return confirm('هل أنت متأكد من اعتماد الرواتب؟ لا يمكن التعديل بعد الاعتماد.')">
-                    <i class="fas fa-check-double"></i> اعتماد المسير نهائياً
+                <button type="submit" class="btn btn-success fw-bold shadow-sm" onclick="return confirm('تأكيد اعتماد المسير؟ لا يمكن التراجع أو التعديل بعد الاعتماد.')">
+                    <i class="fas fa-check-double me-1"></i> اعتماد نهائي وترحيل للحسابات
                 </button>
             </form>
             @endif
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <!-- ملخص مالي -->
+    <div class="row g-3 mb-3 text-center">
+        <div class="col-md-2"><div class="card border-0 shadow-sm bg-light"><div class="card-body p-2"><div class="text-muted small">الأساسي</div><div class="fw-bold">{{ number_format($summary['total_basic']) }}</div></div></div></div>
+        <div class="col-md-2"><div class="card border-0 shadow-sm bg-success bg-opacity-10"><div class="card-body p-2"><div class="text-success small">إجمالي المخصصات</div><div class="fw-bold text-success">{{ number_format($summary['total_allowances'] + $summary['total_bonuses'] + $summary['total_overtime']) }}</div></div></div></div>
+        <div class="col-md-2"><div class="card border-0 shadow-sm bg-danger bg-opacity-10"><div class="card-body p-2"><div class="text-danger small">إجمالي الاستقطاعات</div><div class="fw-bold text-danger">{{ number_format($summary['total_penalties'] + $summary['total_absence'] + $summary['total_loans'] + $summary['total_social'] + $summary['total_tax']) }}</div></div></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm bg-primary text-white"><div class="card-body p-2"><div class="small opacity-75">إجمالي الصافي للموظفين</div><div class="fw-bold fs-5">{{ number_format($summary['total_net']) }} د.ع</div></div></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm bg-dark text-white"><div class="card-body p-2"><div class="small opacity-75">طرق الدفع (نقداً / بنك)</div><div class="fw-bold fs-6">{{ number_format($summary['total_cash_amount']) }} / {{ number_format($summary['total_bank_amount']) }}</div></div></div></div>
+    </div>
+
+    @if($payroll->status === 'draft')
+        <div class="alert alert-warning py-2 mb-3 border-0 shadow-sm small">
+            <i class="fas fa-info-circle me-1"></i>
+            الشيت في وضع <strong>المسودة</strong>. يمكنك النقر على أرقام "المخصصات" لتعديلها يدوياً إذا دعت الحاجة. سيتم حفظ التعديل وإعادة حساب الصافي تلقائياً.
         </div>
     @endif
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0 text-center">
-                    <thead class="table-dark">
-                        <tr>
-                            <th rowspan="2" class="align-middle">القسم</th>
-                            <th rowspan="2" class="align-middle">اسم الموظف</th>
-                            <th rowspan="2" class="align-middle">الراتب الأساسي</th>
-                            <th colspan="3">الاستحقاقات والاستقطاعات الإضافية</th>
-                            <th rowspan="2" class="align-middle bg-success text-white">الراتب الصافي النهائي</th>
-                            @if($cycle->status == 'draft')
-                            <th rowspan="2" class="align-middle">تعديل المخصصات</th>
+    <!-- جدول الرواتب المركزي -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="table-responsive" style="max-height: 70vh;">
+            <table class="table table-bordered table-hover align-middle mb-0 text-center table-sm" style="white-space: nowrap;">
+                <thead class="bg-light sticky-top shadow-sm" style="z-index: 10;">
+                    <tr>
+                        <th rowspan="2" class="align-middle bg-light">الرقم الوظيفي</th>
+                        <th rowspan="2" class="align-middle bg-light text-start">اسم الموظف / القسم</th>
+                        <th rowspan="2" class="align-middle bg-light">الأساسي</th>
+                        <th colspan="3" class="bg-success bg-opacity-10 text-success border-success">الاستحقاقات والمكافآت (+)</th>
+                        <th colspan="5" class="bg-danger bg-opacity-10 text-danger border-danger">الاستقطاعات والخصومات (-)</th>
+                        <th rowspan="2" class="align-middle bg-primary bg-opacity-10 text-primary border-primary">الصافي للدفع</th>
+                        <th rowspan="2" class="align-middle bg-light">طريقة الدفع</th>
+                    </tr>
+                    <tr>
+                        <th class="bg-success bg-opacity-10 text-success border-success">المخصصات الثابتة</th>
+                        <th class="bg-success bg-opacity-10 text-success border-success">العمل الإضافي</th>
+                        <th class="bg-success bg-opacity-10 text-success border-success">المكافآت</th>
+                        
+                        <th class="bg-danger bg-opacity-10 text-danger border-danger">الغيابات</th>
+                        <th class="bg-danger bg-opacity-10 text-danger border-danger">العقوبات</th>
+                        <th class="bg-danger bg-opacity-10 text-danger border-danger">السلف</th>
+                        <th class="bg-danger bg-opacity-10 text-danger border-danger">ضمان</th>
+                        <th class="bg-danger bg-opacity-10 text-danger border-danger">ضريبة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($payroll->payrolls as $slip)
+                    <tr id="slip-{{ $slip->id }}">
+                        <td class="text-muted font-monospace">{{ $slip->employee->employee_code }}</td>
+                        <td class="text-start fw-bold">
+                            {{ $slip->employee->full_name }}
+                            <div class="small text-muted fw-normal">{{ $slip->employee->department->name ?? '—' }}</div>
+                        </td>
+                        <td class="fw-bold">{{ number_format($slip->basic_salary) }}</td>
+                        
+                        <!-- (+) -->
+                        <td class="bg-success bg-opacity-10">
+                            @if($payroll->status === 'draft')
+                                <input type="number" class="form-control form-control-sm text-center fw-bold border-success text-success bg-transparent ajax-slip-input" 
+                                       data-id="{{ $slip->id }}" data-field="allowances" value="{{ $slip->allowances }}" style="width:100px; margin: 0 auto;">
+                            @else
+                                <span class="text-success fw-bold">{{ number_format($slip->allowances) }}</span>
                             @endif
-                        </tr>
-                        <tr>
-                            <th class="bg-secondary text-white">المخصصات والعلاوات (يدوي)</th>
-                            <th class="bg-success text-white">المكافآت (تلقائي)</th>
-                            <th class="bg-danger text-white">العقوبات والخصومات (تلقائي)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php
-                            $totalBasic = 0;
-                            $totalAllowances = 0;
-                            $totalBonuses = 0;
-                            $totalPenalties = 0;
-                            $totalNet = 0;
-                        @endphp
-                        @foreach($cycle->payrolls as $slip)
-                        @php
-                            $totalBasic += $slip->basic_salary;
-                            $totalAllowances += $slip->allowances;
-                            $totalBonuses += $slip->bonuses_amount;
-                            $totalPenalties += $slip->penalties_amount;
-                            $totalNet += $slip->net_salary;
-                        @endphp
-                        <tr id="row-{{ $slip->id }}">
-                            <td>{{ $slip->employee->department->name ?? 'غير محدد' }}</td>
-                            <td class="text-start fw-bold text-primary">{{ $slip->employee->full_name }}</td>
-                            <td>{{ number_format($slip->basic_salary, 0) }} د.ع</td>
-                            
-                            <td class="allowances-cell bg-light">
-                                <span class="allowances-text fw-bold">{{ number_format($slip->allowances, 0) }}</span> د.ع
-                            </td>
-                            
-                            <td class="text-success fw-bold">{{ number_format($slip->bonuses_amount, 0) }} د.ع</td>
-                            <td class="text-danger fw-bold">{{ number_format($slip->penalties_amount, 0) }} د.ع</td>
-                            
-                            <td class="bg-success-subtle fw-bold fs-5 net-salary-cell">{{ number_format($slip->net_salary, 0) }} د.ع</td>
-                            
-                            @if($cycle->status == 'draft')
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-allowances" 
-                                    data-id="{{ $slip->id }}" 
-                                    data-val="{{ rtrim(rtrim($slip->allowances, '0'), '.') ?: '0' }}">
-                                    <i class="fas fa-edit"></i> مخصصات
-                                </button>
-                            </td>
+                        </td>
+                        <td class="text-success">{{ $slip->overtime_amount > 0 ? number_format($slip->overtime_amount) : '—' }}</td>
+                        <td class="text-success">{{ $slip->bonuses_amount > 0 ? number_format($slip->bonuses_amount) : '—' }}</td>
+                        
+                        <!-- (-) -->
+                        <td class="text-danger">{{ $slip->absence_deduction > 0 ? number_format($slip->absence_deduction) : '—' }}</td>
+                        <td class="text-danger">{{ $slip->penalties_amount > 0 ? number_format($slip->penalties_amount) : '—' }}</td>
+                        <td class="text-danger fw-bold">{{ $slip->loan_deduction > 0 ? number_format($slip->loan_deduction) : '—' }}</td>
+                        <td class="text-danger small">{{ $slip->social_security_amount > 0 ? number_format($slip->social_security_amount) : '—' }}</td>
+                        <td class="text-danger small">{{ $slip->tax_amount > 0 ? number_format($slip->tax_amount) : '—' }}</td>
+                        
+                        <!-- Net & Method -->
+                        <td class="fw-bold text-primary fs-6 bg-primary bg-opacity-10" id="net-{{ $slip->id }}">
+                            {{ number_format($slip->net_salary) }}
+                        </td>
+                        <td>
+                            @if($slip->payment_method === 'bank') <span class="badge bg-primary">بنك</span>
+                            @else <span class="badge bg-success">كاش</span>
                             @endif
-                        </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot class="table-light fw-bold fs-5">
-                        <tr>
-                            <td colspan="2" class="text-end">الإجمالي الكلي للشهر:</td>
-                            <td class="text-primary">{{ number_format($totalBasic, 0) }} د.ع</td>
-                            <td id="total-allowances">{{ number_format($totalAllowances, 0) }} د.ع</td>
-                            <td class="text-success">{{ number_format($totalBonuses, 0) }} د.ع</td>
-                            <td class="text-danger">{{ number_format($totalPenalties, 0) }} د.ع</td>
-                            <td class="bg-success text-white" id="total-net">{{ number_format($totalNet, 0) }} د.ع</td>
-                            @if($cycle->status == 'draft')
-                            <td></td>
-                            @endif
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<!-- Modal for Editing Allowances -->
-<div class="modal fade" id="editAllowancesModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title">تعديل المخصصات/العلاوات</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="slip_id">
-                <label class="form-label">إجمالي مبلغ المخصصات (د.ع)</label>
-                <input type="number" id="allowances_input" class="form-control" step="1000" min="0">
-                <small class="text-muted mt-2 d-block">سجل مجموع المخصصات كـ (الزوجية، الأطفال، النقل، الخطورة، إلخ).</small>
-            </div>
-            <div class="modal-footer bg-light p-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-success btn-sm" id="btn-save-allowances"><i class="fas fa-save"></i> حفظ</button>
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-@section('scripts')
+@push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let editModal = new bootstrap.Modal(document.getElementById('editAllowancesModal'));
-    
-    document.querySelectorAll('.btn-edit-allowances').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.getElementById('slip_id').value = this.dataset.id;
-            document.getElementById('allowances_input').value = this.dataset.val;
-            editModal.show();
+    document.querySelectorAll('.ajax-slip-input').forEach(input => {
+        input.addEventListener('change', function() {
+            let slipId = this.dataset.id;
+            let val = this.value;
+            
+            fetch(`{{ url('hr/payrolls/slip') }}/${slipId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    allowances: val
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update net salary UI
+                    document.getElementById(`net-${slipId}`).innerText = new Intl.NumberFormat().format(data.net_salary);
+                    // Flashing effect
+                    document.getElementById(`slip-${slipId}`).style.backgroundColor = '#d1e7dd';
+                    setTimeout(() => { document.getElementById(`slip-${slipId}`).style.backgroundColor = ''; }, 1000);
+                } else {
+                    alert(data.message);
+                }
+            });
         });
     });
-
-    document.getElementById('btn-save-allowances').addEventListener('click', function() {
-        let slipId = document.getElementById('slip_id').value;
-        let allowances = document.getElementById('allowances_input').value || 0;
-        
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-        this.disabled = true;
-
-        fetch(`/hr/payrolls/slip/${slipId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ allowances: allowances })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success) {
-                // Update UI instantly
-                let row = document.getElementById(`row-${slipId}`);
-                row.querySelector('.allowances-text').innerText = new Intl.NumberFormat().format(allowances);
-                row.querySelector('.net-salary-cell').innerText = new Intl.NumberFormat().format(data.net_salary) + ' د.ع';
-                
-                // Update dataset for next edit
-                row.querySelector('.btn-edit-allowances').dataset.val = allowances;
-                
-                editModal.hide();
-                // Optionally reload to update totals, or update totals via JS
-                location.reload();
-            } else {
-                alert('حدث خطأ أثناء الحفظ');
-            }
-        })
-        .finally(() => {
-            this.innerHTML = '<i class="fas fa-save"></i> حفظ';
-            this.disabled = false;
-        });
-    });
-});
 </script>
+@endpush
 @endsection
