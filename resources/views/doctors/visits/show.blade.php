@@ -949,9 +949,25 @@ datalist option:hover {
                                                     </div>
                                                 </div>
 
-                                                <!-- 4. تبويبات تصفية الأقسام -->
+                                                <!-- 4. تبويبات تصفية الأقسام حسب المجموعات الطبية -->
                                                 @php
-                                                    $grouped = $labTests->groupBy('category');
+                                                    $catMap = [
+                                                        'biochemistry' => '🧪 كيمياء حيوية',
+                                                        'hormone' => '🧬 هرمونات',
+                                                        'hematology' => '🩸 أمراض الدم',
+                                                        'haematology' => '🩸 أمراض الدم',
+                                                        'immunity' => '🛡️ المناعة',
+                                                        'immunology' => '🛡️ المناعة',
+                                                        'serology' => '💉 الأمصال',
+                                                        'infectious disease' => '🦠 أمراض معدية',
+                                                        'microbiology' => '🔬 أحياء مجهرية',
+                                                        'virology' => '🧫 فيروسات',
+                                                    ];
+
+                                                    $grouped = $labTests->groupBy(function($t) use ($catMap) {
+                                                        $sub = strtolower(trim($t->subcategory ?? ''));
+                                                        return $catMap[$sub] ?? ($t->subcategory ?: ($t->main_category ?: 'تحاليل عامة'));
+                                                    });
                                                 @endphp
                                                 <div class="d-flex align-items-center gap-1 overflow-x-auto pb-2 mb-3 border-bottom" id="docLabCategoryPills" style="white-space: nowrap;">
                                                     <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 doc-cat-pill active" data-category="ALL">
@@ -968,10 +984,13 @@ datalist option:hover {
                                                 <div id="docLabTestsGridContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
                                                     <div class="row g-2" id="docLabItemsGrid">
                                                         @foreach($labTests as $test)
+                                                            @php
+                                                                $testCat = $catMap[strtolower(trim($test->subcategory ?? ''))] ?? ($test->subcategory ?: ($test->main_category ?: 'تحاليل عامة'));
+                                                            @endphp
                                                             <div class="col-md-6 col-12 doc-lab-col" 
                                                                  data-test-name="{{ strtolower($test->name) }}"
                                                                  data-test-code="{{ strtolower($test->code ?? '') }}"
-                                                                 data-category="{{ $test->category }}"
+                                                                 data-category="{{ $testCat }}"
                                                                  data-id="{{ $test->id }}">
                                                                 <label for="inline_test_{{ $test->id }}" 
                                                                        class="doc-lab-card p-2 rounded-3 border bg-white d-flex align-items-center justify-content-between h-100 mb-0 w-100 user-select-none" 
@@ -985,7 +1004,7 @@ datalist option:hover {
                                                                                data-test-id="{{ $test->id }}"
                                                                                data-test-name="{{ $test->name }}"
                                                                                data-test-code="{{ $test->code ?? '' }}"
-                                                                               data-test-category="{{ $test->category }}"
+                                                                               data-test-category="{{ $testCat }}"
                                                                                style="cursor: pointer; width: 1.1em; height: 1.1em;">
                                                                         <div class="text-truncate">
                                                                             <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $test->name }}">{{ $test->name }}</span>
@@ -993,7 +1012,7 @@ datalist option:hover {
                                                                                 @if($test->code)
                                                                                     <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.68rem;">{{ $test->code }}</span>
                                                                                 @endif
-                                                                                <span class="text-muted" style="font-size: 0.68rem;">{{ Str::limit($test->category, 18) }}</span>
+                                                                                <span class="text-muted" style="font-size: 0.68rem;">{{ Str::limit($testCat, 20) }}</span>
                                                                             </div>
                                                                         </div>
                                                                     </div>
