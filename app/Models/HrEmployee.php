@@ -38,14 +38,24 @@ class HrEmployee extends Model
         'qualification',
         'profile_photo',
         'notes',
+        // حقول الرواتب الجديدة
+        'payment_method', 'bank_name', 'bank_account_number',
+        'overtime_hourly_rate',
+        'subject_to_social_security', 'social_security_percentage',
+        'subject_to_tax', 'tax_percentage',
     ];
 
     protected $casts = [
-        'date_of_birth' => 'date',
-        'hire_date' => 'date',
-        'contract_end_date' => 'date',
-        'license_expiry_date' => 'date',
-        'basic_salary' => 'decimal:2',
+        'date_of_birth'                => 'date',
+        'hire_date'                    => 'date',
+        'contract_end_date'            => 'date',
+        'license_expiry_date'          => 'date',
+        'basic_salary'                 => 'decimal:2',
+        'overtime_hourly_rate'         => 'decimal:2',
+        'social_security_percentage'   => 'decimal:2',
+        'tax_percentage'               => 'decimal:2',
+        'subject_to_social_security'   => 'boolean',
+        'subject_to_tax'               => 'boolean',
     ];
 
     // العلاقات
@@ -63,6 +73,37 @@ class HrEmployee extends Model
     {
         return $this->hasMany(HrEmployeeDocument::class, 'employee_id');
     }
+
+    public function allowances()
+    {
+        return $this->hasMany(HrEmployeeAllowance::class, 'hr_employee_id');
+    }
+
+    public function activeAllowances()
+    {
+        return $this->hasMany(HrEmployeeAllowance::class, 'hr_employee_id')->where('is_active', true);
+    }
+
+    public function loans()
+    {
+        return $this->hasMany(HrLoan::class, 'hr_employee_id');
+    }
+
+    public function activeLoans()
+    {
+        return $this->hasMany(HrLoan::class, 'hr_employee_id')->where('status', 'active');
+    }
+
+    public function absences()
+    {
+        return $this->hasMany(HrAbsence::class, 'hr_employee_id');
+    }
+
+    public function overtimes()
+    {
+        return $this->hasMany(HrOvertime::class, 'hr_employee_id');
+    }
+
 
     // التحقق من طبيعة الكادر
     public function isMedicalStaff(): bool
