@@ -968,7 +968,7 @@ datalist option:hover {
                                                 <div id="docLabTestsGridContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
                                                     <div class="row g-2" id="docLabItemsGrid">
                                                         @foreach($labTests as $test)
-                                                            <div class="col-xl-4 col-md-6 col-12 doc-lab-col" 
+                                                            <div class="col-md-6 col-12 doc-lab-col" 
                                                                  data-test-name="{{ strtolower($test->name) }}"
                                                                  data-test-code="{{ strtolower($test->code ?? '') }}"
                                                                  data-category="{{ $test->category }}"
@@ -1004,8 +1004,6 @@ datalist option:hover {
                                                             </div>
                                                         @endforeach
                                                     </div>
-                                                </div>
-
                                                 </div>
                                             </form>
                                         </div>
