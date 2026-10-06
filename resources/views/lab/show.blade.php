@@ -115,6 +115,9 @@ $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood
 $hasAttachment = !empty($requestDetails['attachment']);
 $attachmentUrl = $hasAttachment ? asset('storage/' . $requestDetails['attachment']) : '';
 $isImageAttachment = $hasAttachment && str_starts_with($requestDetails['attachment_mime'] ?? '', 'image/');
+$testAttachments = is_array($requestDetails['test_attachments'] ?? null) ? $requestDetails['test_attachments'] : [];
+$hasAnyAttachment = $hasAttachment || count($testAttachments) > 0;
+
 $patient = $request->visit?->patient;
 $patientUser = $patient?->user;
 $gender = $patientUser?->gender ?? ($patient?->gender ?? 'male');
@@ -124,53 +127,44 @@ $age = $patient?->age ?? null;
 @section('content')
 <div class="container-fluid py-2">
 
-    <!-- 1. شريط العنوان والأزرار العلوية -->
+    <!-- 1. شريط العنوان والإجراءات العلوي المدمج -->
     <div class="row mb-3">
         <div class="col-12">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white p-3 rounded-3 shadow-sm border">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-transparent pb-3 border-bottom">
                 <div class="d-flex align-items-center gap-2">
-                    <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                    <div class="bg-primary-subtle text-primary p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="fas fa-microscope fs-5"></i>
                     </div>
                     <div>
-                        <h4 class="mb-0 fw-bold text-dark">
-                            معالجة طلب المختبر #{{ $request->id }}
-                        </h4>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="mb-0 fw-bold text-dark">
+                                طلب المختبر #{{ $request->id }}
+                            </h5>
+                            <span class="badge bg-{{ $request->status_color }}">{{ $request->status_text }}</span>
+                        </div>
                         <small class="text-muted">
                             <i class="fas fa-calendar-alt me-1"></i> {{ $request->created_at->format('Y-m-d H:i') }}
-                            <span class="mx-1">•</span>
-                            <span class="badge bg-{{ $request->status_color }}">{{ $request->status_text }}</span>
                         </small>
                     </div>
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    @if($hasAttachment)
-                        <a href="{{ $attachmentUrl }}" 
-                           class="btn btn-info text-white fw-bold shadow-sm" 
-                           target="_blank">
-                            <i class="fas fa-file-alt me-1"></i>
-                            معاينة / طباعة تقرير الجهاز
-                        </a>
+                <div class="d-flex gap-2">
+                    @if(!$isBloodBankRequest)
+                        <button type="submit" form="labResultForm" class="btn btn-primary fw-bold shadow-sm px-3">
+                            <i class="fas fa-check-circle me-1"></i> حفظ واعتماد النتائج
+                        </button>
                     @endif
-                    @if($request->type == 'lab' || $isBloodBankRequest)
-                        <a href="{{ route('lab.print', $request) }}" 
-                           class="btn btn-success fw-bold shadow-sm" 
-                           target="_blank">
-                            <i class="fas fa-print me-1"></i>
-                            طباعة تقرير النظام (RX)
-                        </a>
-                    @endif
+
                     @if(!$isBloodBankRequest && in_array($request->status, ['pending', 'in_progress', 'completed']))
-                        <a href="{{ route('lab.show', ['request' => $request, 'append' => 1]) }}#appendTestsSection" class="btn btn-outline-primary fw-semibold">
-                            <i class="fas fa-plus-circle me-1"></i>
-                            إضافة تحاليل أخرى
+                        <a href="{{ route('lab.show', ['request' => $request, 'append' => 1]) }}#appendTestsSection" class="btn btn-outline-secondary" title="إضافة تحاليل إضافية">
+                            <i class="fas fa-plus-circle me-1"></i> إضافة تحاليل
                         </a>
                     @endif
+
                     <a href="{{ route('lab.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        العودة للقائمة
+                        <i class="fas fa-arrow-left me-1"></i> القائمة
                     </a>
+                </div>
                 </div>
             </div>
         </div>
@@ -196,14 +190,14 @@ $age = $patient?->age ?? null;
     <!-- 2. بطاقة معلومات المريض والطلب الموحدة -->
     <div class="row mb-3">
         <div class="col-12">
-            <div class="card shadow-sm border-0 bg-white">
-                <div class="card-header bg-gradient bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3">
+            <div class="card shadow-sm border-0 bg-transparent">
+                <div class="card-header bg-transparent text-dark border-bottom d-flex justify-content-between align-items-center py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-id-card"></i>
+                        <i class="fas fa-id-card text-primary"></i>
                         <h6 class="mb-0 fw-bold">بيانات المريض والطلب</h6>
                     </div>
                     <div>
-                        <span class="badge bg-white text-primary font-monospace fw-bold">
+                        <span class="badge bg-primary-subtle text-primary font-monospace fw-bold">
                             ملف: #{{ $patient?->national_id ?: ($patient?->id ?? $request->visit?->patient_id) }}
                         </span>
                     </div>
@@ -329,10 +323,10 @@ $age = $patient?->age ?? null;
     @if(!$isBloodBankRequest && in_array($request->status, ['pending', 'in_progress', 'completed']) && $showAppendSection)
     <div class="row mb-3" id="appendTestsSection">
         <div class="col-12">
-            <div class="card shadow-sm border-primary">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
-                    <h6 class="mb-0 fw-bold"><i class="fas fa-plus-circle me-2"></i>إضافة تحاليل إضافية إلى هذا الطلب</h6>
-                    <a href="{{ route('lab.show', $request) }}" class="btn btn-light btn-sm py-0 px-2">
+            <div class="card shadow-sm border-0 bg-transparent">
+                <div class="card-header bg-transparent text-dark border-bottom d-flex justify-content-between align-items-center py-2">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-plus-circle text-primary me-2"></i>إضافة تحاليل إضافية إلى هذا الطلب</h6>
+                    <a href="{{ route('lab.show', $request) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
                         <i class="fas fa-times me-1"></i> إغلاق
                     </a>
                 </div>
@@ -417,12 +411,12 @@ $age = $patient?->age ?? null;
     </div>
     @endif
 
-    <!-- 4. النموذج الرئيسي لإدخال ومعالجة النتائج -->
+    <!-- 4. النموذج الرئيسي لإدخال ومعالجة النتائج ورفع التقارير -->
     @if($isBloodBankRequest)
         {{-- نموذج مصرف الدم --}}
-        <div class="card border-danger shadow-sm mb-4">
-            <div class="card-header bg-danger text-white py-2 px-3">
-                <h6 class="mb-0 fw-bold"><i class="fas fa-tint me-2"></i>تفاصيل طلب مصرف الدم</h6>
+        <div class="card border-0 bg-transparent shadow-sm mb-4">
+            <div class="card-header bg-transparent text-dark border-bottom py-2 px-3">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-tint text-danger me-2"></i>تفاصيل طلب مصرف الدم</h6>
             </div>
             <div class="card-body p-3">
                 <form method="POST" action="{{ route('lab.update', $request) }}">
@@ -490,263 +484,259 @@ $age = $patient?->age ?? null;
             </div>
         </div>
     @else
-        {{-- نموذج إدخال وإرفاق نتائج المختبر --}}
+        {{-- نموذج إدخال وإرفاق نتائج المختبر الذكي --}}
+        @php
+            $patientGender = $gender ?? 'both';
+            $patientAge    = (int) ($age ?? 0);
+            $testsList = buildSelectedLabTests($requestDetails);
+            $labTestMap = \App\Models\LabTest::with(['subTests' => function($q) {
+                $q->orderBy('sort_order')->orderBy('id');
+            }, 'references'])->whereIn('name', $testsList)->get()->keyBy('name');
+            $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
+            
+            $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);
+            $savedTestResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
+            
+            // استخراج الملاحظات النصية الصافية وتجنب ظهور كود JSON الخام
+            $savedNotes = '';
+            if (is_array($resultData) && isset($resultData['notes']) && is_string($resultData['notes'])) {
+                $trimmed = trim($resultData['notes']);
+                if (!str_starts_with($trimmed, '{') && !str_starts_with($trimmed, '[')) {
+                    $savedNotes = $trimmed;
+                }
+            } elseif (is_string($request->result)) {
+                $trimmed = trim($request->result);
+                if (!str_starts_with($trimmed, '{') && !str_starts_with($trimmed, '[')) {
+                    $savedNotes = $trimmed;
+                }
+            }
+        @endphp
+
         <form action="{{ route('lab.update', $request) }}" method="POST" enctype="multipart/form-data" id="labResultForm">
             @csrf
             @method('PUT')
+            <input type="hidden" name="status" value="completed">
+            <input type="hidden" name="action" value="complete">
 
-            <!-- البطاقة أ: إرفاق تقرير جهاز التحاليل / سكانر / PDF -->
-            <div class="card border-info mb-3 shadow-sm rounded-3 overflow-hidden" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
-                <div class="card-header bg-info text-white d-flex align-items-center justify-content-between py-2 px-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="fas fa-file-medical-alt me-2"></i>
-                        إرفاق تقرير جهاز التحاليل (Scanned Machine Report / PDF / صور)
-                    </h6>
-                    @if($hasAttachment)
-                        <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i> يوجد تقرير مرفق</span>
-                    @endif
-                </div>
-                <div class="card-body p-3">
-                    @if($hasAttachment)
-                        <div class="alert alert-white bg-white border-2 border-success p-3 rounded-3 mb-3 shadow-sm">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle fs-3">
-                                        <i class="fas {{ $isImageAttachment ? 'fa-file-image' : 'fa-file-pdf' }}"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="fw-bold text-dark mb-1">{{ $requestDetails['attachment_title'] ?? 'ملف تقرير التحاليل المرفق' }}</h6>
-                                        <div class="text-muted small">
-                                            <span><i class="fas fa-paperclip me-1"></i> {{ $requestDetails['attachment_name'] ?? 'ملف مرفق' }}</span>
-                                            @if(!empty($requestDetails['attached_at']))
-                                                <span class="ms-3"><i class="fas fa-clock me-1"></i> {{ $requestDetails['attached_at'] }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-info text-white fw-bold shadow-sm">
-                                        <i class="fas fa-print me-1"></i> طباعة الملف المرفق
-                                    </a>
-                                    <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-sm btn-primary fw-bold">
-                                        <i class="fas fa-eye me-1"></i> معاينة وتكبير
-                                    </a>
-                                    <label class="btn btn-sm btn-outline-danger" for="removeAttachmentCb" style="cursor: pointer;">
-                                        <input type="checkbox" name="remove_attachment" value="1" id="removeAttachmentCb" class="d-none" onchange="this.checked ? this.closest('label').classList.add('active', 'btn-danger') : this.closest('label').classList.remove('active', 'btn-danger')">
-                                        <i class="fas fa-trash-alt me-1"></i> حذف الملف عند الحفظ
-                                    </label>
-                                </div>
+            <div class="row g-3 mb-3">
+                <!-- العمود الأيمن (8 أعمدة): جدول النتائج الرقمية والمديات المرجعية -->
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 bg-transparent h-100 rounded-3 overflow-hidden d-flex flex-column">
+                        <div class="card-header bg-transparent text-dark border-bottom d-flex justify-content-between align-items-center py-2 px-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-table fs-5 text-primary"></i>
+                                <h6 class="mb-0 fw-bold">جدول النتائج والمديات المرجعية ({{ count($testsList) }} فحص)</h6>
                             </div>
-                            @if($isImageAttachment)
-                                <div class="mt-3 text-center border-top pt-2">
-                                    <a href="{{ $attachmentUrl }}" target="_blank" title="اضغط للتكبير">
-                                        <img src="{{ $attachmentUrl }}" alt="تقرير مرفق" style="max-height: 200px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
-                                    </a>
-                                </div>
-                            @endif
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary fw-bold font-monospace">{{ count($testsList) }} فحوصات</span>
+                            </div>
                         </div>
-                    @endif
 
-                    <div class="row align-items-center g-3">
-                        <div class="col-md-7">
-                            <label class="form-label fw-bold small text-dark mb-1">
-                                <i class="fas fa-upload me-1 text-primary"></i>
-                                {{ $hasAttachment ? 'استبدال أو رفع ملف جديد:' : 'اختر ملف التقرير الممسوح من الجهاز (PDF، صورة، أو سكانر):' }}
-                            </label>
-                            <input type="file" name="attachment" id="attachmentInput" class="form-control form-control-sm" accept=".pdf,.png,.jpg,.jpeg">
-                            <div class="form-text small text-muted" style="font-size: 0.75rem;">الملفات المدعومة: PDF, JPG, PNG بحجم أقصى 20MB.</div>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold small text-dark mb-1">عنوان أو وصف الملف المرفق (اختياري):</label>
-                            <input type="text" name="attachment_title" class="form-control form-control-sm" value="{{ old('attachment_title', $requestDetails['attachment_title'] ?? '') }}" placeholder="مثال: تقرير CBC كامل من الجهاز">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- البطاقة ب: جدول إدخال النتائج الرقمية والمديات المرجعية -->
-            @php
-                $patientGender = $gender ?? 'both';
-                $patientAge    = (int) ($age ?? 0);
-                $testsList = buildSelectedLabTests($requestDetails);
-                $labTestMap = \App\Models\LabTest::with(['subTests' => function($q) {
-                    $q->orderBy('sort_order')->orderBy('id');
-                }, 'references'])->whereIn('name', $testsList)->get()->keyBy('name');
-                $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
-                
-                $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);
-                $savedTestResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
-                
-                // استخراج الملاحظات النصية الصافية وتجنب ظهور كود JSON الخام
-                $savedNotes = '';
-                if (is_array($resultData) && isset($resultData['notes']) && is_string($resultData['notes'])) {
-                    $trimmed = trim($resultData['notes']);
-                    if (!str_starts_with($trimmed, '{') && !str_starts_with($trimmed, '[')) {
-                        $savedNotes = $trimmed;
-                    }
-                } elseif (is_string($request->result)) {
-                    $trimmed = trim($request->result);
-                    if (!str_starts_with($trimmed, '{') && !str_starts_with($trimmed, '[')) {
-                        $savedNotes = $trimmed;
-                    }
-                }
-            @endphp
-
-            <div class="card shadow-sm border-0 bg-white mb-3 rounded-3 overflow-hidden">
-                <div class="card-header bg-gradient bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-table fs-5"></i>
-                        <h6 class="mb-0 fw-bold">جدول النتائج الرقمية والمديات المرجعية ({{ count($testsList) }} فحص)</h6>
-                    </div>
-                    <div>
-                        <span class="badge bg-white text-primary fw-bold">{{ $request->visit?->patient?->user?->name }}</span>
-                    </div>
-                </div>
-
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle mb-0" id="resultsTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="text-center" style="width: 45px;">#</th>
-                                    <th>اسم الفحص الطبي</th>
-                                    <th style="width: 220px;">النتيجة (Value)</th>
-                                    <th style="width: 100px;">الوحدة</th>
-                                    <th style="width: 180px;">المدى الطبيعي المرجعي</th>
-                                    <th style="width: 120px;" class="text-center">الحالة (Flag)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($testsList as $index => $test)
-                                    @php
-                                        $testIcon   = getTestIcon($test);
-                                        $labTestObj = $labTestMap[$test] ?? null;
-                                        $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
-                                    @endphp
-
-                                    @if($hasSubTests)
-                                        {{-- فحص مركب: يعتمد على تقرير الجهاز المرفق --}}
-                                        <tr class="table-info bg-opacity-10">
-                                            <td class="text-center text-muted small fw-bold">{{ $index + 1 }}</td>
-                                            <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <i class="{{ $testIcon }}"></i>
-                                                    <strong class="text-dark">{{ $test }}</strong>
-                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.72rem;">
-                                                        <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
-                                                    </span>
-                                                </div>
-                                                <small class="text-muted d-block mt-1">
-                                                    <i class="fas fa-info-circle me-1"></i> تتم قراءة كافة المعاملات والرسومات البيانية من الملف المرفق
-                                                </small>
-                                            </td>
-                                            <td colspan="2">
-                                                @if($hasAttachment)
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 fw-semibold">
-                                                        <i class="fas fa-check-circle me-1"></i> مرفق بالتقرير أعلاه
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2 fw-semibold">
-                                                        <i class="fas fa-upload me-1 text-warning"></i> يرجى إرفاق ملف التقرير
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-light text-muted border">مدرج بتقرير الجهاز</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-secondary-subtle text-secondary border">تقرير مرفق</span>
-                                            </td>
+                        <div class="card-body p-0 flex-grow-1">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered align-middle mb-0" id="resultsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-center" style="width: 40px;">#</th>
+                                            <th>اسم الفحص الطبي</th>
+                                            <th style="width: 200px;">النتيجة (Value)</th>
+                                            <th style="width: 80px;">الوحدة</th>
+                                            <th style="width: 150px;">المدى المرجعي</th>
+                                            <th style="width: 90px;" class="text-center">الحالة (Flag)</th>
+                                            <th style="width: 250px;" class="text-center">
+                                                <i class="fas fa-paperclip text-primary me-1"></i> المرفق (اختياري)
+                                            </th>
                                         </tr>
-                                    @else
-                                        {{-- فحص رقمي فردي --}}
-                                        @php
-                                            $refObj = $labTestObj
-                                                ? \App\Models\LabTestReference::forPatient($labTestObj->id, $patientGender, $patientAge)
-                                                : null;
-                                            $refDisplay  = $refObj ? $refObj->range_display : '—';
-                                            $refMin      = $refObj?->ref_min;
-                                            $refMax      = $refObj?->ref_max;
-                                            $unitDisplay = $refObj?->unit ?? getTestUnit($test, $labTests);
-                                            
-                                            // القيمة المحفوظة مسبقاً
-                                            $savedVal = $dbResults[$test]->value ?? '';
-                                            if ($savedVal === '' && isset($savedTestResults[$test])) {
-                                                $savedVal = is_array($savedTestResults[$test]) ? ($savedTestResults[$test]['value'] ?? '') : $savedTestResults[$test];
-                                            }
-                                        @endphp
-                                        <tr class="test-row" data-test="{{ $test }}"
-                                            data-ref-min="{{ $refMin }}"
-                                            data-ref-max="{{ $refMax }}">
-                                            <td class="text-center text-muted small fw-bold">{{ $index + 1 }}</td>
-                                            <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <i class="{{ $testIcon }}"></i>
-                                                    <strong class="text-dark">{{ $test }}</strong>
-                                                    @if($labTestObj?->code)
-                                                        <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.7rem;">{{ $labTestObj->code }}</span>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <input type="text"
-                                                       class="form-control form-control-sm test-value font-monospace fw-bold"
-                                                       name="test_results[{{ $test }}][value]"
-                                                       value="{{ old('test_results.' . $test . '.value', $savedVal) }}"
-                                                       placeholder="أدخل القيمة..."
-                                                       tabindex="{{ $index + 1 }}"
-                                                       data-test="{{ $test }}">
-                                                <input type="hidden" name="test_results[{{ $test }}][test_name]" value="{{ $test }}">
-                                                <input type="hidden" name="test_results[{{ $test }}][lab_test_id]" value="{{ $labTestObj?->id }}">
-                                                <input type="hidden" name="test_results[{{ $test }}][unit]" value="{{ $unitDisplay }}">
-                                                <input type="hidden" name="test_results[{{ $test }}][reference_range]" value="{{ $refDisplay }}">
-                                            </td>
-                                            <td class="text-muted small fw-semibold">{{ $unitDisplay ?: '-' }}</td>
-                                            <td>
-                                                @if($refObj && $refDisplay !== '—')
-                                                    <span class="badge bg-light text-primary border font-monospace">{{ $refDisplay }}</span>
-                                                @else
-                                                    <span class="text-muted small">{{ $refDisplay }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="result-flag" id="flag-{{ $index }}">
-                                                    <i class="fas fa-circle text-muted small"></i>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    @endif
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">
-                                            <i class="fas fa-flask fa-2x mb-2 opacity-25"></i>
-                                            <p class="mb-0">لا توجد تحاليل محددة في هذا الطلب بعد</p>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($testsList as $index => $test)
+                                            @php
+                                                $testIcon   = getTestIcon($test);
+                                                $labTestObj = $labTestMap[$test] ?? null;
+                                                $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
+                                                $hasSpecificAttachment = !empty($testAttachments[$test]);
+                                            @endphp
 
-                    <!-- شريط الإحصاء الحي للنتائج -->
-                    <div class="p-3 bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fas fa-chart-pie text-primary fs-5"></i>
-                            <strong class="text-dark small">ملخص تقييم النتائج:</strong>
+                                            @if($hasSubTests)
+                                                {{-- فحص مركب: يعتمد على تقرير الجهاز المرفق --}}
+                                                <tr class="table-info bg-opacity-10">
+                                                    <td class="text-center text-muted small fw-bold">{{ $index + 1 }}</td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="{{ $testIcon }}"></i>
+                                                            <strong class="text-dark">{{ $test }}</strong>
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.72rem;">
+                                                                <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
+                                                            </span>
+                                                        </div>
+                                                        <small class="text-muted d-block mt-1">
+                                                            <i class="fas fa-info-circle me-1"></i> تتم قراءة كافة المعاملات والرسومات البيانية من الملف المرفق
+                                                        </small>
+                                                    </td>
+                                                    <td colspan="4">
+                                                        <div class="d-flex align-items-center gap-2 text-muted small">
+                                                            <i class="fas fa-arrow-left"></i> يرجى إرفاق تقرير الجهاز الخاص بهذا الفحص في الخانة المجاورة
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if($hasSpecificAttachment)
+                                                            <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
+                                                                <a href="{{ asset('storage/' . $testAttachments[$test]['path']) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span>معاينة التقرير</span>
+                                                                </a>
+                                                                <label class="btn btn-xs btn-outline-danger rounded-circle p-0 mb-0 d-inline-flex align-items-center justify-content-center" style="width: 22px; height: 22px; cursor: pointer;" title="حذف هذا المرفق عند الحفظ">
+                                                                    <input type="checkbox" name="remove_test_attachment[{{ $test }}]" value="1" class="d-none" onchange="this.checked ? (this.closest('label').classList.add('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.add('border-danger', 'bg-danger-subtle')) : (this.closest('label').classList.remove('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.remove('border-danger', 'bg-danger-subtle'))">
+                                                                    <i class="fas fa-times" style="font-size: 0.65rem;"></i>
+                                                                </label>
+                                                            </div>
+                                                        @elseif($hasAttachment)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
+                                                                <i class="fas fa-check-circle me-1"></i> ضمن التقرير العام
+                                                            </span>
+                                                        @else
+                                                            <div class="pill-upload-wrapper d-inline-block">
+                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="اضغط لاختيار تقرير هذا الفحص">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span class="pill-text fw-semibold">إرفاق تقرير</span>
+                                                                    <input type="file" name="test_attachments[{{ $test }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
+                                                                </label>
+                                                                <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-sm" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-check-circle"></i>
+                                                                    <span class="pill-filename text-truncate fw-bold" style="max-width: 110px;"></span>
+                                                                    <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @else
+                                                {{-- فحص رقمي فردي --}}
+                                                @php
+                                                    $refObj = $labTestObj
+                                                        ? \App\Models\LabTestReference::forPatient($labTestObj->id, $patientGender, $patientAge)
+                                                        : null;
+                                                    $refDisplay  = $refObj ? $refObj->range_display : '—';
+                                                    $refMin      = $refObj?->ref_min;
+                                                    $refMax      = $refObj?->ref_max;
+                                                    $unitDisplay = $refObj?->unit ?? getTestUnit($test, $labTests);
+                                                    
+                                                    // القيمة المحفوظة مسبقاً
+                                                    $savedVal = $dbResults[$test]->value ?? '';
+                                                    if ($savedVal === '' && isset($savedTestResults[$test])) {
+                                                        $savedVal = is_array($savedTestResults[$test]) ? ($savedTestResults[$test]['value'] ?? '') : $savedTestResults[$test];
+                                                    }
+                                                @endphp
+                                                <tr class="test-row" data-test="{{ $test }}"
+                                                    data-ref-min="{{ $refMin }}"
+                                                    data-ref-max="{{ $refMax }}">
+                                                    <td class="text-center text-muted small fw-bold">{{ $index + 1 }}</td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="{{ $testIcon }}"></i>
+                                                            <strong class="text-dark">{{ $test }}</strong>
+                                                            @if($labTestObj?->code)
+                                                                <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.7rem;">{{ $labTestObj->code }}</span>
+                                                            @endif
+                                                            @if($hasSpecificAttachment)
+                                                                <a href="{{ asset('storage/' . $testAttachments[$test]['path']) }}" target="_blank" class="badge bg-info-subtle text-info border border-info ms-1 text-decoration-none" title="يوجد تقرير منفصل لهذا الفحص">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                </a>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <input type="text"
+                                                               class="form-control form-control-sm test-value font-monospace fw-bold"
+                                                               name="test_results[{{ $test }}][value]"
+                                                               value="{{ old('test_results.' . $test . '.value', $savedVal) }}"
+                                                               placeholder="أدخل القيمة..."
+                                                               tabindex="{{ $index + 1 }}"
+                                                               data-test="{{ $test }}">
+                                                        <input type="hidden" name="test_results[{{ $test }}][test_name]" value="{{ $test }}">
+                                                        <input type="hidden" name="test_results[{{ $test }}][lab_test_id]" value="{{ $labTestObj?->id }}">
+                                                        <input type="hidden" name="test_results[{{ $test }}][unit]" value="{{ $unitDisplay }}">
+                                                        <input type="hidden" name="test_results[{{ $test }}][reference_range]" value="{{ $refDisplay }}">
+                                                    </td>
+                                                    <td class="text-muted small fw-semibold">{{ $unitDisplay ?: '-' }}</td>
+                                                    <td>
+                                                        @if($refObj && $refDisplay !== '—')
+                                                            <span class="badge bg-light text-primary border font-monospace">{{ $refDisplay }}</span>
+                                                        @else
+                                                            <span class="text-muted small">{{ $refDisplay }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="result-flag" id="flag-{{ $index }}">
+                                                            <i class="fas fa-circle text-muted small"></i>
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if($hasSpecificAttachment)
+                                                            <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
+                                                                <a href="{{ asset('storage/' . $testAttachments[$test]['path']) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span>معاينة التقرير</span>
+                                                                </a>
+                                                                <label class="btn btn-xs btn-outline-danger rounded-circle p-0 mb-0 d-inline-flex align-items-center justify-content-center" style="width: 22px; height: 22px; cursor: pointer;" title="حذف هذا المرفق عند الحفظ">
+                                                                    <input type="checkbox" name="remove_test_attachment[{{ $test }}]" value="1" class="d-none" onchange="this.checked ? (this.closest('label').classList.add('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.add('border-danger', 'bg-danger-subtle')) : (this.closest('label').classList.remove('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.remove('border-danger', 'bg-danger-subtle'))">
+                                                                    <i class="fas fa-times" style="font-size: 0.65rem;"></i>
+                                                                </label>
+                                                            </div>
+                                                        @elseif($hasAttachment)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
+                                                                <i class="fas fa-check-circle me-1"></i> ضمن التقرير العام
+                                                            </span>
+                                                        @else
+                                                            <div class="pill-upload-wrapper d-inline-block">
+                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="اضغط لاختيار تقرير هذا الفحص">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span class="pill-text fw-semibold">إرفاق تقرير</span>
+                                                                    <input type="file" name="test_attachments[{{ $test }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
+                                                                </label>
+                                                                <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-sm" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-check-circle"></i>
+                                                                    <span class="pill-filename text-truncate fw-bold" style="max-width: 110px;"></span>
+                                                                    <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endif
+                                        @empty
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4 text-muted">
+                                                    <i class="fas fa-flask fa-2x mb-2 opacity-25"></i>
+                                                    <p class="mb-0">لا توجد تحاليل محددة في هذا الطلب بعد</p>
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3">
-                                <i class="fas fa-check-circle me-1"></i> طبيعي: <strong id="normal-count" class="ms-1 fs-6">0</strong>
-                            </span>
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-2 px-3">
-                                <i class="fas fa-arrow-up me-1"></i> مرتفع: <strong id="high-count" class="ms-1 fs-6">0</strong>
-                            </span>
-                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-2 px-3">
-                                <i class="fas fa-arrow-down me-1 text-warning"></i> منخفض: <strong id="low-count" class="ms-1 fs-6">0</strong>
-                            </span>
-                            <span class="badge bg-secondary-subtle text-secondary border py-2 px-3">
-                                <i class="fas fa-clock me-1"></i> غير مدخل: <strong id="pending-count" class="ms-1 fs-6">{{ count($testsList) }}</strong>
-                            </span>
+
+                        <!-- شريط الإحصاء الحي للنتائج -->
+                        <div class="p-3 bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-chart-pie text-primary fs-5"></i>
+                                <strong class="text-dark small">ملخص تقييم النتائج:</strong>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3">
+                                    <i class="fas fa-check-circle me-1"></i> طبيعي: <strong id="normal-count" class="ms-1 fs-6">0</strong>
+                                </span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-2 px-3">
+                                    <i class="fas fa-arrow-up me-1"></i> مرتفع: <strong id="high-count" class="ms-1 fs-6">0</strong>
+                                </span>
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-2 px-3">
+                                    <i class="fas fa-arrow-down me-1 text-warning"></i> منخفض: <strong id="low-count" class="ms-1 fs-6">0</strong>
+                                </span>
+                                <span class="badge bg-secondary-subtle text-secondary border py-2 px-3">
+                                    <i class="fas fa-clock me-1"></i> غير مدخل: <strong id="pending-count" class="ms-1 fs-6">{{ count($testsList) }}</strong>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -780,74 +770,40 @@ $age = $patient?->age ?? null;
                 </div>
             </div>
 
-            <!-- شريط الإجراءات السفلي (Action Footer) -->
-            <div class="card shadow-sm border-0 bg-white sticky-bottom p-3 mb-4 rounded-3" style="bottom: 15px; z-index: 100;">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="status" class="form-label mb-0 fw-bold small text-dark">حالة الطلب:</label>
-                        <select class="form-select form-select-sm" id="status" name="status" style="width: 160px;" required>
-                            <option value="in_progress" {{ $request->status == 'in_progress' ? 'selected' : '' }}>قيد المعالجة (مسودة)</option>
-                            <option value="completed" {{ $request->status == 'completed' ? 'selected' : '' }}>مكتمل ومعتمد ✅</option>
-                            <option value="pending" {{ $request->status == 'pending' ? 'selected' : '' }}>في الانتظار</option>
-                        </select>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="submit" class="btn btn-outline-primary px-3 fw-bold">
-                            <i class="fas fa-save me-1"></i> حفظ النتائج
-                        </button>
-                        <button type="button" class="btn btn-success px-4 fw-bold shadow-sm" onclick="completeAndSave()">
-                            <i class="fas fa-check-circle me-1"></i> اعتماد وإنهاء الفحص
-                        </button>
-                    </div>
-                </div>
-            </div>
         </form>
-    @endif
-
-    <!-- 5. معلومات الزيارة والتشخيص الطبي (للاطلاع السريري) -->
-    @if($request->visit)
-    <div class="card shadow-sm border-0 bg-white mb-4 rounded-3">
-        <div class="card-header bg-light py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 fw-bold text-dark">
-                <i class="fas fa-history text-muted me-2"></i>
-                سياق الزيارة والتشخيص الطبي للطبيب المعالج
-            </h6>
-        </div>
-        <div class="card-body p-3">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <small class="text-muted d-block">تاريخ ونوع الزيارة</small>
-                    <strong class="text-dark">{{ $request->visit->visit_date ? $request->visit->visit_date->format('Y-m-d') : 'اليوم' }} ({{ $request->visit->visit_type_text ?? 'كشفية عادية' }})</strong>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-muted d-block">الشكوى الرئيسية</small>
-                    <span class="text-dark">{{ $request->visit->chief_complaint ?: 'غير محددة' }}</span>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-muted d-block">التشخيص الطبي (ICD-10)</small>
-                    @php $diag = is_string($request->visit->diagnosis) ? json_decode($request->visit->diagnosis, true) : $request->visit->diagnosis; @endphp
-                    @if(is_array($diag) && !empty($diag['code']))
-                        <span class="badge bg-primary-subtle text-primary">{{ $diag['code'] }}</span>
-                        <span class="text-dark small ms-1">{{ $diag['description'] ?? '' }}</span>
-                    @else
-                        <span class="text-muted small">غير مدخل</span>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
     @endif
 
 </div>
 
 <script>
-function completeAndSave() {
-    const statusSelect = document.getElementById('status');
-    if (statusSelect) {
-        statusSelect.value = 'completed';
+// ──────────────── دوال رفع المرفقات بنمط الكبسولة الأنيقة ────────────────
+function handlePillUpload(input) {
+    const wrapper = input.closest('.pill-upload-wrapper');
+    if (!wrapper) return;
+    const btn = wrapper.querySelector('.pill-upload-btn');
+    const badge = wrapper.querySelector('.pill-chosen-badge');
+    const nameSpan = wrapper.querySelector('.pill-filename');
+    
+    if (input.files && input.files[0]) {
+        nameSpan.textContent = input.files[0].name;
+        nameSpan.title = input.files[0].name;
+        btn.classList.add('d-none');
+        badge.classList.remove('d-none');
+        badge.classList.add('d-inline-flex');
     }
-    document.getElementById('labResultForm').submit();
+}
+
+function cancelPillUpload(button) {
+    const wrapper = button.closest('.pill-upload-wrapper');
+    if (!wrapper) return;
+    const btn = wrapper.querySelector('.pill-upload-btn');
+    const badge = wrapper.querySelector('.pill-chosen-badge');
+    const input = wrapper.querySelector('.pill-file-input');
+    
+    if (input) input.value = '';
+    badge.classList.add('d-none');
+    badge.classList.remove('d-inline-flex');
+    btn.classList.remove('d-none');
 }
 
 // ──────────────── تلوين وتحديد نتائج التحاليل تلقائياً ────────────────

@@ -303,10 +303,10 @@ class DoctorQueueController extends Controller
             $pName = $pUser ? $pUser->name : 'مريض';
             $qNum = $v->appointment ? $v->appointment->queue_number : $v->id;
 
-            $radRequests = $v->radiologyRequests;
-            $medicalRadRequests = $v->requests->where('type', 'radiology');
-            $labRequests = $v->requests->where('type', 'lab');
-            $prescriptions = $v->prescriptions;
+            $radRequests = $v->radiologyRequests->whereNotIn('status', ['cancelled', 'rejected']);
+            $medicalRadRequests = $v->requests->where('type', 'radiology')->whereNotIn('status', ['cancelled', 'rejected']);
+            $labRequests = $v->requests->where('type', 'lab')->whereNotIn('status', ['cancelled', 'rejected']);
+            $prescriptions = $v->prescriptions->whereNotIn('status', ['cancelled', 'rejected']);
 
             $testsList = [];
             $totalTests = 0;
@@ -398,7 +398,7 @@ class DoctorQueueController extends Controller
                 ];
             }
 
-            $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->count() > 0;
+            $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected'])->where('payment_status', '!=', 'paid')->count() > 0;
             $isUnpaidAppointment = ($v->appointment && $v->appointment->payment_status !== 'paid' && !$v->appointment->emergency_id);
             $hasUnpaidTests = $hasUnpaidRequests || $isUnpaidAppointment;
 
@@ -704,8 +704,8 @@ class DoctorQueueController extends Controller
 
         $visit = Visit::with(['patient.user', 'doctor.user', 'appointment', 'radiologyRequests', 'requests'])->findOrFail($visitId);
         
-        $hasPendingRad = $visit->radiologyRequests()->where('status', '!=', 'completed')->exists();
-        $hasPendingLab = $visit->requests()->where('type', 'lab')->where('status', '!=', 'completed')->exists();
+        $hasPendingRad = $visit->radiologyRequests()->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->exists();
+        $hasPendingLab = $visit->requests()->where('type', 'lab')->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->exists();
         if ($hasPendingRad || $hasPendingLab) {
             return response()->json([
                 'success' => false,
@@ -714,7 +714,7 @@ class DoctorQueueController extends Controller
         }
 
         // التحقق من تسديد أجور الفحوصات والكشفية بالكاشير
-        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->exists();
+        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected'])->where('payment_status', '!=', 'paid')->exists();
         $isUnpaidAppointment = ($visit->appointment && $visit->appointment->payment_status !== 'paid' && !$visit->appointment->emergency_id);
 
         if ($hasUnpaidLab || $isUnpaidAppointment) {

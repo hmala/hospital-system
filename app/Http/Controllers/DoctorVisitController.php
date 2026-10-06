@@ -427,6 +427,32 @@ class DoctorVisitController extends Controller
             ? $latestPrescription->items->where('substitution_status', 'pending_approval')
             : collect();
 
+        // السجل الطبي التراكمي للمريض (الزيارات السابقة، العمليات، الطوارئ)
+        $pastVisits = $visit->patient_id 
+            ? Visit::where('patient_id', $visit->patient_id)
+                ->where('id', '!=', $visit->id)
+                ->with(['doctor.user', 'requests', 'prescribedMedications'])
+                ->orderBy('visit_date', 'desc')
+                ->limit(15)
+                ->get()
+            : collect();
+
+        $pastSurgeries = $visit->patient_id
+            ? \App\Models\Surgery::where('patient_id', $visit->patient_id)
+                ->with('doctor.user')
+                ->latest()
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $pastEmergencies = $visit->patient_id
+            ? \App\Models\Emergency::where('patient_id', $visit->patient_id)
+                ->with('doctor.user')
+                ->latest()
+                ->limit(10)
+                ->get()
+            : collect();
+
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
@@ -442,7 +468,10 @@ class DoctorVisitController extends Controller
             'emergencyServices',
             'availableMedicines',
             'latestPrescription',
-            'pendingSubstitutionRequests'
+            'pendingSubstitutionRequests',
+            'pastVisits',
+            'pastSurgeries',
+            'pastEmergencies'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
