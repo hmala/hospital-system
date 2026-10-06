@@ -974,7 +974,7 @@
                         @endcanany
 
                         <!-- قسم الأطباء والعيادات -->
-                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability'])
+                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability', 'view visits'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="false">
                             <span><i class="fas fa-stethoscope"></i> الأطباء والعيادات</span>
@@ -1010,7 +1010,6 @@
                         </li>
                         @endcan
 
-
                         @can('manage own visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
@@ -1020,31 +1019,10 @@
                         </li>
                         @endcan
 
-                        </div>
-                        @endcanany
-
-                        <!-- قسم الزيارات الطبية -->
-                        @canany(['view visits', 'view own visits'])
-                        <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#appointmentSection" aria-expanded="false">
-                            <span><i class="fas fa-file-medical"></i> الزيارات الطبية</span>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                        </div>
-                        <div class="collapse collapse-section" id="appointmentSection">
-
                         @can('view visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('visits.*') ? 'active' : '' }}" href="{{ route('visits.index') }}">
-                                <i class="fas fa-file-medical"></i><span> سجل الزيارات الطبية</span>
-                                <span class="badge bg-secondary ms-2">{{ $incompleteVisits }}</span>
-                            </a>
-                        </li>
-                        @endcan
-
-                        @can('view own visits')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
-                                <i class="fas fa-user-injured"></i><span> زياراتي السابقة</span>
+                                <i class="fas fa-file-medical"></i><span> سجل الزيارات العام</span>
                             </a>
                         </li>
                         @endcan
