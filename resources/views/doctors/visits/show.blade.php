@@ -1538,18 +1538,12 @@ datalist option:hover {
                                         </table>
                                     </div>{{-- end table-responsive --}}
                                 @else
-                                    <div class="text-center py-5">
-                                        <i class="fas fa-clipboard fa-4x text-muted mb-3"></i>
-                                        <h5 class="text-muted">لا توجد طلبات طبية</h5>
-                                        <p class="text-muted">اختر نوع الطلب لإنشائه</p>
-                                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#requestModal">
-                                            <i class="fas fa-flask me-1"></i>
-                                            فحوصات مختبرية
-                                        </button>
-                                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#radiologyModal">
-                                            <i class="fas fa-x-ray me-1"></i>
-                                            طلب أشعة
-                                        </button>
+                                    <div class="text-center py-5 bg-white rounded-3 border">
+                                        <div class="text-muted mb-3">
+                                            <i class="fas fa-clipboard-list fa-3x opacity-50"></i>
+                                        </div>
+                                        <h6 class="fw-bold text-dark mb-1">لا توجد طلبات طبية مسجلة لهذه الزيارة</h6>
+                                        <p class="text-muted small mb-0">يمكنك اختيار وإرسال الفحوصات والخدمات الطبية مباشرة من النموذج المقابل ➡️</p>
                                     </div>
                                 @endif
                                     </div>
