@@ -20,10 +20,17 @@ class HrActionSettingController extends Controller
             'category' => 'required|in:penalty,bonus,warning',
             'title' => 'required|string|max:255',
             'effect_type' => 'required|in:none,amount,days,percentage',
-            'effect_value' => 'required|numeric|min:0',
+            'effect_value' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
-            'is_active' => 'boolean',
         ]);
+
+        if ($validated['effect_type'] === 'none') {
+            $validated['effect_value'] = 0;
+        } elseif (empty($validated['effect_value'])) {
+            $validated['effect_value'] = 0; // fallback
+        }
+
+        $validated['is_active'] = $request->has('is_active');
 
         HrActionSetting::create($validated);
 
@@ -36,10 +43,15 @@ class HrActionSettingController extends Controller
             'category' => 'required|in:penalty,bonus,warning',
             'title' => 'required|string|max:255',
             'effect_type' => 'required|in:none,amount,days,percentage',
-            'effect_value' => 'required|numeric|min:0',
+            'effect_value' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
-            'is_active' => 'boolean',
         ]);
+
+        if ($validated['effect_type'] === 'none') {
+            $validated['effect_value'] = 0;
+        } elseif (empty($validated['effect_value'])) {
+            $validated['effect_value'] = 0;
+        }
 
         $validated['is_active'] = $request->has('is_active');
 

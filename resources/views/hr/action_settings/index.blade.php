@@ -23,6 +23,19 @@
         </div>
     @endif
 
+    
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-1"></i> <strong>يوجد خطأ في الإدخال:</strong>
+            <ul class="mb-0 mt-1">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -132,7 +145,7 @@
                                             </div>
                                             <div class="mb-3 effect-value-container" style="{{ $setting->effect_type == 'none' ? 'display: none;' : '' }}">
                                                 <label class="form-label">مقدار التأثير <span class="text-danger">*</span></label>
-                                                <input type="number" step="0.01" name="effect_value" class="form-control" value="{{ rtrim(rtrim($setting->effect_value, '0'), '.') }}" required>
+                                                <input type="number" step="0.01" name="effect_value" class="form-control" value="{{ rtrim(rtrim($setting->effect_value, '0'), '.') }}">
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">الوصف التفصيلي (اختياري)</label>
@@ -200,7 +213,7 @@
                     </div>
                     <div class="mb-3 effect-value-container" style="display: none;">
                         <label class="form-label">مقدار التأثير <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" name="effect_value" class="form-control" value="0" required>
+                        <input type="number" step="0.01" name="effect_value" class="form-control" value="0">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">الوصف التفصيلي (اختياري)</label>
