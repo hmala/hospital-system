@@ -218,6 +218,16 @@ class DoctorVisitController extends Controller
         $labTests = \App\Models\LabTest::where('is_active', true)->get();
         $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->get();
         $favoriteLabTests = UserLabTestStat::getFavoritesForUser($user->id);
+        $medicineGroups = \App\Models\UserMedicineGroup::with('medicines')
+            ->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('is_public', true);
+            })
+            ->orderByDesc('is_starred')
+            ->orderByDesc('usage_count')
+            ->orderByDesc('is_public')
+            ->orderBy('name', 'asc')
+            ->get();
 
         // Log lab tests count
         \Illuminate\Support\Facades\Log::info('Lab Tests Count: ' . $labTests->count());
@@ -458,6 +468,7 @@ class DoctorVisitController extends Controller
             'labTests',
             'labTestGroups',
             'favoriteLabTests',
+            'medicineGroups',
             'radiologyTypes',
             'icd10Codes',
             'prescribedMedications',

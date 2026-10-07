@@ -58,6 +58,10 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -114,6 +118,10 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -384,6 +392,10 @@ class RoleManagementController extends Controller
             // 💊 6. الصيدلية والمخزن الطبي
             'view pharmacy' => ['label' => 'عرض شاشة الصيدلية ونقطة البيع (POS Kanban)', 'action' => 'عرض', 'badge' => 'info'],
             'process pharmacy requests' => ['label' => 'صرف الوصفات الطبية واقتراح البدائل الدوائية', 'action' => 'معالجة', 'badge' => 'success'],
+            'view medicine groups' => ['label' => 'عرض مجموعات الأدوية المفضلة', 'action' => 'عرض', 'badge' => 'info'],
+            'create medicine groups' => ['label' => 'إنشاء مجموعة أدوية مفضلة جديدة', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit medicine groups' => ['label' => 'تعديل وتخصيص أدوية المجموعة المفضلة', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete medicine groups' => ['label' => 'حذف مجموعة أدوية مفضلة', 'action' => 'حذف', 'badge' => 'danger'],
             'view products' => ['label' => 'عرض دليل الأدوية والمواد الطبية', 'action' => 'عرض', 'badge' => 'info'],
             'create products' => ['label' => 'إضافة دواء أو مستلزم طبي جديد', 'action' => 'إضافة', 'badge' => 'success'],
             'edit products' => ['label' => 'تعديل بيانات الدواء والأسعار والباركود', 'action' => 'تعديل', 'badge' => 'warning'],
@@ -486,7 +498,8 @@ class RoleManagementController extends Controller
         // 5. Pharmacy & Inventory
         if (str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') || 
             str_contains($permissionName, 'purchase') || str_contains($permissionName, 'inventory') || 
-            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location')) {
+            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location') ||
+            str_contains($permissionName, 'medicine group')) {
             return 'pharmacy';
         }
 

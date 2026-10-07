@@ -1263,13 +1263,19 @@ datalist option:hover {
                             </div>
 
                             <!-- قسم الأدوية والوصفة الطبية الإلكترونية -->
-                            <div class="card border-success mb-4">
-                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <div class="card border-success mb-4 shadow-sm">
+                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <h5 class="mb-0 fs-6">
                                         <i class="fas fa-prescription me-2"></i>
                                         الأدوية الموصوفة (الوصفة الطبية الإلكترونية E-Prescription)
                                     </h5>
-                                    <div class="d-flex gap-2">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-warning btn-sm text-dark fw-bold" onclick="window.openSaveAsPkgModal()" title="حفظ الأدوية المكتوبة حالياً كباقة سريعة جديدة">
+                                            <i class="fas fa-save me-1"></i> حفظ كباقة سريعة
+                                        </button>
+                                        <a href="{{ route('medicine-groups.index') }}" target="_blank" class="btn btn-light btn-sm text-success" title="إدارة باقات أدويتي المفضلة">
+                                            <i class="fas fa-cog me-1"></i> إدارة الباقات
+                                        </a>
                                         <button type="button" class="btn btn-light btn-sm text-success fw-bold" onclick="addMedication()">
                                             <i class="fas fa-plus me-1"></i>
                                             إضافة دواء
@@ -1281,6 +1287,67 @@ datalist option:hover {
                                     </div>
                                 </div>
                                 <div class="card-body">
+                                    <div id="docQuickPkgWrapper" class="mb-3 p-2 bg-light rounded-3 border" style="{{ (isset($medicineGroups) && $medicineGroups->isNotEmpty()) ? '' : 'display:none;' }}">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="small fw-bold text-dark d-flex align-items-center gap-1">
+                                                <i class="fas fa-bolt text-warning"></i> باقاتي السريعة (تثبيت المفضلة بالصدارة ⭐ | نقرة لإدراج الأدوية والترتيب الذكي 🔥)
+                                            </span>
+                                            <a href="{{ route('medicine-groups.index') }}" target="_blank" class="text-decoration-none small text-muted">
+                                                <i class="fas fa-cog me-1"></i> إدارة الباقات
+                                            </a>
+                                        </div>
+                                        <div id="docQuickPkgContainer" class="d-flex flex-wrap gap-2 py-1 align-items-center">
+                                            @if(isset($medicineGroups) && $medicineGroups->isNotEmpty())
+                                                @foreach($medicineGroups as $pkg)
+                                                    <div class="doc-pkg-chip-item d-inline-flex align-items-center btn btn-sm {{ $pkg->is_starred ? 'btn-warning border-warning text-dark fw-bold shadow-sm' : ($pkg->is_public ? 'btn-outline-primary border-primary' : 'btn-outline-success border-success') }} rounded-pill p-1 pe-3 transition-all"
+                                                         data-id="{{ $pkg->id }}"
+                                                         data-is-starred="{{ $pkg->is_starred ? '1' : '0' }}"
+                                                         data-usage="{{ $pkg->usage_count ?? 0 }}"
+                                                         data-meds="{{ $pkg->medicines->map(function($m) {
+                                                             return [
+                                                                 'medicine_id' => $m->id,
+                                                                 'name' => $m->name,
+                                                                 'type' => $m->pivot->dosage_form,
+                                                                 'dosage' => $m->pivot->dosage,
+                                                                 'frequency' => $m->pivot->frequency,
+                                                                 'duration' => $m->pivot->duration,
+                                                                 'instructions' => $m->pivot->instructions,
+                                                             ];
+                                                         })->toJson() }}"
+                                                         data-pkg-name="{{ $pkg->name }}"
+                                                         title="نقرة لإضافة الأدوية | اضغط النجمة لتثبيت في الصدارة ⭐">
+                                                        
+                                                        <!-- زر تثبيت النجمة الذهبية -->
+                                                        <button type="button" 
+                                                                class="btn btn-sm btn-link p-0 me-2 text-decoration-none pkg-star-btn {{ $pkg->is_starred ? 'text-warning' : 'text-muted opacity-50' }}"
+                                                                onclick="event.stopPropagation(); window.togglePkgStar(this, {{ $pkg->id }});"
+                                                                title="{{ $pkg->is_starred ? 'إلغاء التثبيت من المفضلة' : 'تثبيت في الصدارة ⭐' }}">
+                                                            <i class="{{ $pkg->is_starred ? 'fas fa-star text-dark' : 'far fa-star' }} fs-6"></i>
+                                                        </button>
+
+                                                        <!-- محتوى الباقة القابل للنقر -->
+                                                        <span class="pkg-content-click d-inline-flex align-items-center cursor-pointer" onclick="window.applyMedPkg(this.closest('.doc-pkg-chip-item'), {{ $pkg->id }})">
+                                                            @if($pkg->is_public)
+                                                                <i class="fas fa-hospital {{ $pkg->is_starred ? 'text-dark' : 'text-primary' }} me-1"></i>
+                                                                <strong>{{ $pkg->name }}</strong>
+                                                                <span class="badge {{ $pkg->is_starred ? 'bg-dark text-white' : 'bg-primary text-white' }} rounded-pill ms-1">{{ $pkg->medicines->count() }} (عامة)</span>
+                                                            @else
+                                                                <i class="fas fa-layer-group {{ $pkg->is_starred ? 'text-dark' : 'text-success' }} me-1 opacity-75"></i>
+                                                                <strong>{{ $pkg->name }}</strong>
+                                                                <span class="badge {{ $pkg->is_starred ? 'bg-dark text-white' : 'bg-success-subtle text-success' }} rounded-pill ms-1">{{ $pkg->medicines->count() }}</span>
+                                                            @endif
+
+                                                            @if(($pkg->usage_count ?? 0) > 0)
+                                                                <span class="badge bg-light text-dark border rounded-pill ms-1 pkg-usage-badge font-monospace" style="font-size: 0.7rem;" title="عدد مرات الاستخدام">
+                                                                    <i class="fas fa-fire text-danger"></i> <span class="usage-num">{{ $pkg->usage_count }}</span>
+                                                                </span>
+                                                            @endif
+                                                        </span>
+                                                    </div>
+                                                @endforeach
+                                            @endif
+                                        </div>
+                                    </div>
                                     <div id="medicationsContainer">
                                         @if(count($prescribedMedications) > 0)
                                             @foreach($prescribedMedications as $index => $medication)
@@ -2598,6 +2665,7 @@ window.removeMedication = function(elem) {
         if (!elem) return;
         const item = elem.closest('.medication-item');
         if (item) {
+            const pkgId = item.getAttribute('data-pkg-id');
             if (typeof $ !== 'undefined' && $.fn.select2) {
                 const $s = $(item).find('.medicine-select2');
                 if ($s.length && $s.hasClass('select2-hidden-accessible')) {
@@ -2605,6 +2673,21 @@ window.removeMedication = function(elem) {
                 }
             }
             item.remove();
+
+            // إذا تم حذف دواء وكان يتبع باقة، نتحقق إن كانت أدوية الباقة قد حذفت جميعها لنلغي تحديد الباقة
+            if (pkgId) {
+                const container = document.getElementById('medicationsContainer');
+                const remaining = container ? container.querySelectorAll(`.medication-item[data-pkg-id="${pkgId}"]`).length : 0;
+                if (remaining === 0) {
+                    const chip = document.querySelector(`.doc-pkg-chip-item[data-id="${pkgId}"]`);
+                    if (chip) {
+                        chip.setAttribute('data-applied', '0');
+                        chip.classList.remove('pkg-is-selected', 'border-2', 'shadow-sm');
+                        const checkIndicator = chip.querySelector('.pkg-check-indicator');
+                        if (checkIndicator) checkIndicator.remove();
+                    }
+                }
+            }
         }
         const container = document.getElementById('medicationsContainer');
         if (container && container.querySelectorAll('.medication-item').length === 0) {
@@ -2764,6 +2847,512 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error in addMedication:', error);
         }
+    };
+
+    window.addMedicationFromPkg = function(med, pkgId) {
+        try {
+            window.addMedication();
+            const container = document.getElementById('medicationsContainer');
+            if (!container) return;
+            const newRow = container.lastElementChild;
+            if (!newRow) return;
+
+            if (pkgId) {
+                newRow.setAttribute('data-pkg-id', String(pkgId));
+                newRow.classList.add('pkg-row-' + pkgId);
+            }
+
+            const select2Elem = newRow.querySelector('.medicine-select2');
+            const idInput = newRow.querySelector('.med-id-input');
+            const nameInput = newRow.querySelector('.med-name-input');
+            const typeSelect = newRow.querySelector('.med-type-select');
+            const dosageInput = newRow.querySelector('.med-dosage-input');
+            const durationInput = newRow.querySelector('input[name*="[duration]"]');
+            const instructionsInput = newRow.querySelector('input[name*="[instructions]"]');
+
+            if (med.medicine_id && select2Elem) {
+                if (typeof $ !== 'undefined' && $.fn.select2) {
+                    $(select2Elem).val(String(med.medicine_id)).trigger('change.select2');
+                }
+                if (idInput) idInput.value = med.medicine_id;
+            }
+            if (nameInput) nameInput.value = med.name || '';
+            if (typeSelect && med.type) typeSelect.value = med.type;
+            if (dosageInput && med.dosage) dosageInput.value = med.dosage;
+            if (durationInput && med.duration) durationInput.value = med.duration;
+            if (instructionsInput && med.instructions) instructionsInput.value = med.instructions;
+
+            if (med.frequency) {
+                const freqRadio = newRow.querySelector(`input[name*="[frequency]"][value="${med.frequency}"]`);
+                if (freqRadio) freqRadio.checked = true;
+            }
+        } catch (error) {
+            console.error('Error in addMedicationFromPkg:', error);
+        }
+    };
+
+    // إدارة باقات الأدوية السريعة (تثبيت المفضلة ⭐ + الترتيب التلقائي حسب الاستخدام 🔥)
+    window.sortQuickPkgChipsInDom = function() {
+        const container = document.getElementById('docQuickPkgContainer');
+        if (!container) return;
+
+        const chips = Array.from(container.querySelectorAll('.doc-pkg-chip-item'));
+        if (chips.length <= 1) return;
+
+        chips.sort((a, b) => {
+            const starredA = parseInt(a.getAttribute('data-is-starred') || '0', 10);
+            const starredB = parseInt(b.getAttribute('data-is-starred') || '0', 10);
+            if (starredB !== starredA) return starredB - starredA;
+
+            const usageA = parseInt(a.getAttribute('data-usage') || '0', 10);
+            const usageB = parseInt(b.getAttribute('data-usage') || '0', 10);
+            if (usageB !== usageA) return usageB - usageA;
+
+            const nameA = a.getAttribute('data-pkg-name') || '';
+            const nameB = b.getAttribute('data-pkg-name') || '';
+            return nameA.localeCompare(nameB, 'ar');
+        });
+
+        chips.forEach(chip => container.appendChild(chip));
+    };
+
+    window.togglePkgStar = function(btn, groupId) {
+        if (!groupId) return;
+        const chip = btn.closest('.doc-pkg-chip-item');
+
+        btn.disabled = true;
+        fetch(`{{ url('medicine-groups') }}/${groupId}/toggle-star`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success) {
+                const isStarred = data.is_starred;
+                if (chip) {
+                    chip.setAttribute('data-is-starred', isStarred ? '1' : '0');
+                    if (isStarred) {
+                        chip.className = 'doc-pkg-chip-item d-inline-flex align-items-center btn btn-sm btn-warning border-warning text-dark fw-bold shadow-sm rounded-pill p-1 pe-3 transition-all' + (chip.classList.contains('pkg-is-selected') ? ' pkg-is-selected' : '');
+                        btn.className = 'btn btn-sm btn-link p-0 me-2 text-decoration-none pkg-star-btn text-warning';
+                        btn.innerHTML = '<i class="fas fa-star text-dark fs-6"></i>';
+                        btn.title = 'إلغاء التثبيت من المفضلة';
+                    } else {
+                        chip.className = 'doc-pkg-chip-item d-inline-flex align-items-center btn btn-sm btn-outline-success border-success rounded-pill p-1 pe-3 transition-all' + (chip.classList.contains('pkg-is-selected') ? ' pkg-is-selected' : '');
+                        btn.className = 'btn btn-sm btn-link p-0 me-2 text-decoration-none pkg-star-btn text-muted opacity-50';
+                        btn.innerHTML = '<i class="far fa-star fs-6"></i>';
+                        btn.title = 'تثبيت في الصدارة ⭐';
+                    }
+                }
+
+                window.sortQuickPkgChipsInDom();
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: isStarred ? 'success' : 'info',
+                        title: data.message,
+                        timer: 1500,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            console.error('Error toggling package star:', err);
+        });
+    };
+
+    window.applyMedPkg = function(chip, groupId) {
+        if (!chip) return;
+        try {
+            const isApplied = chip.getAttribute('data-applied') === '1';
+            const pkgName = chip.getAttribute('data-pkg-name') || 'الباقة';
+            const container = document.getElementById('medicationsContainer');
+
+            if (isApplied) {
+                // إلغاء الاختيار (Toggle Off): إزالة أدوية هذه الباقة
+                if (container && groupId) {
+                    const pkgRows = container.querySelectorAll(`.medication-item[data-pkg-id="${groupId}"]`);
+                    pkgRows.forEach(row => {
+                        if (typeof $ !== 'undefined' && $.fn.select2) {
+                            const $s = $(row).find('.medicine-select2');
+                            if ($s.length && $s.hasClass('select2-hidden-accessible')) {
+                                $s.select2('destroy');
+                            }
+                        }
+                        row.remove();
+                    });
+
+                    if (container.querySelectorAll('.medication-item').length === 0) {
+                        const notice = document.getElementById('noMedicationsNotice');
+                        if (notice) notice.style.display = 'block';
+                    }
+                }
+
+                chip.setAttribute('data-applied', '0');
+                chip.classList.remove('pkg-is-selected');
+
+                const checkIcon = chip.querySelector('.pkg-check-indicator');
+                if (checkIcon) checkIcon.remove();
+
+                // إنقاص عداد الاستخدام عند إلغاء الاختيار
+                if (groupId) {
+                    fetch(`{{ url('medicine-groups') }}/${groupId}/decrement-usage`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const newCount = data.usage_count;
+                            chip.setAttribute('data-usage', newCount);
+
+                            let badge = chip.querySelector('.pkg-usage-badge');
+                            if (badge) {
+                                if (newCount > 0) {
+                                    const numSpan = badge.querySelector('.usage-num');
+                                    if (numSpan) numSpan.textContent = newCount;
+                                } else {
+                                    badge.remove();
+                                }
+                            }
+                            window.sortQuickPkgChipsInDom();
+                        }
+                    })
+                    .catch(err => console.error('Error decrementing usage count:', err));
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'تم إلغاء اختيار: ' + pkgName,
+                        text: 'تمت إزالة أدوية هذه الباقة من جدول الوصفة.',
+                        timer: 1800,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false
+                    });
+                }
+                return;
+            }
+
+            // تطبيق واختيار الباقة (Toggle On): إضافة أدوية الباقة
+            const meds = JSON.parse(chip.getAttribute('data-meds') || '[]');
+            meds.forEach(med => window.addMedicationFromPkg(med, groupId));
+
+            chip.setAttribute('data-applied', '1');
+            chip.classList.add('pkg-is-selected');
+
+            const clickArea = chip.querySelector('.pkg-content-click');
+            if (clickArea && !chip.querySelector('.pkg-check-indicator')) {
+                const check = document.createElement('span');
+                check.className = 'badge bg-success text-white rounded-pill ms-1 pkg-check-indicator animate__animated animate__fadeIn';
+                check.style.fontSize = '0.65rem';
+                check.innerHTML = '<i class="fas fa-check"></i> مختارة';
+                clickArea.appendChild(check);
+            }
+
+            // زيادة عداد الاستخدام في الخلفية والترتيب التلقائي
+            if (groupId) {
+                fetch(`{{ url('medicine-groups') }}/${groupId}/increment-usage`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const newCount = data.usage_count;
+                        chip.setAttribute('data-usage', newCount);
+
+                        let badge = chip.querySelector('.pkg-usage-badge');
+                        if (badge) {
+                            const numSpan = badge.querySelector('.usage-num');
+                            if (numSpan) numSpan.textContent = newCount;
+                        } else {
+                            if (clickArea) {
+                                const newBadge = document.createElement('span');
+                                newBadge.className = 'badge bg-light text-dark border rounded-pill ms-1 pkg-usage-badge font-monospace';
+                                newBadge.style.fontSize = '0.7rem';
+                                newBadge.title = 'عدد مرات الاستخدام';
+                                newBadge.innerHTML = `<i class="fas fa-fire text-danger"></i> <span class="usage-num">${newCount}</span>`;
+                                clickArea.appendChild(newBadge);
+                            }
+                        }
+
+                        window.sortQuickPkgChipsInDom();
+                    }
+                })
+                .catch(err => console.error('Error incrementing usage count:', err));
+            }
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تمت إضافة باقة: ' + pkgName,
+                    text: 'تم إدراج الأدوية في الروشتة (اضغط مجدداً لإلغاء الاختيار).',
+                    timer: 2000,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false
+                });
+            }
+        } catch (err) {
+            console.error('Error applying package medicines:', err);
+        }
+    };
+
+    window.openSaveAsPkgModal = function(triggerBtn) {
+        try {
+            const container = document.getElementById('medicationsContainer');
+            if (!container) {
+                console.error('medicationsContainer not found');
+                return;
+            }
+            
+            const items = container.querySelectorAll('.medication-item');
+            const meds = [];
+            
+            items.forEach(item => {
+                const idInput = item.querySelector('.med-id-input');
+                const nameInput = item.querySelector('.med-name-input');
+                const selectEl = item.querySelector('.medicine-select2');
+                const typeSelect = item.querySelector('.med-type-select');
+                const dosageInput = item.querySelector('.med-dosage-input');
+                const durationInput = item.querySelector('input[name*="[duration]"]');
+                const instructionsInput = item.querySelector('input[name*="[instructions]"]');
+                const checkedFreq = item.querySelector('input[name*="[frequency]"]:checked');
+
+                let name = (nameInput ? nameInput.value : '').trim();
+                let medId = idInput ? idInput.value : '';
+
+                // إذا كان اسم الدواء فارغاً في حقل النص، نجلب الاسم من القائمة المحددة Select2
+                if (!name && selectEl) {
+                    if (selectEl.value && selectEl.value !== 'custom') {
+                        medId = selectEl.value;
+                        const opt = selectEl.options[selectEl.selectedIndex];
+                        if (opt) {
+                            name = opt.getAttribute('data-name') || opt.text.split('(')[0].trim();
+                        }
+                    }
+                }
+
+                if (!name && medId) {
+                    const found = (window.availableMedicinesData || []).find(x => x.id == medId);
+                    if (found) name = found.name;
+                }
+
+                if (name) {
+                    meds.push({
+                        medicine_id: medId,
+                        name: name,
+                        type: typeSelect ? typeSelect.value : 'tablet',
+                        dosage: dosageInput ? dosageInput.value : '',
+                        frequency: checkedFreq ? checkedFreq.value : '1',
+                        duration: durationInput ? durationInput.value : '',
+                        instructions: instructionsInput ? instructionsInput.value : ''
+                    });
+                }
+            });
+
+            if (meds.length === 0) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'لا توجد أدوية مضافة',
+                        text: 'يرجى كتابة أو اختيار دواء واحد على الأقل في الوصفة الطبية قبل حفظ الباقة.',
+                        confirmButtonText: 'حسناً'
+                    });
+                } else {
+                    alert('يرجى كتابة أو اختيار دواء واحد على الأقل في الوصفة الطبية قبل حفظ الباقة.');
+                }
+                return;
+            }
+
+            window._currentPendingPkgMeds = meds;
+
+            // تحديث قائمة الأدوية في المودال
+            const previewList = document.getElementById('saveRxPkgPreviewList');
+            if (previewList) {
+                let html = '';
+                meds.forEach((m, idx) => {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                            <div>
+                                <strong class="text-dark">${idx + 1}. ${m.name}</strong>
+                                <small class="text-muted d-block">${m.dosage || ''} (${m.type || ''}) - تكرار: ${m.frequency || '1'} ${m.duration ? '- لمدة ' + m.duration : ''}</small>
+                            </div>
+                            <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1"><i class="fas fa-check"></i> جاهز</span>
+                        </li>
+                    `;
+                });
+                previewList.innerHTML = html;
+            }
+
+            const countBadge = document.getElementById('saveRxPkgMedsCount');
+            if (countBadge) countBadge.textContent = meds.length;
+
+            const modalEl = document.getElementById('saveRxAsPkgModal');
+            if (modalEl) {
+                if (modalEl.parentElement !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                } else if (typeof $ !== 'undefined' && $.fn.modal) {
+                    $(modalEl).modal('show');
+                } else {
+                    modalEl.classList.add('show');
+                    modalEl.style.display = 'block';
+                }
+            }
+        } catch (err) {
+            console.error('Error opening saveRxAsPkgModal:', err);
+            alert('حدث خطأ أثناء فتح نافذة الحفظ: ' + err.message);
+        }
+    };
+
+    window.submitSaveRxAsPkg = function(btn) {
+        const nameInput = document.getElementById('saveRxPkgName');
+        const descInput = document.getElementById('saveRxPkgDesc');
+        const isPublicInput = document.getElementById('saveRxPkgIsPublic');
+        const errorAlert = document.getElementById('saveRxPkgError');
+
+        if (errorAlert) errorAlert.classList.add('d-none');
+
+        const name = (nameInput ? nameInput.value : '').trim();
+        if (!name) {
+            if (nameInput) nameInput.focus();
+            if (errorAlert) {
+                errorAlert.textContent = 'يرجى إدخال اسم الباقة (مثال: باقة نزلات البرد)';
+                errorAlert.classList.remove('d-none');
+            }
+            return;
+        }
+
+        const meds = window._currentPendingPkgMeds || [];
+        if (meds.length === 0) {
+            alert('لا توجد أدوية محددة للحفظ');
+            return;
+        }
+
+        const payload = {
+            name: name,
+            description: descInput ? descInput.value : '',
+            is_public: isPublicInput ? (isPublicInput.checked ? 1 : 0) : 0,
+            medications: meds
+        };
+
+        const originalBtnHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+
+        fetch("{{ route('medicine-groups.save-from-visit') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+
+            if (data.success && data.group) {
+                const wrapper = document.getElementById('docQuickPkgWrapper');
+                const container = document.getElementById('docQuickPkgContainer');
+                if (wrapper) wrapper.style.display = 'block';
+
+                if (container) {
+                    const isPub = data.group.is_public;
+                    const btnClass = isPub ? 'btn-outline-primary border-primary' : 'btn-outline-success border-success';
+                    const iconClass = isPub ? 'fas fa-hospital text-primary me-1' : 'fas fa-layer-group text-success me-1 opacity-75';
+                    const badgeHtml = isPub 
+                        ? `<span class="badge bg-primary text-white rounded-pill ms-1">${data.group.medicines_count} (عامة)</span>`
+                        : `<span class="badge bg-success-subtle text-success rounded-pill ms-1">${data.group.medicines_count}</span>`;
+                    
+                    const newChip = document.createElement('div');
+                    newChip.className = `doc-pkg-chip-item d-inline-flex align-items-center btn btn-sm ${btnClass} rounded-pill p-1 pe-3 transition-all animate__animated animate__bounceIn`;
+                    newChip.setAttribute('data-id', data.group.id);
+                    newChip.setAttribute('data-is-starred', '0');
+                    newChip.setAttribute('data-usage', '0');
+                    newChip.setAttribute('data-meds', JSON.stringify(data.group.meds || []));
+                    newChip.setAttribute('data-pkg-name', data.group.name);
+                    newChip.title = 'نقرة لإضافة الأدوية | اضغط النجمة لتثبيت في الصدارة ⭐';
+                    newChip.innerHTML = `
+                        <button type="button" 
+                                class="btn btn-sm btn-link p-0 me-2 text-decoration-none pkg-star-btn text-muted opacity-50"
+                                onclick="event.stopPropagation(); window.togglePkgStar(this, ${data.group.id});"
+                                title="تثبيت في الصدارة ⭐">
+                            <i class="far fa-star fs-6"></i>
+                        </button>
+                        <span class="pkg-content-click d-inline-flex align-items-center cursor-pointer" onclick="window.applyMedPkg(this.closest('.doc-pkg-chip-item'), ${data.group.id})">
+                            <i class="${iconClass}"></i>
+                            <strong>${data.group.name}</strong>
+                            ${badgeHtml}
+                        </span>
+                    `;
+                    container.prepend(newChip);
+                    window.sortQuickPkgChipsInDom();
+                }
+
+                // إغلاق المودال وتصفير الحقول
+                const modalEl = document.getElementById('saveRxAsPkgModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                if (nameInput) nameInput.value = '';
+                if (descInput) descInput.value = '';
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم حفظ الباقة بنجاح ✅',
+                        text: `تم حفظ باقة "${data.group.name}" وأصبحت متاحة فوراً في باقاتك السريعة!`,
+                        timer: 3500,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert('تم حفظ الباقة بنجاح!');
+                }
+            } else {
+                if (errorAlert) {
+                    errorAlert.textContent = data.message || 'حدث خطأ أثناء حفظ الباقة';
+                    errorAlert.classList.remove('d-none');
+                }
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+            console.error('Error saving medicine group:', err);
+            if (errorAlert) {
+                errorAlert.textContent = 'حدث خطأ في الاتصال بالخادم';
+                errorAlert.classList.remove('d-none');
+            }
+        });
     };
 
     // إدارة الأيقونات المنسدلة للمجموعات
@@ -3836,5 +4425,73 @@ function confirmSurgeryReferral() {
         });
     }
 </script>
+
+<style>
+    #saveRxAsPkgModal.modal {
+        z-index: 20050 !important;
+    }
+    #saveRxAsPkgModal .modal-dialog,
+    #saveRxAsPkgModal .modal-content {
+        pointer-events: auto !important;
+    }
+</style>
+
+<!-- Modal: حفظ الروشتة الحالية كباقة علاجية سريعة -->
+<div class="modal fade" id="saveRxAsPkgModal" tabindex="-1" aria-labelledby="saveRxAsPkgModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fs-6 fw-bold" id="saveRxAsPkgModalLabel">
+                    <i class="fas fa-layer-group me-2"></i> حفظ الروشتة الحالية كباقة سريعة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="saveRxPkgError" class="alert alert-danger d-none py-2 small mb-3"></div>
+
+                <div class="mb-3">
+                    <label for="saveRxPkgName" class="form-label fw-bold small text-dark">
+                        اسم الباقة <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" id="saveRxPkgName" class="form-control" placeholder="مثال: باقة نزلات البرد، كورس جرثومة المعدة..." maxlength="255" required autofocus>
+                </div>
+
+                <div class="mb-3">
+                    <label for="saveRxPkgDesc" class="form-label fw-bold small text-dark">
+                        وصف مختصر / ملاحظات (اختياري)
+                    </label>
+                    <input type="text" id="saveRxPkgDesc" class="form-control form-control-sm" placeholder="مثال: بروتوكول الباطنية للمرضى البالغين" maxlength="500">
+                </div>
+
+                @if(Auth::user()->isAdmin() || Auth::user()->hasRole('admin'))
+                <div class="mb-3 form-check form-switch p-3 bg-light rounded-3 border">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="saveRxPkgIsPublic" value="1">
+                    <label class="form-check-label fw-bold text-primary small cursor-pointer" for="saveRxPkgIsPublic">
+                        <i class="fas fa-hospital me-1"></i> مشاركة كباقة عامة لجميع أطباء المستشفى
+                    </label>
+                    <small class="text-muted d-block mt-1">عند التفعيل، ستظهر هذه الباقة في شاشات كافة الأطباء الاستشاريين في المستشفى.</small>
+                </div>
+                @endif
+
+                <div class="border rounded-3 p-2 bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                        <span class="small fw-bold text-dark">
+                            <i class="fas fa-pills text-success me-1"></i> الأدوية التي سيتم تضمينها بالباقة:
+                        </span>
+                        <span class="badge bg-success rounded-pill" id="saveRxPkgMedsCount">0</span>
+                    </div>
+                    <ul class="list-group list-group-flush rounded-2 border bg-white" id="saveRxPkgPreviewList" style="max-height: 180px; overflow-y: auto;">
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-success btn-sm px-4 fw-bold" onclick="window.submitSaveRxAsPkg(this)">
+                    <i class="fas fa-save me-1"></i> حفظ وتثبيت الباقة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @endsection 

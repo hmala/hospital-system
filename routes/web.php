@@ -15,6 +15,7 @@ use App\Http\Controllers\RadiologyController;
 use App\Http\Controllers\RadiologyTypeController;
 use App\Http\Controllers\SurgeryController;
 use App\Http\Controllers\UserLabTestGroupController;
+use App\Http\Controllers\UserMedicineGroupController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use Illuminate\Support\Facades\Route;
@@ -463,7 +464,27 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/groups/{group}', [UserLabTestGroupController::class, 'update'])->name('groups.update')->middleware('can:edit lab test groups');
             Route::delete('/groups/{group}', [UserLabTestGroupController::class, 'destroy'])->name('groups.destroy')->middleware('can:delete lab test groups');
         });
+    });
 
+    // إدارة مجموعات الأدوية المفضلة الشخصية للطبيب
+    Route::prefix('medicine-groups')->name('medicine-groups.')->middleware('can:view medicine groups')->group(function () {
+        Route::get('/', [UserMedicineGroupController::class, 'index'])->name('index');
+        Route::post('/', [UserMedicineGroupController::class, 'store'])->name('store')->middleware('can:create medicine groups');
+        Route::post('/save-from-visit', [UserMedicineGroupController::class, 'saveFromVisit'])->name('save-from-visit')->middleware('can:create medicine groups');
+        Route::post('/reorder', [UserMedicineGroupController::class, 'reorder'])->name('reorder')->middleware('can:edit medicine groups');
+        Route::post('/reset-usage', [UserMedicineGroupController::class, 'resetUsageCounts'])->name('reset-usage')->middleware('can:edit medicine groups');
+        Route::post('/{group}/toggle-star', [UserMedicineGroupController::class, 'toggleStar'])->name('toggle-star');
+        Route::post('/{group}/increment-usage', [UserMedicineGroupController::class, 'incrementUsage'])->name('increment-usage');
+        Route::post('/{group}/decrement-usage', [UserMedicineGroupController::class, 'decrementUsage'])->name('decrement-usage');
+        Route::post('/{group}/reset-usage', [UserMedicineGroupController::class, 'resetSingleUsage'])->name('reset-single-usage');
+        Route::get('/search-medicines', [UserMedicineGroupController::class, 'searchMedicines'])->name('search-medicines');
+        Route::get('/{group}/edit', [UserMedicineGroupController::class, 'edit'])->name('edit')->middleware('can:edit medicine groups');
+        Route::put('/{group}', [UserMedicineGroupController::class, 'update'])->name('update')->middleware('can:edit medicine groups');
+        Route::delete('/{group}', [UserMedicineGroupController::class, 'destroy'])->name('destroy')->middleware('can:delete medicine groups');
+    });
+
+    // إدارة أنواع التحاليل المختبرية - تابع (تسعير، تفاصيل، مرجعيات)
+    Route::prefix('lab-tests')->name('lab-tests.')->group(function () {
         // جدول تسعير وتصنيف الفحوصات المختبرية السريع
         Route::get('/pricing-settings', [\App\Http\Controllers\LabTestPricingController::class, 'index'])->name('pricing-settings.index');
         Route::post('/pricing-settings/save', [\App\Http\Controllers\LabTestPricingController::class, 'save'])->name('pricing-settings.save');

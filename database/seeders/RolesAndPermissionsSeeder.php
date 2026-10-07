@@ -129,6 +129,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'create lab test groups',
             'edit lab test groups',
             'delete lab test groups',
+            // صلاحيات مجموعات المفضلات للأدوية
+            'view medicine groups',
+            'create medicine groups',
+            'edit medicine groups',
+            'delete medicine groups',
             // صلاحيات الباقات (Packages)
             'view packages',
             'create packages',
@@ -241,6 +246,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'create lab test groups',
             'edit lab test groups',
             'delete lab test groups',
+            'view medicine groups',
+            'create medicine groups',
+            'edit medicine groups',
+            'delete medicine groups',
         ]);
 
         // دور المريض (Patient)

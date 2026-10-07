@@ -974,13 +974,13 @@
                         @endcanany
 
                         <!-- قسم الأطباء والعيادات -->
-                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability', 'view visits'])
+                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability', 'view visits', 'view medicine groups', 'view lab test groups'])
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="false">
+                        <div class="sidebar-section-title {{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="{{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? 'true' : 'false' }}">
                             <span><i class="fas fa-stethoscope"></i> الأطباء والعيادات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="doctorSection">
+                        <div class="collapse collapse-section {{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? 'show' : '' }}" id="doctorSection">
 
                         @can('view doctors')
                         <li class="nav-item">
@@ -1015,6 +1015,22 @@
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
                                 <i class="fas fa-user-md"></i><span> زياراتي</span>
                                 <span class="badge bg-secondary ms-2">{{ $doctorIncompleteVisits }}</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        @can('view medicine groups')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('medicine-groups.*') ? 'active' : '' }}" href="{{ route('medicine-groups.index') }}">
+                                <i class="fas fa-pills"></i><span> مجموعات الأدوية المفضلة</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        @can('view lab test groups')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
+                                <i class="fas fa-vials"></i><span> مجموعات التحاليل المفضلة</span>
                             </a>
                         </li>
                         @endcan
