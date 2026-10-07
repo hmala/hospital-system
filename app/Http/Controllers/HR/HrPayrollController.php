@@ -123,7 +123,7 @@ class HrPayrollController extends Controller
                 'tax_amount'             => $tax,
                 'net_salary'             => max(0, $netSalary),
                 'payment_method'         => $emp->payment_method ?? 'cash',
-                'status'                 => 'draft',
+                'status'                 => 'pending',
             ]);
 
             // ترحيل العقوبات/المكافآت
