@@ -654,7 +654,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('action_settings', \App\Http\Controllers\HR\HrActionSettingController::class)->except(['create', 'show', 'edit']);
 
         // نظام الرواتب
-        Route::resource('payrolls', \App\Http\Controllers\HR\HrPayrollController::class)->except(['edit', 'update', 'destroy']);
+        Route::resource('payrolls', \App\Http\Controllers\HR\HrPayrollController::class)->except(['edit', 'update']);
         Route::post('payrolls/{payroll}/approve', [\App\Http\Controllers\HR\HrPayrollController::class, 'approve'])->name('payrolls.approve');
         Route::post('payrolls/slip/{slip}', [\App\Http\Controllers\HR\HrPayrollController::class, 'updateSlip'])->name('payrolls.slip.update');
 

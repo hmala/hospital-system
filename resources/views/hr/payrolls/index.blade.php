@@ -64,9 +64,18 @@
                                 @endif
                             </td>
                             <td>
-                                <a href="{{ route('hr.payrolls.show', $cycle->id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> عرض الشيت
+                                <a href="{{ route('hr.payrolls.show', $cycle->id) }}" class="btn btn-sm btn-outline-primary" title="عرض الشيت">
+                                    <i class="fas fa-eye"></i>
                                 </a>
+                                @if($cycle->status === 'draft')
+                                <form action="{{ route('hr.payrolls.destroy', $cycle->id) }}" method="POST" class="d-inline-block">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف هذه المسودة وإعادة جميع القيود لحالة الانتظار؟')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                @endif
                             </td>
                         </tr>
                         @empty

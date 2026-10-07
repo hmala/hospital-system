@@ -218,4 +218,52 @@ class HrPayrollController extends Controller
 
         return response()->json(['success' => true, 'net_salary' => $slip->net_salary]);
     }
+
+    // حذف مسير الرواتب (إذا كان مسودة فقط) وإرجاع كل شيء لحالته السابقة
+    public function destroy(HrPayrollCycle $payroll)
+    {
+        if ($payroll->status !== 'draft') {
+            return back()->with('error', 'لا يمكن حذف مسير رواتب تم اعتماده مسبقاً.');
+        }
+
+        // إرجاع حالة المكافآت والعقوبات إلى pending
+        HrEmployeeAction::where('hr_payroll_cycle_id', $payroll->id)->update([
+            'status' => 'pending',
+            'hr_payroll_cycle_id' => null,
+        ]);
+
+        // إرجاع حالة الغيابات إلى pending
+        HrAbsence::where('hr_payroll_cycle_id', $payroll->id)->update([
+            'status' => 'pending',
+            'hr_payroll_cycle_id' => null,
+        ]);
+
+        // إرجاع حالة الإضافي إلى pending
+        HrOvertime::where('hr_payroll_cycle_id', $payroll->id)->update([
+            'status' => 'pending',
+            'hr_payroll_cycle_id' => null,
+        ]);
+
+        // إرجاع أقساط السلف
+        foreach ($payroll->payrolls as $slip) {
+            if ($slip->loan_deduction > 0) {
+                // البحث عن السلفة النشطة أو المكتملة حديثاً لنفس الموظف
+                $loan = HrLoan::where('hr_employee_id', $slip->hr_employee_id)
+                    ->orderBy('id', 'desc')->first();
+                if ($loan) {
+                    $loan->revertInstallment($slip->loan_deduction);
+                }
+            }
+        }
+
+        // سجلات الرواتب الفرعية (HrPayroll) ستحذف تلقائياً إذا كان هناك cascadeOnDelete 
+        // أو نقوم بحذفها يدوياً لتأكيد ذلك
+        $payroll->payrolls()->delete();
+
+        // حذف الدورة نفسها
+        $payroll->delete();
+
+        return redirect()->route('hr.payrolls.index')->with('success', 'تم حذف مسودة مسير الرواتب بنجاح وإعادة جميع الاستحقاقات والخصومات لحالة الانتظار.');
+    }
+
 }

@@ -12,6 +12,18 @@
             <a href="{{ route('hr.payrolls.index') }}" class="btn btn-outline-secondary">عودة</a>
             <button class="btn btn-outline-success" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
             @if($payroll->status === 'draft')
+            <form action="{{ route('hr.payrolls.destroy', $payroll->id) }}" method="POST" class="d-inline-block" id="refreshForm">
+                @csrf
+                @method('DELETE')
+                <button type="button" class="btn btn-outline-primary" onclick="if(confirm('هل أنت متأكد من رغبتك بتحديث (إعادة توليد) الشيت؟ سيتم حذف المسودة الحالية وإرجاعك لصفحة التوليد.')){ document.getElementById('refreshForm').submit(); }">
+                    <i class="fas fa-sync-alt"></i> تحديث وإعادة توليد
+                </button>
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('هل أنت متأكد من حذف هذه المسودة نهائياً وإعادة الاستحقاقات للانتظار؟')">
+                    <i class="fas fa-trash"></i> حذف المسودة
+                </button>
+            </form>
+            @endif
+            @if($payroll->status === 'draft')
             <form action="{{ route('hr.payrolls.approve', $payroll->id) }}" method="POST" class="d-inline-block">
                 @csrf
                 <button type="submit" class="btn btn-success fw-bold shadow-sm" onclick="return confirm('تأكيد اعتماد المسير؟ لا يمكن التراجع أو التعديل بعد الاعتماد.')">

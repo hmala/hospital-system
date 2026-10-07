@@ -55,4 +55,18 @@ class HrLoan extends Model
         }
         $this->save();
     }
+
+    /**
+     * استرجاع قسط تم سداده في حالة حذف مسير الرواتب
+     */
+    public function revertInstallment(float $amount): void
+    {
+        $this->paid_amount      -= $amount;
+        $this->remaining_amount += $amount;
+
+        if ($this->remaining_amount > 0 && $this->status === 'completed') {
+            $this->status = 'active';
+        }
+        $this->save();
+    }
 }
