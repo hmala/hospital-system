@@ -1421,6 +1421,28 @@
                                     <i class="fas fa-money-check-alt"></i><span> مسير الرواتب والأجور</span>
                                 </a>
                             </li>
+
+                            <!-- Submenu: الدوام والخفارات -->
+                            @php
+                                $isAttendanceActive = request()->routeIs('hr.shifts.*') || request()->routeIs('hr.schedules.*');
+                            @endphp
+                            <div class="sidebar-section-title {{ $isAttendanceActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#attendanceSubSection" aria-expanded="{{ $isAttendanceActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
+                                <span><i class="fas fa-clock me-1"></i> الدوام والخفارات</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ $isAttendanceActive ? 'show' : '' }} ps-2" id="attendanceSubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('hr.shifts.*') ? 'active' : '' }}" href="{{ route('hr.shifts.index') }}">
+                                        <i class="fas fa-calendar-day"></i><span> إعدادات الشفتات</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('hr.schedules.*') ? 'active' : '' }}" href="{{ route('hr.schedules.index') }}">
+                                        <i class="fas fa-calendar-alt"></i><span> جدول الدوام الأسبوعي</span>
+                                    </a>
+                                </li>
+                            </div>
+
                         </div>
                         @endcanany
 

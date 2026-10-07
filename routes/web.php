@@ -658,6 +658,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('payrolls/{payroll}/approve', [\App\Http\Controllers\HR\HrPayrollController::class, 'approve'])->name('payrolls.approve');
         Route::post('payrolls/slip/{slip}', [\App\Http\Controllers\HR\HrPayrollController::class, 'updateSlip'])->name('payrolls.slip.update');
 
+        // الدوام والخفارات
+        Route::resource('shifts', \App\Http\Controllers\HR\HrShiftController::class)->except(['show']);
+        Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
+
+
         // المخصصات الثابتة
         Route::post('employees/{employee}/allowances', [\App\Http\Controllers\HR\HrAllowanceController::class, 'store'])->name('employees.allowances.store');
         Route::put('employees/allowances/{allowance}', [\App\Http\Controllers\HR\HrAllowanceController::class, 'update'])->name('employees.allowances.update');
