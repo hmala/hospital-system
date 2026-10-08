@@ -987,11 +987,8 @@ class DoctorVisitController extends Controller
             'insurance_type' => $insuranceType
         ]);
 
-        $isInsurance = ($insuranceType && $insuranceType !== 'none');
         $successMsg = $request->type === 'nursing'
-            ? ($isInsurance 
-                ? 'تم إرسال إحالة الطوارئ بنجاح - تم توجيه المريض لشاشة موظف الضمان الصحي لتأكيد الحجز' 
-                : 'تم إرسال إحالة الطوارئ بنجاح - تم توجيه المريض لكاونتر استقبال الطوارئ لفتح التذكرة واستيفاء الرسوم')
+            ? 'تم إرسال طلب الإحالة للطوارئ بنجاح - سيقوم موظف الاستقبال باستكمال وحجز الحالة للمريض'
             : 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع';
 
         // التحقق من نوع الطلب (AJAX أو عادي)
@@ -1001,8 +998,7 @@ class DoctorVisitController extends Controller
                 'message' => $successMsg,
                 'request_count' => $visit->requests()->count(),
                 'request_id' => $medicalRequest->id,
-                'requires_payment' => ($request->type !== 'nursing'), // إحالة الطوارئ لا تتطلب دفع كاشير العيادات مباشرة بل توجه للضمان أو الطوارئ
-                'is_insurance' => $isInsurance,
+                'requires_payment' => ($request->type !== 'nursing'), // إحالة الطوارئ لا تتطلب دفع كاشير العيادات بل يتولاها موظف الحجز
                 'cashier_url' => route('cashier.request.payment.form', $medicalRequest->id)
             ]);
         }

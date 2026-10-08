@@ -1201,55 +1201,28 @@ datalist option:hover {
                     <!-- تاب 4: إحالة الطوارئ والتمريض -->
                     <div id="nursingCollapse" class="workstation-panel" style="display: none;">
                         @php
-                            $patientInsuranceType = optional($visit->appointment)->insurance_type ?? optional($visit->patient)->insurance_type ?? 'none';
-                            $isInsurancePatient = ($patientInsuranceType && $patientInsuranceType !== 'none');
-                            $insuranceCategoryName = optional(optional($visit->patient)->healthInsuranceCategory)->name;
                             $sentNursingRequests = $visit->requests->where('type', 'nursing');
                         @endphp
 
-                        <!-- بطاقة التوجيه والكشف الذكي لنوع المريض والتأمين -->
-                        @if($isInsurancePatient)
-                            <div class="alert alert-success border-2 border-success shadow-sm rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="bg-success text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                                        <i class="fas fa-shield-alt fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="fw-bold text-success mb-1">
-                                            🟢 المريض مشمول بنظام الضمان الصحي 
-                                            @if($insuranceCategoryName)
-                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-50 px-2 py-1 ms-1">فئة: {{ $insuranceCategoryName }}</span>
-                                            @endif
-                                        </h6>
-                                        <p class="mb-0 small text-dark">
-                                            عند إرسال الإحالة، ستظهر كطلب معلق في <strong>شاشة موظف الضمان الصحي</strong> ليقوم بتأكيد حجز الطوارئ واستكمال الإجراءات المعتمدة للمؤمّن.
-                                        </p>
-                                    </div>
+                        <!-- بطاقة تنبيه وإرشاد سريعة للطبيب -->
+                        <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-25 shadow-2xs rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-danger text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                    <i class="fas fa-ambulance fs-5"></i>
                                 </div>
-                                <span class="badge bg-success text-white px-3 py-2 fs-7 rounded-pill shadow-xs">
-                                    <i class="fas fa-route me-1"></i> التوجيه: موظف الضمان
-                                </span>
-                            </div>
-                        @else
-                            <div class="alert alert-primary border-2 border-primary shadow-sm rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                                        <i class="fas fa-user text-white fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="fw-bold text-primary mb-1">
-                                            ⚪ مريض حجز عام (نظام نقدي / غير مشمول بالضمان)
-                                        </h6>
-                                        <p class="mb-0 small text-dark">
-                                            عند إرسال الإحالة، ستظهر كطلب معلق في <strong>كاونتر / استقبال قسم الطوارئ</strong> لفتح التذكرة واستيفاء الرسوم وتأكيد الحجز فوراً.
-                                        </p>
-                                    </div>
+                                <div>
+                                    <h6 class="fw-bold text-danger mb-1">
+                                        طلب إحالة المريض لقسم الطوارئ / الخدمات التمريضية
+                                    </h6>
+                                    <p class="mb-0 small text-dark">
+                                        اكتب التوجيهات الطبية أو حدد الخدمات المطلوبة، وسيظهر الطلب فوراً لموظف الاستقبال لحجز الحالة للمريض واستكمال الإجراءات.
+                                    </p>
                                 </div>
-                                <span class="badge bg-primary text-white px-3 py-2 fs-7 rounded-pill shadow-xs">
-                                    <i class="fas fa-ambulance me-1"></i> التوجيه: استقبال الطوارئ
-                                </span>
                             </div>
-                        @endif
+                            <span class="badge bg-danger text-white px-3 py-2 fs-7 rounded-pill shadow-xs">
+                                <i class="fas fa-user-clock me-1"></i> الحجز عبر موظف الاستقبال
+                            </span>
+                        </div>
 
                         <form action="{{ route('doctor.requests.store') }}" method="POST" id="nursingReferralForm">
                             @csrf
