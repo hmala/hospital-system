@@ -520,9 +520,9 @@
                         <h6 class="stat-card-title text-info fw-bold mb-1">
                             <i class="fas fa-users me-1"></i> مراجعو العيادة للشهر
                         </h6>
-                        <h3 class="stat-card-value text-info mb-1">{{ $doctorStats['monthlyVisitsCount'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
+                        <h3 class="stat-card-value text-info mb-1">{{ $doctorStats['totalMonthlyPatients'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
                         <span class="stat-card-sub text-muted">
-                            {{ $doctorStats['monthlyRechecksCount'] }} مراجعة مجانية • {{ $doctorStats['monthlySurgeriesCount'] }} عملية
+                            {{ $doctorStats['monthlyVisitsCount'] }} كشف مكتمل • {{ $doctorStats['monthlyRechecksCount'] }} مجانية • {{ $doctorStats['monthlySurgeriesCount'] }} عملية
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #cffafe 0%, #06b6d4 100%); color: #fff;">

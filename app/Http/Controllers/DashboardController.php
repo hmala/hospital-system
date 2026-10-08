@@ -161,15 +161,46 @@ class DashboardController extends Controller
                 ->sum('amount');
 
             // 2. إحصائيات المرضى والزيارات للشهر
-            $monthlyVisitsCount = Visit::where('doctor_id', $doctor->id)
-                ->whereYear('visit_date', $year)
-                ->whereMonth('visit_date', $month)
+            $monthlyAppointmentsCount = Appointment::where('doctor_id', $doctor->id)
+                ->where(function ($q) use ($year, $month) {
+                    $q->where(function ($sq) use ($year, $month) {
+                        $sq->whereYear('appointment_date', $year)
+                           ->whereMonth('appointment_date', $month);
+                    })->orWhere(function ($sq) use ($year, $month) {
+                        $sq->whereNull('appointment_date')
+                           ->whereYear('created_at', $year)
+                           ->whereMonth('created_at', $month);
+                    });
+                })
                 ->count();
+
+            $monthlyVisitsCount = Visit::where('doctor_id', $doctor->id)
+                ->where(function ($q) use ($year, $month) {
+                    $q->where(function ($sq) use ($year, $month) {
+                        $sq->whereYear('visit_date', $year)
+                           ->whereMonth('visit_date', $month);
+                    })->orWhere(function ($sq) use ($year, $month) {
+                        $sq->whereNull('visit_date')
+                           ->whereYear('created_at', $year)
+                           ->whereMonth('created_at', $month);
+                    });
+                })
+                ->count();
+
+            $totalMonthlyPatients = max($monthlyAppointmentsCount, $monthlyVisitsCount);
 
             $monthlyRechecksCount = Appointment::where('doctor_id', $doctor->id)
                 ->where('is_free_recheck', true)
-                ->whereYear('appointment_date', $year)
-                ->whereMonth('appointment_date', $month)
+                ->where(function ($q) use ($year, $month) {
+                    $q->where(function ($sq) use ($year, $month) {
+                        $sq->whereYear('appointment_date', $year)
+                           ->whereMonth('appointment_date', $month);
+                    })->orWhere(function ($sq) use ($year, $month) {
+                        $sq->whereNull('appointment_date')
+                           ->whereYear('created_at', $year)
+                           ->whereMonth('created_at', $month);
+                    });
+                })
                 ->count();
 
             $monthlySurgeriesCount = \App\Models\Surgery::where('doctor_id', $doctor->id)
@@ -238,6 +269,8 @@ class DashboardController extends Controller
                 'monthlyPaid' => $monthlyPaid,
                 'monthlyPending' => $monthlyPending,
                 'totalAllTimePending' => $totalAllTimePending,
+                'totalMonthlyPatients' => $totalMonthlyPatients,
+                'monthlyAppointmentsCount' => $monthlyAppointmentsCount,
                 'monthlyVisitsCount' => $monthlyVisitsCount,
                 'monthlyRechecksCount' => $monthlyRechecksCount,
                 'monthlySurgeriesCount' => $monthlySurgeriesCount,
