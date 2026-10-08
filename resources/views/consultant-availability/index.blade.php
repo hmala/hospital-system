@@ -225,110 +225,167 @@
 
         <!-- Live Clinic Consultation Monitor & Compact Patient Queue (Left Side Panel - Wide & Bold Table) -->
         <div class="col-xl-7 col-lg-7">
-            <!-- 1. Live Active Consultations Bold Table Card -->
-            <div class="card border-0 shadow-sm rounded-3 bg-white mb-3">
-                <div class="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="spinner-grow spinner-grow-sm text-success" role="status" aria-hidden="true"></span>
-                        <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-stethoscope text-primary me-2"></i>العيادات الجارية الآن</h5>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-xs btn-outline-primary px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" title="عرض سجل الحركات المالية">
-                            <i class="fas fa-chart-line me-1"></i>حركات مالية
-                        </a>
-                        <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem;" title="عرض شاشة الصالة الرئيسية">
-                            <i class="fas fa-tv me-1"></i>شاشة الصالة
-                        </a>
-                        <span class="badge bg-primary text-white px-2 py-1 small">
-                            {{ $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling'])->count() }} عيادة جارية الآن
-                        </span>
+            
+            <!-- Top Section: Active Running Clinics + Today's Follow-up Appointments Side-by-Side -->
+            <div class="row g-2 mb-3">
+                <!-- 1. Live Active Consultations Card -->
+                <div class="col-lg-6 col-12">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100 d-flex flex-column">
+                        <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-1 text-truncate">
+                                <span class="spinner-grow spinner-grow-sm text-success flex-shrink-0" role="status" aria-hidden="true" style="width: 0.65rem; height: 0.65rem;"></span>
+                                <h6 class="mb-0 fw-bold text-dark small text-truncate"><i class="fas fa-stethoscope text-primary me-1"></i>العيادات الجارية الآن</h6>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-xs btn-outline-primary px-1 py-0 rounded-pill" style="font-size: 0.68rem;" title="عرض الحركات المالية">
+                                    <i class="fas fa-chart-line"></i>
+                                </a>
+                                <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-xs btn-outline-info px-1 py-0 rounded-pill" style="font-size: 0.68rem;" title="شاشة الصالة">
+                                    <i class="fas fa-tv"></i>
+                                </a>
+                                <span class="badge bg-primary text-white px-2 py-0 rounded-pill" style="font-size: 0.68rem;">
+                                    {{ $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling'])->count() }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0 overflow-auto flex-grow-1" style="height: 300px; max-height: 300px;">
+                            @php
+                                $activeRunningDocs = $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling']);
+                            @endphp
+                            @if($activeRunningDocs->count() > 0)
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                                        <thead class="table-light sticky-top">
+                                            <tr class="text-muted small text-uppercase" style="font-size: 0.72rem;">
+                                                <th>الطبيب والعيادة</th>
+                                                <th>المريض بالداخل</th>
+                                                <th class="text-center">الحالة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($activeRunningDocs as $doc)
+                                                <tr class="{{ $doc->current_status === 'in_consultation' ? 'table-primary bg-opacity-25' : ($doc->current_status === 'calling' ? 'table-warning bg-opacity-25' : '') }}">
+                                                    <!-- Doctor Name & Clinic -->
+                                                    <td class="text-truncate" style="max-width: 140px;">
+                                                        <div class="fw-bold text-dark text-truncate">د. {{ $doc->user->name }}</div>
+                                                        <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;"><i class="fas fa-clinic-medical text-secondary me-1"></i>{{ $doc->department->name ?? 'العيادة' }}</small>
+                                                    </td>
+
+                                                    <!-- Current Patient -->
+                                                    <td>
+                                                        @if($doc->current_status === 'in_consultation')
+                                                            <div class="d-flex align-items-center gap-1">
+                                                                <span class="badge bg-primary text-white rounded-pill px-1" style="font-size: 0.7rem;">#{{ $doc->current_patient_queue ?? '—' }}</span>
+                                                                <div class="text-truncate">
+                                                                    <div class="fw-bold text-primary small text-truncate">{{ $doc->current_patient_name }}</div>
+                                                                    <small class="text-muted d-block" style="font-size: 0.65rem;"><i class="fas fa-clock text-info me-1"></i>منذ {{ $doc->current_since }}</small>
+                                                                </div>
+                                                            </div>
+                                                        @elseif($doc->current_status === 'calling')
+                                                            <div class="d-flex align-items-center gap-1">
+                                                                <span class="badge bg-warning text-dark rounded-pill px-1" style="font-size: 0.7rem;">#{{ $doc->current_patient_queue ?? '—' }}</span>
+                                                                <div class="text-truncate">
+                                                                    <div class="fw-bold text-dark small text-truncate">{{ $doc->current_patient_name }}</div>
+                                                                    <small class="text-warning fw-bold d-block" style="font-size: 0.65rem;"><i class="fas fa-bullhorn me-1"></i>نداء للشاشة</small>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </td>
+
+                                                    <!-- Status Badge -->
+                                                    <td class="text-center">
+                                                        @if($doc->current_status === 'in_consultation')
+                                                            <span class="badge bg-success text-white px-1 py-0 shadow-xs" style="font-size: 0.65rem;">
+                                                                فحص
+                                                            </span>
+                                                        @elseif($doc->current_status === 'calling')
+                                                            <span class="badge bg-warning text-dark px-1 py-0 shadow-xs" style="font-size: 0.65rem;">
+                                                                نداء
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-stethoscope fa-2x mb-2 text-secondary opacity-50"></i>
+                                    <p class="mb-0 fw-bold small">لا توجد كشوفات جارية الآن</p>
+                                    <small class="text-muted" style="font-size: 0.7rem;">ستظهر العيادة هنا فور استدعاء المريض</small>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
-                <div class="card-body p-0 overflow-auto" style="max-height: 340px;">
-                    @php
-                        $activeRunningDocs = $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling']);
-                    @endphp
-                    @if($activeRunningDocs->count() > 0)
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light sticky-top">
-                                    <tr class="text-muted small text-uppercase">
-                                        <th>الطبيب والعيادة</th>
-                                        <th>المريض الحالي (بالداخل)</th>
-                                        <th style="width: 6.5rem;" class="text-center">الحالة</th>
-                                        <th style="width: 5rem;" class="text-center">طابور الانتظار</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($activeRunningDocs as $doc)
-                                        <tr class="{{ $doc->current_status === 'in_consultation' ? 'table-primary bg-opacity-25' : ($doc->current_status === 'calling' ? 'table-warning bg-opacity-25' : '') }}">
-                                            <!-- Doctor Name & Clinic -->
-                                            <td>
-                                                <div class="fw-bold text-dark fs-6">د. {{ $doc->user->name }}</div>
-                                                <small class="text-muted"><i class="fas fa-clinic-medical text-secondary me-1"></i>{{ $doc->department->name ?? 'العيادة' }}</small>
-                                            </td>
 
-                                            <!-- Current Patient -->
-                                            <td>
-                                                @if($doc->current_status === 'in_consultation')
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="badge bg-primary text-white rounded-pill px-2 fs-6 shadow-xs">#{{ $doc->current_patient_queue ?? '—' }}</span>
-                                                        <div>
-                                                            <div class="fw-bold text-primary fs-6">{{ $doc->current_patient_name }}</div>
-                                                            <small class="text-muted"><i class="fas fa-clock text-info me-1"></i>داخل منذ <strong>{{ $doc->current_since }}</strong></small>
-                                                        </div>
+                <!-- 2. Today's Follow-up Appointments from Doctors Card -->
+                <div class="col-lg-6 col-12">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info h-100 d-flex flex-column">
+                        <div class="card-header bg-info bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-1 text-truncate">
+                                <i class="fas fa-calendar-check text-info small"></i>
+                                <h6 class="mb-0 fw-bold text-dark small text-truncate">مراجعات تم جدولتها اليوم</h6>
+                            </div>
+                            <span class="badge bg-info text-dark fw-bold rounded-pill" style="font-size: 0.68rem;">
+                                {{ isset($todayScheduledFollowUps) ? $todayScheduledFollowUps->count() : 0 }}
+                            </span>
+                        </div>
+                        <div class="card-body p-2 overflow-auto flex-grow-1" style="height: 300px; max-height: 300px;">
+                            @if(isset($todayScheduledFollowUps) && $todayScheduledFollowUps->count() > 0)
+                                <div class="list-group list-group-flush">
+                                    @foreach($todayScheduledFollowUps as $fApp)
+                                        <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
+                                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                                <div class="text-truncate">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">
+                                                            {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
+                                                        </strong>
+                                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.62rem;">
+                                                            مراجعة مجانية
+                                                        </span>
                                                     </div>
-                                                @elseif($doc->current_status === 'calling')
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="badge bg-warning text-dark rounded-pill px-2 fs-6 shadow-xs">#{{ $doc->current_patient_queue ?? '—' }}</span>
-                                                        <div>
-                                                            <div class="fw-bold text-dark fs-6">{{ $doc->current_patient_name }}</div>
-                                                            <small class="text-warning fw-bold"><i class="fas fa-bullhorn me-1"></i>تم النداء للشاشة</small>
-                                                        </div>
-                                                    </div>
-                                                @endif
-                                            </td>
-
-                                            <!-- Status Badge -->
-                                            <td class="text-center">
-                                                @if($doc->current_status === 'in_consultation')
-                                                    <span class="badge bg-success text-white px-2 py-1 shadow-xs fw-bold">
-                                                        <i class="fas fa-user-check me-1"></i> قيد الفحص
-                                                    </span>
-                                                @elseif($doc->current_status === 'calling')
-                                                    <span class="badge bg-warning text-dark px-2 py-1 shadow-xs fw-bold">
-                                                        <i class="fas fa-bell me-1"></i> استدعاء
-                                                    </span>
-                                                @endif
-                                            </td>
-
-                                            <!-- Waiting Count -->
-                                            <td class="text-center">
-                                                <span class="badge {{ $doc->waiting_patients_count > 0 ? 'bg-primary' : 'bg-light text-secondary border' }} rounded-pill px-2 py-1 fs-6">
-                                                    {{ $doc->waiting_patients_count }}
-                                                </span>
-                                            </td>
-                                        </tr>
+                                                    <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
+                                                        <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
+                                                        — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">{{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->format('Y-m-d') : '—' }}</strong>
+                                                        ({{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->locale('ar')->dayName : '' }})
+                                                    </small>
+                                                    @if($fApp->notes)
+                                                        <small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;">
+                                                            <i class="fas fa-comment-medical text-warning me-1"></i>{{ $fApp->notes }}
+                                                        </small>
+                                                    @endif
+                                                </div>
+                                                <div class="flex-shrink-0">
+                                                    <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
+                                                        <i class="fas fa-print me-1"></i> طباعة
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endforeach
-                                </tbody>
-                            </table>
+                                </div>
+                            @else
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-calendar-alt fa-2x mb-2 text-secondary opacity-50"></i>
+                                    <p class="mb-0 fw-bold small">لا توجد مراجعات مجدولة اليوم بعد</p>
+                                    <small class="text-muted" style="font-size: 0.7rem;">ستظهر هنا أي مراجعة يحددها الطبيب فور إنهاء الزيارة</small>
+                                </div>
+                            @endif
                         </div>
-                    @else
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-stethoscope fa-2x mb-2 text-secondary"></i>
-                            <p class="mb-0 fw-bold">لا توجد كشوفات جارية حالياً</p>
-                            <small class="text-secondary">ستظهر هنا العيادة فور بدء الكشف على مريض أو استدعائه من قبل الطبيب</small>
-                        </div>
-                    @endif
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. Compact Today's Patient Queue & Payment Actions Card -->
+            <!-- Bottom Section: Today's Patient Queue & Pending Tests -->
+            <!-- 3. Compact Today's Patient Queue & Payment Actions Card -->
             <div class="card border-0 shadow-sm rounded-3 bg-white mb-3">
-                <div class="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
+                <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-users-line text-success fs-5"></i>
-                        <h6 class="mb-0 fw-bold text-dark">طابور الحجوزات والقبض</h6>
+                        <i class="fas fa-users-line text-success fs-6"></i>
+                        <h6 class="mb-0 fw-bold text-dark small">طابور الحجوزات والقبض</h6>
                     </div>
                     @if(isset($todayAppointments))
                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small">
@@ -336,7 +393,7 @@
                         </span>
                     @endif
                 </div>
-                <div class="card-body p-2 overflow-auto" style="max-height: 380px;">
+                <div class="card-body p-2 overflow-auto" style="max-height: 340px;">
                     @if(isset($todayAppointments) && $todayAppointments->count() > 0)
                         <div class="list-group list-group-flush">
                             @foreach($todayAppointments as $appointment)
@@ -416,7 +473,7 @@
                 </div>
             </div>
 
-            <!-- 3. Compact Ultrasound / Lab Requests Card (If Any) -->
+            <!-- 4. Compact Ultrasound / Lab Requests Card (If Any) -->
             @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
                 <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3">
                     <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
@@ -447,54 +504,6 @@
                                             @else
                                                 <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
                                             @endcan
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            <!-- 4. Compact Today's Follow-up Appointments from Doctors Card -->
-            @if(isset($todayScheduledFollowUps) && $todayScheduledFollowUps->count() > 0)
-                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
-                    <div class="card-header bg-info bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-1">
-                            <i class="fas fa-calendar-check text-info small"></i>
-                            <h6 class="mb-0 fw-bold text-dark small">مراجعات تم جدولتها اليوم من العيادات</h6>
-                        </div>
-                        <span class="badge bg-info text-dark fw-bold small">{{ $todayScheduledFollowUps->count() }}</span>
-                    </div>
-                    <div class="card-body p-2 overflow-auto" style="max-height: 280px;">
-                        <div class="list-group list-group-flush">
-                            @foreach($todayScheduledFollowUps as $fApp)
-                                <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
-                                    <div class="d-flex justify-content-between align-items-center gap-2">
-                                        <div class="text-truncate">
-                                            <div class="d-flex align-items-center gap-1">
-                                                <strong class="text-dark small text-truncate">
-                                                    {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
-                                                </strong>
-                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.65rem;">
-                                                    مراجعة مجانية
-                                                </span>
-                                            </div>
-                                            <small class="text-muted d-block" style="font-size: 0.72rem;">
-                                                <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
-                                                — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">{{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->format('Y-m-d') : '—' }}</strong>
-                                                ({{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->locale('ar')->dayName : '' }})
-                                            </small>
-                                            @if($fApp->notes)
-                                                <small class="text-secondary d-block text-truncate" style="font-size: 0.68rem;">
-                                                    <i class="fas fa-comment-medical text-warning me-1"></i>{{ $fApp->notes }}
-                                                </small>
-                                            @endif
-                                        </div>
-                                        <div class="flex-shrink-0">
-                                            <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
-                                                <i class="fas fa-print me-1"></i> طباعة الوصل
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
