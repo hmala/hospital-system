@@ -1232,71 +1232,61 @@ datalist option:hover {
                             <div class="card border shadow-xs rounded-3 mb-3 bg-white">
                                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0 fw-bold text-dark small">
-                                        <i class="fas fa-stethoscope text-danger me-1"></i> تحديد الإجراءات والخدمات التمريضية المطلوبة
+                                        <i class="fas fa-ambulance text-danger me-1"></i> إحالة طبية إلى قسم الطوارئ والتمريض
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
                                         <label class="small fw-bold text-secondary mb-0">درجة الأولوية:</label>
-                                        <select name="priority" class="form-select form-select-sm py-0" style="width: 120px; font-size: 0.8rem;">
-                                            <option value="urgent" selected>⚡ عاجل</option>
-                                            <option value="emergency">🚨 طارئ جداً</option>
-                                            <option value="normal">عادي</option>
+                                        <select name="priority" class="form-select form-select-sm py-0" style="width: 125px; font-size: 0.8rem;">
+                                            <option value="urgent" selected>⚡ عاجل (Urgent)</option>
+                                            <option value="emergency">🚨 طارئ جداً (STAT)</option>
+                                            <option value="normal">عادي (Routine)</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="card-body p-3">
-                                    <!-- حقل الملاحظات والتوجيهات -->
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold small text-dark"><i class="fas fa-comment-medical text-primary me-1"></i> توجيهات وملاحظات الطبيب لطاقم الطوارئ والتمريض:</label>
-                                        <textarea name="description" class="form-control form-control-sm rounded-2" rows="2" placeholder="اكتب التوجيهات الطبية (مثل: إعطاء مغذي رينجر مع مسكن وريدي، قياس الضغط كل 15 دقيقة، عمل تبخيرة فنتولين...)"></textarea>
-                                    </div>
-
-                                    <!-- حقل البحث عن خدمة -->
+                                    <!-- حقل التوجيهات الطبية مع مقترحات سريعة -->
                                     <div class="mb-2">
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
-                                            <input type="text" id="nursingSearchInput" class="form-control" placeholder="بحث سريع عن خدمة تمريضية (حقن، تبخيرة، تضميد، سوائل وريدية...)...">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small text-dark mb-0">
+                                                <i class="fas fa-comment-medical text-primary me-1"></i> توجيهات وملاحظات الطبيب لطاقم الطوارئ:
+                                            </label>
+                                            <span class="text-muted" style="font-size: 0.72rem;">* يتولى كادر الطوارئ تقديم وتقييم الخدمات المناسبة</span>
                                         </div>
+                                        <textarea name="description" id="referralDirectionsText" class="form-control form-control-sm rounded-2" rows="3" placeholder="اكتب التوجيهات الطبية المباشرة لطاقم الطوارئ (مثلاً: إعطاء محلول ملحي وريدي + مسكن، عمل تبخيرة فنتولين، متابعة العلامات الحيوية كل 15 دقيقة...)"></textarea>
                                     </div>
 
-                                    <!-- قائمة الخدمات التمريضية -->
-                                    <div id="nursingServicesContainer" style="max-height: 280px; overflow-y: auto;" class="border rounded-2 p-2 bg-light">
-                                        @forelse($emergencyServices as $category => $services)
-                                            <div class="mb-2">
-                                                <div class="d-flex justify-content-between align-items-center mb-1 px-2 py-1 bg-white border rounded">
-                                                    <strong class="text-dark small"><i class="fas fa-tag text-secondary me-1"></i>{{ $category ?: 'خدمات أخرى' }}</strong>
-                                                    <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ count($services) }}</span>
-                                                </div>
-                                                <div class="row g-1">
-                                                    @foreach($services as $service)
-                                                        <div class="col-md-6 col-12 nursing-service-item" data-service-name="{{ strtolower($service->name) }}">
-                                                            <label class="list-group-item d-flex align-items-center p-2 rounded border bg-white shadow-2xs h-100" style="cursor: pointer;">
-                                                                <input class="form-check-input me-2 flex-shrink-0" type="checkbox" name="nursing_services[]" value="{{ $service->id }}" id="nursing_service_{{ $service->id }}" style="width: 16px; height: 16px; cursor: pointer;">
-                                                                <div class="flex-grow-1 text-truncate">
-                                                                    <span class="fw-semibold text-dark d-block text-truncate" style="font-size: 0.82rem;">{{ $service->name }}</span>
-                                                                    <small class="text-muted" style="font-size: 0.7rem;">{{ number_format($service->price, 0) }} د.ع</small>
-                                                                </div>
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @empty
-                                            <div class="alert alert-warning py-2 mb-0 small">
-                                                <i class="fas fa-info-circle me-1"></i> لا توجد خدمات تمريضية معرفة حالياً
-                                            </div>
-                                        @endforelse
+                                    <!-- أزرار سريعة للتوجيهات الشائعة -->
+                                    <div class="d-flex flex-wrap gap-1 align-items-center mt-2 pt-2 border-top">
+                                        <span class="small text-muted me-1" style="font-size: 0.72rem;"><i class="fas fa-magic text-warning me-1"></i>إضافة سريعة:</span>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('إعطاء محلول وريدي (Normal Saline 500ml) STAT')">+ محلول وريدي STAT</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('جلسة تبخيرة فنتولين (Ventolin Nebulizer)')">+ تبخيرة فنتولين</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('إبرة مسكن عضلي / وريدي')">+ مسكن ألم</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('مراقبة العلامات الحيوية والضغط والنبض')">+ مراقبة العلامات الحيوية</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('فحص سكر الدم العشوائي (RBS)')">+ قياس سكر الدم</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('تضميد وعناية بجرح')">+ تضميد جرح</button>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center">
-                                    <div class="small text-muted" id="selectedNursingCount" style="display: none;">
-                                        <i class="fas fa-check-circle text-success me-1"></i> تم اختيار <strong id="nursingCountNumber" class="text-success">0</strong> خدمة
-                                    </div>
-                                    <button type="submit" class="btn btn-danger btn-sm px-3 shadow-sm fw-bold rounded-pill ms-auto">
-                                        <i class="fas fa-paper-plane me-1"></i> إرسال إحالة الطوارئ والتمريض 🚀
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> سيتم توجيه المريض فوراً للاستعلامات لتأكيد دخوله الطوارئ.</small>
+                                    <button type="submit" class="btn btn-danger btn-sm px-4 shadow-sm fw-bold rounded-pill">
+                                        <i class="fas fa-paper-plane me-1"></i> إرسال الإحالة إلى الطوارئ 🚀
                                     </button>
                                 </div>
                             </div>
                         </form>
+
+                        <script>
+                            function appendReferralText(text) {
+                                const ta = document.getElementById('referralDirectionsText');
+                                if (!ta) return;
+                                if (ta.value.trim() === '') {
+                                    ta.value = text;
+                                } else {
+                                    ta.value += ' + ' + text;
+                                }
+                                ta.focus();
+                            }
+                        </script>
 
                         <!-- سجل الإحالات السابقة الصادرة من هذه الزيارة -->
                         @if($sentNursingRequests->count() > 0)
