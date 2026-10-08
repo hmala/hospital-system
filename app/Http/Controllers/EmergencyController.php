@@ -1398,31 +1398,85 @@ class EmergencyController extends Controller
             ? implode(' | ', $descriptionParts)
             : 'رسوم طوارئ';
 
-        if ($existingPayment) {
-            $existingPayment->update([
+        $isInsurance = (bool)($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory));
+        $emergencyCopay = $isInsurance ? $emergency->patient->getCopayPercentageFor('emergency') : 100.0;
+        $patientShare = $isInsurance ? round($totalAmount * ($emergencyCopay / 100.0), 2) : $totalAmount;
+        $insuranceShare = $isInsurance ? round($totalAmount - $patientShare, 2) : 0.0;
+
+        // إذا كان المريض مشمولاً بالضمان بنسبة 0% على المريض (تغطية كاملة 100% من هيئة الضمان)
+        $isFullyCoveredByInsurance = $isInsurance && $patientShare <= 0 && $totalAmount > 0;
+
+        if ($isFullyCoveredByInsurance) {
+            $paymentData = [
+                'emergency_id' => $emergency->id,
                 'patient_id' => $emergency->patient_id,
-                'amount' => $totalAmount,
-                'description' => $description,
+                'amount' => 0.00,
+                'total_amount' => $totalAmount,
+                'patient_share' => 0.00,
+                'insurance_share' => $insuranceShare,
+                'insurance_type' => 'hi',
+                'copay_percentage' => $emergencyCopay,
+                'insurance_card_no' => $emergency->patient->insurance_card_no ?? null,
+                'payment_type' => 'emergency',
+                'payment_method' => 'insurance',
+                'claim_status' => 'claimed',
+                'description' => $description . ' (مغطاة بالكامل بالضمان الصحي)',
+                'paid_at' => now(),
+            ];
+
+            if ($existingPayment) {
+                $existingPayment->update($paymentData);
+                $payment = $existingPayment;
+            } else {
+                $paymentData['receipt_number'] = Payment::generateReceiptNumber();
+                $payment = Payment::create($paymentData);
+            }
+
+            // ربط معرف الدفع بالخدمات حتى تعتبر مسددة ومسجلة في حساب الضمان
+            \DB::table('emergency_emergency_service')
+                ->where('emergency_id', $emergency->id)
+                ->whereNull('payment_id')
+                ->update(['payment_id' => $payment->id]);
+
+            if ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) {
+                $emergency->update(['follow_up_payment_id' => $payment->id]);
+            }
+
+            $emergency->update([
+                'payment_status' => 'paid',
+                'payment_id' => $payment->id,
             ]);
 
+            return $payment;
+        }
+
+        $paymentData = [
+            'patient_id' => $emergency->patient_id,
+            'amount' => $patientShare,
+            'total_amount' => $totalAmount,
+            'patient_share' => $patientShare,
+            'insurance_share' => $insuranceShare,
+            'insurance_type' => $isInsurance ? 'hi' : 'none',
+            'copay_percentage' => $emergencyCopay,
+            'insurance_card_no' => $emergency->patient?->insurance_card_no,
+            'payment_type' => 'emergency',
+            'payment_method' => 'pending',
+            'description' => $description,
+            'paid_at' => null,
+        ];
+
+        if ($existingPayment) {
+            $existingPayment->update($paymentData);
             $emergency->update([
                 'payment_status' => 'pending',
                 'payment_id' => $existingPayment->id,
             ]);
-
             return $existingPayment;
         }
 
-        $payment = Payment::create([
-            'emergency_id' => $emergency->id,
-            'patient_id' => $emergency->patient_id,
-            'amount' => $totalAmount,
-            'payment_type' => 'emergency',
-            'payment_method' => 'pending',
-            'description' => $description,
-            'receipt_number' => Payment::generateReceiptNumber(),
-            'paid_at' => null,
-        ]);
+        $paymentData['emergency_id'] = $emergency->id;
+        $paymentData['receipt_number'] = Payment::generateReceiptNumber();
+        $payment = Payment::create($paymentData);
 
         $emergency->update([
             'payment_status' => 'pending',
