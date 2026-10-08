@@ -610,7 +610,7 @@
             <nav class="col-md-3 col-lg-2 d-md-block sidebar">
                 <div class="position-sticky pt-0">
                     <div class="sidebar-header text-center p-3">
-                        <img src="{{ asset('images/logo.jpeg') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                        <img src="{{ asset('images/logo.jpeg') }}" alt="HERAMZ RP" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                         <div class="sidebar-user">
                             <div><i class="fas fa-user-circle"></i> <span>{{ Auth::user()->name }}</span></div>
                             <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
