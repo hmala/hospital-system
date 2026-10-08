@@ -156,7 +156,7 @@
                                                         <span class="badge bg-success-subtle text-success ms-1">ضمان صحي</span>
                                                     @endif
                                                 </td>
-                                                <td>{{ number_format($srvPricing['price'], 2) }} IQD</td>
+                                                <td>{{ number_format($srvPricing['approved_price'], 2) }} IQD</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -186,7 +186,7 @@
                                                     @endphp
                                                     <div class="d-inline-flex align-items-center gap-1 mb-1 me-2">
                                                         <span class="badge bg-primary">{{ $test->name }}</span>
-                                                        <span class="badge bg-light text-dark border">{{ number_format($tPricing['price'], 0) }} د.ع</span>
+                                                        <span class="badge bg-light text-dark border">{{ number_format($tPricing['approved_price'], 0) }} د.ع</span>
                                                     </div>
                                                 @endforeach
                                             </td>
@@ -224,7 +224,7 @@
                                                     @endphp
                                                     <div class="d-inline-flex align-items-center gap-1 mb-1 me-2">
                                                         <span class="badge bg-info">{{ $type->name }}</span>
-                                                        <span class="badge bg-light text-dark border">{{ number_format($rPricing['price'], 0) }} د.ع</span>
+                                                        <span class="badge bg-light text-dark border">{{ number_format($rPricing['approved_price'], 0) }} د.ع</span>
                                                     </div>
                                                 @endforeach
                                             </td>
@@ -256,8 +256,8 @@
                                     $invoiceItems[] = [
                                         'name' => $service->name . ($isInsurance && $srvPricing['is_covered'] ? ' (ضمان صحي)' : ''),
                                         'qty' => 1,
-                                        'price' => $srvPricing['price'],
-                                        'total' => $srvPricing['price']
+                                        'price' => $srvPricing['approved_price'],
+                                        'total' => $srvPricing['approved_price']
                                     ];
                                 }
 
@@ -268,8 +268,8 @@
                                         $invoiceItems[] = [
                                             'name' => '[تحاليل] ' . $test->name . ($isInsurance && $tPricing['is_covered'] ? ' (ضمان صحي)' : ''),
                                             'qty' => 1,
-                                            'price' => $tPricing['price'],
-                                            'total' => $tPricing['price']
+                                            'price' => $tPricing['approved_price'],
+                                            'total' => $tPricing['approved_price']
                                         ];
                                     }
                                 }
@@ -281,8 +281,8 @@
                                         $invoiceItems[] = [
                                             'name' => '[أشعة] ' . $type->name . ($isInsurance && $rPricing['is_covered'] ? ' (ضمان صحي)' : ''),
                                             'qty' => 1,
-                                            'price' => $rPricing['price'],
-                                            'total' => $rPricing['price']
+                                            'price' => $rPricing['approved_price'],
+                                            'total' => $rPricing['approved_price']
                                         ];
                                     }
                                 }
