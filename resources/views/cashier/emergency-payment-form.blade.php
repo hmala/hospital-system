@@ -111,6 +111,29 @@
                                 <hr>
                             @endif
 
+                            @php
+                                $em = $payment->emergency;
+                                $isInsurance = false;
+                                if (isset($em->is_insured)) {
+                                    $isInsurance = (bool) $em->is_insured;
+                                } elseif (isset($em->insurance_type) && $em->insurance_type !== 'none') {
+                                    $isInsurance = true;
+                                } elseif ($em->patient && ($em->patient->insurance_type === 'hi' || $em->patient->healthInsuranceCategory)) {
+                                    $isInsurance = true;
+                                }
+                                if ($payment->insurance_type === 'none') {
+                                    $isInsurance = false;
+                                } elseif ($payment->payment_method === 'insurance' || ($payment->insurance_share > 0)) {
+                                    $isInsurance = true;
+                                }
+
+                                $insuranceType = $isInsurance ? 'hi' : 'none';
+                                $patient = $em->patient;
+                                $emergencyCopay = $isInsurance && $patient ? $patient->getCopayPercentageFor('emergency') : 100.0;
+                                $labCopay = $isInsurance && $patient ? $patient->getCopayPercentageFor('lab') : 100.0;
+                                $radCopay = $isInsurance && $patient ? $patient->getCopayPercentageFor('radiology') : 100.0;
+                            @endphp
+
                             @if($payment->emergency->services->count() > 0)
                             <div class="table-responsive mb-3">
                                 <h6>خدمات الطوارئ</h6>
@@ -123,10 +146,18 @@
                                     </thead>
                                     <tbody>
                                         @foreach($payment->emergency->services as $service)
-                                        <tr>
-                                            <td>{{ $service->name }}</td>
-                                            <td>{{ number_format($service->price, 2) }} IQD</td>
-                                        </tr>
+                                            @php
+                                                $srvPricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+                                            @endphp
+                                            <tr>
+                                                <td>
+                                                    {{ $service->name }}
+                                                    @if($isInsurance && $srvPricing['is_covered'])
+                                                        <span class="badge bg-success-subtle text-success ms-1">ضمان صحي</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ number_format($srvPricing['price'], 2) }} IQD</td>
+                                            </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
@@ -150,7 +181,13 @@
                                             <td>#{{ $labReq->id }}</td>
                                             <td>
                                                 @foreach($labReq->labTests as $test)
-                                                    <span class="badge bg-primary me-1">{{ $test->name }}</span>
+                                                    @php
+                                                        $tPricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
+                                                    @endphp
+                                                    <div class="d-inline-flex align-items-center gap-1 mb-1 me-2">
+                                                        <span class="badge bg-primary">{{ $test->name }}</span>
+                                                        <span class="badge bg-light text-dark border">{{ number_format($tPricing['price'], 0) }} د.ع</span>
+                                                    </div>
                                                 @endforeach
                                             </td>
                                             <td>
@@ -182,7 +219,13 @@
                                             <td>#{{ $radReq->id }}</td>
                                             <td>
                                                 @foreach($radReq->radiologyTypes as $type)
-                                                    <span class="badge bg-info me-1">{{ $type->name }}</span>
+                                                    @php
+                                                        $rPricing = $type->calculateInsurancePricing($insuranceType, $radCopay);
+                                                    @endphp
+                                                    <div class="d-inline-flex align-items-center gap-1 mb-1 me-2">
+                                                        <span class="badge bg-info">{{ $type->name }}</span>
+                                                        <span class="badge bg-light text-dark border">{{ number_format($rPricing['price'], 0) }} د.ع</span>
+                                                    </div>
                                                 @endforeach
                                             </td>
                                             <td>
@@ -209,22 +252,24 @@
 
                                 // إضافة الخدمات غير المدفوعة فقط
                                 foreach($payment->emergency->services->whereIn('id', $unpaidServiceIds) as $service) {
+                                    $srvPricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
                                     $invoiceItems[] = [
-                                        'name' => $service->name,
+                                        'name' => $service->name . ($isInsurance && $srvPricing['is_covered'] ? ' (ضمان صحي)' : ''),
                                         'qty' => 1,
-                                        'price' => $service->price,
-                                        'total' => $service->price
+                                        'price' => $srvPricing['price'],
+                                        'total' => $srvPricing['price']
                                     ];
                                 }
 
                                 // إضافة طلبات التحاليل غير المدفوعة فقط
                                 foreach($payment->emergency->labRequests->whereNull('payment_id') as $labReq) {
                                     foreach($labReq->labTests as $test) {
+                                        $tPricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
                                         $invoiceItems[] = [
-                                            'name' => '[تحاليل] ' . $test->name,
+                                            'name' => '[تحاليل] ' . $test->name . ($isInsurance && $tPricing['is_covered'] ? ' (ضمان صحي)' : ''),
                                             'qty' => 1,
-                                            'price' => $test->price,
-                                            'total' => $test->price
+                                            'price' => $tPricing['price'],
+                                            'total' => $tPricing['price']
                                         ];
                                     }
                                 }
@@ -232,11 +277,12 @@
                                 // إضافة طلبات الأشعة غير المدفوعة فقط
                                 foreach($payment->emergency->radiologyRequests->whereNull('payment_id') as $radReq) {
                                     foreach($radReq->radiologyTypes as $type) {
+                                        $rPricing = $type->calculateInsurancePricing($insuranceType, $radCopay);
                                         $invoiceItems[] = [
-                                            'name' => '[أشعة] ' . $type->name,
+                                            'name' => '[أشعة] ' . $type->name . ($isInsurance && $rPricing['is_covered'] ? ' (ضمان صحي)' : ''),
                                             'qty' => 1,
-                                            'price' => $type->base_price ?? 0,
-                                            'total' => $type->base_price ?? 0
+                                            'price' => $rPricing['price'],
+                                            'total' => $rPricing['price']
                                         ];
                                     }
                                 }
@@ -264,9 +310,11 @@
                                 }
 
                                 $subtotal = array_sum(array_column($invoiceItems, 'total'));
+                                $insuranceCoveredAmount = $payment->insurance_share > 0 ? (float)$payment->insurance_share : ($payment->total_amount > 0 ? (float)$payment->total_amount - (float)$payment->amount : 0);
+                                $patientRequiredAmount = (float)$payment->amount;
                                 $paidAmount = $payment->paid_at ? $payment->amount : 0;
-                                $dueAmount = max(0, $subtotal - $paidAmount);
-                                $totalInvoiceAmount = $subtotal; // نعرض المجموع من العناصر الفعلية
+                                $dueAmount = max(0, $patientRequiredAmount - $paidAmount);
+                                $totalInvoiceAmount = $subtotal > 0 ? $subtotal : (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
                             @endphp
 
                             <div class="card mt-4 border-dark">
@@ -301,20 +349,30 @@
                                             </tbody>
                                             <tfoot>
                                                 <tr>
-                                                    <th colspan="3" class="text-end">المجموع الفرعي</th>
-                                                    <th class="text-end">{{ number_format($subtotal, 2) }} IQD</th>
+                                                    <th colspan="3" class="text-end">المجموع الإجمالي</th>
+                                                    <th class="text-end">{{ number_format($totalInvoiceAmount, 2) }} IQD</th>
                                                 </tr>
+                                                @if($isInsurance && $insuranceCoveredAmount > 0)
+                                                <tr class="table-info">
+                                                    <th colspan="3" class="text-end text-success">
+                                                        <i class="fas fa-shield-alt me-1"></i> تغطية هيئة الضمان الصحي
+                                                    </th>
+                                                    <th class="text-end text-success">- {{ number_format($insuranceCoveredAmount, 2) }} IQD</th>
+                                                </tr>
+                                                <tr class="table-warning">
+                                                    <th colspan="3" class="text-end fw-bold">
+                                                        المبلغ المستحق على المريض نقدياً
+                                                    </th>
+                                                    <th class="text-end fw-bold">{{ number_format($patientRequiredAmount, 2) }} IQD</th>
+                                                </tr>
+                                                @endif
                                                 <tr>
                                                     <th colspan="3" class="text-end">المدفوع</th>
                                                     <th class="text-end">{{ number_format($paidAmount, 2) }} IQD</th>
                                                 </tr>
                                                 <tr>
-                                                    <th colspan="3" class="text-end">المتبقي</th>
-                                                    <th class="text-end">{{ number_format($dueAmount, 2) }} IQD</th>
-                                                </tr>
-                                                <tr class="table-success">
-                                                    <th colspan="3" class="text-end">الإجمالي</th>
-                                                    <th class="text-end">{{ number_format($totalInvoiceAmount, 2) }} IQD</th>
+                                                    <th colspan="3" class="text-end">المتبقي المطلوب قبضه</th>
+                                                    <th class="text-end text-danger fw-bold">{{ number_format($dueAmount, 2) }} IQD</th>
                                                 </tr>
                                             </tfoot>
                                         </table>
@@ -325,8 +383,8 @@
 
                             <div class="mt-3 p-3 bg-light rounded">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">المجموع الكلي:</h5>
-                                    <h4 class="mb-0 text-success">{{ number_format($totalInvoiceAmount, 2) }} IQD</h4>
+                                    <h5 class="mb-0">المبلغ المطلوب قبضه نقدياً:</h5>
+                                    <h4 class="mb-0 text-success">{{ number_format($dueAmount, 2) }} IQD</h4>
                                 </div>
                             </div>
                         </div>

@@ -1671,6 +1671,7 @@ class CashierController extends Controller
 
         $payment->load([
             'emergency.patient.user',
+            'emergency.patient.healthInsuranceCategory',
             'emergency.services',
             'emergency.labRequests.labTests',
             'emergency.radiologyRequests.radiologyTypes',
