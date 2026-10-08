@@ -100,6 +100,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.index');
     Route::get('/consultant-availability/live-status', [ConsultantAvailabilityController::class, 'liveStatus'])
         ->name('consultant-availability.live-status');
+    Route::get('/consultant-availability/search-follow-ups', [ConsultantAvailabilityController::class, 'searchFollowUps'])
+        ->name('consultant-availability.search-follow-ups');
     Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
         ->name('consultant-availability.financial-movements');
     Route::get('/consultant-availability/financial-movements/export', [ConsultantAvailabilityController::class, 'exportFinancialMovements'])

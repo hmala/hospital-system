@@ -320,75 +320,161 @@
                     </div>
                 </div>
 
-                <!-- 2. Today's Follow-up Appointments from Doctors Card -->
+                <!-- 2. Today's Follow-up Appointments from Doctors Card with Sub-tabs -->
                 <div class="col-lg-6 col-12">
                     <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info h-100 d-flex flex-column">
-                        <div class="card-header bg-info bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center gap-1 text-truncate">
-                                <i class="fas fa-calendar-check text-info small"></i>
-                                <h6 class="mb-0 fw-bold text-dark small text-truncate">مراجعات تم جدولتها اليوم</h6>
+                        <div class="card-header bg-info bg-opacity-10 border-bottom py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div class="d-flex align-items-center gap-1 text-truncate">
+                                    <i class="fas fa-calendar-check text-info small"></i>
+                                    <h6 class="mb-0 fw-bold text-dark small text-truncate">مراجعات العيادات والاستشارية</h6>
+                                </div>
+                                <span class="badge bg-info text-dark fw-bold rounded-pill" id="allFollowUpsCountBadge" style="font-size: 0.68rem;">
+                                    {{ (isset($pendingPrintFollowUps) ? $pendingPrintFollowUps->count() : 0) + (isset($printedTodayFollowUps) ? $printedTodayFollowUps->count() : 0) }} اليوم
+                                </span>
                             </div>
-                            <span class="badge bg-info text-dark fw-bold rounded-pill" id="followUpsCountBadge" style="font-size: 0.68rem;">
-                                {{ isset($todayScheduledFollowUps) ? $todayScheduledFollowUps->count() : 0 }}
-                            </span>
+                            <!-- Sub-tabs Navigation -->
+                            <div class="nav nav-pills nav-fill gap-1" id="followUpTabs" role="tablist">
+                                <button type="button" class="nav-link active py-0 px-2 rounded-pill fw-bold border-0 d-flex align-items-center justify-content-center gap-1" id="tabFuPending" onclick="switchFollowUpTab('pending')" style="font-size: 0.72rem; min-height: 24px;">
+                                    <span>⏳ بانتظار الطباعة</span>
+                                    <span class="badge bg-warning text-dark rounded-pill px-1" id="pendingFollowUpsCountBadge" style="font-size: 0.65rem;">
+                                        {{ isset($pendingPrintFollowUps) ? $pendingPrintFollowUps->count() : 0 }}
+                                    </span>
+                                </button>
+                                <button type="button" class="nav-link py-0 px-2 rounded-pill fw-bold border-0 d-flex align-items-center justify-content-center gap-1" id="tabFuPrinted" onclick="switchFollowUpTab('printed')" style="font-size: 0.72rem; min-height: 24px;">
+                                    <span>✔️ المطبوعة اليوم</span>
+                                    <span class="badge bg-success text-white rounded-pill px-1" id="printedFollowUpsCountBadge" style="font-size: 0.65rem;">
+                                        {{ isset($printedTodayFollowUps) ? $printedTodayFollowUps->count() : 0 }}
+                                    </span>
+                                </button>
+                                <button type="button" class="nav-link py-0 px-2 rounded-pill fw-bold border-0 d-flex align-items-center justify-content-center gap-1" id="tabFuArchive" onclick="switchFollowUpTab('archive')" style="font-size: 0.72rem; min-height: 24px;">
+                                    <span>🗄️ كافة الأيام</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="card-body p-2 overflow-auto flex-grow-1" id="followUpsContainer" style="height: 300px; max-height: 300px;">
-                            @if(isset($todayScheduledFollowUps) && $todayScheduledFollowUps->count() > 0)
-                                <div class="list-group list-group-flush">
-                                    @foreach($todayScheduledFollowUps as $fApp)
-                                        <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
-                                            <div class="d-flex justify-content-between align-items-center gap-2">
-                                                <div class="text-truncate">
-                                                    <div class="d-flex align-items-center gap-1 flex-wrap">
-                                                        <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">
-                                                            {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
-                                                        </strong>
-                                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.62rem;">
-                                                            مراجعة مجانية
-                                                        </span>
-                                                        @if($fApp->printed_at)
+                        <div class="card-body p-2 overflow-auto flex-grow-1" id="followUpsMainContainer" style="height: 300px; max-height: 300px;">
+                            <!-- Pane 1: Pending Print Follow-ups -->
+                            <div id="fuPanePending">
+                                @if(isset($pendingPrintFollowUps) && $pendingPrintFollowUps->count() > 0)
+                                    <div class="list-group list-group-flush" id="fuPendingListContainer">
+                                        @foreach($pendingPrintFollowUps as $fApp)
+                                            <div class="list-group-item px-2 py-2 border border-warning border-opacity-50 rounded-2 mb-1 bg-warning bg-opacity-10 shadow-2xs">
+                                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                                    <div class="text-truncate">
+                                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                            <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">
+                                                                {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
+                                                            </strong>
                                                             <span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
-                                                                <i class="fas fa-check-double me-1"></i>تمت الطباعة ({{ $fApp->printed_at->format('H:i') }})
+                                                                مراجعة مجانية
                                                             </span>
-                                                        @else
                                                             <span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
                                                                 <i class="fas fa-clock me-1"></i>بانتظار الطباعة
                                                             </span>
+                                                        </div>
+                                                        <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
+                                                            <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
+                                                            — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">{{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->format('Y-m-d') : '—' }}</strong>
+                                                            ({{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->locale('ar')->dayName : '' }})
+                                                        </small>
+                                                        @if($fApp->notes)
+                                                            <small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;">
+                                                                <i class="fas fa-comment-medical text-warning me-1"></i>{{ $fApp->notes }}
+                                                            </small>
                                                         @endif
                                                     </div>
-                                                    <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
-                                                        <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
-                                                        — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">{{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->format('Y-m-d') : '—' }}</strong>
-                                                        ({{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->locale('ar')->dayName : '' }})
-                                                    </small>
-                                                    @if($fApp->notes)
-                                                        <small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;">
-                                                            <i class="fas fa-comment-medical text-warning me-1"></i>{{ $fApp->notes }}
-                                                        </small>
-                                                    @endif
-                                                </div>
-                                                <div class="flex-shrink-0">
-                                                    @if($fApp->printed_at)
-                                                        <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" title="إعادة طباعة وصل المراجعة للمريض">
-                                                            <i class="fas fa-redo me-1"></i> إعادة طباعة
-                                                        </a>
-                                                    @else
+                                                    <div class="flex-shrink-0">
                                                         <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
                                                             <i class="fas fa-print me-1"></i> طباعة الوصل
                                                         </a>
-                                                    @endif
+                                                    </div>
                                                 </div>
                                             </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-center py-5 text-muted" id="fuPendingEmptyState">
+                                        <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-75"></i>
+                                        <p class="mb-0 fw-bold small text-dark">لا توجد مراجعات بانتظار الطباعة</p>
+                                        <small class="text-muted" style="font-size: 0.7rem;">أي مراجعة يحددها الطبيب ستظهر هنا فوراً وتختفي بمجرد طباعتها</small>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- Pane 2: Printed Today Follow-ups -->
+                            <div id="fuPanePrinted" style="display: none;">
+                                @if(isset($printedTodayFollowUps) && $printedTodayFollowUps->count() > 0)
+                                    <div class="list-group list-group-flush" id="fuPrintedListContainer">
+                                        @foreach($printedTodayFollowUps as $fApp)
+                                            <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
+                                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                                    <div class="text-truncate">
+                                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                            <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">
+                                                                {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
+                                                            </strong>
+                                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
+                                                                مراجعة مجانية
+                                                            </span>
+                                                            <span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
+                                                                <i class="fas fa-check-double me-1"></i>تمت الطباعة {{ $fApp->printed_at ? '(' . $fApp->printed_at->format('H:i') . ')' : '' }}
+                                                            </span>
+                                                        </div>
+                                                        <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
+                                                            <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
+                                                            — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">{{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->format('Y-m-d') : '—' }}</strong>
+                                                            ({{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->locale('ar')->dayName : '' }})
+                                                        </small>
+                                                        @if($fApp->notes)
+                                                            <small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;">
+                                                                <i class="fas fa-comment-medical text-warning me-1"></i>{{ $fApp->notes }}
+                                                            </small>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex-shrink-0">
+                                                        <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" title="إعادة طباعة وصل المراجعة للمريض">
+                                                            <i class="fas fa-redo me-1"></i> إعادة طباعة
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-center py-5 text-muted" id="fuPrintedEmptyState">
+                                        <i class="fas fa-print fa-2x mb-2 text-secondary opacity-50"></i>
+                                        <p class="mb-0 fw-bold small">لا توجد مراجعات مطبوعة اليوم بعد</p>
+                                        <small class="text-muted" style="font-size: 0.7rem;">ستنتقل المراجعات المطبوعة إلى هنا فور طباعتها</small>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- Pane 3: Archive & All Days Search -->
+                            <div id="fuPaneArchive" style="display: none;">
+                                <div class="p-1 mb-2 bg-light rounded-2 border">
+                                    <div class="row g-1">
+                                        <div class="col-7">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white border-end-0 py-0 px-2"><i class="fas fa-search text-muted" style="font-size: 0.7rem;"></i></span>
+                                                <input type="text" id="fuArchiveSearchInput" class="form-control form-control-sm border-start-0 py-0" placeholder="بحث باسم المريض أو الهاتف أو رقم الإضبارة..." style="font-size: 0.75rem;" oninput="debounceFuArchiveSearch()">
+                                            </div>
                                         </div>
-                                    @endforeach
+                                        <div class="col-5">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white border-end-0 py-0 px-1"><i class="fas fa-calendar-alt text-muted" style="font-size: 0.7rem;"></i></span>
+                                                <input type="date" id="fuArchiveDateInput" class="form-control form-control-sm border-start-0 py-0" style="font-size: 0.75rem;" onchange="executeFuArchiveSearch()">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            @else
-                                <div class="text-center py-5 text-muted">
-                                    <i class="fas fa-calendar-alt fa-2x mb-2 text-secondary opacity-50"></i>
-                                    <p class="mb-0 fw-bold small">لا توجد مراجعات مجدولة اليوم بعد</p>
-                                    <small class="text-muted" style="font-size: 0.7rem;">ستظهر هنا أي مراجعة يحددها الطبيب فور إنهاء الزيارة</small>
+                                <div id="fuArchiveResultsContainer">
+                                    <div class="text-center py-4 text-muted" id="fuArchiveInitialHint">
+                                        <i class="fas fa-archive fa-2x mb-2 text-primary opacity-50"></i>
+                                        <p class="mb-0 fw-bold small text-dark">سجل مراجعات ومواعيد كافة الأيام</p>
+                                        <small class="text-muted" style="font-size: 0.7rem;">اكتب اسم المريض أو اختر تاريخاً للبحث السريع وإعادة الطباعة</small>
+                                    </div>
                                 </div>
-                            @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1033,6 +1119,134 @@ function showQuickToast(msg, type = 'success') {
     }, 2800);
 }
 
+// تبديل تبويبات المراجعات (بانتظار الطباعة / المطبوعة اليوم / كافة الأيام)
+let currentFollowUpTab = 'pending';
+function switchFollowUpTab(tab) {
+    currentFollowUpTab = tab;
+    
+    // أزرار التبويبات
+    document.querySelectorAll('#followUpTabs .nav-link').forEach(btn => btn.classList.remove('active', 'bg-white', 'shadow-xs'));
+    
+    // الحاويات
+    const pPending = document.getElementById('fuPanePending');
+    const pPrinted = document.getElementById('fuPanePrinted');
+    const pArchive = document.getElementById('fuPaneArchive');
+    
+    if (pPending) pPending.style.display = 'none';
+    if (pPrinted) pPrinted.style.display = 'none';
+    if (pArchive) pArchive.style.display = 'none';
+    
+    if (tab === 'pending') {
+        const btn = document.getElementById('tabFuPending');
+        if (btn) btn.classList.add('active');
+        if (pPending) pPending.style.display = 'block';
+    } else if (tab === 'printed') {
+        const btn = document.getElementById('tabFuPrinted');
+        if (btn) btn.classList.add('active');
+        if (pPrinted) pPrinted.style.display = 'block';
+    } else if (tab === 'archive') {
+        const btn = document.getElementById('tabFuArchive');
+        if (btn) btn.classList.add('active');
+        if (pArchive) pArchive.style.display = 'block';
+        executeFuArchiveSearch();
+    }
+}
+
+// البحث في سجل المراجعات لكافة الأيام
+let fuArchiveDebounceTimer = null;
+function debounceFuArchiveSearch() {
+    clearTimeout(fuArchiveDebounceTimer);
+    fuArchiveDebounceTimer = setTimeout(executeFuArchiveSearch, 300);
+}
+
+function executeFuArchiveSearch() {
+    const searchInput = document.getElementById('fuArchiveSearchInput');
+    const dateInput = document.getElementById('fuArchiveDateInput');
+    const resultsContainer = document.getElementById('fuArchiveResultsContainer');
+    
+    const query = searchInput ? searchInput.value.trim() : '';
+    const date = dateInput ? dateInput.value : '';
+    
+    if (!resultsContainer) return;
+    
+    resultsContainer.innerHTML = `
+        <div class="text-center py-4 text-muted">
+            <span class="spinner-border spinner-border-sm text-primary me-1" role="status"></span>
+            <span class="small">جاري البحث في سجل المراجعات...</span>
+        </div>
+    `;
+    
+    const url = new URL('{{ route('consultant-availability.search-follow-ups') }}', window.location.origin);
+    if (query) url.searchParams.append('q', query);
+    if (date) url.searchParams.append('date', date);
+    
+    fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.results && data.results.length > 0) {
+            let listHtml = '<div class="list-group list-group-flush">';
+            data.results.forEach(item => {
+                const notesHtml = item.notes 
+                    ? `<small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;"><i class="fas fa-comment-medical text-warning me-1"></i>${item.notes}</small>`
+                    : '';
+                const printBadge = item.is_printed 
+                    ? `<span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-check-double me-1"></i>مطبوع (${item.print_count}x)</span>`
+                    : `<span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-clock me-1"></i>غير مطبوع</span>`;
+                const btnClass = item.is_printed ? 'btn-outline-secondary' : 'btn-primary text-white fw-bold shadow-xs';
+                const btnIcon = item.is_printed ? 'fa-redo' : 'fa-print';
+                const btnText = item.is_printed ? 'إعادة طباعة' : 'طباعة الوصل';
+                
+                listHtml += `
+                    <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div class="text-truncate">
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                    <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">${item.patient_name}</strong>
+                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.60rem;">مراجعة</span>
+                                    ${printBadge}
+                                </div>
+                                <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
+                                    <i class="fas fa-user-md text-secondary me-1"></i>د. ${item.doctor_name}
+                                    — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">${item.appointment_date}</strong>
+                                    (${item.day_name})
+                                </small>
+                                ${notesHtml}
+                            </div>
+                            <div class="flex-shrink-0">
+                                <a href="${item.print_url}" target="_blank" class="btn btn-xs ${btnClass} py-1 px-2" style="font-size: 0.72rem;" title="${btnText}">
+                                    <i class="fas ${btnIcon} me-1"></i> ${btnText}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            listHtml += '</div>';
+            resultsContainer.innerHTML = listHtml;
+        } else {
+            resultsContainer.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-search fa-2x mb-2 text-secondary opacity-50"></i>
+                    <p class="mb-0 fw-bold small text-dark">لا توجد مراجعات مطابقة للبحث</p>
+                    <small class="text-muted" style="font-size: 0.7rem;">جرّب كتابة اسم آخر أو مسح فلتر التاريخ</small>
+                </div>
+            `;
+        }
+    })
+    .catch(err => {
+        resultsContainer.innerHTML = `
+            <div class="text-center py-4 text-danger small">
+                <i class="fas fa-exclamation-triangle me-1"></i> تعذر جلب سجل المراجعات
+            </div>
+        `;
+    });
+}
+
 // التحديث التلقائي الفوري (Auto-Refresh Polling) كل 4 ثوانٍ للعيادات الجارية والمراجعات المجدولة
 function pollLiveConsultantStatus() {
     fetch('{{ route('consultant-availability.live-status') }}', {
@@ -1109,32 +1323,32 @@ function pollLiveConsultantStatus() {
                 }
             }
 
-            // 2. تحديث المراجعات المجدولة اليوم
-            const followUpsCountBadge = document.getElementById('followUpsCountBadge');
-            const followUpsContainer = document.getElementById('followUpsContainer');
-            if (followUpsCountBadge) followUpsCountBadge.textContent = data.follow_ups_count;
-            if (followUpsContainer) {
-                if (data.follow_ups && data.follow_ups.length > 0) {
-                    let listHtml = '<div class="list-group list-group-flush">';
-                    data.follow_ups.forEach(fApp => {
+            // 2. تحديث العدادات العلوية للمراجعات
+            const allCountBadge = document.getElementById('allFollowUpsCountBadge');
+            const pendingCountBadge = document.getElementById('pendingFollowUpsCountBadge');
+            const printedCountBadge = document.getElementById('printedFollowUpsCountBadge');
+            
+            if (allCountBadge) allCountBadge.textContent = `${data.all_today_count} اليوم`;
+            if (pendingCountBadge) pendingCountBadge.textContent = data.pending_follow_ups_count;
+            if (printedCountBadge) printedCountBadge.textContent = data.printed_today_follow_ups_count;
+
+            // 3. تحديث قائمة "بانتظار الطباعة" (Pane 1)
+            const pPending = document.getElementById('fuPanePending');
+            if (pPending) {
+                if (data.pending_follow_ups && data.pending_follow_ups.length > 0) {
+                    let pListHtml = '<div class="list-group list-group-flush" id="fuPendingListContainer">';
+                    data.pending_follow_ups.forEach(fApp => {
                         const notesHtml = fApp.notes 
                             ? `<small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;"><i class="fas fa-comment-medical text-warning me-1"></i>${fApp.notes}</small>`
                             : '';
-                        const printBadgeHtml = fApp.is_printed
-                            ? `<span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-check-double me-1"></i>تمت الطباعة ${fApp.printed_time ? '(' + fApp.printed_time + ')' : ''}</span>`
-                            : `<span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-clock me-1"></i>بانتظار الطباعة</span>`;
-                        const printBtnHtml = fApp.is_printed
-                            ? `<a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" title="إعادة طباعة وصل المراجعة للمريض"><i class="fas fa-redo me-1"></i> إعادة طباعة</a>`
-                            : `<a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض"><i class="fas fa-print me-1"></i> طباعة الوصل</a>`;
-
-                        listHtml += `
-                            <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
+                        pListHtml += `
+                            <div class="list-group-item px-2 py-2 border border-warning border-opacity-50 rounded-2 mb-1 bg-warning bg-opacity-10 shadow-2xs">
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="text-truncate">
                                         <div class="d-flex align-items-center gap-1 flex-wrap">
                                             <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">${fApp.patient_name}</strong>
-                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.62rem;">مراجعة مجانية</span>
-                                            ${printBadgeHtml}
+                                            <span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;">مراجعة مجانية</span>
+                                            <span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-clock me-1"></i>بانتظار الطباعة</span>
                                         </div>
                                         <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
                                             <i class="fas fa-user-md text-secondary me-1"></i>د. ${fApp.doctor_name}
@@ -1144,20 +1358,69 @@ function pollLiveConsultantStatus() {
                                         ${notesHtml}
                                     </div>
                                     <div class="flex-shrink-0">
-                                        ${printBtnHtml}
+                                        <a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
+                                            <i class="fas fa-print me-1"></i> طباعة الوصل
+                                        </a>
                                     </div>
                                 </div>
                             </div>
                         `;
                     });
-                    listHtml += '</div>';
-                    followUpsContainer.innerHTML = listHtml;
+                    pListHtml += '</div>';
+                    pPending.innerHTML = pListHtml;
                 } else {
-                    followUpsContainer.innerHTML = `
-                        <div class="text-center py-5 text-muted">
-                            <i class="fas fa-calendar-alt fa-2x mb-2 text-secondary opacity-50"></i>
-                            <p class="mb-0 fw-bold small">لا توجد مراجعات مجدولة اليوم بعد</p>
-                            <small class="text-muted" style="font-size: 0.7rem;">ستظهر هنا أي مراجعة يحددها الطبيب فور إنهاء الزيارة</small>
+                    pPending.innerHTML = `
+                        <div class="text-center py-5 text-muted" id="fuPendingEmptyState">
+                            <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-75"></i>
+                            <p class="mb-0 fw-bold small text-dark">لا توجد مراجعات بانتظار الطباعة</p>
+                            <small class="text-muted" style="font-size: 0.7rem;">أي مراجعة يحددها الطبيب ستظهر هنا فوراً وتختفي بمجرد طباعتها</small>
+                        </div>
+                    `;
+                }
+            }
+
+            // 4. تحديث قائمة "المطبوعة اليوم" (Pane 2)
+            const pPrinted = document.getElementById('fuPanePrinted');
+            if (pPrinted) {
+                if (data.printed_today_follow_ups && data.printed_today_follow_ups.length > 0) {
+                    let prListHtml = '<div class="list-group list-group-flush" id="fuPrintedListContainer">';
+                    data.printed_today_follow_ups.forEach(fApp => {
+                        const notesHtml = fApp.notes 
+                            ? `<small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;"><i class="fas fa-comment-medical text-warning me-1"></i>${fApp.notes}</small>`
+                            : '';
+                        prListHtml += `
+                            <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="text-truncate">
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">${fApp.patient_name}</strong>
+                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.60rem;">مراجعة مجانية</span>
+                                            <span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-check-double me-1"></i>تمت الطباعة ${fApp.printed_time ? '(' + fApp.printed_time + ')' : ''}</span>
+                                        </div>
+                                        <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
+                                            <i class="fas fa-user-md text-secondary me-1"></i>د. ${fApp.doctor_name}
+                                            — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">${fApp.appointment_date}</strong>
+                                            (${fApp.day_name})
+                                        </small>
+                                        ${notesHtml}
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" title="إعادة طباعة وصل المراجعة للمريض">
+                                            <i class="fas fa-redo me-1"></i> إعادة طباعة
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    prListHtml += '</div>';
+                    pPrinted.innerHTML = prListHtml;
+                } else {
+                    pPrinted.innerHTML = `
+                        <div class="text-center py-5 text-muted" id="fuPrintedEmptyState">
+                            <i class="fas fa-print fa-2x mb-2 text-secondary opacity-50"></i>
+                            <p class="mb-0 fw-bold small">لا توجد مراجعات مطبوعة اليوم بعد</p>
+                            <small class="text-muted" style="font-size: 0.7rem;">ستنتقل المراجعات المطبوعة إلى هنا فور طباعتها</small>
                         </div>
                     `;
                 }
