@@ -98,6 +98,8 @@ Route::middleware(['auth'])->group(function () {
     // إدارة توفر الأطباء الاستشاريين (لموظف الاستقبال)
     Route::get('/consultant-availability', [ConsultantAvailabilityController::class, 'index'])
         ->name('consultant-availability.index');
+    Route::get('/consultant-availability/live-status', [ConsultantAvailabilityController::class, 'liveStatus'])
+        ->name('consultant-availability.live-status');
     Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
         ->name('consultant-availability.financial-movements');
     Route::get('/consultant-availability/financial-movements/export', [ConsultantAvailabilityController::class, 'exportFinancialMovements'])

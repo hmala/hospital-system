@@ -191,6 +191,90 @@ class ConsultantAvailabilityController extends Controller
         return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'pendingConsultantRequests', 'todayScheduledFollowUps', 'weekDays', 'selectedDay'));
     }
 
+    /**
+     * جلب الحالة المباشرة للعيادات الجارية والمراجعات المجدولة اليوم (AJAX Polling)
+     */
+    public function liveStatus(Request $request)
+    {
+        $today = today();
+
+        // 1. العيادات الجارية الآن
+        $consultantDoctors = Doctor::with(['user', 'department'])
+            ->where('type', 'consultant')
+            ->where('is_active', true)
+            ->get();
+
+        $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
+            ->whereDate('visit_date', $today)
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->get()
+            ->groupBy('doctor_id');
+
+        $inConsultationAppointments = \App\Models\Appointment::with('patient.user')
+            ->whereDate('appointment_date', $today)
+            ->whereIn('status', ['calling', 'in_consultation'])
+            ->get()
+            ->groupBy('doctor_id');
+
+        $runningClinics = [];
+        foreach ($consultantDoctors as $doc) {
+            $activeVisit = $activeVisits->get($doc->id)?->first();
+            $inConsultApp = $inConsultationAppointments->get($doc->id)?->first();
+
+            if ($activeVisit || $inConsultApp) {
+                $status = $activeVisit ? 'in_consultation' : $inConsultApp->status;
+                $patientName = $activeVisit 
+                    ? (optional(optional($activeVisit->patient)->user)->name ?? optional($activeVisit->patient)->name ?? 'مريض بالداخل')
+                    : (optional(optional($inConsultApp->patient)->user)->name ?? optional($inConsultApp->patient)->name ?? 'مريض قيد الاستدعاء');
+                $queue = $activeVisit ? optional($activeVisit->appointment)->queue_number : $inConsultApp->queue_number;
+                $since = $activeVisit 
+                    ? ($activeVisit->created_at ? $activeVisit->created_at->diffForHumans(null, true) : 'الآن')
+                    : ($inConsultApp->called_at ? \Carbon\Carbon::parse($inConsultApp->called_at)->diffForHumans(null, true) : 'الآن');
+
+                $runningClinics[] = [
+                    'doctor_id' => $doc->id,
+                    'doctor_name' => $doc->user->name ?? 'طبيب',
+                    'department_name' => $doc->department->name ?? 'العيادة',
+                    'status' => $status,
+                    'patient_name' => $patientName,
+                    'patient_queue' => $queue,
+                    'current_since' => $since,
+                ];
+            }
+        }
+
+        // 2. المراجعات المجدولة اليوم
+        $todayScheduledFollowUps = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
+            ->where(function($q) {
+                $q->where('is_free_recheck', true)
+                  ->orWhereNotNull('recheck_parent_visit_id');
+            })
+            ->whereDate('created_at', $today)
+            ->latest('created_at')
+            ->get()
+            ->map(function($fApp) {
+                $appDate = $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date) : null;
+                return [
+                    'id' => $fApp->id,
+                    'patient_name' => optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض',
+                    'doctor_name' => optional(optional($fApp->doctor)->user)->name ?? 'غير محدد',
+                    'appointment_date' => $appDate ? $appDate->format('Y-m-d') : '—',
+                    'day_name' => $appDate ? $appDate->locale('ar')->dayName : '',
+                    'notes' => $fApp->notes ?? '',
+                    'print_url' => route('appointments.print', $fApp->id),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'running_clinics' => $runningClinics,
+            'running_clinics_count' => count($runningClinics),
+            'follow_ups' => $todayScheduledFollowUps,
+            'follow_ups_count' => count($todayScheduledFollowUps),
+            'timestamp' => now()->format('H:i:s'),
+        ]);
+    }
+
     public function financialMovements(Request $request)
     {
         $user = auth()->user();

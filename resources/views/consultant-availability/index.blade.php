@@ -243,12 +243,12 @@
                                 <a href="{{ route('queue.all.display') }}" target="_blank" class="btn btn-xs btn-outline-info px-1 py-0 rounded-pill" style="font-size: 0.68rem;" title="شاشة الصالة">
                                     <i class="fas fa-tv"></i>
                                 </a>
-                                <span class="badge bg-primary text-white px-2 py-0 rounded-pill" style="font-size: 0.68rem;">
+                                <span class="badge bg-primary text-white px-2 py-0 rounded-pill" id="runningClinicsCountBadge" style="font-size: 0.68rem;">
                                     {{ $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling'])->count() }}
                                 </span>
                             </div>
                         </div>
-                        <div class="card-body p-0 overflow-auto flex-grow-1" style="height: 300px; max-height: 300px;">
+                        <div class="card-body p-0 overflow-auto flex-grow-1" id="runningClinicsContainer" style="height: 300px; max-height: 300px;">
                             @php
                                 $activeRunningDocs = $consultantDoctors->whereIn('current_status', ['in_consultation', 'calling']);
                             @endphp
@@ -328,11 +328,11 @@
                                 <i class="fas fa-calendar-check text-info small"></i>
                                 <h6 class="mb-0 fw-bold text-dark small text-truncate">مراجعات تم جدولتها اليوم</h6>
                             </div>
-                            <span class="badge bg-info text-dark fw-bold rounded-pill" style="font-size: 0.68rem;">
+                            <span class="badge bg-info text-dark fw-bold rounded-pill" id="followUpsCountBadge" style="font-size: 0.68rem;">
                                 {{ isset($todayScheduledFollowUps) ? $todayScheduledFollowUps->count() : 0 }}
                             </span>
                         </div>
-                        <div class="card-body p-2 overflow-auto flex-grow-1" style="height: 300px; max-height: 300px;">
+                        <div class="card-body p-2 overflow-auto flex-grow-1" id="followUpsContainer" style="height: 300px; max-height: 300px;">
                             @if(isset($todayScheduledFollowUps) && $todayScheduledFollowUps->count() > 0)
                                 <div class="list-group list-group-flush">
                                     @foreach($todayScheduledFollowUps as $fApp)
@@ -1018,9 +1018,140 @@ function showQuickToast(msg, type = 'success') {
     }, 2800);
 }
 
-// تطبيق الفلتر الافتراضي عند فتح الصفحة (المتواجدون اليوم فقط لتقليل الزحام)
+// التحديث التلقائي الفوري (Auto-Refresh Polling) كل 4 ثوانٍ للعيادات الجارية والمراجعات المجدولة
+function pollLiveConsultantStatus() {
+    fetch('{{ route('consultant-availability.live-status') }}', {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // 1. تحديث العيادات الجارية
+            const runningCountBadge = document.getElementById('runningClinicsCountBadge');
+            const runningContainer = document.getElementById('runningClinicsContainer');
+            if (runningCountBadge) runningCountBadge.textContent = data.running_clinics_count;
+            if (runningContainer) {
+                if (data.running_clinics && data.running_clinics.length > 0) {
+                    let rowsHtml = '';
+                    data.running_clinics.forEach(doc => {
+                        const isConsult = (doc.status === 'in_consultation');
+                        const trClass = isConsult ? 'table-primary bg-opacity-25' : 'table-warning bg-opacity-25';
+                        const badgeHtml = isConsult 
+                            ? `<span class="badge bg-success text-white px-1 py-0 shadow-xs" style="font-size: 0.65rem;">فحص</span>`
+                            : `<span class="badge bg-warning text-dark px-1 py-0 shadow-xs" style="font-size: 0.65rem;">نداء</span>`;
+                        const queueBadgeClass = isConsult ? 'bg-primary text-white' : 'bg-warning text-dark';
+                        const subText = isConsult
+                            ? `<small class="text-muted d-block" style="font-size: 0.65rem;"><i class="fas fa-clock text-info me-1"></i>منذ ${doc.current_since}</small>`
+                            : `<small class="text-warning fw-bold d-block" style="font-size: 0.65rem;"><i class="fas fa-bullhorn me-1"></i>نداء للشاشة</small>`;
+
+                        rowsHtml += `
+                            <tr class="${trClass}">
+                                <td class="text-truncate" style="max-width: 140px;">
+                                    <div class="fw-bold text-dark text-truncate">د. ${doc.doctor_name}</div>
+                                    <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;"><i class="fas fa-clinic-medical text-secondary me-1"></i>${doc.department_name}</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="badge ${queueBadgeClass} rounded-pill px-1" style="font-size: 0.7rem;">#${doc.patient_queue || '—'}</span>
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-primary small text-truncate">${doc.patient_name}</div>
+                                            ${subText}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">${badgeHtml}</td>
+                            </tr>
+                        `;
+                    });
+
+                    runningContainer.innerHTML = `
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr class="text-muted small text-uppercase" style="font-size: 0.72rem;">
+                                        <th>الطبيب والعيادة</th>
+                                        <th>المريض بالداخل</th>
+                                        <th class="text-center">الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    runningContainer.innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-stethoscope fa-2x mb-2 text-secondary opacity-50"></i>
+                            <p class="mb-0 fw-bold small">لا توجد كشوفات جارية الآن</p>
+                            <small class="text-muted" style="font-size: 0.7rem;">ستظهر العيادة هنا فور استدعاء المريض</small>
+                        </div>
+                    `;
+                }
+            }
+
+            // 2. تحديث المراجعات المجدولة اليوم
+            const followUpsCountBadge = document.getElementById('followUpsCountBadge');
+            const followUpsContainer = document.getElementById('followUpsContainer');
+            if (followUpsCountBadge) followUpsCountBadge.textContent = data.follow_ups_count;
+            if (followUpsContainer) {
+                if (data.follow_ups && data.follow_ups.length > 0) {
+                    let listHtml = '<div class="list-group list-group-flush">';
+                    data.follow_ups.forEach(fApp => {
+                        const notesHtml = fApp.notes 
+                            ? `<small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;"><i class="fas fa-comment-medical text-warning me-1"></i>${fApp.notes}</small>`
+                            : '';
+                        listHtml += `
+                            <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="text-truncate">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">${fApp.patient_name}</strong>
+                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.62rem;">مراجعة مجانية</span>
+                                        </div>
+                                        <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
+                                            <i class="fas fa-user-md text-secondary me-1"></i>د. ${fApp.doctor_name}
+                                            — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">${fApp.appointment_date}</strong>
+                                            (${fApp.day_name})
+                                        </small>
+                                        ${notesHtml}
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
+                                            <i class="fas fa-print me-1"></i> طباعة
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    listHtml += '</div>';
+                    followUpsContainer.innerHTML = listHtml;
+                } else {
+                    followUpsContainer.innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-calendar-alt fa-2x mb-2 text-secondary opacity-50"></i>
+                            <p class="mb-0 fw-bold small">لا توجد مراجعات مجدولة اليوم بعد</p>
+                            <small class="text-muted" style="font-size: 0.7rem;">ستظهر هنا أي مراجعة يحددها الطبيب فور إنهاء الزيارة</small>
+                        </div>
+                    `;
+                }
+            }
+        }
+    })
+    .catch(err => {
+        console.debug('Background poll error:', err);
+    });
+}
+
+// تطبيق الفلتر الافتراضي عند فتح الصفحة وتشغيل التحديث التلقائي
 document.addEventListener('DOMContentLoaded', function() {
     applyDoctorRowFilters();
+    setInterval(pollLiveConsultantStatus, 4000);
 });
 </script>
 @endsection
@@ -1029,7 +1160,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 $(document).ready(function() {
     console.log('Consultant Availability Page Loaded');
-    console.log('Using simple HTML forms for updates - no JavaScript required!');
 });
 </script>
 @endpush
