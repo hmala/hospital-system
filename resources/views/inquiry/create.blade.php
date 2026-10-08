@@ -206,6 +206,8 @@
                         </div>
                     </div>
                 </div>
+            @endforeach
+
             @if(auth()->user()->can('create emergencies') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'inquiry_staff', 'consultation_receptionist']))
                 <!-- بطاقة حجز طوارئ / طوارئ الضمان -->
                 <div class="col-md-6 col-lg-3">
