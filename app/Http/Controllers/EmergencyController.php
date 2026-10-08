@@ -403,7 +403,18 @@ class EmergencyController extends Controller
             }
         }
 
-        // return to list instead of details so user sees the emergency table
+        $returnTo = $request->input('return_to');
+        $user = Auth::user();
+        $isFromInquiry = $returnTo === 'inquiry' || 
+                         $referralId || 
+                         $user->hasRole(['receptionist', 'inquiry_staff', 'consultation_receptionist']) ||
+                         !$user->can('view emergencies');
+
+        if ($isFromInquiry) {
+            return redirect()->route('inquiry.index')
+                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+        }
+
         return redirect()->route('emergency.index')
             ->with('success', 'تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة');
     }

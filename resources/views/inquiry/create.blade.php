@@ -211,7 +211,7 @@
             @can('create emergencies')
                 <!-- بطاقة حجز طوارئ / طوارئ الضمان -->
                 <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('emergency.create', ['patient_id' => $patient->id, 'from_referral_id' => request('referral_id') ?? request('from_referral_id')]) }}" class="text-decoration-none">
+                    <a href="{{ route('emergency.create', ['patient_id' => $patient->id, 'from_referral_id' => request('referral_id') ?? request('from_referral_id'), 'return_to' => 'inquiry']) }}" class="text-decoration-none">
                         <div class="card h-100 shadow-sm request-card emergency-card border border-danger border-opacity-25" style="cursor: pointer;">
                             <div class="card-body text-center p-4">
                                 <div class="mb-3">

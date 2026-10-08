@@ -10,8 +10,13 @@
                     <i class="fas fa-plus-circle me-2"></i>
                     إضافة حالة طوارئ جديدة
                 </h2>
-                <a href="{{ route('emergency.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>العودة للقائمة
+                @php
+                    $isFromInquiry = request('return_to') === 'inquiry' || request('from_inquiry') || request('from_referral_id') || auth()->user()->hasRole(['receptionist', 'inquiry_staff', 'consultation_receptionist']) || !auth()->user()->can('view emergencies');
+                    $backUrl = $isFromInquiry ? route('inquiry.index') : route('emergency.index');
+                    $backLabel = $isFromInquiry ? 'العودة للاستعلامات' : 'العودة لقائمة الطوارئ';
+                @endphp
+                <a href="{{ $backUrl }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>{{ $backLabel }}
                 </a>
             </div>
         </div>
@@ -47,6 +52,7 @@
                 <div class="card-body">
                     <form method="POST" action="{{ route('emergency.store') }}">
                         @csrf
+                        <input type="hidden" name="return_to" value="{{ request('return_to', $isFromInquiry ? 'inquiry' : 'emergency') }}">
                         @if(isset($referralRequest) && $referralRequest)
                             <input type="hidden" name="referral_request_id" value="{{ $referralRequest->id }}">
                         @endif
