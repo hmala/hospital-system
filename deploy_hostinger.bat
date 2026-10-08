@@ -58,7 +58,7 @@ echo.
 echo Connecting to Hostinger via SSH (Clean Operational Tables Only)...
 echo Please enter your SSH password if prompted:
 echo --------------------------------------------------------
-ssh -p 65002 -t u175868711@92.113.18.46 "cd domains/hinpa.icu/public_html/hearmz && echo '=== [1/3] Safely Cleaning 48 Operational Tables ===' && php artisan db:clean-operational-data --force && echo '=== [2/3] Resetting Permissions Cache ===' && php artisan permission:cache-reset && echo '=== [3/3] Clearing App Cache ===' && php artisan optimize:clear && echo '=============================================' && echo 'Operational Clean completed successfully!' && echo '============================================='"
+ssh -p 65002 -t u175868711@92.113.18.46 "cd domains/hinpa.icu/public_html/hearmz && echo '=== [1/4] Pulling Latest Code from GitHub Main ===' && git stash --include-untracked && git fetch origin main && git reset --hard origin/main && echo '=== [2/4] Safely Cleaning 48 Operational Tables ===' && php artisan db:clean-operational-data --force && echo '=== [3/4] Resetting Permissions Cache ===' && php artisan permission:cache-reset && echo '=== [4/4] Clearing App Cache ===' && php artisan optimize:clear && echo '=============================================' && echo 'Operational Clean completed successfully!' && echo '============================================='"
 goto end
 
 :end
