@@ -1509,12 +1509,45 @@ datalist option:hover {
                         <div class="tab-pane fade show active" id="side-today-pane" role="tabpanel">
                             @php
                                 $hasPrescriptions = (isset($prescribedMedications) && $prescribedMedications->count() > 0) || (isset($latestPrescription) && $latestPrescription && $latestPrescription->items->count() > 0);
+                                $medCount = ($latestPrescription && $latestPrescription->items->count() > 0) ? $latestPrescription->items->count() : (isset($prescribedMedications) ? $prescribedMedications->count() : 0);
+                                $todayLabRequests = $visit->requests->where('type', 'lab');
+                                $todayRadRequests = $visit->requests->where('type', 'radiology');
+                                $todayNursingRequests = $visit->requests->where('type', 'nursing');
+                                $totalTodayCount = $todayLabRequests->count() + $todayRadRequests->count() + $todayNursingRequests->count() + ($hasPrescriptions ? 1 : 0);
                             @endphp
-                            @if($visit->requests->count() > 0 || $hasPrescriptions)
+
+                            @if($totalTodayCount > 0)
+                                <!-- شريط تبويبات تصفية طلبات اليوم (Sub-Filter Pills) -->
+                                <div class="today-filter-tray d-flex flex-wrap gap-1 mb-3 p-1 bg-light rounded-3 border align-items-center">
+                                    <button type="button" class="btn btn-xs btn-dark rounded-pill px-2 py-1 fw-bold today-filter-pill active" data-filter="all" onclick="filterTodayRequests('all', this)">
+                                        الكل <span class="badge bg-secondary rounded-pill ms-1">{{ $totalTodayCount }}</span>
+                                    </button>
+                                    @if($todayLabRequests->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 fw-bold today-filter-pill" data-filter="lab" onclick="filterTodayRequests('lab', this)">
+                                            <i class="fas fa-microscope me-1"></i> المختبر <span class="badge bg-primary rounded-pill ms-1">{{ $todayLabRequests->count() }}</span>
+                                        </button>
+                                    @endif
+                                    @if($todayRadRequests->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 fw-bold today-filter-pill text-dark" data-filter="radiology" onclick="filterTodayRequests('radiology', this)">
+                                            <i class="fas fa-x-ray me-1 text-info"></i> الأشعة <span class="badge bg-info rounded-pill ms-1 text-dark">{{ $todayRadRequests->count() }}</span>
+                                        </button>
+                                    @endif
+                                    @if($hasPrescriptions)
+                                        <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2 py-1 fw-bold today-filter-pill" data-filter="rx" onclick="filterTodayRequests('rx', this)">
+                                            <i class="fas fa-pills me-1"></i> الأدوية <span class="badge bg-success rounded-pill ms-1">{{ $medCount }}</span>
+                                        </button>
+                                    @endif
+                                    @if($todayNursingRequests->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1 fw-bold today-filter-pill" data-filter="nursing" onclick="filterTodayRequests('nursing', this)">
+                                            <i class="fas fa-syringe me-1"></i> التمريض <span class="badge bg-secondary rounded-pill ms-1">{{ $todayNursingRequests->count() }}</span>
+                                        </button>
+                                    @endif
+                                </div>
+
                                 <div class="d-flex flex-column gap-3">
                                     {{-- بطاقة الوصفة الطبية الإلكترونية وصرف الصيدلية --}}
                                     @if($hasPrescriptions)
-                                        <div class="card border border-success shadow-sm rounded-3 overflow-hidden">
+                                        <div class="today-card-item card border border-success shadow-sm rounded-3 overflow-hidden" data-today-type="rx">
                                             <div class="card-header py-2 px-3 bg-success-subtle border-success-subtle d-flex justify-content-between align-items-center">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <span class="badge bg-success">
@@ -1604,7 +1637,7 @@ datalist option:hover {
                                             $testAttachments = $reqDetails['test_attachments'] ?? ($resultData['test_attachments'] ?? []);
                                             if (!is_array($testAttachments)) $testAttachments = [];
                                         @endphp
-                                        <div class="card border shadow-sm rounded-3 overflow-hidden">
+                                        <div class="today-card-item card border shadow-sm rounded-3 overflow-hidden" data-today-type="{{ $medRequest->type }}">
                                             <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <span class="badge bg-{{ $medRequest->type == 'lab' ? 'primary' : ($medRequest->type == 'radiology' ? 'info' : 'success') }}">
@@ -4509,6 +4542,35 @@ function confirmSurgeryReferral() {
             console.error('Error responding to substitution:', err);
         });
     }
+
+    // تصفية بطاقات طلبات ونتائج اليوم بالتبويبات
+    window.filterTodayRequests = function(filterType, btn) {
+        document.querySelectorAll('.today-filter-pill').forEach(function(pill) {
+            pill.classList.remove('active', 'btn-dark', 'btn-primary', 'btn-info', 'btn-success', 'btn-secondary');
+            var f = pill.getAttribute('data-filter');
+            if (f === 'all') pill.classList.add('btn-outline-dark');
+            else if (f === 'lab') pill.classList.add('btn-outline-primary');
+            else if (f === 'radiology') pill.classList.add('btn-outline-info');
+            else if (f === 'rx') pill.classList.add('btn-outline-success');
+            else if (f === 'nursing') pill.classList.add('btn-outline-secondary');
+        });
+
+        btn.classList.add('active');
+        btn.classList.remove('btn-outline-dark', 'btn-outline-primary', 'btn-outline-info', 'btn-outline-success', 'btn-outline-secondary');
+        if (filterType === 'all') btn.classList.add('btn-dark');
+        else if (filterType === 'lab') btn.classList.add('btn-primary');
+        else if (filterType === 'radiology') btn.classList.add('btn-info');
+        else if (filterType === 'rx') btn.classList.add('btn-success');
+        else if (filterType === 'nursing') btn.classList.add('btn-secondary');
+
+        document.querySelectorAll('.today-card-item').forEach(function(card) {
+            if (filterType === 'all' || card.getAttribute('data-today-type') === filterType) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    };
 </script>
 
 <style>
