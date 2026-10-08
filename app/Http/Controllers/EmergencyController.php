@@ -1296,6 +1296,8 @@ class EmergencyController extends Controller
         $isInsurance = (bool)($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory));
         $insuranceType = $isInsurance ? 'hi' : 'none';
         $emergencyCopay = $isInsurance ? $emergency->patient->getCopayPercentageFor('emergency') : 100.0;
+        $labCopay       = $isInsurance ? $emergency->patient->getCopayPercentageFor('lab') : 100.0;
+        $radCopay       = $isInsurance ? $emergency->patient->getCopayPercentageFor('radiology') : 100.0;
 
         $unpaidServices = $emergency->services->whereIn('id', $unpaidServiceIds);
         $totalServicesAmount = 0.0;
@@ -1314,19 +1316,33 @@ class EmergencyController extends Controller
             }
         }
 
-        // حساب التحاليل غير المدفوعة فقط
-        $labAmount = $emergency->labRequests
-            ->whereNull('payment_id')
-            ->sum(function ($request) {
-                return $request->labTests->sum('price');
-            });
+        // حساب التحاليل غير المدفوعة بنسب تسعير وتغطية الضمان
+        $totalLabAmount = 0.0;
+        $labPatientShare = 0.0;
+        $labInsuranceShare = 0.0;
+        $unpaidLabRequests = $emergency->labRequests->whereNull('payment_id');
+        foreach ($unpaidLabRequests as $request) {
+            foreach ($request->labTests as $test) {
+                $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
+                $totalLabAmount += (float)$pricing['total_amount'];
+                $labPatientShare += (float)$pricing['patient_share'];
+                $labInsuranceShare += (float)$pricing['insurance_share'];
+            }
+        }
 
-        // حساب الأشعة غير المدفوعة فقط
-        $radiologyAmount = $emergency->radiologyRequests
-            ->whereNull('payment_id')
-            ->sum(function ($request) {
-                return $request->radiologyTypes->sum('price');
-            });
+        // حساب الأشعة غير المدفوعة بنسب تسعير وتغطية الضمان
+        $totalRadiologyAmount = 0.0;
+        $radiologyPatientShare = 0.0;
+        $radiologyInsuranceShare = 0.0;
+        $unpaidRadiologyRequests = $emergency->radiologyRequests->whereNull('payment_id');
+        foreach ($unpaidRadiologyRequests as $request) {
+            foreach ($request->radiologyTypes as $rad) {
+                $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
+                $totalRadiologyAmount += (float)$pricing['total_amount'];
+                $radiologyPatientShare += (float)$pricing['patient_share'];
+                $radiologyInsuranceShare += (float)$pricing['insurance_share'];
+            }
+        }
 
         $consultationAmount = $emergency->appointments
             ->where('payment_status', 'pending')
@@ -1340,9 +1356,9 @@ class EmergencyController extends Controller
         $followUpPatientShare = $isInsurance ? round($followUpFee * ($emergencyCopay / 100.0), 2) : $followUpFee;
         $followUpInsuranceShare = round($followUpFee - $followUpPatientShare, 2);
             
-        $totalAmount = $totalServicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee;
-        $patientShare = $servicesPatientShare + $labAmount + $radiologyAmount + $consultationAmount + $followUpPatientShare;
-        $insuranceShare = $servicesInsuranceShare + $followUpInsuranceShare;
+        $totalAmount = $totalServicesAmount + $totalLabAmount + $totalRadiologyAmount + $consultationAmount + $followUpFee;
+        $patientShare = $servicesPatientShare + $labPatientShare + $radiologyPatientShare + $consultationAmount + $followUpPatientShare;
+        $insuranceShare = $servicesInsuranceShare + $labInsuranceShare + $radiologyInsuranceShare + $followUpInsuranceShare;
 
         $hasPendingAmount = $totalAmount > 0;
         $existingPayment = Payment::where('emergency_id', $emergency->id)
@@ -1453,6 +1469,14 @@ class EmergencyController extends Controller
                 ->where('emergency_id', $emergency->id)
                 ->whereNull('payment_id')
                 ->update(['payment_id' => $payment->id]);
+
+            // ربط طلبات المختبر والأشعة المغطاة بالكامل بهيئة الضمان
+            foreach ($unpaidLabRequests as $req) {
+                $req->update(['payment_id' => $payment->id]);
+            }
+            foreach ($unpaidRadiologyRequests as $req) {
+                $req->update(['payment_id' => $payment->id]);
+            }
 
             if ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) {
                 $emergency->update(['follow_up_payment_id' => $payment->id]);
