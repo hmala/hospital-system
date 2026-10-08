@@ -418,7 +418,7 @@
 
             <!-- 3. Compact Ultrasound / Lab Requests Card (If Any) -->
             @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
-                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning">
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3">
                     <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-1">
                             <i class="fas fa-wave-square text-primary small"></i>
@@ -447,6 +447,54 @@
                                             @else
                                                 <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
                                             @endcan
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- 4. Compact Today's Follow-up Appointments from Doctors Card -->
+            @if(isset($todayScheduledFollowUps) && $todayScheduledFollowUps->count() > 0)
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
+                    <div class="card-header bg-info bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-1">
+                            <i class="fas fa-calendar-check text-info small"></i>
+                            <h6 class="mb-0 fw-bold text-dark small">مراجعات تم جدولتها اليوم من العيادات</h6>
+                        </div>
+                        <span class="badge bg-info text-dark fw-bold small">{{ $todayScheduledFollowUps->count() }}</span>
+                    </div>
+                    <div class="card-body p-2 overflow-auto" style="max-height: 280px;">
+                        <div class="list-group list-group-flush">
+                            @foreach($todayScheduledFollowUps as $fApp)
+                                <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div class="text-truncate">
+                                            <div class="d-flex align-items-center gap-1">
+                                                <strong class="text-dark small text-truncate">
+                                                    {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
+                                                </strong>
+                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.65rem;">
+                                                    مراجعة مجانية
+                                                </span>
+                                            </div>
+                                            <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                                <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
+                                                — <i class="fas fa-calendar-day text-primary me-1"></i><strong class="text-primary">{{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->format('Y-m-d') : '—' }}</strong>
+                                                ({{ $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date)->locale('ar')->dayName : '' }})
+                                            </small>
+                                            @if($fApp->notes)
+                                                <small class="text-secondary d-block text-truncate" style="font-size: 0.68rem;">
+                                                    <i class="fas fa-comment-medical text-warning me-1"></i>{{ $fApp->notes }}
+                                                </small>
+                                            @endif
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
+                                                <i class="fas fa-print me-1"></i> طباعة الوصل
+                                            </a>
                                         </div>
                                     </div>
                                 </div>

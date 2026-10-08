@@ -178,7 +178,17 @@ class ConsultantAvailabilityController extends Controller
             ->latest()
             ->get();
 
-        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'pendingConsultantRequests', 'weekDays', 'selectedDay'));
+        // جلب المراجعات والمواعيد التي تم جدولتها اليوم من محطة الأطباء
+        $todayScheduledFollowUps = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
+            ->where(function($q) {
+                $q->where('is_free_recheck', true)
+                  ->orWhereNotNull('recheck_parent_visit_id');
+            })
+            ->whereDate('created_at', today())
+            ->latest('created_at')
+            ->get();
+
+        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'pendingConsultantRequests', 'todayScheduledFollowUps', 'weekDays', 'selectedDay'));
     }
 
     public function financialMovements(Request $request)
