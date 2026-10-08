@@ -1198,7 +1198,7 @@
                         @endcanany
 
                         <!-- قسم المختبر والتحاليل الطبية -->
-                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view lab test groups', 'view packages'])
+                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view packages'])
                         @php
                             $isLabActive = request()->routeIs('lab.*') || 
                                            request()->routeIs('admin.packages.*') || 
@@ -1237,13 +1237,6 @@
                         </li>
                         @endcan
 
-                        @can('view lab test groups')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
-                                <i class="fas fa-layer-group"></i><span> مجموعات المفضلات</span>
-                            </a>
-                        </li>
-                        @endcan
 
                         @can('view lab tests')
                         <li class="nav-item">
