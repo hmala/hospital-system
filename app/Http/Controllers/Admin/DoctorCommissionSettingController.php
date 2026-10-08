@@ -25,7 +25,46 @@ class DoctorCommissionSettingController extends Controller
 
     public function index(Request $request)
     {
-        $query = Doctor::with(['user', 'department', 'currentCommissionSetting']);
+        $baseQuery = Doctor::where(function ($q) {
+            $q->where('type', 'consultant')->orWhereNull('type');
+        });
+
+        $query = (clone $baseQuery)->with(['user', 'department', 'currentCommissionSetting']);
+
+        // إحصاءات عامة لأطباء الاستشارية
+        $totalDoctors = (clone $baseQuery)->count();
+        $assignedDoctors = (clone $baseQuery)->whereHas('currentCommissionSetting', function ($q) {
+            $q->whereNotNull('fixed_amount')->where('fixed_amount', '>', 0);
+        })->count();
+        $unassignedDoctors = $totalDoctors - $assignedDoctors;
+        $activeDoctors = (clone $baseQuery)->where('is_active', true)->count();
+
+        // فلترة بالقسم
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        // فلترة بحالة العمولة
+        if ($request->filled('status_filter')) {
+            if ($request->status_filter === 'assigned') {
+                $query->whereHas('currentCommissionSetting', function ($q) {
+                    $q->whereNotNull('fixed_amount')->where('fixed_amount', '>', 0);
+                });
+            } elseif ($request->status_filter === 'unassigned') {
+                $query->whereDoesntHave('currentCommissionSetting', function ($q) {
+                    $q->whereNotNull('fixed_amount')->where('fixed_amount', '>', 0);
+                });
+            }
+        }
+
+        // فلترة بالنشاط
+        if ($request->filled('active_filter')) {
+            if ($request->active_filter === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->active_filter === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
 
         if ($request->filled('q')) {
             $search = trim($request->q);
@@ -44,10 +83,31 @@ class DoctorCommissionSettingController extends Controller
             });
         }
 
-        $doctors = $query->orderBy('id')->paginate(20)->withQueryString();
+        $doctors = $query->orderBy('id')->paginate(30)->withQueryString();
+        $departments = Department::where('is_active', true)
+            ->whereHas('doctors', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('type', 'consultant')->orWhereNull('type');
+                });
+            })
+            ->withCount(['doctors as consultant_doctors_count' => function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('type', 'consultant')->orWhereNull('type');
+                });
+            }])
+            ->orderBy('name')
+            ->get();
         $q = $request->q;
 
-        return view('admin.doctor_commission_settings.index', compact('doctors', 'q'));
+        return view('admin.doctor_commission_settings.index', compact(
+            'doctors',
+            'departments',
+            'totalDoctors',
+            'assignedDoctors',
+            'unassignedDoctors',
+            'activeDoctors',
+            'q'
+        ));
     }
 
     public function create()
@@ -204,6 +264,13 @@ class DoctorCommissionSettingController extends Controller
             }
 
             $processRows($rowIndex);
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حفظ إعداد العمولة بنجاح',
+            ]);
         }
 
         return redirect()->route('admin.doctor-commission-settings.index')
