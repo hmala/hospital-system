@@ -420,39 +420,74 @@ class InquiryController extends Controller
                 // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
                 $appointmentDate = $httpRequest->appointment_date ? Carbon::parse($httpRequest->appointment_date) : Carbon::today();
 
-                // فحص ما إذا كان للمريض زيارة سابقة مكتملة لدى نفس الطبيب ضمن فترة صلاحية المراجعة المجانية
+                // فحص ما إذا كان للمريض موعد مراجعة مجانية مجدول مسبقاً أو زيارة سابقة حدد فيها الطبيب صراحة موعد مراجعة وما زالت صالحة
                 $validityDays = $doctor->recheck_validity_days ?: 7;
-                $recentVisit = Visit::where('patient_id', $patient->id)
+
+                // 1. هل يوجد موعد مراجعة مجانية مجدول مسبقاً من محطة الطبيب لدى نفس الطبيب؟
+                $scheduledRecheckAppt = Appointment::where('patient_id', $patient->id)
                     ->where('doctor_id', $doctor->id)
-                    ->where('status', 'completed')
-                    ->where('visit_date', '>=', Carbon::today()->subDays($validityDays))
-                    ->latest('visit_date')
+                    ->where('is_free_recheck', true)
+                    ->whereIn('status', ['scheduled', 'confirmed'])
+                    ->latest()
                     ->first();
 
-                $isFreeRecheck = ($recentVisit !== null);
+                // 2. هل توجد زيارة سابقة مكتملة حدد فيها الطبيب صراحة موعد مراجعة (follow_up_date) وما زالت ضمن الصلاحية ولم تُستهلك بعد؟
+                $recentVisitWithFollowUp = null;
+                if (!$scheduledRecheckAppt) {
+                    $recentVisitWithFollowUp = Visit::where('patient_id', $patient->id)
+                        ->where('doctor_id', $doctor->id)
+                        ->where('status', 'completed')
+                        ->whereNotNull('follow_up_date')
+                        ->where(function($q) use ($validityDays) {
+                            $q->where('follow_up_date', '>=', Carbon::today())
+                              ->orWhere('visit_date', '>=', Carbon::today()->subDays($validityDays));
+                        })
+                        ->whereDoesntHave('recheckAppointments', function($q) {
+                            $q->whereIn('status', ['completed', 'in_consultation']);
+                        })
+                        ->latest('visit_date')
+                        ->first();
+                }
+
+                $parentVisit = $scheduledRecheckAppt?->recheckParentVisit ?: $recentVisitWithFollowUp;
+                $isFreeRecheck = ($scheduledRecheckAppt !== null || $recentVisitWithFollowUp !== null);
+
                 $fee = $isFreeRecheck ? 0 : ($doctor->consultation_fee ?? $department->consultation_fee ?? 0);
                 $payStatus = $isFreeRecheck ? 'paid' : 'pending';
                 $reasonText = $isFreeRecheck ? 'مراجعة مجانية' : ($httpRequest->description ?? 'كشف طبي عام');
                 $noteText = $isFreeRecheck 
-                    ? ("مراجعة مجانية سارية حتى " . Carbon::parse($recentVisit->visit_date)->addDays($validityDays)->format('Y-m-d') . " (مرتبطة بالزيارة #{$recentVisit->id})")
+                    ? ("مراجعة مجانية صالحة حتى " . Carbon::parse($parentVisit?->visit_date ?? now())->addDays($validityDays)->format('Y-m-d') . ($parentVisit ? " (مرتبطة بالزيارة #{$parentVisit->id})" : ""))
                     : 'تم الحجز من الاستعلامات - بانتظار الدفع';
 
-                // إنشاء موعد
-                $appointment = Appointment::create([
-                    'patient_id' => $patient->id,
-                    'doctor_id' => $doctor->id,
-                    'department_id' => $department->id,
-                    'appointment_date' => $appointmentDate,
-                    'reason' => $reasonText,
-                    'notes' => $noteText,
-                    'consultation_fee' => $fee,
-                    'is_free_recheck' => $isFreeRecheck,
-                    'recheck_parent_visit_id' => $recentVisit?->id,
-                    'duration' => 30,
-                    'status' => $isFreeRecheck ? 'confirmed' : 'scheduled',
-                    'payment_status' => $payStatus, // إذا كانت مراجعة مجانية تصبح مدفوعة/معفية فوراً
-                    'insurance_type' => $bookingInsuranceType
-                ]);
+                // إنشاء أو تحديث الموعد
+                if ($scheduledRecheckAppt) {
+                    $appointment = $scheduledRecheckAppt;
+                    $appointment->update([
+                        'department_id' => $department->id,
+                        'appointment_date' => $appointmentDate,
+                        'reason' => $reasonText,
+                        'notes' => $noteText,
+                        'status' => 'confirmed',
+                        'payment_status' => 'paid',
+                        'insurance_type' => $bookingInsuranceType
+                    ]);
+                } else {
+                    $appointment = Appointment::create([
+                        'patient_id' => $patient->id,
+                        'doctor_id' => $doctor->id,
+                        'department_id' => $department->id,
+                        'appointment_date' => $appointmentDate,
+                        'reason' => $reasonText,
+                        'notes' => $noteText,
+                        'consultation_fee' => $fee,
+                        'is_free_recheck' => $isFreeRecheck,
+                        'recheck_parent_visit_id' => $parentVisit?->id,
+                        'duration' => 30,
+                        'status' => $isFreeRecheck ? 'confirmed' : 'scheduled',
+                        'payment_status' => $payStatus,
+                        'insurance_type' => $bookingInsuranceType
+                    ]);
+                }
 
                 if ($isFreeRecheck) {
                     $messages[] = "✨ تم تسجيل المريض كمراجعة مجانية صالحة لدى د. " . ($doctor->user?->name ?? '') . " برسم (0 د.ع) ودخوله لطابور الطبيب مباشرة.";

@@ -99,6 +99,11 @@ class Appointment extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    public function recheckParentVisit()
+    {
+        return $this->belongsTo(Visit::class, 'recheck_parent_visit_id');
+    }
+
     // النطاق (Scopes)
     public function scopeToday($query)
     {
