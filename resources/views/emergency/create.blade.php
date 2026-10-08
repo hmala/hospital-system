@@ -120,6 +120,36 @@
                                 @enderror
                             </div>
 
+                            <!-- قسم تحديد تغطية الضمان للطوارئ -->
+                            <div class="col-md-12 mb-3" id="emergencyInsuranceSection" style="{{ isset($selectedPatient) && ($selectedPatient->healthInsuranceCategory || ($selectedPatient->insurance_type && $selectedPatient->insurance_type !== 'none')) ? '' : 'display: none;' }}">
+                                <div class="card border-success bg-success-subtle bg-opacity-10 p-3 shadow-sm rounded-3">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <h6 class="fw-bold text-success mb-1">
+                                                <i class="fas fa-shield-alt me-1"></i> مظلة الضمان الصحي للمريض: <span id="selectedPatientInsuranceCategoryText">{{ $selectedPatient->healthInsuranceCategory->name ?? ($selectedPatient && $selectedPatient->insurance_type !== 'none' ? 'مشمول بالضمان الصحي' : '') }}</span>
+                                            </h6>
+                                            <p class="small text-muted mb-0">
+                                                حدد ما إذا كانت هذه الحالة الطارئة والخدمات المقدمة سيتم احتسابها على ذمة الضمان الصحي أم حساب كاش مباشر للمريض.
+                                            </p>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3 bg-white p-2 rounded-3 border shadow-xs">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-success cursor-pointer" for="apply_insurance_yes">
+                                                    🛡️ حجز تحت مظلة الضمان
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-secondary cursor-pointer" for="apply_insurance_no">
+                                                    💵 حجز كاش عادي (بدون ضمان)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- حقول إنشاء مريض جديد -->
                             <div class="col-md-12 mb-3" id="newPatientFields" style="{{ old('new_patient_name') ? '' : 'display: none;' }}">
                                 <div class="card border-info p-3">
@@ -369,13 +399,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const insBadge = document.getElementById('selectedPatientInsuranceBadge');
         const insText = document.getElementById('selectedPatientInsuranceText');
-        if (insBadge && insText) {
-            if (patient.is_insurance) {
-                insText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
-                insBadge.style.display = 'inline-block';
-            } else {
-                insBadge.style.display = 'none';
-            }
+        const insuranceSection = document.getElementById('emergencyInsuranceSection');
+        const insuranceCatText = document.getElementById('selectedPatientInsuranceCategoryText');
+        const applyYes = document.getElementById('apply_insurance_yes');
+        const applyNo = document.getElementById('apply_insurance_no');
+
+        if (patient.is_insurance) {
+            if (insText) insText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+            if (insBadge) insBadge.style.display = 'inline-block';
+            if (insuranceCatText) insuranceCatText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+            if (insuranceSection) insuranceSection.style.display = 'block';
+            if (applyYes) applyYes.checked = true;
+        } else {
+            if (insBadge) insBadge.style.display = 'none';
+            if (insuranceSection) insuranceSection.style.display = 'none';
+            if (applyNo) applyNo.checked = true;
         }
 
         searchResults.style.display = 'none';
@@ -396,6 +434,10 @@ document.addEventListener('DOMContentLoaded', function() {
         clearPatientBtn.addEventListener('click', function() {
             hiddenPatientId.value = '';
             selectedCard.style.display = 'none';
+            const insuranceSection = document.getElementById('emergencyInsuranceSection');
+            if (insuranceSection) insuranceSection.style.display = 'none';
+            const applyNo = document.getElementById('apply_insurance_no');
+            if (applyNo) applyNo.checked = true;
             searchContainer.style.display = 'block';
             if (searchInput) {
                 searchInput.value = '';

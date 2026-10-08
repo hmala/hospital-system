@@ -149,13 +149,13 @@
                 <table class="table table-hover align-middle mb-0" id="commissionTable">
                     <thead class="table-light text-secondary small text-nowrap">
                         <tr>
-                            <th style="width: 50px;" class="text-center">#</th>
-                            <th>الطبيب والقسم</th>
-                            <th style="width: 140px;" class="text-center">أجرة الكشفية</th>
-                            <th style="width: 200px;" class="text-center">حصة الطبيب (د.ع)</th>
-                            <th style="width: 220px;" class="text-center">حصة المستشفى (معاينة)</th>
-                            <th style="width: 100px;" class="text-center">حالة الطبيب</th>
-                            <th style="width: 120px;" class="text-center">حفظ فوري</th>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th style="min-width: 200px;">الطبيب والقسم</th>
+                            <th style="width: 150px;" class="text-center">💵 كشفية الكاش (د.ع)</th>
+                            <th style="width: 210px;" class="text-center">🛡️ الضمان الصحي (HI)</th>
+                            <th style="width: 160px;" class="text-center">👨‍⚕️ حصة الطبيب (د.ع)</th>
+                            <th style="width: 180px;" class="text-center">🏥 حصة المستشفى</th>
+                            <th style="width: 90px;" class="text-center">حفظ فوري</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -163,35 +163,35 @@
                             @php
                                 $commission = $doctor->currentCommissionSetting;
                                 $docFee = (float) ($doctor->consultation_fee ?? 0);
+                                $hiFee = (float) ($doctor->hi_price ?? 0);
                                 $docShare = $commission && $commission->fixed_amount !== null ? (float) $commission->fixed_amount : 0;
                                 $hospShare = max(0, $docFee - $docShare);
                                 $hospPercent = $docFee > 0 ? round(($hospShare / $docFee) * 100) : 0;
-                                $docPercent = $docFee > 0 ? round(($docShare / $docFee) * 100) : 0;
                             @endphp
-                            <tr class="doctor-row-item" data-doctor-id="{{ $doctor->id }}" data-fee="{{ $docFee }}">
+                            <tr class="doctor-row-item" data-doctor-id="{{ $doctor->id }}" data-fee="{{ $docFee }}" data-hi-fee="{{ $hiFee }}">
                                 <!-- معرف الطبيب -->
                                 <td class="text-center font-monospace text-muted small">
                                     {{ $doctor->id }}
-                                    <input type="hidden" name="doctor_id[]" value="{{ $doctor->id }}">
-                                    <input type="hidden" name="commission_type[]" value="fixed">
+                                    <input type="hidden" name="doctor_id[{{ $index }}]" value="{{ $doctor->id }}">
+                                    <input type="hidden" name="commission_type[{{ $index }}]" value="fixed">
                                 </td>
 
                                 <!-- الطبيب والقسم -->
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        <div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px; font-size: 0.9rem;">
+                                        <div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 0.85rem;">
                                             {{ mb_substr($doctor->user?->name ?? 'ط', 0, 1) }}
                                         </div>
                                         <div>
-                                            <strong class="text-dark d-block">
+                                            <strong class="text-dark d-block fs-7">
                                                 {{ $doctor->user?->name ?? 'طبيب #' . $doctor->id }}
                                             </strong>
-                                            <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
-                                                <span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size: 0.72rem;">
+                                            <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                <span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size: 0.7rem;">
                                                     <i class="fas fa-hospital me-1"></i> {{ $doctor->department?->name ?? 'غير محدد' }}
                                                 </span>
                                                 @if(!empty($doctor->specialization))
-                                                    <span class="text-muted small" style="font-size: 0.72rem;">
+                                                    <span class="text-muted" style="font-size: 0.7rem;">
                                                         • {{ $doctor->specialization }}
                                                     </span>
                                                 @endif
@@ -200,15 +200,51 @@
                                     </div>
                                 </td>
 
-                                <!-- أجرة الكشفية الأصلية -->
-                                <td class="text-center">
-                                    @if($docFee > 0)
-                                        <span class="badge bg-light text-dark border font-monospace px-2 py-1 fs-7">
-                                            {{ number_format($docFee, 0) }} د.ع
-                                        </span>
-                                    @else
-                                        <span class="text-muted small font-monospace">0 د.ع</span>
-                                    @endif
+                                <!-- كشفية الكاش -->
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" 
+                                               step="500" 
+                                               min="0"
+                                               name="consultation_fee[{{ $index }}]" 
+                                               id="cashFeeInput-{{ $doctor->id }}"
+                                               value="{{ $docFee > 0 ? $docFee : '' }}" 
+                                               class="form-control form-control-sm font-monospace text-center fw-semibold fee-input" 
+                                               placeholder="0"
+                                               data-doctor-id="{{ $doctor->id }}"
+                                               oninput="onFeeChange({{ $doctor->id }})"
+                                               onkeydown="handleInputKeydown(event, {{ $doctor->id }})">
+                                        <span class="input-group-text bg-light text-muted small px-1" style="font-size: 0.7rem;">د.ع</span>
+                                    </div>
+                                </td>
+
+                                <!-- كشفية الضمان الصحي (HI) -->
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <div class="form-check form-switch mb-0 me-1" title="تفعيل / إطفاء كشفية الضمان الصحي">
+                                            <input type="hidden" name="is_hi_active[{{ $index }}]" id="is_hi_active_{{ $doctor->id }}" value="{{ $doctor->is_hi_active ? 1 : 0 }}">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   role="switch" 
+                                                   id="switch_hi_{{ $doctor->id }}" 
+                                                   {{ $doctor->is_hi_active ? 'checked' : '' }}
+                                                   onchange="document.getElementById('is_hi_active_{{ $doctor->id }}').value = this.checked ? 1 : 0; onFeeChange({{ $doctor->id }});">
+                                        </div>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" 
+                                                   step="500" 
+                                                   min="0"
+                                                   name="hi_price[{{ $index }}]" 
+                                                   id="hiPriceInput-{{ $doctor->id }}"
+                                                   value="{{ $hiFee > 0 ? $hiFee : '' }}" 
+                                                   class="form-control form-control-sm font-monospace text-center hi-input" 
+                                                   placeholder="سعر HI"
+                                                   data-doctor-id="{{ $doctor->id }}"
+                                                   oninput="onFeeChange({{ $doctor->id }})"
+                                                   onkeydown="handleInputKeydown(event, {{ $doctor->id }})">
+                                            <span class="input-group-text bg-success-subtle text-success small px-1" style="font-size: 0.65rem;">HI</span>
+                                        </div>
+                                    </div>
                                 </td>
 
                                 <!-- حصة الطبيب (إدخال) -->
@@ -217,42 +253,28 @@
                                         <input type="number" 
                                                step="500" 
                                                min="0"
-                                               max="{{ $docFee > 0 ? $docFee : 9999999 }}"
-                                               name="fixed_amount[]" 
+                                               name="fixed_amount[{{ $index }}]" 
                                                id="docShareInput-{{ $doctor->id }}"
                                                value="{{ $commission?->fixed_amount ?? '' }}" 
-                                               class="form-control form-control-sm font-monospace text-center fw-bold doctor-share-input" 
+                                               class="form-control form-control-sm font-monospace text-center fw-bold text-primary doctor-share-input" 
                                                placeholder="0"
                                                data-doctor-id="{{ $doctor->id }}"
                                                oninput="onDoctorShareChange({{ $doctor->id }})"
                                                onkeydown="handleInputKeydown(event, {{ $doctor->id }})">
-                                        <span class="input-group-text bg-light text-muted small px-2">د.ع</span>
+                                        <span class="input-group-text bg-light text-muted small px-1" style="font-size: 0.7rem;">د.ع</span>
                                     </div>
                                 </td>
 
                                 <!-- حصة المستشفى (معاينة حية) -->
                                 <td class="text-center">
                                     <div id="hospShareBox-{{ $doctor->id }}" class="d-inline-flex align-items-center gap-1 bg-light p-1 px-2 rounded-3 border">
-                                        <span class="fw-bold font-monospace text-info hosp-share-val" id="hospShareVal-{{ $doctor->id }}">
+                                        <span class="fw-bold font-monospace text-info hosp-share-val" id="hospShareVal-{{ $doctor->id }}" style="font-size: 0.8rem;">
                                             {{ number_format($hospShare, 0) }} د.ع
                                         </span>
-                                        <span class="badge bg-info-subtle text-info rounded-pill font-monospace hosp-share-percent" id="hospSharePercent-{{ $doctor->id }}" style="font-size: 0.7rem;">
+                                        <span class="badge bg-info-subtle text-info rounded-pill font-monospace hosp-share-percent" id="hospSharePercent-{{ $doctor->id }}" style="font-size: 0.65rem;">
                                             {{ $hospPercent }}%
                                         </span>
                                     </div>
-                                </td>
-
-                                <!-- حالة الطبيب -->
-                                <td class="text-center">
-                                    @if($doctor->is_active)
-                                        <span class="badge bg-success-subtle text-success px-2 py-1 font-monospace" style="font-size: 0.72rem;">
-                                            <i class="fas fa-check-circle me-1"></i> نشط
-                                        </span>
-                                    @else
-                                        <span class="badge bg-secondary-subtle text-muted px-2 py-1 font-monospace" style="font-size: 0.72rem;">
-                                            غير نشط
-                                        </span>
-                                    @endif
                                 </td>
 
                                 <!-- زر الحفظ الفوري السريع -->
@@ -261,7 +283,7 @@
                                             class="btn btn-sm btn-outline-success px-2 py-1 btn-save-row" 
                                             id="btnSaveRow-{{ $doctor->id }}"
                                             onclick="saveSingleRow({{ $doctor->id }}, this)"
-                                            title="حفظ فوري لحصة هذا الطبيب">
+                                            title="حفظ فوري لأسعار وحصة هذا الطبيب">
                                         <i class="fas fa-save me-1"></i> حفظ
                                     </button>
                                 </td>
@@ -304,7 +326,21 @@
 
 @section('scripts')
 <script>
-// 1. الاحتساب التلقائي المباشر لحصة المستشفى
+// 1. تحديث أسعار الكشفية والاحتساب المباشر
+window.onFeeChange = function(doctorId) {
+    const row = document.querySelector(`.doctor-row-item[data-doctor-id="${doctorId}"]`);
+    if (!row) return;
+
+    const cashInput = document.getElementById(`cashFeeInput-${doctorId}`);
+    const hiInput = document.getElementById(`hiPriceInput-${doctorId}`);
+
+    if (cashInput) row.setAttribute('data-fee', cashInput.value || '0');
+    if (hiInput) row.setAttribute('data-hi-fee', hiInput.value || '0');
+
+    window.onDoctorShareChange(doctorId);
+};
+
+// 2. الاحتساب التلقائي المباشر لحصة المستشفى
 window.onDoctorShareChange = function(doctorId) {
     const row = document.querySelector(`.doctor-row-item[data-doctor-id="${doctorId}"]`);
     if (!row) return;
@@ -330,7 +366,7 @@ window.onDoctorShareChange = function(doctorId) {
     row.classList.add('table-warning');
 };
 
-// 2. الحفظ بالضغط على زر Enter داخل حقل الإدخال
+// 3. الحفظ بالضغط على زر Enter داخل أي حقل إدخال
 window.handleInputKeydown = function(e, doctorId) {
     if (e.key === 'Enter') {
         e.preventDefault();

@@ -197,6 +197,14 @@ class DoctorCommissionSettingController extends Controller
             'doctor_id.*' => 'required|exists:doctors,id',
             'fixed_amount' => 'nullable|array',
             'fixed_amount.*' => 'nullable|numeric|min:0',
+            'consultation_fee' => 'nullable|array',
+            'consultation_fee.*' => 'nullable|numeric|min:0',
+            'hi_price' => 'nullable|array',
+            'hi_price.*' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|array',
+            'moi_price' => 'nullable|array',
+            'moi_price.*' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|array',
             'save_mode' => 'required|in:row,all,first_n',
             'doctor_row' => 'required_if:save_mode,row|exists:doctors,id',
             'rows_to_save' => 'nullable|integer|min:1',
@@ -204,6 +212,11 @@ class DoctorCommissionSettingController extends Controller
 
         $doctorIds = $validated['doctor_id'];
         $fixedAmounts = $request->input('fixed_amount', []);
+        $consultationFees = $request->input('consultation_fee', []);
+        $hiPrices = $request->input('hi_price', []);
+        $isHiActives = $request->input('is_hi_active', []);
+        $moiPrices = $request->input('moi_price', []);
+        $isMoiActives = $request->input('is_moi_active', []);
         $saveMode = $validated['save_mode'];
 
         $rowsToSave = null;
@@ -211,13 +224,35 @@ class DoctorCommissionSettingController extends Controller
             $rowsToSave = min($validated['rows_to_save'] ?? count($doctorIds), count($doctorIds));
         }
 
-        $processRows = function (int $index) use ($doctorIds, $fixedAmounts) {
+        $processRows = function (int $index) use ($doctorIds, $fixedAmounts, $consultationFees, $hiPrices, $isHiActives, $moiPrices, $isMoiActives) {
             $doctorId = $doctorIds[$index];
             $fixedAmount = $fixedAmounts[$index] ?? null;
 
             $doctor = Doctor::findOrFail($doctorId);
             $departmentId = $doctor->department_id;
             $isActive = $doctor->is_active;
+
+            // تحديث أسعار وتفعيل كشفيات الضمان والكاش للطبيب
+            $doctorUpdateData = [];
+            if (array_key_exists($index, $consultationFees) && $consultationFees[$index] !== null && $consultationFees[$index] !== '') {
+                $doctorUpdateData['consultation_fee'] = (float) $consultationFees[$index];
+            }
+            if (array_key_exists($index, $hiPrices)) {
+                $doctorUpdateData['hi_price'] = $hiPrices[$index] !== null && $hiPrices[$index] !== '' ? (float) $hiPrices[$index] : null;
+            }
+            if (array_key_exists($index, $isHiActives) || isset($hiPrices[$index])) {
+                $doctorUpdateData['is_hi_active'] = !empty($isHiActives[$index]);
+            }
+            if (array_key_exists($index, $moiPrices)) {
+                $doctorUpdateData['moi_price'] = $moiPrices[$index] !== null && $moiPrices[$index] !== '' ? (float) $moiPrices[$index] : null;
+            }
+            if (array_key_exists($index, $isMoiActives) || isset($moiPrices[$index])) {
+                $doctorUpdateData['is_moi_active'] = !empty($isMoiActives[$index]);
+            }
+
+            if (!empty($doctorUpdateData)) {
+                $doctor->update($doctorUpdateData);
+            }
 
             $commissionSetting = DoctorCommissionSetting::where('doctor_id', $doctorId)
                 ->latest('id')

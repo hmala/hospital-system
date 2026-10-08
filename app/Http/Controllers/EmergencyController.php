@@ -186,7 +186,7 @@ class EmergencyController extends Controller
         }
 
         if ($selectedPatientId) {
-            $selectedPatient = Patient::with('user')->find($selectedPatientId);
+            $selectedPatient = Patient::with(['user', 'healthInsuranceCategory'])->find($selectedPatientId);
         }
 
         $daysMap = [
@@ -374,8 +374,16 @@ class EmergencyController extends Controller
             $doctorId = $assignedDoc?->id;
         }
 
+        $patient = $patientId ? Patient::find($patientId) : null;
+        $isPatientInsured = $patient && (($patient->insurance_type && $patient->insurance_type !== 'none') || $patient->health_insurance_category_id);
+        $applyInsurance = $request->input('apply_insurance', '1') == '1';
+        $isInsured = $isPatientInsured && $applyInsurance;
+        $insuranceType = $isInsured ? ($patient->insurance_type ?: 'hi') : 'none';
+
         $emergency = Emergency::create([
             'patient_id' => $patientId,
+            'is_insured' => $isInsured,
+            'insurance_type' => $insuranceType,
             'emergency_patient_id' => $emergencyPatientId,
             'doctor_id' => $doctorId,
             'nurse_id' => $request->nurse_id,
@@ -1293,11 +1301,23 @@ class EmergencyController extends Controller
             ->whereNull('payment_id')
             ->pluck('emergency_service_id');
         
-        $isInsurance = (bool)($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory));
-        $insuranceType = $isInsurance ? 'hi' : 'none';
-        $emergencyCopay = $isInsurance ? $emergency->patient->getCopayPercentageFor('emergency') : 100.0;
-        $labCopay       = $isInsurance ? $emergency->patient->getCopayPercentageFor('lab') : 100.0;
-        $radCopay       = $isInsurance ? $emergency->patient->getCopayPercentageFor('radiology') : 100.0;
+        $isInsurance = false;
+        if (isset($emergency->is_insured)) {
+            $isInsurance = (bool) $emergency->is_insured;
+        } elseif (isset($emergency->insurance_type) && $emergency->insurance_type !== 'none') {
+            $isInsurance = true;
+        } elseif ($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory)) {
+            $isInsurance = true;
+        }
+
+        $insuranceType = $isInsurance ? ($emergency->insurance_type ?: 'hi') : 'none';
+        if ($insuranceType === 'none') {
+            $isInsurance = false;
+        }
+
+        $emergencyCopay = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('emergency') ?? 0.0) : 100.0;
+        $labCopay       = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
+        $radCopay       = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
 
         $unpaidServices = $emergency->services->whereIn('id', $unpaidServiceIds);
         $totalServicesAmount = 0.0;

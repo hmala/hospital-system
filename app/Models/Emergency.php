@@ -13,6 +13,8 @@ class Emergency extends Model
 {
     protected $fillable = [
         'patient_id',
+        'is_insured',
+        'insurance_type',
         'doctor_id',
         'nurse_id',
         'priority',
@@ -47,6 +49,7 @@ class Emergency extends Model
         'discharge_time' => 'datetime',
         'requires_surgery' => 'boolean',
         'requires_admission' => 'boolean',
+        'is_insured' => 'boolean',
         'doctor_follow_up_fee' => 'integer',
         'is_active' => 'boolean',
         'patient_migrated' => 'boolean',
