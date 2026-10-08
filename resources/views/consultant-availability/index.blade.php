@@ -382,8 +382,17 @@
                                                     </a>
                                                 @else
                                                     <span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>
-                                                @endcan
+                                                @endcanany
                                             @endif
+
+                                            @if($appointment->is_free_recheck)
+                                                <span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.65rem;">مراجعة مجانية</span>
+                                            @endif
+
+                                            <!-- زر طباعة الوصل الحراري -->
+                                            <a href="{{ route('appointments.print', $appointment->id) }}" target="_blank" class="btn btn-xs btn-outline-dark py-1 px-2" style="font-size: 0.75rem;" title="طباعة وصل الموعد والمراجعة للمريض">
+                                                <i class="fas fa-print"></i>
+                                            </a>
 
                                             @if($appointment->canBeCancelled())
                                                 <form method="POST" action="{{ route('appointments.cancel', $appointment) }}" class="d-inline m-0">

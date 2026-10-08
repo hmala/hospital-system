@@ -20,6 +20,7 @@ class Doctor extends Model
         'type',
         'schedule',
         'consultation_fee',
+        'recheck_validity_days',
         'moi_price',
         'is_moi_active',
         'hi_price',

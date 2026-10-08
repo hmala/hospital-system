@@ -25,12 +25,15 @@ class Visit extends Model
         'notes',
         'status',
         'vital_signs',
+        'follow_up_date',
+        'follow_up_notes',
         'needs_surgery',
         'surgery_notes'
     ];
 
     protected $casts = [
         'visit_date' => 'date',
+        'follow_up_date' => 'date',
         'visit_time' => 'datetime:H:i',
         'vital_signs' => 'array',
         'diagnosis' => 'array'

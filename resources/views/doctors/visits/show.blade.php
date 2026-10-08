@@ -654,6 +654,14 @@ datalist option:hover {
                             @endif
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" type="button" role="tab" data-bs-target="#recheckAppointmentCollapse">
+                            <i class="fas fa-calendar-check me-1 text-primary"></i> 6. المراجعة والموعد
+                            @if($visit->follow_up_date)
+                                <span class="badge bg-success ms-1"><i class="fas fa-check"></i></span>
+                            @endif
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="p-3 p-md-4">
@@ -1459,6 +1467,129 @@ datalist option:hover {
                             </div>
                         </form>
                     </div>
+
+                    <!-- تاب 6: المواعيد والمراجعة المجانية -->
+                    <div id="recheckAppointmentCollapse" class="workstation-panel" style="display: none;">
+                        <form action="{{ route('doctor.visits.update', $visit->id) }}" method="POST" id="recheckAppointmentForm">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="is_prescription_form" value="1">
+
+                            <div class="card border-primary mb-4 shadow-sm">
+                                <div class="card-header bg-gradient bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3 px-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-calendar-check fs-4"></i>
+                                        <div>
+                                            <h5 class="mb-0 fs-6 fw-bold">جدولة موعد واستشارة المراجعة (Medical Recheck & Follow-up)</h5>
+                                            <small class="text-white-50">تحديد موعد عودة المريض مجاناً لتقييم الخطة العلاجية أو الاطلاع على الفحوصات</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        @if($visit->doctor && $visit->doctor->recheck_validity_days)
+                                            <span class="badge bg-white text-primary border px-3 py-2 rounded-pill small fw-bold">
+                                                <i class="fas fa-shield-alt me-1"></i> صلاحية المراجعة: {{ $visit->doctor->recheck_validity_days }} أيام
+                                            </span>
+                                        @endif
+                                        <a href="{{ route('doctor.visits.appointment.print', $visit->id) }}" target="_blank" class="btn btn-light btn-sm text-primary fw-bold px-3 shadow-sm">
+                                            <i class="fas fa-print me-1"></i> طباعة كرت الموعد
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="card-body bg-white p-4">
+                                    
+                                    @if($visit->follow_up_date)
+                                        <div class="alert alert-success border-2 border-success rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
+                                            <div class="bg-success text-white p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 46px; height: 46px;">
+                                                <i class="fas fa-calendar-check"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold text-success mb-1">يوجد موعد مراجعة مجاني مجدول حالياً</h6>
+                                                <div class="text-dark small">
+                                                    الموعد المحدد: <strong class="fs-6 text-primary">{{ \Carbon\Carbon::parse($visit->follow_up_date)->format('Y-m-d') }}</strong> 
+                                                    (يوم {{ \Carbon\Carbon::parse($visit->follow_up_date)->locale('ar')->translatedFormat('l') }})
+                                                </div>
+                                                @if($visit->follow_up_notes)
+                                                    <div class="text-muted small mt-1"><i class="fas fa-info-circle me-1 text-info"></i>{{ $visit->follow_up_notes }}</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label text-dark small fw-bold mb-2">
+                                                <i class="fas fa-bolt text-warning me-1"></i> فترات المراجعة السريعة المقترحة:
+                                            </label>
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold" onclick="setFollowUpDays(3)">
+                                                    <i class="fas fa-clock me-1"></i> بعد 3 أيام
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold" onclick="setFollowUpDays(5)">
+                                                    <i class="fas fa-clock me-1"></i> بعد 5 أيام
+                                                </button>
+                                                <button type="button" class="btn btn-outline-success rounded-pill px-3 fw-bold" onclick="setFollowUpDays(7)">
+                                                    <i class="fas fa-calendar-week me-1"></i> بعد أسبوع (7 أيام)
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold" onclick="setFollowUpDays(10)">
+                                                    <i class="fas fa-clock me-1"></i> بعد 10 أيام
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold" onclick="setFollowUpDays(14)">
+                                                    <i class="fas fa-calendar-alt me-1"></i> بعد أسبوعين (14 يوم)
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary rounded-pill px-3" onclick="clearFollowUpDate()">
+                                                    <i class="fas fa-times me-1"></i> إلغاء الموعد / بدون مراجعة
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-md-4">
+                                            <label for="follow_up_date_tab6" class="form-label text-dark small fw-bold">
+                                                <i class="fas fa-calendar-day text-primary me-1"></i> تاريخ المراجعة:
+                                            </label>
+                                            <input type="date" 
+                                                   id="follow_up_date_tab6" 
+                                                   name="follow_up_date" 
+                                                   class="form-control border-primary fw-bold" 
+                                                   value="{{ old('follow_up_date', $visit->follow_up_date ? \Carbon\Carbon::parse($visit->follow_up_date)->format('Y-m-d') : '') }}"
+                                                   min="{{ date('Y-m-d') }}"
+                                                   onchange="syncFollowUpInputs(this.value)">
+                                            <small id="followUpDayNameTab6" class="text-primary fw-bold d-block mt-2"></small>
+                                        </div>
+
+                                        <div class="col-12 col-md-8">
+                                            <label for="follow_up_notes_tab6" class="form-label text-dark small fw-bold">
+                                                <i class="fas fa-comment-medical text-primary me-1"></i> ملاحظات وتوجيهات الطبيب للمراجعة:
+                                            </label>
+                                            <textarea id="follow_up_notes_tab6" 
+                                                      name="follow_up_notes" 
+                                                      class="form-control" 
+                                                      rows="3"
+                                                      placeholder="اكتب التوجيهات الطبية للمريض (مثال: الحضور صائماً 8 ساعات، إحضار نتيجة تحليل CBC ووظائف الكلى، قياس السكر يومياً...)" 
+                                                      maxlength="500"
+                                                      onchange="syncFollowUpNotes(this.value)">{{ old('follow_up_notes', $visit->follow_up_notes) }}</textarea>
+                                            <small class="text-muted d-block mt-1">تتم طباعة هذه الملاحظات في كرت المراجعة المطبوع والوصفة الطبية وتظهر لموظف الاستقبال.</small>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="p-3 bg-light rounded-3 border text-muted small d-flex align-items-center gap-3">
+                                                <i class="fas fa-magic text-warning fs-3"></i>
+                                                <div>
+                                                    <strong class="text-dark">أتمتة وحجز فوري:</strong> عند النقر على حفظ، يتم حجز موعد مؤكد ومجاني (كشفية = 0) تلقائياً في جدول الاستقبال ليوم المراجعة، ويتمكن المريض من طباعة كرت الموعد والوصفة الطبية.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end align-items-center mt-4 pt-3 border-top">
+                                        <button type="submit" class="btn btn-primary px-4 py-2 fw-bold shadow-sm">
+                                            <i class="fas fa-save me-1"></i> حفظ وتثبيت موعد المراجعة
+                                        </button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1491,6 +1622,12 @@ datalist option:hover {
                             <button class="nav-link py-1 px-2 small fw-semibold" id="side-visits-tab" data-bs-toggle="pill" data-bs-target="#side-visits-pane" type="button" role="tab">
                                 <i class="fas fa-history me-1"></i> الزيارات السابقة
                                 <span class="badge bg-secondary ms-1">{{ isset($pastVisits) ? $pastVisits->count() : 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-2 small fw-semibold" id="side-appointments-tab" data-bs-toggle="pill" data-bs-target="#side-appointments-pane" type="button" role="tab">
+                                <i class="fas fa-calendar-check me-1"></i> المواعيد والمراجعات
+                                <span class="badge bg-info text-dark ms-1">{{ isset($patientAppointments) ? $patientAppointments->count() : 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item">
@@ -2058,7 +2195,73 @@ datalist option:hover {
                             @endif
                         </div>
 
-                        <!-- محتوى 3: العمليات الجراحية ودخول الطوارئ -->
+                        <!-- محتوى 3: سجل المواعيد والمراجعات -->
+                        <div class="tab-pane fade" id="side-appointments-pane" role="tabpanel">
+                            @if(isset($patientAppointments) && $patientAppointments->count() > 0)
+                                <div class="d-flex flex-column gap-2">
+                                    @foreach($patientAppointments as $apt)
+                                        @php
+                                            $isPastApt = \Carbon\Carbon::parse($apt->appointment_date)->isPast() && !\Carbon\Carbon::parse($apt->appointment_date)->isToday();
+                                            $isTodayApt = \Carbon\Carbon::parse($apt->appointment_date)->isToday();
+                                        @endphp
+                                        <div class="card border {{ $apt->is_free_recheck ? 'border-success-subtle bg-success-subtle bg-opacity-10' : ($isTodayApt ? 'border-primary-subtle bg-primary-subtle bg-opacity-10' : 'border-light-subtle bg-white') }} p-2 rounded-3 shadow-none">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <strong class="text-dark small">
+                                                        <i class="fas fa-calendar-day text-primary me-1"></i>
+                                                        {{ $apt->appointment_date }}
+                                                    </strong>
+                                                    @if($apt->appointment_time)
+                                                        <span class="text-muted small">({{ \Carbon\Carbon::parse($apt->appointment_time)->format('h:i A') }})</span>
+                                                    @endif
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    @if($apt->is_free_recheck)
+                                                        <span class="badge bg-success rounded-pill px-2" style="font-size: 0.68rem;">
+                                                            <i class="fas fa-check-circle me-1"></i> مراجعة مجانية
+                                                        </span>
+                                                    @endif
+                                                    <span class="badge {{ $apt->status == 'completed' ? 'bg-secondary' : ($apt->status == 'confirmed' ? 'bg-primary' : ($apt->status == 'cancelled' ? 'bg-danger' : 'bg-warning text-dark')) }} rounded-pill" style="font-size: 0.68rem;">
+                                                        {{ $apt->status == 'completed' ? 'مكتمل' : ($apt->status == 'confirmed' ? 'مؤكد' : ($apt->status == 'cancelled' ? 'ملغي' : 'في الانتظار')) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex align-items-center justify-content-between text-muted small mt-1">
+                                                <div>
+                                                    <i class="fas fa-user-md me-1 text-info"></i>
+                                                    <strong>د. {{ $apt->doctor?->user?->name ?? 'طبيب الاستشارية' }}</strong>
+                                                    @if($apt->department)
+                                                        <span class="text-secondary ms-1">({{ $apt->department->name }})</span>
+                                                    @endif
+                                                </div>
+                                                <div>
+                                                    @if($apt->payment_status == 'paid')
+                                                        <span class="text-success small fw-bold"><i class="fas fa-check"></i> مسدد</span>
+                                                    @else
+                                                        <span class="text-warning small fw-bold"><i class="fas fa-clock"></i> غير مسدد</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                            @if($apt->reason)
+                                                <div class="p-1 px-2 mt-1 rounded bg-light border text-dark small" style="font-size: 0.72rem;">
+                                                    <i class="fas fa-info-circle text-primary me-1"></i> {{ $apt->reason }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-calendar-check fa-3x opacity-25 mb-2"></i>
+                                    <h6 class="fw-bold mb-1">لا توجد مواعيد مسجلة للمريض</h6>
+                                    <p class="small mb-0">يمكنك جدولة موعد مراجعة مجانية مباشرة من التبويب 5 (الوصفة والعلاج).</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- محتوى 4: العمليات الجراحية ودخول الطوارئ -->
                         <div class="tab-pane fade" id="side-surgeries-pane" role="tabpanel">
                             <!-- العمليات الجراحية -->
                             <div class="mb-4">
@@ -4687,6 +4890,82 @@ function confirmSurgeryReferral() {
             }
         });
     };
+
+    // دوال تحديد موعد المراجعة المجانية السريع
+    window.setFollowUpDays = function(days) {
+        var targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + parseInt(days));
+        var yyyy = targetDate.getFullYear();
+        var mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+        var dd = String(targetDate.getDate()).padStart(2, '0');
+        var formatted = yyyy + '-' + mm + '-' + dd;
+
+        var input5 = document.getElementById('follow_up_date');
+        var input6 = document.getElementById('follow_up_date_tab6');
+        if (input5) input5.value = formatted;
+        if (input6) input6.value = formatted;
+
+        updateFollowUpDayLabel(targetDate);
+    };
+
+    window.clearFollowUpDate = function() {
+        var input5 = document.getElementById('follow_up_date');
+        var input6 = document.getElementById('follow_up_date_tab6');
+        if (input5) input5.value = '';
+        if (input6) input6.value = '';
+
+        var label5 = document.getElementById('followUpDayName');
+        var label6 = document.getElementById('followUpDayNameTab6');
+        if (label5) label5.textContent = '';
+        if (label6) label6.textContent = '';
+    };
+
+    window.syncFollowUpInputs = function(val) {
+        var input5 = document.getElementById('follow_up_date');
+        if (input5 && input5.value !== val) input5.value = val;
+        if (val) {
+            var parts = val.split('-');
+            if (parts.length === 3) {
+                var d = new Date(parts[0], parts[1] - 1, parts[2]);
+                updateFollowUpDayLabel(d);
+            }
+        } else {
+            clearFollowUpDate();
+        }
+    };
+
+    window.syncFollowUpNotes = function(val) {
+        var notes5 = document.getElementById('follow_up_notes');
+        if (notes5 && notes5.value !== val) notes5.value = val;
+    };
+
+    function updateFollowUpDayLabel(dateObj) {
+        var dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        var dayName = dayNames[dateObj.getDay()];
+        var text = 'يوافق يوم: ' + dayName;
+        
+        var label5 = document.getElementById('followUpDayName');
+        var label6 = document.getElementById('followUpDayNameTab6');
+        if (label5) label5.textContent = text;
+        if (label6) label6.textContent = text;
+    }
+
+    // تحديث اسم اليوم عند اختيار التاريخ يدوياً
+    ['follow_up_date', 'follow_up_date_tab6'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', function() {
+                syncFollowUpInputs(this.value);
+            });
+            if (el.value) {
+                var parts = el.value.split('-');
+                if (parts.length === 3) {
+                    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+                    updateFollowUpDayLabel(d);
+                }
+            }
+        }
+    });
 </script>
 
 <style>

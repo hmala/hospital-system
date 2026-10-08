@@ -179,6 +179,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/appointments/{appointment}/confirm', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::post('/appointments/{appointment}/complete', [AppointmentController::class, 'complete'])->name('appointments.complete');
     Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+    Route::get('/appointments/{appointment}/print', [AppointmentController::class, 'printSlip'])->name('appointments.print');
     Route::get('/appointments/available-slots', [AppointmentController::class, 'getAvailableSlots'])->name('appointments.available-slots');
     
     // مسارات الاستعلامات - يجب أن تأتي قبل resource
@@ -343,6 +344,7 @@ Route::middleware(['auth'])->group(function () {
         // Patient Medical History Timeline
         Route::get('/patient/{patient}/history', [DoctorVisitController::class, 'showPatientHistory'])->name('patient.history');
         Route::get('/visits/{visit}/prescription/print', [DoctorVisitController::class, 'printPrescription'])->name('visits.prescription.print');
+        Route::get('/visits/{visit}/appointment/print', [DoctorVisitController::class, 'printAppointment'])->name('visits.appointment.print');
         Route::get('/visits/{visit}/substitution-requests', [DoctorVisitController::class, 'getSubstitutionRequests'])->name('visits.substitution-requests');
         Route::post('/prescriptions/items/{item}/respond-substitution', [DoctorVisitController::class, 'respondToSubstitution'])->name('prescriptions.items.respond-substitution');
     });

@@ -463,6 +463,14 @@ class DoctorVisitController extends Controller
                 ->get()
             : collect();
 
+        $patientAppointments = $visit->patient_id
+            ? \App\Models\Appointment::where('patient_id', $visit->patient_id)
+                ->with(['doctor.user', 'department'])
+                ->orderBy('appointment_date', 'desc')
+                ->limit(20)
+                ->get()
+            : collect();
+
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
@@ -482,7 +490,8 @@ class DoctorVisitController extends Controller
             'pendingSubstitutionRequests',
             'pastVisits',
             'pastSurgeries',
-            'pastEmergencies'
+            'pastEmergencies',
+            'patientAppointments'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -535,6 +544,8 @@ class DoctorVisitController extends Controller
         // إضافة القواعد الأخرى
         $rules['treatment_plan'] = 'nullable|string|max:1000';
         $rules['notes'] = 'nullable|string|max:1000';
+        $rules['follow_up_date'] = 'nullable|date';
+        $rules['follow_up_notes'] = 'nullable|string|max:500';
 
         $request->validate($rules);
 
@@ -564,6 +575,39 @@ class DoctorVisitController extends Controller
 
         if ($request->has('notes')) {
             $updateData['notes'] = $request->notes;
+        }
+
+        if ($request->has('follow_up_date')) {
+            $updateData['follow_up_date'] = $request->filled('follow_up_date') ? $request->follow_up_date : null;
+            $updateData['follow_up_notes'] = $request->follow_up_notes;
+
+            // إذا تم تحديد موعد مراجعة، يتم إنشاء أو تحديث موعد المراجعة المجانية في جدول المواعيد
+            if ($request->filled('follow_up_date')) {
+                $fuDate = \Carbon\Carbon::parse($request->follow_up_date)->format('Y-m-d');
+                
+                $followupAppt = Appointment::firstOrNew([
+                    'recheck_parent_visit_id' => $visit->id,
+                ]);
+
+                $followupAppt->fill([
+                    'patient_id' => $visit->patient_id,
+                    'doctor_id' => $visit->doctor_id,
+                    'department_id' => $visit->department_id,
+                    'appointment_date' => $fuDate . ' 09:00:00',
+                    'status' => 'confirmed',
+                    'payment_status' => 'paid',
+                    'is_free_recheck' => true,
+                    'consultation_fee' => 0,
+                    'reason' => 'مراجعة مجانية',
+                    'notes' => $request->follow_up_notes ?: 'مراجعة مجانية مجدولة من محطة الطبيب',
+                ]);
+
+                $followupAppt->save();
+            } else {
+                Appointment::where('recheck_parent_visit_id', $visit->id)
+                    ->whereIn('status', ['scheduled', 'confirmed'])
+                    ->delete();
+            }
         }
 
         if ($request->has('status')) {
@@ -1233,6 +1277,23 @@ class DoctorVisitController extends Controller
         $prescription = $visit->prescriptions()->latest()->first();
 
         return view('doctors.visits.prescription-print', compact('visit', 'prescription'));
+    }
+
+    /**
+     * طباعة كرت وبطاقة موعد المراجعة والاستشارة (Appointment / Follow-up Slip Print)
+     */
+    public function printAppointment(Visit $visit)
+    {
+        $visit->load([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'appointment'
+        ]);
+
+        $followUpAppointment = \App\Models\Appointment::where('recheck_parent_visit_id', $visit->id)->latest()->first();
+
+        return view('doctors.visits.appointment-print', compact('visit', 'followUpAppointment'));
     }
 
     /**
