@@ -1507,8 +1507,93 @@ datalist option:hover {
                         
                         <!-- محتوى 1: طلبات ونتائج اليوم -->
                         <div class="tab-pane fade show active" id="side-today-pane" role="tabpanel">
-                            @if($visit->requests->count() > 0)
+                            @php
+                                $hasPrescriptions = (isset($prescribedMedications) && $prescribedMedications->count() > 0) || (isset($latestPrescription) && $latestPrescription && $latestPrescription->items->count() > 0);
+                            @endphp
+                            @if($visit->requests->count() > 0 || $hasPrescriptions)
                                 <div class="d-flex flex-column gap-3">
+                                    {{-- بطاقة الوصفة الطبية الإلكترونية وصرف الصيدلية --}}
+                                    @if($hasPrescriptions)
+                                        <div class="card border border-success shadow-sm rounded-3 overflow-hidden">
+                                            <div class="card-header py-2 px-3 bg-success-subtle border-success-subtle d-flex justify-content-between align-items-center">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-prescription me-1"></i> الوصفة الطبية (RX)
+                                                    </span>
+                                                    @if($latestPrescription && $latestPrescription->prescription_number)
+                                                        <small class="text-dark font-monospace fw-bold">{{ $latestPrescription->prescription_number }}</small>
+                                                    @endif
+                                                    @if($latestPrescription && $latestPrescription->created_at)
+                                                        <small class="text-muted font-monospace">{{ $latestPrescription->created_at->format('H:i') }}</small>
+                                                    @endif
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    @if($latestPrescription && $latestPrescription->status === 'dispensed')
+                                                        <span class="badge bg-success" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-check-double me-1"></i> تم الصرف بالصيدلية
+                                                        </span>
+                                                    @elseif($latestPrescription && $latestPrescription->status === 'partially_dispensed')
+                                                        <span class="badge bg-warning text-dark" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-hourglass-half me-1"></i> صرف جزئي
+                                                        </span>
+                                                    @elseif($latestPrescription && $latestPrescription->status === 'cancelled')
+                                                        <span class="badge bg-danger" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-times-circle me-1"></i> ملغية
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-clock me-1"></i> بانتظار الصرف بالصيدلية
+                                                        </span>
+                                                    @endif
+
+                                                    <a href="{{ route('doctor.visits.prescription.print', $visit->id) }}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="طباعة الروشتة">
+                                                        <i class="fas fa-print me-1"></i> طباعة
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-2 p-md-3 bg-white">
+                                                <div class="d-flex flex-column gap-2">
+                                                    @php
+                                                        $medList = ($latestPrescription && $latestPrescription->items->count() > 0)
+                                                            ? $latestPrescription->items
+                                                            : $prescribedMedications;
+                                                    @endphp
+                                                    @foreach($medList as $medItem)
+                                                        @php
+                                                            $medName = $medItem->medicine_name ?? ($medItem->name ?? ($medItem->medicine->name ?? 'دواء'));
+                                                            $medDosage = $medItem->dosage_frequency ?? ($medItem->dosage ?? '');
+                                                            $medDuration = !empty($medItem->duration_days) ? ($medItem->duration_days . ' يوم') : ($medItem->duration ?? '');
+                                                            $medInstructions = $medItem->instructions ?? '';
+                                                            $isDispensed = isset($medItem->dispensed_quantity) && $medItem->dispensed_quantity > 0;
+                                                        @endphp
+                                                        <div class="p-2 rounded-2 border bg-light d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                                    <i class="fas fa-pills text-success"></i>
+                                                                    <strong class="text-dark small">{{ $medName }}</strong>
+                                                                    @if($medDosage)
+                                                                        <span class="badge bg-secondary-subtle text-secondary border font-monospace" style="font-size: 0.7rem;">{{ $medDosage }}</span>
+                                                                    @endif
+                                                                    @if($medDuration)
+                                                                        <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.7rem;">{{ $medDuration }}</span>
+                                                                    @endif
+                                                                </div>
+                                                                @if($medInstructions)
+                                                                    <small class="text-muted d-block mt-1" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i> {{ $medInstructions }}</small>
+                                                                @endif
+                                                            </div>
+                                                            @if($isDispensed)
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.7rem;">
+                                                                    <i class="fas fa-check"></i> تم الصرف
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     @foreach($visit->requests as $medRequest)
                                         @php
                                             $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
