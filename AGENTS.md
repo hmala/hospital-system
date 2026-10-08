@@ -787,3 +787,24 @@ Consult these files before making changes or proposing fixes:
 - This repository contains many Arabic-language docs and comments; be careful not to lose or mistranslate them.
 - Key domain areas include radiology, cashier/payment workflows, scanner integration, and surgery stations.
 - When making changes that affect UI or workflow state, verify related docs under `docs/` and root markdown files.
+
+## Session log (2026-10-08 — نظام الدوام والخفارات المتكامل، والمراسلات)
+
+### Done
+- **نظام مسير الرواتب (Payroll):** إضافة ميزة "حذف مسودة الراتب" و "إعادة التوليد" مع خاصية (Rollback) الآمنة التي تعيد الاستقطاعات والغيابات والمكافآت إلى حالة الانتظار عند حذف مسودة الراتب. (إصلاح خطأ حالة pending في جدول الرواتب).
+- **إعدادات الشفتات (Shifts Setup):** واجهة متكاملة لإضافة وتعديل وحذف أنواع الشفتات (أوقاتها، وألوان تمييزها).
+- **جدول الدوام الأسبوعي (Roster Builder):**
+  - بناء شاشة توزيع خفارات تشبه Excel (Grid View).
+  - ميزة **النسخ السريع (Copy Last Week)** لاستنساخ جدول الأسبوع الماضي بضغطة زر.
+  - ميزة **التبادل (Shift Swaps)** لتبديل خفارة طبيبين في نفس اليوم.
+  - ميزة **بديل الطوارئ (Emergency Cover)** للبحث الفوري عن الموظفين المجازين (Off) لتغطية النقص.
+  - ميزة **تنبيه الإرهاق (Fatigue Warning)** تظهر شارة حمراء إذا عمل الموظف 6 أيام متواصلة.
+- **الجدول الفردي للموظف (My Roster):** إضافة زر لملف الموظف يعرض رزنامة (Calendar) خاصة بدوامه الشهري جاهزة للطباعة.
+
+### Next / Planned
+- **نظام المراسلات والموافقات (Workflow & E-Signature System):**
+  - أرشفة الكتب الرسمية بملف الموظف (كتب الشكر، الإنذار، تأييد الاستمرار).
+  - طلبات الأقسام (طلبات الشراء والموافقات).
+  - دورة مستندية من مستويين للموافقة (مدير الإدارة + المدير العام).
+  - عند الموافقة يتم إدراج "التوقيع الإلكتروني" للمدير آلياً.
+  - عند الاعتماد النهائي يُغلق الكتاب ويُمنح "رقم صادر وتاريخ".
