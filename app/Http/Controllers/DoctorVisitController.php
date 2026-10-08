@@ -441,7 +441,7 @@ class DoctorVisitController extends Controller
         $pastVisits = $visit->patient_id 
             ? Visit::where('patient_id', $visit->patient_id)
                 ->where('id', '!=', $visit->id)
-                ->with(['doctor.user', 'requests', 'prescribedMedications'])
+                ->with(['doctor.user', 'requests', 'prescribedMedications', 'prescriptions.items.medicine'])
                 ->orderBy('visit_date', 'desc')
                 ->limit(15)
                 ->get()

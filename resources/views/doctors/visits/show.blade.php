@@ -1863,73 +1863,189 @@ datalist option:hover {
                         <!-- محتوى 2: الزيارات السابقة -->
                         <div class="tab-pane fade" id="side-visits-pane" role="tabpanel">
                             @if(isset($pastVisits) && $pastVisits->count() > 0)
-                                <div class="d-flex flex-column gap-2">
-                                    @foreach($pastVisits as $pv)
-                                        <div class="card border rounded-3 p-3 bg-white shadow-sm">
-                                            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                <div class="accordion d-flex flex-column gap-2" id="pastVisitsAccordion">
+                                    @foreach($pastVisits as $pvIndex => $pv)
+                                        @php
+                                            $pvLabReqs = $pv->requests->where('type', 'lab');
+                                            $pvRadReqs = $pv->requests->where('type', 'radiology');
+                                            $pvNursingReqs = $pv->requests->where('type', 'nursing');
+                                            $pvLatestRx = $pv->prescriptions->first();
+                                            $pvMeds = ($pvLatestRx && $pvLatestRx->items->count() > 0) ? $pvLatestRx->items : $pv->prescribedMedications;
+                                            $pvDiag = $pv->diagnosis ?? [];
+                                        @endphp
+                                        <div class="card border rounded-3 overflow-hidden shadow-sm">
+                                            <!-- رأس بطاقة الزيارة القابل للنقر للتوسيع -->
+                                            <div class="card-header bg-light py-2 px-3 cursor-pointer d-flex justify-content-between align-items-center" 
+                                                 data-bs-toggle="collapse" 
+                                                 data-bs-target="#pvCollapse{{ $pv->id }}" 
+                                                 aria-expanded="false" 
+                                                 aria-controls="pvCollapse{{ $pv->id }}"
+                                                 style="user-select: none;">
                                                 <div>
-                                                    <strong class="text-dark fs-6">{{ $pv->created_at->format('Y-m-d') }}</strong>
-                                                    <small class="text-muted ms-1 font-monospace">({{ $pv->created_at->diffForHumans() }})</small>
+                                                    <strong class="text-dark small d-block">{{ $pv->created_at->format('Y-m-d') }}</strong>
+                                                    <small class="text-muted font-monospace" style="font-size: 0.72rem;">{{ $pv->created_at->diffForHumans() }}</small>
                                                 </div>
-                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">
-                                                    د. {{ $pv->doctor?->user?->name ?? 'طبيب استشاري' }}
-                                                </span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;">
+                                                        د. {{ $pv->doctor?->user?->name ?? 'طبيب استشاري' }}
+                                                    </span>
+                                                    @if($pvLabReqs->count() > 0)
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace" style="font-size: 0.68rem;" title="تحاليل مخبرية">
+                                                            <i class="fas fa-microscope"></i> {{ $pvLabReqs->count() }}
+                                                        </span>
+                                                    @endif
+                                                    @if($pvRadReqs->count() > 0)
+                                                        <span class="badge bg-info-subtle text-info border border-info-subtle font-monospace" style="font-size: 0.68rem;" title="أشعة وتصوير">
+                                                            <i class="fas fa-x-ray"></i> {{ $pvRadReqs->count() }}
+                                                        </span>
+                                                    @endif
+                                                    @if($pvMeds->count() > 0)
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace" style="font-size: 0.68rem;" title="أدوية موصوفة">
+                                                            <i class="fas fa-pills"></i> {{ $pvMeds->count() }}
+                                                        </span>
+                                                    @endif
+                                                    <i class="fas fa-chevron-down text-muted ms-1" style="font-size: 0.75rem;"></i>
+                                                </div>
                                             </div>
 
-                                            <!-- العلامات الحيوية السابقة -->
-                                            @if(!empty($pv->vital_signs))
-                                                <div class="d-flex flex-wrap gap-1 mb-2">
-                                                    @if(!empty($pv->vital_signs['blood_pressure_systolic']))
-                                                        <span class="badge bg-light text-dark border" style="font-size: 0.72rem;">
-                                                            BP: {{ $pv->vital_signs['blood_pressure_systolic'] }}/{{ $pv->vital_signs['blood_pressure_diastolic'] ?? '' }}
-                                                        </span>
-                                                    @endif
-                                                    @if(!empty($pv->vital_signs['heart_rate']))
-                                                        <span class="badge bg-light text-dark border" style="font-size: 0.72rem;">
-                                                            HR: {{ $pv->vital_signs['heart_rate'] }} bpm
-                                                        </span>
-                                                    @endif
-                                                    @if(!empty($pv->vital_signs['temperature']))
-                                                        <span class="badge bg-light text-dark border" style="font-size: 0.72rem;">
-                                                            Temp: {{ $pv->vital_signs['temperature'] }}°C
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            @endif
-
-                                            <!-- التشخيص السابق -->
-                                            @php
-                                                $pvDiag = $pv->diagnosis ?? [];
-                                            @endphp
-                                            @if(!empty($pvDiag['code']) || !empty($pvDiag['description']) || !empty($pv->physical_examination))
-                                                <div class="bg-light p-2 rounded-2 mb-2 small">
-                                                    @if(!empty($pvDiag['code']))
-                                                        <div class="text-primary fw-bold">
-                                                            <i class="fas fa-stethoscope me-1"></i> {{ $pvDiag['code'] }}
+                                            <!-- محتوى تفاصيل الزيارة المنسدل -->
+                                            <div id="pvCollapse{{ $pv->id }}" class="collapse" data-bs-parent="#pastVisitsAccordion">
+                                                <div class="card-body p-3 bg-white border-top">
+                                                    
+                                                    <!-- العلامات الحيوية -->
+                                                    @if(!empty($pv->vital_signs))
+                                                        <div class="d-flex flex-wrap gap-1 mb-2 pb-2 border-bottom">
+                                                            @if(!empty($pv->vital_signs['blood_pressure_systolic']))
+                                                                <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.7rem;">
+                                                                    BP: {{ $pv->vital_signs['blood_pressure_systolic'] }}/{{ $pv->vital_signs['blood_pressure_diastolic'] ?? '' }}
+                                                                </span>
+                                                            @endif
+                                                            @if(!empty($pv->vital_signs['heart_rate']))
+                                                                <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.7rem;">
+                                                                    HR: {{ $pv->vital_signs['heart_rate'] }}
+                                                                </span>
+                                                            @endif
+                                                            @if(!empty($pv->vital_signs['temperature']))
+                                                                <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.7rem;">
+                                                                    Temp: {{ $pv->vital_signs['temperature'] }}°C
+                                                                </span>
+                                                            @endif
                                                         </div>
                                                     @endif
-                                                    @if(!empty($pvDiag['description']))
-                                                        <div class="text-dark">{{ $pvDiag['description'] }}</div>
-                                                    @endif
-                                                    @if(!empty($pv->physical_examination))
-                                                        <div class="text-muted small mt-1"><strong>الفحص:</strong> {{ Str::limit($pv->physical_examination, 70) }}</div>
-                                                    @endif
-                                                </div>
-                                            @endif
 
-                                            <!-- الأدوية الموصوفة -->
-                                            @if($pv->prescribedMedications->count() > 0)
-                                                <div class="small">
-                                                    <span class="text-success fw-bold"><i class="fas fa-pills me-1"></i> الأدوية:</span>
-                                                    <div class="d-flex flex-wrap gap-1 mt-1">
-                                                        @foreach($pv->prescribedMedications as $med)
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
-                                                                {{ $med->name }} ({{ $med->dosage }})
-                                                            </span>
-                                                        @endforeach
-                                                    </div>
+                                                    <!-- التشخيص والفحص -->
+                                                    @if(!empty($pvDiag['code']) || !empty($pvDiag['description']) || !empty($pv->physical_examination))
+                                                        <div class="bg-light p-2 rounded-2 mb-2 small">
+                                                            @if(!empty($pvDiag['code']))
+                                                                <div class="text-primary fw-bold mb-1">
+                                                                    <i class="fas fa-stethoscope me-1"></i> {{ $pvDiag['code'] }}: {{ $pvDiag['description'] ?? '' }}
+                                                                </div>
+                                                            @elseif(!empty($pvDiag['description']))
+                                                                <div class="text-dark fw-semibold mb-1">{{ $pvDiag['description'] }}</div>
+                                                            @endif
+                                                            @if(!empty($pv->physical_examination))
+                                                                <div class="text-muted small"><strong>الفحص:</strong> {{ $pv->physical_examination }}</div>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+
+                                                    <!-- التحاليل السابقة ونتائجها -->
+                                                    @if($pvLabReqs->count() > 0)
+                                                        <div class="mb-2 p-2 rounded-2 border border-primary-subtle bg-primary-subtle bg-opacity-10">
+                                                            <div class="small fw-bold text-primary mb-1 d-flex align-items-center gap-1">
+                                                                <i class="fas fa-microscope"></i> التحاليل والنتائج:
+                                                            </div>
+                                                            @foreach($pvLabReqs as $pvLab)
+                                                                @php
+                                                                    $pvLabDetails = is_string($pvLab->details) ? json_decode($pvLab->details, true) : ($pvLab->details ?? []);
+                                                                    $pvLabRes = is_string($pvLab->result) ? json_decode($pvLab->result, true) : ($pvLab->result ?? []);
+                                                                    $pvLabTests = $pvLabDetails['tests'] ?? [$pvLabDetails['description'] ?? 'فحص'];
+                                                                    $pvLabAtts = $pvLabDetails['test_attachments'] ?? ($pvLabRes['test_attachments'] ?? []);
+                                                                @endphp
+                                                                <div class="d-flex flex-wrap gap-1 mb-1">
+                                                                    @foreach($pvLabTests as $tName)
+                                                                        <span class="badge bg-white text-dark border font-monospace" style="font-size: 0.72rem;">{{ $tName }}</span>
+                                                                    @endforeach
+                                                                </div>
+                                                                @if(!empty($pvLabRes['test_results']) && is_array($pvLabRes['test_results']))
+                                                                    <div class="bg-white rounded border p-1 mb-1">
+                                                                        @foreach($pvLabRes['test_results'] as $rName => $rVal)
+                                                                            @php
+                                                                                $v = is_array($rVal) ? ($rVal['value'] ?? '-') : $rVal;
+                                                                                $u = is_array($rVal) ? ($rVal['unit'] ?? '') : '';
+                                                                            @endphp
+                                                                            <small class="d-block text-muted" style="font-size: 0.72rem;">
+                                                                                <strong>{{ $rName }}:</strong> <span class="text-dark fw-bold">{{ $v }} {{ $u }}</span>
+                                                                            </small>
+                                                                        @endforeach
+                                                                    </div>
+                                                                @endif
+                                                                @if(!empty($pvLabAtts) && is_array($pvLabAtts))
+                                                                    @foreach($pvLabAtts as $attName => $attFile)
+                                                                        @if(!empty($attFile['path']))
+                                                                            <a href="{{ asset('storage/' . $attFile['path']) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold me-1 mb-1" style="font-size: 0.7rem;">
+                                                                                <i class="fas fa-paperclip me-1"></i> {{ $attName }}
+                                                                            </a>
+                                                                        @endif
+                                                                    @endforeach
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    <!-- الأشعة السابقة -->
+                                                    @if($pvRadReqs->count() > 0)
+                                                        <div class="mb-2 p-2 rounded-2 border border-info-subtle bg-info-subtle bg-opacity-10">
+                                                            <div class="small fw-bold text-info-emphasis mb-1 d-flex align-items-center gap-1">
+                                                                <i class="fas fa-x-ray"></i> الأشعة والتصوير:
+                                                            </div>
+                                                            @foreach($pvRadReqs as $pvRad)
+                                                                @php
+                                                                    $pvRadDetails = is_string($pvRad->details) ? json_decode($pvRad->details, true) : ($pvRad->details ?? []);
+                                                                    $pvRadNames = !empty($pvRadDetails['radiology_types']) 
+                                                                        ? \App\Models\RadiologyType::whereIn('id', $pvRadDetails['radiology_types'])->pluck('name')->toArray() 
+                                                                        : [$pvRadDetails['description'] ?? 'فحص أشعة'];
+                                                                @endphp
+                                                                <div class="d-flex flex-wrap gap-1 mb-1">
+                                                                    @foreach($pvRadNames as $rName)
+                                                                        <span class="badge bg-white text-dark border font-monospace" style="font-size: 0.72rem;">{{ $rName }}</span>
+                                                                    @endforeach
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    <!-- الأدوية السابقة -->
+                                                    @if($pvMeds->count() > 0)
+                                                        <div class="p-2 rounded-2 border border-success-subtle bg-success-subtle bg-opacity-10 mb-2">
+                                                            <div class="small fw-bold text-success mb-1 d-flex align-items-center gap-1">
+                                                                <i class="fas fa-pills"></i> الأدوية الموصوفة ({{ $pvMeds->count() }}):
+                                                            </div>
+                                                            <div class="d-flex flex-column gap-1">
+                                                                @foreach($pvMeds as $med)
+                                                                    @php
+                                                                        $mName = $med->medicine_name ?? ($med->name ?? ($med->medicine->name ?? 'دواء'));
+                                                                        $mDosage = $med->dosage_frequency ?? ($med->dosage ?? '');
+                                                                        $mDuration = !empty($med->duration_days) ? ($med->duration_days . ' يوم') : ($med->duration ?? '');
+                                                                    @endphp
+                                                                    <div class="d-flex align-items-center justify-content-between bg-white p-1 rounded border">
+                                                                        <strong class="small text-dark">{{ $mName }}</strong>
+                                                                        <div class="d-flex gap-1 font-monospace" style="font-size: 0.68rem;">
+                                                                            @if($mDosage) <span class="badge bg-light text-dark border">{{ $mDosage }}</span> @endif
+                                                                            @if($mDuration) <span class="badge bg-light text-muted border">{{ $mDuration }}</span> @endif
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
+
+                                                    <!-- زر فتح الكشفية كاملة -->
+                                                    <a href="{{ route('doctor.visits.show', $pv->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary w-100 py-1 fw-bold" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-external-link-alt me-1"></i> فتح ملف الزيارة بالكامل
+                                                    </a>
                                                 </div>
-                                            @endif
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
