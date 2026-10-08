@@ -215,6 +215,97 @@
         </div>
     </div>
 
+    <!-- Quick Category & Global Switch Card -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+        <div class="card-body p-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-2 text-danger">
+                        <i class="fas fa-bolt fa-lg"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark fs-6">التحكم السريع الشامل (تفعيل / إطفاء الكل لكل صنف)</div>
+                        <div class="text-muted small">تطبيق تفعيل أو استبعاد الضمان بنقرة واحدة لصنف محدد أو لكافة خدمات المستشفى</div>
+                    </div>
+                </div>
+
+                <!-- Global Toggle Action Form -->
+                <form action="{{ route('emergency-services.global-toggle') }}" method="POST" class="d-flex flex-wrap align-items-center gap-2 m-0" onsubmit="return confirm('هل أنت متأكد من تنفيذ هذا التعديل الشامل؟');">
+                    @csrf
+                    <!-- Category Selector -->
+                    <select name="category" class="form-select form-select-sm rounded-pill border bg-light" style="width: auto; min-width: 170px;">
+                        <option value="">⚡ كافة الأصناف (الكل)</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat }}" {{ request('category') == $cat ? 'selected' : '' }}>صنف: {{ $cat }}</option>
+                        @endforeach
+                    </select>
+
+                    <!-- HI Dropdown -->
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-success dropdown-toggle rounded-pill px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-heartbeat me-1"></i> هيئة الضمان (HI)
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                            <li>
+                                <button type="submit" name="field" value="is_hi_active" class="dropdown-item text-success fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='1'">
+                                    <i class="fas fa-check-circle me-2"></i> تفعيل الضمان (HI) للصنف المحدد
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="submit" name="field" value="is_hi_active" class="dropdown-item text-danger fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='0'">
+                                    <i class="fas fa-ban me-2"></i> إطفاء / استبعاد من الضمان (كاش فقط)
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- MOI Dropdown -->
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle rounded-pill px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-id-badge me-1"></i> ضمان الداخلية (MOI)
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                            <li>
+                                <button type="submit" name="field" value="is_moi_active" class="dropdown-item text-primary fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='1'">
+                                    <i class="fas fa-check-circle me-2"></i> تفعيل ضمان الداخلية للصنف
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="submit" name="field" value="is_moi_active" class="dropdown-item text-danger fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='0'">
+                                    <i class="fas fa-times-circle me-2"></i> إطفاء ضمان الداخلية للصنف
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Status Dropdown -->
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-dark dropdown-toggle rounded-pill px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-toggle-on me-1"></i> حالة الخدمات
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                            <li>
+                                <button type="submit" name="field" value="is_active" class="dropdown-item text-primary fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='1'">
+                                    <i class="fas fa-play me-2"></i> تفعيل كل الخدمات للصنف
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="submit" name="field" value="is_active" class="dropdown-item text-secondary fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='0'">
+                                    <i class="fas fa-pause me-2"></i> تعطيل كل الخدمات للصنف
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <input type="hidden" name="state" value="1">
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Bulk Actions Bar (Shown when items are checked) -->
     <div id="bulkActionsBar" class="card border-0 shadow-lg bulk-toolbar text-white mb-4 p-3" style="display: none;">
         <form id="bulkActionForm" action="{{ route('emergency-services.bulk-action') }}" method="POST">
@@ -225,7 +316,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-danger fs-6 px-3 py-2 rounded-pill fw-bold" id="selectedCountBadge">0 خدمات مختارة</span>
-                    <span class="text-white-50 small">اختر الإجراء الجماعي لتطبيقه على كل الخدمات المحددة:</span>
+                    <span class="text-white-50 small">اختر الإجراء الجماعي لتطبيقه على الخدمات المحددة:</span>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <!-- HI Actions -->
@@ -271,6 +362,11 @@
                 <span class="badge bg-light text-dark border px-3 py-2 rounded-pill fw-bold">
                     {{ $services->total() }} خدمة
                 </span>
+                @if(request('category'))
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-3 py-2 rounded-pill fw-bold">
+                        صنف: {{ request('category') }}
+                    </span>
+                @endif
             </div>
             <div class="d-flex align-items-center gap-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="toggleSelectAll()">
@@ -291,11 +387,17 @@
                             <th>اسم الخدمة</th>
                             <th>التصنيف</th>
                             <th>سعر الكاش (د.ع)</th>
-                            <th class="text-center" style="width: 170px;">
-                                <i class="fas fa-heartbeat text-success me-1"></i> هيئة الضمان (HI)
+                            <th class="text-center" style="width: 190px;">
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <i class="fas fa-heartbeat text-success"></i>
+                                    <span>هيئة الضمان (HI)</span>
+                                </div>
                             </th>
-                            <th class="text-center" style="width: 160px;">
-                                <i class="fas fa-id-badge text-primary me-1"></i> ضمان الداخلية (MOI)
+                            <th class="text-center" style="width: 180px;">
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <i class="fas fa-id-badge text-primary"></i>
+                                    <span>ضمان الداخلية (MOI)</span>
+                                </div>
                             </th>
                             <th class="text-center" style="width: 110px;">الحالة</th>
                             <th class="text-center" style="width: 120px;">الإجراءات</th>

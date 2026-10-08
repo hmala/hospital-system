@@ -247,17 +247,40 @@ class EmergencyServiceController extends Controller
                     ->whereDoesntHave('emergencies')
                     ->delete();
 
-                if ($usedCount > 0) {
-                    $msg = "تم حذف ({$deleted}) خدمة، وتخطي ({$usedCount}) خدمة لأنها مرتبطة بسجلات سابقة.";
-                } else {
-                    $msg = "تم حذف ({$deleted}) خدمة بنجاح 🗑️";
-                }
-                break;
+    /**
+     * تفعيل أو إطفاء الكل لعمود معين (الضمان الصحي HI، ضمان الداخلية MOI، أو حالة الخدمة)
+     * مع دعم التحديد لصنف معين (Category) أو لكافة الأصناف
+     */
+    public function globalToggle(Request $request)
+    {
+        $field = $request->input('field');
+        $state = filter_var($request->input('state', true), FILTER_VALIDATE_BOOLEAN);
+        $category = $request->input('category');
 
-            default:
-                return redirect()->back()->with('error', 'إجراء جماعي غير معروف.');
+        if (!in_array($field, ['is_hi_active', 'is_moi_active', 'is_active'])) {
+            return redirect()->back()->with('error', 'حقل غير صالح.');
         }
 
-        return redirect()->back()->with('success', $msg);
+        $query = EmergencyService::query();
+        if (!empty($category)) {
+            $query->where('category', $category);
+            $catLabel = "لصنف ({$category})";
+        } else {
+            $catLabel = "لكافة الخدمات والأصناف";
+        }
+
+        $count = $query->count();
+        $query->update([$field => $state]);
+
+        $fieldLabels = [
+            'is_hi_active' => 'الضمان الصحي (HI)',
+            'is_moi_active' => 'ضمان الداخلية (MOI)',
+            'is_active' => 'حالة التفعيل',
+        ];
+
+        $actionText = $state ? 'تفعيل' : 'إطفاء/استبعاد';
+        $label = $fieldLabels[$field] ?? $field;
+
+        return redirect()->back()->with('success', "تم {$actionText} {$label} بنجاح {$catLabel} (إجمالي {$count} خدمة).");
     }
 }
