@@ -89,7 +89,16 @@ class InquiryController extends Controller
             ->latest('updated_at')
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers'));
+        // جلب إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية
+        $pendingInsuranceEmergencyReferrals = \App\Models\Request::where('type', 'nursing')
+            ->where('status', 'pending')
+            ->where('insurance_type', '!=', 'none')
+            ->whereDate('created_at', Carbon::today())
+            ->with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->latest()
+            ->get();
+
+        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals'));
     }
 
     /**
@@ -941,8 +950,17 @@ class InquiryController extends Controller
         $messages[] = $message;
         }
 
-        // تجميع جميع الرسائل
-        $finalMessage = 'تم إنشاء ' . $totalRequests . ' طلبات بنجاح';
+        // تحديث حالة الإحالة إلى مكتملة إن وجدت
+        $refId = $httpRequest->input('referral_request_id', $httpRequest->input('from_referral_id'));
+        if ($refId) {
+            $ref = \App\Models\Request::find($refId);
+            if ($ref) {
+                $ref->update([
+                    'status' => 'completed',
+                    'notes' => 'تم قبول إحالة الضمان وتأكيد حجز الطوارئ بنجاح'
+                ]);
+            }
+        }
 
         // إذا كان الحجز لسونار أو المستخدم موظف استعلامات استشارية، تحويله إلى شاشة توفر الاستشاريين
         $hasUltrasound = in_array('radiology', $requestTypes) && (($httpRequest->radiology_category ?? '') === 'ultrasound');

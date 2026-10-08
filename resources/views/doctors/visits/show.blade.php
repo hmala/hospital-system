@@ -667,7 +667,13 @@ datalist option:hover {
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link fw-bold" type="button" role="tab" data-bs-target="#nursingCollapse">
-                            <i class="fas fa-syringe me-1 text-success"></i> 4. الخدمات التمريضية
+                            <i class="fas fa-ambulance me-1 text-danger"></i> 4. إحالة الطوارئ والتمريض
+                            @php
+                                $nursingReqCount = $visit->requests->where('type', 'nursing')->count();
+                            @endphp
+                            @if($nursingReqCount > 0)
+                                <span class="badge bg-danger ms-1">{{ $nursingReqCount }}</span>
+                            @endif
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -1192,76 +1198,169 @@ datalist option:hover {
                         </form>
                     </div>
 
-                    <!-- تاب 4: الخدمات التمريضية -->
+                    <!-- تاب 4: إحالة الطوارئ والتمريض -->
                     <div id="nursingCollapse" class="workstation-panel" style="display: none;">
-                        <form action="{{ route('doctor.requests.store') }}" method="POST">
+                        @php
+                            $patientInsuranceType = optional($visit->appointment)->insurance_type ?? optional($visit->patient)->insurance_type ?? 'none';
+                            $isInsurancePatient = ($patientInsuranceType && $patientInsuranceType !== 'none');
+                            $insuranceCategoryName = optional(optional($visit->patient)->healthInsuranceCategory)->name;
+                            $sentNursingRequests = $visit->requests->where('type', 'nursing');
+                        @endphp
+
+                        <!-- بطاقة التوجيه والكشف الذكي لنوع المريض والتأمين -->
+                        @if($isInsurancePatient)
+                            <div class="alert alert-success border-2 border-success shadow-sm rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-success text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                        <i class="fas fa-shield-alt fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-success mb-1">
+                                            🟢 المريض مشمول بنظام الضمان الصحي 
+                                            @if($insuranceCategoryName)
+                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-50 px-2 py-1 ms-1">فئة: {{ $insuranceCategoryName }}</span>
+                                            @endif
+                                        </h6>
+                                        <p class="mb-0 small text-dark">
+                                            عند إرسال الإحالة، ستظهر كطلب معلق في <strong>شاشة موظف الضمان الصحي</strong> ليقوم بتأكيد حجز الطوارئ واستكمال الإجراءات المعتمدة للمؤمّن.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success text-white px-3 py-2 fs-7 rounded-pill shadow-xs">
+                                    <i class="fas fa-route me-1"></i> التوجيه: موظف الضمان
+                                </span>
+                            </div>
+                        @else
+                            <div class="alert alert-primary border-2 border-primary shadow-sm rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                        <i class="fas fa-user text-white fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-primary mb-1">
+                                            ⚪ مريض حجز عام (نظام نقدي / غير مشمول بالضمان)
+                                        </h6>
+                                        <p class="mb-0 small text-dark">
+                                            عند إرسال الإحالة، ستظهر كطلب معلق في <strong>كاونتر / استقبال قسم الطوارئ</strong> لفتح التذكرة واستيفاء الرسوم وتأكيد الحجز فوراً.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary text-white px-3 py-2 fs-7 rounded-pill shadow-xs">
+                                    <i class="fas fa-ambulance me-1"></i> التوجيه: استقبال الطوارئ
+                                </span>
+                            </div>
+                        @endif
+
+                        <form action="{{ route('doctor.requests.store') }}" method="POST" id="nursingReferralForm">
                             @csrf
                             <input type="hidden" name="visit_id" value="{{ $visit->id }}">
                             <input type="hidden" name="type" value="nursing">
-                            <input type="hidden" name="priority" value="normal">
                             
-                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-success-subtle text-success p-2 rounded-circle fs-6">
-                                        <i class="fas fa-syringe"></i>
-                                    </span>
-                                    <div>
-                                        <h5 class="mb-0 fw-bold text-success">طلب الخدمات التمريضية والإجراءات</h5>
-                                        <small class="text-muted">اختر الإجراءات التمريضية (حقن، تبخيرة، تضميد، سوائل وريدية...)</small>
+                            <div class="card border shadow-xs rounded-3 mb-3 bg-white">
+                                <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold text-dark small">
+                                        <i class="fas fa-stethoscope text-danger me-1"></i> تحديد الإجراءات والخدمات التمريضية المطلوبة
+                                    </h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="small fw-bold text-secondary mb-0">درجة الأولوية:</label>
+                                        <select name="priority" class="form-select form-select-sm py-0" style="width: 120px; font-size: 0.8rem;">
+                                            <option value="urgent" selected>⚡ عاجل</option>
+                                            <option value="emergency">🚨 طارئ جداً</option>
+                                            <option value="normal">عادي</option>
+                                        </select>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-success btn-sm px-3 shadow-sm fw-bold">
-                                    <i class="fas fa-paper-plane me-1"></i> إرسال الخدمات التمريضية
-                                </button>
-                            </div>
-                            
-                            <!-- حقل البحث -->
-                            <div class="mb-3">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-search text-success"></i>
-                                    </span>
-                                    <input type="text" id="nursingSearchInput" class="form-control" placeholder="ابحث عن خدمة تمريضية...">
-                                    <button type="button" id="nursingSearchBtn" class="btn btn-success">
-                                        <i class="fas fa-search"></i>
+                                <div class="card-body p-3">
+                                    <!-- حقل الملاحظات والتوجيهات -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-dark"><i class="fas fa-comment-medical text-primary me-1"></i> توجيهات وملاحظات الطبيب لطاقم الطوارئ والتمريض:</label>
+                                        <textarea name="description" class="form-control form-control-sm rounded-2" rows="2" placeholder="اكتب التوجيهات الطبية (مثل: إعطاء مغذي رينجر مع مسكن وريدي، قياس الضغط كل 15 دقيقة، عمل تبخيرة فنتولين...)"></textarea>
+                                    </div>
+
+                                    <!-- حقل البحث عن خدمة -->
+                                    <div class="mb-2">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                                            <input type="text" id="nursingSearchInput" class="form-control" placeholder="بحث سريع عن خدمة تمريضية (حقن، تبخيرة، تضميد، سوائل وريدية...)...">
+                                        </div>
+                                    </div>
+
+                                    <!-- قائمة الخدمات التمريضية -->
+                                    <div id="nursingServicesContainer" style="max-height: 280px; overflow-y: auto;" class="border rounded-2 p-2 bg-light">
+                                        @forelse($emergencyServices as $category => $services)
+                                            <div class="mb-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-1 px-2 py-1 bg-white border rounded">
+                                                    <strong class="text-dark small"><i class="fas fa-tag text-secondary me-1"></i>{{ $category ?: 'خدمات أخرى' }}</strong>
+                                                    <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ count($services) }}</span>
+                                                </div>
+                                                <div class="row g-1">
+                                                    @foreach($services as $service)
+                                                        <div class="col-md-6 col-12 nursing-service-item" data-service-name="{{ strtolower($service->name) }}">
+                                                            <label class="list-group-item d-flex align-items-center p-2 rounded border bg-white shadow-2xs h-100" style="cursor: pointer;">
+                                                                <input class="form-check-input me-2 flex-shrink-0" type="checkbox" name="nursing_services[]" value="{{ $service->id }}" id="nursing_service_{{ $service->id }}" style="width: 16px; height: 16px; cursor: pointer;">
+                                                                <div class="flex-grow-1 text-truncate">
+                                                                    <span class="fw-semibold text-dark d-block text-truncate" style="font-size: 0.82rem;">{{ $service->name }}</span>
+                                                                    <small class="text-muted" style="font-size: 0.7rem;">{{ number_format($service->price, 0) }} د.ع</small>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="alert alert-warning py-2 mb-0 small">
+                                                <i class="fas fa-info-circle me-1"></i> لا توجد خدمات تمريضية معرفة حالياً
+                                            </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center">
+                                    <div class="small text-muted" id="selectedNursingCount" style="display: none;">
+                                        <i class="fas fa-check-circle text-success me-1"></i> تم اختيار <strong id="nursingCountNumber" class="text-success">0</strong> خدمة
+                                    </div>
+                                    <button type="submit" class="btn btn-danger btn-sm px-3 shadow-sm fw-bold rounded-pill ms-auto">
+                                        <i class="fas fa-paper-plane me-1"></i> إرسال إحالة الطوارئ والتمريض 🚀
                                     </button>
                                 </div>
                             </div>
-                            
-                            <div id="nursingServicesContainer" style="max-height: 420px; overflow-y: auto;">
-                                @forelse($emergencyServices as $category => $services)
-                                    <div class="mb-3">
-                                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
-                                            <h6 class="mb-0 text-success fw-bold">
-                                                <i class="fas fa-heartbeat me-2"></i>{{ $category ?: 'خدمات أخرى' }}
-                                                <span class="badge bg-success ms-2">{{ count($services) }}</span>
-                                            </h6>
-                                        </div>
-                                        <div class="list-group">
-                                            @foreach($services as $service)
-                                                <label class="list-group-item list-group-item-action d-flex align-items-center nursing-service-item" data-service-name="{{ strtolower($service->name) }}" style="cursor: pointer; padding: 8px 12px; border-left: 3px solid #28a745;">
-                                                    <input class="form-check-input me-3 flex-shrink-0" type="checkbox" name="nursing_services[]" value="{{ $service->id }}" id="nursing_service_{{ $service->id }}" style="width: 18px; height: 18px; cursor: pointer;">
-                                                    <div class="flex-grow-1">
-                                                        <span class="fw-semibold text-dark" style="font-size: 0.92rem;">{{ $service->name }}</span>
-                                                        <br><small class="text-muted">السعر: {{ $service->price }} ر.س</small>
-                                                    </div>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        لا توجد خدمات تمريضية متاحة حالياً
-                                    </div>
-                                @endforelse
-                            </div>
-                            
-                            <div class="alert alert-info mt-3" id="selectedNursingCount" style="display: none;">
-                                <i class="fas fa-check-circle me-2"></i>
-                                تم اختيار <strong id="nursingCountNumber">0</strong> خدمة تمريضية
-                            </div>
                         </form>
+
+                        <!-- سجل الإحالات السابقة الصادرة من هذه الزيارة -->
+                        @if($sentNursingRequests->count() > 0)
+                            <div class="card border rounded-3 shadow-2xs bg-white mt-3">
+                                <div class="card-header bg-light py-2 px-3">
+                                    <h6 class="mb-0 fw-bold text-dark small"><i class="fas fa-history text-secondary me-1"></i> الإحالات الصادرة من هذه الزيارة ({{ $sentNursingRequests->count() }})</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="list-group list-group-flush">
+                                        @foreach($sentNursingRequests as $sReq)
+                                            @php
+                                                $reqStatusBadge = match($sReq->status) {
+                                                    'completed' => '<span class="badge bg-success text-white"><i class="fas fa-check-double me-1"></i>تم الاستقبال والتأكيد</span>',
+                                                    'in_progress' => '<span class="badge bg-info text-dark"><i class="fas fa-spinner fa-spin me-1"></i>قيد التنفيذ</span>',
+                                                    'cancelled' => '<span class="badge bg-danger text-white"><i class="fas fa-times me-1"></i>ملغي</span>',
+                                                    default => '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>بانتظار الاستقبال (' . ($sReq->insurance_type !== 'none' ? 'الضمان الصحي' : 'استقبال الطوارئ') . ')</span>'
+                                                };
+                                            @endphp
+                                            <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
+                                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                    <div>
+                                                        <strong class="text-dark small d-block">{{ $sReq->description }}</strong>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>{{ $sReq->created_at ? $sReq->created_at->format('H:i') : '' }}
+                                                            — الأولوية: <span class="badge bg-light text-dark border">{{ $sReq->priority ?? 'عادي' }}</span>
+                                                        </small>
+                                                    </div>
+                                                    <div>
+                                                        {!! $reqStatusBadge !!}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
 
                     <!-- تاب 5: الوصفة والعلاج -->

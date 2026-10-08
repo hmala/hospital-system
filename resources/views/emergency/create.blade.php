@@ -19,6 +19,27 @@
 
     <div class="row">
         <div class="col-md-10">
+            @if(isset($referralRequest) && $referralRequest)
+                <div class="alert alert-danger border-2 border-danger shadow-sm rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 animate__animated animate__fadeIn">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-danger text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                            <i class="fas fa-ambulance fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-danger mb-1">
+                                📥 إحالة طوارئ وتمريض واردة من: د. {{ optional(optional(optional($referralRequest->visit)->doctor)->user)->name ?? 'الاستشاري' }}
+                            </h6>
+                            <p class="mb-0 small text-dark">
+                                <strong>الخدمات والتوجيهات المطلوبة:</strong> {{ $referralRequest->description }}
+                            </p>
+                        </div>
+                    </div>
+                    <span class="badge bg-danger text-white px-3 py-2 fs-7 rounded-pill">
+                        الأولوية: {{ $referralRequest->priority ?? 'عاجل' }}
+                    </span>
+                </div>
+            @endif
+
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">بيانات حالة الطوارئ</h5>
@@ -26,6 +47,9 @@
                 <div class="card-body">
                     <form method="POST" action="{{ route('emergency.store') }}">
                         @csrf
+                        @if(isset($referralRequest) && $referralRequest)
+                            <input type="hidden" name="referral_request_id" value="{{ $referralRequest->id }}">
+                        @endif
 
                         <div class="row">
                             <!-- اختيار المريض التفاعلي بالبحث المباشر -->

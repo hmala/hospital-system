@@ -147,11 +147,20 @@ class EmergencyController extends Controller
 
         $nursingRequests = $nursingQuery->orderBy('created_at', 'desc')->get();
 
+        // جلب إحالات الطوارئ والتمريض الواردة من العيادات الاستشارية (المرضى العامين / كاش)
+        $pendingClinicReferrals = \App\Models\Request::where('type', 'nursing')
+            ->where('status', 'pending')
+            ->where('insurance_type', 'none')
+            ->whereDate('created_at', today())
+            ->with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->latest()
+            ->get();
+
         $availableMedicines = Medicine::where('is_active', true)
             ->orderBy('name')
             ->get();
 
-        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'icd10Codes', 'stats', 'filter', 'date', 'availableMedicines'));
+        return view('emergency.index', compact('emergencies', 'emergencyServices', 'labTests', 'radiologyTypes', 'nursingRequests', 'pendingClinicReferrals', 'icd10Codes', 'stats', 'filter', 'date', 'availableMedicines'));
     }
 
     /**
@@ -167,6 +176,15 @@ class EmergencyController extends Controller
 
         $selectedPatient = null;
         $selectedPatientId = old('patient_id', request('patient_id'));
+        $referralRequest = null;
+
+        if (request('from_referral_id')) {
+            $referralRequest = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user'])->find(request('from_referral_id'));
+            if ($referralRequest && !$selectedPatientId && $referralRequest->visit?->patient_id) {
+                $selectedPatientId = $referralRequest->visit->patient_id;
+            }
+        }
+
         if ($selectedPatientId) {
             $selectedPatient = Patient::with('user')->find($selectedPatientId);
         }
@@ -219,7 +237,7 @@ class EmergencyController extends Controller
             $nurses = User::role('nurse')->where('is_active', true)->get();
         }
 
-        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses', 'assignedDoctor'));
+        return view('emergency.create', compact('selectedPatient', 'doctors', 'nurses', 'assignedDoctor', 'referralRequest'));
     }
 
     /**
@@ -373,9 +391,21 @@ class EmergencyController extends Controller
             $this->upsertUnifiedEmergencyPayment($emergency);
         }
 
+        // إذا كانت الحالة من إحالة عيادة استشارية، تحديث حالة الإحالة إلى مكتملة
+        $referralId = $request->input('referral_request_id', $request->input('from_referral_id'));
+        if ($referralId) {
+            $ref = \App\Models\Request::find($referralId);
+            if ($ref) {
+                $ref->update([
+                    'status' => 'completed',
+                    'notes' => 'تم قبول الإحالة واستقبال الحالة في الطوارئ برقم #' . $emergency->id
+                ]);
+            }
+        }
+
         // return to list instead of details so user sees the emergency table
         return redirect()->route('emergency.index')
-            ->with('success', 'تم إنشاء حالة الطوارئ بنجاح');
+            ->with('success', 'تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة');
     }
 
     /**
