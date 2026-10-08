@@ -660,6 +660,7 @@ Route::middleware(['auth'])->group(function () {
 
         // الدوام والخفارات
         Route::resource('shifts', \App\Http\Controllers\HR\HrShiftController::class)->except(['show']);
+        Route::post('schedules/copy-last-week', [\App\Http\Controllers\HR\HrScheduleController::class, 'copyLastWeek'])->name('schedules.copy-last-week');
         Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
 
 

@@ -76,4 +76,53 @@ class HrScheduleController extends Controller
 
         return back()->with('success', 'تم حفظ وتحديث جدول الدوام بنجاح.');
     }
+
+    public function copyLastWeek(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'department_id' => 'nullable|exists:departments,id'
+        ]);
+
+        $currentStartDate = \Carbon\Carbon::parse($request->start_date);
+        $currentEndDate = clone $currentStartDate;
+        $currentEndDate->addDays(6);
+
+        $lastWeekStartDate = clone $currentStartDate;
+        $lastWeekStartDate->subDays(7);
+        $lastWeekEndDate = clone $currentEndDate;
+        $lastWeekEndDate->subDays(7);
+
+        $employees = \App\Models\HrEmployee::where('status', 'active');
+        if ($request->department_id) {
+            $employees->where('department_id', $request->department_id);
+        }
+        $employeeIds = $employees->pluck('id')->toArray();
+
+        // Get last week's schedules for these employees
+        $lastWeekSchedules = \App\Models\HrSchedule::whereIn('hr_employee_id', $employeeIds)
+            ->whereBetween('shift_date', [$lastWeekStartDate->format('Y-m-d'), $lastWeekEndDate->format('Y-m-d')])
+            ->get();
+
+        if ($lastWeekSchedules->isEmpty()) {
+            return back()->with('error', 'لا يوجد جدول محفوظ في الأسبوع الماضي لنسخه.');
+        }
+
+        $count = 0;
+        foreach ($lastWeekSchedules as $schedule) {
+            $newDate = \Carbon\Carbon::parse($schedule->shift_date)->addDays(7)->format('Y-m-d');
+            
+            \App\Models\HrSchedule::updateOrCreate(
+                ['hr_employee_id' => $schedule->hr_employee_id, 'shift_date' => $newDate],
+                [
+                    'hr_shift_id' => $schedule->hr_shift_id,
+                    'is_off_day' => $schedule->is_off_day,
+                    'created_by' => auth()->id()
+                ]
+            );
+            $count++;
+        }
+
+        return back()->with('success', "تم نسخ $count شفت من الأسبوع الماضي بنجاح.");
+    }
 }

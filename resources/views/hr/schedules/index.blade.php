@@ -59,6 +59,12 @@
                 الجدول من {{ $startDate->format('Y-m-d') }} إلى {{ $endDate->format('Y-m-d') }}
             </h6>
             <div>
+                <form action="{{ route('hr.schedules.copy-last-week') }}" method="POST" class="d-inline-block me-2">
+                    @csrf
+                    <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
+                    <input type="hidden" name="department_id" value="{{ $departmentId }}">
+                    <button type="submit" class="btn btn-sm btn-outline-info" onclick="return confirm('هل أنت متأكد من جلب جدول الأسبوع الماضي؟ سيتم استبدال جدول هذا الأسبوع بالبيانات المستنسخة.')"><i class="fas fa-copy"></i> نسخ جدول الأسبوع الماضي</button>
+                </form>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('rosterForm').reset();"><i class="fas fa-undo"></i> تصفير التعديلات</button>
                 <button type="submit" form="rosterForm" class="btn btn-sm btn-success fw-bold px-4"><i class="fas fa-save"></i> حفظ الجدول</button>
             </div>
@@ -140,7 +146,41 @@
 </div>
 
 <script>
+    
+    <script>
+        function checkFatigue() {
+            let table = document.querySelector("table");
+            let rows = table.querySelectorAll("tbody tr");
+            rows.forEach(row => {
+                let selects = row.querySelectorAll("select");
+                let workDaysCount = 0;
+                selects.forEach(select => {
+                    if (select.value !== "" && select.value !== "off") {
+                        workDaysCount++;
+                    }
+                });
+                
+                let nameCell = row.querySelector("td");
+                let existingBadge = nameCell.querySelector(".fatigue-badge");
+                if (workDaysCount >= 6) {
+                    if (!existingBadge) {
+                        nameCell.innerHTML += '<div class="fatigue-badge mt-1"><span class="badge bg-danger" style="font-size: 0.65rem;" title="تنبيه إرهاق: يعمل الموظف 6 أيام متواصلة أو أكثر"><i class="fas fa-exclamation-triangle"></i> تنبيه إرهاق</span></div>';
+                    }
+                } else {
+                    if (existingBadge) {
+                        existingBadge.remove();
+                    }
+                }
+            });
+        }
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            checkFatigue();
+        });
+    </script>
+    
     function updateSelectColor(selectObj) {
+        checkFatigue();
         var selectedOption = selectObj.options[selectObj.selectedIndex];
         var color = selectedOption.getAttribute('data-color');
         if (color) {
