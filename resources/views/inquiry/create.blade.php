@@ -206,7 +206,30 @@
                         </div>
                     </div>
                 </div>
-            @endforeach
+            @if(auth()->user()->can('create emergencies') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'inquiry_staff', 'consultation_receptionist']))
+                <!-- بطاقة حجز طوارئ / طوارئ الضمان -->
+                <div class="col-md-6 col-lg-3">
+                    <a href="{{ route('emergency.create', ['patient_id' => $patient->id, 'from_referral_id' => request('referral_id') ?? request('from_referral_id')]) }}" class="text-decoration-none">
+                        <div class="card h-100 shadow-sm request-card emergency-card border border-danger border-opacity-25" style="cursor: pointer;">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-ambulance fa-4x text-danger"></i>
+                                </div>
+                                <h5 class="card-title text-dark fw-bold">حجز طوارئ / طوارئ الضمان</h5>
+                                <p class="card-text text-muted small">
+                                    حجز تذكرة طوارئ أو قبول إحالة تمريض وضمان صحي
+                                </p>
+                                <div class="mt-2">
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        انتقال لنموذج الطوارئ
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            @endif
 
             @can('create surgeries')
                 <!-- بطاقة حجز عملية جراحية -->

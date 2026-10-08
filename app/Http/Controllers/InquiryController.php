@@ -111,6 +111,10 @@ class InquiryController extends Controller
         $canBookAny = $isAdmin || (
             $user && (
                 $user->can('create inquiries') ||
+                $user->can('create emergencies') ||
+                $user->can('create surgeries') ||
+                $user->can('create bed reservations') ||
+                $user->can('create incubator reservations') ||
                 $user->can('inquiry.create.checkup') ||
                 $user->can('inquiry.create.radiology.general') ||
                 $user->can('inquiry.create.radiology.ultrasound') ||

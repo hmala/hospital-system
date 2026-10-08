@@ -308,8 +308,8 @@
                                             <td>د. {{ optional(optional(optional($insRef->visit)->doctor)->user)->name ?? 'الاستشاري' }}</td>
                                             <td><span class="text-dark fw-bold">{{ Str::limit($insRef->description, 60) }}</span></td>
                                             <td>
-                                                <a href="{{ route('inquiry.create', ['patient_id' => optional($insRef->visit)->patient_id, 'from_referral_id' => $insRef->id, 'type' => 'emergency']) }}" class="btn btn-sm btn-success fw-bold shadow-xs">
-                                                    <i class="fas fa-check-circle me-1"></i> حجز طوارئ الضمان
+                                                <a href="{{ route('emergency.create', ['patient_id' => optional($insRef->visit)->patient_id, 'from_referral_id' => $insRef->id]) }}" class="btn btn-sm btn-success fw-bold shadow-xs">
+                                                    <i class="fas fa-ambulance me-1"></i> حجز طوارئ الضمان
                                                 </a>
                                             </td>
                                         </tr>
