@@ -404,7 +404,7 @@ class EmergencyController extends Controller
             $this->upsertUnifiedEmergencyPayment($emergency);
         }
 
-        // إذا كانت الحالة من إحالة عيادة استشارية، تحديث حالة الإحالة إلى مكتملة
+        // إذا كانت الحالة من إحالة عيادة استشارية، تحديث حالة الإحالة وترحيل الخدمات المطلوبة
         $referralId = $request->input('referral_request_id', $request->input('from_referral_id'));
         if ($referralId) {
             $ref = \App\Models\Request::find($referralId);
@@ -413,6 +413,20 @@ class EmergencyController extends Controller
                     'status' => 'completed',
                     'notes' => 'تم قبول الإحالة واستقبال الحالة في الطوارئ برقم #' . $emergency->id
                 ]);
+
+                // ترحيل وربط الخدمات التمريضية المطلوبة من الطبيب الاستشاري تلقائياً بسجل الطوارئ
+                $refDetails = is_string($ref->details) ? json_decode($ref->details, true) : ($ref->details ?? []);
+                $nursingServiceIds = $refDetails['nursing_services'] ?? [];
+                
+                if (!empty($nursingServiceIds)) {
+                    $emergency->services()->syncWithoutDetaching($nursingServiceIds);
+                }
+
+                if (empty($emergency->symptoms) && !empty($ref->description)) {
+                    $emergency->update(['symptoms' => $ref->description]);
+                }
+
+                $this->upsertUnifiedEmergencyPayment($emergency);
             }
         }
 
