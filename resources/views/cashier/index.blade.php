@@ -224,16 +224,29 @@
                                                                         $patientId = optional($appointment->patient)->national_id ?? '---';
                                                                         $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
                                                                         $department = optional($appointment->department)->name ?? 'غير محدد';
-                                                                        $amount = $appointment->consultation_fee ?? 0;
+                                                                        $insType = $appointment->insurance_type ?? optional($appointment->patient)->insurance_type ?? 'none';
+                                                                        $baseFee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : (optional($appointment->doctor)->consultation_fee ?? 0));
+                                                                        $doctor = $appointment->doctor;
+                                                                        $patient = $appointment->patient;
+                                                                        $isIns = in_array($insType, ['hi', 'moi']);
+                                                                        if ($isIns) {
+                                                                            $approvedFee = ($insType === 'moi' && $doctor && $doctor->moi_price > 0) ? (float)$doctor->moi_price : (($insType === 'hi' && $doctor && $doctor->hi_price > 0) ? (float)$doctor->hi_price : $baseFee);
+                                                                            $copayPct = ($insType === 'hi' && $patient) ? $patient->getCopayPercentageFor('consultation') : (float)($patient->copay_percentage ?? 15);
+                                                                            $patientShare = round($approvedFee * ($copayPct / 100));
+                                                                        } else {
+                                                                            $approvedFee = $baseFee;
+                                                                            $copayPct = 100;
+                                                                            $patientShare = $baseFee;
+                                                                        }
                                                                     @endphp
                                                                     <tr>
                                                                         <td><strong>#{{ $appointment->id }}</strong></td>
                                                                         <td><span class="badge bg-warning"><i class="fas fa-calendar-check me-1"></i> كشفية</span></td>
                                                                         <td>
                                                                             <div class="fw-semibold">{{ $patientName }}
-                                                                                @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                                                @if($insType === 'moi')
                                                                                     <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                                @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                                                @elseif($insType === 'hi')
                                                                                     <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                                 @endif
                                                                             </div>
@@ -245,7 +258,14 @@
                                                                                 {{ $department }}
                                                                             </small>
                                                                         </td>
-                                                                        <td class="text-end text-success fw-bold">{{ number_format($amount, 2) }} IQD</td>
+                                                                        <td class="text-end">
+                                                                            @if($isIns)
+                                                                                <div class="text-success fw-bold">{{ number_format($patientShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($approvedFee) }} د.ع</small>
+                                                                            @else
+                                                                                <span class="text-success fw-bold">{{ number_format($baseFee) }} د.ع</span>
+                                                                            @endif
+                                                                        </td>
                                                                         <td>
                                                                             <small>{{ $appointment->created_at->format('Y-m-d') }}</small><br>
                                                                             <small class="text-muted">{{ $appointment->created_at->format('H:i') }}</small>
@@ -264,9 +284,58 @@
                                                                 @foreach($pendingMedicalRequests ?? [] as $request)
                                                                     @php
                                                                         $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                                                        $amount = $request->total_amount;
                                                                         $reqPatient = optional(optional($request->visit)->patient);
+                                                                        $insType = $request->insurance_type ?? optional(optional($request->visit)->appointment)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
                                                                         $docName = optional(optional(optional($request->visit)->doctor)->user)->name;
+                                                                        $isIns = in_array($insType, ['hi', 'moi']);
+                                                                        
+                                                                        $computedApproved = 0;
+                                                                        $computedPatient = 0;
+                                                                        $hasComputedItems = false;
+                                                                        $copayPct = ($insType === 'hi' && $reqPatient) ? $reqPatient->getCopayPercentageFor($request->type) : (float)($reqPatient->copay_percentage ?? 15);
+
+                                                                        if ($request->type === 'lab') {
+                                                                            $testIds = $details['lab_test_ids'] ?? [];
+                                                                            if (empty($testIds) && !empty($details['package_id'])) {
+                                                                                $pkg = \App\Models\Package::find($details['package_id']);
+                                                                                if ($pkg) $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                                                            }
+                                                                            if (!empty($testIds)) {
+                                                                                foreach ($testIds as $tId) {
+                                                                                    $t = \App\Models\LabTest::find($tId);
+                                                                                    if ($t) {
+                                                                                        $hasComputedItems = true;
+                                                                                        $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                        $computedApproved += $p['approved_price'];
+                                                                                        $computedPatient += $p['patient_share'];
+                                                                                    }
+                                                                                }
+                                                                            } elseif (!empty($details['tests'])) {
+                                                                                foreach ($details['tests'] as $tName) {
+                                                                                    $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                                                                    if ($t) {
+                                                                                        $hasComputedItems = true;
+                                                                                        $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                        $computedApproved += $p['approved_price'];
+                                                                                        $computedPatient += $p['patient_share'];
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        } elseif ($request->type === 'radiology') {
+                                                                            $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? $details['ultrasound_type_id'] ?? [];
+                                                                            if (!is_array($typeIds)) $typeIds = [$typeIds];
+                                                                            if (!empty($typeIds)) {
+                                                                                foreach ($typeIds as $rId) {
+                                                                                    $r = \App\Models\RadiologyType::find($rId);
+                                                                                    if ($r) {
+                                                                                        $hasComputedItems = true;
+                                                                                        $p = $r->calculateInsurancePricing($insType, $copayPct);
+                                                                                        $computedApproved += $p['approved_price'];
+                                                                                        $computedPatient += $p['patient_share'];
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
                                                                     @endphp
                                                                     <tr>
                                                                         <td><strong>#{{ $request->id }}</strong></td>
@@ -283,9 +352,9 @@
                                                                         </td>
                                                                         <td>
                                                                             <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
-                                                                                @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                                @if($insType === 'moi')
                                                                                     <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                                @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                                @elseif($insType === 'hi')
                                                                                     <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                                 @endif
                                                                             </div>
@@ -306,7 +375,18 @@
                                                                                 <small class="text-muted">{{ $request->description }}</small>
                                                                             @endif
                                                                         </td>
-                                                                        <td class="text-end text-success fw-bold">{{ $amount !== null ? number_format($amount, 2) . ' IQD' : '-' }}</td>
+                                                                        <td class="text-end">
+                                                                            @if($isIns && $hasComputedItems)
+                                                                                <div class="text-success fw-bold">{{ number_format($computedPatient) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($computedApproved) }} د.ع</small>
+                                                                            @elseif($isIns && $request->total_amount > 0)
+                                                                                @php $pShare = round($request->total_amount * ($copayPct / 100)); @endphp
+                                                                                <div class="text-success fw-bold">{{ number_format($pShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($request->total_amount) }} د.ع</small>
+                                                                            @else
+                                                                                <span class="text-success fw-bold">{{ $request->total_amount !== null ? number_format($request->total_amount) . ' د.ع' : ($hasComputedItems ? number_format($computedApproved) . ' د.ع' : 'يحدد عند التسديد') }}</span>
+                                                                            @endif
+                                                                        </td>
                                                                         <td>
                                                                             <small>{{ $request->created_at->format('Y-m-d') }}</small><br>
                                                                             <small class="text-muted">{{ $request->created_at->format('H:i') }}</small>
@@ -387,15 +467,28 @@
                                                                     $patientId = optional($appointment->patient)->national_id ?? '---';
                                                                     $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
                                                                     $department = optional($appointment->department)->name ?? 'غير محدد';
-                                                                    $amount = $appointment->consultation_fee ?? 0;
+                                                                    $insType = $appointment->insurance_type ?? optional($appointment->patient)->insurance_type ?? 'none';
+                                                                    $baseFee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : (optional($appointment->doctor)->consultation_fee ?? 0));
+                                                                    $doctor = $appointment->doctor;
+                                                                    $patient = $appointment->patient;
+                                                                    $isIns = in_array($insType, ['hi', 'moi']);
+                                                                    if ($isIns) {
+                                                                        $approvedFee = ($insType === 'moi' && $doctor && $doctor->moi_price > 0) ? (float)$doctor->moi_price : (($insType === 'hi' && $doctor && $doctor->hi_price > 0) ? (float)$doctor->hi_price : $baseFee);
+                                                                        $copayPct = ($insType === 'hi' && $patient) ? $patient->getCopayPercentageFor('consultation') : (float)($patient->copay_percentage ?? 15);
+                                                                        $patientShare = round($approvedFee * ($copayPct / 100));
+                                                                    } else {
+                                                                        $approvedFee = $baseFee;
+                                                                        $copayPct = 100;
+                                                                        $patientShare = $baseFee;
+                                                                    }
                                                                 @endphp
                                                                 <tr>
                                                                     <td><strong>#{{ $appointment->id }}</strong></td>
                                                                     <td>
                                                                         <div class="fw-semibold">{{ $patientName }}
-                                                                            @if(optional($appointment->patient)->insurance_type === 'moi')
+                                                                            @if($insType === 'moi')
                                                                                 <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                            @elseif(optional($appointment->patient)->insurance_type === 'hi')
+                                                                            @elseif($insType === 'hi')
                                                                                 <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                             @endif
                                                                         </div>
@@ -403,7 +496,14 @@
                                                                     </td>
                                                                     <td>د. {{ $doctorName }}</td>
                                                                     <td>{{ $department }}</td>
-                                                                    <td class="text-end text-success fw-bold">{{ number_format($amount, 2) }} IQD</td>
+                                                                    <td class="text-end">
+                                                                        @if($isIns)
+                                                                            <div class="text-success fw-bold">{{ number_format($patientShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($approvedFee) }} د.ع</small>
+                                                                        @else
+                                                                            <span class="text-success fw-bold">{{ number_format($baseFee) }} د.ع</span>
+                                                                        @endif
+                                                                    </td>
                                                                     <td>{{ $appointment->created_at->format('Y-m-d H:i') }}</td>
                                                                     <td class="text-center">
                                                                         <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
@@ -437,7 +537,7 @@
                                                                 <th>المريض</th>
                                                                 <th>تفاصيل الفحص / التحليل</th>
                                                                 <th>الطبيب الطالب</th>
-                                                                <th class="text-end">المبلغ الإجمالي</th>
+                                                                <th class="text-end">المبلغ المطلوب</th>
                                                                 <th>التاريخ والوقت</th>
                                                                 <th class="text-center">الإجراء</th>
                                                             </tr>
@@ -446,9 +546,58 @@
                                                             @foreach($pendingMedicalRequests ?? [] as $request)
                                                                 @php
                                                                     $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                                                    $amount = $request->total_amount;
                                                                     $reqPatient = optional(optional($request->visit)->patient);
+                                                                    $insType = $request->insurance_type ?? optional(optional($request->visit)->appointment)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
                                                                     $docName = optional(optional(optional($request->visit)->doctor)->user)->name ?? '---';
+                                                                    $isIns = in_array($insType, ['hi', 'moi']);
+                                                                    
+                                                                    $computedApproved = 0;
+                                                                    $computedPatient = 0;
+                                                                    $hasComputedItems = false;
+                                                                    $copayPct = ($insType === 'hi' && $reqPatient) ? $reqPatient->getCopayPercentageFor($request->type) : (float)($reqPatient->copay_percentage ?? 15);
+
+                                                                    if ($request->type === 'lab') {
+                                                                        $testIds = $details['lab_test_ids'] ?? [];
+                                                                        if (empty($testIds) && !empty($details['package_id'])) {
+                                                                            $pkg = \App\Models\Package::find($details['package_id']);
+                                                                            if ($pkg) $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                                                        }
+                                                                        if (!empty($testIds)) {
+                                                                            foreach ($testIds as $tId) {
+                                                                                $t = \App\Models\LabTest::find($tId);
+                                                                                if ($t) {
+                                                                                    $hasComputedItems = true;
+                                                                                    $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                    $computedApproved += $p['approved_price'];
+                                                                                    $computedPatient += $p['patient_share'];
+                                                                                }
+                                                                            }
+                                                                        } elseif (!empty($details['tests'])) {
+                                                                            foreach ($details['tests'] as $tName) {
+                                                                                $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                                                                if ($t) {
+                                                                                    $hasComputedItems = true;
+                                                                                    $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                    $computedApproved += $p['approved_price'];
+                                                                                    $computedPatient += $p['patient_share'];
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    } elseif ($request->type === 'radiology') {
+                                                                        $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? $details['ultrasound_type_id'] ?? [];
+                                                                        if (!is_array($typeIds)) $typeIds = [$typeIds];
+                                                                        if (!empty($typeIds)) {
+                                                                            foreach ($typeIds as $rId) {
+                                                                                $r = \App\Models\RadiologyType::find($rId);
+                                                                                if ($r) {
+                                                                                    $hasComputedItems = true;
+                                                                                    $p = $r->calculateInsurancePricing($insType, $copayPct);
+                                                                                    $computedApproved += $p['approved_price'];
+                                                                                    $computedPatient += $p['patient_share'];
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
                                                                 @endphp
                                                                 <tr>
                                                                     <td><strong>#{{ $request->id }}</strong></td>
@@ -465,9 +614,9 @@
                                                                     </td>
                                                                     <td>
                                                                         <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
-                                                                            @if($reqPatient && $reqPatient->insurance_type === 'moi')
+                                                                            @if($insType === 'moi')
                                                                                 <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                            @elseif($reqPatient && $reqPatient->insurance_type === 'hi')
+                                                                            @elseif($insType === 'hi')
                                                                                 <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                             @endif
                                                                         </div>
@@ -486,7 +635,18 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>د. {{ $docName }}</td>
-                                                                    <td class="text-end text-success fw-bold">{{ $amount !== null ? number_format($amount, 2) . ' IQD' : '-' }}</td>
+                                                                    <td class="text-end">
+                                                                        @if($isIns && $hasComputedItems)
+                                                                            <div class="text-success fw-bold">{{ number_format($computedPatient) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($computedApproved) }} د.ع</small>
+                                                                        @elseif($isIns && $request->total_amount > 0)
+                                                                            @php $pShare = round($request->total_amount * ($copayPct / 100)); @endphp
+                                                                            <div class="text-success fw-bold">{{ number_format($pShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($request->total_amount) }} د.ع</small>
+                                                                        @else
+                                                                            <span class="text-success fw-bold">{{ $request->total_amount !== null ? number_format($request->total_amount) . ' د.ع' : ($hasComputedItems ? number_format($computedApproved) . ' د.ع' : 'يحدد عند التسديد') }}</span>
+                                                                        @endif
+                                                                    </td>
                                                                     <td>{{ $request->created_at->format('Y-m-d H:i') }}</td>
                                                                     <td class="text-center">
                                                                         <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">

@@ -13,12 +13,213 @@ use Carbon\Carbon;
 class DoctorQueueController extends Controller
 {
     /**
+     * Show unified live queue display screen with dynamic doctor selection
+     */
+    public function liveDisplay(Request $request)
+    {
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where('type', 'consultant')
+            ->get();
+
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        $doctorId = $request->query('doctor_id') ?? $request->query('doctor');
+        if (!$doctorId && auth()->check() && auth()->user()->doctor) {
+            $doctorId = auth()->user()->doctor->id;
+        }
+
+        $doctor = null;
+        if ($doctorId) {
+            $doctor = Doctor::with(['user', 'department'])->find($doctorId);
+        }
+
+        return view('queue.doctor-display', compact('doctor', 'doctorsList'));
+    }
+
+    /**
+     * Show fixed clinic room TV display (e.g. /queue/room/1)
+     */
+    public function roomDisplay($roomNumber)
+    {
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where('type', 'consultant')
+            ->get();
+
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        // Find doctor currently assigned to this room
+        $doctor = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function($q) use ($roomNumber) {
+                $q->where('current_room', $roomNumber)
+                  ->orWhere(function($sub) use ($roomNumber) {
+                      $sub->whereNull('current_room')
+                          ->whereHas('department', function($d) use ($roomNumber) {
+                              $d->where('room_number', $roomNumber);
+                          });
+                  });
+            })
+            ->first();
+
+        return view('queue.doctor-display', compact('doctor', 'doctorsList', 'roomNumber'));
+    }
+
+    /**
+     * Realtime JSON data for a specific room display (auto switches doctor dynamically)
+     */
+    public function roomQueueData($roomNumber)
+    {
+        $doctor = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where(function($q) use ($roomNumber) {
+                $q->where('current_room', $roomNumber)
+                  ->orWhere(function($sub) use ($roomNumber) {
+                      $sub->whereNull('current_room')
+                          ->whereHas('department', function($d) use ($roomNumber) {
+                              $d->where('room_number', $roomNumber);
+                          });
+                  });
+            })
+            ->first();
+
+        if (!$doctor) {
+            return response()->json([
+                'success' => true,
+                'has_doctor' => false,
+                'room_number' => $roomNumber,
+                'doctor_id' => null,
+                'doctor_name' => null,
+                'message' => "في انتظار تعيين طبيب للغرفة رقم {$roomNumber} من الاستعلامات",
+                'current_patient' => null,
+                'waiting_list' => [],
+                'stats' => ['waiting_count' => 0, 'completed_count' => 0, 'total_today' => 0],
+            ]);
+        }
+
+        // Delegate to standard queueData
+        $queueResponse = $this->queueData($doctor->id);
+        $data = json_decode($queueResponse->getContent(), true);
+        $data['has_doctor'] = true;
+        $data['room_number'] = $roomNumber;
+        $data['doctor_id'] = $doctor->id;
+        $data['doctor_name'] = optional($doctor->user)->name;
+        $data['department_name'] = optional($doctor->department)->name;
+        $data['specialization'] = $doctor->specialization;
+
+        return response()->json($data);
+    }
+
+    /**
+     * Assign doctor to a specific clinic room (called from inquiry/reception screen)
+     */
+    public function assignDoctorRoom(Request $request)
+    {
+        $request->validate([
+            'doctor_id' => 'required|exists:doctors,id',
+            'room' => 'nullable|string|max:50',
+        ]);
+
+        $doctor = Doctor::findOrFail($request->doctor_id);
+        
+        // If room is specified, clear any other doctor on that same room
+        if ($request->filled('room')) {
+            Doctor::where('current_room', $request->room)
+                ->where('id', '!=', $doctor->id)
+                ->update(['current_room' => null]);
+        }
+
+        $doctor->update(['current_room' => $request->room ?: null]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $request->filled('room') 
+                ? "تم تعيين د. " . optional($doctor->user)->name . " على عيادة {$request->room} بنجاح" 
+                : "تم إلغاء تعيين الغرفة للطبيب",
+            'doctor_id' => $doctor->id,
+            'room' => $doctor->current_room,
+        ]);
+    }
+
+    /**
      * Show external TV queue display screen for a specific doctor
      */
     public function display($doctorId)
     {
         $doctor = Doctor::with(['user', 'department'])->findOrFail($doctorId);
-        return view('queue.doctor-display', compact('doctor'));
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where('type', 'consultant')
+            ->get();
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        return view('queue.doctor-display', compact('doctor', 'doctorsList'));
+    }
+
+    /**
+     * Return JSON list of available doctors with today's queue counts
+     */
+    public function availableDoctorsList(Request $request)
+    {
+        $today = today();
+        $doctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where('type', 'consultant')
+            ->get();
+
+        $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
+
+        return response()->json([
+            'ok' => true,
+            'doctors' => $doctorsList,
+        ]);
+    }
+
+    /**
+     * Helper to compute queue counts and availability for doctors list
+     */
+    protected function getDoctorsListWithCounts($doctors, $today)
+    {
+        return $doctors->map(function ($doc) use ($today) {
+            $waitingCount = Appointment::where('doctor_id', $doc->id)
+                ->whereDate('appointment_date', $today)
+                ->where(function ($q) {
+                    $q->where('payment_status', 'paid')
+                      ->orWhereNotNull('emergency_id');
+                })
+                ->whereDoesntHave('visit')
+                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->count();
+
+            $callingCount = Appointment::where('doctor_id', $doc->id)
+                ->whereDate('appointment_date', $today)
+                ->whereIn('status', ['calling', 'in_consultation'])
+                ->count();
+
+            $isAvailableToday = (bool) ($doc->is_available_today && (!$doc->available_date || $doc->available_date->isToday()));
+
+            return [
+                'id' => $doc->id,
+                'name' => optional($doc->user)->name ?? 'طبيب #' . $doc->id,
+                'specialization' => $doc->specialization ?? 'استشاري',
+                'department' => optional($doc->department)->name ?? 'العيادات الاستشارية',
+                'current_room' => $doc->current_room ?: optional($doc->department)->room_number,
+                'type' => $doc->type ?? 'consultant',
+                'is_available_today' => $isAvailableToday,
+                'waiting_count' => $waitingCount,
+                'calling_count' => $callingCount,
+            ];
+        })
+        ->sortByDesc(function ($doc) {
+            return ($doc['is_available_today'] ? 1000 : 0) 
+                 + ($doc['waiting_count'] > 0 ? 500 : 0) 
+                 + ($doc['calling_count'] > 0 ? 200 : 0);
+        })
+        ->values();
     }
 
     /**
@@ -102,10 +303,10 @@ class DoctorQueueController extends Controller
             $pName = $pUser ? $pUser->name : 'مريض';
             $qNum = $v->appointment ? $v->appointment->queue_number : $v->id;
 
-            $radRequests = $v->radiologyRequests;
-            $medicalRadRequests = $v->requests->where('type', 'radiology');
-            $labRequests = $v->requests->where('type', 'lab');
-            $prescriptions = $v->prescriptions;
+            $radRequests = $v->radiologyRequests->whereNotIn('status', ['cancelled', 'rejected']);
+            $medicalRadRequests = $v->requests->where('type', 'radiology')->whereNotIn('status', ['cancelled', 'rejected']);
+            $labRequests = $v->requests->where('type', 'lab')->whereNotIn('status', ['cancelled', 'rejected']);
+            $prescriptions = $v->prescriptions->whereNotIn('status', ['cancelled', 'rejected']);
 
             $testsList = [];
             $totalTests = 0;
@@ -197,7 +398,7 @@ class DoctorQueueController extends Controller
                 ];
             }
 
-            $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->count() > 0;
+            $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected'])->where('payment_status', '!=', 'paid')->count() > 0;
             $isUnpaidAppointment = ($v->appointment && $v->appointment->payment_status !== 'paid' && !$v->appointment->emergency_id);
             $hasUnpaidTests = $hasUnpaidRequests || $isUnpaidAppointment;
 
@@ -503,8 +704,8 @@ class DoctorQueueController extends Controller
 
         $visit = Visit::with(['patient.user', 'doctor.user', 'appointment', 'radiologyRequests', 'requests'])->findOrFail($visitId);
         
-        $hasPendingRad = $visit->radiologyRequests()->where('status', '!=', 'completed')->exists();
-        $hasPendingLab = $visit->requests()->where('type', 'lab')->where('status', '!=', 'completed')->exists();
+        $hasPendingRad = $visit->radiologyRequests()->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->exists();
+        $hasPendingLab = $visit->requests()->where('type', 'lab')->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->exists();
         if ($hasPendingRad || $hasPendingLab) {
             return response()->json([
                 'success' => false,
@@ -513,7 +714,7 @@ class DoctorQueueController extends Controller
         }
 
         // التحقق من تسديد أجور الفحوصات والكشفية بالكاشير
-        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->where('payment_status', '!=', 'paid')->exists();
+        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected'])->where('payment_status', '!=', 'paid')->exists();
         $isUnpaidAppointment = ($visit->appointment && $visit->appointment->payment_status !== 'paid' && !$visit->appointment->emergency_id);
 
         if ($hasUnpaidLab || $isUnpaidAppointment) {

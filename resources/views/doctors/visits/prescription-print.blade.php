@@ -139,9 +139,12 @@
 
     <!-- ترويسة الوصفة -->
     <div class="row align-items-center mb-3 pb-3 border-bottom">
-        <div class="col-7">
-            <div class="header-logo"><i class="fas fa-hospital me-2"></i>نظام المستشفى المتكامل</div>
-            <div class="text-muted small">العيادات الاستشارية والتخصصية | E-Prescription</div>
+        <div class="col-7 d-flex align-items-center gap-3">
+            <img src="{{ asset('images/لوغو.png') }}" alt="Logo" style="height: 50px; object-fit: contain;" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
+            <div>
+                <div class="fw-bold fs-5 text-primary">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الاهلي' }}</div>
+                <div class="text-muted small">العيادات الاستشارية والتخصصية | E-Prescription</div>
+            </div>
         </div>
         <div class="col-5 text-start">
             <div class="fw-bold text-primary fs-6">{{ $prescription->prescription_number ?? ('RX-' . date('Ymd') . '-' . str_pad($visit->id, 4, '0', STR_PAD_LEFT)) }}</div>
@@ -234,6 +237,20 @@
             @endforelse
         </tbody>
     </table>
+
+    <!-- موعد وتوصيات المراجعة القادمة -->
+    @if($visit->follow_up_date)
+        <div class="mb-3 p-2 bg-light border border-primary-subtle rounded d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold text-primary"><i class="fas fa-calendar-check me-1"></i>موعد المراجعة القادمة:</span>
+                <strong class="text-dark fs-6 ms-2">{{ \Carbon\Carbon::parse($visit->follow_up_date)->format('Y-m-d') }} ({{ \Carbon\Carbon::parse($visit->follow_up_date)->locale('ar')->translatedFormat('l') }})</strong>
+                @if($visit->follow_up_notes)
+                    <div class="text-muted small mt-1"><i class="fas fa-info-circle me-1"></i>{{ $visit->follow_up_notes }}</div>
+                @endif
+            </div>
+            <span class="badge bg-success text-white px-2 py-1 small">مراجعة مجانية</span>
+        </div>
+    @endif
 
     <!-- خطة وتوصيات إضافية -->
     @if($visit->treatment_plan)

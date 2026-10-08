@@ -58,6 +58,10 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -114,6 +118,10 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -330,6 +338,14 @@ class RoleManagementController extends Controller
             'delete visits' => ['label' => 'حذف زيارة طبية', 'action' => 'حذف', 'badge' => 'danger'],
             'view own visits' => ['label' => 'دخول محطة الطبيب وععرض زياراتي', 'action' => 'عرض', 'badge' => 'info'],
             'manage own visits' => ['label' => 'إدارة الكشف الطبي والفحوصات في محطة الطبيب', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view medicine groups' => ['label' => 'عرض مجموعات الأدوية المفضلة (الروشتات السريعة)', 'action' => 'عرض', 'badge' => 'info'],
+            'create medicine groups' => ['label' => 'إنشاء وحفظ مجموعة أدوية مفضلة جديدة', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit medicine groups' => ['label' => 'تعديل وتخصيص باقة أدوية مفضلة', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete medicine groups' => ['label' => 'حذف باقة أدوية مفضلة', 'action' => 'حذف', 'badge' => 'danger'],
+            'view lab test groups' => ['label' => 'عرض مجموعات التحاليل المفضلة', 'action' => 'عرض', 'badge' => 'info'],
+            'create lab test groups' => ['label' => 'إنشاء مجموعة تحاليل مفضلة جديدة', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit lab test groups' => ['label' => 'تعديل مجموعة تحاليل مفضلة', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete lab test groups' => ['label' => 'حذف مجموعة تحاليل مفضلة', 'action' => 'حذف', 'badge' => 'danger'],
             'view referrals' => ['label' => 'عرض سجل التحويلات الطبية بين العيادات', 'action' => 'عرض', 'badge' => 'info'],
             'create referrals' => ['label' => 'إنشاء تحويل طبي لمريض', 'action' => 'إضافة', 'badge' => 'success'],
             'manage referrals' => ['label' => 'إدارة وقبول التحويلات الطبية', 'action' => 'إدارة', 'badge' => 'primary'],
@@ -371,10 +387,6 @@ class RoleManagementController extends Controller
             'edit lab tests' => ['label' => 'تعديل بيانات وأسعار الفحوصات المختبرية', 'action' => 'تعديل', 'badge' => 'warning'],
             'delete lab tests' => ['label' => 'حذف فحص مختبري', 'action' => 'حذف', 'badge' => 'danger'],
             'process lab requests' => ['label' => 'محطة المختبر (سحب العينات وإدخال واعتماد النتائج)', 'action' => 'معالجة', 'badge' => 'success'],
-            'view lab test groups' => ['label' => 'عرض مجموعات التحاليل المفضلة', 'action' => 'عرض', 'badge' => 'info'],
-            'create lab test groups' => ['label' => 'إنشاء مجموعة تحاليل مفضلة جديدة', 'action' => 'إضافة', 'badge' => 'success'],
-            'edit lab test groups' => ['label' => 'تعديل مجموعة تحاليل مفضلة', 'action' => 'تعديل', 'badge' => 'warning'],
-            'delete lab test groups' => ['label' => 'حذف مجموعة تحاليل مفضلة', 'action' => 'حذف', 'badge' => 'danger'],
             'manage surgery lab tests' => ['label' => 'إدارة واختيار تحاليل العمليات الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],
             'view packages' => ['label' => 'عرض باقات الفحص الطبي الشامل', 'action' => 'عرض', 'badge' => 'info'],
             'create packages' => ['label' => 'إضافة باقة فحوصات جديدة', 'action' => 'إضافة', 'badge' => 'success'],
@@ -479,14 +491,14 @@ class RoleManagementController extends Controller
         }
 
         // 4. Laboratory
-        if (str_contains($permissionName, 'lab ') || str_contains($permissionName, 'lab_') || str_contains($permissionName, 'package') || $permissionName === 'manage surgery lab tests') {
+        if ((str_contains($permissionName, 'lab ') || str_contains($permissionName, 'lab_') || str_contains($permissionName, 'package') || $permissionName === 'manage surgery lab tests') && !str_contains($permissionName, 'lab test group')) {
             return 'lab';
         }
 
         // 5. Pharmacy & Inventory
-        if (str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') || 
+        if ((str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') || 
             str_contains($permissionName, 'purchase') || str_contains($permissionName, 'inventory') || 
-            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location')) {
+            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location')) && !str_contains($permissionName, 'medicine group')) {
             return 'pharmacy';
         }
 
@@ -500,11 +512,12 @@ class RoleManagementController extends Controller
             return 'surgeries';
         }
 
-        // 8. Outpatient & Consultant & Doctors (Clinics, Appointments, Visits)
+        // 8. Outpatient & Consultant & Doctors (Clinics, Appointments, Visits, Medicine & Lab Groups)
         if (str_contains($permissionName, 'consultant') || str_contains($permissionName, 'own visits') || 
             str_contains($permissionName, 'doctor') || str_contains($permissionName, 'department') || 
             str_contains($permissionName, 'appointment') || str_contains($permissionName, 'visit') || 
-            str_contains($permissionName, 'referral')) {
+            str_contains($permissionName, 'referral') || str_contains($permissionName, 'medicine group') ||
+            str_contains($permissionName, 'lab test group')) {
             return 'consultant_doctors';
         }
 

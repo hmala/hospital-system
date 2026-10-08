@@ -209,11 +209,11 @@
         </tr>
         <tr>
             <td>الطبيب:</td>
-            <td><strong>د. {{ $payment->appointment->doctor->user->name }}</strong></td>
+            <td><strong>د. {{ $payment->appointment->doctor?->user?->name ?? 'الكادر الطبي' }}</strong></td>
         </tr>
         <tr>
             <td>القسم:</td>
-            <td><strong>{{ $payment->appointment->department->name }}</strong></td>
+            <td><strong>{{ $payment->appointment->department?->name ?? 'العيادات الاستشارية' }}</strong></td>
         </tr>
     </table>
     @endif

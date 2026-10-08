@@ -15,6 +15,7 @@ use App\Http\Controllers\RadiologyController;
 use App\Http\Controllers\RadiologyTypeController;
 use App\Http\Controllers\SurgeryController;
 use App\Http\Controllers\UserLabTestGroupController;
+use App\Http\Controllers\UserMedicineGroupController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,12 @@ Route::get('/departments', [DepartmentController::class, 'publicIndex'])
 
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
+    Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
+    Route::get('/doctor', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay']);
+    Route::get('/room/{roomNumber}', [\App\Http\Controllers\DoctorQueueController::class, 'roomDisplay'])->name('room.display');
+    Route::get('/room/{roomNumber}/data', [\App\Http\Controllers\DoctorQueueController::class, 'roomQueueData'])->name('room.data');
+    Route::post('/assign-room', [\App\Http\Controllers\DoctorQueueController::class, 'assignDoctorRoom'])->name('assign-room');
+    Route::get('/available-doctors', [\App\Http\Controllers\DoctorQueueController::class, 'availableDoctorsList'])->name('available-doctors');
     Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
     Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');
     Route::get('/all', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all.display');
@@ -91,6 +98,10 @@ Route::middleware(['auth'])->group(function () {
     // إدارة توفر الأطباء الاستشاريين (لموظف الاستقبال)
     Route::get('/consultant-availability', [ConsultantAvailabilityController::class, 'index'])
         ->name('consultant-availability.index');
+    Route::get('/consultant-availability/live-status', [ConsultantAvailabilityController::class, 'liveStatus'])
+        ->name('consultant-availability.live-status');
+    Route::get('/consultant-availability/search-follow-ups', [ConsultantAvailabilityController::class, 'searchFollowUps'])
+        ->name('consultant-availability.search-follow-ups');
     Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
         ->name('consultant-availability.financial-movements');
     Route::get('/consultant-availability/financial-movements/export', [ConsultantAvailabilityController::class, 'exportFinancialMovements'])
@@ -172,6 +183,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/appointments/{appointment}/confirm', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::post('/appointments/{appointment}/complete', [AppointmentController::class, 'complete'])->name('appointments.complete');
     Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+    Route::get('/appointments/{appointment}/print', [AppointmentController::class, 'printSlip'])->name('appointments.print');
     Route::get('/appointments/available-slots', [AppointmentController::class, 'getAvailableSlots'])->name('appointments.available-slots');
     
     // مسارات الاستعلامات - يجب أن تأتي قبل resource
@@ -336,6 +348,7 @@ Route::middleware(['auth'])->group(function () {
         // Patient Medical History Timeline
         Route::get('/patient/{patient}/history', [DoctorVisitController::class, 'showPatientHistory'])->name('patient.history');
         Route::get('/visits/{visit}/prescription/print', [DoctorVisitController::class, 'printPrescription'])->name('visits.prescription.print');
+        Route::get('/visits/{visit}/appointment/print', [DoctorVisitController::class, 'printAppointment'])->name('visits.appointment.print');
         Route::get('/visits/{visit}/substitution-requests', [DoctorVisitController::class, 'getSubstitutionRequests'])->name('visits.substitution-requests');
         Route::post('/prescriptions/items/{item}/respond-substitution', [DoctorVisitController::class, 'respondToSubstitution'])->name('prescriptions.items.respond-substitution');
     });
@@ -394,6 +407,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\LabStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
+        Route::get('/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('attachment');
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
     });
@@ -432,6 +446,9 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [RadiologyTypeController::class, 'index'])->name('index');
             Route::get('/create', [RadiologyTypeController::class, 'create'])->name('create');
             Route::post('/', [RadiologyTypeController::class, 'store'])->name('store');
+            Route::post('/bulk-delete', [RadiologyTypeController::class, 'bulkDelete'])->name('bulk-delete');
+            Route::post('/bulk-toggle-status', [RadiologyTypeController::class, 'bulkToggleStatus'])->name('bulk-toggle-status');
+            Route::post('/{type}/quick-price', [RadiologyTypeController::class, 'quickPriceUpdate'])->name('quick-price');
             Route::get('/{type}', [RadiologyTypeController::class, 'show'])->name('show');
             Route::get('/{type}/edit', [RadiologyTypeController::class, 'edit'])->name('edit');
             Route::put('/{type}', [RadiologyTypeController::class, 'update'])->name('update');
@@ -453,7 +470,27 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/groups/{group}', [UserLabTestGroupController::class, 'update'])->name('groups.update')->middleware('can:edit lab test groups');
             Route::delete('/groups/{group}', [UserLabTestGroupController::class, 'destroy'])->name('groups.destroy')->middleware('can:delete lab test groups');
         });
+    });
 
+    // إدارة مجموعات الأدوية المفضلة الشخصية للطبيب
+    Route::prefix('medicine-groups')->name('medicine-groups.')->middleware('can:view medicine groups')->group(function () {
+        Route::get('/', [UserMedicineGroupController::class, 'index'])->name('index');
+        Route::post('/', [UserMedicineGroupController::class, 'store'])->name('store')->middleware('can:create medicine groups');
+        Route::post('/save-from-visit', [UserMedicineGroupController::class, 'saveFromVisit'])->name('save-from-visit')->middleware('can:create medicine groups');
+        Route::post('/reorder', [UserMedicineGroupController::class, 'reorder'])->name('reorder')->middleware('can:edit medicine groups');
+        Route::post('/reset-usage', [UserMedicineGroupController::class, 'resetUsageCounts'])->name('reset-usage')->middleware('can:edit medicine groups');
+        Route::post('/{group}/toggle-star', [UserMedicineGroupController::class, 'toggleStar'])->name('toggle-star');
+        Route::post('/{group}/increment-usage', [UserMedicineGroupController::class, 'incrementUsage'])->name('increment-usage');
+        Route::post('/{group}/decrement-usage', [UserMedicineGroupController::class, 'decrementUsage'])->name('decrement-usage');
+        Route::post('/{group}/reset-usage', [UserMedicineGroupController::class, 'resetSingleUsage'])->name('reset-single-usage');
+        Route::get('/search-medicines', [UserMedicineGroupController::class, 'searchMedicines'])->name('search-medicines');
+        Route::get('/{group}/edit', [UserMedicineGroupController::class, 'edit'])->name('edit')->middleware('can:edit medicine groups');
+        Route::put('/{group}', [UserMedicineGroupController::class, 'update'])->name('update')->middleware('can:edit medicine groups');
+        Route::delete('/{group}', [UserMedicineGroupController::class, 'destroy'])->name('destroy')->middleware('can:delete medicine groups');
+    });
+
+    // إدارة أنواع التحاليل المختبرية - تابع (تسعير، تفاصيل، مرجعيات)
+    Route::prefix('lab-tests')->name('lab-tests.')->group(function () {
         // جدول تسعير وتصنيف الفحوصات المختبرية السريع
         Route::get('/pricing-settings', [\App\Http\Controllers\LabTestPricingController::class, 'index'])->name('pricing-settings.index');
         Route::post('/pricing-settings/save', [\App\Http\Controllers\LabTestPricingController::class, 'save'])->name('pricing-settings.save');
@@ -739,6 +776,7 @@ Route::middleware(['auth'])->group(function () {
 
     // مسارات التحكم بالطابور والاستدعاء (تحتاج تسجيل دخول)
     Route::prefix('queue')->name('queue.')->group(function () {
+        Route::post('/assign-room', [\App\Http\Controllers\DoctorQueueController::class, 'assignDoctorRoom'])->name('assign-room');
         Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('doctor.call-next');
         Route::post('/appointment/{appointment}/recall', [\App\Http\Controllers\DoctorQueueController::class, 'recall'])->name('appointment.recall');
         Route::post('/appointment/{appointment}/start-consultation', [\App\Http\Controllers\DoctorQueueController::class, 'startConsultation'])->name('appointment.start-consultation');
@@ -749,8 +787,13 @@ Route::middleware(['auth'])->group(function () {
 
 // مسارات شاشات الطابور العامة والصوت (يمكن فتحها على التلفاز دون جلسة كاشير)
 Route::prefix('queue')->name('queue.')->group(function () {
+    Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
+    Route::get('/doctor', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay']);
+    Route::get('/room/{roomNumber}', [\App\Http\Controllers\DoctorQueueController::class, 'roomDisplay'])->name('room');
+    Route::get('/room/{roomNumber}/data', [\App\Http\Controllers\DoctorQueueController::class, 'roomQueueData'])->name('room.data');
     Route::get('/doctor/{doctor}', [\App\Http\Controllers\DoctorQueueController::class, 'display'])->name('doctor.display');
     Route::get('/doctor/{doctor}/data', [\App\Http\Controllers\DoctorQueueController::class, 'queueData'])->name('doctor.data');
+    Route::get('/available-doctors', [\App\Http\Controllers\DoctorQueueController::class, 'availableDoctorsList'])->name('available-doctors');
     Route::get('/all-clinics', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsDisplay'])->name('all-clinics.display');
     Route::get('/all-clinics/data', [\App\Http\Controllers\DoctorQueueController::class, 'allClinicsData'])->name('all-clinics.data');
     Route::get('/tts', [\App\Http\Controllers\DoctorQueueController::class, 'tts'])->name('tts');

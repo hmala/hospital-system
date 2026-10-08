@@ -19,7 +19,8 @@
                 <div class="card-body p-4">
                     @php
                         $patient = optional($request->visit)->patient;
-                        $defaultInsurance = $request->insurance_type ?? $patient->insurance_type ?? 'none';
+                        $appointment = optional($request->visit)->appointment;
+                        $defaultInsurance = $request->insurance_type ?? optional($appointment)->insurance_type ?? optional($patient)->insurance_type ?? 'none';
                         $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
                         if ($defaultInsurance === 'hi' && $patient) {
                             $defaultCopay = $patient->getCopayPercentageFor($request->type);
@@ -51,8 +52,8 @@
                                             'base_price' => (float)$test->getRegularPrice(),
                                             'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
                                             'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
-                                            'is_moi_active' => (bool)$test->is_moi_active,
-                                            'is_hi_active' => (bool)$test->is_hi_active,
+                                            'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                            'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                         ];
                                     }
                                 }
@@ -68,8 +69,8 @@
                                             'base_price' => (float)$test->getRegularPrice(),
                                             'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
                                             'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
-                                            'is_moi_active' => (bool)$test->is_moi_active,
-                                            'is_hi_active' => (bool)$test->is_hi_active,
+                                            'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                            'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                         ];
                                     }
                                 }
@@ -91,25 +92,40 @@
                                             'base_price' => (float)$rad->getRegularPrice(),
                                             'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : $rad->getRegularPrice()),
                                             'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : $rad->getRegularPrice()),
-                                            'is_moi_active' => (bool)$rad->is_moi_active,
-                                            'is_hi_active' => (bool)$rad->is_hi_active,
+                                            'is_moi_active' => (bool)($rad->is_moi_active ?? true),
+                                            'is_hi_active' => (bool)($rad->is_hi_active ?? true),
                                         ];
                                     }
                                 }
                             }
                         }
 
-                        $initialApproved = count($items) > 0 ? collect($items)->sum('base_price') : (float)($request->total_amount ?? 0);
-                        $initialPatient = $initialApproved;
+                        $initialApproved = 0;
+                        $initialPatient = 0;
                         $initialInsurance = 0;
-                        if ($defaultInsurance === 'moi') {
-                            $initialApproved = count($items) > 0 ? collect($items)->sum(fn($i) => $i['moi_price'] ?: $i['base_price']) : $initialApproved;
-                            $initialPatient = round($initialApproved * ($defaultCopay / 100));
-                            $initialInsurance = max(0, $initialApproved - $initialPatient);
-                        } elseif ($defaultInsurance === 'hi') {
-                            $initialApproved = count($items) > 0 ? collect($items)->sum(fn($i) => $i['hi_price'] ?: $i['base_price']) : $initialApproved;
-                            $initialPatient = round($initialApproved * ($defaultCopay / 100));
-                            $initialInsurance = max(0, $initialApproved - $initialPatient);
+
+                        if (count($items) > 0) {
+                            foreach ($items as $itm) {
+                                $rowApp = $itm['base_price'];
+                                $rowCov = false;
+                                if ($defaultInsurance === 'moi' && $itm['is_moi_active']) {
+                                    $rowApp = $itm['moi_price'] > 0 ? $itm['moi_price'] : $itm['base_price'];
+                                    $rowCov = true;
+                                } elseif ($defaultInsurance === 'hi' && $itm['is_hi_active']) {
+                                    $rowApp = $itm['hi_price'] > 0 ? $itm['hi_price'] : $itm['base_price'];
+                                    $rowCov = true;
+                                }
+                                $rowPat = $rowCov ? round($rowApp * ($defaultCopay / 100)) : $rowApp;
+                                $rowIns = $rowCov ? max(0, $rowApp - $rowPat) : 0;
+
+                                $initialApproved += $rowApp;
+                                $initialPatient += $rowPat;
+                                $initialInsurance += $rowIns;
+                            }
+                        } else {
+                            $initialApproved = (float)($request->total_amount ?? 0);
+                            $initialPatient = $initialApproved;
+                            $initialInsurance = 0;
                         }
                     @endphp
 
@@ -295,6 +311,19 @@
                                             </thead>
                                             <tbody>
                                                 @foreach($items as $idx => $item)
+                                                    @php
+                                                        $rowApp = $item['base_price'];
+                                                        $rowCov = false;
+                                                        if ($defaultInsurance === 'moi' && $item['is_moi_active']) {
+                                                            $rowApp = $item['moi_price'] > 0 ? $item['moi_price'] : $item['base_price'];
+                                                            $rowCov = true;
+                                                        } elseif ($defaultInsurance === 'hi' && $item['is_hi_active']) {
+                                                            $rowApp = $item['hi_price'] > 0 ? $item['hi_price'] : $item['base_price'];
+                                                            $rowCov = true;
+                                                        }
+                                                        $rowPat = $rowCov ? round($rowApp * ($defaultCopay / 100)) : $rowApp;
+                                                        $rowIns = $rowCov ? max(0, $rowApp - $rowPat) : 0;
+                                                    @endphp
                                                     <tr class="service-item-row" 
                                                         data-base-price="{{ $item['base_price'] }}"
                                                         data-moi-price="{{ $item['moi_price'] }}"
@@ -311,9 +340,9 @@
                                                             <span class="fw-semibold">{{ $item['name'] }}</span>
                                                         </td>
                                                         <td><code>{{ $item['code'] }}</code></td>
-                                                        <td class="text-end fw-bold row-approved-price">{{ number_format($item['base_price']) }} د.ع</td>
-                                                        <td class="text-end text-success fw-bold row-patient-share">{{ number_format($item['base_price']) }} د.ع</td>
-                                                        <td class="text-end text-primary fw-bold row-insurance-share">0 د.ع</td>
+                                                        <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
+                                                        <td class="text-end text-success fw-bold row-patient-share">{{ number_format($rowPat) }} د.ع</td>
+                                                        <td class="text-end text-primary fw-bold row-insurance-share">{{ number_format($rowIns) }} د.ع</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>

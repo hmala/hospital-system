@@ -295,6 +295,11 @@ class PatientController extends Controller
             'neighborhood' => $request->neighborhood
         ]);
 
+        $returnUrl = $request->input('return_url');
+        if ($returnUrl && !str_contains($returnUrl, '/edit')) {
+            return redirect()->to($returnUrl)->with('success', 'تم تحديث بيانات المريض بنجاح');
+        }
+
         return redirect()->route('patients.show', $patient)
             ->with('success', 'تم تحديث بيانات المريض بنجاح');
     }

@@ -61,11 +61,27 @@ class UserLabTestGroupController extends Controller
             abort(403, 'غير مصرح لك بتحرير هذه المجموعة');
         }
 
+        $categoryNames = [
+            'biochemistry' => 'الكيمياء الحيوية (Biochemistry)',
+            'hormone' => 'الهرمونات (Hormone)',
+            'hematology' => 'أمراض الدم (Hematology)',
+            'haematology' => 'أمراض الدم (Hematology)',
+            'immunity' => 'المناعة (Immunology)',
+            'immunology' => 'المناعة (Immunology)',
+            'serology' => 'الأمصال (Serology)',
+            'infectious disease' => 'الأمراض المعدية (Infectious Diseases)',
+            'microbiology' => 'الأحياء المجهرية (Microbiology)',
+            'virology' => 'الفيروسات (Virology)',
+        ];
+
         $labTests = \App\Models\LabTest::where('is_active', true)
-            ->orderBy('main_category')
+            ->orderBy('subcategory')
             ->orderBy('name')
             ->get()
-            ->groupBy('main_category');
+            ->groupBy(function ($test) use ($categoryNames) {
+                $subKey = strtolower(trim($test->subcategory ?? ''));
+                return $categoryNames[$subKey] ?? ($test->subcategory ?: 'تحاليل أخرى');
+            });
 
         $selectedTestIds = $group->labTests->pluck('id')->toArray();
 

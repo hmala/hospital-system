@@ -974,13 +974,13 @@
                         @endcanany
 
                         <!-- قسم الأطباء والعيادات -->
-                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability'])
+                        @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability', 'view visits', 'view medicine groups', 'view lab test groups'])
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="false">
+                        <div class="sidebar-section-title {{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="{{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? 'true' : 'false' }}">
                             <span><i class="fas fa-stethoscope"></i> الأطباء والعيادات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="doctorSection">
+                        <div class="collapse collapse-section {{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? 'show' : '' }}" id="doctorSection">
 
                         @can('view doctors')
                         <li class="nav-item">
@@ -1010,7 +1010,6 @@
                         </li>
                         @endcan
 
-
                         @can('manage own visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
@@ -1020,31 +1019,26 @@
                         </li>
                         @endcan
 
-                        </div>
-                        @endcanany
-
-                        <!-- قسم الزيارات الطبية -->
-                        @canany(['view visits', 'view own visits'])
-                        <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#appointmentSection" aria-expanded="false">
-                            <span><i class="fas fa-file-medical"></i> الزيارات الطبية</span>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                        </div>
-                        <div class="collapse collapse-section" id="appointmentSection">
-
-                        @can('view visits')
+                        @can('view medicine groups')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('visits.*') ? 'active' : '' }}" href="{{ route('visits.index') }}">
-                                <i class="fas fa-file-medical"></i><span> سجل الزيارات الطبية</span>
-                                <span class="badge bg-secondary ms-2">{{ $incompleteVisits }}</span>
+                            <a class="nav-link {{ request()->routeIs('medicine-groups.*') ? 'active' : '' }}" href="{{ route('medicine-groups.index') }}">
+                                <i class="fas fa-pills"></i><span> مجموعات الأدوية المفضلة</span>
                             </a>
                         </li>
                         @endcan
 
-                        @can('view own visits')
+                        @can('view lab test groups')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('patient.visits.*') ? 'active' : '' }}" href="{{ route('patient.visits.index') }}">
-                                <i class="fas fa-user-injured"></i><span> زياراتي السابقة</span>
+                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
+                                <i class="fas fa-vials"></i><span> مجموعات التحاليل المفضلة</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        @can('view visits')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('visits.*') ? 'active' : '' }}" href="{{ route('visits.index') }}">
+                                <i class="fas fa-file-medical"></i><span> سجل الزيارات العام</span>
                             </a>
                         </li>
                         @endcan
@@ -1272,7 +1266,7 @@
                         @endcanany
 
                         <!-- قسم المختبر والتحاليل الطبية -->
-                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view lab test groups', 'view packages'])
+                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view packages'])
                         @php
                             $isLabActive = request()->routeIs('lab.*') || 
                                            request()->routeIs('admin.packages.*') || 
@@ -1311,13 +1305,6 @@
                         </li>
                         @endcan
 
-                        @can('view lab test groups')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
-                                <i class="fas fa-layer-group"></i><span> مجموعات المفضلات</span>
-                            </a>
-                        </li>
-                        @endcan
 
                         @can('view lab tests')
                         <li class="nav-item">

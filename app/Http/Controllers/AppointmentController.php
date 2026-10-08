@@ -317,9 +317,37 @@ class AppointmentController extends Controller
             ->with('success', 'تم إلغاء الموعد بنجاح');
     }
 
-    // الحصول على المواعيد المتاحة للطبيب (لم تعد مستخدمة)
-    // public function getAvailableSlots(Request $request)
-    // {
-    //     // تم إزالة هذه الدالة لأننا لم نعد نستخدم أوقات محددة
-    // }
+    /**
+     * طباعة وصل حراري للموعد / كرت المراجعة للاستعلامات والاستقبال
+     */
+    public function printSlip(Appointment $appointment)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('view appointments') && !$user->can('create appointments') && !$user->can('manage consultant availability') && !$user->can('view own visits') && !$user->can('view visits')))) {
+            abort(403, 'غير مصرح لك بطباعة وصل الموعد والمراجعة');
+        }
+
+        $appointment->load(['patient.user', 'doctor.user', 'department', 'visit']);
+
+        // تسجيل وقت الطباعة وزيادة عداد الطباعة
+        $appointment->forceFill([
+            'printed_at' => now(),
+            'print_count' => ($appointment->print_count ?? 0) + 1,
+        ])->saveQuietly();
+
+        $followUpAppointment = $appointment;
+        $visit = $appointment->visit ?? new \App\Models\Visit([
+            'patient_id' => $appointment->patient_id,
+            'doctor_id' => $appointment->doctor_id,
+            'department_id' => $appointment->department_id,
+            'follow_up_date' => $appointment->appointment_date,
+            'follow_up_notes' => $appointment->notes ?: $appointment->reason,
+        ]);
+        if ($appointment->patient) $visit->setRelation('patient', $appointment->patient);
+        if ($appointment->doctor) $visit->setRelation('doctor', $appointment->doctor);
+        if ($appointment->department) $visit->setRelation('department', $appointment->department);
+
+        return view('doctors.visits.appointment-print', compact('appointment', 'visit', 'followUpAppointment'));
+    }
 }

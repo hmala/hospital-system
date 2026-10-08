@@ -178,7 +178,199 @@ class ConsultantAvailabilityController extends Controller
             ->latest()
             ->get();
 
-        return view('consultant-availability.index', compact('consultantDoctors', 'groupedDoctors', 'todayAppointments', 'pendingConsultantRequests', 'weekDays', 'selectedDay'));
+        // جلب المراجعات والمواعيد التي تم جدولتها اليوم من محطة الأطباء
+        $todayScheduledFollowUps = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
+            ->where(function($q) {
+                $q->where('is_free_recheck', true)
+                  ->orWhereNotNull('recheck_parent_visit_id');
+            })
+            ->whereDate('created_at', today())
+            ->latest('created_at')
+            ->get();
+
+        $pendingPrintFollowUps = $todayScheduledFollowUps->filter(function($f) {
+            return empty($f->printed_at) && ($f->print_count ?? 0) === 0;
+        });
+
+        $printedTodayFollowUps = $todayScheduledFollowUps->filter(function($f) {
+            return !empty($f->printed_at) || ($f->print_count ?? 0) > 0;
+        });
+
+        return view('consultant-availability.index', compact(
+            'consultantDoctors', 
+            'groupedDoctors', 
+            'todayAppointments', 
+            'pendingConsultantRequests', 
+            'todayScheduledFollowUps', 
+            'pendingPrintFollowUps',
+            'printedTodayFollowUps',
+            'weekDays', 
+            'selectedDay'
+        ));
+    }
+
+    /**
+     * جلب الحالة المباشرة للعيادات الجارية والمراجعات المجدولة اليوم (AJAX Polling)
+     */
+    public function liveStatus(Request $request)
+    {
+        $today = today();
+
+        // 1. العيادات الجارية الآن
+        $consultantDoctors = Doctor::with(['user', 'department'])
+            ->where('type', 'consultant')
+            ->where('is_active', true)
+            ->get();
+
+        $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
+            ->whereDate('visit_date', $today)
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->get()
+            ->groupBy('doctor_id');
+
+        $inConsultationAppointments = \App\Models\Appointment::with('patient.user')
+            ->whereDate('appointment_date', $today)
+            ->whereIn('status', ['calling', 'in_consultation'])
+            ->get()
+            ->groupBy('doctor_id');
+
+        $runningClinics = [];
+        foreach ($consultantDoctors as $doc) {
+            $activeVisit = $activeVisits->get($doc->id)?->first();
+            $inConsultApp = $inConsultationAppointments->get($doc->id)?->first();
+
+            if ($activeVisit || $inConsultApp) {
+                $status = $activeVisit ? 'in_consultation' : $inConsultApp->status;
+                $patientName = $activeVisit 
+                    ? (optional(optional($activeVisit->patient)->user)->name ?? optional($activeVisit->patient)->name ?? 'مريض بالداخل')
+                    : (optional(optional($inConsultApp->patient)->user)->name ?? optional($inConsultApp->patient)->name ?? 'مريض قيد الاستدعاء');
+                $queue = $activeVisit ? optional($activeVisit->appointment)->queue_number : $inConsultApp->queue_number;
+                $since = $activeVisit 
+                    ? ($activeVisit->created_at ? $activeVisit->created_at->diffForHumans(null, true) : 'الآن')
+                    : ($inConsultApp->called_at ? \Carbon\Carbon::parse($inConsultApp->called_at)->diffForHumans(null, true) : 'الآن');
+
+                $runningClinics[] = [
+                    'doctor_id' => $doc->id,
+                    'doctor_name' => $doc->user->name ?? 'طبيب',
+                    'department_name' => $doc->department->name ?? 'العيادة',
+                    'status' => $status,
+                    'patient_name' => $patientName,
+                    'patient_queue' => $queue,
+                    'current_since' => $since,
+                ];
+            }
+        }
+
+        // 2. المراجعات المجدولة اليوم
+        $allTodayFollowUps = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
+            ->where(function($q) {
+                $q->where('is_free_recheck', true)
+                  ->orWhereNotNull('recheck_parent_visit_id');
+            })
+            ->whereDate('created_at', $today)
+            ->latest('created_at')
+            ->get();
+
+        $mapFollowUp = function($fApp) {
+            $appDate = $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date) : null;
+            $isPrinted = !empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
+            return [
+                'id' => $fApp->id,
+                'patient_name' => optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض',
+                'doctor_name' => optional(optional($fApp->doctor)->user)->name ?? 'غير محدد',
+                'appointment_date' => $appDate ? $appDate->format('Y-m-d') : '—',
+                'day_name' => $appDate ? $appDate->locale('ar')->dayName : '',
+                'notes' => $fApp->notes ?? '',
+                'is_printed' => $isPrinted,
+                'print_count' => $fApp->print_count ?? 0,
+                'printed_time' => $fApp->printed_at ? \Carbon\Carbon::parse($fApp->printed_at)->format('H:i') : null,
+                'print_url' => route('appointments.print', $fApp->id),
+            ];
+        };
+
+        $pendingFollowUps = $allTodayFollowUps->filter(function($f) {
+            return empty($f->printed_at) && ($f->print_count ?? 0) === 0;
+        })->map($mapFollowUp)->values();
+
+        $printedTodayFollowUps = $allTodayFollowUps->filter(function($f) {
+            return !empty($f->printed_at) || ($f->print_count ?? 0) > 0;
+        })->map($mapFollowUp)->values();
+
+        return response()->json([
+            'success' => true,
+            'running_clinics' => $runningClinics,
+            'running_clinics_count' => count($runningClinics),
+            'pending_follow_ups' => $pendingFollowUps,
+            'pending_follow_ups_count' => count($pendingFollowUps),
+            'printed_today_follow_ups' => $printedTodayFollowUps,
+            'printed_today_follow_ups_count' => count($printedTodayFollowUps),
+            'all_today_count' => count($allTodayFollowUps),
+            'timestamp' => now()->format('H:i:s'),
+        ]);
+    }
+
+    /**
+     * البحث الفوري في سجل كافة المراجعات والمواعيد لجميع الأيام
+     */
+    public function searchFollowUps(Request $request)
+    {
+        $searchQuery = $request->query('q');
+        $date = $request->query('date');
+
+        $query = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
+            ->where(function($q) {
+                $q->where('is_free_recheck', true)
+                  ->orWhereNotNull('recheck_parent_visit_id');
+            });
+
+        if ($date) {
+            $query->whereDate('appointment_date', $date);
+        }
+
+        if ($searchQuery) {
+            $query->where(function($q) use ($searchQuery) {
+                $q->whereHas('patient.user', function($uq) use ($searchQuery) {
+                    $uq->where('name', 'LIKE', "%{$searchQuery}%")
+                      ->orWhere('phone', 'LIKE', "%{$searchQuery}%");
+                })
+                ->orWhereHas('patient', function($pq) use ($searchQuery) {
+                    $pq->where('name', 'LIKE', "%{$searchQuery}%")
+                      ->orWhere('national_id', 'LIKE', "%{$searchQuery}%")
+                      ->orWhere('medical_record_number', 'LIKE', "%{$searchQuery}%");
+                })
+                ->orWhere('notes', 'LIKE', "%{$searchQuery}%")
+                ->orWhere('reason', 'LIKE', "%{$searchQuery}%");
+            });
+        }
+
+        $results = $query->latest('appointment_date')
+            ->limit(30)
+            ->get()
+            ->map(function($fApp) {
+                $appDate = $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date) : null;
+                $isPrinted = !empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
+                return [
+                    'id' => $fApp->id,
+                    'patient_name' => optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض',
+                    'patient_phone' => optional(optional($fApp->patient)->user)->phone ?? optional($fApp->patient)->phone ?? '—',
+                    'patient_file' => optional($fApp->patient)->national_id ?: optional($fApp->patient)->id,
+                    'doctor_name' => optional(optional($fApp->doctor)->user)->name ?? 'غير محدد',
+                    'department_name' => optional($fApp->department)->name ?? 'الاستشارية',
+                    'appointment_date' => $appDate ? $appDate->format('Y-m-d') : '—',
+                    'day_name' => $appDate ? $appDate->locale('ar')->dayName : '',
+                    'notes' => $fApp->notes ?? '',
+                    'is_printed' => $isPrinted,
+                    'print_count' => $fApp->print_count ?? 0,
+                    'printed_time' => $fApp->printed_at ? \Carbon\Carbon::parse($fApp->printed_at)->format('Y-m-d H:i') : null,
+                    'print_url' => route('appointments.print', $fApp->id),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'results' => $results,
+            'count' => count($results),
+        ]);
     }
 
     public function financialMovements(Request $request)

@@ -1,534 +1,727 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid" id="lab-requests-content">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2>
-                        <i class="fas fa-flask me-2 text-primary"></i>
-                        طلبات المختبر
-                        <span class="badge bg-success" id="live-indicator">
-                            <i class="fas fa-circle fa-xs"></i> مباشر
-                        </span>
-                    </h2>
-                    <p class="text-muted mb-0">
-                        مرحباً {{ auth()->user()->name }} -
-                        <small id="last-update">آخر تحديث: الآن</small>
-                    </p>
-                </div>
+<div class="container-fluid py-3" id="lab-requests-content">
+    
+    <!-- 1. الهيدر العلوي وشريط الإحصاءات السريعة -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-primary text-white p-2 rounded-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 46px; height: 46px;">
+                <i class="fas fa-flask fs-4"></i>
             </div>
+            <div>
+                <h4 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                    طلبات وفحوصات المختبر
+                    <span class="badge bg-success shadow-sm" id="live-indicator" style="font-size: 0.72rem;">
+                        <i class="fas fa-circle fa-xs me-1"></i> مباشر
+                    </span>
+                </h4>
+                <small class="text-muted">
+                    مرحباً <strong>{{ auth()->user()->name }}</strong> •
+                    <span id="last-update" class="text-secondary">آخر تحديث: الآن</span>
+                </small>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            @can('create lab tests')
+                <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-primary btn-sm fw-semibold">
+                    <i class="fas fa-vial me-1"></i> دليل وأسعار التحاليل
+                </a>
+            @endcan
         </div>
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <!-- الطلبات العادية -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>
-                الطلبات العادية
-                <span class="badge bg-light text-primary ms-2">{{ $requests->total() }}</span>
-            </h5>
-            <form method="GET" action="{{ route('lab.index') }}" class="d-flex align-items-center gap-2" style="min-width: 320px;">
-                <div class="input-group input-group-sm">
-                    <input type="text" name="search" id="lab-search-input" class="form-control" 
-                           placeholder="بحث باسم المريض، الهاتف، الطبيب، رقم الطلب..." 
-                           value="{{ request('search') }}">
-                    <button class="btn btn-light text-primary fw-bold" type="submit">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    @if(request('search'))
-                        <a href="{{ route('lab.index') }}" class="btn btn-outline-light" title="إلغاء تصفية البحث">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    @endif
+    <!-- 2. بطاقات الأقسام الثلاثة: الاستشارية، المختبر المباشر، والطوارئ -->
+    <div class="row g-2 mb-3">
+        <!-- أ. طلبات العيادات الاستشارية -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('lab.index', ['source' => 'consultation', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'consultation' ? 'border-bottom border-primary border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات العيادات الاستشارية</span>
+                        <h4 class="mb-0 fw-bold text-primary font-monospace">{{ $counts['consultation'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">تحاليل محولة من الأطباء</small>
+                    </div>
+                    <div class="bg-primary-subtle text-primary p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-user-md fs-5"></i>
+                    </div>
                 </div>
-            </form>
+            </a>
         </div>
+
+        <!-- ب. طلبات المختبر المباشرة (الخارجية) -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('lab.index', ['source' => 'direct', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'direct' ? 'border-bottom border-info border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات المختبر المباشرة</span>
+                        <h4 class="mb-0 fw-bold text-info font-monospace">{{ $counts['direct'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">مراجعي الصندوق والمختبر العام</small>
+                    </div>
+                    <div class="bg-info-subtle text-info p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-vial fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- ج. تحاليل قسم الطوارئ -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('lab.index', ['source' => 'emergency', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'emergency' ? 'border-bottom border-danger border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">تحاليل قسم الطوارئ</span>
+                        <h4 class="mb-0 fw-bold text-danger font-monospace">{{ $counts['emergency'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">حالات الطوارئ الحرجة</small>
+                    </div>
+                    <div class="bg-danger-subtle text-danger p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-ambulance fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- د. كافة الطلبات (إجمالي) -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('lab.index', ['source' => 'all', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? 'all') == 'all' ? 'border-bottom border-secondary border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">كافة طلبات المختبر</span>
+                        <h4 class="mb-0 fw-bold text-dark font-monospace">{{ $counts['all'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">مكتمل: {{ $counts['completed'] ?? 0 }} • معلق: {{ $counts['pending'] ?? 0 }}</small>
+                    </div>
+                    <div class="bg-secondary-subtle text-secondary p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-layer-group fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- 3. شريط الفلترة والبحث والتبويبات -->
+    <div class="card shadow-sm border-0 bg-white mb-3 rounded-3">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-center justify-content-between">
+                <!-- التبويبات العلوية الثلاثية -->
+                <div class="col-lg-7 col-12">
+                    <ul class="nav nav-pills gap-1" id="labRequestsTabs">
+                        <li class="nav-item">
+                            <a href="{{ route('lab.index', ['source' => 'consultation', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+                               class="nav-link {{ ($sourceFilter ?? '') == 'consultation' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2">
+                                <i class="fas fa-user-md"></i>
+                                <span>الاستشارية</span>
+                                <span class="badge {{ ($sourceFilter ?? '') == 'consultation' ? 'bg-white text-primary' : 'bg-primary text-white' }} rounded-pill">{{ $counts['consultation'] ?? 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('lab.index', ['source' => 'direct', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+                               class="nav-link {{ ($sourceFilter ?? '') == 'direct' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2">
+                                <i class="fas fa-vial"></i>
+                                <span>طلبات مباشرة</span>
+                                <span class="badge {{ ($sourceFilter ?? '') == 'direct' ? 'bg-white text-info' : 'bg-info text-white' }} rounded-pill">{{ $counts['direct'] ?? 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('lab.index', ['source' => 'emergency', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+                               class="nav-link {{ ($sourceFilter ?? '') == 'emergency' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2 text-danger">
+                                <i class="fas fa-ambulance"></i>
+                                <span>الطوارئ</span>
+                                <span class="badge {{ ($sourceFilter ?? '') == 'emergency' ? 'bg-white text-danger' : 'bg-danger text-white' }} rounded-pill">{{ $counts['emergency'] ?? 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('lab.index', ['source' => 'all', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+                               class="nav-link {{ ($sourceFilter ?? 'all') == 'all' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2">
+                                <i class="fas fa-list"></i>
+                                <span>الكل</span>
+                                <span class="badge {{ ($sourceFilter ?? 'all') == 'all' ? 'bg-white text-dark' : 'bg-secondary text-white' }} rounded-pill">{{ $counts['all'] ?? 0 }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- شريط البحث والفلترة -->
+                <div class="col-lg-5 col-12">
+                    <form method="GET" action="{{ route('lab.index') }}" class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+                        <input type="hidden" name="source" value="{{ request('source', 'all') }}">
+                        <input type="hidden" name="status" value="{{ request('status', 'all') }}">
+                        
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ route('lab.index', ['source' => request('source', 'all'), 'status' => request('status', 'all'), 'date' => 'today', 'search' => request('search')]) }}" 
+                               class="btn {{ ($dateFilter ?? '') == 'today' ? 'btn-primary fw-bold' : 'btn-outline-secondary' }}">
+                                اليوم
+                            </a>
+                            <a href="{{ route('lab.index', ['source' => request('source', 'all'), 'status' => request('status', 'all'), 'date' => 'all', 'search' => request('search')]) }}" 
+                               class="btn {{ ($dateFilter ?? 'all') == 'all' ? 'btn-primary fw-bold' : 'btn-outline-secondary' }}">
+                                كافة التواريخ
+                            </a>
+                        </div>
+
+                        <div class="input-group input-group-sm" style="max-width: 240px;">
+                            <input type="text" name="search" id="lab-search-input" class="form-control" 
+                                   placeholder="بحث باسم المريض، رقم..." 
+                                   value="{{ request('search') }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            @if(request('search'))
+                                <a href="{{ route('lab.index', ['source' => request('source', 'all'), 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" class="btn btn-outline-secondary" title="إلغاء البحث">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. جدول الطلبات الموحد والوحيد في الشاشة -->
+    <div class="card shadow-sm border-0 bg-white rounded-3 overflow-hidden">
+        <!-- شريط فلترة حالة الفحص السريعة -->
+        <div class="p-2 px-3 bg-light border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted small fw-bold"><i class="fas fa-filter text-secondary me-1"></i> حالة الفحص:</span>
+                
+                <a href="{{ route('lab.index', ['source' => request('source', 'all'), 'status' => 'all', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                   class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? 'all') == 'all' ? 'btn-secondary text-white fw-bold shadow-sm' : 'btn-outline-secondary' }}">
+                    الكل <span class="badge bg-white text-dark ms-1 rounded-pill font-monospace">{{ $counts['tab_total'] ?? $counts['all'] }}</span>
+                </a>
+
+                <a href="{{ route('lab.index', ['source' => request('source', 'all'), 'status' => 'pending', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                   class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? '') == 'pending' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-outline-warning text-dark' }}">
+                    <i class="fas fa-hourglass-half me-1"></i> بانتظار الفحص / معلق 
+                    <span class="badge bg-dark text-white ms-1 rounded-pill font-monospace">{{ $counts['pending'] ?? 0 }}</span>
+                </a>
+
+                <a href="{{ route('lab.index', ['source' => request('source', 'all'), 'status' => 'completed', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                   class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? '') == 'completed' ? 'btn-success text-white fw-bold shadow-sm' : 'btn-outline-success' }}">
+                    <i class="fas fa-check-circle me-1"></i> المكتملة والمعتمدة 
+                    <span class="badge bg-white text-success ms-1 rounded-pill font-monospace">{{ $counts['completed'] ?? 0 }}</span>
+                </a>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 small text-muted">
+                <span class="d-inline-flex align-items-center gap-1"><span class="badge bg-success p-1 rounded-circle"></span> مكتمل</span>
+                <span class="d-inline-flex align-items-center gap-1"><span class="badge bg-warning p-1 rounded-circle"></span> معلق</span>
+            </div>
+        </div>
+
         <div class="card-body p-0">
-            @if($requests->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width:70px;">رقم</th>
-                                <th>مريض</th>
-                                <th>طبيب</th>
-                                <th style="width:90px;">نوع</th>
-                                <th style="width:80px;">وقت</th>
-                                <th style="width:90px;">الدفع</th>
-                                <th style="width:70px;">حالة</th>
-                                <th style="width:100px;">إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($requests as $request)
-                            <tr class="{{ $request->payment_status == 'pending' ? 'table-danger' : ($request->payment_status == 'paid' ? 'table-success' : '') }}">
-                                <td><strong>#{{ $request->id }}</strong></td>
-                                <td>{{ $request->visit?->patient?->user?->name ?? 'غير محدد' }}</td>
-                                <td>د. {{ $request->visit?->doctor?->user?->name ?? 'غير محدد' }}</td>
-                                <td>
+            @if(($sourceFilter ?? '') === 'emergency')
+                <!-- أ. جدول تحاليل الطوارئ الحرجة -->
+                @if(isset($emergencyLabRequests) && $emergencyLabRequests->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="labEmergencyTable">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th class="text-center" style="width: 80px;">رقم الطوارئ</th>
+                                    <th>المريض</th>
+                                    <th>التحاليل المطلوبة</th>
+                                    <th style="width: 110px;" class="text-center">الأولوية</th>
+                                    <th style="width: 140px;" class="text-center">حالة الفحص</th>
+                                    <th style="width: 150px;" class="text-center">الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($emergencyLabRequests as $emergencyRequest)
                                     @php
-                                        $det = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                        $isBloodBank = $request->type === 'blood_bank' || data_get($det, 'blood_bank', false);
+                                        $emCompleted = $emergencyRequest->status === 'completed';
+                                        $emInProgress = $emergencyRequest->status === 'in_progress';
                                     @endphp
-                                    <span class="badge bg-{{ $isBloodBank ? 'danger' : 'primary' }}">
-                                        {{ $isBloodBank ? 'مصرف الدم' : 'تحاليل' }}
-                                    </span>
-                                </td>
-                                <td><small>{{ $request->created_at->format('H:i') }}</small></td>
-                                <td>
-                                    @if($request->payment_status == 'paid')
-                                        <span class="badge bg-success">مدفوع</span>
-                                    @elseif($request->payment_status == 'pending')
-                                        <span class="badge bg-danger">غير مدفوع</span>
-                                    @else
-                                        <span class="badge bg-secondary">-</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ $request->status == 'completed' ? 'success' : ($request->status == 'pending' ? 'warning' : ($request->status == 'pending_service_selection' ? 'secondary' : 'info')) }}">
-                                        {{ $request->status == 'completed' ? 'تم' : ($request->status == 'pending' ? 'معلق' : ($request->status == 'pending_service_selection' ? 'بانتظار تحديد' : 'جاري')) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('lab.show', $request) }}"
-                                           class="btn btn-outline-primary"
-                                           title="عرض">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        @if($request->payment_status != 'paid')
-                                            <a href="{{ route('lab.show', $request) }}"
-                                               class="btn btn-outline-warning"
-                                               title="تعديل التحاليل">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        @endif
-                                        @if(!empty($det['attachment']))
-                                            <a href="{{ asset('storage/' . $det['attachment']) }}"
-                                               class="btn btn-outline-info"
-                                               target="_blank"
-                                               title="طباعة / معاينة الملف المرفق">
-                                                <i class="fas fa-file-medical"></i>
-                                            </a>
-                                        @endif
-                                        @if(in_array($request->status, ['completed', 'in_progress']))
-                                            <a href="{{ route('lab.print', $request) }}"
-                                               class="btn btn-outline-success"
-                                               target="_blank"
-                                               title="طباعة تقرير النظام">
-                                                <i class="fas fa-print"></i>
-                                            </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <div class="d-flex justify-content-center p-3">
-                    {{ $requests->links() }}
-                </div>
+                                    <tr style="{{ $emCompleted ? 'border-right: 4px solid #16a34a; background-color: #fafdfb;' : ($emInProgress ? 'border-right: 4px solid #0284c7; background-color: #f0f9ff;' : 'border-right: 4px solid #dc2626; background-color: #ffffff;') }}">
+                                        <td class="text-center font-monospace fw-bold text-danger">
+                                            #{{ $emergencyRequest->emergency_id }}
+                                        </td>
+                                        <td>
+                                            <strong class="text-dark d-block">{{ $emergencyRequest->patient?->user?->name ?? 'غير محدد' }}</strong>
+                                            <small class="text-muted">
+                                                {{ $emergencyRequest->patient?->age ? ($emergencyRequest->patient->age . ' سنة') : '' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach($emergencyRequest->labTests as $t)
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ $t->name }}</span>
+                                                @endforeach
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-{{ $emergencyRequest->priority == 'critical' ? 'danger' : 'warning text-dark' }} fw-bold">
+                                                {{ $emergencyRequest->priority_text }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($emCompleted)
+                                                <span class="badge bg-success py-1.5 px-2.5 shadow-sm fw-semibold">
+                                                    <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد
+                                                </span>
+                                            @elseif($emInProgress)
+                                                <span class="badge bg-info text-white py-1.5 px-2.5 shadow-sm fw-semibold">
+                                                    <i class="fas fa-spinner fa-spin me-1"></i> قيد الإجراء
+                                                </span>
+                                            @else
+                                                <span class="badge bg-danger text-white py-1.5 px-2.5 shadow-sm fw-bold">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> بانتظار الفحص
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($emergencyRequest->status == 'pending')
+                                                <form action="{{ route('staff.emergency-lab.start', $emergencyRequest) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-primary fw-bold shadow-sm px-3">
+                                                        <i class="fas fa-play me-1"></i> بدء الفحص
+                                                    </button>
+                                                </form>
+                                            @elseif($emergencyRequest->status == 'in_progress')
+                                                <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#completeEmergencyLabModal{{ $emergencyRequest->id }}">
+                                                    <i class="fas fa-check me-1"></i> إدخال النتائج
+                                                </button>
+                                            @else
+                                                <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-sm" target="_blank">
+                                                    <i class="fas fa-print me-1"></i> طباعة
+                                                </a>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- الترقيم والصفحات للطوارئ -->
+                    <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span class="text-muted small">
+                            عرض <strong>{{ $emergencyLabRequests->firstItem() ?? 0 }}</strong> إلى <strong>{{ $emergencyLabRequests->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $emergencyLabRequests->total() }}</strong> طلب طوارئ
+                        </span>
+                        <div>
+                            {{ $emergencyLabRequests->links() }}
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-5">
+                        <i class="fas fa-ambulance fa-3x text-muted opacity-50 mb-3"></i>
+                        <h6 class="text-dark fw-bold">لا توجد تحاليل طوارئ تطابق هذا الفلتر</h6>
+                        <p class="text-muted small mb-0">يمكنك التبديل بين التبويبات أو إزالة فلتر الحالة للاطلاع على بقية الطلبات.</p>
+                    </div>
+                @endif
+
             @else
-                <div class="text-center py-5">
-                    <i class="fas fa-flask fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">لا توجد طلبات مختبر</h5>
-                </div>
+                <!-- ب. جدول طلبات المختبر (الاستشارية / المباشرة / الكل) -->
+                @if(isset($requests) && $requests->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="labRequestsTable">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th class="text-center" style="width: 75px;"># الطلب</th>
+                                    <th>بيانات المريض</th>
+                                    <th>المصدر / الطبيب</th>
+                                    <th>نوع الطلب والمرفقات</th>
+                                    <th style="width: 140px;">تاريخ ووقت الطلب</th>
+                                    <th style="width: 110px;" class="text-center">حالة الدفع</th>
+                                    <th style="width: 140px;" class="text-center">حالة الفحص</th>
+                                    <th style="width: 170px;" class="text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($requests as $req)
+                                    @php
+                                        $det = is_string($req->details) ? json_decode($req->details, true) : $req->details;
+                                        if (!is_array($det)) $det = [];
+                                        $isBloodBank = $req->type === 'blood_bank' || data_get($det, 'blood_bank', false);
+                                        $hasAttachment = !empty($det['attachment']);
+                                        $testAttachments = is_array($det['test_attachments'] ?? null) ? $det['test_attachments'] : [];
+                                        $totalAttachmentsCount = ($hasAttachment ? 1 : 0) + count($testAttachments);
+
+                                        // استخراج أسماء الفحوصات الطبية
+                                        $tests = [];
+                                        if (!empty($det['lab_test_ids'])) {
+                                            $ids = is_array($det['lab_test_ids']) ? $det['lab_test_ids'] : explode(',', (string) $det['lab_test_ids']);
+                                            $tests = \App\Models\LabTest::whereIn('id', array_filter($ids))->pluck('name')->toArray();
+                                        }
+                                        if (empty($tests) && !empty($det['tests'])) {
+                                            $tests = is_array($det['tests']) ? $det['tests'] : explode(',', (string) $det['tests']);
+                                        }
+                                        if (empty($tests) && !empty($req->description)) {
+                                            $tests = [$req->description];
+                                        }
+                                        $tests = array_filter(array_map('trim', $tests));
+
+                                        $patient = $req->visit?->patient;
+                                        $patientUser = $patient?->user;
+                                        $isConsultation = !empty($req->visit?->doctor_id);
+                                        $isCompleted = $req->status === 'completed';
+                                        $isInProgress = $req->status === 'in_progress';
+                                    @endphp
+                                    <tr style="{{ $isCompleted ? 'border-right: 4px solid #16a34a; background-color: #fafdfb;' : ($isInProgress ? 'border-right: 4px solid #0284c7; background-color: #f0f9ff;' : 'border-right: 4px solid #f59e0b; background-color: #ffffff;') }}">
+                                        <!-- رقم الطلب -->
+                                        <td class="text-center">
+                                            <span class="badge {{ $isCompleted ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-dark border' }} font-monospace fw-bold">
+                                                #{{ $req->id }}
+                                            </span>
+                                        </td>
+
+                                        <!-- بيانات المريض -->
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="{{ $isCompleted ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary' }} rounded-circle p-2 text-center" style="width: 34px; height: 34px;">
+                                                    <i class="fas fa-user small"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="text-dark d-block">{{ $patientUser?->name ?? 'غير محدد' }}</strong>
+                                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                                        ملف: #{{ $patient?->national_id ?: ($patient?->id ?? '-') }}
+                                                        @if($patient?->age) • {{ $patient->age }} سنة @endif
+                                                        @if($patient?->blood_type) • <span class="text-danger fw-bold">{{ $patient->blood_type }}</span> @endif
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <!-- المصدر والطبيب المحول -->
+                                        <td>
+                                            @if($isConsultation)
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fas fa-user-md text-primary small me-1"></i>
+                                                    <span class="text-dark fw-semibold small">د. {{ $req->visit?->doctor?->user?->name }}</span>
+                                                </div>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">
+                                                    عيادة استشارية
+                                                </span>
+                                            @else
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fas fa-vial text-info small me-1"></i>
+                                                    <span class="text-dark fw-semibold small">مختبر خارجي مباشر</span>
+                                                </div>
+                                                <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;">
+                                                    استقبال الصندوق
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <!-- نوع الطلب والفحوصات والمرفقات -->
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <!-- الفحوصات المطلوبة -->
+                                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                                    @if($isBloodBank)
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-tint me-1"></i> مصرف الدم
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                            <i class="fas fa-flask me-1"></i> تحاليل
+                                                        </span>
+                                                    @endif
+
+                                                    @foreach(array_slice($tests, 0, 3) as $tName)
+                                                        <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.72rem;">
+                                                            {{ $tName }}
+                                                        </span>
+                                                    @endforeach
+                                                    @if(count($tests) > 3)
+                                                        <span class="badge bg-secondary-subtle text-secondary border" style="font-size: 0.68rem;" title="{{ implode(', ', array_slice($tests, 3)) }}">
+                                                            +{{ count($tests) - 3 }} فحص
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                <!-- المرفقات وتقارير الأجهزة -->
+                                                @if($totalAttachmentsCount > 0)
+                                                    <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                                                        @if($hasAttachment)
+                                                            <a href="{{ asset('storage/' . $det['attachment']) }}" 
+                                                               target="_blank" 
+                                                               class="badge bg-info-subtle text-info border border-info text-decoration-none shadow-sm py-1 px-2 d-inline-flex align-items-center gap-1" 
+                                                               title="معاينة التقرير المرفق العام">
+                                                                <i class="fas fa-paperclip"></i>
+                                                                <span>تقرير عام ↗</span>
+                                                            </a>
+                                                        @endif
+
+                                                        @foreach($testAttachments as $tName => $tData)
+                                                            <a href="{{ asset('storage/' . $tData['path']) }}" 
+                                                               target="_blank" 
+                                                               class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none shadow-sm py-1 px-2 d-inline-flex align-items-center gap-1" 
+                                                               title="معاينة تقرير {{ $tName }}">
+                                                                <i class="fas fa-paperclip"></i>
+                                                                <span>{{ Str::limit($tName, 12) }} ↗</span>
+                                                            </a>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        <!-- تاريخ ووقت الطلب -->
+                                        <td>
+                                            <div class="text-dark small fw-semibold">
+                                                <i class="fas fa-calendar-alt text-muted me-1 small"></i> {{ $req->created_at->format('Y-m-d') }}
+                                            </div>
+                                            <small class="text-muted font-monospace" style="font-size: 0.72rem;">
+                                                <i class="fas fa-clock me-1"></i> {{ $req->created_at->format('H:i A') }}
+                                            </small>
+                                        </td>
+
+                                        <!-- حالة الدفع -->
+                                        <td class="text-center">
+                                            @if($req->payment_status == 'paid')
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+                                                    <i class="fas fa-check-circle me-1"></i> مسدد
+                                                </span>
+                                            @elseif($req->payment_status == 'pending')
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2">
+                                                    <i class="fas fa-exclamation-circle me-1"></i> غير مسدد
+                                                </span>
+                                            @else
+                                                <span class="badge bg-secondary-subtle text-secondary border py-1 px-2">-</span>
+                                            @endif
+                                        </td>
+
+                                        <!-- حالة الفحص -->
+                                        <td class="text-center">
+                                            @if($isCompleted)
+                                                <span class="badge bg-success py-1.5 px-2.5 shadow-sm fw-semibold" style="font-size: 0.78rem;">
+                                                    <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد
+                                                </span>
+                                            @elseif($isInProgress)
+                                                <span class="badge bg-info text-white py-1.5 px-2.5 shadow-sm fw-semibold" style="font-size: 0.78rem;">
+                                                    <i class="fas fa-spinner fa-spin me-1"></i> قيد الإجراء
+                                                </span>
+                                            @elseif($req->status == 'pending_service_selection')
+                                                <span class="badge bg-secondary py-1.5 px-2.5" style="font-size: 0.78rem;">
+                                                    بانتظار تحديد
+                                                </span>
+                                            @else
+                                                <span class="badge bg-warning text-dark py-1.5 px-2.5 shadow-sm border border-warning fw-bold" style="font-size: 0.78rem;">
+                                                    <i class="fas fa-hourglass-half me-1"></i> بانتظار الفحص
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <!-- الإجراءات -->
+                                        <td class="text-center">
+                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                @if($isCompleted)
+                                                    <a href="{{ route('lab.show', $req) }}" 
+                                                       class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1 shadow-sm" 
+                                                       title="معاينة أو تعديل النتائج">
+                                                        <i class="fas fa-eye me-1"></i> معاينة
+                                                    </a>
+                                                    <a href="{{ route('lab.print', $req) }}" 
+                                                       class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-sm" 
+                                                       target="_blank" 
+                                                       title="طباعة التقرير الطبي">
+                                                        <i class="fas fa-print me-1"></i> طباعة
+                                                    </a>
+                                                @else
+                                                    <a href="{{ route('lab.show', $req) }}" 
+                                                       class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-sm" 
+                                                       title="إدخال نتائج الفحص واعتمادها">
+                                                        <i class="fas fa-bolt me-1"></i> إدخال النتائج
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- الترقيم والصفحات -->
+                    <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span class="text-muted small">
+                            عرض <strong>{{ $requests->firstItem() ?? 0 }}</strong> إلى <strong>{{ $requests->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $requests->total() }}</strong> طلب
+                        </span>
+                        <div>
+                            {{ $requests->links() }}
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-5">
+                        <div class="bg-light p-3 rounded-circle d-inline-flex mb-3 text-muted">
+                            <i class="fas fa-flask fa-3x opacity-50"></i>
+                        </div>
+                        <h6 class="text-dark fw-bold">لا توجد طلبات مختبر تطابق هذا القسم</h6>
+                        <p class="text-muted small mb-0">يمكنك التبديل بين التبويبات أعلاه للاطلاع على بقية الطلبات.</p>
+                    </div>
+                @endif
             @endif
         </div>
     </div>
-
-    <!-- طلبات تحاليل الطوارئ -->
-    @if(isset($emergencyLabRequests) && $emergencyLabRequests->count() > 0)
-    <div class="card shadow-sm border-danger">
-        <div class="card-header bg-danger text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-ambulance me-2"></i>
-                <i class="fas fa-flask me-2"></i>
-                تحاليل الطوارئ
-                <span class="badge bg-light text-danger ms-2">{{ $emergencyLabRequests->count() }}</span>
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width:90px;">رقم طوارئ</th>
-                            <th>مريض</th>
-                            <th>تحاليل</th>
-                            <th style="width:80px;">أولوية</th>
-                            <th style="width:70px;">حالة</th>
-                            <th style="width:120px;">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($emergencyLabRequests as $emergencyRequest)
-                        <tr class="{{ $emergencyRequest->status == 'pending' ? 'table-warning' : ($emergencyRequest->status == 'in_progress' ? 'table-info' : 'table-success') }}">
-                            <td><strong class="text-danger">#{{ $emergencyRequest->emergency_id }}</strong></td>
-                            <td>{{ $emergencyRequest->patient->user->name }}</td>
-                            <td>
-                                @foreach($emergencyRequest->labTests as $test)
-                                    <span class="badge bg-primary me-1">{{ $test->name }}</span>
-                                @endforeach
-                            </td>
-                            <td>
-                                <span class="badge bg-{{ $emergencyRequest->priority == 'critical' ? 'danger' : 'warning' }}">
-                                    {{ $emergencyRequest->priority_text }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="{{ $emergencyRequest->status_badge_class }}">{{ $emergencyRequest->status_text }}</span>
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    @if($emergencyRequest->status == 'pending')
-                                        <form action="{{ route('staff.emergency-lab.start', $emergencyRequest) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-primary btn-sm" title="بدء العمل">
-                                                <i class="fas fa-play"></i>
-                                            </button>
-                                        </form>
-                                    @elseif($emergencyRequest->status == 'in_progress')
-                                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#completeEmergencyLabModal{{ $emergencyRequest->id }}" title="إكمال">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    @else
-                                        <span class="badge bg-success">تم</span>
-                                    @endif
-                                    @if($emergencyRequest->status == 'completed')
-                                        <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" class="btn btn-outline-secondary btn-sm" target="_blank" title="طباعة">
-                                            <i class="fas fa-print"></i>
-                                        </a>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- مودالات إكمال تحاليل الطوارئ (خارج الجدول لتفادي مشاكل الـ z-index وتفاعل الإدخال) -->
-    @foreach($emergencyLabRequests as $emergencyRequest)
-        @if($emergencyRequest->status == 'in_progress')
-        <div class="modal fade" id="completeEmergencyLabModal{{ $emergencyRequest->id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">إدخال نتائج تحليل الطوارئ (#{{ $emergencyRequest->emergency_id }})</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ route('staff.emergency-lab.complete', $emergencyRequest) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        <div class="modal-body">
-                            @foreach($emergencyRequest->labTests as $test)
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">{{ $test->name }}</label>
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <input type="text" name="results[{{ $test->id }}][value]" class="form-control" placeholder="النتيجة" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="results[{{ $test->id }}][unit]" class="form-control" placeholder="الوحدة" value="{{ $test->unit }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="results[{{ $test->id }}][reference]" class="form-control" placeholder="المرجع">
-                                    </div>
-                                </div>
-                            </div>
-                            @endforeach
-                            <div class="mb-3">
-                                <label class="form-label">ملاحظات</label>
-                                <textarea name="notes" class="form-control" rows="2"></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i> حفظ النتائج
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        @endif
-    @endforeach
-    @endif
 </div>
 
-<!-- مودالات إكمال تحاليل الطوارئ بتصميم عصري وإشعارات فورية -->
+<!-- مودالات إدخال نتائج الطوارئ المعتمدة -->
 <div id="emergency-lab-modals-container">
     @if(isset($emergencyLabRequests) && $emergencyLabRequests->count() > 0)
-    @foreach($emergencyLabRequests as $emergencyRequest)
-        @if($emergencyRequest->status == 'in_progress')
-        <div class="modal fade" id="completeEmergencyLabModal{{ $emergencyRequest->id }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="false" data-bs-focus="false">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
-                    <!-- الترويسة الأنيقة -->
-                    <div class="modal-header bg-gradient-dark text-white p-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                        <div class="d-flex align-items-center">
-                            <div class="icon-shape bg-primary text-white rounded-circle p-2 me-3 shadow-sm" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-flask fa-lg"></i>
+        @foreach($emergencyLabRequests as $emergencyRequest)
+            @if($emergencyRequest->status == 'in_progress')
+            <div class="modal fade" id="completeEmergencyLabModal{{ $emergencyRequest->id }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="false" data-bs-focus="false">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+                        <div class="modal-header bg-gradient-dark text-white p-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary text-white rounded-circle p-2 me-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-flask"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-bold mb-0">إدخال نتائج تحاليل الطوارئ #{{ $emergencyRequest->emergency_id }}</h5>
+                                    <small class="text-white-50">{{ $emergencyRequest->patient?->user?->name }}</small>
+                                </div>
                             </div>
-                            <div>
-                                <h5 class="modal-title fw-bold mb-0">إدخال وتدقيق تحاليل الطوارئ #{{ $emergencyRequest->emergency_id }}</h5>
-                                <small class="text-white-50">ادخل النتائج وسيتم مقارنتها تلقائياً بالمعدلات المرجعية</small>
-                            </div>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
 
-                    <form action="{{ route('staff.emergency-lab.complete', $emergencyRequest) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        <div class="modal-body p-4" style="background-color: #f8fafc;">
-                            <!-- بطاقة معلومات المريض -->
-                            <div class="p-3 mb-4 rounded-3 border" style="background: #ffffff; border-right: 4px solid #3b82f6 !important;">
-                                <div class="row align-items-center">
-                                    <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-user-injured fa-2x text-primary me-3"></i>
-                                            <div>
-                                                <div class="fw-bold text-dark fs-6">{{ $emergencyRequest->patient->user->name }}</div>
-                                                <small class="text-muted">رقم المريض: #{{ $emergencyRequest->patient->id }}</small>
+                        <form action="{{ route('staff.emergency-lab.complete', $emergencyRequest) }}" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <div class="modal-body p-4" style="background-color: #f8fafc;">
+                                @foreach($emergencyRequest->labTests as $test)
+                                    @php
+                                        $patientGender = $emergencyRequest->patient->gender ?? $emergencyRequest->patient->user->gender ?? 'male';
+                                        $patientAge = $emergencyRequest->patient->age ?? 30;
+                                        $refObj = $test->referenceForPatient($patientGender, (int)$patientAge) ?? $test->references->first();
+                                        $refRangeText = $refObj?->range_display ?? '';
+                                        $refMin = $refObj?->ref_min ?? '';
+                                        $refMax = $refObj?->ref_max ?? '';
+                                        $unit = $test->unit ?: ($refObj?->unit ?? '');
+
+                                        if (empty($refRangeText)) {
+                                            $labResultHelper = new \App\Models\LabResult();
+                                            $refRangeText = $labResultHelper->getReferenceRange($test->name);
+                                            if (empty($unit)) $unit = $labResultHelper->getUnit($test->name);
+                                        }
+                                    @endphp
+
+                                    <div class="test-card p-3 mb-3 bg-white rounded-3 border shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong class="text-dark">
+                                                <i class="fas fa-microscope text-primary me-2"></i> {{ $test->name }}
+                                            </strong>
+                                            @if($refRangeText)
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                                    المعدل الطبيعي: {{ $refRangeText }} {{ $unit }}
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-5">
+                                                <label class="form-label small text-muted mb-1">النتيجة</label>
+                                                <input type="text" 
+                                                       name="results[{{ $test->id }}][value]" 
+                                                       class="form-control form-control-sm fw-bold font-monospace" 
+                                                       placeholder="أدخل النتيجة" 
+                                                       required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small text-muted mb-1">الوحدة</label>
+                                                <input type="text" name="results[{{ $test->id }}][unit]" class="form-control form-control-sm bg-light" value="{{ $unit }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small text-muted mb-1">المرجع</label>
+                                                <input type="text" name="results[{{ $test->id }}][reference]" class="form-control form-control-sm bg-light" value="{{ $refRangeText }}">
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
-                                        <span class="badge bg-light text-dark border me-1">
-                                            <i class="fas fa-calendar-alt text-secondary me-1"></i> العمر: {{ $emergencyRequest->patient->age ?? '-' }} سنة
-                                        </span>
-                                        <span class="badge bg-light text-dark border">
-                                            <i class="fas fa-venus-mars text-secondary me-1"></i> الجنس: {{ ($emergencyRequest->patient->gender ?? $emergencyRequest->patient->user->gender ?? null) === 'female' ? 'أنثى' : 'ذكر' }}
-                                        </span>
-                                    </div>
+                                @endforeach
+
+                                <div class="mt-3">
+                                    <label class="form-label fw-bold text-dark small">
+                                        <i class="fas fa-comment-dots text-primary me-1"></i> ملاحظات فنية
+                                    </label>
+                                    <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="اكتب أي ملاحظات اختيارية..."></textarea>
                                 </div>
                             </div>
 
-                            <h6 class="fw-bold text-secondary mb-3">
-                                <i class="fas fa-list-check me-2"></i> فحوصات الطلب الحالي:
-                            </h6>
-
-                            @foreach($emergencyRequest->labTests as $test)
-                            @php
-                                $patientGender = $emergencyRequest->patient->gender ?? $emergencyRequest->patient->user->gender ?? 'male';
-                                $patientAge = $emergencyRequest->patient->age ?? 30;
-                                
-                                // 1. محاولة جلب المرجع المقترن بـ LabTestReference
-                                $refObj = $test->referenceForPatient($patientGender, (int)$patientAge) ?? $test->references->first();
-                                $refRangeText = $refObj?->range_display ?? '';
-                                $refMin = $refObj?->ref_min ?? '';
-                                $refMax = $refObj?->ref_max ?? '';
-                                $unit = $test->unit ?: ($refObj?->unit ?? '');
-
-                                // 2. الاحتياطي من قواعد LabResult المستعملة في التحاليل العادية
-                                if (empty($refRangeText)) {
-                                    $labResultHelper = new \App\Models\LabResult();
-                                    $refRangeText = $labResultHelper->getReferenceRange($test->name);
-                                    if (empty($unit)) {
-                                        $unit = $labResultHelper->getUnit($test->name);
-                                    }
-                                    if (preg_match('/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/', $refRangeText, $matches)) {
-                                        $refMin = $matches[1];
-                                        $refMax = $matches[2];
-                                    } elseif (preg_match('/<\s*(\d+(?:\.\d+)?)/', $refRangeText, $matches)) {
-                                        $refMax = $matches[1];
-                                    } elseif (preg_match('/>=\s*(\d+(?:\.\d+)?)/', $refRangeText, $matches)) {
-                                        $refMin = $matches[1];
-                                    }
-                                }
-                            @endphp
-
-                            <!-- بطاقة الفحص -->
-                            <div class="test-card p-3 mb-3 bg-white rounded-3 border shadow-sm" style="transition: all 0.2s ease;">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="fw-bold text-dark fs-6">
-                                        <i class="fas fa-microscope text-primary me-2"></i> {{ $test->name }}
-                                    </span>
-                                    @if($refRangeText)
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill" style="font-size: 0.85rem;">
-                                            <i class="fas fa-shield-halved me-1"></i> المعدل الطبيعي: {{ $refRangeText }} {{ $unit }}
-                                        </span>
-                                    @else
-                                        <span class="badge bg-secondary-subtle text-secondary border px-3 py-1 rounded-pill" style="font-size: 0.85rem;">
-                                            لا يوجد مدى مرجعي مسجل
-                                        </span>
-                                    @endif
-                                </div>
-
-                                <div class="row g-2 align-items-center">
-                                    <div class="col-md-5">
-                                        <label class="form-label small text-muted mb-1">النتيجة الرقمية</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light"><i class="fas fa-pen text-secondary"></i></span>
-                                            <input type="text" 
-                                                   name="results[{{ $test->id }}][value]" 
-                                                   class="form-control test-result-input fw-bold" 
-                                                   placeholder="أدخل النتيجة" 
-                                                   data-ref-min="{{ $refMin }}" 
-                                                   data-ref-max="{{ $refMax }}" 
-                                                   data-ref-range="{{ $refRangeText }}"
-                                                   required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small text-muted mb-1">الوحدة</label>
-                                        <input type="text" name="results[{{ $test->id }}][unit]" class="form-control bg-light" placeholder="الوحدة" value="{{ $unit }}">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label small text-muted mb-1">المرجع</label>
-                                        <input type="text" name="results[{{ $test->id }}][reference]" class="form-control bg-light" placeholder="المرجع" value="{{ $refRangeText }}">
-                                    </div>
-                                </div>
-
-                                <!-- إشعار التقييم التلقائي المباشر -->
-                                <div class="result-status-alert alert d-none mt-3 mb-0 py-2 px-3 border-0 rounded-3" style="font-size: 0.9rem;">
-                                </div>
+                            <div class="modal-footer bg-white border-top-0 p-3">
+                                <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-success btn-sm px-4 fw-bold shadow-sm">
+                                    <i class="fas fa-check-circle me-1"></i> اعتماد وحفظ النتيجة
+                                </button>
                             </div>
-                            @endforeach
-
-                            <div class="mt-3">
-                                <label class="form-label fw-bold text-dark">
-                                    <i class="fas fa-comment-dots text-primary me-1"></i> ملاحظات إضافية
-                                </label>
-                                <textarea name="notes" class="form-control" rows="2" placeholder="اكتب أي ملاحظات أو توصيات للمختبر..." style="border-radius: 8px;"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="modal-footer bg-white border-top-0 p-3">
-                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">إلغاء</button>
-                            <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm" style="border-radius: 8px;">
-                                <i class="fas fa-check-circle me-1"></i> حفظ نتائج التحليل
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-        @endif
-    @endforeach
+            @endif
+        @endforeach
     @endif
 </div>
 
 <script>
-// تقييم مباشر وعرض إشعار مرئي لحظي عند كتابة القيمة
-$(document).on('input', '.test-result-input', function() {
-    const val = parseFloat($(this).val());
-    const minStr = $(this).data('ref-min');
-    const maxStr = $(this).data('ref-max');
-    const refRange = $(this).data('ref-range') || '';
-    const min = minStr !== '' ? parseFloat(minStr) : NaN;
-    const max = maxStr !== '' ? parseFloat(maxStr) : NaN;
-    const alertBox = $(this).closest('.test-card').find('.result-status-alert');
-
-    if (isNaN(val) || (isNaN(min) && isNaN(max))) {
-        alertBox.addClass('d-none').html('');
-        return;
-    }
-
-    alertBox.removeClass('d-none alert-success alert-danger alert-warning');
-    
-    if (!isNaN(min) && val < min) {
-        alertBox.addClass('alert-warning').html(
-            `<div class="d-flex align-items-center">
-                <i class="fas fa-arrow-down fa-lg me-2 text-warning"></i>
-                <div>
-                    <strong>إشعار النتيجة: منخفض ⬇</strong>
-                    <div class="small">القيمة المُدخلة (<strong>${val}</strong>) أقل من الحد الطبيعي الأدنى (<strong>${min}</strong>).</div>
-                </div>
-            </div>`
-        );
-    } else if (!isNaN(max) && val > max) {
-        alertBox.addClass('alert-danger').html(
-            `<div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle fa-lg me-2 text-danger"></i>
-                <div>
-                    <strong>إشعار النتيجة: مرتفع ⬆</strong>
-                    <div class="small">القيمة المُدخلة (<strong>${val}</strong>) أعلى من الحد الطبيعي الأعلى (<strong>${max}</strong>).</div>
-                </div>
-            </div>`
-        );
-    } else {
-        alertBox.addClass('alert-success').html(
-            `<div class="d-flex align-items-center">
-                <i class="fas fa-check-circle fa-lg me-2 text-success"></i>
-                <div>
-                    <strong>إشعار النتيجة: طبيعي ✓</strong>
-                    <div class="small">القيمة المُدخلة (<strong>${val}</strong>) تقع ضمن المعدل الطبيعي الأصلي (<strong>${refRange || 'المحدد'}</strong>).</div>
-                </div>
-            </div>`
-        );
-    }
-});
+// تحديث حي ذكي في الخلفية
 setInterval(function() {
-    // عدم تحديث الصفحة إذا كان هناك مودال مفتوح لمنع إغلاقه أو ضياع البيانات المدخلة
-    if ($('.modal.show').length > 0) {
+    if (document.querySelectorAll('.modal.show').length > 0) {
         return;
     }
-    $.ajax({
-        url: window.location.href,
-        success: function(response) {
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
             const parser = new DOMParser();
-            const doc = parser.parseFromString(response, 'text/html');
+            const doc = parser.parseFromString(html, 'text/html');
             const newContent = doc.getElementById('lab-requests-content');
             if (newContent) {
-                const scroll = window.scrollY;
-                $('#lab-requests-content').html($(newContent).html());
-                window.scrollTo(0, scroll);
-                $('#last-update').text('آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ'));
+                const activeTabId = document.querySelector('#labRequestsTabs .nav-link.active')?.id;
+                const scrollPos = window.scrollY;
+                document.getElementById('lab-requests-content').innerHTML = newContent.innerHTML;
+                if (activeTabId) {
+                    const tabBtn = document.getElementById(activeTabId);
+                    if (tabBtn) tabBtn.classList.add('active');
+                }
+                window.scrollTo(0, scrollPos);
+                const lastUpdateEl = document.getElementById('last-update');
+                if (lastUpdateEl) {
+                    lastUpdateEl.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ');
+                }
             }
-        }
-    });
-}, 5000);
-
-$(document).ready(function() {
-    $('#last-update').text('آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ'));
-    // نقل المودالات إلى body مباشرة عند تحضير الصفحة لتجنب مشاكل stacking context مع Bootstrap
-    $('.modal').appendTo('body');
-});
+        })
+        .catch(err => console.log('Live refresh skipped:', err));
+}, 10000);
 </script>
 
 <style>
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 #live-indicator { animation: pulse 2s ease-in-out infinite; }
-.table-sm th { white-space: nowrap; }
-.table-sm td { white-space: normal; word-break: break-word; }
-.table-responsive table { min-width: max-content; }
-
-/* إخفاء طبقة backdrop الخارجية تماماً ومنع تظليل/حجب الإدخال */
-.modal-backdrop {
-    display: none !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    z-index: -1 !important;
+#labRequestsTabs .nav-link {
+    border-radius: 20px;
+    background-color: #f1f5f9;
+    color: #475569;
+    transition: all 0.2s ease;
 }
-.modal {
-    background: rgba(15, 23, 42, 0.55) !important;
-    z-index: 10000 !important;
+#labRequestsTabs .nav-link.active {
+    background-color: #2563eb;
+    color: #ffffff;
 }
-.modal-dialog {
-    z-index: 10001 !important;
+#labRequestsTabs .nav-link.active .badge {
+    background-color: #ffffff !important;
+    color: #2563eb !important;
 }
-.modal-content {
-    position: relative;
-    z-index: 10002 !important;
-    pointer-events: auto !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+#labRequestsTabs .nav-link#pills-emergency-tab.active {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+#labRequestsTabs .nav-link#pills-emergency-tab.active .badge {
+    background-color: #ffffff !important;
+    color: #dc2626 !important;
 }
 </style>
 @endsection

@@ -96,13 +96,13 @@
                                         موعد استشاري
                                     </h6>
                                     <p class="mb-1">
-                                        <strong>الطبيب:</strong> د. {{ $payment->appointment->doctor->user->name ?? 'غير محدد' }}
+                                        <strong>الطبيب:</strong> د. {{ $payment->appointment->doctor?->user?->name ?? 'غير محدد' }}
                                     </p>
                                     <p class="mb-1">
-                                        <strong>التخصص:</strong> {{ $payment->appointment->doctor->specialization ?? 'غير محدد' }}
+                                        <strong>التخصص:</strong> {{ $payment->appointment->doctor?->specialization ?? 'غير محدد' }}
                                     </p>
                                     <p class="mb-1">
-                                        <strong>التاريخ:</strong> {{ $payment->appointment->appointment_date->format('Y-m-d H:i') ?? 'غير محدد' }}
+                                        <strong>التاريخ:</strong> {{ $payment->appointment->appointment_date?->format('Y-m-d H:i') ?? 'غير محدد' }}
                                     </p>
                                     <p class="mb-1">
                                         <strong>رسوم الاستشارة:</strong> <span class="text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</span>

@@ -42,17 +42,111 @@ class LabStaffController extends Controller
             });
         }
 
-        $requests = $query->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->withQueryString();
+        $sourceFilter = request('source', 'all');
+        if ($sourceFilter === 'consultation') {
+            $query->whereHas('visit', function($vq) {
+                $vq->whereNotNull('doctor_id');
+            });
+        } elseif ($sourceFilter === 'direct') {
+            $query->where(function($q) {
+                $q->whereDoesntHave('visit')
+                  ->orWhereHas('visit', function($vq) {
+                      $vq->whereNull('doctor_id');
+                  });
+            });
+        }
 
-        $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
-            ->whereIn('status', ['pending', 'in_progress', 'completed'])
-            ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
-            ->orderBy('requested_at', 'asc')
-            ->get();
+        $statusFilter = request('status', 'all');
+        if ($statusFilter === 'pending') {
+            $query->whereIn('status', ['pending', 'pending_service_selection', 'in_progress']);
+        } elseif ($statusFilter === 'completed') {
+            $query->where('status', 'completed');
+        }
 
-        return view('lab.index', compact('requests', 'emergencyLabRequests'));
+        $dateFilter = request('date', 'all');
+        if ($dateFilter === 'today') {
+            $query->whereDate('created_at', now()->toDateString());
+        }
+
+        $baseCountQuery = MedicalRequest::where(function ($q) {
+            $q->whereIn('type', ['lab', 'blood_bank'])
+              ->orWhere(function ($inner) {
+                  $inner->where('type', 'lab')
+                        ->whereJsonContains('details->blood_bank', true);
+              });
+        })->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
+
+        $activeSourceQuery = clone $baseCountQuery;
+        if ($sourceFilter === 'consultation') {
+            $activeSourceQuery->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'));
+        } elseif ($sourceFilter === 'direct') {
+            $activeSourceQuery->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')));
+        }
+
+        // Emergency queries & counts
+        $emergencyBaseQuery = \App\Models\EmergencyLabRequest::whereIn('status', ['pending', 'in_progress', 'completed']);
+        $emergencyCount = (clone $emergencyBaseQuery)->count();
+        $emergencyPendingCount = (clone $emergencyBaseQuery)->whereIn('status', ['pending', 'in_progress'])->count();
+        $emergencyCompletedCount = (clone $emergencyBaseQuery)->where('status', 'completed')->count();
+
+        if ($sourceFilter === 'emergency') {
+            $emergencyQuery = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
+                ->whereIn('status', ['pending', 'in_progress', 'completed']);
+
+            if ($statusFilter === 'pending') {
+                $emergencyQuery->whereIn('status', ['pending', 'in_progress']);
+            } elseif ($statusFilter === 'completed') {
+                $emergencyQuery->where('status', 'completed');
+            }
+
+            if ($dateFilter === 'today') {
+                $emergencyQuery->whereDate('requested_at', now()->toDateString());
+            }
+
+            if (!empty($s)) {
+                $emergencyQuery->where(function ($eq) use ($s) {
+                    $eq->where('emergency_id', 'like', "%{$s}%")
+                       ->orWhereHas('patient.user', function ($puq) use ($s) {
+                           $puq->where('name', 'like', "%{$s}%");
+                       });
+                });
+            }
+
+            $emergencyLabRequests = $emergencyQuery->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+                ->orderBy('requested_at', 'desc')
+                ->paginate(15)
+                ->withQueryString();
+
+            $requests = collect();
+
+            $counts = [
+                'all' => (clone $baseCountQuery)->count(),
+                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
+                'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
+                'emergency' => $emergencyCount,
+                'pending' => $emergencyPendingCount,
+                'completed' => $emergencyCompletedCount,
+                'tab_total' => $emergencyCount,
+            ];
+        } else {
+            $counts = [
+                'all' => (clone $baseCountQuery)->count(),
+                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
+                'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
+                'emergency' => $emergencyCount,
+                'pending' => (clone $activeSourceQuery)->whereIn('status', ['pending', 'pending_service_selection', 'in_progress'])->count(),
+                'completed' => (clone $activeSourceQuery)->where('status', 'completed')->count(),
+                'tab_total' => (clone $activeSourceQuery)->count(),
+            ];
+
+            $requests = $query->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->withQueryString();
+
+            $emergencyLabRequests = collect();
+        }
+
+        return view('lab.index', compact('requests', 'emergencyLabRequests', 'counts', 'statusFilter', 'dateFilter', 'sourceFilter'));
     }
 
     public function show(MedicalRequest $request)
@@ -86,6 +180,34 @@ class LabStaffController extends Controller
         }
 
         return view('lab.show', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
+    }
+
+    public function attachment(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        $testName = $httpRequest->query('test');
+
+        $attachmentPath = null;
+        if ($testName && !empty($details['test_attachments'][$testName]['path'])) {
+            $attachmentPath = $details['test_attachments'][$testName]['path'];
+        } elseif (!empty($details['attachment'])) {
+            $attachmentPath = $details['attachment'];
+        }
+
+        if (!$attachmentPath) {
+            abort(404, 'لا يوجد تقرير مرفق لهذا الطلب');
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($attachmentPath)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->response($attachmentPath);
+        }
+
+        $fullPath = storage_path('app/public/' . $attachmentPath);
+        if (file_exists($fullPath)) {
+            return response()->file($fullPath);
+        }
+
+        abort(404, 'الملف المرفق غير موجود في وحدة التخزين');
     }
 
     public function update(HttpRequest $httpRequest, MedicalRequest $request)
@@ -185,11 +307,13 @@ class LabStaffController extends Controller
             return redirect()->route('lab.show', $request)->with('success', 'تم حفظ بيانات مصرف الدم بنجاح');
         }
 
-        // 3. معالجة المرفق (تقرير جهاز التحاليل ممسوح ضوئياً) وحفظ نتائج التحاليل
+        // 3. معالجة المرفقات (تقرير عام أو تقارير مخصصة لكل فحص) وحفظ نتائج التحاليل
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         if (!is_array($details)) $details = [];
 
         $hasNewAttachment = false;
+
+        // أ. معالجة المرفق العام (attachment)
         if ($httpRequest->hasFile('attachment')) {
             $file = $httpRequest->file('attachment');
             $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
@@ -198,7 +322,7 @@ class LabStaffController extends Controller
             $details['attachment'] = $path;
             $details['attachment_name'] = $file->getClientOriginalName();
             $details['attachment_mime'] = $file->getClientMimeType();
-            $details['attachment_title'] = $httpRequest->attachment_title ?: 'تقرير جهاز التحاليل المرفق';
+            $details['attachment_title'] = $httpRequest->attachment_title ?: 'تقرير جهاز التحاليل العام';
             $details['attached_at'] = now()->toDateTimeString();
             $hasNewAttachment = true;
         } elseif ($httpRequest->has('remove_attachment') && $httpRequest->remove_attachment == '1') {
@@ -206,6 +330,43 @@ class LabStaffController extends Controller
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($details['attachment']);
             }
             unset($details['attachment'], $details['attachment_name'], $details['attachment_mime'], $details['attachment_title'], $details['attached_at']);
+        }
+
+        // ب. معالجة المرفقات المخصصة لكل فحص (test_attachments)
+        if (!isset($details['test_attachments']) || !is_array($details['test_attachments'])) {
+            $details['test_attachments'] = [];
+        }
+
+        if ($httpRequest->hasFile('test_attachments')) {
+            $testFiles = $httpRequest->file('test_attachments');
+            if (is_array($testFiles)) {
+                foreach ($testFiles as $testName => $file) {
+                    if ($file && $file->isValid()) {
+                        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                        $path = $file->storeAs('lab_attachments', $filename, 'public');
+                        
+                        $details['test_attachments'][$testName] = [
+                            'path' => $path,
+                            'name' => $file->getClientOriginalName(),
+                            'mime' => $file->getClientMimeType(),
+                            'title' => 'تقرير فحص: ' . $testName,
+                            'attached_at' => now()->toDateTimeString(),
+                        ];
+                        $hasNewAttachment = true;
+                    }
+                }
+            }
+        }
+
+        // ج. حذف مرفق فحص محدد إن طلب المستخدم
+        if ($httpRequest->has('remove_test_attachment')) {
+            $removes = (array) $httpRequest->remove_test_attachment;
+            foreach ($removes as $tName => $val) {
+                if ($val && !empty($details['test_attachments'][$tName]['path'])) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($details['test_attachments'][$tName]['path']);
+                    unset($details['test_attachments'][$tName]);
+                }
+            }
         }
 
         $request->details = $details;
@@ -258,30 +419,41 @@ class LabStaffController extends Controller
             }
         }
 
-        // إذا تم إدخال نتائج رقمية أو تم رفع مرفق جديد
-        if ($savedResults > 0 || $hasNewAttachment || !empty($details['attachment'])) {
-            $request->status = 'completed';
-            
-            $existingRes = is_string($request->result) ? (json_decode($request->result, true) ?: []) : ($request->result ?: []);
-            if (!is_array($existingRes)) $existingRes = [];
+        $targetStatus = $httpRequest->status ?? ($savedResults > 0 || $hasNewAttachment || !empty($details['attachment']) || !empty($details['test_attachments']) ? 'completed' : $request->status);
+        $request->status = $targetStatus;
 
-            if ($savedResults > 0) {
-                $existingRes['test_results'] = $httpRequest->test_results;
-            }
-            if (!empty($details['attachment'])) {
-                $existingRes['attachment'] = $details['attachment'];
-                $existingRes['attachment_name'] = $details['attachment_name'] ?? '';
-                $existingRes['attachment_title'] = $details['attachment_title'] ?? '';
-            } elseif (isset($existingRes['attachment']) && empty($details['attachment'])) {
-                unset($existingRes['attachment'], $existingRes['attachment_name'], $existingRes['attachment_title']);
-            }
-            if ($httpRequest->filled('result_notes') || $httpRequest->filled('result')) {
-                $existingRes['notes'] = $httpRequest->result_notes ?? $httpRequest->result;
-            }
+        $existingRes = is_string($request->result) ? (json_decode($request->result, true) ?: []) : ($request->result ?: []);
+        if (!is_array($existingRes)) $existingRes = [];
 
-            $request->result = json_encode($existingRes);
-            $request->save();
+        if ($savedResults > 0) {
+            $existingRes['test_results'] = $httpRequest->test_results;
+        }
+        if (!empty($details['attachment'])) {
+            $existingRes['attachment'] = $details['attachment'];
+            $existingRes['attachment_name'] = $details['attachment_name'] ?? '';
+            $existingRes['attachment_title'] = $details['attachment_title'] ?? '';
+        } elseif (isset($existingRes['attachment']) && empty($details['attachment'])) {
+            unset($existingRes['attachment'], $existingRes['attachment_name'], $existingRes['attachment_title']);
+        }
+        if (!empty($details['test_attachments'])) {
+            $existingRes['test_attachments'] = $details['test_attachments'];
+        } elseif (isset($existingRes['test_attachments']) && empty($details['test_attachments'])) {
+            unset($existingRes['test_attachments']);
+        }
 
+        if ($httpRequest->filled('result_notes') || $httpRequest->filled('result')) {
+            $rawNote = trim((string)($httpRequest->result_notes ?? $httpRequest->result));
+            if (!str_starts_with($rawNote, '{') && !str_starts_with($rawNote, '[')) {
+                $existingRes['notes'] = $rawNote;
+            }
+        } elseif ($httpRequest->has('result') && empty($httpRequest->result)) {
+            unset($existingRes['notes']);
+        }
+
+        $request->result = json_encode($existingRes);
+        $request->save();
+
+        if ($targetStatus === 'completed') {
             try {
                 app(\App\Services\TelegramService::class)->sendResultsReady($request);
             } catch (\Throwable $te) {
@@ -296,18 +468,18 @@ class LabStaffController extends Controller
                     $request->visit->save();
                 }
             }
-
-            $msg = $savedResults > 0
-                ? "تم حفظ {$savedResults} نتيجة تحليل" . ($hasNewAttachment ? " مع تقرير الجهاز المرفق" : "") . " بنجاح"
-                : "تم حفظ واعتماد تقرير جهاز التحاليل المرفق بنجاح";
-
-            return redirect()->route('lab.show', $request)->with('success', $msg);
         }
 
-        // 4. تحديث حالة الطلب فقط
-        $request->update(['status' => $httpRequest->status ?? 'completed']);
+        $msg = $savedResults > 0
+            ? "تم حفظ {$savedResults} نتيجة تحليل" . ($hasNewAttachment ? " مع تقارير الأجهزة المرفقة" : "") . " بنجاح"
+            : ($hasNewAttachment ? "تم حفظ وإرفاق تقارير الأجهزة بنجاح" : "تم حفظ بيانات وتفاصيل الفحص بنجاح");
 
-        return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
+        // إذا تم الاعتماد الكامل ننتقل للقائمة، وإذا كان حفظ مسودة نبقى في نفس الصفحة
+        if ($targetStatus === 'completed' && $httpRequest->action === 'complete') {
+            return redirect()->route('lab.index')->with('success', $msg . ' وتم اعتماد وإنهاء الفحص.');
+        }
+
+        return redirect()->route('lab.show', $request)->with('success', $msg);
     }
 
     public function print(MedicalRequest $request)

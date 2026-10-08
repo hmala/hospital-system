@@ -262,6 +262,67 @@
         </div>
     @endif
 
+    @if(isset($pendingInsuranceEmergencyReferrals) && count($pendingInsuranceEmergencyReferrals) > 0)
+        <!-- إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية -->
+        <div class="row mb-4 animate__animated animate__fadeIn">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-success">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-shield-alt me-2 animate__animated animate__pulse animate__infinite"></i>
+                            إحالات الطوارئ المشمولة بالضمان الصحي (الواردة من عيادات الاستشارية)
+                        </h5>
+                        <span class="badge bg-white text-success fw-bold fs-6">{{ count($pendingInsuranceEmergencyReferrals) }} إحالة بانتظار التأكيد</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>وقت الإحالة</th>
+                                        <th>اسم المريض</th>
+                                        <th>فئة الضمان</th>
+                                        <th>الطبيب الاستشاري</th>
+                                        <th>الخدمات والتوجيهات</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($pendingInsuranceEmergencyReferrals as $insRef)
+                                        <tr>
+                                            <td>
+                                                <small class="text-success fw-bold">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ $insRef->created_at ? $insRef->created_at->format('H:i') : '—' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <strong>{{ optional(optional($insRef->visit)->patient)->name ?? optional(optional(optional($insRef->visit)->patient)->user)->name ?? 'مريض غير محدد' }}</strong>
+                                                <br><small class="text-muted">{{ optional(optional(optional($insRef->visit)->patient)->user)->phone ?? '-' }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                                                    {{ optional(optional(optional($insRef->visit)->patient)->healthInsuranceCategory)->name ?? 'ضمان صحي' }}
+                                                </span>
+                                            </td>
+                                            <td>د. {{ optional(optional(optional($insRef->visit)->doctor)->user)->name ?? 'الاستشاري' }}</td>
+                                            <td><span class="text-dark fw-bold">{{ Str::limit($insRef->description, 60) }}</span></td>
+                                            <td>
+                                                <a href="{{ route('inquiry.create', ['patient_id' => optional($insRef->visit)->patient_id, 'from_referral_id' => $insRef->id, 'type' => 'emergency']) }}" class="btn btn-sm btn-success fw-bold shadow-xs">
+                                                    <i class="fas fa-check-circle me-1"></i> حجز طوارئ الضمان
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if(isset($pendingTransfers) && count($pendingTransfers) > 0)
         <!-- مرضى محولون للعمليات من الطوارئ -->
         <div class="row mb-4 animate__animated animate__fadeIn">

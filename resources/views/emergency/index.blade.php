@@ -97,6 +97,51 @@
         </div>
     </div>
 
+    @if(isset($pendingClinicReferrals) && $pendingClinicReferrals->count() > 0)
+        <!-- إحالات الطوارئ والتمريض الواردة من العيادات الاستشارية (المرضى العامين / كاش) -->
+        <div class="row mb-3 animate__animated animate__fadeIn">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-danger rounded-3 bg-white">
+                    <div class="card-header bg-danger bg-opacity-10 py-2 px-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-ambulance text-danger fs-6"></i>
+                            <h6 class="mb-0 fw-bold text-dark small">📥 إحالات الطوارئ والتمريض الواردة من العيادات الاستشارية (المرضى العامين / كاش)</h6>
+                        </div>
+                        <span class="badge bg-danger text-white rounded-pill px-2 py-1 small">{{ $pendingClinicReferrals->count() }} إحالة جديدة</span>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            @foreach($pendingClinicReferrals as $pRef)
+                                <div class="col-lg-6 col-12">
+                                    <div class="p-2 border rounded-2 bg-light shadow-2xs d-flex justify-content-between align-items-center gap-2">
+                                        <div class="text-truncate">
+                                            <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                <strong class="text-dark small">{{ optional(optional($pRef->visit)->patient)->name ?? optional(optional(optional($pRef->visit)->patient)->user)->name ?? 'مريض' }}</strong>
+                                                <span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.65rem;">{{ $pRef->priority ?? 'عاجل' }}</span>
+                                                <span class="badge bg-secondary text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
+                                                    <i class="fas fa-clock me-1"></i>{{ $pRef->created_at ? $pRef->created_at->format('H:i') : '' }}
+                                                </span>
+                                            </div>
+                                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">
+                                                <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional(optional($pRef->visit)->doctor)->user)->name ?? 'الاستشاري' }}
+                                                — <span class="text-danger fw-bold">{{ $pRef->description }}</span>
+                                            </small>
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <a href="{{ route('emergency.create', ['patient_id' => optional($pRef->visit)->patient_id, 'from_referral_id' => $pRef->id]) }}" class="btn btn-xs btn-danger text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="فتح تذكرة وقبول الإحالة فوراً">
+                                                <i class="fas fa-bolt me-1"></i> فتح تذكرة وقبول
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @php
         $actualUnpaidCount = $emergencies->filter(fn($e) => $e->hasUnpaidDues())->count();
     @endphp

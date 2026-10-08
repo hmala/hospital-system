@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>شاشة الانتظار - عيادة {{ $doctor->user ? $doctor->user->name : 'الطبيب' }}</title>
+    <title>شاشة الانتظار - {{ $doctor ? 'عيادة د. ' . optional($doctor->user)->name : (isset($roomNumber) ? 'عيادة ' . $roomNumber : 'شاشة العيادات') }}</title>
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -556,10 +556,26 @@
         </div>
 
         <div class="clinic-info-badge">
-            <div class="doc-name">د. {{ $doctor->user ? $doctor->user->name : 'الطبيب' }}</div>
-            <div class="doc-spec">
-                <span class="room-pill"><i class="fas fa-door-open me-1"></i> {{ $doctor->department ? $doctor->department->name : 'العيادة' }}</span>
-                <span>{{ $doctor->specialization ?: 'استشاري' }}</span>
+            <div class="doc-name" id="top-doc-name">
+                @if($doctor)
+                    د. {{ optional($doctor->user)->name ?? 'طبيب' }}
+                @elseif(isset($roomNumber))
+                    عيادة رقم {{ $roomNumber }}
+                @else
+                    شاشة الانتظار
+                @endif
+            </div>
+            <div class="doc-spec" id="top-doc-spec">
+                @if($doctor)
+                    <span class="room-pill"><i class="fas fa-door-open me-1"></i> {{ $doctor->current_room ? 'عيادة ' . $doctor->current_room : (optional($doctor->department)->name ?? 'العيادة') }}</span>
+                    <span>{{ $doctor->specialization ?: 'استشاري' }}</span>
+                @elseif(isset($roomNumber))
+                    <span class="room-pill"><i class="fas fa-door-open me-1"></i> عيادة رقم {{ $roomNumber }}</span>
+                    <span class="text-warning">في انتظار تعيين الطبيب من الاستعلامات</span>
+                @else
+                    <span class="room-pill"><i class="fas fa-door-open me-1"></i> الاستشارية</span>
+                    <span>قسم العيادات التخصصية</span>
+                @endif
             </div>
         </div>
 
@@ -660,10 +676,17 @@
     </footer>
 
     <script>
-        const doctorId = {{ $doctor->id }};
-        const baseUrl = window.location.origin + (window.location.pathname.startsWith('/hearmz') ? '/hearmz' : '');
-        const apiUrl = `${baseUrl}/queue/doctor/${doctorId}/data`;
-        const docFullName = "{{ $doctor->user ? $doctor->user->name : 'الطبيب' }}";
+        const baseUrl = @json(url('/'));
+        const currentRoomNumber = @json($roomNumber ?? null);
+        const allDoctors = @json($doctorsList ?? []);
+        let currentDoctorId = {{ $doctor ? $doctor->id : 'null' }};
+        let docFullName = "{{ $doctor && $doctor->user ? $doctor->user->name : '' }}";
+        
+        let apiUrl = currentRoomNumber 
+            ? `${baseUrl}/queue/room/${currentRoomNumber}/data` 
+            : (currentDoctorId ? `${baseUrl}/queue/doctor/${currentDoctorId}/data` : null);
+        
+        let activeFilter = 'available';
         let lastCallKey = null;
         let isInitialLoad = true;
         let isAnnouncing = false;
@@ -681,7 +704,152 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Singleton Audio Context for Clean Ding-Dong Chime (No hardware context limits)
+        // Doctor Selection Grid Logic
+        function renderDoctorsGrid() {
+            const grid = document.getElementById('doctors-cards-grid');
+            if (!grid) return;
+
+            const searchQuery = (document.getElementById('doctor-search-input')?.value || '').trim().toLowerCase();
+            
+            let filtered = allDoctors.filter(doc => {
+                const nameMatches = (doc.name || '').toLowerCase().includes(searchQuery);
+                const specMatches = (doc.specialization || '').toLowerCase().includes(searchQuery);
+                const deptMatches = (doc.department || '').toLowerCase().includes(searchQuery);
+                const matchesSearch = nameMatches || specMatches || deptMatches;
+
+                if (!matchesSearch) return false;
+
+                if (activeFilter === 'available') return doc.is_available_today;
+                if (activeFilter === 'waiting') return doc.waiting_count > 0;
+                return true;
+            });
+
+            const countAll = allDoctors.length;
+            const countAvail = allDoctors.filter(d => d.is_available_today).length;
+            const countWait = allDoctors.filter(d => d.waiting_count > 0).length;
+            if (document.getElementById('count-all')) document.getElementById('count-all').textContent = countAll;
+            if (document.getElementById('count-available')) document.getElementById('count-available').textContent = countAvail;
+            if (document.getElementById('count-waiting')) document.getElementById('count-waiting').textContent = countWait;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px; font-weight: 700;">لا يوجد أطباء مطابقين للبحث</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(doc => {
+                const isSelected = (currentDoctorId && currentDoctorId == doc.id);
+                const availHtml = doc.is_available_today 
+                    ? '<span class="avail-badge-live"><i class="fas fa-check-circle"></i> متوفر اليوم</span>'
+                    : '<span class="avail-badge-off"><i class="fas fa-circle-dot"></i> غير مسجل</span>';
+
+                const waitingHtml = doc.waiting_count > 0
+                    ? `<span class="waiting-badge-live"><i class="fas fa-user-clock"></i> ${doc.waiting_count} بالانتظار</span>`
+                    : `<span style="color: #94a3b8;"><i class="fas fa-check"></i> لا يوجد انتظار</span>`;
+
+                const roomBadge = doc.current_room ? `<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 6px; font-size: 0.72rem;">عيادة ${doc.current_room}</span>` : '';
+
+                return `
+                    <div class="doctor-card-item ${isSelected ? 'selected' : ''}" onclick="switchDoctor(${doc.id})">
+                        <div class="doc-card-top">
+                            <div class="doc-avatar-circle">
+                                <i class="fas fa-user-doctor"></i>
+                            </div>
+                            <div class="doc-card-meta">
+                                <h3>د. ${doc.name} ${roomBadge}</h3>
+                                <p><i class="fas fa-door-open me-1 text-sky-400"></i> ${doc.department} - ${doc.specialization}</p>
+                            </div>
+                        </div>
+                        <div class="doc-card-badges">
+                            ${availHtml}
+                            ${waitingHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterDoctorsGrid() {
+            renderDoctorsGrid();
+        }
+
+        function setDoctorFilter(filter, btn) {
+            activeFilter = filter;
+            document.querySelectorAll('.filter-pill-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderDoctorsGrid();
+        }
+
+        function openDoctorSelectModal() {
+            renderDoctorsGrid();
+            const modal = document.getElementById('doctor-modal-overlay');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeDoctorSelectModal() {
+            if (!currentDoctorId && !currentRoomNumber) return;
+            const modal = document.getElementById('doctor-modal-overlay');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function switchDoctor(newDocId) {
+            newDocId = parseInt(newDocId);
+            if (!newDocId) return;
+
+            const doc = allDoctors.find(d => d.id == newDocId);
+            if (!doc) return;
+
+            currentDoctorId = newDocId;
+            docFullName = doc.name;
+            apiUrl = `${baseUrl}/queue/doctor/${currentDoctorId}/data`;
+
+            localStorage.setItem('selected_queue_doctor_id', newDocId);
+
+            const nameEl = document.getElementById('header-doc-name');
+            const pillEl = document.getElementById('header-room-pill');
+            const specEl = document.getElementById('header-spec-text');
+            const selectEl = document.getElementById('header-doctor-select');
+            const closeBtn = document.getElementById('modal-close-btn');
+
+            if (nameEl) nameEl.textContent = 'د. ' + doc.name;
+            if (pillEl) pillEl.innerHTML = `<i class="fas fa-door-open me-1"></i> ${doc.department}`;
+            if (specEl) specEl.textContent = doc.specialization;
+            if (selectEl) selectEl.value = newDocId;
+            if (closeBtn) closeBtn.style.display = 'inline-flex';
+
+            try {
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('doctor_id', newDocId);
+                window.history.replaceState({}, '', newUrl.toString());
+            } catch (e) {}
+
+            const modal = document.getElementById('doctor-modal-overlay');
+            if (modal) modal.style.display = 'none';
+
+            lastCallKey = null;
+            isInitialLoad = true;
+            fetchQueueData();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderDoctorsGrid();
+
+            // If in room mode, we don't force opening modal unless room has no doctor
+            if (currentRoomNumber) {
+                const headerRoom = document.getElementById('header-room-pill');
+                if (headerRoom) headerRoom.innerHTML = `<i class="fas fa-door-open me-1"></i> عيادة رقم ${currentRoomNumber}`;
+            } else if (!currentDoctorId) {
+                const savedId = localStorage.getItem('selected_queue_doctor_id');
+                if (savedId && allDoctors.some(d => d.id == savedId)) {
+                    switchDoctor(savedId);
+                } else {
+                    openDoctorSelectModal();
+                }
+            } else {
+                localStorage.setItem('selected_queue_doctor_id', currentDoctorId);
+            }
+        });
+
+        // Audio Chime & Speech Logic
         function getAudioContext() {
             if (!globalAudioCtx) {
                 const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -701,8 +869,6 @@
                 if (!ctx) return;
 
                 const now = ctx.currentTime;
-
-                // 1st Tone (High - Note A5: 880Hz)
                 const osc1 = ctx.createOscillator();
                 const gain1 = ctx.createGain();
                 osc1.type = 'sine';
@@ -714,7 +880,6 @@
                 osc1.start(now);
                 osc1.stop(now + 0.75);
 
-                // 2nd Tone (Low - Note D5: 587.33Hz)
                 const osc2 = ctx.createOscillator();
                 const gain2 = ctx.createGain();
                 osc2.type = 'sine';
@@ -730,7 +895,6 @@
             }
         }
 
-        // Voice List Loader with Firefox / Chrome fallback
         function loadVoices() {
             if ('speechSynthesis' in window) {
                 availableVoices = window.speechSynthesis.getVoices() || [];
@@ -741,7 +905,6 @@
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
 
-        // Fetch Audio Blob Once into Memory
         async function getAudioBlobUrl(text) {
             try {
                 const res = await fetch(`${baseUrl}/queue/tts?text=${encodeURIComponent(text)}`);
@@ -757,7 +920,6 @@
             return null;
         }
 
-        // Play Audio Buffer from URL or Blob
         function playAudioStream(url) {
             return new Promise((resolve) => {
                 let resolved = false;
@@ -776,14 +938,13 @@
                     if (playProm !== undefined) {
                         playProm.catch(finish);
                     }
-                    setTimeout(finish, 9000); // Safety timeout
+                    setTimeout(finish, 9000);
                 } catch (e) {
                     finish();
                 }
             });
         }
 
-        // Secondary Fallback: Browser SpeechSynthesis
         function fallbackSpeechSynthesis(text) {
             return new Promise((resolve) => {
                 if (!('speechSynthesis' in window)) {
@@ -829,23 +990,20 @@
             });
         }
 
-        // Patient Announcement: 1 Call per Button Click (جرس + نداء لمرة واحدة لكل ضغطة بالصيغة العراقية الراقية)
         async function triggerCallAnnouncement(patientName, queueNumber) {
             if (isAnnouncing) return;
             isAnnouncing = true;
 
+            const roomText = currentRoomNumber ? `في عيادة رقم ${currentRoomNumber}` : '';
             const announcementText = queueNumber 
-                ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لعيادة دكتور ${docFullName}.`
-                : `المراجع ${patientName}، تفضل لعيادة دكتور ${docFullName}.`;
+                ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لعيادة دكتور ${docFullName} ${roomText}.`
+                : `المراجع ${patientName}، تفضل لعيادة دكتور ${docFullName} ${roomText}.`;
 
             try {
                 const blobUrl = await getAudioBlobUrl(announcementText);
-
-                // الجرس التنبيهي النقي
                 playChime();
-                await new Promise(r => setTimeout(r, 900)); // Chime duration
+                await new Promise(r => setTimeout(r, 900));
 
-                // النداء الصوتي العربي لمرة واحدة
                 if (blobUrl) {
                     await playAudioStream(blobUrl);
                     URL.revokeObjectURL(blobUrl);
@@ -859,7 +1017,7 @@
             }
         }
 
-        // Periodic Guidance Audio Announcements (إرشادات المستشفى ناطقة دورياً بصوت خافت راقي)
+        // Periodic Guidance Audio Announcements
         const hospitalGuidanceTips = [
             "مرحباً بكم في مستشفى الكفاءات الأهلي. يرجى تحضير بطاقة الهوية ووصل الحجز عند استدعاء رقم دورك.",
             "ضيوفنا الكرام، يرجى الالتزام برقم الدور والمحافظة على الهدوء في صالة الانتظار لراحتكم وراحة المرضى.",
@@ -870,7 +1028,6 @@
         let guidanceVoiceEnabled = true;
 
         async function speakGuidanceTip() {
-            // Do not interrupt if calling patient or audio not ready
             if (isAnnouncing || !guidanceVoiceEnabled) return;
             isAnnouncing = true;
 
@@ -907,7 +1064,6 @@
                 btn.classList.add('active');
                 icon.className = 'fas fa-volume-up';
                 text.textContent = 'إرشادات صوتية: مفعّلة';
-                // Play first tip shortly as confirmation
                 setTimeout(speakGuidanceTip, 1000);
             } else {
                 btn.classList.remove('active');
@@ -916,7 +1072,6 @@
             }
         }
 
-        // Schedule guidance voice announcement every 5 minutes (300,000 ms)
         setInterval(() => {
             if (guidanceVoiceEnabled && !isAnnouncing) {
                 speakGuidanceTip();
@@ -927,7 +1082,6 @@
             getAudioContext();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.resume();
-                // Test subtle utterance to unlock audio pipeline in Firefox
                 const dummy = new SpeechSynthesisUtterance('');
                 window.speechSynthesis.speak(dummy);
             }
@@ -936,21 +1090,21 @@
             if (banner) banner.style.display = 'none';
         }
 
-        // Global click listener to unlock audio on first touch
         document.addEventListener('click', function() {
             enableAudio();
         }, { once: true });
 
-        // Manual Test Button Function
         function testAudioAndCall() {
             enableAudio();
             const testName = document.getElementById('serving-patient-name').textContent || 'محمد علي';
             const testNum = document.getElementById('serving-ticket-num').textContent || '1';
-            triggerCallAnnouncement(testName === 'لا يوجد مريض حالياً' ? 'محمد علي حسن' : testName, testNum === '-' ? '1' : testNum);
+            triggerCallAnnouncement(testName === 'العيادة جاهزة لاستقبال المريض القادم' ? 'محمد علي حسن' : testName, testNum === '-' ? '1' : testNum);
         }
 
-        // Fetch Queue Data in Real Time with anti-cache query
+        // Fetch Queue Data in Real Time with dynamic room doctor tracking
         async function fetchQueueData() {
+            if (!apiUrl) return;
+
             try {
                 const res = await fetch(apiUrl + '?_t=' + new Date().getTime(), {
                     cache: 'no-store',
@@ -972,14 +1126,41 @@
         }
 
         function renderScreen(data) {
+            // In room mode, check if doctor changed
+            if (currentRoomNumber) {
+                const nameEl = document.getElementById('top-doc-name');
+                const specEl = document.getElementById('top-doc-spec');
+                
+                if (data.has_doctor === false) {
+                    if (nameEl) nameEl.textContent = `عيادة رقم ${currentRoomNumber}`;
+                    if (specEl) specEl.innerHTML = `<span class="room-pill"><i class="fas fa-door-open me-1"></i> عيادة رقم ${currentRoomNumber}</span> <span class="text-warning">في انتظار تعيين الطبيب من الاستعلامات</span>`;
+                    document.getElementById('serving-ticket-num').textContent = '-';
+                    document.getElementById('serving-patient-name').textContent = `العيادة رقم ${currentRoomNumber} غير مشغولة حالياً`;
+                    document.getElementById('serving-instructions').textContent = 'يرجى مراجعة موظف الاستعلامات لمعرفة الطبيب المناوب';
+                    document.getElementById('queue-list').innerHTML = '<div class="empty-queue-msg">في انتظار تعيين الطبيب للعيادة</div>';
+                    return;
+                } else if (data.has_doctor === true && data.doctor_name) {
+                    docFullName = data.doctor_name;
+                    currentDoctorId = data.doctor_id;
+                    if (nameEl) nameEl.textContent = 'د. ' + data.doctor_name;
+                    if (specEl) {
+                        const roomBadge = `<span class="room-pill"><i class="fas fa-door-open me-1"></i> عيادة ${currentRoomNumber}</span>`;
+                        specEl.innerHTML = `${roomBadge} <span>${(data.department_name || 'العيادة')} - ${(data.specialization || 'استشاري')}</span>`;
+                    }
+                }
+            }
+
             const current = data.current_patient;
             const waiting = data.waiting_list || [];
             const stats = data.stats || {};
 
-            // Update stats
             document.getElementById('stat-waiting').textContent = stats.waiting_count || 0;
             document.getElementById('stat-completed').textContent = stats.completed_count || 0;
             document.getElementById('stat-total').textContent = stats.total_today || 0;
+            if (document.getElementById('badge-waiting-count')) {
+                document.getElementById('badge-waiting-count').textContent = `${waiting.length} متبقي`;
+            }
+
             const card = document.getElementById('serving-card');
             const emergencyBadge = document.getElementById('emergency-badge');
             const statusBadge = document.getElementById('serving-status-badge');
@@ -1010,7 +1191,6 @@
                     emergencyBadge.style.display = 'none';
                 }
 
-                // Call Event Trigger (Detect new call or recall)
                 const newKey = current.call_key || (current.id + '_' + current.status + '_' + (current.called_at || ''));
                 if (newKey !== lastCallKey) {
                     const wasInitial = isInitialLoad;
@@ -1032,7 +1212,6 @@
                 emergencyBadge.style.display = 'none';
             }
 
-            // Render Waiting List
             const queueContainer = document.getElementById('queue-list');
             if (waiting.length === 0) {
                 queueContainer.innerHTML = '<div class="empty-queue-msg">لا يوجد مرضى في قائمة الانتظار</div>';
@@ -1060,7 +1239,6 @@
             isInitialLoad = false;
         }
 
-        // Fullscreen Helper
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {});
@@ -1071,9 +1249,10 @@
             }
         }
 
-        // Auto Poll every 1.5 seconds for instant response
         setInterval(fetchQueueData, 1500);
-        fetchQueueData();
+        if (apiUrl) {
+            fetchQueueData();
+        }
     </script>
 </body>
 </html>

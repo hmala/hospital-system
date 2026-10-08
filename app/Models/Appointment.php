@@ -27,6 +27,8 @@ class Appointment extends Model
         'reason',
         'notes',
         'consultation_fee',
+        'is_free_recheck',
+        'recheck_parent_visit_id',
         'duration',
         'cancellation_reason',
         'cancelled_by',
@@ -34,6 +36,8 @@ class Appointment extends Model
         'confirmed_at',
         'completed_at',
         'cancelled_at',
+        'printed_at',
+        'print_count',
         'telegram_chat_id'
     ];
 
@@ -41,6 +45,7 @@ class Appointment extends Model
     const VISIT_REASONS = [
         'كشف طبي عام' => 'كشف طبي عام',
         'متابعة حالة مرضية' => 'متابعة حالة مرضية',
+        'مراجعة مجانية' => 'مراجعة مجانية',
         'استشارة طبية' => 'استشارة طبية',
         'فحوصات دورية' => 'فحوصات دورية',
         'طوارئ' => 'طوارئ',
@@ -53,7 +58,10 @@ class Appointment extends Model
     ];
 
     protected $casts = [
+        'is_free_recheck' => 'boolean',
         'appointment_date' => 'datetime',
+        'printed_at' => 'datetime',
+        'print_count' => 'integer',
         'called_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',

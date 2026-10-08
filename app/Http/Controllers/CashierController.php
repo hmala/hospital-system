@@ -486,8 +486,9 @@ class CashierController extends Controller
                         ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
         }
             $patient = optional($request->visit)->patient;
-            $insuranceType = $httpRequest->input('insurance_type', $patient->insurance_type ?? 'none');
-            $copayPercentage = (float)$httpRequest->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $appointment = optional($request->visit)->appointment;
+            $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
+            $copayPercentage = (float)$httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
             $cardNo = $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
             $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;

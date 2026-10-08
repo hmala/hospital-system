@@ -89,7 +89,16 @@ class InquiryController extends Controller
             ->latest('updated_at')
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers'));
+        // جلب إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية
+        $pendingInsuranceEmergencyReferrals = \App\Models\Request::where('type', 'nursing')
+            ->where('status', 'pending')
+            ->where('insurance_type', '!=', 'none')
+            ->whereDate('created_at', Carbon::today())
+            ->with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->latest()
+            ->get();
+
+        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals'));
     }
 
     /**
@@ -407,22 +416,45 @@ class InquiryController extends Controller
                 // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
                 $appointmentDate = $httpRequest->appointment_date ? Carbon::parse($httpRequest->appointment_date) : Carbon::today();
 
+                // فحص ما إذا كان للمريض زيارة سابقة مكتملة لدى نفس الطبيب ضمن فترة صلاحية المراجعة المجانية
+                $validityDays = $doctor->recheck_validity_days ?: 7;
+                $recentVisit = Visit::where('patient_id', $patient->id)
+                    ->where('doctor_id', $doctor->id)
+                    ->where('status', 'completed')
+                    ->where('visit_date', '>=', Carbon::today()->subDays($validityDays))
+                    ->latest('visit_date')
+                    ->first();
+
+                $isFreeRecheck = ($recentVisit !== null);
+                $fee = $isFreeRecheck ? 0 : ($doctor->consultation_fee ?? $department->consultation_fee ?? 0);
+                $payStatus = $isFreeRecheck ? 'paid' : 'pending';
+                $reasonText = $isFreeRecheck ? 'مراجعة مجانية' : ($httpRequest->description ?? 'كشف طبي عام');
+                $noteText = $isFreeRecheck 
+                    ? ("مراجعة مجانية سارية حتى " . Carbon::parse($recentVisit->visit_date)->addDays($validityDays)->format('Y-m-d') . " (مرتبطة بالزيارة #{$recentVisit->id})")
+                    : 'تم الحجز من الاستعلامات - بانتظار الدفع';
+
                 // إنشاء موعد
                 $appointment = Appointment::create([
                     'patient_id' => $patient->id,
                     'doctor_id' => $doctor->id,
                     'department_id' => $department->id,
                     'appointment_date' => $appointmentDate,
-                    'reason' => $httpRequest->description ?? 'كشف طبي عام',
-                    'notes' => 'تم الحجز من الاستعلامات - بانتظار الدفع',
-                    'consultation_fee' => $doctor->consultation_fee ?? $department->consultation_fee ?? 0,
+                    'reason' => $reasonText,
+                    'notes' => $noteText,
+                    'consultation_fee' => $fee,
+                    'is_free_recheck' => $isFreeRecheck,
+                    'recheck_parent_visit_id' => $recentVisit?->id,
                     'duration' => 30,
-                    'status' => 'scheduled',
-                    'payment_status' => 'pending', // حالة الدفع: معلق
+                    'status' => $isFreeRecheck ? 'confirmed' : 'scheduled',
+                    'payment_status' => $payStatus, // إذا كانت مراجعة مجانية تصبح مدفوعة/معفية فوراً
                     'insurance_type' => $bookingInsuranceType
                 ]);
 
-                $messages[] = "✅ تم حجز الموعد بنجاح! رقم الموعد: #" . $appointment->id . " - كشف طبي";
+                if ($isFreeRecheck) {
+                    $messages[] = "✨ تم تسجيل المريض كمراجعة مجانية صالحة لدى د. " . ($doctor->user?->name ?? '') . " برسم (0 د.ع) ودخوله لطابور الطبيب مباشرة.";
+                } else {
+                    $messages[] = "✅ تم حجز الموعد بنجاح! رقم الموعد: #" . $appointment->id . " - كشف طبي";
+                }
                 continue;
             }
         // ========================================
@@ -918,8 +950,17 @@ class InquiryController extends Controller
         $messages[] = $message;
         }
 
-        // تجميع جميع الرسائل
-        $finalMessage = 'تم إنشاء ' . $totalRequests . ' طلبات بنجاح';
+        // تحديث حالة الإحالة إلى مكتملة إن وجدت
+        $refId = $httpRequest->input('referral_request_id', $httpRequest->input('from_referral_id'));
+        if ($refId) {
+            $ref = \App\Models\Request::find($refId);
+            if ($ref) {
+                $ref->update([
+                    'status' => 'completed',
+                    'notes' => 'تم قبول إحالة الضمان وتأكيد حجز الطوارئ بنجاح'
+                ]);
+            }
+        }
 
         // إذا كان الحجز لسونار أو المستخدم موظف استعلامات استشارية، تحويله إلى شاشة توفر الاستشاريين
         $hasUltrasound = in_array('radiology', $requestTypes) && (($httpRequest->radiology_category ?? '') === 'ultrasound');

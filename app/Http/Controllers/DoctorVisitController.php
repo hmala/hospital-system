@@ -218,6 +218,16 @@ class DoctorVisitController extends Controller
         $labTests = \App\Models\LabTest::where('is_active', true)->get();
         $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->get();
         $favoriteLabTests = UserLabTestStat::getFavoritesForUser($user->id);
+        $medicineGroups = \App\Models\UserMedicineGroup::with('medicines')
+            ->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('is_public', true);
+            })
+            ->orderByDesc('is_starred')
+            ->orderByDesc('usage_count')
+            ->orderByDesc('is_public')
+            ->orderBy('name', 'asc')
+            ->get();
 
         // Log lab tests count
         \Illuminate\Support\Facades\Log::info('Lab Tests Count: ' . $labTests->count());
@@ -427,11 +437,46 @@ class DoctorVisitController extends Controller
             ? $latestPrescription->items->where('substitution_status', 'pending_approval')
             : collect();
 
+        // السجل الطبي التراكمي للمريض (الزيارات السابقة، العمليات، الطوارئ)
+        $pastVisits = $visit->patient_id 
+            ? Visit::where('patient_id', $visit->patient_id)
+                ->where('id', '!=', $visit->id)
+                ->with(['doctor.user', 'requests', 'prescribedMedications', 'prescriptions.items.medicine'])
+                ->orderBy('visit_date', 'desc')
+                ->limit(15)
+                ->get()
+            : collect();
+
+        $pastSurgeries = $visit->patient_id
+            ? \App\Models\Surgery::where('patient_id', $visit->patient_id)
+                ->with('doctor.user')
+                ->latest()
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $pastEmergencies = $visit->patient_id
+            ? \App\Models\Emergency::where('patient_id', $visit->patient_id)
+                ->with('doctor.user')
+                ->latest()
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $patientAppointments = $visit->patient_id
+            ? \App\Models\Appointment::where('patient_id', $visit->patient_id)
+                ->with(['doctor.user', 'department'])
+                ->orderBy('appointment_date', 'desc')
+                ->limit(20)
+                ->get()
+            : collect();
+
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
             'labTestGroups',
             'favoriteLabTests',
+            'medicineGroups',
             'radiologyTypes',
             'icd10Codes',
             'prescribedMedications',
@@ -442,7 +487,11 @@ class DoctorVisitController extends Controller
             'emergencyServices',
             'availableMedicines',
             'latestPrescription',
-            'pendingSubstitutionRequests'
+            'pendingSubstitutionRequests',
+            'pastVisits',
+            'pastSurgeries',
+            'pastEmergencies',
+            'patientAppointments'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -495,6 +544,8 @@ class DoctorVisitController extends Controller
         // إضافة القواعد الأخرى
         $rules['treatment_plan'] = 'nullable|string|max:1000';
         $rules['notes'] = 'nullable|string|max:1000';
+        $rules['follow_up_date'] = 'nullable|date';
+        $rules['follow_up_notes'] = 'nullable|string|max:500';
 
         $request->validate($rules);
 
@@ -524,6 +575,39 @@ class DoctorVisitController extends Controller
 
         if ($request->has('notes')) {
             $updateData['notes'] = $request->notes;
+        }
+
+        if ($request->has('follow_up_date')) {
+            $updateData['follow_up_date'] = $request->filled('follow_up_date') ? $request->follow_up_date : null;
+            $updateData['follow_up_notes'] = $request->follow_up_notes;
+
+            // إذا تم تحديد موعد مراجعة، يتم إنشاء أو تحديث موعد المراجعة المجانية في جدول المواعيد
+            if ($request->filled('follow_up_date')) {
+                $fuDate = \Carbon\Carbon::parse($request->follow_up_date)->format('Y-m-d');
+                
+                $followupAppt = Appointment::firstOrNew([
+                    'recheck_parent_visit_id' => $visit->id,
+                ]);
+
+                $followupAppt->fill([
+                    'patient_id' => $visit->patient_id,
+                    'doctor_id' => $visit->doctor_id,
+                    'department_id' => $visit->department_id,
+                    'appointment_date' => $fuDate . ' 09:00:00',
+                    'status' => 'confirmed',
+                    'payment_status' => 'paid',
+                    'is_free_recheck' => true,
+                    'consultation_fee' => 0,
+                    'reason' => 'مراجعة مجانية',
+                    'notes' => $request->follow_up_notes ?: 'مراجعة مجانية مجدولة من محطة الطبيب',
+                ]);
+
+                $followupAppt->save();
+            } else {
+                Appointment::where('recheck_parent_visit_id', $visit->id)
+                    ->whereIn('status', ['scheduled', 'confirmed'])
+                    ->delete();
+            }
         }
 
         if ($request->has('status')) {
@@ -652,18 +736,26 @@ class DoctorVisitController extends Controller
         // إذا تم إنهاء الزيارة، حدث حالة الموعد المرتبط بها
         if (isset($updateData['status']) && $updateData['status'] === 'completed' && $visit->appointment) {
             $visit->appointment->complete();
+        } elseif (isset($updateData['status']) && $updateData['status'] === 'in_progress' && $visit->appointment) {
+            $visit->appointment->update(['status' => 'in_consultation']);
         }
+
+        $successMsg = (isset($updateData['status']) && $updateData['status'] === 'in_progress')
+            ? 'تم إعادة فتح الزيارة بنجاح للمتابعة والتعديل ✅'
+            : ((isset($updateData['status']) && $updateData['status'] === 'completed')
+                ? 'تم إنهاء الزيارة وأرشفتها بنجاح ✅'
+                : 'تم حفظ البيانات بنجاح');
 
         // التحقق من نوع الطلب (AJAX أو عادي)
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'تم حفظ البيانات بنجاح',
+                'message' => $successMsg,
                 'visit_status' => $visit->status
             ]);
         }
 
-        return redirect()->back()->with('success', 'تم حفظ البيانات بنجاح');
+        return redirect()->back()->with('success', $successMsg);
     }
 
     public function cancel(Visit $visit)
@@ -877,6 +969,8 @@ class DoctorVisitController extends Controller
             $nursingDescription = 'طلب خدمات تمريضية: ' . implode(', ', $details['nursing_service_names']);
         }
 
+        $insuranceType = optional($visit->appointment)->insurance_type ?? optional($visit->patient)->insurance_type ?? 'none';
+
         $medicalRequest = MedicalRequest::create([
             'visit_id' => $visit->id,
             'type' => $request->type,
@@ -889,22 +983,27 @@ class DoctorVisitController extends Controller
 
             'details' => $details,
             'status' => 'pending',
-            'payment_status' => 'pending' // يجب الدفع عند الكاشير قبل الإرسال للقسم المختص
+            'payment_status' => 'pending', // يجب الدفع عند الكاشير قبل الإرسال للقسم المختص
+            'insurance_type' => $insuranceType
         ]);
+
+        $successMsg = $request->type === 'nursing'
+            ? 'تم إرسال طلب الإحالة للطوارئ بنجاح - سيقوم موظف الاستقبال باستكمال وحجز الحالة للمريض'
+            : 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع';
 
         // التحقق من نوع الطلب (AJAX أو عادي)
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع',
+                'message' => $successMsg,
                 'request_count' => $visit->requests()->count(),
                 'request_id' => $medicalRequest->id,
-                'requires_payment' => true, // إشارة للواجهة بأن الطلب يحتاج دفع
+                'requires_payment' => ($request->type !== 'nursing'), // إحالة الطوارئ لا تتطلب دفع كاشير العيادات بل يتولاها موظف الحجز
                 'cashier_url' => route('cashier.request.payment.form', $medicalRequest->id)
             ]);
         }
 
-        return redirect()->back()->with('success', 'تم إنشاء الطلب بنجاح - يرجى التوجه للكاشير للدفع');
+        return redirect()->back()->with('success', $successMsg);
     }
     public function updateRequestStatus(MedicalRequest $request, HttpRequest $httpRequest)
     {
@@ -1190,6 +1289,23 @@ class DoctorVisitController extends Controller
         $prescription = $visit->prescriptions()->latest()->first();
 
         return view('doctors.visits.prescription-print', compact('visit', 'prescription'));
+    }
+
+    /**
+     * طباعة كرت وبطاقة موعد المراجعة والاستشارة (Appointment / Follow-up Slip Print)
+     */
+    public function printAppointment(Visit $visit)
+    {
+        $visit->load([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'appointment'
+        ]);
+
+        $followUpAppointment = \App\Models\Appointment::where('recheck_parent_visit_id', $visit->id)->latest()->first();
+
+        return view('doctors.visits.appointment-print', compact('visit', 'followUpAppointment'));
     }
 
     /**

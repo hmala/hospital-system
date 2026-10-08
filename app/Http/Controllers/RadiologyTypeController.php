@@ -27,7 +27,7 @@ class RadiologyTypeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = RadiologyType::query();
+        $query = RadiologyType::query()->withCount('requests');
 
         // البحث بالاسم أو الكود
         if ($request->filled('search')) {
@@ -42,6 +42,23 @@ class RadiologyTypeController extends Controller
         // الفلترة حسب الحالة
         if ($request->filled('is_active')) {
             $query->where('is_active', $request->is_active);
+        }
+
+        // الفلترة حسب تغطية الضمان
+        if ($request->filled('insurance_filter')) {
+            if ($request->insurance_filter === 'moi_active') {
+                $query->where('is_moi_active', true);
+            } elseif ($request->insurance_filter === 'hi_active') {
+                $query->where('is_hi_active', true);
+            } elseif ($request->insurance_filter === 'both_active') {
+                $query->where('is_moi_active', true)->where('is_hi_active', true);
+            } elseif ($request->insurance_filter === 'none_active') {
+                $query->where(function($q) {
+                    $q->where('is_moi_active', false)->orWhereNull('is_moi_active');
+                })->where(function($q) {
+                    $q->where('is_hi_active', false)->orWhereNull('is_hi_active');
+                });
+            }
         }
 
         // الفلترة حسب الحاجة لمادة تباين
@@ -77,13 +94,118 @@ class RadiologyTypeController extends Controller
         $sortDir = $request->get('sort_dir', 'asc');
         $query->orderBy($sortBy, $sortDir);
 
-        $types = $query->paginate(15)->withQueryString();
+        $types = $query->paginate(20)->withQueryString();
         
         // الحصول على التصنيفات المتاحة
-        $mainCategories = RadiologyType::distinct()->pluck('main_category');
-        $subcategories = RadiologyType::distinct()->pluck('subcategory');
+        $mainCategories = RadiologyType::whereNotNull('main_category')->distinct()->pluck('main_category');
+        $subcategories = RadiologyType::whereNotNull('subcategory')->distinct()->pluck('subcategory');
 
         return view('radiology.types.index', compact('types', 'mainCategories', 'subcategories'));
+    }
+
+    /**
+     * Bulk delete selected radiology types safely.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+            abort(403, 'غير مصرح لك بحذف أنواع الأشعة');
+        }
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:radiology_types,id',
+        ]);
+
+        $ids = $request->input('ids', []);
+        $types = RadiologyType::withCount('requests')->whereIn('id', $ids)->get();
+
+        $deletedCount = 0;
+        $protectedCount = 0;
+
+        foreach ($types as $type) {
+            if ($type->requests_count > 0) {
+                $protectedCount++;
+            } else {
+                $type->delete();
+                $deletedCount++;
+            }
+        }
+
+        if ($deletedCount > 0 && $protectedCount > 0) {
+            $msg = "تم حذف {$deletedCount} فحص بنجاح. تم تخطي {$protectedCount} فحص لوجود طلبات وسجلات طبية مرتبطة بها.";
+        } elseif ($deletedCount > 0) {
+            $msg = "تم حذف {$deletedCount} فحص بنجاح.";
+        } else {
+            return redirect()->route('radiology.types.index')
+                ->with('error', "تعذر حذف الفحوصات المحددة لأنها جميعاً ({$protectedCount}) مرتبطة بطلبات وسجلات طبية سابقة للمرضى.");
+        }
+
+        return redirect()->route('radiology.types.index')->with('success', $msg);
+    }
+
+    /**
+     * Bulk toggle active status for selected radiology types.
+     */
+    public function bulkToggleStatus(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+            abort(403, 'غير مصرح لك بتعديل حالة أنواع الأشعة');
+        }
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:radiology_types,id',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        $ids = $request->input('ids', []);
+        $isActive = ($request->status === 'active');
+
+        $count = RadiologyType::whereIn('id', $ids)->update(['is_active' => $isActive]);
+
+        $statusText = $isActive ? 'تفعيل' : 'تعطيل';
+        return redirect()->route('radiology.types.index')
+            ->with('success', "تم {$statusText} {$count} فحص بنجاح.");
+    }
+
+    /**
+     * Quick update pricing via AJAX.
+     */
+    public function quickPriceUpdate(Request $request, RadiologyType $type)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل الأسعار'], 403);
+        }
+
+        $request->validate([
+            'base_price' => 'nullable|numeric|min:0',
+            'moi_price' => 'nullable|numeric|min:0',
+            'is_moi_active' => 'nullable|boolean',
+            'hi_price' => 'nullable|numeric|min:0',
+            'is_hi_active' => 'nullable|boolean',
+        ]);
+
+        $data = [];
+        if ($request->has('base_price')) $data['base_price'] = $request->base_price;
+        if ($request->has('moi_price')) $data['moi_price'] = $request->moi_price;
+        if ($request->has('is_moi_active')) $data['is_moi_active'] = (bool)$request->is_moi_active;
+        if ($request->has('hi_price')) $data['hi_price'] = $request->hi_price;
+        if ($request->has('is_hi_active')) $data['is_hi_active'] = (bool)$request->is_hi_active;
+
+        $type->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث التسعير بنجاح',
+            'type' => $type->fresh()
+        ]);
     }
 
     /**
@@ -113,7 +235,7 @@ class RadiologyTypeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:radiology_types,code',
-            'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
+            'subcategory' => 'required|string|max:100|in:أشعة,سونار,مفراس,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',
@@ -180,7 +302,7 @@ class RadiologyTypeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:radiology_types,code,' . $type->id,
-            'subcategory' => 'required|string|max:100|in:أشعة,سونار,الرنين,إيكو',
+            'subcategory' => 'required|string|max:100|in:أشعة,سونار,مفراس,الرنين,إيكو',
             'description' => 'nullable|string|max:1000',
             'base_price' => 'required|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',
