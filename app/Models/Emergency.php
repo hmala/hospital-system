@@ -195,12 +195,21 @@ class Emergency extends Model
             return 0.0;
         }
 
+        $isInsurance = (bool)($this->patient && ($this->patient->insurance_type === 'hi' || $this->patient->healthInsuranceCategory));
+        $insuranceType = $isInsurance ? 'hi' : 'none';
+        $emergencyCopay = $isInsurance ? $this->patient->getCopayPercentageFor('emergency') : 100.0;
+
         $unpaidServiceIds = \DB::table('emergency_emergency_service')
             ->where('emergency_id', $this->id)
             ->whereNull('payment_id')
             ->pluck('emergency_service_id');
-        
-        $servicesAmount = $this->services()->whereIn('emergency_services.id', $unpaidServiceIds)->sum('price');
+
+        $unpaidServices = $this->services()->whereIn('emergency_services.id', $unpaidServiceIds)->get();
+        $servicesPatientAmount = 0.0;
+        foreach ($unpaidServices as $service) {
+            $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+            $servicesPatientAmount += (float)$pricing['patient_share'];
+        }
         
         $labAmount = $this->labRequests()
             ->whereNull('payment_id')
@@ -222,15 +231,9 @@ class Emergency extends Model
         $followUpFee = ($this->doctor_follow_up_fee > 0 && !$this->follow_up_payment_id) 
             ? $this->doctor_follow_up_fee 
             : 0;
+        $followUpPatientFee = $isInsurance ? (float)($followUpFee * ($emergencyCopay / 100.0)) : (float)$followUpFee;
 
-        // تطبيق نسبة استقطاع الضمان الصحي على حصة المريض إن وجد
-        if ($this->patient && ($this->patient->insurance_type === 'hi' || $this->patient->healthInsuranceCategory)) {
-            $emergencyCopay = $this->patient->getCopayPercentageFor('emergency');
-            $servicesAmount = (float) ($servicesAmount * ($emergencyCopay / 100.0));
-            $followUpFee = (float) ($followUpFee * ($emergencyCopay / 100.0));
-        }
-
-        return (float) ($servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee);
+        return (float) ($servicesPatientAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpPatientFee);
     }
 
     /**

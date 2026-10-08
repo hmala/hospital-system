@@ -1293,9 +1293,26 @@ class EmergencyController extends Controller
             ->whereNull('payment_id')
             ->pluck('emergency_service_id');
         
-        $servicesAmount = $emergency->services
-            ->whereIn('id', $unpaidServiceIds)
-            ->sum('price');
+        $isInsurance = (bool)($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory));
+        $insuranceType = $isInsurance ? 'hi' : 'none';
+        $emergencyCopay = $isInsurance ? $emergency->patient->getCopayPercentageFor('emergency') : 100.0;
+
+        $unpaidServices = $emergency->services->whereIn('id', $unpaidServiceIds);
+        $totalServicesAmount = 0.0;
+        $servicesPatientShare = 0.0;
+        $servicesInsuranceShare = 0.0;
+        $fullyCoveredServiceIds = [];
+
+        foreach ($unpaidServices as $service) {
+            $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+            $totalServicesAmount += (float)$pricing['total_amount'];
+            $servicesPatientShare += (float)$pricing['patient_share'];
+            $servicesInsuranceShare += (float)$pricing['insurance_share'];
+
+            if ($pricing['is_covered'] && $pricing['patient_share'] <= 0) {
+                $fullyCoveredServiceIds[] = $service->id;
+            }
+        }
 
         // حساب التحاليل غير المدفوعة فقط
         $labAmount = $emergency->labRequests
@@ -1320,8 +1337,12 @@ class EmergencyController extends Controller
         $followUpFee = ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) 
             ? $emergency->doctor_follow_up_fee 
             : 0;
+        $followUpPatientShare = $isInsurance ? round($followUpFee * ($emergencyCopay / 100.0), 2) : $followUpFee;
+        $followUpInsuranceShare = round($followUpFee - $followUpPatientShare, 2);
             
-        $totalAmount = $servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee;
+        $totalAmount = $totalServicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee;
+        $patientShare = $servicesPatientShare + $labAmount + $radiologyAmount + $consultationAmount + $followUpPatientShare;
+        $insuranceShare = $servicesInsuranceShare + $followUpInsuranceShare;
 
         $hasPendingAmount = $totalAmount > 0;
         $existingPayment = Payment::where('emergency_id', $emergency->id)
@@ -1398,12 +1419,7 @@ class EmergencyController extends Controller
             ? implode(' | ', $descriptionParts)
             : 'رسوم طوارئ';
 
-        $isInsurance = (bool)($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory));
-        $emergencyCopay = $isInsurance ? $emergency->patient->getCopayPercentageFor('emergency') : 100.0;
-        $patientShare = $isInsurance ? round($totalAmount * ($emergencyCopay / 100.0), 2) : $totalAmount;
-        $insuranceShare = $isInsurance ? round($totalAmount - $patientShare, 2) : 0.0;
-
-        // إذا كان المريض مشمولاً بالضمان بنسبة 0% على المريض (تغطية كاملة 100% من هيئة الضمان)
+        // إذا كان كامل المبلغ المطلوب من المريض 0 ومغطى بالضمان
         $isFullyCoveredByInsurance = $isInsurance && $patientShare <= 0 && $totalAmount > 0;
 
         if ($isFullyCoveredByInsurance) {
