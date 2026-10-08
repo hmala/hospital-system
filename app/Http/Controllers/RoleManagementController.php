@@ -315,6 +315,7 @@ class RoleManagementController extends Controller
             'inquiry.create.lab' => ['label' => 'حجز تحاليل مختبرية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.pharmacy' => ['label' => 'طلب صيدلية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.blood_bank' => ['label' => 'حجز طلب مصرف الدم', 'action' => 'حجز', 'badge' => 'primary'],
+            'create emergencies' => ['label' => 'حجز واستقبال حالة طوارئ جديدة / طوارئ الضمان', 'action' => 'حجز', 'badge' => 'danger'],
             'view bed reservations' => ['label' => 'عرض سجل وقائمة حجوزات الأسرّة والرقود', 'action' => 'عرض', 'badge' => 'info'],
             'create bed reservations' => ['label' => 'حجز وتسكين سرير أو رقود مبدئي لمريض', 'action' => 'حجز', 'badge' => 'success'],
             'view incubator reservations' => ['label' => 'عرض سجل وقائمة حجوزات حاضنات الخُدّج', 'action' => 'عرض', 'badge' => 'info'],
@@ -455,6 +456,7 @@ class RoleManagementController extends Controller
             'view inquiries', 'create inquiries', 'manage inquiries', 
             'view patient history', 'view occupancy', 
             'view patients', 'create patients', 'edit patients', 'delete patients',
+            'create emergencies',
             'view bed reservations', 'create bed reservations',
             'view incubator reservations', 'create incubator reservations', 'manage incubator reservations',
         ])) {
