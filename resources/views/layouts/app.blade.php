@@ -188,13 +188,55 @@
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(148, 163, 184, 1);
         }
-        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
-        .sidebar-header img { background: rgba(59, 130, 246, 0.12); border-radius: 18px; padding: 10px; max-height: 70px; width: auto; border: 1px solid rgba(59, 130, 246, 0.45); box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18); }
-        .sidebar-user { color: #1d4ed8; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
+        .sidebar-header { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 0.6rem; 
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 18px; 
+            margin: 0.75rem 0.75rem 0 0.75rem; 
+            padding: 1rem 0.85rem; 
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08);
+        }
+        .sidebar-header .logo-badge {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 8px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-header .logo-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(37, 99, 235, 0.16);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        .sidebar-header .logo-badge img { 
+            background: transparent; 
+            border-radius: 0; 
+            padding: 0; 
+            max-height: 52px; 
+            width: auto; 
+            max-width: 100%; 
+            object-fit: contain;
+            border: none; 
+            box-shadow: none; 
+            display: block;
+        }
+        .sidebar-user { color: #1d4ed8; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; width: 100%; margin-top: 0.25rem; }
         .sidebar-user i { font-size: 1rem; color: #1d4ed8; }
-        .sidebar-user span { display: block; color: #1d4ed8; }
-        .sidebar-user .logout-link { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.45); padding: 0.45rem 0.9rem; border-radius: 12px; background: rgba(59, 130, 246, 0.12); transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
-        .sidebar-user .logout-link:hover { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; transform: translateY(-1px); }
+        .sidebar-user span { display: block; color: #1e3a8a; font-size: 0.92rem; font-weight: 700; }
+        .sidebar-user .logout-link { color: #dc2626; font-size: 0.82rem; font-weight: 600; text-decoration: none; border: 1px solid rgba(239, 68, 68, 0.25); padding: 0.35rem 0.85rem; border-radius: 10px; background: rgba(254, 242, 242, 0.8); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem; }
+        .sidebar-user .logout-link:hover { background: #fee2e2; color: #b91c1c; border-color: rgba(239, 68, 68, 0.4); transform: translateY(-1px); }
         .home-link {
             display: inline-flex;
             align-items: center;
@@ -588,6 +630,13 @@
     @stack('styles')
 </head>
 <body>
+    @php
+        $logoFilePath = public_path('images/logo.jpeg');
+        $systemLogoSrc = file_exists($logoFilePath) 
+            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoFilePath)) 
+            : asset('images/logo.jpeg');
+    @endphp
+
     {{-- Global Page Loader Ultra --}}
     <div id="global-page-loader">
         <div class="loader-top-bar" id="loader-top-bar"></div>
@@ -595,7 +644,7 @@
             <div class="loader-glow-aura"></div>
             <div class="loader-spinner-ring-outer"></div>
             <div class="loader-spinner-ring"></div>
-            <img src="{{ asset('images/logo.jpeg') }}" alt="جاري التحميل..." class="loader-logo-img">
+            <img src="{{ $systemLogoSrc }}" alt="جاري التحميل..." class="loader-logo-img">
         </div>
         <div class="loader-text-wrapper">
             <div class="loader-text">
@@ -609,12 +658,14 @@
             <!-- الشريط الجانبي -->
             <nav class="col-md-3 col-lg-2 d-md-block sidebar">
                 <div class="position-sticky pt-0">
-                    <div class="sidebar-header text-center p-3">
-                        <img src="{{ asset('images/logo.jpeg') }}" alt="HERAMZ RP" class="img-fluid" style="max-height: 70px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                    <div class="sidebar-header text-center">
+                        <div class="logo-badge">
+                            <img src="{{ $systemLogoSrc }}" alt="HERAMZ RP" class="img-fluid">
+                        </div>
                         <div class="sidebar-user">
-                            <div><i class="fas fa-user-circle"></i> <span>{{ Auth::user()->name }}</span></div>
+                            <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
                             <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                تسجيل الخروج
+                                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
                             </a>
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
