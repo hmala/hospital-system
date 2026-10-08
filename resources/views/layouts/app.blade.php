@@ -188,55 +188,40 @@
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(148, 163, 184, 1);
         }
-        .sidebar-header { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 0.6rem; 
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
+        .sidebar-header img,
+        .sidebar-header .logo-badge { 
+            background: rgba(59, 130, 246, 0.12); 
             border-radius: 18px; 
-            margin: 0.75rem 0.75rem 0 0.75rem; 
-            padding: 1rem 0.85rem; 
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08);
-        }
-        .sidebar-header .logo-badge {
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 8px 14px;
+            padding: 10px; 
+            max-height: 70px; 
+            width: auto; 
+            border: 1px solid rgba(59, 130, 246, 0.45); 
+            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18); 
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 100%;
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(0,0,0,0.04);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease;
         }
         .sidebar-header .logo-badge:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 22px rgba(37, 99, 235, 0.16);
-            border-color: rgba(59, 130, 246, 0.4);
+            background: rgba(59, 130, 246, 0.22);
+            border-color: rgba(59, 130, 246, 0.65);
+            transform: translateY(-1px);
         }
-        .sidebar-header .logo-badge img { 
-            background: transparent; 
-            border-radius: 0; 
-            padding: 0; 
-            max-height: 52px; 
-            width: auto; 
-            max-width: 100%; 
-            object-fit: contain;
-            border: none; 
-            box-shadow: none; 
-            display: block;
+        .sidebar-header .logo-badge img {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            max-height: 52px;
+            width: auto;
+            border-radius: 10px;
         }
-        .sidebar-user { color: #1d4ed8; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; width: 100%; margin-top: 0.25rem; }
+        .sidebar-user { color: #1d4ed8; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
         .sidebar-user i { font-size: 1rem; color: #1d4ed8; }
-        .sidebar-user span { display: block; color: #1e3a8a; font-size: 0.92rem; font-weight: 700; }
-        .sidebar-user .logout-link { color: #dc2626; font-size: 0.82rem; font-weight: 600; text-decoration: none; border: 1px solid rgba(239, 68, 68, 0.25); padding: 0.35rem 0.85rem; border-radius: 10px; background: rgba(254, 242, 242, 0.8); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem; }
-        .sidebar-user .logout-link:hover { background: #fee2e2; color: #b91c1c; border-color: rgba(239, 68, 68, 0.4); transform: translateY(-1px); }
+        .sidebar-user span { display: block; color: #1d4ed8; }
+        .sidebar-user .logout-link { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.45); padding: 0.45rem 0.9rem; border-radius: 12px; background: rgba(59, 130, 246, 0.12); transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
+        .sidebar-user .logout-link:hover { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; transform: translateY(-1px); }
         .home-link {
             display: inline-flex;
             align-items: center;
