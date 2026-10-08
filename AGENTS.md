@@ -61,6 +61,18 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-08 — المرحلة 13: إظهار صلاحيات مفضلة الأدوية والتحاليل في بطاقة العيادات ومحطة الأطباء)
+
+### Done
+- **إظهار صلاحيات مجموعات الأدوية والتحاليل المفضلة في لوحة الصلاحيات (`RoleManagementController.php`)**:
+  * نقل صلاحيات مجموعات الأدوية (`view/create/edit/delete medicine groups`) ومجموعات التحاليل (`view/create/edit/delete lab test groups`) إلى **البطاقة رقم 2: «العيادات والاستشارية ومحطة الأطباء»** لتتطابق تماماً مع مكانها الفعلي في القائمة الجانبية ومحطة الأطباء.
+  * ضبط دالة `permissionGroup()` لفرز صلاحيات المجموعات المفضلة ضمن تصنيف `consultant_doctors` ومنع إخفائها أو تشتيتها.
+  * تحديث كاش الصلاحيات والتأكد من تفعيل مفاتيح التبديل (Toggles) الفورية في واجهة تعديل الأدوار.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (176 assertions).
+- **الرفع إلى GitHub**:
+  * الرفع المباشر على فرع `main`.
+
 ## Session log (2026-10-07 — المرحلة 12: نظام الباقات السريعة للأدوية والترتيب الذكي بالمفضلة والاستخدام)
 
 ### Done
