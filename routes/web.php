@@ -648,6 +648,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
 
         // إدارة الموظفين
+        Route::get('employees/{employee}/roster', [\App\Http\Controllers\HR\HrEmployeeController::class, 'roster'])->name('employees.roster');
         Route::resource('employees', \App\Http\Controllers\HR\HrEmployeeController::class);
 
         // إعدادات العقوبات والمكافآت
@@ -660,6 +661,8 @@ Route::middleware(['auth'])->group(function () {
 
         // الدوام والخفارات
         Route::resource('shifts', \App\Http\Controllers\HR\HrShiftController::class)->except(['show']);
+        Route::post('schedules/swap', [\App\Http\Controllers\HR\HrScheduleController::class, 'swap'])->name('schedules.swap');
+        Route::get('schedules/emergency-cover-search', [\App\Http\Controllers\HR\HrScheduleController::class, 'emergencyCoverSearch'])->name('schedules.emergency-cover-search');
         Route::post('schedules/copy-last-week', [\App\Http\Controllers\HR\HrScheduleController::class, 'copyLastWeek'])->name('schedules.copy-last-week');
         Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
 

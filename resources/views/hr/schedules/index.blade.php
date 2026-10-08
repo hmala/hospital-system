@@ -17,6 +17,19 @@
         </div>
     @endif
 
+    
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-warning fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#swapModal">
+            <i class="fas fa-exchange-alt me-1"></i> تبادل خفارات (Swap)
+        </button>
+        <button type="button" class="btn btn-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#emergencyModal">
+            <i class="fas fa-ambulance me-1"></i> البحث عن بديل طوارئ
+        </button>
+        <a href="{{ route('hr.employees.index') }}" class="btn btn-info fw-bold shadow-sm text-white">
+            <i class="fas fa-calendar-alt me-1"></i> عرض جدول موظف فردي
+        </a>
+    </div>
+
     <!-- الفلتر والتحكم -->
     <div class="card border-0 shadow-sm rounded-3 mb-3">
         <div class="card-body p-3">
@@ -194,4 +207,121 @@
         }
     }
 </script>
+
+    <!-- Swap Modal -->
+    <div class="modal fade" id="swapModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <form action="{{ route('hr.schedules.swap') }}" method="POST">
+                    @csrf
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title fw-bold text-dark"><i class="fas fa-exchange-alt me-2"></i>تبادل شفتات / خفارات</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-4">اختر التاريخ واسم الموظفين ليتم تبديل شفتاتهم في ذلك اليوم فوراً.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">تاريخ التبادل <span class="text-danger">*</span></label>
+                            <input type="date" name="swap_date" class="form-control" required value="{{ date('Y-m-d') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الموظف الأول (سيتنازل عن شفته) <span class="text-danger">*</span></label>
+                            <select name="employee1_id" class="form-select" required>
+                                <option value="">اختر الموظف...</option>
+                                @foreach(\App\Models\HrEmployee::where('status', 'active')->get() as $emp)
+                                    <option value="{{ $emp->id }}">{{ $emp->full_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="text-center my-2 text-muted"><i class="fas fa-arrow-up"></i> تبادل <i class="fas fa-arrow-down"></i></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الموظف الثاني (البديل) <span class="text-danger">*</span></label>
+                            <select name="employee2_id" class="form-select" required>
+                                <option value="">اختر الموظف...</option>
+                                @foreach(\App\Models\HrEmployee::where('status', 'active')->get() as $emp)
+                                    <option value="{{ $emp->id }}">{{ $emp->full_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-warning fw-bold px-4">تأكيد التبادل</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Cover Modal -->
+    <div class="modal fade" id="emergencyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-ambulance me-2"></i>البحث عن بديل للطوارئ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">اختر اليوم والقسم ليعرض لك النظام الموظفين الذين في "يوم راحة (Off)" ومتاحين لتغطية النقص.</p>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">تاريخ النقص</label>
+                            <input type="date" id="emDate" class="form-control" value="{{ date('Y-m-d') }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">القسم</label>
+                            <select id="emDept" class="form-select">
+                                <option value="">أي قسم</option>
+                                @foreach($departments as $dept)
+                                    <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-danger w-100 mb-4 fw-bold" onclick="searchEmergencyCover()">
+                        <i class="fas fa-search me-1"></i> بحث عن المتاحين للعمل
+                    </button>
+
+                    <div id="emResults" class="d-none">
+                        <h6 class="fw-bold mb-2 text-success">المتاحون في هذا اليوم (Off):</h6>
+                        <ul class="list-group" id="emList">
+                            <!-- Results will be populated here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    function searchEmergencyCover() {
+        let date = document.getElementById("emDate").value;
+        let dept = document.getElementById("emDept").value;
+        if(!date) return;
+        
+        document.getElementById("emList").innerHTML = '<li class="list-group-item text-center"><i class="fas fa-spinner fa-spin"></i> جاري البحث...</li>';
+        document.getElementById("emResults").classList.remove("d-none");
+
+        fetch(`{{ route("hr.schedules.emergency-cover-search") }}?date=${date}&department_id=${dept}`)
+            .then(res => res.json())
+            .then(data => {
+                let html = "";
+                if(data.length === 0) {
+                    html = '<li class="list-group-item text-danger text-center">لا يوجد أي موظف مجاز/Off في هذا اليوم.</li>';
+                } else {
+                    data.forEach(emp => {
+                        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div><strong>${emp.name}</strong> <br><small class="text-muted">${emp.job || '-'}</small></div>
+                                    <span class="badge bg-success">متاح (Off)</span>
+                                 </li>`;
+                    });
+                }
+                document.getElementById("emList").innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById("emList").innerHTML = '<li class="list-group-item text-danger">حدث خطأ في الاتصال.</li>';
+            });
+    }
+    </script>
+    
 @endsection

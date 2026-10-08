@@ -468,8 +468,18 @@ class HrEmployeeController extends Controller
         return redirect()->route('hr.employees.index')
             ->with('success', "تم أرشفة/حذف ملف الموظف '{$name}' بنجاح.");
     }
+
+    public function roster(HrEmployee $employee)
+    {
+        // Get all schedules for this employee for the current month
+        $startOfMonth = now()->startOfMonth();
+        $endOfMonth = now()->endOfMonth();
+        
+        $schedules = \App\Models\HrSchedule::where('hr_employee_id', $employee->id)
+            ->whereBetween('shift_date', [$startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d')])
+            ->orderBy('shift_date')
+            ->get();
+            
+        return view('hr.employees.roster', compact('employee', 'schedules', 'startOfMonth', 'endOfMonth'));
+    }
 }
-
-
-
-

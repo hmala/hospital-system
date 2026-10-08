@@ -125,4 +125,71 @@ class HrScheduleController extends Controller
 
         return back()->with('success', "تم نسخ $count شفت من الأسبوع الماضي بنجاح.");
     }
+
+    public function swap(Request $request)
+    {
+        $request->validate([
+            'swap_date' => 'required|date',
+            'employee1_id' => 'required|exists:hr_employees,id',
+            'employee2_id' => 'required|exists:hr_employees,id|different:employee1_id',
+        ]);
+
+        $date = $request->swap_date;
+        
+        $schedule1 = \App\Models\HrSchedule::where('shift_date', $date)->where('hr_employee_id', $request->employee1_id)->first();
+        $schedule2 = \App\Models\HrSchedule::where('shift_date', $date)->where('hr_employee_id', $request->employee2_id)->first();
+
+        $shift1 = $schedule1 ? $schedule1->hr_shift_id : null;
+        $off1 = $schedule1 ? $schedule1->is_off_day : false;
+
+        $shift2 = $schedule2 ? $schedule2->hr_shift_id : null;
+        $off2 = $schedule2 ? $schedule2->is_off_day : false;
+
+        // Update 1 with 2's data
+        \App\Models\HrSchedule::updateOrCreate(
+            ['hr_employee_id' => $request->employee1_id, 'shift_date' => $date],
+            ['hr_shift_id' => $shift2, 'is_off_day' => $off2, 'created_by' => auth()->id()]
+        );
+
+        // Update 2 with 1's data
+        \App\Models\HrSchedule::updateOrCreate(
+            ['hr_employee_id' => $request->employee2_id, 'shift_date' => $date],
+            ['hr_shift_id' => $shift1, 'is_off_day' => $off1, 'created_by' => auth()->id()]
+        );
+
+        return back()->with('success', 'تم تبادل الخفارات بنجاح.');
+    }
+
+    public function emergencyCoverSearch(Request $request)
+    {
+        $date = $request->get('date');
+        $departmentId = $request->get('department_id');
+
+        if (!$date) return response()->json([]);
+
+        $employees = \App\Models\HrEmployee::where('status', 'active');
+        if ($departmentId) {
+            $employees->where('department_id', $departmentId);
+        }
+        
+        $allEmployees = $employees->get();
+        $schedules = \App\Models\HrSchedule::where('shift_date', $date)
+            ->whereIn('hr_employee_id', $allEmployees->pluck('id'))
+            ->get()->keyBy('hr_employee_id');
+
+        $available = [];
+        foreach ($allEmployees as $emp) {
+            $sch = $schedules->get($emp->id);
+            // Available if they have NO schedule OR they are explicitly marked as OFF
+            if (!$sch || $sch->is_off_day) {
+                $available[] = [
+                    'id' => $emp->id,
+                    'name' => $emp->full_name,
+                    'job' => $emp->job_title
+                ];
+            }
+        }
+
+        return response()->json($available);
+    }
 }
