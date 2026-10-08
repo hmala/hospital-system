@@ -355,6 +355,30 @@ datalist option:hover {
 .main-group-header:not(.collapsed) .toggle-icon {
     transform: rotate(180deg);
 }
+
+/* وضع القراءة فقط عند اكتمال الزيارة (Read-only on completed visit) */
+.visit-is-completed .workstation-panel form input:not([type="hidden"]),
+.visit-is-completed .workstation-panel form select,
+.visit-is-completed .workstation-panel form textarea,
+.visit-is-completed .workstation-panel form button[type="submit"]:not(.allow-always),
+.visit-is-completed .workstation-panel form .btn-primary:not(.allow-always):not([href]),
+.visit-is-completed .workstation-panel form .btn-success:not(.allow-always):not([href]),
+.visit-is-completed .workstation-panel .doc-quick-pkg-btn,
+.visit-is-completed .workstation-panel .tag-chip,
+.visit-is-completed .workstation-panel .btn-add-item,
+.visit-is-completed .workstation-panel .btn-remove-item {
+    pointer-events: none !important;
+    opacity: 0.65;
+    background-color: #f8fafc !important;
+    cursor: not-allowed !important;
+}
+
+.visit-is-completed .workstation-panel .allow-always,
+.visit-is-completed .workstation-panel .allow-always * {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    cursor: pointer !important;
+}
 </style>
 <div class="container-fluid">
     <div class="row mb-4">
@@ -616,10 +640,10 @@ datalist option:hover {
 
     <!-- المحتوى الرئيسي - مقسم إلى شاشة عمل الطبيب (يمين) والسجل الطبي الدائم (يسار) -->
     <div class="row g-3 mb-4">
-        <!-- 1. الشاشة الرئيسية لعمل الطبيب (التبويبات الـ 5 المستقلة) -->
+        <!-- 1. الشاشة الرئيسية لعمل الطبيب (التبويبات الـ 6 المستقلة) -->
         <div class="col-12 col-xl-7 col-lg-7">
-            <div class="visit-tabs-container bg-white rounded-3 shadow-sm border overflow-hidden">
-                <!-- شريط التبويبات الـ 5 -->
+            <div class="visit-tabs-container bg-white rounded-3 shadow-sm border overflow-hidden {{ $visit->status === 'completed' ? 'visit-is-completed' : '' }}">
+                <!-- شريط التبويبات الـ 6 -->
                 <ul class="nav nav-tabs visit-tab-nav border-bottom bg-light px-2 pt-2" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active fw-bold" type="button" role="tab" data-bs-target="#examinationCollapse">
@@ -665,6 +689,29 @@ datalist option:hover {
                 </ul>
 
                 <div class="p-3 p-md-4">
+                    @if($visit->status === 'completed')
+                        <!-- تنبيه وضع القراءة فقط للزيارة المكتملة -->
+                        <div class="alert alert-warning border-2 border-warning shadow-sm d-flex flex-wrap justify-content-between align-items-center py-2 px-3 mb-3 rounded-3 allow-always">
+                            <div class="d-flex align-items-center gap-2 mb-2 mb-md-0">
+                                <div class="bg-warning bg-opacity-25 text-dark rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-lock fs-5 text-warning"></i>
+                                </div>
+                                <div>
+                                    <strong class="d-block text-dark fs-6">الزيارة مكتملة ومغلقة (وضع القراءة والعرض فقط 🔒)</strong>
+                                    <small class="text-muted">الاستمارة مقفلة لمنع أي تعديل غير مقصود. للتعديل وإضافة أدوية أو فحوصات، اضغط على زر "إعادة فتح الزيارة للمتابعة".</small>
+                                </div>
+                            </div>
+                            <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" class="m-0 allow-always">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="status" value="in_progress">
+                                <button type="submit" class="btn btn-sm btn-primary fw-bold px-3 py-2 shadow-xs allow-always" onclick="return confirm('هل تريد إعادة فتح هذه الزيارة لاستكمال الإجراءات والتعديل؟')">
+                                    <i class="fas fa-unlock me-1"></i> إعادة فتح الزيارة للمتابعة
+                                </button>
+                            </form>
+                        </div>
+                    @endif
+
                     <!-- تاب 1: الفحص السريري والتشخيص -->
                     <div id="examinationCollapse" class="workstation-panel show">
                         <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" id="examinationDiagnosisForm">

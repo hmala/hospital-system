@@ -736,18 +736,26 @@ class DoctorVisitController extends Controller
         // إذا تم إنهاء الزيارة، حدث حالة الموعد المرتبط بها
         if (isset($updateData['status']) && $updateData['status'] === 'completed' && $visit->appointment) {
             $visit->appointment->complete();
+        } elseif (isset($updateData['status']) && $updateData['status'] === 'in_progress' && $visit->appointment) {
+            $visit->appointment->update(['status' => 'in_consultation']);
         }
+
+        $successMsg = (isset($updateData['status']) && $updateData['status'] === 'in_progress')
+            ? 'تم إعادة فتح الزيارة بنجاح للمتابعة والتعديل ✅'
+            : ((isset($updateData['status']) && $updateData['status'] === 'completed')
+                ? 'تم إنهاء الزيارة وأرشفتها بنجاح ✅'
+                : 'تم حفظ البيانات بنجاح');
 
         // التحقق من نوع الطلب (AJAX أو عادي)
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'تم حفظ البيانات بنجاح',
+                'message' => $successMsg,
                 'visit_status' => $visit->status
             ]);
         }
 
-        return redirect()->back()->with('success', 'تم حفظ البيانات بنجاح');
+        return redirect()->back()->with('success', $successMsg);
     }
 
     public function cancel(Visit $visit)
