@@ -208,7 +208,7 @@
                 </div>
             @endforeach
 
-            @if(auth()->user()->can('create emergencies') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'inquiry_staff', 'consultation_receptionist']))
+            @can('create emergencies')
                 <!-- بطاقة حجز طوارئ / طوارئ الضمان -->
                 <div class="col-md-6 col-lg-3">
                     <a href="{{ route('emergency.create', ['patient_id' => $patient->id, 'from_referral_id' => request('referral_id') ?? request('from_referral_id')]) }}" class="text-decoration-none">
@@ -231,7 +231,7 @@
                         </div>
                     </a>
                 </div>
-            @endif
+            @endcan
 
             @can('create surgeries')
                 <!-- بطاقة حجز عملية جراحية -->
