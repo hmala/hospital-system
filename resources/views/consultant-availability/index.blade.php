@@ -339,13 +339,22 @@
                                         <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
                                             <div class="d-flex justify-content-between align-items-center gap-2">
                                                 <div class="text-truncate">
-                                                    <div class="d-flex align-items-center gap-1">
+                                                    <div class="d-flex align-items-center gap-1 flex-wrap">
                                                         <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">
                                                             {{ optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض' }}
                                                         </strong>
                                                         <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.62rem;">
                                                             مراجعة مجانية
                                                         </span>
+                                                        @if($fApp->printed_at)
+                                                            <span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
+                                                                <i class="fas fa-check-double me-1"></i>تمت الطباعة ({{ $fApp->printed_at->format('H:i') }})
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.60rem;">
+                                                                <i class="fas fa-clock me-1"></i>بانتظار الطباعة
+                                                            </span>
+                                                        @endif
                                                     </div>
                                                     <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
                                                         <i class="fas fa-user-md text-secondary me-1"></i>د. {{ optional(optional($fApp->doctor)->user)->name ?? 'غير محدد' }}
@@ -359,9 +368,15 @@
                                                     @endif
                                                 </div>
                                                 <div class="flex-shrink-0">
-                                                    <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
-                                                        <i class="fas fa-print me-1"></i> طباعة
-                                                    </a>
+                                                    @if($fApp->printed_at)
+                                                        <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" title="إعادة طباعة وصل المراجعة للمريض">
+                                                            <i class="fas fa-redo me-1"></i> إعادة طباعة
+                                                        </a>
+                                                    @else
+                                                        <a href="{{ route('appointments.print', $fApp->id) }}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
+                                                            <i class="fas fa-print me-1"></i> طباعة الوصل
+                                                        </a>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>
@@ -1105,13 +1120,21 @@ function pollLiveConsultantStatus() {
                         const notesHtml = fApp.notes 
                             ? `<small class="text-secondary d-block text-truncate" style="font-size: 0.65rem;"><i class="fas fa-comment-medical text-warning me-1"></i>${fApp.notes}</small>`
                             : '';
+                        const printBadgeHtml = fApp.is_printed
+                            ? `<span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-check-double me-1"></i>تمت الطباعة ${fApp.printed_time ? '(' + fApp.printed_time + ')' : ''}</span>`
+                            : `<span class="badge bg-warning text-dark px-1 py-0 rounded-pill" style="font-size: 0.60rem;"><i class="fas fa-clock me-1"></i>بانتظار الطباعة</span>`;
+                        const printBtnHtml = fApp.is_printed
+                            ? `<a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" title="إعادة طباعة وصل المراجعة للمريض"><i class="fas fa-redo me-1"></i> إعادة طباعة</a>`
+                            : `<a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض"><i class="fas fa-print me-1"></i> طباعة الوصل</a>`;
+
                         listHtml += `
                             <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light shadow-2xs">
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="text-truncate">
-                                        <div class="d-flex align-items-center gap-1">
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
                                             <strong class="text-dark small text-truncate" style="font-size: 0.8rem;">${fApp.patient_name}</strong>
                                             <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 rounded-pill" style="font-size: 0.62rem;">مراجعة مجانية</span>
+                                            ${printBadgeHtml}
                                         </div>
                                         <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">
                                             <i class="fas fa-user-md text-secondary me-1"></i>د. ${fApp.doctor_name}
@@ -1121,9 +1144,7 @@ function pollLiveConsultantStatus() {
                                         ${notesHtml}
                                     </div>
                                     <div class="flex-shrink-0">
-                                        <a href="${fApp.print_url}" target="_blank" class="btn btn-xs btn-primary text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.72rem;" title="طباعة وصل المراجعة الحراري فوراً للمريض">
-                                            <i class="fas fa-print me-1"></i> طباعة
-                                        </a>
+                                        ${printBtnHtml}
                                     </div>
                                 </div>
                             </div>

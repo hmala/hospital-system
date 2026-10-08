@@ -254,6 +254,7 @@ class ConsultantAvailabilityController extends Controller
             ->get()
             ->map(function($fApp) {
                 $appDate = $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date) : null;
+                $isPrinted = !empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
                 return [
                     'id' => $fApp->id,
                     'patient_name' => optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض',
@@ -261,6 +262,9 @@ class ConsultantAvailabilityController extends Controller
                     'appointment_date' => $appDate ? $appDate->format('Y-m-d') : '—',
                     'day_name' => $appDate ? $appDate->locale('ar')->dayName : '',
                     'notes' => $fApp->notes ?? '',
+                    'is_printed' => $isPrinted,
+                    'print_count' => $fApp->print_count ?? 0,
+                    'printed_time' => $fApp->printed_at ? \Carbon\Carbon::parse($fApp->printed_at)->format('H:i') : null,
                     'print_url' => route('appointments.print', $fApp->id),
                 ];
             });

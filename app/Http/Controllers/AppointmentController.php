@@ -329,6 +329,13 @@ class AppointmentController extends Controller
         }
 
         $appointment->load(['patient.user', 'doctor.user', 'department', 'visit']);
+
+        // تسجيل وقت الطباعة وزيادة عداد الطباعة
+        $appointment->forceFill([
+            'printed_at' => now(),
+            'print_count' => ($appointment->print_count ?? 0) + 1,
+        ])->saveQuietly();
+
         $followUpAppointment = $appointment;
         $visit = $appointment->visit ?? new \App\Models\Visit([
             'patient_id' => $appointment->patient_id,

@@ -36,6 +36,8 @@ class Appointment extends Model
         'confirmed_at',
         'completed_at',
         'cancelled_at',
+        'printed_at',
+        'print_count',
         'telegram_chat_id'
     ];
 
@@ -58,6 +60,8 @@ class Appointment extends Model
     protected $casts = [
         'is_free_recheck' => 'boolean',
         'appointment_date' => 'datetime',
+        'printed_at' => 'datetime',
+        'print_count' => 'integer',
         'called_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
