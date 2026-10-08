@@ -247,6 +247,20 @@ class EmergencyServiceController extends Controller
                     ->whereDoesntHave('emergencies')
                     ->delete();
 
+                if ($usedCount > 0) {
+                    $msg = "تم حذف ({$deleted}) خدمة، وتخطي ({$usedCount}) خدمة لأنها مرتبطة بسجلات سابقة.";
+                } else {
+                    $msg = "تم حذف ({$deleted}) خدمة بنجاح 🗑️";
+                }
+                break;
+
+            default:
+                return redirect()->back()->with('error', 'إجراء جماعي غير معروف.');
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
     /**
      * تفعيل أو إطفاء الكل لعمود معين (الضمان الصحي HI، ضمان الداخلية MOI، أو حالة الخدمة)
      * مع دعم التحديد لصنف معين (Category) أو لكافة الأصناف
