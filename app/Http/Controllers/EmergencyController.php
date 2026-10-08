@@ -263,7 +263,7 @@ class EmergencyController extends Controller
             return response()->json([]);
         }
 
-        $patients = Patient::with('user')
+        $patients = Patient::with(['user', 'healthInsuranceCategory'])
             ->where(function($pQuery) use ($query) {
                 $pQuery->where('national_id', 'LIKE', "%{$query}%")
                        ->orWhere('id', $query)
@@ -285,6 +285,8 @@ class EmergencyController extends Controller
                         $age = null;
                     }
                 }
+                $isInsurance = ($patient->insurance_type && $patient->insurance_type !== 'none') || (bool)$patient->health_insurance_category_id;
+                $insuranceName = $patient->healthInsuranceCategory?->name ?? ($isInsurance ? 'ضمان صحي' : null);
                 return [
                     'id' => $patient->id,
                     'name' => $u->name ?? 'مريض بدون اسم',
@@ -292,6 +294,9 @@ class EmergencyController extends Controller
                     'national_id' => $patient->national_id ?? '',
                     'gender' => ($u->gender ?? null) === 'male' ? 'ذكر' : (($u->gender ?? null) === 'female' ? 'أنثى' : 'غير محدد'),
                     'age' => $age ? $age : '',
+                    'is_insurance' => $isInsurance,
+                    'insurance_name' => $insuranceName,
+                    'insurance_card_no' => $patient->insurance_card_no ?? '',
                 ];
             });
 

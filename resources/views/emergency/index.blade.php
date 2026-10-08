@@ -201,6 +201,12 @@
                                                         مريض غير معروف
                                                     @endif
                                                 </strong>
+                                                @if($emergency->patient?->healthInsuranceCategory || ($emergency->patient?->insurance_type && $emergency->patient?->insurance_type !== 'none'))
+                                                    <br>
+                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-1 py-0 mt-1" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-shield-alt me-1"></i>{{ $emergency->patient?->healthInsuranceCategory?->name ?? 'ضمان صحي' }}
+                                                    </span>
+                                                @endif
                                                 <br>
                                                 <small class="text-muted">
                                                     رقم الطوارئ: {{ $emergency->id }}

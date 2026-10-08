@@ -105,6 +105,14 @@
                                 @if($emergency->emergencyPatient && !$emergency->patient)
                                     <span class="badge bg-secondary-subtle text-secondary border px-1" style="font-size: 0.65rem;">سجل مؤقت</span>
                                 @endif
+                                @if($emergency->patient?->healthInsuranceCategory || ($emergency->patient?->insurance_type && $emergency->patient?->insurance_type !== 'none'))
+                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1 ms-1" style="font-size: 0.75rem;">
+                                        <i class="fas fa-shield-alt me-1"></i>{{ $emergency->patient?->healthInsuranceCategory?->name ?? 'مشمول بالضمان الصحي' }}
+                                        @if($emergency->patient?->insurance_card_no)
+                                            <span class="text-dark ms-1">({{ $emergency->patient->insurance_card_no }})</span>
+                                        @endif
+                                    </span>
+                                @endif
                             </h5>
                             <div class="d-flex flex-wrap gap-2 align-items-center text-muted small">
                                 @if($patientPhone)

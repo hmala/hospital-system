@@ -97,12 +97,15 @@
                                             </div>
                                             <div>
                                                 <h6 class="mb-0 fw-bold text-primary" id="selectedPatientName">{{ $selectedPatient->user->name ?? '' }}</h6>
-                                                <div class="small text-muted d-flex flex-wrap gap-2 mt-1">
+                                                <div class="small text-muted d-flex flex-wrap gap-2 mt-1 align-items-center">
                                                     <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ $selectedPatient->user->phone ?? ($selectedPatient->phone ?? 'لا يوجد') }}</span></span>
                                                     <span class="badge bg-secondary" id="selectedPatientIdBadge">#{{ $selectedPatient->id ?? '' }}</span>
                                                     @if(isset($selectedPatient) && $selectedPatient->national_id)
                                                         <span class="badge bg-info text-dark" id="selectedPatientRefBadge">{{ $selectedPatient->national_id }}</span>
                                                     @endif
+                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25" id="selectedPatientInsuranceBadge" style="{{ isset($selectedPatient) && ($selectedPatient->healthInsuranceCategory || ($selectedPatient->insurance_type && $selectedPatient->insurance_type !== 'none')) ? '' : 'display: none;' }}">
+                                                        <i class="fas fa-shield-alt me-1"></i><span id="selectedPatientInsuranceText">{{ $selectedPatient->healthInsuranceCategory->name ?? 'مشمول بالضمان الصحي' }}</span>
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -299,8 +302,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 class="list-group-item list-group-item-action text-end d-flex justify-content-between align-items-center py-2 patient-result-item" 
                                 data-patient-id="${p.id}">
                             <div>
-                                <div class="fw-bold text-primary mb-1">
-                                    <i class="fas fa-user-circle me-1"></i>${p.name}
+                                <div class="fw-bold text-primary mb-1 d-flex align-items-center gap-2">
+                                    <span><i class="fas fa-user-circle me-1"></i>${p.name}</span>
+                                    ${p.is_insurance ? `<span class="badge bg-success-subtle text-success border border-success border-opacity-25 py-0 px-1" style="font-size: 0.7rem;"><i class="fas fa-shield-alt me-1"></i>${p.insurance_name || 'ضمان صحي'}</span>` : ''}
                                 </div>
                                 <div class="small text-muted">
                                     <i class="fas fa-phone-alt me-1 text-secondary"></i>${p.phone} 
@@ -361,6 +365,17 @@ document.addEventListener('DOMContentLoaded', function() {
             refBadge.style.display = 'inline-block';
         } else {
             refBadge.style.display = 'none';
+        }
+
+        const insBadge = document.getElementById('selectedPatientInsuranceBadge');
+        const insText = document.getElementById('selectedPatientInsuranceText');
+        if (insBadge && insText) {
+            if (patient.is_insurance) {
+                insText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+                insBadge.style.display = 'inline-block';
+            } else {
+                insBadge.style.display = 'none';
+            }
         }
 
         searchResults.style.display = 'none';

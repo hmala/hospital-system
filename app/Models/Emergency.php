@@ -223,6 +223,13 @@ class Emergency extends Model
             ? $this->doctor_follow_up_fee 
             : 0;
 
+        // تطبيق نسبة استقطاع الضمان الصحي على حصة المريض إن وجد
+        if ($this->patient && ($this->patient->insurance_type === 'hi' || $this->patient->healthInsuranceCategory)) {
+            $emergencyCopay = $this->patient->getCopayPercentageFor('emergency');
+            $servicesAmount = (float) ($servicesAmount * ($emergencyCopay / 100.0));
+            $followUpFee = (float) ($followUpFee * ($emergencyCopay / 100.0));
+        }
+
         return (float) ($servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee);
     }
 
