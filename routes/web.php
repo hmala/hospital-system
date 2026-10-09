@@ -446,8 +446,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [RadiologyTypeController::class, 'index'])->name('index');
             Route::get('/create', [RadiologyTypeController::class, 'create'])->name('create');
             Route::post('/', [RadiologyTypeController::class, 'store'])->name('store');
+            Route::post('/bulk-action', [RadiologyTypeController::class, 'bulkAction'])->name('bulk-action');
+            Route::post('/global-toggle', [RadiologyTypeController::class, 'globalToggle'])->name('global-toggle');
             Route::post('/bulk-delete', [RadiologyTypeController::class, 'bulkDelete'])->name('bulk-delete');
             Route::post('/bulk-toggle-status', [RadiologyTypeController::class, 'bulkToggleStatus'])->name('bulk-toggle-status');
+            Route::post('/{type}/quick-toggle', [RadiologyTypeController::class, 'quickToggle'])->name('quick-toggle');
             Route::post('/{type}/quick-price', [RadiologyTypeController::class, 'quickPriceUpdate'])->name('quick-price');
             Route::get('/{type}', [RadiologyTypeController::class, 'show'])->name('show');
             Route::get('/{type}/edit', [RadiologyTypeController::class, 'edit'])->name('edit');
