@@ -177,7 +177,7 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المريض.'], 403);
         }
 
@@ -241,7 +241,7 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
             abort(403, 'غير مصرح لك ببدء فحص الأشعة');
         }
 
@@ -271,6 +271,7 @@ class RadiologyStaffController extends Controller
 
     private function getRadiologyCategoryForUser($user)
     {
+        if (!$user) return null;
         if ($user->hasRole('radiology_echo')) {
             return 'echo';
         }
@@ -280,19 +281,41 @@ class RadiologyStaffController extends Controller
         if ($user->hasRole('radiology_mri')) {
             return 'mri';
         }
+        if ($user->hasRole('radiology_ct')) {
+            return 'ct';
+        }
         if ($user->hasAnyRole(['radiology_general', 'radiology_staff'])) {
             return 'radiology';
+        }
+        if ($user->hasRole('doctor') && $user->doctor) {
+            $spec = $user->doctor->specialization ?? '';
+            $type = $user->doctor->type ?? '';
+            if (mb_stripos($spec, 'سونار') !== false || $type === 'sonar') {
+                return 'ultrasound';
+            }
+            if (mb_stripos($spec, 'إيكو') !== false || mb_stripos($spec, 'echo') !== false) {
+                return 'echo';
+            }
         }
         return null;
     }
 
     private function authorizeMedicalRequestForUser(MedicalRequest $request, $user)
     {
-        $category = $this->getRadiologyCategoryForUser($user);
-        if ($user->hasRole('admin')) {
+        if (!$user) {
+            abort(403, 'غير مصرح لك بعرض هذا الطلب');
+        }
+
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if ($isAdmin) {
             return;
         }
+
+        $category = $this->getRadiologyCategoryForUser($user);
         if (!$category) {
+            if ($user->can('process radiology requests') || $user->can('view radiology')) {
+                return;
+            }
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -312,7 +335,6 @@ class RadiologyStaffController extends Controller
             // التعامل مع double JSON encoding
             if (is_string($details)) {
                 $details = json_decode($details, true);
-                // إذا كان النتيجة string، فهذا يعني double encoding
                 if (is_string($details)) {
                     $details = json_decode($details, true);
                 }

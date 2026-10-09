@@ -152,7 +152,7 @@
                                         <i class="fas fa-door-open me-1"></i> إدخال وبدء الفحص
                                     </button>
                                 </form>
-                                <button type="button" class="btn btn-outline-dark btn-sm px-2 btn-call-patient" data-request-id="{{ $callingPatient->id }}" data-patient-name="{{ $callingPatient->visit?->patient?->name }}">
+                                <button type="button" class="btn btn-outline-dark btn-sm px-2 btn-call-patient" data-request-id="{{ $callingPatient->id }}" data-patient-name="{{ $callingPatient->visit?->patient?->name }}" onclick="callRadiologyPatient(this, {{ $callingPatient->id }}, '{{ addslashes($callingPatient->visit?->patient?->name ?? 'المريض') }}')">
                                     <i class="fas fa-redo"></i>
                                 </button>
                             </div>
@@ -453,6 +453,7 @@
                                                             class="btn btn-sm btn-outline-warning text-dark fw-bold px-2 btn-call-patient" 
                                                             data-request-id="{{ $req->id }}" 
                                                             data-patient-name="{{ $patientName }}"
+                                                            onclick="callRadiologyPatient(this, {{ $req->id }}, '{{ addslashes($patientName) }}')"
                                                             title="مناداة المريض واستدعاؤه للغرفة">
                                                         <i class="fas fa-bullhorn me-1"></i> نداء
                                                     </button>
@@ -578,12 +579,14 @@
 
 </div>
 
-<!-- Audio Chime Synth & AJAX Calling Script -->
+<!-- Audio Chime Synth & Calling Script -->
 <script>
 // Web Audio API Ding-Dong Chime Synth
 function playChimeSound() {
     try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const audioCtx = new AudioContext();
         const now = audioCtx.currentTime;
         
         // Tone 1
@@ -614,61 +617,90 @@ function playChimeSound() {
     }
 }
 
-// Handle Patient Calling Click
-$(document).on('click', '.btn-call-patient', function(e) {
-    e.preventDefault();
-    const btn = $(this);
-    const reqId = btn.data('request-id');
-    const patientName = btn.data('patient-name');
+// Global Vanilla JS Calling Function
+window.callRadiologyPatient = function(btnElement, reqId, patientName) {
+    if (!reqId) return;
+    const btn = btnElement ? (btnElement.jquery ? btnElement[0] : btnElement) : null;
+    const originalHtml = btn ? btn.innerHTML : '';
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري النداء...';
+    }
 
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
-    $.ajax({
-        url: `/radiology-staff/requests/${reqId}/call`,
-        type: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}'
+    fetch(`/radiology-staff/requests/${reqId}/call`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
         },
-        success: function(res) {
-            playChimeSound();
-            if (typeof toastr !== 'undefined') {
-                toastr.success(res.message || 'تمت المناداة على المريض بنجاح.');
-            }
-            // Auto reload or refresh UI
-            setTimeout(() => {
-                window.location.reload();
-            }, 600);
-        },
-        error: function(xhr) {
-            btn.prop('disabled', false).html('<i class="fas fa-bullhorn me-1"></i> نداء');
-            const err = xhr.responseJSON ? xhr.responseJSON.message : 'حدث خطأ أثناء المناداة';
-            if (typeof toastr !== 'undefined') {
-                toastr.error(err);
-            } else {
-                alert(err);
-            }
+        body: JSON.stringify({})
+    })
+    .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.message || `خطأ (${response.status}) أثناء استدعاء المريض`);
+        }
+        return data;
+    })
+    .then((data) => {
+        playChimeSound();
+        if (typeof toastr !== 'undefined') {
+            toastr.success(data.message || 'تمت المناداة على المريض بنجاح.');
+        }
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    })
+    .catch((error) => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml || '<i class="fas fa-bullhorn me-1"></i> نداء';
+        }
+        const msg = error.message || 'حدث خطأ أثناء المناداة';
+        if (typeof toastr !== 'undefined') {
+            toastr.error(msg);
+        } else {
+            alert(msg);
         }
     });
+};
+
+// Event Delegation Fallback
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-call-patient');
+    if (btn && !btn.hasAttribute('onclick')) {
+        e.preventDefault();
+        const reqId = btn.getAttribute('data-request-id');
+        const pName = btn.getAttribute('data-patient-name') || 'المريض';
+        window.callRadiologyPatient(btn, reqId, pName);
+    }
 });
 
 // Realtime Queue Polling
-let autoRefreshTimer = setInterval(function() {
-    if ($('input:focus, select:focus, textarea:focus').length === 0) {
-        $.ajax({
-            url: window.location.href,
-            success: function(response) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(response, 'text/html');
-                const newContent = doc.getElementById('radiology-hub-content');
-                if (newContent) {
-                    const scroll = window.scrollY;
-                    $('#radiology-hub-content').html($(newContent).html());
-                    window.scrollTo(0, scroll);
-                    $('#last-update-time').text('آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ'));
-                }
-            }
-        });
+setInterval(function() {
+    if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        return;
     }
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(res => res.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.getElementById('radiology-hub-content');
+            const currentContent = document.getElementById('radiology-hub-content');
+            if (newContent && currentContent) {
+                const scrollY = window.scrollY;
+                currentContent.innerHTML = newContent.innerHTML;
+                window.scrollTo(0, scrollY);
+                const timeEl = document.getElementById('last-update-time');
+                if (timeEl) timeEl.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ');
+            }
+        })
+        .catch(() => {});
 }, 15000);
 </script>
 
