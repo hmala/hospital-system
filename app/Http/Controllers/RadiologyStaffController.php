@@ -205,6 +205,26 @@ class RadiologyStaffController extends Controller
         $request->status = 'calling';
         $request->save();
 
+        // مزامنة الموعد المرتبط لطابور الطبيب وشاشة التلفاز والاستقبال
+        if ($request->visit) {
+            $appointment = $request->visit->appointment ?: ($request->visit->appointment_id ? \App\Models\Appointment::find($request->visit->appointment_id) : null);
+            if ($appointment) {
+                \App\Models\Appointment::where('doctor_id', $appointment->doctor_id)
+                    ->whereDate('appointment_date', today())
+                    ->where('status', 'calling')
+                    ->where('id', '!=', $appointment->id)
+                    ->update(['status' => 'confirmed']);
+
+                $appointment->status = 'calling';
+                $appointment->called_at = now();
+                $appointment->save();
+
+                try {
+                    app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+                } catch (\Throwable $te) {}
+            }
+        }
+
         $patientName = $request->visit?->patient?->name ?? $request->visit?->patient?->user?->name ?? 'المريض';
 
         return response()->json([
@@ -235,6 +255,16 @@ class RadiologyStaffController extends Controller
         $request->details = $details;
         $request->status = 'in_progress';
         $request->save();
+
+        // مزامنة الزيارة والموعد
+        if ($request->visit) {
+            $request->visit->update(['status' => 'in_progress']);
+            if ($request->visit->appointment_id) {
+                \App\Models\Appointment::where('id', $request->visit->appointment_id)->update([
+                    'status' => 'in_consultation'
+                ]);
+            }
+        }
 
         return redirect()->route('radiology-staff.show', $request)->with('success', 'تم إدخال المريض وبدء الفحص بنجاح. يمكنك الآن كتابة التقرير والنتائج.');
     }
