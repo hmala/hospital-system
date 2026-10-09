@@ -128,7 +128,7 @@
                                             </small>
                                         </div>
                                         <div class="flex-shrink-0">
-                                            <a href="{{ route('emergency.create', ['patient_id' => optional($pRef->visit)->patient_id, 'from_referral_id' => $pRef->id]) }}" class="btn btn-xs btn-danger text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="فتح تذكرة وقبول الإحالة فوراً">
+                                            <a href="{{ route('emergency.create', ['patient_id' => optional($pRef->visit)->patient_id, 'from_referral_id' => $pRef->id, 'return_to' => 'emergency']) }}" class="btn btn-xs btn-danger text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="فتح تذكرة وقبول الإحالة فوراً">
                                                 <i class="fas fa-bolt me-1"></i> فتح تذكرة وقبول
                                             </a>
                                         </div>

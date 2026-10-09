@@ -432,18 +432,19 @@ class EmergencyController extends Controller
 
         $returnTo = $request->input('return_to');
         $user = Auth::user();
-        $isFromInquiry = $returnTo === 'inquiry' || 
-                         $referralId || 
-                         $user->hasRole(['receptionist', 'inquiry_staff', 'consultation_receptionist']) ||
-                         !$user->can('view emergencies');
 
-        if ($isFromInquiry) {
+        if ($returnTo === 'emergency' || ($user->can('view emergencies') && $returnTo !== 'inquiry')) {
+            return redirect()->route('emergency.index')
+                ->with('success', '✅ تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة (رقم الحالة #' . $emergency->id . ')');
+        }
+
+        if ($user->can('view inquiries')) {
             return redirect()->route('inquiry.index')
                 ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
         }
 
-        return redirect()->route('emergency.index')
-            ->with('success', 'تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة');
+        return redirect()->route('consultant-availability.index')
+            ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
     }
 
     /**
