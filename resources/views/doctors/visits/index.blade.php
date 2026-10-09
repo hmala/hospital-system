@@ -719,10 +719,11 @@
                     } else {
                         waitingTbody.innerHTML = waitingList.map((item, idx) => {
                             const isEmergency = item.is_emergency;
+                            const isPaid = item.is_paid;
                             return `
-                                <tr class="scheduled-appointment">
+                                <tr class="scheduled-appointment ${!isPaid ? 'border-warning bg-warning-subtle' : ''}">
                                     <td>
-                                        <span class="badge bg-primary text-white fw-bold fs-6">#${item.queue_number}</span>
+                                        <span class="badge ${isPaid ? 'bg-primary' : 'bg-warning text-dark'} fw-bold fs-6">#${item.queue_number}</span>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -732,23 +733,31 @@
                                             <div class="ms-2">
                                                 <strong>${item.name}</strong>
                                                 ${isEmergency ? '<span class="badge bg-danger ms-1"><i class="fas fa-ambulance"></i> طوارئ</span>' : ''}
+                                                ${!isPaid ? '<span class="badge bg-warning text-dark border border-warning ms-1"><i class="fas fa-clock me-1"></i> بانتظار الدفع بالكاشير</span>' : '<span class="badge bg-success-subtle text-success border border-success ms-1"><i class="fas fa-check-circle me-1"></i> مسدد</span>'}
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="type-badge scheduled-appointment">${isEmergency ? 'طوارئ' : 'كشف استشاري'}</span>
+                                        <span class="type-badge scheduled-appointment">${isEmergency ? 'طوارئ' : 'كشف / فحص'}</span>
                                     </td>
                                     <td>
-                                        <span class="status-badge status-pending"><i class="fas fa-clock"></i> ${item.status_text || 'في الانتظار'}</span>
+                                        <span class="status-badge ${isPaid ? 'status-pending' : 'status-incomplete'}">
+                                            <i class="fas ${isPaid ? 'fa-clock text-primary' : 'fa-exclamation-triangle text-warning'}"></i> 
+                                            ${isPaid ? (item.status_text || 'في الانتظار') : 'غير مسدد في الصندوق'}
+                                        </span>
                                     </td>
                                     <td class="text-end">
-                                        ${idx === 0 ? `
+                                        ${!isPaid ? `
+                                            <span class="badge bg-light text-muted border px-2 py-1" title="يجب تسديد الرسوم في الكاشير أولاً">
+                                                <i class="fas fa-lock me-1"></i> بانتظار الصندوق
+                                            </span>
+                                        ` : (idx === 0 ? `
                                             <button type="button" class="action-btn btn-success" onclick="doctorCallNext()">
                                                 <i class="fas fa-bullhorn"></i> استدعاء
                                             </button>
                                         ` : `
                                             <span class="badge bg-light text-secondary border px-2 py-1">دور #${idx + 1}</span>
-                                        `}
+                                        `)}
                                     </td>
                                 </tr>
                             `;

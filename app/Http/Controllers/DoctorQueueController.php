@@ -455,12 +455,15 @@ class DoctorQueueController extends Controller
         $formattedWaiting = $waitingList->map(function($apt) {
             $patientUser = $apt->patient ? $apt->patient->user : null;
             $name = $patientUser ? $patientUser->name : ($apt->emergency && $apt->emergency->emergencyPatient ? $apt->emergency->emergencyPatient->name : 'مريض مجهول');
+            $isPaid = ($apt->payment_status === 'paid' || (bool)$apt->emergency_id);
             
             return [
                 'id' => $apt->id,
                 'queue_number' => $apt->queue_number ?: $apt->id,
                 'name' => $name,
                 'is_emergency' => (bool)$apt->emergency_id,
+                'is_paid' => $isPaid,
+                'payment_status' => $apt->payment_status,
                 'status' => $apt->status,
                 'status_text' => $apt->status_text,
             ];
