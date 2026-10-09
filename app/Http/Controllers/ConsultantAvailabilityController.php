@@ -117,7 +117,7 @@ class ConsultantAvailabilityController extends Controller
             ->where(function($q) {
                 $q->whereDoesntHave('visit')
                   ->orWhereHas('visit', function($vq) {
-                      $vq->whereNotIn('status', ['in_progress', 'completed', 'cancelled']);
+                      $vq->whereNotIn('status', ['completed', 'cancelled']);
                   });
             })
             ->whereIn('status', ['scheduled', 'confirmed'])

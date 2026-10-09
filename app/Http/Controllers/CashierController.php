@@ -296,7 +296,7 @@ class CashierController extends Controller
             // تحديث الزيارة والطلبات الطبية المرتبطة إن وجدت
             if ($appointment->visit) {
                 $appointment->visit->update([
-                    'status' => 'pending' // في انتظار دخول الطبيب
+                    'status' => 'scheduled' // في انتظار دخول الطبيب
                 ]);
 
                 $medReqs = \App\Models\Request::where('visit_id', $appointment->visit->id)->get();
@@ -585,10 +585,10 @@ class CashierController extends Controller
 
             \Log::info('Request updated to paid');
 
-            // تحديث حالة الزيارة من pending_payment إلى pending لتظهر في قائمة انتظار المختبر والأشعة
+            // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة
             if ($request->visit) {
                 $request->visit->update([
-                    'status' => 'pending'
+                    'status' => 'scheduled'
                 ]);
                 // تحديث الموعد المرتبط إن وجد (مثل حجوزات السونار) لتصبح مدفوعة في شاشة توفر الاستشاريين
                 if ($request->visit->appointment_id) {
