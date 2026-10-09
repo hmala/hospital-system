@@ -190,23 +190,33 @@
                 </div>
                 <div>
                     <h3 class="mb-0 fw-bold text-dark">
-                        قسم الأشعة والتصوير الطبي ومحطة السونار
                         @if($selectedCategory === 'ultrasound')
-                            <span class="badge bg-info text-white fs-6 ms-2"><i class="fas fa-wave-square me-1"></i> السونار والدوبلر</span>
+                            محطة فحص السونار والدوبلر
+                            <span class="badge bg-info-subtle text-info border border-info-subtle fs-6 ms-2"><i class="fas fa-wave-square me-1"></i> السونار</span>
                         @elseif($selectedCategory === 'mri')
-                            <span class="badge bg-purple text-white fs-6 ms-2" style="background-color: #6f42c1;"><i class="fas fa-magnet me-1"></i> الرنين والمفراس</span>
+                            قسم الرنين المغناطيسي والمفراس
+                            <span class="badge bg-purple-subtle text-purple border border-purple-subtle fs-6 ms-2" style="background-color: #f3e8ff; color: #7e22ce;"><i class="fas fa-magnet me-1"></i> الرنين والمفراس</span>
                         @elseif($selectedCategory === 'echo')
-                            <span class="badge bg-danger text-white fs-6 ms-2"><i class="fas fa-heartbeat me-1"></i> إيكو القلب</span>
+                            قسم فحص إيكو القلب
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 ms-2"><i class="fas fa-heartbeat me-1"></i> إيكو القلب</span>
                         @elseif($selectedCategory === 'radiology')
-                            <span class="badge bg-secondary text-white fs-6 ms-2"><i class="fas fa-film me-1"></i> الأشعة السينية</span>
+                            قسم الأشعة والتصوير التشخيصي (X-Ray)
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-2"><i class="fas fa-film me-1"></i> الأشعة السينية</span>
                         @else
-                            <span class="badge bg-primary text-white fs-6 ms-2"><i class="fas fa-hospital me-1"></i> المركز العام</span>
+                            قسم الأشعة والتصوير الطبي
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-2"><i class="fas fa-hospital me-1"></i> المركز العام</span>
                         @endif
                     </h3>
                     <div class="d-flex align-items-center gap-2 mt-1">
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-1 px-2">
-                            <i class="fas fa-circle fa-xs me-1 text-success"></i> طابور مباشر متزامن
-                        </span>
+                        @if($selectedCategory === 'ultrasound')
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-1 px-2">
+                                <i class="fas fa-circle fa-xs me-1 text-success"></i> طابور مباشر متزامن مع الغرفة 11
+                            </span>
+                        @else
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2">
+                                <i class="fas fa-layer-group fa-xs me-1"></i> نظام الفحوصات والتقارير الطبية
+                            </span>
+                        @endif
                         <small class="text-muted" id="last-update-time">آخر تحديث: {{ now()->format('H:i:s') }}</small>
                     </div>
                 </div>
