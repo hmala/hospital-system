@@ -53,8 +53,8 @@ class InquiryController extends Controller
         ->latest()
         ->paginate(15);
 
-        // موظف استعلامات الاستشارية فقط لا تظهر له تحويلات الطوارئ للعمليات أو الرقود
-        $isConsultationReceptionistOnly = $user->hasRole('consultation_receptionist') && !$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff']);
+        // موظف استعلامات الاستشارية فقط لا تظهر له تحويلات الطوارئ للعمليات أو الرقود أو الجداول العامة
+        $isConsultationReceptionistOnly = $user->hasRole('consultation_receptionist') && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff']);
 
         // جلب المرضى المحولين من الطوارئ بانتظار حجز العمليات الجراحية
         $pendingTransfers = $isConsultationReceptionistOnly ? collect() : \App\Models\Emergency::with(['patient.user', 'doctor.user'])
@@ -83,14 +83,14 @@ class InquiryController extends Controller
             ->get();
 
         // جلب المرضى المحولين من العيادات الاستشارية بانتظار حجز العمليات الجراحية
-        $consultantSurgeryTransfers = Visit::with(['patient.user', 'doctor.user', 'department'])
+        $consultantSurgeryTransfers = $isConsultationReceptionistOnly ? collect() : Visit::with(['patient.user', 'doctor.user', 'department'])
             ->where('needs_surgery', true)
             ->whereDoesntHave('surgery')
             ->latest('updated_at')
             ->get();
 
         // جلب إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية
-        $pendingInsuranceEmergencyReferrals = \App\Models\Request::where('type', 'nursing')
+        $pendingInsuranceEmergencyReferrals = $isConsultationReceptionistOnly ? collect() : \App\Models\Request::where('type', 'nursing')
             ->where('status', 'pending')
             ->where('insurance_type', '!=', 'none')
             ->whereDate('created_at', Carbon::today())
@@ -98,7 +98,7 @@ class InquiryController extends Controller
             ->latest()
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals'));
+        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals', 'isConsultationReceptionistOnly'));
     }
 
     /**

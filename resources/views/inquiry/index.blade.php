@@ -128,438 +128,473 @@
         </div>
     @endif
 
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm inquiry-stat-card">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h6 class="mb-1 text-uppercase">زيارات اليوم</h6>
-                            <h1 class="mb-0">{{ $todayInquiries->total() }}</h1>
-                        </div>
-                        <div class="icon-circle">
-                            <i class="fas fa-users fa-2x"></i>
+    @if(isset($isConsultationReceptionistOnly) && $isConsultationReceptionistOnly)
+        <!-- واجهة موظف استعلامات الاستشارية: واجهة طلب جديد وبحث مباشر عن المرضى بدون جداول -->
+        <div class="row justify-content-center my-4">
+            <div class="col-lg-8 col-md-10">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden text-center p-4 p-md-5" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow-sm" style="width: 80px; height: 80px;">
+                            <i class="fas fa-stethoscope fa-3x"></i>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
+                    <h2 class="fw-bold text-dark mb-2">استقبال العيادات الاستشارية</h2>
+                    <p class="text-muted fs-6 mb-4">إنشاء طلبات وحجز كشفيات العيادات الاستشارية للمرضى وتوجيههم للأطباء</p>
+                    
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mb-4">
+                        <a href="{{ route('inquiry.search') }}" class="btn btn-primary btn-lg px-4 py-3 fw-bold shadow-sm rounded-pill">
+                            <i class="fas fa-plus-circle me-2"></i> إنشاء طلب كشفية جديد
+                        </a>
+                        <a href="{{ route('patients.create') }}" class="btn btn-outline-dark btn-lg px-4 py-3 fw-bold rounded-pill">
+                            <i class="fas fa-user-plus me-2"></i> تسجيل مريض جديد
+                        </a>
+                    </div>
 
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm inquiry-stat-card">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h6 class="mb-1 text-uppercase">قيد المعالجة</h6>
-                            <h1 class="mb-0">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h1>
-                        </div>
-                        <div class="icon-circle">
-                            <i class="fas fa-spinner fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm inquiry-stat-card">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h6 class="mb-1 text-uppercase">مكتملة</h6>
-                            <h1 class="mb-0">{{ $todayInquiries->where('status', 'completed')->count() }}</h1>
-                        </div>
-                        <div class="icon-circle">
-                            <i class="fas fa-check-circle fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm inquiry-stat-card">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h6 class="mb-1 text-uppercase">في الانتظار</h6>
-                            <h1 class="mb-0">{{ $todayInquiries->where('status', 'pending')->count() }}</h1>
-                        </div>
-                        <div class="icon-circle">
-                            <i class="fas fa-clock fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @if(isset($consultantSurgeryTransfers) && count($consultantSurgeryTransfers) > 0)
-        <!-- مرضى العيادات الاستشارية المحولين للعمليات -->
-        <div class="row mb-4 animate__animated animate__fadeIn">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm border-start border-4 border-warning">
-                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
-                            مرضى العيادات الاستشارية المحولين للعمليات الجراحية
-                        </h5>
-                        <span class="badge bg-dark text-white fw-bold fs-6">{{ count($consultantSurgeryTransfers) }} مرضى بانتظار حجز العملية</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>وقت التحويل</th>
-                                        <th>اسم المريض</th>
-                                        <th>رقم المريض</th>
-                                        <th>الطبيب الاستشاري</th>
-                                        <th>العيادة</th>
-                                        <th>ملاحظات العملية</th>
-                                        <th>الإجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($consultantSurgeryTransfers as $cTransfer)
-                                        <tr>
-                                            <td>
-                                                <small class="text-dark fw-bold">
-                                                    <i class="fas fa-clock me-1 text-warning"></i>
-                                                    {{ $cTransfer->updated_at ? $cTransfer->updated_at->format('Y-m-d H:i') : $cTransfer->visit_date->format('Y-m-d') }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <strong>{{ optional($cTransfer->patient)->user->name ?? 'مريض غير محدد' }}</strong>
-                                                <br><small class="text-muted">{{ optional($cTransfer->patient)->user->phone ?? '-' }}</small>
-                                            </td>
-                                            <td><code>#{{ $cTransfer->patient_id }}</code></td>
-                                            <td>د. {{ optional($cTransfer->doctor)->user->name ?? 'طبيب استشاري' }}</td>
-                                            <td><span class="badge bg-info text-white">{{ optional($cTransfer->department)->name ?? 'الاستشارية' }}</span></td>
-                                            <td class="text-start">
-                                                <small class="text-dark fw-semibold">{{ Str::limit($cTransfer->surgery_notes, 80) }}</small>
-                                            </td>
-                                            <td>
-                                                <a href="{{ route('surgeries.create', [
-                                                    'patient_id' => $cTransfer->patient_id,
-                                                    'visit_id' => $cTransfer->id,
-                                                    'doctor_id' => $cTransfer->doctor_id,
-                                                    'department_id' => $cTransfer->department_id,
-                                                    'referring_doctor_name' => optional($cTransfer->doctor)->user->name ?? 'طبيب استشاري'
-                                                ]) }}" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm">
-                                                    <i class="fas fa-procedures me-1"></i> حجز عملية جراحية
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    @if(isset($pendingInsuranceEmergencyReferrals) && count($pendingInsuranceEmergencyReferrals) > 0)
-        <!-- إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية -->
-        <div class="row mb-4 animate__animated animate__fadeIn">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm border-start border-4 border-success">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-shield-alt me-2 animate__animated animate__pulse animate__infinite"></i>
-                            إحالات الطوارئ المشمولة بالضمان الصحي (الواردة من عيادات الاستشارية)
-                        </h5>
-                        <span class="badge bg-white text-success fw-bold fs-6">{{ count($pendingInsuranceEmergencyReferrals) }} إحالة بانتظار التأكيد</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>وقت الإحالة</th>
-                                        <th>اسم المريض</th>
-                                        <th>فئة الضمان</th>
-                                        <th>الطبيب الاستشاري</th>
-                                        <th>الخدمات والتوجيهات</th>
-                                        <th>الإجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($pendingInsuranceEmergencyReferrals as $insRef)
-                                        <tr>
-                                            <td>
-                                                <small class="text-success fw-bold">
-                                                    <i class="fas fa-clock me-1"></i>
-                                                    {{ $insRef->created_at ? $insRef->created_at->format('H:i') : '—' }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <strong>{{ optional(optional($insRef->visit)->patient)->name ?? optional(optional(optional($insRef->visit)->patient)->user)->name ?? 'مريض غير محدد' }}</strong>
-                                                <br><small class="text-muted">{{ optional(optional(optional($insRef->visit)->patient)->user)->phone ?? '-' }}</small>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
-                                                    {{ optional(optional(optional($insRef->visit)->patient)->healthInsuranceCategory)->name ?? 'ضمان صحي' }}
-                                                </span>
-                                            </td>
-                                            <td>د. {{ optional(optional(optional($insRef->visit)->doctor)->user)->name ?? 'الاستشاري' }}</td>
-                                            <td><span class="text-dark fw-bold">{{ Str::limit($insRef->description, 60) }}</span></td>
-                                            <td>
-                                                <a href="{{ route('emergency.create', ['patient_id' => optional($insRef->visit)->patient_id, 'from_referral_id' => $insRef->id, 'return_to' => 'inquiry']) }}" class="btn btn-sm btn-success fw-bold shadow-xs">
-                                                    <i class="fas fa-ambulance me-1"></i> حجز طوارئ الضمان
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    @if(isset($pendingTransfers) && count($pendingTransfers) > 0)
-        <!-- مرضى محولون للعمليات من الطوارئ -->
-        <div class="row mb-4 animate__animated animate__fadeIn">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm border-start border-4 border-danger">
-                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-3">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
-                            مرضى الطوارئ المحولين للعمليات الجراحية
-                        </h5>
-                        <span class="badge bg-white text-danger fw-bold fs-6">{{ count($pendingTransfers) }} مرضى بانتظار الحجز</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>وقت التحويل</th>
-                                        <th>اسم المريض</th>
-                                        <th>رقم المريض</th>
-                                        <th>الطبيب المحيل</th>
-                                        <th>الشكوى/الحالة</th>
-                                        <th>الإجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($pendingTransfers as $transfer)
-                                        <tr>
-                                            <td>
-                                                <small class="text-danger fw-bold">
-                                                    <i class="fas fa-clock me-1"></i>
-                                                    {{ $transfer->updated_at->format('Y-m-d H:i') }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <strong>{{ $transfer->patient?->user?->name ?? ($transfer->emergencyPatient?->name ?? 'مريض غير محدد') }}</strong>
-                                                <br><small class="text-muted">{{ $transfer->patient?->user?->phone ?? ($transfer->emergencyPatient?->phone ?? '-') }}</small>
-                                            </td>
-                                            <td><code>#{{ $transfer->patient_id }}</code></td>
-                                            <td>د. {{ $transfer->doctor?->user?->name ?? 'طبيب الطوارئ' }}</td>
-                                            <td><span class="text-muted">{{ Str::limit($transfer->description ?: $transfer->symptoms, 50) }}</span></td>
-                                            <td>
-                                                <a href="{{ route('surgeries.create', ['patient_id' => $transfer->patient_id, 'referring_doctor_name' => $transfer->doctor?->user?->name ?? 'طبيب الطوارئ']) }}" class="btn btn-sm btn-danger fw-bold">
-                                                    <i class="fas fa-plus me-1"></i> حجز عملية جراحية
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    @if(isset($pendingAdmissionTransfers) && count($pendingAdmissionTransfers) > 0)
-        <!-- مرضى محولون للرقود من الطوارئ -->
-        <div class="row mb-4 animate__animated animate__fadeIn">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm border-start border-4 border-warning">
-                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-bed me-2 animate__animated animate__pulse animate__infinite"></i>
-                            مرضى الطوارئ المحولين للرقود (التنويم)
-                        </h5>
-                        <span class="badge bg-dark text-white fw-bold fs-6">{{ count($pendingAdmissionTransfers) }} مرضى بانتظار حجز سرير</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>وقت التحويل</th>
-                                        <th>اسم المريض</th>
-                                        <th>رقم المريض</th>
-                                        <th>الطبيب المحيل</th>
-                                        <th>الشكوى/الحالة</th>
-                                        <th>الإجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($pendingAdmissionTransfers as $admTransfer)
-                                        <tr>
-                                            <td>
-                                                <small class="text-warning fw-bold text-dark">
-                                                    <i class="fas fa-clock me-1"></i>
-                                                    {{ $admTransfer->updated_at->format('Y-m-d H:i') }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <strong>{{ $admTransfer->patient?->user?->name ?? ($admTransfer->emergencyPatient?->name ?? 'مريض غير محدد') }}</strong>
-                                                <br><small class="text-muted">{{ $admTransfer->patient?->user?->phone ?? ($admTransfer->emergencyPatient?->phone ?? '-') }}</small>
-                                            </td>
-                                            <td><code>#{{ $admTransfer->patient_id }}</code></td>
-                                            <td>د. {{ $admTransfer->doctor?->user?->name ?? 'طبيب الطوارئ' }}</td>
-                                            <td><span class="text-muted">{{ Str::limit($admTransfer->description ?: $admTransfer->symptoms, 50) }}</span></td>
-                                            <td>
-                                                <a href="{{ route('bed-reservations.create', ['patient_id' => $admTransfer->patient_id, 'doctor_id' => $admTransfer->doctor_id]) }}" class="btn btn-sm btn-warning text-dark fw-bold">
-                                                    <i class="fas fa-bed me-1"></i> حجز رقود وسرير
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- قائمة الزيارات -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header border-0 pb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-calendar-day me-2"></i>
-                            زيارات اليوم
-                        </h5>
-                        <div class="d-flex gap-2">
-                            @can('create inquiries')
-                            <a href="{{ route('inquiry.search') }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-plus-circle me-1"></i> طلب جديد
-                            </a>
-                            @endcan
-                            <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
-                                <i class="fas fa-sync-alt me-1"></i>
-                                تحديث
+                    <form action="{{ route('inquiry.search') }}" method="GET" class="mt-2">
+                        <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden border">
+                            <input type="text" name="search" class="form-control border-0 px-4 py-3" placeholder="ابحث باسم المريض أو رقم الهاتف أو الرقم الموحد..." autofocus>
+                            <button class="btn btn-dark px-4 fw-bold" type="submit">
+                                <i class="fas fa-search me-1"></i> بحث واختيار
                             </button>
                         </div>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    @if($todayInquiries->count() > 0)
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 inquiry-table">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>وقت الزيارة</th>
-                                        <th>اسم المريض</th>
-                                        <th>العمر</th>
-                                        <th>رقم الهاتف</th>
-                                        <th>الشكوى الرئيسية</th>
-                                        <th>الطبيب المختص</th>
-                                        <th>حالة الزيارة</th>
-                                        <th>العمليات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($todayInquiries as $visit)
-                                    <tr>
-                                        <td>
-                                            <small class="text-muted">
-                                                <i class="fas fa-clock me-1"></i>
-                                                {{ $visit->visit_time ? \Carbon\Carbon::parse($visit->visit_time)->format('H:i') : '-' }}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-secondary">{{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                <i class="fas fa-phone me-1"></i>
-                                                {{ optional($visit->patient)->phone ?? 'غير محدد' }}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ Str::limit($visit->chief_complaint ?? 'لا يوجد', 40) }}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            @if($visit->doctor)
-                                                <small>د. {{ $visit->doctor->user->name }}</small>
-                                            @else
-                                                <small class="text-muted">-</small>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($visit->status == 'in_progress')
-                                                <span class="badge bg-info">قيد المعالجة</span>
-                                            @elseif($visit->status == 'completed')
-                                                <span class="badge bg-success">مكتمل</span>
-                                            @elseif($visit->status == 'pending')
-                                                <span class="badge bg-warning">في الانتظار</span>
-                                            @else
-                                                <span class="badge bg-secondary">{{ $visit->status }}</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm inquiry-actions">
-                                                <a href="{{ route('visits.edit', $visit) }}" 
-                                                   class="btn btn-sm btn-warning"
-                                                   title="تعديل الحجز">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Pagination -->
-                        <div class="card-footer bg-transparent border-0">
-                            <div class="d-flex justify-content-center">
-                                {{ $todayInquiries->links() }}
-                            </div>
-                        </div>
-                    @else
-                        <div class="text-center py-5">
-                            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-                            <h5 class="text-muted">لا توجد زيارات اليوم</h5>
-                            <p class="text-muted">ابدأ بإنشاء طلب جديد للمريض</p>
-                            @can('create inquiries')
-                            <div class="d-flex justify-content-center gap-2">
-                                <a href="{{ route('inquiry.search') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-plus-circle me-2"></i>
-                                    طلب جديد
-                                </a>
-                            </div>
-                            @endcan
-                        </div>
-                    @endif
+                    </form>
                 </div>
             </div>
         </div>
-    </div>
+    @else
+        <!-- إحصائيات سريعة -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm inquiry-stat-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1 text-uppercase">زيارات اليوم</h6>
+                                <h1 class="mb-0">{{ $todayInquiries->total() }}</h1>
+                            </div>
+                            <div class="icon-circle">
+                                <i class="fas fa-users fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm inquiry-stat-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1 text-uppercase">قيد المعالجة</h6>
+                                <h1 class="mb-0">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h1>
+                            </div>
+                            <div class="icon-circle">
+                                <i class="fas fa-spinner fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm inquiry-stat-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1 text-uppercase">مكتملة</h6>
+                                <h1 class="mb-0">{{ $todayInquiries->where('status', 'completed')->count() }}</h1>
+                            </div>
+                            <div class="icon-circle">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm inquiry-stat-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1 text-uppercase">في الانتظار</h6>
+                                <h1 class="mb-0">{{ $todayInquiries->where('status', 'pending')->count() }}</h1>
+                            </div>
+                            <div class="icon-circle">
+                                <i class="fas fa-clock fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if(isset($consultantSurgeryTransfers) && count($consultantSurgeryTransfers) > 0)
+            <!-- مرضى العيادات الاستشارية المحولين للعمليات -->
+            <div class="row mb-4 animate__animated animate__fadeIn">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
+                                مرضى العيادات الاستشارية المحولين للعمليات الجراحية
+                            </h5>
+                            <span class="badge bg-dark text-white fw-bold fs-6">{{ count($consultantSurgeryTransfers) }} مرضى بانتظار حجز العملية</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 text-center">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>وقت التحويل</th>
+                                            <th>اسم المريض</th>
+                                            <th>رقم المريض</th>
+                                            <th>الطبيب الاستشاري</th>
+                                            <th>العيادة</th>
+                                            <th>ملاحظات العملية</th>
+                                            <th>الإجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($consultantSurgeryTransfers as $cTransfer)
+                                            <tr>
+                                                <td>
+                                                    <small class="text-dark fw-bold">
+                                                        <i class="fas fa-clock me-1 text-warning"></i>
+                                                        {{ $cTransfer->updated_at ? $cTransfer->updated_at->format('Y-m-d H:i') : $cTransfer->visit_date->format('Y-m-d') }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ optional($cTransfer->patient)->user->name ?? 'مريض غير محدد' }}</strong>
+                                                    <br><small class="text-muted">{{ optional($cTransfer->patient)->user->phone ?? '-' }}</small>
+                                                </td>
+                                                <td><code>#{{ $cTransfer->patient_id }}</code></td>
+                                                <td>د. {{ optional($cTransfer->doctor)->user->name ?? 'طبيب استشاري' }}</td>
+                                                <td><span class="badge bg-info text-white">{{ optional($cTransfer->department)->name ?? 'الاستشارية' }}</span></td>
+                                                <td class="text-start">
+                                                    <small class="text-dark fw-semibold">{{ Str::limit($cTransfer->surgery_notes, 80) }}</small>
+                                                </td>
+                                                <td>
+                                                    <a href="{{ route('surgeries.create', [
+                                                        'patient_id' => $cTransfer->patient_id,
+                                                        'visit_id' => $cTransfer->id,
+                                                        'doctor_id' => $cTransfer->doctor_id,
+                                                        'department_id' => $cTransfer->department_id,
+                                                        'referring_doctor_name' => optional($cTransfer->doctor)->user->name ?? 'طبيب استشاري'
+                                                    ]) }}" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm">
+                                                        <i class="fas fa-procedures me-1"></i> حجز عملية جراحية
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if(isset($pendingInsuranceEmergencyReferrals) && count($pendingInsuranceEmergencyReferrals) > 0)
+            <!-- إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية -->
+            <div class="row mb-4 animate__animated animate__fadeIn">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm border-start border-4 border-success">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="fas fa-shield-alt me-2 animate__animated animate__pulse animate__infinite"></i>
+                                إحالات الطوارئ المشمولة بالضمان الصحي (الواردة من عيادات الاستشارية)
+                            </h5>
+                            <span class="badge bg-white text-success fw-bold fs-6">{{ count($pendingInsuranceEmergencyReferrals) }} إحالة بانتظار التأكيد</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 text-center">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>وقت الإحالة</th>
+                                            <th>اسم المريض</th>
+                                            <th>فئة الضمان</th>
+                                            <th>الطبيب الاستشاري</th>
+                                            <th>الخدمات والتوجيهات</th>
+                                            <th>الإجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($pendingInsuranceEmergencyReferrals as $insRef)
+                                            <tr>
+                                                <td>
+                                                    <small class="text-success fw-bold">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ $insRef->created_at ? $insRef->created_at->format('H:i') : '—' }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ optional(optional($insRef->visit)->patient)->name ?? optional(optional(optional($insRef->visit)->patient)->user)->name ?? 'مريض غير محدد' }}</strong>
+                                                    <br><small class="text-muted">{{ optional(optional(optional($insRef->visit)->patient)->user)->phone ?? '-' }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                                                        {{ optional(optional(optional($insRef->visit)->patient)->healthInsuranceCategory)->name ?? 'ضمان صحي' }}
+                                                    </span>
+                                                </td>
+                                                <td>د. {{ optional(optional(optional($insRef->visit)->doctor)->user)->name ?? 'الاستشاري' }}</td>
+                                                <td><span class="text-dark fw-bold">{{ Str::limit($insRef->description, 60) }}</span></td>
+                                                <td>
+                                                    <a href="{{ route('emergency.create', ['patient_id' => optional($insRef->visit)->patient_id, 'from_referral_id' => $insRef->id, 'return_to' => 'inquiry']) }}" class="btn btn-sm btn-success fw-bold shadow-xs">
+                                                        <i class="fas fa-ambulance me-1"></i> حجز طوارئ الضمان
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if(isset($pendingTransfers) && count($pendingTransfers) > 0)
+            <!-- مرضى محولون للعمليات من الطوارئ -->
+            <div class="row mb-4 animate__animated animate__fadeIn">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm border-start border-4 border-danger">
+                        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-3">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
+                                مرضى الطوارئ المحولين للعمليات الجراحية
+                            </h5>
+                            <span class="badge bg-white text-danger fw-bold fs-6">{{ count($pendingTransfers) }} مرضى بانتظار الحجز</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 text-center">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>وقت التحويل</th>
+                                            <th>اسم المريض</th>
+                                            <th>رقم المريض</th>
+                                            <th>الطبيب المحيل</th>
+                                            <th>الشكوى/الحالة</th>
+                                            <th>الإجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($pendingTransfers as $transfer)
+                                            <tr>
+                                                <td>
+                                                    <small class="text-danger fw-bold">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ $transfer->updated_at->format('Y-m-d H:i') }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ $transfer->patient?->user?->name ?? ($transfer->emergencyPatient?->name ?? 'مريض غير محدد') }}</strong>
+                                                    <br><small class="text-muted">{{ $transfer->patient?->user?->phone ?? ($transfer->emergencyPatient?->phone ?? '-') }}</small>
+                                                </td>
+                                                <td><code>#{{ $transfer->patient_id }}</code></td>
+                                                <td>د. {{ $transfer->doctor?->user?->name ?? 'طبيب الطوارئ' }}</td>
+                                                <td><span class="text-muted">{{ Str::limit($transfer->description ?: $transfer->symptoms, 50) }}</span></td>
+                                                <td>
+                                                    <a href="{{ route('surgeries.create', ['patient_id' => $transfer->patient_id, 'referring_doctor_name' => $transfer->doctor?->user?->name ?? 'طبيب الطوارئ']) }}" class="btn btn-sm btn-danger fw-bold">
+                                                        <i class="fas fa-plus me-1"></i> حجز عملية جراحية
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if(isset($pendingAdmissionTransfers) && count($pendingAdmissionTransfers) > 0)
+            <!-- مرضى محولون للرقود من الطوارئ -->
+            <div class="row mb-4 animate__animated animate__fadeIn">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="fas fa-bed me-2 animate__animated animate__pulse animate__infinite"></i>
+                                مرضى الطوارئ المحولين للرقود (التنويم)
+                            </h5>
+                            <span class="badge bg-dark text-white fw-bold fs-6">{{ count($pendingAdmissionTransfers) }} مرضى بانتظار حجز سرير</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 text-center">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>وقت التحويل</th>
+                                            <th>اسم المريض</th>
+                                            <th>رقم المريض</th>
+                                            <th>الطبيب المحيل</th>
+                                            <th>الشكوى/الحالة</th>
+                                            <th>الإجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($pendingAdmissionTransfers as $admTransfer)
+                                            <tr>
+                                                <td>
+                                                    <small class="text-warning fw-bold text-dark">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ $admTransfer->updated_at->format('Y-m-d H:i') }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ $admTransfer->patient?->user?->name ?? ($admTransfer->emergencyPatient?->name ?? 'مريض غير محدد') }}</strong>
+                                                    <br><small class="text-muted">{{ $admTransfer->patient?->user?->phone ?? ($admTransfer->emergencyPatient?->phone ?? '-') }}</small>
+                                                </td>
+                                                <td><code>#{{ $admTransfer->patient_id }}</code></td>
+                                                <td>د. {{ $admTransfer->doctor?->user?->name ?? 'طبيب الطوارئ' }}</td>
+                                                <td><span class="text-muted">{{ Str::limit($admTransfer->description ?: $admTransfer->symptoms, 50) }}</span></td>
+                                                <td>
+                                                    <a href="{{ route('bed-reservations.create', ['patient_id' => $admTransfer->patient_id, 'doctor_id' => $admTransfer->doctor_id]) }}" class="btn btn-sm btn-warning text-dark fw-bold">
+                                                        <i class="fas fa-bed me-1"></i> حجز رقود وسرير
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- قائمة الزيارات -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header border-0 pb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-calendar-day me-2"></i>
+                                زيارات اليوم
+                            </h5>
+                            <div class="d-flex gap-2">
+                                @can('create inquiries')
+                                <a href="{{ route('inquiry.search') }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-plus-circle me-1"></i> طلب جديد
+                                </a>
+                                @endcan
+                                <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                                    <i class="fas fa-sync-alt me-1"></i>
+                                    تحديث
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        @if($todayInquiries->count() > 0)
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 inquiry-table">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>وقت الزيارة</th>
+                                            <th>اسم المريض</th>
+                                            <th>العمر</th>
+                                            <th>رقم الهاتف</th>
+                                            <th>الشكوى الرئيسية</th>
+                                            <th>الطبيب المختص</th>
+                                            <th>حالة الزيارة</th>
+                                            <th>العمليات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($todayInquiries as $visit)
+                                        <tr>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ $visit->visit_time ? \Carbon\Carbon::parse($visit->visit_time)->format('H:i') : '-' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-phone me-1"></i>
+                                                    {{ optional($visit->patient)->phone ?? 'غير محدد' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ Str::limit($visit->chief_complaint ?? 'لا يوجد', 40) }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                @if($visit->doctor)
+                                                    <small>د. {{ $visit->doctor->user->name }}</small>
+                                                @else
+                                                    <small class="text-muted">-</small>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($visit->status == 'in_progress')
+                                                    <span class="badge bg-info">قيد المعالجة</span>
+                                                @elseif($visit->status == 'completed')
+                                                    <span class="badge bg-success">مكتمل</span>
+                                                @elseif($visit->status == 'pending')
+                                                    <span class="badge bg-warning">في الانتظار</span>
+                                                @else
+                                                    <span class="badge bg-secondary">{{ $visit->status }}</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm inquiry-actions">
+                                                    <a href="{{ route('visits.edit', $visit) }}" 
+                                                       class="btn btn-sm btn-warning"
+                                                       title="تعديل الحجز">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div class="card-footer bg-transparent border-0">
+                                <div class="d-flex justify-content-center">
+                                    {{ $todayInquiries->links() }}
+                                </div>
+                            </div>
+                        @else
+                            <div class="text-center py-5">
+                                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                                <h5 class="text-muted">لا توجد زيارات اليوم</h5>
+                                <p class="text-muted">ابدأ بإنشاء طلب جديد للمريض</p>
+                                @can('create inquiries')
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="{{ route('inquiry.search') }}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-plus-circle me-2"></i>
+                                        طلب جديد
+                                    </a>
+                                </div>
+                                @endcan
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
 </div>
 @endsection
