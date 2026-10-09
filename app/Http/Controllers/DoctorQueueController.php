@@ -20,7 +20,11 @@ class DoctorQueueController extends Controller
         $today = today();
         $doctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where('type', 'consultant')
+            ->where(function($q) {
+                $q->where('type', 'consultant')
+                  ->orWhere('type', 'sonar')
+                  ->orWhere('specialization', 'LIKE', '%سونار%');
+            })
             ->get();
 
         $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
@@ -46,7 +50,11 @@ class DoctorQueueController extends Controller
         $today = today();
         $doctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where('type', 'consultant')
+            ->where(function($q) {
+                $q->where('type', 'consultant')
+                  ->orWhere('type', 'sonar')
+                  ->orWhere('specialization', 'LIKE', '%سونار%');
+            })
             ->get();
 
         $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);

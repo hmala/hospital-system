@@ -82,7 +82,11 @@ class ConsultantAvailabilityController extends Controller
 
         $consultantDoctors = Doctor::with(['user', 'department'])
             ->join('users', 'doctors.user_id', '=', 'users.id')
-            ->where('doctors.type', 'consultant')
+            ->where(function($q) {
+                $q->where('doctors.type', 'consultant')
+                  ->orWhere('doctors.type', 'sonar')
+                  ->orWhere('doctors.specialization', 'LIKE', '%سونار%');
+            })
             ->where('doctors.is_active', true)
             ->orderBy('doctors.specialization')
             ->orderBy('users.name')
@@ -110,7 +114,12 @@ class ConsultantAvailabilityController extends Controller
                 $q->where('payment_status', 'paid')
                   ->orWhereNotNull('emergency_id');
             })
-            ->whereDoesntHave('visit')
+            ->where(function($q) {
+                $q->whereDoesntHave('visit')
+                  ->orWhereHas('visit', function($vq) {
+                      $vq->whereNotIn('status', ['in_progress', 'completed', 'cancelled']);
+                  });
+            })
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->selectRaw('doctor_id, count(*) as count')
             ->groupBy('doctor_id')
@@ -218,7 +227,11 @@ class ConsultantAvailabilityController extends Controller
 
         // 1. العيادات الجارية الآن
         $consultantDoctors = Doctor::with(['user', 'department'])
-            ->where('type', 'consultant')
+            ->where(function($q) {
+                $q->where('type', 'consultant')
+                  ->orWhere('type', 'sonar')
+                  ->orWhere('specialization', 'LIKE', '%سونار%');
+            })
             ->where('is_active', true)
             ->get();
 
