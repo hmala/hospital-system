@@ -158,8 +158,21 @@ class RadiologyStaffController extends Controller
         $currentPatient = $allCategoryRequests->where('status', 'in_progress')->first();
         $callingPatient = $allCategoryRequests->where('status', 'calling')->first();
 
+        $waitingRequests = $allCategoryRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])
+            ->sortBy(function($r) {
+                $prio = $r->priority === 'emergency' ? 1 : ($r->priority === 'urgent' ? 2 : 3);
+                $pay = $r->payment_status === 'paid' ? 1 : 2;
+                return $prio . '_' . $pay . '_' . $r->id;
+            })->values();
+
+        $inProgressRequests = $allCategoryRequests->where('status', 'in_progress')->values();
+        $completedRequests = $allCategoryRequests->where('status', 'completed')->sortByDesc('updated_at')->values();
+
         return view('radiology-staff.index', compact(
             'requests',
+            'waitingRequests',
+            'inProgressRequests',
+            'completedRequests',
             'emergencyRadiologyRequests',
             'stats',
             'selectedCategory',

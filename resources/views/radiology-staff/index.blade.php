@@ -364,18 +364,100 @@
                         </tr>
                     </thead>
                     <tbody id="radiology-station-waiting-list">
-                        <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                <i class="fas fa-spinner fa-spin me-1"></i> جاري تحميل طابور الانتظار...
-                            </td>
-                        </tr>
+                        @php $turnNum = 1; @endphp
+                        @forelse($waitingRequests as $req)
+                            @php
+                                $isPaid = $req->payment_status === 'paid';
+                                $isCalling = $req->status === 'calling';
+                                $p = $req->visit?->patient;
+                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $qNum = $req->visit?->appointment?->queue_number ?? ($turnNum++);
+                            @endphp
+                            <tr class="{{ $isCalling ? 'calling-row fw-bold' : '' }}" id="request-row-{{ $req->id }}">
+                                <td>
+                                    <span class="badge {{ $isCalling ? 'bg-warning text-dark' : 'bg-dark bg-opacity-10 text-dark border' }} px-2 py-1 font-monospace fs-6">
+                                        #{{ $qNum }}
+                                    </span>
+                                </td>
+                                <td class="font-monospace text-muted">#{{ $req->id }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle">
+                                            {{ mb_substr($pName, 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong class="text-dark">{{ $pName }}</strong>
+                                            <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
+                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if(!empty($req->radiology_names))
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach($req->radiology_names as $rName)
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold py-1 px-2">
+                                                    <i class="fas fa-x-ray fa-xs me-1"></i> {{ $rName }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="text-muted">{{ $req->description ?: 'فحص تصوير' }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
+                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                </td>
+                                <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
+                                <td class="text-center">
+                                    @if($isPaid)
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
+                                    @else
+                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($isCalling)
+                                        <span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold"><i class="fas fa-bullhorn me-1"></i> قيد النداء</span>
+                                    @else
+                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ بالانتظار</span>
+                                    @endif
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        @if($isPaid)
+                                            <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="مناداة واستدعاء للغرفة">
+                                                <i class="fas fa-bullhorn"></i> نداء
+                                            </button>
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="إدخال للغرفة وبدء الفحص">
+                                                <i class="fas fa-door-open"></i> إدخال
+                                            </a>
+                                        @else
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-secondary" title="معاينة الطلب">
+                                                <i class="fas fa-eye"></i> معاينة
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
 
         </div>
 
-        <!-- 2. IN PROGRESS TAB -->
+        <!-- 2. IN PROGRESS TAB (قيد الفحص والتقرير) -->
         <div class="tab-pane fade" id="inprogress-pane" role="tabpanel">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
@@ -397,14 +479,45 @@
                         </tr>
                     </thead>
                     <tbody id="radiology-tab-inprogress-tbody">
-                        <!-- Loaded dynamically -->
+                        @forelse($inProgressRequests as $req)
+                            @php
+                                $p = $req->visit?->patient;
+                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
+                            @endphp
+                            <tr class="inprogress-row">
+                                <td><span class="badge bg-info text-white font-monospace fs-6">#{{ $qNum }}</span></td>
+                                <td><strong class="text-dark">{{ $pName }}</strong></td>
+                                <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
+                                <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                                <td class="text-center font-monospace small">{{ $req->details['started_at'] ?? $req->updated_at->format('H:i') }}</td>
+                                <td class="text-end">
+                                    <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs">
+                                        <i class="fas fa-edit"></i> كتابة التقرير والنتائج
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fas fa-check-circle text-success me-1"></i> لا توجد فحوصات جارية داخل غرفة الفحص حالياً
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 3. COMPLETED TAB -->
+        <!-- 3. COMPLETED TAB (المكتملة والطباعة) -->
         <div class="tab-pane fade" id="completed-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-check-circle me-2 text-success"></i>
+                    الفحوصات المكتملة الجاهزة للمعاينة والطباعة
+                </h5>
+                <span class="badge bg-success text-white">{{ $stats['completed'] }} مكتمل</span>
+            </div>
             <div class="table-responsive">
                 <table class="table unified-table">
                     <thead>
@@ -418,7 +531,31 @@
                         </tr>
                     </thead>
                     <tbody id="radiology-tab-completed-tbody">
-                        <!-- Loaded dynamically -->
+                        @forelse($completedRequests as $req)
+                            @php
+                                $p = $req->visit?->patient;
+                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
+                            @endphp
+                            <tr class="completed-row">
+                                <td><span class="badge bg-success text-white font-monospace fs-6">#{{ $qNum }}</span></td>
+                                <td><strong class="text-dark">{{ $pName }}</strong></td>
+                                <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
+                                <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                                <td class="text-center font-monospace small">{{ $req->updated_at ? $req->updated_at->format('H:i') : '—' }}</td>
+                                <td class="text-end">
+                                    <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="عرض وطباعة">
+                                        <i class="fas fa-print"></i> عرض / طباعة
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fas fa-info-circle text-secondary me-1"></i> لا توجد فحوصات مكتملة اليوم حتى الآن
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -758,19 +895,20 @@ async function syncRadiologyQueue() {
             }
         }
 
-        // 4. Render In-Progress Tab Table
+        // 4. Render In-Progress Table
+        const inprogTbody = document.getElementById('radiology-station-inprogress-list');
         const inprogTabTbody = document.getElementById('radiology-tab-inprogress-tbody');
-        if (inprogTabTbody) {
+        if (inprogTbody) {
             if (data.in_progress_list.length === 0) {
-                inprogTabTbody.innerHTML = `
+                inprogTbody.innerHTML = `
                     <tr>
                         <td colspan="6" class="text-center py-4 text-muted">
-                            <i class="fas fa-check-circle text-success me-1"></i> لا توجد فحوصات جارية داخل غرفة الفحص حالياً
+                            <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مريض داخل غرفة الفحص حالياً
                         </td>
                     </tr>
                 `;
             } else {
-                inprogTabTbody.innerHTML = data.in_progress_list.map(r => `
+                const inprogRows = data.in_progress_list.map(r => `
                     <tr class="inprogress-row">
                         <td><span class="badge bg-info text-white font-monospace fs-6">#${r.queue_number}</span></td>
                         <td><strong class="text-dark">${r.name}</strong></td>
@@ -779,11 +917,13 @@ async function syncRadiologyQueue() {
                         <td class="text-center font-monospace small">${r.started_time}</td>
                         <td class="text-end">
                             <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-success fw-bold shadow-xs">
-                                <i class="fas fa-edit"></i> كتابة التقرير والنتائج
+                                <i class="fas fa-edit"></i> كتابة التقرير
                             </a>
                         </td>
                     </tr>
                 `).join('');
+                inprogTbody.innerHTML = inprogRows;
+                if (inprogTabTbody) inprogTabTbody.innerHTML = inprogRows;
             }
         }
 
