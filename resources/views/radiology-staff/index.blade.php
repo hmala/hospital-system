@@ -349,7 +349,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table unified-table mb-4">
+                <table class="table unified-table mb-2">
                     <thead>
                         <tr>
                             <th style="width: 80px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
@@ -373,41 +373,17 @@
                 </table>
             </div>
 
-            <!-- جدول الفحوصات الجارية الآن داخل الغرفة -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0 text-dark fw-bold">
-                    <i class="fas fa-stethoscope me-2 text-info"></i>
-                    الفحوصات الجارية الآن داخل غرفة الفحص
-                </h5>
-                <span class="badge bg-info text-white" id="badge-live-inprogress-count">{{ $stats['in_progress'] }} قيد الفحص</span>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table unified-table mb-4">
-                    <thead>
-                        <tr>
-                            <th style="width: 80px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات الجارية</th>
-                            <th><i class="fas fa-user-md me-2"></i>الطبيب المحول</th>
-                            <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>بدأ منذ</th>
-                            <th class="text-end" style="width: 160px;"><i class="fas fa-cogs me-2"></i>كتابة النتائج</th>
-                        </tr>
-                    </thead>
-                    <tbody id="radiology-station-inprogress-list">
-                        <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">
-                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مريض داخل غرفة الفحص حالياً
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
         </div>
 
         <!-- 2. IN PROGRESS TAB -->
         <div class="tab-pane fade" id="inprogress-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-stethoscope me-2 text-info"></i>
+                    الفحوصات الجارية الآن وكتابة التقارير والنتائج
+                </h5>
+                <span class="badge bg-info text-white" id="badge-tab-inprogress-inner-count">{{ $stats['in_progress'] }} قيد الفحص</span>
+            </div>
             <div class="table-responsive">
                 <table class="table unified-table">
                     <thead>
@@ -416,8 +392,8 @@
                             <th>المريض</th>
                             <th>الفحوصات المطلوبة</th>
                             <th>الطبيب المحول</th>
-                            <th class="text-center">الوقت</th>
-                            <th class="text-end">الإجراءات</th>
+                            <th style="width: 100px;" class="text-center">الوقت</th>
+                            <th class="text-end" style="width: 170px;">كتابة التقرير والنتائج</th>
                         </tr>
                     </thead>
                     <tbody id="radiology-tab-inprogress-tbody">
@@ -782,20 +758,19 @@ async function syncRadiologyQueue() {
             }
         }
 
-        // 4. Render In-Progress Table
-        const inprogTbody = document.getElementById('radiology-station-inprogress-list');
+        // 4. Render In-Progress Tab Table
         const inprogTabTbody = document.getElementById('radiology-tab-inprogress-tbody');
-        if (inprogTbody) {
+        if (inprogTabTbody) {
             if (data.in_progress_list.length === 0) {
-                inprogTbody.innerHTML = `
+                inprogTabTbody.innerHTML = `
                     <tr>
                         <td colspan="6" class="text-center py-4 text-muted">
-                            <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مريض داخل غرفة الفحص حالياً
+                            <i class="fas fa-check-circle text-success me-1"></i> لا توجد فحوصات جارية داخل غرفة الفحص حالياً
                         </td>
                     </tr>
                 `;
             } else {
-                const inprogRows = data.in_progress_list.map(r => `
+                inprogTabTbody.innerHTML = data.in_progress_list.map(r => `
                     <tr class="inprogress-row">
                         <td><span class="badge bg-info text-white font-monospace fs-6">#${r.queue_number}</span></td>
                         <td><strong class="text-dark">${r.name}</strong></td>
@@ -804,13 +779,11 @@ async function syncRadiologyQueue() {
                         <td class="text-center font-monospace small">${r.started_time}</td>
                         <td class="text-end">
                             <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-success fw-bold shadow-xs">
-                                <i class="fas fa-edit"></i> كتابة التقرير
+                                <i class="fas fa-edit"></i> كتابة التقرير والنتائج
                             </a>
                         </td>
                     </tr>
                 `).join('');
-                inprogTbody.innerHTML = inprogRows;
-                if (inprogTabTbody) inprogTabTbody.innerHTML = inprogRows;
             }
         }
 
