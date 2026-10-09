@@ -590,7 +590,7 @@ $age = $patient?->age ?? null;
                                                     <td class="text-center">
                                                         @if($hasSpecificAttachment)
                                                             <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
-                                                                <a href="{{ asset('storage/' . $testAttachments[$test]['path']) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
+                                                                <a href="{{ route('lab.attachment', ['request' => $request, 'test' => $test]) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
                                                                     <i class="fas fa-paperclip"></i>
                                                                     <span>معاينة التقرير</span>
                                                                 </a>
@@ -648,7 +648,7 @@ $age = $patient?->age ?? null;
                                                                 <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.7rem;">{{ $labTestObj->code }}</span>
                                                             @endif
                                                             @if($hasSpecificAttachment)
-                                                                <a href="{{ asset('storage/' . $testAttachments[$test]['path']) }}" target="_blank" class="badge bg-info-subtle text-info border border-info ms-1 text-decoration-none" title="يوجد تقرير منفصل لهذا الفحص">
+                                                                <a href="{{ route('lab.attachment', ['request' => $request, 'test' => $test]) }}" target="_blank" class="badge bg-info-subtle text-info border border-info ms-1 text-decoration-none" title="يوجد تقرير منفصل لهذا الفحص">
                                                                     <i class="fas fa-paperclip"></i>
                                                                 </a>
                                                             @endif
@@ -683,7 +683,7 @@ $age = $patient?->age ?? null;
                                                     <td class="text-center">
                                                         @if($hasSpecificAttachment)
                                                             <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
-                                                                <a href="{{ asset('storage/' . $testAttachments[$test]['path']) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
+                                                                <a href="{{ route('lab.attachment', ['request' => $request, 'test' => $test]) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
                                                                     <i class="fas fa-paperclip"></i>
                                                                     <span>معاينة التقرير</span>
                                                                 </a>

@@ -1994,7 +1994,7 @@ datalist option:hover {
                                                             @foreach($testAttachments as $tName => $tAtt)
                                                                 @php
                                                                     $tPath = $tAtt['path'] ?? '';
-                                                                    $tUrl = $tPath ? asset('storage/' . $tPath) : '';
+                                                                    $tUrl = $tPath ? route('lab.attachment', ['request' => $medRequest, 'test' => $tName]) : '';
                                                                     $tMime = $tAtt['mime'] ?? '';
                                                                     $tIsImage = str_starts_with($tMime, 'image/');
                                                                 @endphp
@@ -2032,6 +2032,9 @@ datalist option:hover {
 
                                                     <!-- المرفق العام إن وجد -->
                                                     @if($hasAttachment)
+                                                        @php
+                                                            $generalAttachmentUrl = route('lab.attachment', $medRequest);
+                                                        @endphp
                                                         <div class="alert alert-success border border-success p-2 rounded-3 mb-2">
                                                             <div class="d-flex justify-content-between align-items-center">
                                                                 <div class="d-flex align-items-center gap-2">
@@ -2041,18 +2044,18 @@ datalist option:hover {
                                                                     </div>
                                                                 </div>
                                                                 <div class="d-flex gap-1">
-                                                                    <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-xs btn-success fw-bold px-2 py-1" style="font-size: 0.75rem;">
+                                                                    <a href="{{ $generalAttachmentUrl }}" target="_blank" class="btn btn-xs btn-success fw-bold px-2 py-1" style="font-size: 0.75rem;">
                                                                         <i class="fas fa-eye me-1"></i> فتح
                                                                     </a>
-                                                                    <a href="{{ $attachmentUrl }}" download class="btn btn-xs btn-outline-secondary px-2 py-1" style="font-size: 0.75rem;">
+                                                                    <a href="{{ $generalAttachmentUrl }}" download class="btn btn-xs btn-outline-secondary px-2 py-1" style="font-size: 0.75rem;">
                                                                         <i class="fas fa-download"></i>
                                                                     </a>
                                                                 </div>
                                                             </div>
                                                             @if($isImageAttachment)
                                                                 <div class="mt-2 text-center">
-                                                                    <a href="{{ $attachmentUrl }}" target="_blank">
-                                                                        <img src="{{ $attachmentUrl }}" alt="تقرير ممسوح" style="max-height: 140px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                                    <a href="{{ $generalAttachmentUrl }}" target="_blank">
+                                                                        <img src="{{ $generalAttachmentUrl }}" alt="تقرير ممسوح" style="max-height: 140px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
                                                                     </a>
                                                                 </div>
                                                             @endif

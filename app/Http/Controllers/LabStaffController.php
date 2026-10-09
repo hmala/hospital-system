@@ -184,6 +184,13 @@ class LabStaffController extends Controller
 
     public function attachment(HttpRequest $httpRequest, MedicalRequest $request)
     {
+        $user = Auth::user();
+
+        // السماح لكافة الكوادر المعنية (المختبر، الأطباء، الطوارئ، الاستقبال، الإدارة) أو من يملك صلاحية عرض الفحوصات
+        if (!$user->hasAnyRole(['admin', 'doctor', 'lab_staff', 'emergency_staff', 'receptionist', 'nurse']) && !$user->can('view lab tests')) {
+            abort(403, 'غير مصرح لك بعرض المرفقات');
+        }
+
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         $testName = $httpRequest->query('test');
 

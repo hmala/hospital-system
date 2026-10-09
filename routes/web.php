@@ -403,11 +403,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 
+    // مسار فتح وتحميل مرفقات التحاليل الطبية (متاح لكافة الكوادر الطبية والمختبر)
+    Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('lab.attachment');
+
     // ======= مسارات قسم المختبر =======
     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\LabStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
-        Route::get('/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('attachment');
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
     });
