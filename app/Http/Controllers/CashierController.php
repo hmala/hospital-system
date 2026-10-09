@@ -429,7 +429,12 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('process medical requests payments') && !$user->can('process medical request payments')))) {
+        $canPay = $isAdmin 
+            || $user->can('process medical requests payments') 
+            || $user->can('process medical request payments')
+            || ($user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
+
+        if (!$canPay) {
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
@@ -461,7 +466,12 @@ class CashierController extends Controller
         
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('process medical requests payments') && !$user->can('process medical request payments')))) {
+        $canPay = $isAdmin 
+            || $user->can('process medical requests payments') 
+            || $user->can('process medical request payments')
+            || ($user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
+
+        if (!$canPay) {
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
