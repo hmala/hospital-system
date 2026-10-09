@@ -415,6 +415,10 @@ Route::middleware(['auth'])->group(function () {
     // ======= مسارات قسم الأشعة والتصوير الطبي =======
     Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
+        Route::get('/queue-status', [\App\Http\Controllers\RadiologyStaffController::class, 'queueStatus'])->name('queue-status');
+        Route::post('/call-next', [\App\Http\Controllers\RadiologyStaffController::class, 'callNext'])->name('call-next');
+        Route::post('/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
+        Route::post('/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
         Route::post('/requests/{request}/call', [\App\Http\Controllers\RadiologyStaffController::class, 'call'])->name('call');
         Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');

@@ -172,6 +172,247 @@ class RadiologyStaffController extends Controller
         ));
     }
 
+    public function queueStatus(HttpRequest $httpRequest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بالوصول إلى قسم الأشعة'], 403);
+        }
+
+        $userCategory = $this->getRadiologyCategoryForUser($user);
+        $selectedCategory = $httpRequest->query('category', $userCategory ?? 'all');
+        if ($userCategory !== null && !$isAdmin) {
+            $selectedCategory = $userCategory;
+        }
+
+        $baseQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user', 'visit.department', 'visit.appointment'])
+            ->where('type', 'radiology')
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('created_at', today());
+
+        if ($selectedCategory !== 'all' && !empty($selectedCategory)) {
+            if ($selectedCategory === 'echo') {
+                $baseQuery->where('subtype', 'echo');
+            } elseif ($selectedCategory === 'ultrasound') {
+                $baseQuery->where('subtype', 'ultrasound');
+            } elseif ($selectedCategory === 'mri') {
+                $baseQuery->where('subtype', 'mri');
+            } elseif ($selectedCategory === 'ct') {
+                $baseQuery->where('subtype', 'ct');
+            } elseif ($selectedCategory === 'radiology') {
+                $baseQuery->where(function($q) {
+                    $q->where('subtype', 'general')
+                      ->orWhere('subtype', 'radiology')
+                      ->orWhereNull('subtype');
+                });
+            }
+        }
+
+        $allRequests = $baseQuery->get();
+
+        // 1. Current calling or in-progress patient
+        $currentCalling = $allRequests->where('status', 'calling')->first();
+        $currentExamining = $allRequests->where('status', 'in_progress')->first();
+        $currentPatientModel = $currentCalling ?: $currentExamining;
+
+        $currentPatient = null;
+        if ($currentPatientModel) {
+            $p = $currentPatientModel->visit?->patient;
+            $currentPatient = [
+                'id' => $currentPatientModel->id,
+                'visit_id' => $currentPatientModel->visit_id,
+                'queue_number' => $currentPatientModel->visit?->appointment?->queue_number ?? $currentPatientModel->id,
+                'name' => $p?->name ?? $p?->user?->name ?? 'مريض',
+                'status' => $currentPatientModel->status,
+                'status_text' => $currentPatientModel->status === 'in_progress' ? 'قيد الفحص داخل الغرفة' : 'قيد النداء الآن 📢',
+                'radiology_names' => $currentPatientModel->radiology_names ?: [$currentPatientModel->description ?: 'فحص تصوير'],
+                'doctor_name' => $currentPatientModel->visit?->doctor?->user?->name ?? 'الاستشارية',
+                'called_at' => $currentPatientModel->details['called_at'] ?? $currentPatientModel->updated_at->format('H:i'),
+            ];
+        }
+
+        // 2. Waiting List
+        $waitingList = $allRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])
+            ->sortBy(function($r) {
+                $prio = $r->priority === 'emergency' ? 1 : ($r->priority === 'urgent' ? 2 : 3);
+                $pay = $r->payment_status === 'paid' ? 1 : 2;
+                return $prio . '_' . $pay . '_' . $r->id;
+            })
+            ->values()
+            ->map(function($r, $idx) {
+                $p = $r->visit?->patient;
+                return [
+                    'id' => $r->id,
+                    'visit_id' => $r->visit_id,
+                    'turn_index' => $idx + 1,
+                    'queue_number' => $r->visit?->appointment?->queue_number ?? ($idx + 1),
+                    'name' => $p?->name ?? $p?->user?->name ?? 'مريض',
+                    'gender' => $p?->gender === 'male' ? 'ذكر' : ($p?->gender === 'female' ? 'أنثى' : ''),
+                    'age' => $p?->age,
+                    'medical_number' => $p?->medical_number,
+                    'radiology_names' => $r->radiology_names ?: [$r->description ?: 'فحص تصوير'],
+                    'subtype' => $r->subtype,
+                    'doctor_name' => $r->visit?->doctor?->user?->name ?? 'الاستشارية',
+                    'department_name' => $r->visit?->department?->name ?? 'العيادات',
+                    'created_time' => $r->created_at ? $r->created_at->format('H:i') : '—',
+                    'is_paid' => $r->payment_status === 'paid',
+                    'status' => $r->status,
+                    'priority' => $r->priority,
+                ];
+            });
+
+        // 3. In-Progress List
+        $inProgressList = $allRequests->where('status', 'in_progress')
+            ->values()
+            ->map(function($r) {
+                $p = $r->visit?->patient;
+                return [
+                    'id' => $r->id,
+                    'visit_id' => $r->visit_id,
+                    'queue_number' => $r->visit?->appointment?->queue_number ?? $r->id,
+                    'name' => $p?->name ?? $p?->user?->name ?? 'مريض',
+                    'radiology_names' => $r->radiology_names ?: [$r->description ?: 'فحص تصوير'],
+                    'doctor_name' => $r->visit?->doctor?->user?->name ?? 'الاستشارية',
+                    'started_time' => $r->details['started_at'] ?? $r->updated_at->format('H:i'),
+                ];
+            });
+
+        // 4. Completed List
+        $completedList = $allRequests->where('status', 'completed')
+            ->sortByDesc('updated_at')
+            ->take(15)
+            ->values()
+            ->map(function($r) {
+                $p = $r->visit?->patient;
+                return [
+                    'id' => $r->id,
+                    'visit_id' => $r->visit_id,
+                    'queue_number' => $r->visit?->appointment?->queue_number ?? $r->id,
+                    'name' => $p?->name ?? $p?->user?->name ?? 'مريض',
+                    'radiology_names' => $r->radiology_names ?: [$r->description ?: 'فحص تصوير'],
+                    'doctor_name' => $r->visit?->doctor?->user?->name ?? 'الاستشارية',
+                    'completed_time' => $r->updated_at->format('H:i'),
+                ];
+            });
+
+        $stats = [
+            'total' => $allRequests->count(),
+            'waiting' => $allRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])->count(),
+            'in_progress' => $allRequests->where('status', 'in_progress')->count(),
+            'completed' => $allRequests->where('status', 'completed')->count(),
+            'paid' => $allRequests->where('payment_status', 'paid')->count(),
+            'unpaid' => $allRequests->where('payment_status', '!=', 'paid')->count(),
+        ];
+
+        $roomNumber = $user->doctor?->current_room ?? ($selectedCategory === 'ultrasound' ? 11 : null);
+
+        return response()->json([
+            'success' => true,
+            'current_patient' => $currentPatient,
+            'waiting_list' => $waitingList,
+            'in_progress_list' => $inProgressList,
+            'completed_list' => $completedList,
+            'stats' => $stats,
+            'room_number' => $roomNumber,
+        ]);
+    }
+
+    public function callNext(HttpRequest $httpRequest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المريض'], 403);
+        }
+
+        $userCategory = $this->getRadiologyCategoryForUser($user);
+        $selectedCategory = $httpRequest->query('category', $userCategory ?? 'all');
+        if ($userCategory !== null && !$isAdmin) {
+            $selectedCategory = $userCategory;
+        }
+
+        $query = MedicalRequest::with(['visit.patient.user', 'visit.appointment'])
+            ->where('type', 'radiology')
+            ->whereIn('status', ['pending', 'scheduled'])
+            ->where(function($q) {
+                $q->where('payment_status', 'paid')
+                  ->orWhere('priority', 'emergency');
+            })
+            ->whereDate('created_at', today());
+
+        if ($selectedCategory !== 'all' && !empty($selectedCategory)) {
+            if ($selectedCategory === 'echo') {
+                $query->where('subtype', 'echo');
+            } elseif ($selectedCategory === 'ultrasound') {
+                $query->where('subtype', 'ultrasound');
+            } elseif ($selectedCategory === 'mri') {
+                $query->where('subtype', 'mri');
+            } elseif ($selectedCategory === 'ct') {
+                $query->where('subtype', 'ct');
+            } elseif ($selectedCategory === 'radiology') {
+                $query->where(function($q) {
+                    $q->where('subtype', 'general')
+                      ->orWhere('subtype', 'radiology')
+                      ->orWhereNull('subtype');
+                });
+            }
+        }
+
+        $nextRequest = $query->orderByRaw("CASE WHEN priority = 'emergency' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
+            ->orderBy('id', 'asc')
+            ->first();
+
+        if (!$nextRequest) {
+            return response()->json(['success' => false, 'message' => 'لا يوجد مرضى بانتظار الفحص في الطابور حالياً.'], 404);
+        }
+
+        return $this->call($nextRequest);
+    }
+
+    public function recall(HttpRequest $httpRequest)
+    {
+        $currentCalling = MedicalRequest::where('type', 'radiology')
+            ->where('status', 'calling')
+            ->whereDate('created_at', today())
+            ->orderBy('updated_at', 'desc')
+            ->first();
+
+        if (!$currentCalling) {
+            return response()->json(['success' => false, 'message' => 'لا توجد مناداة جارية لإعادة استدعائها.'], 404);
+        }
+
+        return $this->call($currentCalling);
+    }
+
+    public function skip(HttpRequest $httpRequest)
+    {
+        $currentCalling = MedicalRequest::where('type', 'radiology')
+            ->where('status', 'calling')
+            ->whereDate('created_at', today())
+            ->orderBy('updated_at', 'desc')
+            ->first();
+
+        if (!$currentCalling) {
+            return response()->json(['success' => false, 'message' => 'لا توجد مناداة جارية لتخطيها.'], 404);
+        }
+
+        $currentCalling->status = 'pending';
+        $currentCalling->save();
+
+        if ($currentCalling->visit && $currentCalling->visit->appointment) {
+            $currentCalling->visit->appointment->status = 'scheduled';
+            $currentCalling->visit->appointment->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تأخير دور المريض ونقله لآخر طابور الانتظار.'
+        ]);
+    }
+
     public function call(MedicalRequest $request)
     {
         $user = Auth::user();
