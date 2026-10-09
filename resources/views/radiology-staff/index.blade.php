@@ -433,9 +433,6 @@
                                             <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="مناداة واستدعاء للغرفة">
                                                 <i class="fas fa-bullhorn"></i> نداء
                                             </button>
-                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="إدخال للغرفة وبدء الفحص">
-                                                <i class="fas fa-door-open"></i> إدخال
-                                            </a>
                                         @else
                                             <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-secondary" title="معاينة الطلب">
                                                 <i class="fas fa-eye"></i> معاينة
@@ -878,9 +875,6 @@ async function syncRadiologyQueue() {
                                     ${r.is_paid ? `
                                         <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific(${r.id}, '${r.name}')" title="مناداة واستدعاء للغرفة">
                                             <i class="fas fa-bullhorn"></i> نداء
-                                        </button>
-                                        <button type="button" class="action-btn btn-primary fw-bold shadow-xs" onclick="radiologyStartSpecific(${r.id})" title="إدخال للغرفة وبدء الفحص">
-                                            <i class="fas fa-door-open"></i> إدخال
                                         </button>
                                     ` : `
                                         <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="معاينة الطلب">
