@@ -254,6 +254,7 @@ class DoctorQueueController extends Controller
         $this->ensureQueueNumbersAssigned($doctor->id);
 
         $today = today();
+        $isSonarDoctor = ($doctor->type === 'sonar' || mb_stripos($doctor->specialization ?? '', 'سونار') !== false || mb_stripos(optional($doctor->department)->name ?? '', 'سونار') !== false);
 
         // 1. Current Patient being called or currently in room
         $currentPatient = Appointment::with(['patient.user', 'emergency', 'visit.radiologyRequests', 'visit.requests'])
@@ -263,6 +264,17 @@ class DoctorQueueController extends Controller
             ->orderByRaw("CASE WHEN status = 'calling' THEN 1 WHEN status = 'in_consultation' THEN 2 ELSE 3 END")
             ->orderBy('called_at', 'desc')
             ->first();
+
+        // For Sonar Room specifically: check if there is an active calling Sonar radiology request
+        $callingSonarReq = null;
+        if ($isSonarDoctor) {
+            $callingSonarReq = \App\Models\Request::with(['visit.patient.user', 'visit.appointment', 'visit.doctor.user'])
+                ->where('type', 'radiology')
+                ->where('status', 'calling')
+                ->whereDate('created_at', $today)
+                ->orderBy('updated_at', 'desc')
+                ->first();
+        }
 
         // 2. Waiting Queue List (Excluded any patient already entered to doctor with a visit)
         $waitingList = Appointment::with(['patient.user', 'emergency'])
@@ -453,7 +465,27 @@ class DoctorQueueController extends Controller
         $waitingCount = $waitingList->count();
 
         $formattedCurrent = null;
-        if ($currentPatient) {
+        if ($callingSonarReq) {
+            $p = $callingSonarReq->visit?->patient;
+            $name = $p?->name ?? $p?->user?->name ?? 'مريض';
+            $appt = $callingSonarReq->visit?->appointment;
+            $qNum = $appt?->queue_number ?? $callingSonarReq->id;
+            $calledTime = $callingSonarReq->details['called_at'] ?? $callingSonarReq->updated_at?->toIso8601String();
+            $calledTimestamp = $callingSonarReq->updated_at ? $callingSonarReq->updated_at->timestamp : now()->timestamp;
+
+            $formattedCurrent = [
+                'id' => $callingSonarReq->id,
+                'queue_number' => $qNum,
+                'name' => $name,
+                'status' => 'calling',
+                'status_text' => 'يتم الاستدعاء',
+                'is_emergency' => ($callingSonarReq->priority === 'emergency'),
+                'is_result_review' => false,
+                'called_at' => $calledTime,
+                'called_at_timestamp' => $calledTimestamp,
+                'call_key' => "sonar_{$callingSonarReq->id}_" . ($callingSonarReq->updated_at ? $callingSonarReq->updated_at->format('YmdHis') : now()->format('YmdHis')) . "_calling",
+            ];
+        } elseif ($currentPatient) {
             $patientUser = $currentPatient->patient ? $currentPatient->patient->user : null;
             $name = $patientUser ? $patientUser->name : ($currentPatient->emergency && $currentPatient->emergency->emergencyPatient ? $currentPatient->emergency->emergencyPatient->name : 'مريض مجهول');
             $hasVisitTests = $currentPatient->visit && ($currentPatient->visit->radiologyRequests->count() > 0 || $currentPatient->visit->requests->count() > 0);
