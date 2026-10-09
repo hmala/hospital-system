@@ -872,7 +872,6 @@ class InquiryController extends Controller
 
             // إنشاء موعد في طابور الأطباء الاستشاريين ليظهر في شاشة توفر الاستشاريين
             $sonarTypeName = $sonarTypeObj ? $sonarTypeObj->name : 'فحص سونار';
-            $sonarFee = $sonarTypeObj ? ($sonarTypeObj->base_price ?? 0) : ($sonarDoc->consultation_fee ?? 0);
 
             $maxQueue = \App\Models\Appointment::where('doctor_id', $sonarDoc?->id)
                 ->whereDate('appointment_date', today())
@@ -886,7 +885,7 @@ class InquiryController extends Controller
                 'queue_number' => $maxQueue + 1,
                 'reason' => 'حجز سونار - ' . $sonarTypeName,
                 'notes' => 'حجز سونار من الاستعلامات' . ($sonarTypeObj ? ' (كود: ' . $sonarTypeObj->code . ')' : ''),
-                'consultation_fee' => $sonarFee,
+                'consultation_fee' => 0, // الرسوم مسجلة ومسعرة بالكامل على الطلب الطبي للفحص
                 'duration' => 20,
                 'status' => 'scheduled',
                 'payment_status' => 'pending',

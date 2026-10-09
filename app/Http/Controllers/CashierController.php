@@ -61,6 +61,9 @@ class CashierController extends Controller
             ->where('payment_status', 'pending')
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->whereNull('emergency_id')
+            ->whereDoesntHave('visit.requests', function($q) {
+                $q->whereIn('type', ['radiology', 'lab', 'blood_bank']);
+            })
             ->whereHas('patient');
 
         if ($dateFilter === 'today') {
