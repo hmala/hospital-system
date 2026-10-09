@@ -309,6 +309,40 @@ class ConsultantAvailabilityController extends Controller
             return !empty($f->printed_at) || ($f->print_count ?? 0) > 0;
         })->map($mapFollowUp)->values();
 
+        // 3. طابور الحجوزات والقبض لليوم
+        $canProcessPayments = auth()->check() && auth()->user()->canAny(['process consultation payments', 'process payments']);
+        $todayAppointmentsList = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'emergency.emergencyPatient'])
+            ->whereDate('appointment_date', $today)
+            ->whereIn('status', ['scheduled', 'confirmed', 'calling'])
+            ->orderByRaw("CASE WHEN status = 'calling' THEN 1 ELSE 2 END")
+            ->orderBy('queue_number', 'asc')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function($app) use ($canProcessPayments) {
+                $patientName = 'مريض غير محدد';
+                if ($app->patient && $app->patient->user) {
+                    $patientName = $app->patient->user->name;
+                } elseif ($app->emergency && $app->emergency->emergencyPatient) {
+                    $patientName = $app->emergency->emergencyPatient->name;
+                }
+
+                return [
+                    'id' => $app->id,
+                    'queue_number' => $app->queue_number ?: $app->id,
+                    'patient_name' => $patientName,
+                    'is_emergency' => (bool)$app->emergency_id,
+                    'doctor_name' => optional(optional($app->doctor)->user)->name ?? 'غير محدد',
+                    'status' => $app->status,
+                    'payment_status' => $app->payment_status,
+                    'is_free_recheck' => (bool)$app->is_free_recheck,
+                    'can_process_payments' => $canProcessPayments,
+                    'payment_url' => route('cashier.payment.form', $app->id),
+                    'print_url' => route('appointments.print', $app->id),
+                    'can_cancel' => $app->canBeCancelled(),
+                    'cancel_url' => route('appointments.cancel', $app->id),
+                ];
+            })->values();
+
         return response()->json([
             'success' => true,
             'running_clinics' => $runningClinics,
@@ -318,6 +352,8 @@ class ConsultantAvailabilityController extends Controller
             'printed_today_follow_ups' => $printedTodayFollowUps,
             'printed_today_follow_ups_count' => count($printedTodayFollowUps),
             'all_today_count' => count($allTodayFollowUps),
+            'today_appointments' => $todayAppointmentsList,
+            'today_appointments_count' => count($todayAppointmentsList),
             'timestamp' => now()->format('H:i:s'),
         ]);
     }

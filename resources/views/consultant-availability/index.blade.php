@@ -488,13 +488,11 @@
                         <i class="fas fa-users-line text-success fs-6"></i>
                         <h6 class="mb-0 fw-bold text-dark small">طابور الحجوزات والقبض</h6>
                     </div>
-                    @if(isset($todayAppointments))
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small">
-                            {{ $todayAppointments->count() }} مريض
-                        </span>
-                    @endif
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small" id="todayAppointmentsCountBadge">
+                        {{ isset($todayAppointments) ? $todayAppointments->count() : 0 }} مريض
+                    </span>
                 </div>
-                <div class="card-body p-2 overflow-auto" style="max-height: 340px;">
+                <div class="card-body p-2 overflow-auto" id="todayAppointmentsContainer" style="max-height: 340px;">
                     @if(isset($todayAppointments) && $todayAppointments->count() > 0)
                         <div class="list-group list-group-flush">
                             @foreach($todayAppointments as $appointment)
@@ -1421,6 +1419,105 @@ function pollLiveConsultantStatus() {
                             <i class="fas fa-print fa-2x mb-2 text-secondary opacity-50"></i>
                             <p class="mb-0 fw-bold small">لا توجد مراجعات مطبوعة اليوم بعد</p>
                             <small class="text-muted" style="font-size: 0.7rem;">ستنتقل المراجعات المطبوعة إلى هنا فور طباعتها</small>
+                        </div>
+                    `;
+                }
+            // 5. تحديث طابور الحجوزات والقبض لليوم (Today's Queue & Cashier)
+            const apptCountBadge = document.getElementById('todayAppointmentsCountBadge');
+            const apptContainer = document.getElementById('todayAppointmentsContainer');
+            
+            if (apptCountBadge && data.today_appointments_count !== undefined) {
+                apptCountBadge.textContent = `${data.today_appointments_count} مريض`;
+            }
+
+            if (apptContainer && data.today_appointments) {
+                const csrfToken = '{{ csrf_token() }}';
+                if (data.today_appointments.length > 0) {
+                    let apptHtml = '<div class="list-group list-group-flush">';
+                    data.today_appointments.forEach(app => {
+                        const isCalling = (app.status === 'calling');
+                        const isPaid = (app.payment_status === 'paid');
+                        const itemClass = isCalling 
+                            ? 'border-primary bg-primary bg-opacity-10' 
+                            : (isPaid ? 'border-light bg-light' : 'border-warning bg-warning bg-opacity-10');
+                        const queueBadgeClass = isPaid ? 'bg-success' : 'bg-warning text-dark';
+                        const emergencyBadge = app.is_emergency ? `<span class="badge bg-danger p-1" style="font-size: 0.65rem;">طوارئ</span>` : '';
+                        const recheckBadge = app.is_free_recheck ? `<span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.65rem;">مراجعة مجانية</span>` : '';
+
+                        let actionBtnHtml = '';
+                        if (isPaid || app.is_emergency) {
+                            if (isCalling) {
+                                actionBtnHtml = `
+                                    <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2" style="font-size: 0.75rem;" onclick="callPatient(${app.id}, this)" title="إعادة النداء للشاشة الخارجية">
+                                        <i class="fas fa-redo me-1"></i> إعادة نداء
+                                    </button>
+                                `;
+                            } else {
+                                actionBtnHtml = `
+                                    <button type="button" class="btn btn-xs btn-primary text-white py-1 px-2" style="font-size: 0.75rem;" onclick="callPatient(${app.id}, this)" title="استدعاء للشاشة الخارجية">
+                                        <i class="fas fa-bullhorn me-1"></i> استدعاء
+                                    </button>
+                                `;
+                            }
+                        } else {
+                            if (app.can_process_payments) {
+                                actionBtnHtml = `
+                                    <a href="${app.payment_url}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="قبض رسوم الكشفية فوراً">
+                                        <i class="fas fa-cash-register me-1"></i> قبض
+                                    </a>
+                                `;
+                            } else {
+                                actionBtnHtml = `<span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>`;
+                            }
+                        }
+
+                        let cancelBtnHtml = '';
+                        if (app.can_cancel) {
+                            cancelBtnHtml = `
+                                <form method="POST" action="${app.cancel_url}" class="d-inline m-0">
+                                    <input type="hidden" name="_token" value="${csrfToken}">
+                                    <button type="submit" class="btn btn-xs btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')" title="إلغاء الحجز">
+                                        <i class="fas fa-times me-1"></i> إلغاء
+                                    </button>
+                                </form>
+                            `;
+                        }
+
+                        apptHtml += `
+                            <div class="list-group-item px-2 py-2 border rounded-2 mb-2 ${itemClass}">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 text-truncate">
+                                        <span class="badge ${queueBadgeClass} rounded-pill px-2 flex-shrink-0" style="font-size: 0.8rem;">
+                                            #${app.queue_number}
+                                        </span>
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark small text-truncate">
+                                                ${app.patient_name} ${emergencyBadge}
+                                            </div>
+                                            <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                                د. ${app.doctor_name}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                        ${actionBtnHtml}
+                                        ${recheckBadge}
+                                        <a href="${app.print_url}" target="_blank" class="btn btn-xs btn-outline-dark py-1 px-2" style="font-size: 0.75rem;" title="طباعة وصل الموعد والمراجعة للمريض">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                        ${cancelBtnHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    apptHtml += '</div>';
+                    apptContainer.innerHTML = apptHtml;
+                } else {
+                    apptContainer.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-calendar-check fa-2x mb-2 text-secondary"></i>
+                            <p class="mb-0 small">لا توجد حجوزات مسجلة اليوم</p>
                         </div>
                     `;
                 }
