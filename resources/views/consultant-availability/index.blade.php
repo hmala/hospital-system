@@ -574,37 +574,40 @@
                 </div>
             </div>
 
-            <!-- 4. Compact Ultrasound / Lab Requests Card (If Any) -->
+            <!-- 4. Compact Ultrasound / Radiology / Lab Requests Card -->
             @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
-                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3">
-                    <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-primary mb-3">
+                    <div class="card-header bg-primary bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-1">
                             <i class="fas fa-wave-square text-primary small"></i>
-                            <h6 class="mb-0 fw-bold text-dark small">فحوصات وسونار بانتظار السداد</h6>
+                            <h6 class="mb-0 fw-bold text-dark small">طلبات الفحوصات والسونار اليوم</h6>
                         </div>
-                        <span class="badge bg-warning text-dark small">{{ $pendingConsultantRequests->count() }}</span>
+                        <span class="badge bg-primary small">{{ $pendingConsultantRequests->count() }}</span>
                     </div>
-                    <div class="card-body p-2 overflow-auto" style="max-height: 240px;">
-                        <div class="list-group list-group-flush">
+                    <div class="card-body p-2 overflow-auto" style="max-height: 260px;">
+                        <div class="list-group list-group-flush gap-1">
                             @foreach($pendingConsultantRequests as $req)
-                                <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
+                                <div class="list-group-item px-2 py-2 border rounded-2 {{ $req->payment_status === 'paid' ? 'bg-success-subtle border-success-subtle' : 'bg-light' }}">
                                     <div class="d-flex justify-content-between align-items-center gap-2">
                                         <div class="text-truncate">
                                             <div class="fw-bold text-dark small text-truncate">
                                                 {{ optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض' }}
                                             </div>
-                                            <small class="text-muted d-block" style="font-size: 0.7rem;">
-                                                {{ $req->subtype === 'ultrasound' ? 'سونار' : ($req->type === 'radiology' ? 'أشعة' : $req->type) }} — <strong class="text-success">{{ number_format($req->total_amount ?? 0) }} د.ع</strong>
+                                            <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                                <span class="badge bg-secondary-subtle text-secondary border px-1">{{ $req->subtype === 'ultrasound' ? 'سونار' : ($req->type === 'radiology' ? 'أشعة' : ($req->type === 'lab' ? 'مختبر' : $req->type)) }}</span>
+                                                <strong class="text-dark">{{ number_format($req->total_amount ?? 0) }} د.ع</strong>
                                             </small>
                                         </div>
-                                        <div>
-                                            @canany(['process medical requests payments', 'process payments'])
-                                                <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;">
-                                                    <i class="fas fa-cash-register me-1"></i> قبض
-                                                </a>
+                                        <div class="text-end">
+                                            @if($req->payment_status === 'paid')
+                                                <span class="badge bg-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-check-circle me-1"></i> تم الدفع
+                                                </span>
                                             @else
-                                                <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
-                                            @endcan
+                                                <span class="badge bg-warning text-dark fw-bold border border-warning-subtle py-1 px-2" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-clock me-1"></i> بانتظار الكاشير
+                                                </span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

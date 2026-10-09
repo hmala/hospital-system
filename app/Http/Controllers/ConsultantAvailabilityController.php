@@ -164,9 +164,8 @@ class ConsultantAvailabilityController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
-        // جلب طلبات الفحوصات والسونار المعلقة الصادرة اليوم من العيادات الاستشارية بانتظار الدفع
+        // جلب طلبات الفحوصات والسونار الصادرة اليوم من العيادات الاستشارية لمتابعة حالتها وسدادها
         $pendingConsultantRequests = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
-            ->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', today())
             ->where(function($q) {
@@ -176,6 +175,7 @@ class ConsultantAvailabilityController extends Controller
                   ->orWhere('description', 'LIKE', '%سونار%');
             })
             ->latest()
+            ->take(20)
             ->get();
 
         // جلب المراجعات والمواعيد التي تم جدولتها اليوم من محطة الأطباء

@@ -941,15 +941,35 @@ class DoctorVisitController extends Controller
                     $details['radiology_type_id'] = $typeId; // حفظ أول نوع لاستخدامه لاحقاً
 
                     if (!$detectedSubtype) {
-                        $cat = mb_strtolower($radiologyType->main_category ?? '');
-                        $sub = mb_strtolower($radiologyType->subcategory ?? '');
-                        $name = mb_strtolower($radiologyType->name ?? '');
-                        if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') || str_contains($cat, 'ultrasound') || str_contains($name, 'doppler') || str_contains($name, 'sonar')) {
+                        $cat = mb_strtolower(trim($radiologyType->main_category ?? ''));
+                        $sub = mb_strtolower(trim($radiologyType->subcategory ?? ''));
+                        $name = mb_strtolower(trim($radiologyType->name ?? ''));
+                        $code = mb_strtolower(trim($radiologyType->code ?? ''));
+
+                        if (
+                            str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') ||
+                            str_contains($cat, 'ultrasound') || str_contains($sub, 'ultrasound') || str_contains($name, 'ultrasound') ||
+                            str_contains($cat, 'sonar') || str_contains($sub, 'sonar') || str_contains($name, 'sonar') ||
+                            str_contains($cat, 'doppler') || str_contains($sub, 'doppler') || str_contains($name, 'doppler') ||
+                            str_contains($cat, 'دوبلر') || str_contains($sub, 'دوبلر') || str_contains($name, 'دوبلر') ||
+                            str_contains($name, 'u/s') || str_starts_with($code, 'us')
+                        ) {
                             $detectedSubtype = 'ultrasound';
-                        } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($name, 'رنين') || str_contains($cat, 'mri')) {
+                        } elseif (
+                            str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($name, 'رنين') ||
+                            str_contains($cat, 'mri') || str_contains($sub, 'mri') || str_contains($name, 'mri')
+                        ) {
                             $detectedSubtype = 'mri';
-                        } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($name, 'إيكو') || str_contains($cat, 'echo')) {
+                        } elseif (
+                            str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($name, 'إيكو') ||
+                            str_contains($cat, 'echo') || str_contains($sub, 'echo') || str_contains($name, 'echo')
+                        ) {
                             $detectedSubtype = 'echo';
+                        } elseif (
+                            str_contains($cat, 'مفراس') || str_contains($sub, 'مفراس') || str_contains($name, 'مفراس') ||
+                            str_contains($cat, 'ct') || str_contains($sub, 'ct') || str_contains($name, 'ct')
+                        ) {
+                            $detectedSubtype = 'ct';
                         } else {
                             $detectedSubtype = 'general';
                         }
