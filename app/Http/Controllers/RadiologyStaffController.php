@@ -623,19 +623,23 @@ class RadiologyStaffController extends Controller
 
         $request->load(['visit.patient.user', 'visit.doctor.user']);
 
-        $savedTestResults = [];
-        $savedNotes = '';
-        $bloodBankRequest = null;
-
+        $resultData = [];
         if ($request->result) {
             $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-            if (is_array($resultData)) {
-                $savedTestResults = $resultData['test_results'] ?? [];
-                $savedNotes = $resultData['notes'] ?? '';
+            if (!is_array($resultData)) {
+                $resultData = ['findings' => (string)$request->result];
             }
         }
 
-        return view('radiology-staff.show', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
+        // Check if there is an associated RadiologyRequest
+        $radiologyRequest = null;
+        if ($request->visit_id) {
+            $radiologyRequest = \App\Models\RadiologyRequest::with(['result.radiologist', 'radiologyType'])
+                ->where('visit_id', $request->visit_id)
+                ->first();
+        }
+
+        return view('radiology-staff.show', compact('request', 'resultData', 'radiologyRequest'));
     }
 
     public function update(HttpRequest $httpRequest, MedicalRequest $request)
@@ -678,7 +682,6 @@ class RadiologyStaffController extends Controller
                     $request->subtype = 'general';
                 }
             } else {
-                // إذا كانت أنواع مختلطة، نجعلها general
                 $request->subtype = 'general';
             }
 
@@ -693,23 +696,77 @@ class RadiologyStaffController extends Controller
             return redirect()->route('radiology-staff.index')->with('success', 'تم تحديد أنواع الأشعة. الطلب بانتظار الدفع.');
         }
 
-        // 2. حفظ نتائج الأشعة (result_text/result_notes)
-        if ($httpRequest->has('result_text') || $httpRequest->has('result_notes')) {
-            $request->result = json_encode([
-                'result_text' => $httpRequest->result_text ?? '',
-                'notes' => $httpRequest->result_notes ?? '',
-            ]);
-            $request->status = 'completed';
+        // 2. حفظ نتائج الأشعة (findings, impression, recommendations, images, etc.)
+        if ($httpRequest->has('findings') || $httpRequest->has('result_text') || $httpRequest->has('impression') || $httpRequest->hasFile('images')) {
+            $existingResult = [];
+            if ($request->result) {
+                $existingResult = is_string($request->result) ? json_decode($request->result, true) : $request->result;
+                if (!is_array($existingResult)) $existingResult = [];
+            }
+
+            $imagePaths = $existingResult['images'] ?? [];
+            if ($httpRequest->hasFile('images')) {
+                foreach ($httpRequest->file('images') as $image) {
+                    if ($image->isValid()) {
+                        $path = $image->store('radiology_images', 'public');
+                        $imagePaths[] = $path;
+                    }
+                }
+            }
+
+            $findings = $httpRequest->findings ?? $httpRequest->result_text ?? ($existingResult['findings'] ?? '');
+            $impression = $httpRequest->impression ?? ($existingResult['impression'] ?? '');
+            $recommendations = $httpRequest->recommendations ?? $httpRequest->result_notes ?? ($existingResult['recommendations'] ?? '');
+            $newStatus = $httpRequest->status ?? 'completed';
+
+            $request->result = [
+                'findings' => $findings,
+                'impression' => $impression,
+                'recommendations' => $recommendations,
+                'images' => $imagePaths,
+                'radiologist' => $user->name,
+                'reported_at' => now()->format('Y-m-d H:i:s'),
+            ];
+            $request->status = $newStatus;
             $request->save();
 
+            // Sync with RadiologyRequest if exists
+            if ($request->visit_id) {
+                $radReq = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)->first();
+                if ($radReq) {
+                    $radReq->update(['status' => $newStatus]);
+                    if ($radReq->result) {
+                        $radReq->result->update([
+                            'findings' => $findings,
+                            'impression' => $impression,
+                            'recommendations' => $recommendations,
+                            'images' => $imagePaths,
+                            'reported_at' => now(),
+                        ]);
+                    } else {
+                        \App\Models\RadiologyResult::create([
+                            'radiology_request_id' => $radReq->id,
+                            'radiologist_id' => $user->id,
+                            'findings' => $findings,
+                            'impression' => $impression,
+                            'recommendations' => $recommendations,
+                            'images' => $imagePaths,
+                            'reported_at' => now(),
+                        ]);
+                    }
+                }
+            }
+
             try {
-                app(\App\Services\TelegramService::class)->sendResultsReady($request);
+                if ($newStatus === 'completed') {
+                    app(\App\Services\TelegramService::class)->sendResultsReady($request);
+                }
             } catch (\Throwable $te) {
                 \Illuminate\Support\Facades\Log::warning('Telegram radiology notification error: ' . $te->getMessage());
             }
 
             $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
-            if ($request->visit && !$isDoctorVisit) {
+            if ($request->visit && !$isDoctorVisit && $newStatus === 'completed') {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();
                 if ($pending === 0) {
                     $request->visit->status = 'completed';
@@ -717,12 +774,71 @@ class RadiologyStaffController extends Controller
                 }
             }
 
-            return redirect()->route('radiology-staff.show', $request)->with('success', 'تم حفظ نتائج الأشعة بنجاح');
+            return redirect()->route('radiology-staff.show', $request)->with('success', 'تم حفظ نتائج وتقرير الأشعة بنجاح');
         }
 
         // 3. تحديث الحالة فقط
         $request->update(['status' => $httpRequest->status ?? 'completed']);
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
+    }
+
+    /**
+     * Print radiology report
+     */
+    public function print(MedicalRequest $request)
+    {
+        $request->load(['visit.patient.user', 'visit.doctor.user']);
+
+        // Check if there is a RadiologyRequest
+        $radiology = null;
+        if ($request->visit_id) {
+            $radiology = \App\Models\RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType', 'result.radiologist'])
+                ->where('visit_id', $request->visit_id)
+                ->first();
+        }
+
+        if (!$radiology) {
+            $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
+            if (!is_array($resultData)) $resultData = ['findings' => (string)($request->result ?? '')];
+
+            $radiologyType = (object)[
+                'name' => implode(', ', $request->radiology_names) ?: ($request->description ?: 'فحص تصوير'),
+                'code' => 'RAD-' . $request->id,
+                'category' => $request->subtype ?? 'الأشعة والتصوير'
+            ];
+
+            $radiologistObj = (object)[
+                'name' => $resultData['radiologist'] ?? auth()->user()->name
+            ];
+
+            $resultObj = (object)[
+                'findings' => $resultData['findings'] ?? '',
+                'impression' => $resultData['impression'] ?? '',
+                'recommendations' => $resultData['recommendations'] ?? '',
+                'images' => $resultData['images'] ?? [],
+                'reported_at' => !empty($resultData['reported_at']) ? \Carbon\Carbon::parse($resultData['reported_at']) : now(),
+                'radiologist' => $radiologistObj
+            ];
+
+            $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+            if (!is_array($details)) $details = [];
+
+            $radiology = (object)[
+                'id' => $request->id,
+                'patient' => $request->visit?->patient,
+                'doctor' => $request->visit?->doctor,
+                'radiologyType' => $radiologyType,
+                'clinical_indication' => $details['clinical_indication'] ?? $request->description,
+                'specific_instructions' => $details['notes'] ?? '',
+                'notes' => $details['notes'] ?? '',
+                'created_at' => $request->created_at,
+                'status' => $request->status,
+                'result' => $resultObj,
+                'payment_status' => $request->payment_status,
+            ];
+        }
+
+        return view('radiology.print', compact('radiology'));
     }
 }

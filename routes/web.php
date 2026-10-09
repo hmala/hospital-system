@@ -420,6 +420,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
         Route::post('/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
+        Route::get('/requests/{request}/print', [\App\Http\Controllers\RadiologyStaffController::class, 'print'])->name('print');
         Route::post('/requests/{request}/call', [\App\Http\Controllers\RadiologyStaffController::class, 'call'])->name('call');
         Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');

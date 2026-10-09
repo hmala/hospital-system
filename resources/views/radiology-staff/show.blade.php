@@ -1,2024 +1,401 @@
 @extends('layouts.app')
 
-@php
-use App\Models\LabTestResult;
-use App\Models\LabTest;
-
-// الحصول على نتائج التحاليل المرتبطة بهذا الطلب
-$labTest = LabTestResult::where('visit_id', $request->visit_id)
-    ->where('test_name', $request->description)
-    ->first();
-
-// الحصول على جميع التحاليل النشطة للاستخدام في JavaScript
-$labTests = LabTest::active()->get()->keyBy('name');
-
-function getTestIcon($testName) {
-    $name = strtolower($testName);
-
-    if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) {
-        return 'fas fa-tint text-danger';
-    } elseif (strpos($name, 'ضغط') !== false || strpos($name, 'pressure') !== false) {
-        return 'fas fa-heartbeat text-danger';
-    } elseif (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) {
-        return 'fas fa-oil-can text-warning';
-    } elseif (strpos($name, 'دم') !== false || strpos($name, 'blood') !== false) {
-        return 'fas fa-tint text-danger';
-    } elseif (strpos($name, 'بول') !== false || strpos($name, 'urine') !== false) {
-        return 'fas fa-flask text-warning';
-    } elseif (strpos($name, 'كبد') !== false || strpos($name, 'liver') !== false) {
-        return 'fas fa-lungs text-success';
-    } elseif (strpos($name, 'كلى') !== false || strpos($name, 'kidney') !== false) {
-        return 'fas fa-kidney text-info';
-    } elseif (strpos($name, 'هرمون') !== false || strpos($name, 'hormone') !== false) {
-        return 'fas fa-atom text-purple';
-    } elseif (strpos($name, 'فيروس') !== false || strpos($name, 'virus') !== false) {
-        return 'fas fa-virus text-danger';
-    } elseif (strpos($name, 'بكتيريا') !== false || strpos($name, 'bacteria') !== false) {
-        return 'fas fa-bacterium text-success';
-    } elseif (strpos($name, 'أشعة') !== false || strpos($name, 'x-ray') !== false) {
-        return 'fas fa-x-ray text-primary';
-    } elseif (strpos($name, 'تصوير') !== false || strpos($name, 'imaging') !== false) {
-        return 'fas fa-camera text-secondary';
-    } else {
-        return 'fas fa-vial text-primary';
+@section('styles')
+<style>
+    .info-item {
+        background: #f8fafc;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 0.75rem;
     }
-}
-
-function getTestUnit($testName, $labTests) {
-    // البحث في قاعدة البيانات أولاً
-    if (isset($labTests[$testName]) && !empty($labTests[$testName]->unit)) {
-        return $labTests[$testName]->unit;
+    .info-item small {
+        color: #6b7280;
     }
-
-    // الاحتياطي للفحوصات غير الموجودة في قاعدة البيانات
-    $name = strtolower($testName);
-
-    if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) {
-        return 'mg/dL';
-    } elseif (strpos($name, 'ضغط') !== false || strpos($name, 'pressure') !== false) {
-        return 'mmHg';
-    } elseif (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) {
-        return 'mg/dL';
-    } elseif (strpos($name, 'بيليروبين') !== false || strpos($name, 'bilirubin') !== false) {
-        return 'mg/dL';
-    } elseif (strpos($name, 'كرياتينين') !== false || strpos($name, 'creatinine') !== false) {
-        return 'mg/dL';
-    } elseif (strpos($name, 'يوريا') !== false || strpos($name, 'urea') !== false) {
-        return 'mg/dL';
-    } elseif (strpos($name, 'sgot') !== false || strpos($name, 'ast') !== false) {
-        return 'U/L';
-    } elseif (strpos($name, 'sgpt') !== false || strpos($name, 'alt') !== false) {
-        return 'U/L';
-    } elseif (strpos($name, 'الصفائح') !== false || strpos($name, 'platelets') !== false) {
-        return '/µL';
-    } elseif (strpos($name, 'الهيموغلوبين') !== false || strpos($name, 'hemoglobin') !== false) {
-        return 'g/dL';
-    } elseif (strpos($name, 'الكرات البيضاء') !== false || strpos($name, 'wbc') !== false) {
-        return '/µL';
-    } elseif (strpos($name, 'الكرات الحمراء') !== false || strpos($name, 'rbc') !== false) {
-        return 'million/µL';
-    } elseif (strpos($name, 'الهيماتوكريت') !== false || strpos($name, 'hematocrit') !== false) {
-        return '%';
-    } elseif (strpos($name, 'هرمون') !== false || strpos($name, 'hormone') !== false) {
-        return 'mIU/mL';
-    } elseif (strpos($name, 'فيتامين') !== false || strpos($name, 'vitamin') !== false) {
-        return 'ng/mL';
-    } elseif (strpos($name, 'حديد') !== false || strpos($name, 'iron') !== false) {
-        return 'µg/dL';
-    } elseif (strpos($name, 'كالسيوم') !== false || strpos($name, 'calcium') !== false) {
-        return 'mg/dL';
-    } elseif (strpos($name, 'صوديوم') !== false || strpos($name, 'sodium') !== false) {
-        return 'mEq/L';
-    } elseif (strpos($name, 'بوتاسيوم') !== false || strpos($name, 'potassium') !== false) {
-        return 'mEq/L';
-    } else {
-        return '';
+    .info-item strong {
+        font-size: 0.95rem;
     }
-}
-@endphp
+    .card {
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+    }
+    .quick-result {
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+    }
+    .quick-result:hover {
+        transform: translateY(-1px);
+    }
+</style>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>
-                    <i class="fas fa-x-ray me-2"></i>
-                    تفاصيل طلب الأشعة
-                </h2>
-                <div class="d-flex gap-2">
-                    @php
-                        $requestDetails = $request->details;
-                        if (is_string($requestDetails)) {
-                            $decoded = json_decode($requestDetails, true);
-                            $requestDetails = is_array($decoded) ? $decoded : [];
-                        }
-                        if (!is_array($requestDetails)) {
-                            $requestDetails = [];
-                        }
-                        $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
-                    @endphp
-
-                    @if($request->payment_status == 'paid' && ($request->type == 'lab' || $isBloodBankRequest))
-                        <a href="{{ route('staff.requests.print', $request) }}" 
-                           class="btn btn-success" 
-                           target="_blank">
-                            <i class="fas fa-print me-1"></i>
-                            طباعة النتائج
-                        </a>
-                    @endif
-                    <a href="{{ route('radiology-staff.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        العودة للقائمة
-                    </a>
+<div class="container-fluid px-3 px-md-4 py-3">
+    
+    <!-- 1. Header & Actions -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3">
+                    <i class="fas fa-x-ray fa-2x"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold text-dark">
+                        كتابة تقرير الأشعة والتصوير الطبي
+                    </h3>
+                    <small class="text-muted">الطلب رقم #{{ $request->id }} • {{ $request->created_at->format('Y-m-d H:i') }}</small>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-3">
-                <div class="card-body p-3">
-                    <div class="row text-center gy-2">
-                        <div class="col-sm-6 col-md-3">
-                            <div class="text-start">
-                                <div class="small text-muted">اسم المريض</div>
-                                <div class="fw-bold">{{ $request->visit->patient?->user?->name ?? 'غير محدد' }}</div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6 col-md-3">
-                            <div class="text-start">
-                                <div class="small text-muted">الجنس</div>
-                                <div class="fw-bold">{{ $request->visit->patient?->gender == 'male' ? 'ذكر' : ($request->visit->patient?->gender == 'female' ? 'أنثى' : 'غير محدد') }}</div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6 col-md-2">
-                            <div class="text-start">
-                                <div class="small text-muted">العمر</div>
-                                <div class="fw-bold">{{ $request->visit->patient?->age ?? 'غير محدد' }} سنة</div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6 col-md-4">
-                            <div class="text-start">
-                                <div class="small text-muted">الطبيب المرسل</div>
-                                <div class="fw-bold">{{ $request->visit->doctor?->user?->name ? 'د. ' . $request->visit->doctor->user->name : 'غير محدد' }}</div>
-                                <div class="small text-muted">{{ $request->visit->doctor?->specialization ?? '' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <div class="text-start">
-                                <div class="small text-muted">وصف الطلب</div>
-                                <div class="fw-bold text-dark">{{ $requestDetails['description'] ?? $request->description ?? 'غير محدد' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="d-flex flex-wrap gap-2">
+            @if($request->status === 'completed' || !empty($resultData['findings']))
+                <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn btn-success fw-bold px-3">
+                    <i class="fas fa-print me-1"></i> طباعة التقرير
+                </a>
+            @endif
+            <a href="{{ route('radiology-staff.index') }}" class="btn btn-outline-secondary px-3">
+                <i class="fas fa-arrow-left me-1"></i> العودة للطابور والمحطة
+            </a>
         </div>
     </div>
 
+    <!-- Alerts -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-3 mb-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    @if($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <!-- معلومات الطلب -->
+    <!-- 2. Patient & Request Overview Card -->
     @php
-        $requestDetails = $request->details;
-        if (is_string($requestDetails)) {
-            $decoded = json_decode($requestDetails, true);
-            $requestDetails = is_array($decoded) ? $decoded : [];
-        }
-        if (!is_array($requestDetails)) {
-            $requestDetails = [];
-        }
-        $isBloodBankRequest = $request->type === 'blood_bank' || ($requestDetails['blood_bank'] ?? false);
+        $p = $request->visit?->patient;
+        $pName = $p?->name ?? $p?->user?->name ?? 'غير محدد';
+        $docName = $request->visit?->doctor?->user?->name ?? 'الاستشارية';
+        $radNames = $request->radiology_names ?: [$request->description ?: 'فحص تصوير'];
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        $images = $resultData['images'] ?? [];
     @endphp
-    <!-- تنبيه الدفع والتصريح بالدخول للمريض -->
-    @if($request->payment_status === 'paid')
-        <div class="alert alert-success d-flex align-items-center mb-3 shadow-sm rounded-3 py-2 px-3 border border-success">
-            <i class="fas fa-check-circle fa-2x text-success me-3"></i>
-            <div>
-                <h6 class="fw-bold mb-0 text-success"><i class="fas fa-door-open me-1"></i>مصرح بالدخول وإجراء الفحص (تم تسديد الأجور في الكاشير)</h6>
-                <small class="text-muted">تم استيفاء الرسوم المالية بالكامل برقم وصل مالي معتمد.</small>
-            </div>
-        </div>
-    @elseif($request->payment_status === 'pending')
-        <div class="alert alert-danger d-flex align-items-center mb-3 shadow-sm rounded-3 py-2 px-3 border border-danger">
-            <i class="fas fa-hand-paper fa-2x text-danger me-3"></i>
-            <div>
-                <h6 class="fw-bold mb-0 text-danger"><i class="fas fa-exclamation-triangle me-1"></i>تنبيه مالي: الفحص غير مدفوع — يجب إكمال الدفع قبل دخول المريض</h6>
-                <small class="text-dark">المريض لم يقم بسداد أجور الفحص في الكاشير بعد. يرجى توجيهه للكاشير لسداد الوصل المالي أولاً.</small>
-            </div>
-        </div>
-    @endif
 
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات الطلب
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>رقم الطلب:</strong> #{{ $request->id }}</p>
-                            <p><strong>نوع الطلب:</strong>
-                                <span class="badge bg-{{ $request->type == 'lab' ? 'primary' : ($request->type == 'radiology' ? 'info' : 'success') }}">
-                                    {{ $request->type_text }}
-                                </span>
-                            </p>
-                            <p><strong>تاريخ الطلب:</strong> {{ $request->created_at->format('Y-m-d H:i') }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>الحالة:</strong>
-                                <span class="badge bg-{{ $request->status == 'completed' ? 'success' : ($request->status == 'pending' ? 'warning' : 'info') }}">
-                                    {{ $request->status_text }}
-                                </span>
-                            </p>
-                            <p><strong>حالة الدفع:</strong>
-                                @if($request->payment_status === 'paid')
-                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>مدفوع</span>
-                                @elseif($request->payment_status === 'pending')
-                                    <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>غير مدفوع (بانتظار الكاشير)</span>
-                                @else
-                                    <span class="badge bg-secondary">-</span>
-                                @endif
-                            </p>
-                            <p><strong>الأولوية:</strong>
-                                <span class="badge bg-{{ ($requestDetails['priority'] ?? 'normal') == 'urgent' ? 'danger' : (($requestDetails['priority'] ?? 'normal') == 'emergency' ? 'dark' : 'secondary') }}">
-                                    {{ ($requestDetails['priority'] ?? 'normal') == 'urgent' ? 'عاجل' : (($requestDetails['priority'] ?? 'normal') == 'emergency' ? 'طوارئ' : 'عادي') }}
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-12">
-                            <p><strong>وصف الطلب:</strong></p>
-                            <p class="text-muted">{{ $requestDetails['description'] ?? $request->description ?? 'لا يوجد وصف' }}</p>
-                        </div>
-                    </div>
-                    @if($request->type === 'radiology')
-                        <hr>
-                        <!-- قسم اختيار الخدمات للطلبات pending_service_selection -->
-                        @if($request->status === 'pending_service_selection')
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        <strong>تنبيه:</strong> هذا الطلب بانتظار تحديد أنواع الأشعة المطلوبة. الرجاء اختيار الأشعة أدناه.
-                                    </div>
-                                    <form action="{{ route('radiology-staff.update', $request) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                        <div class="mb-3">
-                                            <label class="form-label">
-                                                <i class="fas fa-x-ray me-1"></i>
-                                                <strong>اختر أنواع الأشعة المطلوبة:</strong>
-                                            </label>
-                                            <!-- حقل البحث -->
-                                            <div class="input-group mb-2">
-                                                <span class="input-group-text bg-light">
-                                                    <i class="fas fa-search"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="radiologySearchInput" placeholder="ابحث عن نوع إشعة بالاسم...">
-                                                <button class="btn btn-outline-secondary" type="button" id="clearRadiologySearch">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </div>
-                                            <div class="border rounded p-3" id="radiologyTypesContainer" style="max-height: 400px; overflow-y: auto;">
-                                                @php
-                                                    // تحديد الفئة المسموحة بناءً على دور المستخدم
-                                                    $allowedSubcategories = null;
-                                                    $filterBySubcategory = false; // default: admin يرى كل شيء
-                                                    
-                                                    if (auth()->user()->hasRole('radiology_echo')) {
-                                                        $allowedSubcategories = ['إيكو']; // إيكو فقط (جاهز للمستقبل)
-                                                        $filterBySubcategory = true;
-                                                    } elseif (auth()->user()->hasRole('radiology_ultrasound')) {
-                                                        $allowedSubcategories = ['سونار']; // سونار فقط
-                                                        $filterBySubcategory = true;
-                                                    } elseif (auth()->user()->hasRole('radiology_mri')) {
-                                                        $allowedSubcategories = ['الرنين']; // الرنين المغناطيسي فقط
-                                                        $filterBySubcategory = true;
-                                                    } elseif (auth()->user()->hasRole('radiology_general') || auth()->user()->hasRole('radiology_staff')) {
-                                                        $allowedSubcategories = ['أشعة']; // الأشعة العامة فقط
-                                                        $filterBySubcategory = true;
-                                                    }
-                                                    // إذا كان admin فقط -> كل شيء
-                                                    
-                                                    // جلب أنواع الأشعة
-                                                    $radiologyTypesQuery = \App\Models\RadiologyType::where('is_active', true);
-                                                    
-                                                    // تطبيق الفلترة
-                                                    if ($filterBySubcategory && $allowedSubcategories !== null) {
-                                                        $radiologyTypesQuery->whereIn('subcategory', $allowedSubcategories);
-                                                    }
-                                                    
-                                                    $radiologyTypes = $radiologyTypesQuery
-                                                        ->orderBy('main_category')
-                                                        ->orderBy('name')
-                                                        ->get()
-                                                        ->groupBy('main_category');
-                                                @endphp
-                                                @foreach($radiologyTypes as $category => $types)
-                                                    <div class="mb-3">
-                                                        <h6 class="text-info border-bottom pb-2">
-                                                            <i class="fas fa-folder-open me-1"></i>{{ $category }}
-                                                        </h6>
-                                                        @foreach($types as $type)
-                                                            <div class="form-check">
-                                                                <input class="form-check-input radiology-type-checkbox" type="checkbox" name="radiology_type_ids[]" value="{{ $type->id }}" id="radiology_{{ $type->id }}">
-                                                                <label class="form-check-label" for="radiology_{{ $type->id }}">
-                                                                    {{ $type->name }}
-                                                                    <small class="text-muted">({{ $type->code }})</small>
-                                                                </label>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                            <div id="radiologySelectedCount" class="mt-2 text-muted small"></div>
-                                        </div>
-                                        <button type="submit" class="btn btn-success w-100">
-                                            <i class="fas fa-check-circle me-2"></i>
-                                            تأكيد الأشعة وإرسال للكاشير
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        @else
-                            <!-- عرض أنواع الأشعة المحددة مسبقاً -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <div>
-                                            <p class="mb-0"><strong>أنواع الأشعة المطلوبة:</strong></p>
-                                            <small class="text-muted">اختر أنواع الأشعة المطلوبة من القائمة</small>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        @php
-                                            // دعم radiology_type_ids
-                                            $radiologyList = [];
-                                            if (isset($requestDetails['radiology_type_ids']) && is_array($requestDetails['radiology_type_ids'])) {
-                                                // تحويل IDs إلى أسماء
-                                                foreach ($requestDetails['radiology_type_ids'] as $typeId) {
-                                                    $radiologyType = \App\Models\RadiologyType::find($typeId);
-                                                    if ($radiologyType) {
-                                                        $radiologyList[] = $radiologyType->name;
-                                                    }
-                                                }
-                                            }
-                                        @endphp
-                                        @if(count($radiologyList) > 0)
-                                            @foreach($radiologyList as $type)
-                                                <div class="col-md-4 mb-2">
-                                                    <div class="d-flex align-items-center border rounded p-2">
-                                                        <i class="fas fa-x-ray me-2 text-info"></i>
-                                                        <span>{{ $type }}</span>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        @else
-                                            <div class="col-12">
-                                                <div class="alert alert-info">
-                                                    <i class="fas fa-info-circle me-2"></i>
-                                                    لم يتم تحديد أنواع الأشعة بعد
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <div class="info-item p-3">
+                        <small class="d-block mb-1">المريض</small>
+                        <strong class="text-dark">{{ $pName }}</strong>
+                        @if($p?->medical_number)
+                            <span class="badge bg-light text-muted border font-monospace ms-1">{{ $p->medical_number }}</span>
                         @endif
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <div class="info-item p-3">
+                        <small class="d-block mb-1">الجنس والسن</small>
+                        <strong>{{ $p?->gender === 'male' ? 'ذكر' : ($p?->gender === 'female' ? 'أنثى' : 'غير محدد') }} • {{ $p?->age ? $p->age . ' سنة' : '-' }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="info-item p-3">
+                        <small class="d-block mb-1">الطبيب المحول</small>
+                        <strong>د. {{ $docName }}</strong>
+                        <div class="small text-muted" style="font-size: 0.75rem;">{{ $request->visit?->department?->name ?? 'العيادات' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <div class="info-item p-3">
+                        <small class="d-block mb-1">حالة السداد</small>
+                        @if($request->payment_status === 'paid')
+                            <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
+                        @else
+                            <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <div class="info-item p-3">
+                        <small class="d-block mb-1">الحالة الحالية</small>
+                        <span class="badge bg-{{ $request->status === 'completed' ? 'success' : ($request->status === 'in_progress' ? 'info' : ($request->status === 'calling' ? 'warning text-dark' : 'secondary')) }} py-1 px-2">
+                            {{ $request->status_text }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <strong class="text-secondary small">الفحوصات المطلوبة:</strong>
+                    @foreach($radNames as $rn)
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle py-1 px-2 fs-6">
+                            <i class="fas fa-x-ray me-1"></i> {{ $rn }}
+                        </span>
+                    @endforeach
+                    @if(!empty($details['description']) && $details['description'] !== implode(', ', $radNames))
+                        <small class="text-muted ms-2">({{ $details['description'] }})</small>
                     @endif
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal اختيار التحاليل -->
-    <div class="modal fade" id="selectTestsModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-flask me-2"></i>
-                        اختيار التحاليل المطلوبة
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <!-- 3. Completed Results View (إذا كانت النتائج مسجلة مسبقاً) -->
+    @if(!empty($resultData['findings']) || $request->status === 'completed')
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-success text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-file-medical-alt me-2"></i> نتائج التقرير الطبي المعتمد
+                </h5>
+                <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn btn-sm btn-light text-success fw-bold">
+                    <i class="fas fa-print me-1"></i> طباعة الوصل والتقرير
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <!-- Findings -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="fas fa-notes-medical text-primary me-1"></i> النتائج والمشاهدات السريرية (Findings):</h6>
+                        <div class="p-3 bg-light rounded-3 border text-dark font-monospace" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;">{{ $resultData['findings'] ?? 'لا توجد نتائج مسجلة' }}</div>
+                    </div>
+
+                    <!-- Impression -->
+                    @if(!empty($resultData['impression']))
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="fas fa-brain text-info me-1"></i> الانطباع التشخيصي (Impression):</h6>
+                        <div class="p-3 bg-info bg-opacity-10 rounded-3 border border-info-subtle text-dark">{{ $resultData['impression'] }}</div>
+                    </div>
+                    @endif
+
+                    <!-- Recommendations -->
+                    @if(!empty($resultData['recommendations']))
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="fas fa-lightbulb text-warning me-1"></i> التوصيات والمتابعة (Recommendations):</h6>
+                        <div class="p-3 bg-warning bg-opacity-10 rounded-3 border border-warning-subtle text-dark">{{ $resultData['recommendations'] }}</div>
+                    </div>
+                    @endif
+
+                    <div class="d-flex align-items-center gap-3 text-muted small mt-2">
+                        <div><i class="fas fa-user-md me-1"></i> الطبيب الإشعاعي: <strong>{{ $resultData['radiologist'] ?? auth()->user()->name }}</strong></div>
+                        <div><i class="fas fa-clock me-1"></i> تاريخ التقرير: <strong>{{ $resultData['reported_at'] ?? $request->updated_at->format('Y-m-d H:i') }}</strong></div>
+                    </div>
                 </div>
-                <form action="{{ route('radiology-staff.update', $request->id) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-                    <div class="modal-body">
-                        <div class="alert alert-info border-0">
-                            <i class="fas fa-info-circle me-2"></i>
-                            اختر التحاليل المطلوبة من القائمة أدناه
-                        </div>
 
-                        @php
-                            // باقات متاحة لاستخدام المودال
-                            $modalPackages = \App\Models\Package::where('is_active', true)->orderBy('name')->get();
-                        @endphp
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h6 class="mb-2">الباقات</h6>
-                                <div class="accordion" id="modalPackagesAccordion">
-                                    @foreach($modalPackages as $mpkg)
-                                        @php $mpkgTests = $mpkg->labTests->pluck('name')->toArray(); @endphp
-                                        <div class="accordion-item">
-                                            <h2 class="accordion-header" id="pkgHeading{{ $mpkg->id }}">
-                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#pkgCollapse{{ $mpkg->id }}" aria-expanded="false" aria-controls="pkgCollapse{{ $mpkg->id }}">
-                                                    {{ $mpkg->name }} @if($mpkg->price) - {{ number_format($mpkg->price,2) }} @endif
-                                                    <span class="badge bg-secondary ms-auto">{{ count($mpkgTests) }} فحص</span>
-                                                </button>
-                                            </h2>
-                                            <div id="pkgCollapse{{ $mpkg->id }}" class="accordion-collapse collapse" aria-labelledby="pkgHeading{{ $mpkg->id }}" data-bs-parent="#modalPackagesAccordion">
-                                                <div class="accordion-body">
-                                                    <div class="small text-muted mb-2">{{ implode('، ', $mpkgTests) }}</div>
-                                                    <button type="button" class="btn btn-sm btn-success select-package-btn" data-id="{{ $mpkg->id }}" data-tests='@json($mpkgTests)'>اختيار هذه الباقة</button>
-                                                </div>
+                <!-- Images Gallery -->
+                <div class="col-lg-5">
+                    <h6 class="fw-bold text-dark mb-2"><i class="fas fa-images text-primary me-1"></i> الصور والمرفقات الإشعاعية ({{ count($images) }}):</h6>
+                    @if(count($images) > 0)
+                        <div class="row g-2">
+                            @foreach($images as $img)
+                                @php
+                                    $imgUrl = asset('storage/' . $img);
+                                    $imgExt = strtolower(pathinfo($img, PATHINFO_EXTENSION));
+                                    $isImg = in_array($imgExt, ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'bmp', 'webp']);
+                                @endphp
+                                <div class="col-6">
+                                    <div class="card h-100 border p-2 text-center bg-light">
+                                        @if($isImg)
+                                            <a href="{{ $imgUrl }}" target="_blank">
+                                                <img src="{{ $imgUrl }}" alt="Radiology Scan" class="img-fluid rounded mb-2" style="height: 120px; width: 100%; object-fit: cover;">
+                                            </a>
+                                        @else
+                                            <div class="py-3 text-secondary">
+                                                <i class="fas fa-file-pdf fa-3x text-danger mb-2"></i>
+                                                <div class="small text-truncate">{{ basename($img) }}</div>
                                             </div>
+                                        @endif
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <a href="{{ $imgUrl }}" target="_blank" class="btn btn-xs btn-outline-primary py-1 px-2 font-monospace small">
+                                                <i class="fas fa-eye"></i> معاينة
+                                            </a>
+                                            <a href="{{ $imgUrl }}" download class="btn btn-xs btn-outline-secondary py-1 px-2 small">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-4 bg-light rounded-3 border text-muted">
+                            <i class="fas fa-image fa-2x mb-2 text-secondary opacity-50"></i>
+                            <p class="mb-0 small">لم يتم إرفاق صور للفحص</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- 4. Report Writing & Editing Form (تحديث نتائج التصوير) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-warning bg-opacity-10 border-bottom py-3">
+            <h5 class="mb-0 fw-bold text-dark">
+                <i class="fas fa-edit text-warning me-2"></i>
+                {{ empty($resultData['findings']) ? 'كتابة نتائج وتقرير الفحص الطبي' : 'تعديل نتائج التقرير والصور' }}
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <form action="{{ route('radiology-staff.update', $request) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
+
+                <div class="row g-4">
+                    
+                    <!-- Column 1: Exam Info & Status -->
+                    <div class="col-lg-4 col-12">
+                        <div class="card h-100 border-0 bg-light p-3">
+                            <h6 class="fw-bold text-dark mb-3">
+                                <i class="fas fa-info-circle text-primary me-1"></i> بيانات الفحص والحالة
+                            </h6>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">الفحوصات المقررة:</label>
+                                <div class="bg-white p-2 rounded border">
+                                    @foreach($radNames as $rn)
+                                        <div class="fw-bold text-dark mb-1">
+                                            <i class="fas fa-check text-success me-1"></i> {{ $rn }}
                                         </div>
                                     @endforeach
                                 </div>
-                                <div class="mt-3">
-                                    <label class="form-label"><strong>باقة مختارة الآن:</strong></label>
-                                    <div id="selectedPackageName" class="text-secondary">لا توجد</div>
-                                </div>
                             </div>
 
-                            <div class="col-md-8">
-                                <div class="mb-3">
-                                    <label class="form-label"><strong>اختيار باقة (اختياري)</strong></label>
-                                    <select class="form-select" id="modalPackageSelect">
-                                        <option value="">-- لا توجد باقة مختارة --</option>
-                                        @foreach($modalPackages as $mpkg)
-                                            @php $mpkgTests = $mpkg->labTests->pluck('name')->toArray(); @endphp
-                                            <option value="{{ $mpkg->id }}" data-tests='@json($mpkgTests)'>{{ $mpkg->name }} @if($mpkg->price) - {{ number_format($mpkg->price,2) }} @endif</option>
-                                        @endforeach
-                                    </select>
-                                    <div class="form-text">اختيار باقة سيحدد التحاليل في المودال تلقائياً.</div>
-                                </div>
-
-                                <!-- Search Box -->
-                                <div class="mb-4">
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text bg-white">
-                                    <i class="fas fa-search text-primary"></i>
-                                </span>
-                                <input type="text" class="form-control" id="testSearchInput" 
-                                    placeholder="ابحث عن التحليل بالاسم أو الوصف..." 
-                                    autocomplete="off">
-                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                            <div class="mb-3">
+                                <label for="status" class="form-label small fw-bold text-secondary">حالة الطلب:</label>
+                                <select name="status" id="status" class="form-select form-select-sm fw-bold">
+                                    <option value="in_progress" {{ $request->status === 'in_progress' ? 'selected' : '' }}>🔵 قيد الفحص داخل الغرفة</option>
+                                    <option value="completed" {{ $request->status === 'completed' ? 'selected' : (!in_array($request->status, ['in_progress']) ? 'selected' : '') }}>🟢 مكتمل واعتماد النتيجة</option>
+                                    <option value="pending" {{ $request->status === 'pending' ? 'selected' : '' }}>⏳ بالانتظار</option>
+                                </select>
                             </div>
-                            <div class="mt-2 text-muted small">
-                                <span id="searchResultsCount"></span>
+
+                            <!-- Upload Image/Files -->
+                            <div class="mb-2">
+                                <label for="images" class="form-label small fw-bold text-secondary">
+                                    <i class="fas fa-upload text-primary me-1"></i> إرفاق صور / تقرير الفحص:
+                                </label>
+                                <input type="file" name="images[]" id="images" class="form-control form-control-sm" multiple accept=".dcm,.dicom,.pdf,.jpg,.jpeg,.png,.tiff">
+                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">الصيغ المدعومة: DICOM, PDF, صور JPG, PNG, TIFF</small>
+                            </div>
+
+                            <!-- Live preview container -->
+                            <div id="image-preview-box" class="mt-2 text-center" style="display: none;">
+                                <img id="image-preview-elem" src="#" class="img-fluid rounded border" style="max-height: 140px;" />
                             </div>
                         </div>
+                    </div>
 
-                        @php
-                            $categoryNames = [
-                                'كيمياء سريرية' => 'كيمياء سريرية',
-                                'أمراض الدم' => 'أمراض الدم',
-                                'مصرف الدم' => 'مصرف الدم',
-                                'الطفيليات' => 'الطفيليات',
-                                'الأحياء المجهرية' => 'الأحياء المجهرية',
-                                'المناعة السريرية' => 'المناعة السريرية',
-                                'فيروسات' => 'فيروسات',
-                                'هرمونات' => 'هرمونات',
-                                'الخلايا' => 'الخلايا',
-                                'متفرقة' => 'متفرقة',
-                                'أخرى' => 'أخرى'
-                            ];
+                    <!-- Column 2 & 3: Findings, Impressions & Quick Templates -->
+                    <div class="col-lg-8 col-12">
+                        <div class="card h-100 border-0 bg-light p-3">
+                            
+                            <!-- Findings Textarea -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="findings" class="form-label small fw-bold text-dark mb-0">
+                                        <i class="fas fa-notes-medical text-primary me-1"></i> المشاهدات والنتائج الطبية (Findings): <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                                <textarea name="findings" id="findings" class="form-control font-monospace" rows="7" placeholder="أدخل تفاصيل المشاهدات الإشعاعية / نتائج السونار هنا..." required>{{ old('findings', $resultData['findings'] ?? '') }}</textarea>
+                            </div>
 
-                            $categoryIcons = [
-                                'كيمياء سريرية' => 'fas fa-flask',
-                                'أمراض الدم' => 'fas fa-tint',
-                                'مصرف الدم' => 'fas fa-syringe',
-                                'الطفيليات' => 'fas fa-bug',
-                                'الأحياء المجهرية' => 'fas fa-microscope',
-                                'المناعة السريرية' => 'fas fa-shield-alt',
-                                'فيروسات' => 'fas fa-virus',
-                                'هرمونات' => 'fas fa-dna',
-                                'الخلايا' => 'fas fa-search',
-                                'متفرقة' => 'fas fa-list',
-                                'أخرى' => 'fas fa-plus'
-                            ];
-
-                            // تجميع التحاليل حسب الفئة
-                            $grouped = LabTest::active()->get()->groupBy('category');
-
-                            // تجميع الفئات في مجموعات أكبر
-                            $mainGroups = [
-                                'كيمياء سريرية' => [
-                                    'categories' => ['كيمياء سريرية'],
-                                    'icon' => 'fas fa-flask',
-                                    'color' => 'success'
-                                ],
-                                'أمراض الدم والمصارف' => [
-                                    'categories' => ['أمراض الدم', 'مصرف الدم'],
-                                    'icon' => 'fas fa-tint',
-                                    'color' => 'danger'
-                                ],
-                                'الميكروبيولوجيا' => [
-                                    'categories' => ['الأحياء المجهرية', 'الطفيليات'],
-                                    'icon' => 'fas fa-microscope',
-                                    'color' => 'info'
-                                ],
-                                'المناعة والهرمونات' => [
-                                    'categories' => ['المناعة السريرية', 'فيروسات', 'هرمونات'],
-                                    'icon' => 'fas fa-shield-alt',
-                                    'color' => 'warning'
-                                ],
-                                'الخلايا والأنسجة' => [
-                                    'categories' => ['الخلايا'],
-                                    'icon' => 'fas fa-search',
-                                    'color' => 'secondary'
-                                ],
-                                'متفرقة' => [
-                                    'categories' => ['متفرقة', 'أخرى'],
-                                    'icon' => 'fas fa-list',
-                                    'color' => 'dark'
-                                ]
-                            ];
-                        @endphp
-
-                        <div class="accordion" id="testsAccordion">
-                        @php $groupIndex = 0; @endphp
-                        @foreach($mainGroups as $mainGroupName => $mainGroupData)
-                            @php $groupId = 'group_' . $groupIndex; $groupIndex++; @endphp
-                            <div class="accordion-item mb-2">
-                                <h2 class="accordion-header" id="heading_{{ $groupId }}">
-                                    <button class="accordion-button collapsed bg-{{ $mainGroupData['color'] }} text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{ $groupId }}" aria-expanded="false" aria-controls="collapse_{{ $groupId }}">
-                                        <i class="{{ $mainGroupData['icon'] }} me-2"></i>
-                                        {{ $mainGroupName }}
-                                        <span class="badge bg-white text-{{ $mainGroupData['color'] }} ms-2">
-                                            @php
-                                                $totalCount = 0;
-                                                foreach($mainGroupData['categories'] as $cat) {
-                                                    if(isset($grouped[$cat])) {
-                                                        $totalCount += $grouped[$cat]->count();
-                                                    }
-                                                }
-                                                echo $totalCount;
-                                            @endphp
-                                        </span>
+                            <!-- Quick Templates Buttons -->
+                            <div class="mb-3">
+                                <small class="text-muted d-block mb-1 fw-bold"><i class="fas fa-bolt text-warning me-1"></i> قوالب ونتائج سريعة:</small>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button type="button" class="btn btn-outline-success btn-sm quick-result" data-text="Normal study with no significant pathological changes or focal lesions detected.">
+                                        <i class="fas fa-check"></i> طبيعي سليم (Normal)
                                     </button>
-                                </h2>
-                                <div id="collapse_{{ $groupId }}" class="accordion-collapse collapse" aria-labelledby="heading_{{ $groupId }}" data-bs-parent="#testsAccordion">
-                                    <div class="accordion-body p-3 bg-light rounded-bottom">
-                                        <div class="row g-3">
-                                        @foreach($mainGroupData['categories'] as $category)
-                                            @if(isset($grouped[$category]) && $grouped[$category]->count() > 0)
-                                                <div class="col-12">
-                                                    <div class="sub-category-section mb-3 p-3 bg-light rounded">
-                                                        <h6 class="text-primary mb-3 d-flex align-items-center">
-                                                            <i class="{{ $categoryIcons[$category] ?? 'fas fa-list' }} me-2"></i>
-                                                            {{ $categoryNames[$category] ?? ucfirst($category) }}
-                                                            <span class="badge bg-primary ms-2">{{ $grouped[$category]->count() }}</span>
-                                                        </h6>
-                                                        <div class="row g-2">
-                                                            @foreach($grouped[$category] as $test)
-                                                            <div class="col-md-6 col-lg-4">
-                                                                <div class="form-check test-item p-2 border rounded hover-shadow">
-                                                                    <input class="form-check-input" type="checkbox" 
-                                                                        name="tests[]" 
-                                                                        value="{{ $test->name }}" 
-                                                                        id="test_{{ $test->id }}"
-                                                                        {{ in_array($test->name, $requestDetails['tests'] ?? []) ? 'checked' : '' }}>
-                                                                    <label class="form-check-label w-100" for="test_{{ $test->id }}">
-                                                                        <div class="d-flex justify-content-between align-items-start">
-                                                                            <div>
-                                                                                <strong>{{ $test->name }}</strong>
-                                                                                @if($test->description)
-                                                                                    <br><small class="text-muted">{{ \Illuminate\Support\Str::limit($test->description, 50) }}</small>
-                                                                                @endif
-                                                                            </div>
-                                                                            <i class="fas fa-check-circle text-success opacity-0 check-icon"></i>
-                                                                        </div>
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
+                                    <button type="button" class="btn btn-outline-info btn-sm quick-result" data-text="Ultrasound examination reveals normal liver size and echotexture. Gallbladder is well distended, thin-walled, with no calculi. Both kidneys show normal size, parenchymal thickness and corticomedullary differentiation without hydronephrosis. Spleen and urinary bladder are normal.">
+                                        <i class="fas fa-wave-square"></i> سونار بطن وحوض سليم (Abdomen Normal)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm quick-result" data-text="Chest X-Ray shows clear lung fields bilaterally. Normal cardiothoracic ratio. Costophrenic and cardiophrenic angles are clear. No evidence of active pulmonary lesion or pneumothorax.">
+                                        <i class="fas fa-lungs"></i> أشعة صدر سليمة (Chest Normal)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-sm quick-result" data-text="Abnormal findings observed requiring clinical correlation and follow-up.">
+                                        <i class="fas fa-exclamation-triangle"></i> غير طبيعي (Abnormal)
+                                    </button>
                                 </div>
                             </div>
-                        @endforeach
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>
-                            حفظ التحاليل المختارة
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <!-- عرض النتائج إذا كانت موجودة -->
-    @if($request->result && $request->status == 'completed')
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-check-circle me-2"></i>
-                            نتائج الفحص
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @php
-                            $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-                            $testResults = [];
-                            if (is_array($resultData)) {
-                                $testResults = $resultData['test_results'] ?? [];
-                            }
-                            $notes = is_array($resultData) ? ($resultData['notes'] ?? $request->result) : $request->result;
-                        @endphp
-
-                        @if(count((array) $testResults) > 0)
-                            <div class="table-responsive mb-3">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>الفحص</th>
-                                            <th>القيمة</th>
-                                            <th>الوحدة</th>
-                                            <th>المرجع</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($testResults as $testName => $testData)
-                                        <tr>
-                                            <td><strong>{{ $testName }}</strong></td>
-                                            <td>{{ (is_array($testData) ? ($testData['value'] ?? '-') : '-') }}</td>
-                                            <td>{{ (is_array($testData) ? ($testData['unit'] ?? '-') : '-') }}</td>
-                                            <td>{{ (is_array($testData) ? ($testData['reference'] ?? '-') : '-') }}</td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @endif
-
-                        @if($notes)
-                            <div class="mt-3">
-                                <h6>ملاحظات إضافية:</h6>
-                                <p class="text-muted">{{ $notes }}</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    @php
-        $reqDetails = $request->details;
-        if (is_string($reqDetails)) {
-            $decoded = json_decode($reqDetails, true);
-            $reqDetails = is_array($decoded) ? $decoded : [];
-        }
-        if (!is_array($reqDetails)) {
-            $reqDetails = [];
-        }
-        $hasSelectedServices = !empty($reqDetails['lab_test_ids']) || !empty($reqDetails['package_id']) || !empty($reqDetails['radiology_type_ids']) || !empty($reqDetails['services_selected']);
-    @endphp
-    @if($request->status !== 'pending_service_selection' || $hasSelectedServices)
-    <!-- نموذج تحديث حالة الطلب -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-edit me-2"></i>
-                        تحديث حالة الطلب
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('radiology-staff.update', $request) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="status" class="form-label">حالة الطلب</label>
-                                    <select class="form-select" id="status" name="status" required>
-                                        <option value="pending" {{ $request->status == 'pending' ? 'selected' : '' }}>في الانتظار</option>
-                                        <option value="in_progress" {{ $request->status == 'in_progress' ? 'selected' : '' }}>قيد التنفيذ</option>
-                                        <option value="completed" {{ $request->status == 'completed' ? 'selected' : '' }}>مكتمل</option>
-                                    </select>
+                            <!-- Impression & Recommendations -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="impression" class="form-label small fw-bold text-dark mb-1">
+                                        <i class="fas fa-brain text-info me-1"></i> الانطباع النهائي (Impression):
+                                    </label>
+                                    <input type="text" name="impression" id="impression" class="form-control form-control-sm" placeholder="مثال: Normal Abdominal Ultrasound" value="{{ old('impression', $resultData['impression'] ?? '') }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="recommendations" class="form-label small fw-bold text-dark mb-1">
+                                        <i class="fas fa-lightbulb text-warning me-1"></i> التوصيات (Recommendations):
+                                    </label>
+                                    <input type="text" name="recommendations" id="recommendations" class="form-control form-control-sm" placeholder="مثال: Clinical correlation recommended" value="{{ old('recommendations', $resultData['recommendations'] ?? '') }}">
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                @if($request->type == 'lab')
-                                    <!-- جدول إدخال نتائج التحاليل -->
-                                    <div class="lab-results-section">
-                                        <div class="table-responsive">
-                                            <table class="table table-hover table-bordered align-middle">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th class="text-center" style="width: 50px;">#</th>
-                                                        <th>التحليل</th>
-                                                        <th style="width: 200px;">القيمة</th>
-                                                        <th style="width: 120px;">الوحدة</th>
-                                                        <th style="width: 100px;">الحالة</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @php
-                                                        // دعم كل من tests و lab_test_ids
-                                                        $testsList = [];
-                                                        $requestDetails = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                                        
-                                                        if (isset($requestDetails['tests']) && is_array($requestDetails['tests'])) {
-                                                            $testsList = $requestDetails['tests'];
-                                                        } elseif (isset($requestDetails['lab_test_ids']) && is_array($requestDetails['lab_test_ids'])) {
-                                                            // تحويل IDs إلى أسماء
-                                                            foreach ($requestDetails['lab_test_ids'] as $testId) {
-                                                                $labTest = \App\Models\LabTest::find($testId);
-                                                                if ($labTest) {
-                                                                    $testsList[] = $labTest->name;
-                                                                }
-                                                            }
-                                                        }
-                                                    @endphp
-                                                    @foreach($testsList as $index => $test)
-                                                        @php
-                                                            $testIcon = getTestIcon($test);
-                                                        @endphp
-                                                        <tr class="test-row" data-test="{{ $test }}">
-                                                            <td class="text-center">
-                                                                {{ $index + 1 }}
-                                                            </td>
-                                                            <td>
-                                                                <div class="d-flex align-items-center">
-                                                                    <div class="test-icon me-2">
-                                                                        <i class="{{ $testIcon }}"></i>
-                                                                    </div>
-                                                                    <div>
-                                                                        <strong>{{ $test }}</strong>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="input-group">
-                                                                    <span class="input-group-text">
-                                                                        <i class="fas fa-tachometer-alt text-success"></i>
-                                                                    </span>
-                                                                    <input type="text"
-                                                                           class="form-control test-value"
-                                                                           name="test_results[{{ $test }}][value]"
-                                                                           value="{{ old('test_results.' . $test . '.value', (is_array($savedTestResults) && isset($savedTestResults[$test]) && is_array($savedTestResults[$test])) ? $savedTestResults[$test]['value'] : '') }}"
-                                                                           placeholder="أدخل القيمة"
-                                                                           data-test="{{ $test }}">
-                                                                    <!-- إضافة حقل مخفي لوحدة القياس -->
-                                                                    <input type="hidden"
-                                                                           name="test_results[{{ $test }}][unit]"
-                                                                           value="{{ getTestUnit($test, $labTests) }}">
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="d-flex align-items-center unit-display" data-test="{{ $test }}">
-                                                                    <i class="fas fa-balance-scale text-info me-2"></i>
-                                                                    <span class="unit-value">{{ getTestUnit($test, $labTests) }}</span>
-                                                                    <span class="unit-tooltip ms-1" data-bs-toggle="tooltip" 
-                                                                          data-bs-placement="top" 
-                                                                          title="وحدة القياس المعيارية للتحليل">
-                                                                        <i class="fas fa-info-circle text-info"></i>
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="text-center">
-                                                                    <span class="status-indicator" id="indicator-{{ $index }}">
-                                                                        <i class="fas fa-circle text-muted"></i>
-                                                                    </span>
-                                                                    <small class="status-text d-block mt-1" id="status-{{ $index }}">
-                                                                        قيد الإدخال
-                                                                    </small>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
 
-                                        <!-- ملخص سريع للنتائج -->
-                                        <div class="results-summary mt-3 p-3 bg-light rounded">
-                                            <h6 class="mb-2">
-                                                <i class="fas fa-chart-bar text-primary me-2"></i>
-                                                ملخص النتائج
-                                            </h6>
-                                            <div class="summary-stats">
-                                                <span class="stat-item">
-                                                    <i class="fas fa-check-circle text-success"></i>
-                                                    <span id="normal-count">0</span> طبيعي
-                                                </span>
-                                                <span class="stat-item">
-                                                    <i class="fas fa-arrow-up text-danger"></i>
-                                                    <span id="high-count">0</span> مرتفع
-                                                </span>
-                                                <span class="stat-item">
-                                                    <i class="fas fa-arrow-down text-warning"></i>
-                                                    <span id="low-count">0</span> منخفض
-                                                </span>
-                                                <span class="stat-item">
-                                                    <i class="fas fa-question-circle text-muted"></i>
-                                                    <span id="pending-count">{{ is_countable($testsList) ? count($testsList) : 0 }}</span> غير مكتمل
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div class="mt-3">
-                                            <label for="result" class="form-label">
-                                                <i class="fas fa-comment-medical text-secondary me-2"></i>
-                                                ملاحظات إضافية
-                                            </label>
-                                            <textarea class="form-control"
-                                                      id="result"
-                                                      name="result"
-                                                      rows="3"
-                                                      placeholder="ملاحظات إضافية حول النتائج أو تفسيرها">{{ old('result', $savedNotes) }}</textarea>
-                                            <small class="text-muted">
-                                                <i class="fas fa-lightbulb text-warning me-1"></i>
-                                                اكتب أي ملاحظات مهمة أو تفسيرات للنتائج
-                                            </small>
-                                        </div>
-
-                                        <!-- قسم المراجع المرجعية -->
-                                        <div class="mt-4">
-                                            <details class="mb-3">
-                                                <summary class="text-primary fw-bold cursor-pointer">
-                                                    <i class="fas fa-info-circle me-2"></i>
-                                                    القيم المرجعية الطبيعية (معلومات فقط)
-                                                </summary>
-                                                <div class="mt-3 p-3 bg-light rounded">
-                                                    <small class="text-muted">
-                                                        <strong>ملاحظة:</strong> هذه القيم تقريبية عامة وتختلف حسب المختبر، عمر المريض، وجنسه. استشر الطبيب للقيم الصحيحة.
-                                                    </small>
-                                                    <ul class="mt-2 mb-0 small">
-                                                        <li><strong>سكر الدم:</strong> 70-140 mg/dL</li>
-                                                        <li><strong>ضغط الدم:</strong> أقل من 140 mmHg</li>
-                                                        <li><strong>الكوليسترول:</strong> أقل من 200 mg/dL</li>
-                                                        <li><strong>البيليروبين:</strong> أقل من 1.2 mg/dL</li>
-                                                        <li><strong>الكرياتينين:</strong> 0.6-1.2 mg/dL</li>
-                                                        <li><strong>اليوريا:</strong> 7-50 mg/dL</li>
-                                                        <li><strong>SGOT (AST):</strong> أقل من 40 U/L</li>
-                                                        <li><strong>SGPT (ALT):</strong> أقل من 41 U/L</li>
-                                                        <li><strong>الهيموغلوبين:</strong> 12-16 g/dL (نساء)، 14-18 g/dL (رجال)</li>
-                                                        <li><strong>الكرات البيضاء:</strong> 4,000-11,000 /µL</li>
-                                                        <li><strong>الصفائح:</strong> 150,000-450,000 /µL</li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-                                        </div>
-                                    </div>
-                                @else
-                                    <label for="result" class="form-label">النتيجة / التقرير</label>
-                                    <textarea class="form-control" id="result" name="result"
-                                              rows="4" placeholder="أدخل نتائج الفحص أو التقرير">{{ old('result', $request->result) }}</textarea>
-                                @endif
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i>
-                                حفظ التحديث
-                            </button>
-                            @if($request->status == 'pending')
-                                <button type="button" class="btn btn-primary" onclick="startProcessing()">
-                                    <i class="fas fa-play me-1"></i>
-                                    بدء المعالجة
+                            <!-- Submit button -->
+                            <div class="mt-2">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-xs">
+                                    <i class="fas fa-save me-2"></i> حفظ واعتماد نتائج التقرير الطبي
                                 </button>
-                            @endif
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+                            </div>
 
-    @if($request->status !== 'pending_service_selection')
-    <!-- تاريخ الزيارة -->
-    <div class="row">
-        <div class="col-12">
-            @if($request->visit)
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-history me-2"></i>
-                        معلومات الزيارة
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>تاريخ الزيارة:</strong> {{ $request->visit->visit_date ? $request->visit->visit_date->format('Y-m-d') : 'غير محدد' }}</p>
-                            <p><strong>نوع الزيارة:</strong> {{ $request->visit->visit_type_text ?? 'غير محدد' }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>الشكوى الرئيسية:</strong></p>
-                            <p class="text-muted">{{ $request->visit->chief_complaint ? \Illuminate\Support\Str::limit($request->visit->chief_complaint, 100) : 'غير محدد' }}</p>
                         </div>
                     </div>
-                    @if($request->visit->diagnosis)
-                    <hr>
-                    <p><strong>التشخيص:</strong></p>
-                    @php $diag = is_string($request->visit->diagnosis) ? json_decode($request->visit->diagnosis, true) : $request->visit->diagnosis; @endphp
-                    @if($diag['code'] ?? false)
-                        @if($diag['code'] === 'other' && isset($diag['custom_code']))
-                            <p class="text-muted"><strong>رمز ICD:</strong> {{ $diag['custom_code'] }}</p>
-                        @elseif($diag['code'] !== 'other')
-                            <p class="text-muted"><strong>رمز ICD-10:</strong> {{ $diag['code'] }}</p>
-                        @endif
-                    @endif
-                    <p class="text-muted"><strong>الوصف:</strong> {{ $diag['description'] ?? $request->visit->diagnosis }}</p>
-                    @endif
+
                 </div>
-            </div>
-            @endif
+            </form>
         </div>
     </div>
-    @endif
+
 </div>
 
 <script>
-function startProcessing() {
-    document.getElementById('status').value = 'in_progress';
-    document.querySelector('form').submit();
-}
-
-// وظائف تحليل النتائج المخبرية
 document.addEventListener('DOMContentLoaded', function() {
-    initializeLabResults();
-    
-    // تفعيل tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    // إضافة تأثيرات تفاعلية لعرض الوحدات
-    const unitDisplays = document.querySelectorAll('.unit-display');
-    unitDisplays.forEach(display => {
-        display.addEventListener('mouseover', function() {
-            this.style.transform = 'scale(1.05)';
-        });
-        display.addEventListener('mouseout', function() {
-            this.style.transform = 'scale(1)';
-        });
-    });
-
-    // تحديث عداد التحاليل عند تغيير checkboxes
-    const labCheckboxes = document.querySelectorAll('.lab-test-checkbox');
-    labCheckboxes.forEach(cb => cb.addEventListener('change', updateLabSelectedCount));
-    updateLabSelectedCount();
-
-    // اختيار صيغة العرض بين الباقة والتحاليل العامة
-    const serviceTypeRadios = document.querySelectorAll('input[name="service_selection_type"]');
-    const packageSection = document.getElementById('packageSection');
-    const generalTestsSection = document.getElementById('generalTestsSection');
-    const hiddenServiceType = document.getElementById('serviceSelectionType');
-
-    function toggleServiceSelection(type) {
-        if (!packageSection || !generalTestsSection) return;
-
-        const packageCollapse = new bootstrap.Collapse(packageSection, { toggle: false });
-        const generalCollapse = new bootstrap.Collapse(generalTestsSection, { toggle: false });
-
-        if (type === 'package') {
-            packageCollapse.show();
-            generalCollapse.hide();
-        } else {
-            packageCollapse.hide();
-            generalCollapse.show();
-        }
-
-        document.querySelectorAll('.lab-test-checkbox').forEach(cb => cb.checked = false);
-        updateLabSelectedCount();
-    }
-
-    const activeRadio = document.querySelector('input[name="service_selection_type"]:checked');
-    if (activeRadio) {
-        toggleServiceSelection(activeRadio.value);
-    }
-
-    // Package -> auto-check handlers
-    const packageSelect = document.getElementById('packageSelect');
-    if (packageSelect) {
-        packageSelect.addEventListener('change', function() {
-            const raw = this.selectedOptions[0]?.dataset?.tests || '[]';
-            const rawNames = this.selectedOptions[0]?.dataset?.testNames || '[]';
-            let ids = [];
-            let names = [];
-            try { ids = JSON.parse(raw); } catch(e) { ids = []; }
-            try { names = JSON.parse(rawNames); } catch(e) { names = []; }
-
-            applyPackageByIds(ids);
-            showSelectedPackageTests(names);
-
-            // إذا تم اختيار باقة، اجعل خدمة الاختيار باقة واظهر قسم الباقات
-            const pkgRadio = document.getElementById('selectPackage');
-            if (pkgRadio) {
-                pkgRadio.checked = true;
-                toggleServiceSelection('package');
-            }
-            updateLabSelectedCount();
-        });
-
-        // عرض باقة محددة عند التحميل إذا كانت موجودة
-        const selectedOption = packageSelect.selectedOptions[0];
-        if (selectedOption && selectedOption.value) {
-            const rawNames = selectedOption.dataset.testNames || '[]';
-            let names = [];
-            try { names = JSON.parse(rawNames); } catch(e) { names = []; }
-            showSelectedPackageTests(names);
-        }
-    }
-
-    function showSelectedPackageTests(names) {
-        const preview = document.getElementById('packageTestsPreview');
-        if (!preview) return;
-
-        if (!Array.isArray(names) || names.length === 0) {
-            preview.innerHTML = '<small class="text-muted">لم يتم اختيار باقة أو لا توجد تحاليل في الباقة.</small>';
-            return;
-        }
-
-        const listItems = names.map(name => `<span class="badge bg-info text-dark me-1 mb-1">${name}</span>`).join('');
-        preview.innerHTML = `<div><strong>تحاليل الباقة:</strong><br>${listItems}</div>`;
-    }
-
-    const modalPackageSelect = document.getElementById('modalPackageSelect');
-    const selectedPackageName = document.getElementById('selectedPackageName');
-
-    function setSelectedPackage(name) {
-        if (selectedPackageName) {
-            selectedPackageName.textContent = name || 'لا توجد';
-        }
-    }
-
-    if (modalPackageSelect) {
-        modalPackageSelect.addEventListener('change', function() {
-            const selectedOpt = this.selectedOptions[0];
-            const raw = selectedOpt?.dataset?.tests || '[]';
-            let names = [];
-            try { names = JSON.parse(raw); } catch(e) { names = []; }
-            applyPackageInModal(names);
-            setSelectedPackage(selectedOpt?.textContent || 'لا توجد');
-        });
-    }
-
-    document.querySelectorAll('.select-package-btn').forEach(btn => {
+    // Quick Template Handlers
+    const findingsTextarea = document.getElementById('findings');
+    const quickButtons = document.querySelectorAll('.quick-result');
+    quickButtons.forEach(btn => {
         btn.addEventListener('click', function() {
-            const names = this.dataset.tests ? JSON.parse(this.dataset.tests) : [];
-            const pkgName = this.closest('.accordion-item')?.querySelector('.accordion-button')?.textContent || 'لا توجد';
-
-            applyPackageInModal(names);
-            setSelectedPackage(pkgName.trim());
-
-            if (modalPackageSelect) {
-                modalPackageSelect.value = this.dataset.id;
-            }
-
-            // افتح قسم التحاليل لسهولة المتابعة
-            document.getElementById('testSearchInput')?.focus();
-        });
-    });
-});
-
-    // دالة لحساب حالة النتيجة بناءً على اسم التحليل والقيمة
-    function evaluateTestResult(testName, value, testRow, indicator, statusText) {
-        // ملاحظة مهمة: هذه قيم مرجعية تقريبية عامة فقط
-        // القيم الحقيقية تختلف حسب المختبر، عمر المريض، جنسه، والوحدات المستخدمة
-        // يجب دائمًا مراجعة الطبيب أو المختبر للقيم المرجعية الصحيحة
-        let resultType = 'normal';
-        let statusMessage = '<i class="fas fa-info-circle text-info"></i> تم إدخال القيمة - راجع المرجع الطبي';
-        let indicatorClass = 'fas fa-circle text-info';
-
-    // تحليلات أساسية لأنواع شائعة من الفحوصات (قيم تقريبية عامة)
-    if (testName.includes('سكر') || testName.includes('glucose')) {
-        if (value < 70) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else if (value > 140) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (70-140 mg/dL)';
-        }
-    } else if (testName.includes('ضغط') || testName.includes('pressure')) {
-        if (value > 140) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<140 mmHg)';
-        }
-    } else if (testName.includes('كوليسترول') || testName.includes('cholesterol')) {
-        if (value > 200) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<200 mg/dL)';
-        }
-    } else if (testName.includes('بيليروبين') || testName.includes('bilirubin')) {
-        if (value > 1.2) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<1.2 mg/dL)';
-        }
-    } else if (testName.includes('كرياتينين') || testName.includes('creatinine')) {
-        if (value > 1.2) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<1.2 mg/dL)';
-        }
-    } else if (testName.includes('يوريا') || testName.includes('urea')) {
-        if (value > 50) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<50 mg/dL)';
-        }
-    } else if (testName.includes('sgot') || testName.includes('ast')) {
-        if (value > 40) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<40 U/L)';
-        }
-    } else if (testName.includes('sgpt') || testName.includes('alt')) {
-        if (value > 41) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (<41 U/L)';
-        }
-    } else if (testName.includes('الصفائح') || testName.includes('platelets')) {
-        if (value < 150000) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else if (value > 450000) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (150k-450k /µL)';
-        }
-    } else if (testName.includes('الهيموغلوبين') || testName.includes('hemoglobin')) {
-        if (value < 12) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (>12 g/dL)';
-        }
-    } else if (testName.includes('الكرات البيضاء') || testName.includes('wbc')) {
-        if (value < 4000) {
-            resultType = 'low';
-            statusMessage = '<i class="fas fa-arrow-down text-warning"></i> قيمة منخفضة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-down text-warning';
-        } else if (value > 11000) {
-            resultType = 'high';
-            statusMessage = '<i class="fas fa-arrow-up text-danger"></i> قيمة مرتفعة (تحتاج مراجعة طبية)';
-            indicatorClass = 'fas fa-arrow-up text-danger';
-        } else {
-            statusMessage = '<i class="fas fa-check-circle text-success"></i> في المدى الطبيعي العام (4k-11k /µL)';
-        }
-    } else {
-        // للفحوصات غير المحددة، نعتبرها طبيعية
-        statusMessage = '<i class="fas fa-info-circle text-info"></i> تم إدخال القيمة - راجع المرجع الطبي';
-    }
-
-    // تحديث المؤشرات البصرية
-    indicator.className = indicatorClass;
-    statusText.innerHTML = statusMessage;
-
-    // تحديث فئة الصف
-    testRow.classList.remove('result-normal', 'result-high', 'result-low');
-    testRow.classList.add('result-' + resultType);
-
-    updateSummary();
-}
-
-function updateSummary() {
-    const testRows = document.querySelectorAll('.test-row');
-    let normal = 0, high = 0, low = 0, pending = 0;
-
-    testRows.forEach(row => {
-        const input = row.querySelector('.test-value');
-        const value = parseFloat(input.value);
-
-        if (isNaN(value) || value === 0) {
-            pending++;
-        } else if (row.classList.contains('result-high')) {
-            high++;
-        } else if (row.classList.contains('result-low')) {
-            low++;
-        } else {
-            normal++;
-        }
-    });
-
-    document.getElementById('normal-count').textContent = normal;
-    document.getElementById('high-count').textContent = high;
-    document.getElementById('low-count').textContent = low;
-    document.getElementById('pending-count').textContent = pending;
-}
-</script>
-
-<style>
-/* تصميم محسن للقراءات المخبرية */
-.lab-results-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
-    padding: 20px;
-    margin: 15px 0;
-    border: 1px solid #dee2e6;
-}
-
-.lab-tests-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.lab-test-card {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border: 2px solid #e9ecef;
-    transition: all 0.3s ease;
-    overflow: hidden;
-}
-
-.lab-test-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    border-color: #007bff;
-}
-
-.lab-test-card.result-normal {
-    border-color: #28a745;
-    background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);
-}
-
-.lab-test-card.result-high {
-    border-color: #dc3545;
-    background: linear-gradient(135deg, #fff8f8 0%, #ffffff 100%);
-}
-
-.lab-test-card.result-low {
-    border-color: #ffc107;
-    background: linear-gradient(135deg, #fffef8 0%, #ffffff 100%);
-}
-
-.test-header {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    color: white;
-    padding: 12px 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.test-icon {
-    background: rgba(255,255,255,0.2);
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.test-icon:hover {
-    transform: scale(1.1);
-    background: rgba(255,255,255,0.3);
-}
-
-.test-info h6 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.test-info small {
-    font-size: 11px;
-    opacity: 0.9;
-}
-
-.test-inputs {
-    padding: 15px;
-}
-
-.input-group-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.input-group-text {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    color: #6c757d;
-    min-width: 40px;
-    justify-content: center;
-}
-
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
-}
-
-.result-indicator {
-    background: transparent !important;
-    border-left: none !important;
-}
-
-.test-status {
-    padding: 8px 15px 12px;
-    background: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    text-align: center;
-}
-
-.status-text {
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-}
-
-.results-summary {
-    border: 1px solid #dee2e6;
-}
-
-.summary-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: center;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.stat-item i {
-    font-size: 16px;
-}
-
-/* تحسينات إضافية للتصميم */
-.lab-results-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
-    padding: 20px;
-    margin: 15px 0;
-    border: 1px solid #dee2e6;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.results-summary {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 20px;
-}
-
-.results-summary h6 {
-    color: #495057;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.stat-item {
-    background: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-.stat-item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-/* تحسينات للأزرار */
-.btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    border: none;
-    transition: all 0.3s ease;
-}
-
-.btn-success:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
-    border: none;
-    transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-}
-
-/* تحسينات للنصوص */
-.form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 8px;
-}
-
-.text-muted {
-    color: #6c757d !important;
-}
-
-/* تحسينات للبطاقات */
-.card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
-}
-
-.card:hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    border: none;
-    font-weight: 600;
-}
-
-/* تحسينات للتنبيهات */
-.alert {
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.alert-warning {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    border-left: 4px solid #ffc107;
-}
-
-/* تحسينات لقسم المراجع */
-details {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 10px 15px;
-    background: #f8f9fa;
-}
-
-details summary {
-    list-style: none;
-    cursor: pointer;
-    user-select: none;
-}
-
-details summary::-webkit-details-marker {
-    display: none;
-}
-
-details summary::before {
-    content: '▶';
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-details[open] summary::before {
-    transform: rotate(90deg);
-}
-
-details summary:hover {
-    color: #0056b3;
-}
-
-details div {
-    margin-top: 15px;
-    padding: 15px;
-    background: white;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-}
-
-details ul li {
-    margin-bottom: 5px;
-    color: #495057;
-}
-
-/* تحسينات للأيقونات */
-.fas, .far {
-    transition: all 0.3s ease;
-}
-
-.test-icon i {
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
-}
-
-/* تأثيرات انتقال سلسة */
-.lab-test-card {
-    position: relative;
-}
-
-.lab-test-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: #007bff;
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-}
-
-.lab-test-card:hover::before,
-.lab-test-card.result-normal::before {
-    background: #28a745;
-    transform: scaleX(1);
-}
-
-.lab-test-card.result-high::before {
-    background: #dc3545;
-    transform: scaleX(1);
-}
-
-.lab-test-card.result-low::before {
-    background: #ffc107;
-    transform: scaleX(1);
-}
-
-/* تحسينات لوحدة القياس */
-.unit-display {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    padding: 4px 8px;
-    border-radius: 0 4px 4px 0;
-    transition: all 0.3s ease;
-}
-
-.unit-display:hover {
-    background: #e9ecef;
-}
-
-.unit-value {
-    font-weight: 500;
-    color: #495057;
-    font-size: 0.9rem;
-}
-
-.unit-tooltip {
-    cursor: help;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.unit-tooltip:hover {
-    opacity: 1;
-}
-
-.unit-display[data-test*="سكر"] .unit-value,
-.unit-display[data-test*="glucose"] .unit-value {
-    color: #dc3545;
-}
-
-.unit-display[data-test*="ضغط"] .unit-value,
-.unit-display[data-test*="pressure"] .unit-value {
-    color: #0d6efd;
-}
-
-.unit-display[data-test*="كوليسترول"] .unit-value,
-.unit-display[data-test*="cholesterol"] .unit-value {
-    color: #fd7e14;
-}
-
-.unit-display[data-test*="كرياتينين"] .unit-value,
-.unit-display[data-test*="creatinine"] .unit-value,
-.unit-display[data-test*="يوريا"] .unit-value,
-.unit-display[data-test*="urea"] .unit-value {
-    color: #198754;
-}
-
-.unit-display[data-test*="هيموغلوبين"] .unit-value,
-.unit-display[data-test*="hemoglobin"] .unit-value {
-    color: #6f42c1;
-}
-
-/* تحسينات جدول التحاليل */
-.table {
-    margin-bottom: 0;
-    --bs-table-hover-bg: rgba(0, 123, 255, 0.05);
-}
-
-.table > :not(caption) > * > * {
-    padding: 0.75rem;
-    vertical-align: middle;
-}
-
-.table thead th {
-    background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
-    font-weight: 600;
-    text-align: center;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.test-row {
-    transition: all 0.3s ease;
-}
-
-.test-row:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.test-row .test-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: rgba(0, 123, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
-.test-row:hover .test-icon {
-    transform: scale(1.1);
-    background: rgba(0, 123, 255, 0.2);
-}
-
-.test-row .form-control {
-    border-radius: 0 4px 4px 0;
-}
-
-.test-row .input-group-text {
-    border-radius: 4px 0 0 4px;
-}
-
-.status-indicator {
-    font-size: 1.2rem;
-    display: inline-block;
-    transition: all 0.3s ease;
-}
-
-.status-text {
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-/* تصميم متجاوب للجدول */
-.table-responsive {
-    border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-}
-
-@media (max-width: 768px) {
-    .table > :not(caption) > * > * {
-        padding: 0.5rem;
-    }
-    
-    .test-row .test-icon {
-        width: 28px;
-        height: 28px;
-    }
-}
-
-/* تحسين مظهر الحقول في الجدول */
-.test-row .form-control:focus {
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    border-color: #80bdff;
-}
-
-.test-row.result-normal {
-    background-color: rgba(40, 167, 69, 0.05);
-}
-
-.test-row.result-high {
-    background-color: rgba(220, 53, 69, 0.05);
-}
-
-.test-row.result-low {
-    background-color: rgba(255, 193, 7, 0.05);
-}
-
-/* تحسينات للأجهزة المحمولة */
-@media (max-width: 768px) {
-    .lab-tests-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .summary-stats {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .test-header {
-        padding: 10px 12px;
-    }
-
-    .test-inputs {
-        padding: 12px;
-    }
-
-    .lab-results-section {
-        padding: 15px;
-        margin: 10px 0;
-    }
-
-    .stat-item {
-        width: 100%;
-        margin-bottom: 8px;
-        text-align: center;
-    }
-
-    .container-fluid {
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-}
-
-/* تحسينات للشاشات الكبيرة */
-@media (min-width: 1200px) {
-    .lab-tests-grid {
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    }
-}
-
-.hover-shadow:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    transform: translateY(-1px);
-    transition: all 0.2s ease;
-}
-
-.test-item {
-    transition: all 0.2s ease;
-}
-
-.test-item:hover {
-    background-color: #f8f9fa;
-}
-
-.form-check-input:checked + .form-check-label .check-icon {
-    opacity: 1 !important;
-}
-
-.main-group-header {
-    transition: all 0.3s ease;
-}
-
-.main-group-header:hover {
-    opacity: 0.9;
-}
-
-.toggle-icon {
-    transition: transform 0.3s ease;
-}
-
-.collapsed .toggle-icon {
-    transform: rotate(-90deg);
-}
-</style>
-@endsection
-
-@section('scripts')
-<script>
-$(document).ready(function() {
-    // البحث في التحاليل
-    $('#testSearchInput').on('keyup', function() {
-        const searchTerm = $(this).val().toLowerCase().trim();
-        let visibleCount = 0;
-        let totalCount = 0;
-
-        if (searchTerm === '') {
-            // إظهار كل شيء عند مسح البحث
-            $('.test-item').closest('.col-md-6').show();
-            $('.sub-category-section').show();
-            $('.main-group-section').show();
-            $('#searchResultsCount').text('');
-            return;
-        }
-
-        // إخفاء كل شيء أولاً
-        $('.main-group-section').hide();
-        $('.sub-category-section').hide();
-        $('.test-item').closest('.col-md-6').hide();
-
-        // البحث في كل اختبار
-        $('.test-item').each(function() {
-            totalCount++;
-            const testName = $(this).find('strong').text().toLowerCase();
-            const testDesc = $(this).find('.text-muted').text().toLowerCase();
-            
-            if (testName.includes(searchTerm) || testDesc.includes(searchTerm)) {
-                visibleCount++;
-                $(this).closest('.col-md-6').show();
-                $(this).closest('.sub-category-section').show();
-                $(this).closest('.main-group-section').show();
-            }
-        });
-
-        // تحديث عداد النتائج
-        if (visibleCount === 0) {
-            $('#searchResultsCount').html('<i class="fas fa-exclamation-circle text-warning"></i> لا توجد نتائج للبحث');
-        } else {
-            $('#searchResultsCount').html(`<i class="fas fa-check-circle text-success"></i> تم العثور على ${visibleCount} نتيجة من أصل ${totalCount}`);
-        }
-    });
-
-    // زر مسح البحث
-    $('#clearSearch').on('click', function() {
-        $('#testSearchInput').val('').trigger('keyup').focus();
-    });
-
-    // تفعيل الـ collapse للمجموعات
-    $('.main-group-header').on('click', function() {
-        const target = $(this).data('bs-target');
-        $(target).collapse('toggle');
-    });
-
-    // تحديث أيقونة التبديل
-    $('.collapse').on('shown.bs.collapse hidden.bs.collapse', function() {
-        const header = $(this).prev('.main-group-header');
-        const icon = header.find('.toggle-icon');
-        if ($(this).hasClass('show')) {
-            icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
-        } else {
-            icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
-        }
-    });
-
-    // تحديث أيقونات التحقق عند تغيير التحاليل
-    $('.form-check-input').on('change', function() {
-        const checkIcon = $(this).siblings('.form-check-label').find('.check-icon');
-        if ($(this).is(':checked')) {
-            checkIcon.removeClass('opacity-0');
-        } else {
-            checkIcon.addClass('opacity-0');
-        }
-    });
-
-    // تحديث حالة الأيقونات عند التحميل
-    $('.form-check-input:checked').each(function() {
-        $(this).siblings('.form-check-label').find('.check-icon').removeClass('opacity-0');
-    });
-
-    // ========== البحث في قسم اختيار الخدمات للطلبات pending_service_selection ==========
-    $('#labSearchInput').on('keyup', function() {
-        const searchTerm = $(this).val().toLowerCase().trim();
-        
-        if (searchTerm === '') {
-            $('.lab-test-checkbox').closest('.form-check').show();
-            $('#labSelectedCount').text('');
-            return;
-        }
-
-        let visibleCount = 0;
-        $('.lab-test-checkbox').each(function() {
-            const label = $(this).siblings('label').text().toLowerCase();
-            const formCheck = $(this).closest('.form-check');
-            
-            if (label.includes(searchTerm)) {
-                formCheck.show();
-                visibleCount++;
+            const templateText = this.getAttribute('data-text');
+            if (findingsTextarea.value.trim() === '') {
+                findingsTextarea.value = templateText;
             } else {
-                formCheck.hide();
+                if (confirm('هل تريد استبدال النص الحالي بالقالب المختار؟')) {
+                    findingsTextarea.value = templateText;
+                }
             }
         });
-
-        if (visibleCount === 0) {
-            $('#labSelectedCount').html('<i class="fas fa-exclamation-circle text-warning"></i> لا توجد نتائج');
-        } else {
-            $('#labSelectedCount').html(`<i class="fas fa-check-circle text-success"></i> ${visibleCount} نتيجة`);
-        }
     });
 
-    // زر مسح البحث
-    $('#clearLabSearch').on('click', function() {
-        $('#labSearchInput').val('').trigger('keyup');
-    });
+    // Image file live preview
+    const fileInput = document.getElementById('images');
+    const previewBox = document.getElementById('image-preview-box');
+    const previewElem = document.getElementById('image-preview-elem');
 
-    // تحديث عداد التحاليل المختارة
-    $('.lab-test-checkbox').on('change', function() {
-        const selectedCount = $('.lab-test-checkbox:checked').length;
-        if (selectedCount > 0) {
-            $('#labSelectedCount').html(`<i class="fas fa-check-circle text-success"></i> تم اختيار ${selectedCount} تحليل`);
-        } else {
-            $('#labSelectedCount').text('');
-        }
-    });
-
-    // ========== البحث في قسم اختيار أنواع الأشعة ==========
-    $('#radiologySearchInput').on('keyup', function() {
-        const searchTerm = $(this).val().toLowerCase().trim();
-
-        if (searchTerm === '') {
-            $('.radiology-type-checkbox').closest('.form-check').show();
-            $('#radiologySelectedCount').text('');
-            return;
-        }
-
-        let visibleCount = 0;
-        $('.radiology-type-checkbox').each(function() {
-            const label = $(this).siblings('label').text().toLowerCase();
-            const formCheck = $(this).closest('.form-check');
-
-            if (label.includes(searchTerm)) {
-                formCheck.show();
-                visibleCount++;
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewElem.src = e.target.result;
+                    previewBox.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
             } else {
-                formCheck.hide();
+                previewBox.style.display = 'none';
             }
         });
-
-        if (visibleCount === 0) {
-            $('#radiologySelectedCount').html('<i class="fas fa-exclamation-circle text-warning"></i> لا توجد نتائج');
-        } else {
-            $('#radiologySelectedCount').html(`<i class="fas fa-check-circle text-success"></i> ${visibleCount} نتيجة`);
-        }
-    });
-
-    // زر مسح البحث للأشعة
-    $('#clearRadiologySearch').on('click', function() {
-        $('#radiologySearchInput').val('').trigger('keyup');
-    });
-
-    // تحديث عداد أنواع الأشعة المختارة
-    $('.radiology-type-checkbox').on('change', function() {
-        const selectedCount = $('.radiology-type-checkbox:checked').length;
-        if (selectedCount > 0) {
-            $('#radiologySelectedCount').html(`<i class="fas fa-check-circle text-success"></i> تم اختيار ${selectedCount} نوع إشعة`);
-        } else {
-            $('#radiologySelectedCount').text('');
-        }
-    });
+    }
 });
 </script>
 @endsection
