@@ -155,7 +155,7 @@ $age = $patient?->age ?? null;
                         </button>
                     @endif
 
-                    @if(!$isBloodBankRequest && in_array($request->status, ['pending', 'in_progress', 'completed']))
+                    @if(!$isBloodBankRequest && in_array($request->status, ['pending_service_selection', 'pending', 'in_progress', 'completed']))
                         <a href="{{ route('lab.show', ['request' => $request, 'append' => 1]) }}#appendTestsSection" class="btn btn-outline-secondary" title="إضافة تحاليل إضافية">
                             <i class="fas fa-plus-circle me-1"></i> إضافة تحاليل
                         </a>
@@ -320,22 +320,24 @@ $age = $patient?->age ?? null;
         $favorites = \App\Models\UserLabTestStat::getFavoritesForUser(auth()->id());
     @endphp
 
-    @if(!$isBloodBankRequest && in_array($request->status, ['pending', 'in_progress', 'completed']) && $showAppendSection)
+    @if(!$isBloodBankRequest && in_array($request->status, ['pending_service_selection', 'pending', 'in_progress', 'completed']) && ($showAppendSection || count($testsList) == 0))
     <div class="row mb-3" id="appendTestsSection">
         <div class="col-12">
-            <div class="card shadow-sm border-0 bg-transparent">
-                <div class="card-header bg-transparent text-dark border-bottom d-flex justify-content-between align-items-center py-2">
-                    <h6 class="mb-0 fw-bold"><i class="fas fa-plus-circle text-primary me-2"></i>إضافة تحاليل إضافية إلى هذا الطلب</h6>
-                    <a href="{{ route('lab.show', $request) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
-                        <i class="fas fa-times me-1"></i> إغلاق
-                    </a>
+            <div class="card shadow-sm border border-primary-subtle bg-white">
+                <div class="card-header bg-primary-subtle text-primary border-bottom d-flex justify-content-between align-items-center py-2 px-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-plus-circle text-primary me-2"></i>{{ count($testsList) == 0 ? 'تحديد واختيار التحاليل المطلوبة لهذا الطلب' : 'إضافة تحاليل إضافية إلى هذا الطلب' }}</h6>
+                    @if(count($testsList) > 0)
+                        <a href="{{ route('lab.show', $request) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                            <i class="fas fa-times me-1"></i> إغلاق
+                        </a>
+                    @endif
                 </div>
                 <div class="card-body p-3">
                     <form action="{{ route('staff.lab-requests.append-tests', $request) }}" method="POST">
                         @csrf
                         <div class="alert alert-info py-2 px-3 mb-3 small">
                             <i class="fas fa-info-circle me-1"></i>
-                            سيتم إدراج التحاليل المختارة إلى الطلب الحالي مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.
+                            {{ count($testsList) == 0 ? 'هذا الطلب بانتظار تحديد الفحوصات. يرجى اختيار التحاليل المطلوبة للمريض من القائمة أدناه أو البحث عنها ثم الضغط على زر الحفظ.' : 'سيتم إدراج التحاليل المختارة إلى الطلب الحالي مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.' }}
                         </div>
 
                         @php
@@ -706,9 +708,13 @@ $age = $patient?->age ?? null;
                                             @endif
                                         @empty
                                             <tr>
-                                                <td colspan="7" class="text-center py-4 text-muted">
-                                                    <i class="fas fa-flask fa-2x mb-2 opacity-25"></i>
-                                                    <p class="mb-0">لا توجد تحاليل محددة في هذا الطلب بعد</p>
+                                                <td colspan="7" class="text-center py-5 text-muted">
+                                                    <i class="fas fa-flask fa-3x mb-3 text-primary opacity-50"></i>
+                                                    <h6 class="fw-bold text-dark mb-1">لا توجد تحاليل محددة في هذا الطلب بعد</h6>
+                                                    <p class="text-muted small mb-3">يمكنك اختيار وتحديد التحاليل المطلوبة للمريض الآن للبدء بإدخال النتائج.</p>
+                                                    <a href="{{ route('lab.show', ['request' => $request, 'append' => 1]) }}#appendTestsSection" class="btn btn-primary btn-sm px-3 shadow-sm fw-bold">
+                                                        <i class="fas fa-plus-circle me-1"></i> اختيار وتحديد التحاليل الآن
+                                                    </a>
                                                 </td>
                                             </tr>
                                         @endforelse

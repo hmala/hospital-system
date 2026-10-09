@@ -1065,8 +1065,8 @@ datalist option:hover {
                             </div>
 
                             @if(isset($radiologyTypes) && $radiologyTypes->count() > 0)
-                                <!-- 1. حقل البحث الذكي بنمط Tag Autocomplete -->
-                                <div class="mb-3 position-relative">
+                                <!-- 1. حقل البحث الذكي بنمط الفلترة الفورية المباشرة للجدول -->
+                                <div class="mb-3">
                                     <div class="input-group shadow-sm">
                                         <span class="input-group-text bg-info text-white">
                                             <i class="fas fa-search"></i>
@@ -1074,13 +1074,12 @@ datalist option:hover {
                                         <input type="text" 
                                                id="docRadSearchInput" 
                                                class="form-control form-control-lg fs-6" 
-                                               placeholder="اكتب اسم فحص الأشعة (مثل: Chest X-Ray, Brain MRI, Abdomen US, CT Scan...) واضغط Enter..."
+                                               placeholder="ابحث عن فحص الأشعة أو السونار لتصفية القائمة فوراً..."
                                                autocomplete="off">
-                                        <button type="button" class="btn btn-outline-secondary" id="docRadClearSearchBtn" title="مسح البحث">
+                                        <button type="button" class="btn btn-outline-secondary d-none" id="docRadClearSearchBtn" title="مسح البحث">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
-                                    <div id="docRadAutocompleteMenu" class="dropdown-menu w-100 shadow-lg p-1 border-0" style="max-height: 280px; overflow-y: auto; display: none; position: absolute; z-index: 1050;"></div>
                                 </div>
 
                                 <!-- 2. صينية الفحوصات المختارة حالياً (Selected Chips Tray) -->
@@ -2104,19 +2103,94 @@ datalist option:hover {
 
                                                     @if($medRequest->type == 'radiology')
                                                         @php
+                                                            $radResult = is_string($medRequest->result) ? json_decode($medRequest->result, true) : ($medRequest->result ?? []);
+                                                            if (!is_array($radResult) && !empty($medRequest->result)) {
+                                                                $radResult = ['findings' => (string)$medRequest->result];
+                                                            }
+                                                            $radFindings = $radResult['findings'] ?? $radResult['result_text'] ?? null;
+                                                            $radImpression = $radResult['impression'] ?? null;
+                                                            $radRecommendations = $radResult['recommendations'] ?? null;
+                                                            $radImages = $radResult['images'] ?? [];
+                                                            $radiologist = $radResult['radiologist'] ?? null;
+                                                            $radReportedAt = $radResult['reported_at'] ?? null;
+
                                                             $radiologyRequests = \App\Models\RadiologyRequest::where('visit_id', $medRequest->visit_id)->with('result', 'radiologyType')->get();
                                                         @endphp
-                                                        @foreach($radiologyRequests as $radReq)
-                                                            @if($radReq->result)
-                                                                <div class="alert alert-info p-2 rounded-3 mt-2 mb-0 small">
-                                                                    <strong>{{ $radReq->radiologyType->name ?? 'الأشعة' }}:</strong>
-                                                                    <p class="mb-1 text-dark">{{ $radReq->result->result ?? 'تم الفحص' }}</p>
-                                                                    @if(!empty($radReq->result->doctor_notes))
-                                                                        <small class="text-muted d-block">ملاحظات الطبيب: {{ $radReq->result->doctor_notes }}</small>
+
+                                                        @if(!empty($radFindings) || !empty($radImpression) || count($radImages) > 0)
+                                                            <div class="card border border-info-subtle bg-info-subtle bg-opacity-10 rounded-3 mt-2 mb-0 shadow-sm">
+                                                                <div class="card-header bg-white py-1.5 px-2.5 border-bottom d-flex justify-content-between align-items-center">
+                                                                    <div class="d-flex align-items-center gap-1.5 text-info-emphasis">
+                                                                        <i class="fas fa-file-medical-alt fs-6"></i>
+                                                                        <strong class="small">تقرير نتائج الأشعة والتصوير</strong>
+                                                                    </div>
+                                                                    @if($radiologist)
+                                                                        <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">
+                                                                            <i class="fas fa-user-md me-1 text-primary"></i> كُتب بواسطة: {{ $radiologist }}
+                                                                        </span>
                                                                     @endif
                                                                 </div>
-                                                            @endif
-                                                        @endforeach
+                                                                <div class="card-body p-2.5 small">
+                                                                    @if(!empty($radFindings))
+                                                                        <div class="mb-2">
+                                                                            <span class="fw-bold text-dark d-block mb-1"><i class="fas fa-microscope text-info me-1"></i> المشاهدات والنتائج (Findings):</span>
+                                                                            <div class="p-2 bg-white rounded border text-dark" style="white-space: pre-line; line-height: 1.6;">{{ $radFindings }}</div>
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(!empty($radImpression))
+                                                                        <div class="mb-2">
+                                                                            <span class="fw-bold text-primary d-block mb-1"><i class="fas fa-clipboard-check me-1"></i> الانطباع التشخيصي (Impression):</span>
+                                                                            <div class="p-2 bg-primary-subtle text-primary-emphasis rounded border border-primary-subtle fw-semibold" style="white-space: pre-line;">{{ $radImpression }}</div>
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(!empty($radRecommendations))
+                                                                        <div class="mb-2">
+                                                                            <span class="fw-bold text-secondary d-block mb-1"><i class="fas fa-comment-medical me-1"></i> التوصيات والملاحظات:</span>
+                                                                            <div class="p-2 bg-white rounded border text-muted" style="white-space: pre-line;">{{ $radRecommendations }}</div>
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(is_array($radImages) && count($radImages) > 0)
+                                                                        <div class="mt-2 pt-2 border-top">
+                                                                            <span class="fw-bold text-dark d-block mb-1.5"><i class="fas fa-images text-info me-1"></i> الصور والمرفقات الإشعاعية ({{ count($radImages) }}):</span>
+                                                                            <div class="d-flex flex-wrap gap-2">
+                                                                                @foreach($radImages as $imgIndex => $imgPath)
+                                                                                    @php
+                                                                                        $imgUrl = asset('storage/' . $imgPath);
+                                                                                        $isPdf = str_ends_with(strtolower($imgPath), '.pdf');
+                                                                                    @endphp
+                                                                                    @if($isPdf)
+                                                                                        <a href="{{ $imgUrl }}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1">
+                                                                                            <i class="fas fa-file-pdf text-danger"></i>
+                                                                                            <span>ملف PDF #{{ $imgIndex + 1 }} ↗</span>
+                                                                                        </a>
+                                                                                    @else
+                                                                                        <a href="{{ $imgUrl }}" target="_blank" class="position-relative d-inline-block border rounded overflow-hidden shadow-sm" style="width: 70px; height: 70px;">
+                                                                                            <img src="{{ $imgUrl }}" alt="Radiology Image" style="width: 100%; height: 100%; object-fit: cover;">
+                                                                                            <span class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white text-center py-0.5" style="font-size: 0.6rem;">عرض ↗</span>
+                                                                                        </a>
+                                                                                    @endif
+                                                                                @endforeach
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            @foreach($radiologyRequests as $radReq)
+                                                                @if($radReq->result)
+                                                                    <div class="alert alert-info p-2 rounded-3 mt-2 mb-0 small">
+                                                                        <strong>{{ $radReq->radiologyType->name ?? 'الأشعة' }}:</strong>
+                                                                        <p class="mb-1 text-dark">{{ $radReq->result->result ?? 'تم الفحص' }}</p>
+                                                                        @if(!empty($radReq->result->doctor_notes))
+                                                                            <small class="text-muted d-block">ملاحظات الطبيب: {{ $radReq->result->doctor_notes }}</small>
+                                                                        @endif
+                                                                    </div>
+                                                                @endif
+                                                            @endforeach
+                                                        @endif
                                                     @endif
                                                 @elseif($medRequest->status == 'pending')
                                                     <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
@@ -4539,83 +4613,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // 5. اقتراحات البحث الذكية السريعة (Autocomplete Dropdown)
-        function renderSearchDropdown(q) {
-            if (!searchDropdown) return;
-            if (!q || q.length < 1) {
-                searchDropdown.classList.add('d-none');
-                searchDropdown.style.display = 'none';
-                searchDropdown.innerHTML = '';
-                return;
-            }
-
-            const matches = radCheckboxes.filter(chk => {
-                const name = normalizeText(chk.getAttribute('data-type-name') || '');
-                const code = normalizeText(chk.getAttribute('data-type-code') || '');
-                return name.includes(q) || code.includes(q);
-            }).slice(0, 8);
-
-            if (matches.length === 0) {
-                searchDropdown.innerHTML = `<div class="list-group-item text-muted small p-2 text-center">لا توجد فحوصات أشعة مطابقة</div>`;
-                searchDropdown.classList.remove('d-none');
-                searchDropdown.style.display = 'block';
-                return;
-            }
-
-            searchDropdown.innerHTML = '';
-            matches.forEach(chk => {
-                const isChecked = chk.checked;
-                const name = chk.getAttribute('data-type-name') || chk.value;
-                const code = chk.getAttribute('data-type-code') || '';
-                const cat = chk.getAttribute('data-type-category') || '';
-
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2 px-3 ${isChecked ? 'bg-light text-muted' : ''}`;
-                item.innerHTML = `
-                    <div>
-                        <span class="fw-bold text-dark">${name}</span>
-                        ${code ? `<span class="badge bg-light text-muted border ms-1 font-monospace">${code}</span>` : ''}
-                        <small class="text-muted d-block" style="font-size: 0.72rem;">${cat}</small>
-                    </div>
-                    <span>
-                        ${isChecked 
-                            ? `<span class="badge bg-success-subtle text-success"><i class="fas fa-check me-1"></i>محدد</span>` 
-                            : `<span class="badge bg-info-subtle text-info">+ إضافة</span>`}
-                    </span>
-                `;
-
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    chk.checked = !chk.checked;
-                    updateCardVisual(chk);
-                    renderSelectedChips();
-                    searchInput.value = '';
-                    if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
-                    searchDropdown.classList.add('d-none');
-                    searchDropdown.style.display = 'none';
-                    filterGrid();
-                    searchInput.focus();
-                });
-
-                searchDropdown.appendChild(item);
-            });
-
-            searchDropdown.classList.remove('d-none');
-            searchDropdown.style.display = 'block';
-        }
-
         if (searchInput) {
             searchInput.addEventListener('input', function() {
                 const val = this.value.trim();
                 if (clearSearchBtn) {
                     clearSearchBtn.classList.toggle('d-none', val.length === 0);
                 }
-                renderSearchDropdown(normalizeText(val));
                 filterGrid();
             });
 
-            // الضغط على Enter في حقل البحث لاختيار أول نتيجة فوراً
+            // الضغط على Enter في حقل البحث لاختيار أول نتيجة مطابقة فوراً ومسح البحث
             searchInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -4634,40 +4641,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         renderSelectedChips();
                         this.value = '';
                         if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
-                        if (searchDropdown) {
-                            searchDropdown.classList.add('d-none');
-                            searchDropdown.style.display = 'none';
-                        }
                         filterGrid();
                     }
                 } else if (e.key === 'Escape') {
-                    if (searchDropdown) {
-                        searchDropdown.classList.add('d-none');
-                        searchDropdown.style.display = 'none';
-                    }
+                    this.value = '';
+                    if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                    filterGrid();
                 }
             });
-        }
-
         if (clearSearchBtn && searchInput) {
             clearSearchBtn.addEventListener('click', function() {
                 searchInput.value = '';
                 clearSearchBtn.classList.add('d-none');
-                if (searchDropdown) {
-                    searchDropdown.classList.add('d-none');
-                    searchDropdown.style.display = 'none';
-                }
                 filterGrid();
                 searchInput.focus();
             });
         }
-
-        document.addEventListener('click', function(e) {
-            if (searchDropdown && !searchDropdown.contains(e.target) && e.target !== searchInput) {
-                searchDropdown.classList.add('d-none');
-                searchDropdown.style.display = 'none';
-            }
-        });
 
         // 6. أزرار تصفية الأقسام (Category Pills)
         categoryPills.forEach(pill => {
