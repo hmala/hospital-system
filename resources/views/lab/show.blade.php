@@ -149,7 +149,13 @@ $age = $patient?->age ?? null;
                     </div>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                    @if(count($testsList) > 0 || !empty($request->result) || $request->status === 'completed')
+                        <a href="{{ route('lab.print', $request) }}" target="_blank" class="btn btn-outline-dark fw-bold shadow-sm px-3" title="طباعة قائمة التحاليل المطلوبة / تقرير النتائج">
+                            <i class="fas fa-print me-1 text-primary"></i> طباعة {{ $request->status === 'completed' ? 'التقرير' : 'طلب التحاليل' }}
+                        </a>
+                    @endif
+
                     @if(!$isBloodBankRequest)
                         <button type="submit" form="labResultForm" class="btn btn-primary fw-bold shadow-sm px-3">
                             <i class="fas fa-check-circle me-1"></i> حفظ واعتماد النتائج

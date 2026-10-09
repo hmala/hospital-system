@@ -537,6 +537,12 @@
                                                        title="إدخال نتائج الفحص واعتمادها">
                                                         <i class="fas fa-bolt me-1"></i> إدخال النتائج
                                                     </a>
+                                                    <a href="{{ route('lab.print', $req) }}" 
+                                                       class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-sm" 
+                                                       target="_blank" 
+                                                       title="طباعة طلب التحاليل / أمر العمل">
+                                                        <i class="fas fa-print me-1"></i> طباعة الطلب
+                                                    </a>
                                                 @endif
                                             </div>
                                         </td>

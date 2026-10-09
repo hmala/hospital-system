@@ -804,6 +804,47 @@
             $testsCount = count($savedArr);
         }
 
+        // إذا لم تكن هناك نتائج مدخلة بعد، نستخرج قائمة التحاليل المطلوبة (Requisition / Work Order)
+        $requestedLabTestsList = [];
+        $requestDetails = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($requestDetails)) $requestDetails = [];
+
+        if (!empty($requestDetails['package_id'])) {
+            $pkg = \App\Models\Package::find($requestDetails['package_id']);
+            if ($pkg) {
+                $requestedLabTestsList = array_merge($requestedLabTestsList, $pkg->labTests->toArray());
+            }
+        }
+
+        if (!empty($requestDetails['lab_test_ids'])) {
+            $rawIds = $requestDetails['lab_test_ids'];
+            $ids = is_string($rawIds) ? (json_decode($rawIds, true) ?: explode(',', $rawIds)) : (is_array($rawIds) ? $rawIds : []);
+            foreach ($ids as $testId) {
+                $testId = trim((string)$testId);
+                if ($testId === '') continue;
+                $labTestModel = \App\Models\LabTest::find($testId);
+                if ($labTestModel) {
+                    $requestedLabTestsList[] = $labTestModel->toArray();
+                }
+            }
+        }
+
+        if (!empty($requestDetails['tests'])) {
+            $rawTests = $requestDetails['tests'];
+            $testsArr = is_string($rawTests) ? (json_decode($rawTests, true) ?: explode(',', $rawTests)) : (is_array($rawTests) ? $rawTests : []);
+            foreach ($testsArr as $tItem) {
+                if (is_array($tItem)) {
+                    $requestedLabTestsList[] = $tItem;
+                } elseif (is_string($tItem) && trim($tItem) !== '') {
+                    $requestedLabTestsList[] = ['name' => trim($tItem)];
+                }
+            }
+        }
+
+        if ($testsCount === 0) {
+            $testsCount = count($requestedLabTestsList);
+        }
+
         $isBloodBankRequest = $isBloodBankRequest ?? ($request->type === 'blood_bank' || data_get($request->details, 'blood_bank', false));
         $badgeText = $isBloodBankRequest ? 'Blood Bank' : 'Clinical Laboratory';
         $badgeIcon = $isBloodBankRequest ? 'blood-bank-icon.svg' : 'lab-icon.svg';
@@ -1003,7 +1044,7 @@
                         </div>
                     </div>
                 @endforeach
-            @elseif(!empty($request->result))
+            @elseif(!empty($request->result) && count($savedArr ?? []) > 0)
                 @php
                     $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
                     $testResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
@@ -1059,9 +1100,72 @@
                         <div class="test-device-row">By Cobas Integra 400 plus (Roche Diagnostics)</div>
                     </div>
                 @endforeach
+            @elseif(count($requestedLabTestsList ?? []) > 0)
+                <!-- Requisition / Work Order Mode: Requested Tests before entering results -->
+                <div style="background: #f8fafc; border: 1px dashed #0284c7; border-radius: 6px; padding: 6px 12px; margin-bottom: 12px; font-size: 13px; color: #0369a1; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-clipboard-list me-1"></i> قائمة التحاليل المطلوبة (أمر عمل المختبر / Test Work Order)</span>
+                    <span class="badge bg-primary px-2 py-1">بانتظار إدخال النتائج</span>
+                </div>
+
+                @foreach($requestedLabTestsList as $reqTestItem)
+                    @php
+                        $tName = is_array($reqTestItem) ? ($reqTestItem['name'] ?? '') : (is_object($reqTestItem) ? $reqTestItem->name : (string)$reqTestItem);
+                        $tUnit = is_array($reqTestItem) ? ($reqTestItem['unit'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->unit ?? '') : '');
+                        $tRef = is_array($reqTestItem) ? ($reqTestItem['reference_range'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->reference_range ?? '') : '');
+                        $tCat = is_array($reqTestItem) ? ($reqTestItem['category'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->category ?? '') : '');
+
+                        if (empty($tUnit) || empty($tRef)) {
+                            $dbTest = \App\Models\LabTest::where('name', $tName)->first();
+                            if ($dbTest) {
+                                $tUnit = $tUnit ?: $dbTest->unit;
+                                $tRef = $tRef ?: $dbTest->reference_range;
+                                $tCat = $tCat ?: $dbTest->category;
+                            }
+                        }
+                    @endphp
+
+                    @if($tCat && $tCat !== $currentGroup)
+                        @php $currentGroup = $tCat; @endphp
+                        <div class="category-header-row">
+                            {{ $currentGroup }}
+                        </div>
+                    @endif
+
+                    <div class="test-card">
+                        <!-- Main Test Row -->
+                        <div class="test-main-row">
+                            <div class="test-name">
+                                {{ $tName }}
+                            </div>
+                            <div class="test-value-cell">
+                                <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
+                                @if($tUnit)
+                                    <span class="unit-label">{{ $tUnit }}</span>
+                                @endif
+                            </div>
+                            <div class="test-value-cell right">
+                                <span class="badge" style="background-color: #f1f5f9; color: #64748b; font-size: 11px; border: 1px solid #cbd5e1; font-weight: normal;">Pending</span>
+                            </div>
+                        </div>
+
+                        <!-- Reference Range Row -->
+                        @if($tRef)
+                        <div class="test-meta-row">
+                            <div class="meta-label">Normal Range :</div>
+                            <div class="meta-conv-range">{{ $tRef }}</div>
+                            <div class="meta-status-blank"></div>
+                        </div>
+                        @endif
+
+                        <!-- Device / Method Row -->
+                        <div class="test-device-row">
+                            By Cobas Integra 400 plus (Roche Diagnostics)
+                        </div>
+                    </div>
+                @endforeach
             @else
                 <div style="text-align: center; padding: 40px; color: #888;">
-                    No laboratory test results recorded for this request yet.
+                    No laboratory tests or results recorded for this request yet.
                 </div>
             @endif
         @endif
