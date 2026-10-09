@@ -433,17 +433,25 @@ class EmergencyController extends Controller
         $returnTo = $request->input('return_to');
         $user = Auth::user();
 
-        if ($returnTo === 'emergency' || ($user->can('view emergencies') && $returnTo !== 'inquiry')) {
+        // 1. إذا كان موظف طوارئ أو يملك صلاحية عرض الطوارئ
+        if ($user->hasRole(['emergency_staff', 'doctor', 'nurse']) || $user->can('view emergencies') || $returnTo === 'emergency') {
             return redirect()->route('emergency.index')
                 ->with('success', '✅ تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة (رقم الحالة #' . $emergency->id . ')');
         }
 
+        // 2. إذا كان موظف استعلامات عامة
         if ($user->can('view inquiries')) {
             return redirect()->route('inquiry.index')
                 ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
         }
 
-        return redirect()->route('consultant-availability.index')
+        // 3. إذا كان موظف استعلامات استشارية
+        if ($user->can('view consultant availability') || $user->hasRole('consultation_receptionist')) {
+            return redirect()->route('consultant-availability.index')
+                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+        }
+
+        return redirect()->route('home')
             ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
     }
 

@@ -11,7 +11,9 @@
                     إضافة حالة طوارئ جديدة
                 </h2>
                 @php
-                    $isFromInquiry = request('return_to') === 'inquiry' || request('from_inquiry') || request('from_referral_id') || auth()->user()->hasRole(['receptionist', 'inquiry_staff', 'consultation_receptionist']) || !auth()->user()->can('view emergencies');
+                    $isFromInquiry = request('return_to') === 'inquiry' 
+                        || request('from_inquiry') 
+                        || (!auth()->user()->can('view emergencies') && !auth()->user()->hasRole(['emergency_staff', 'doctor', 'nurse']));
                     $backUrl = $isFromInquiry ? route('inquiry.index') : route('emergency.index');
                     $backLabel = $isFromInquiry ? 'العودة للاستعلامات' : 'العودة لقائمة الطوارئ';
                 @endphp
