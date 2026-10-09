@@ -40,19 +40,6 @@ class InquiryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى صفحة الاستعلامات');
         }
 
-        // جلب آخر الزيارات في الاستعلامات ومصرف الدم (اليوم)
-        $todayInquiries = Visit::whereIn('department_id', function($query) {
-            $query->select('id')
-                  ->from('departments')
-                  ->where('name', 'LIKE', '%استعلامات%')
-                  ->orWhere('name', 'LIKE', '%استقبال%')
-                  ->orWhere('name', 'LIKE', '%مصرف دم%');
-        })
-        ->whereDate('visit_date', Carbon::today())
-        ->with(['patient.user', 'doctor.user'])
-        ->latest()
-        ->paginate(15);
-
         // موظف استعلامات الاستشارية فقط لا تظهر له تحويلات الطوارئ للعمليات أو الرقود أو الجداول العامة
         $isConsultationReceptionistOnly = $user->hasRole('consultation_receptionist') && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff']);
 
@@ -98,7 +85,7 @@ class InquiryController extends Controller
             ->latest()
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals', 'isConsultationReceptionistOnly'));
+        return view('inquiry.index', compact('pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals', 'isConsultationReceptionistOnly'));
     }
 
     /**

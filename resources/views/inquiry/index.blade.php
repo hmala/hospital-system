@@ -149,69 +149,28 @@
             </div>
         </div>
     @else
-        <!-- إحصائيات سريعة -->
+        @php
+            $hasAnyTransfers = (isset($consultantSurgeryTransfers) && count($consultantSurgeryTransfers) > 0)
+                || (isset($pendingInsuranceEmergencyReferrals) && count($pendingInsuranceEmergencyReferrals) > 0)
+                || (isset($pendingTransfers) && count($pendingTransfers) > 0)
+                || (isset($pendingAdmissionTransfers) && count($pendingAdmissionTransfers) > 0);
+        @endphp
+
+        <!-- شريط الإجراءات السريع -->
         <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm inquiry-stat-card">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h6 class="mb-1 text-uppercase">زيارات اليوم</h6>
-                                <h1 class="mb-0">{{ $todayInquiries->total() }}</h1>
-                            </div>
-                            <div class="icon-circle">
-                                <i class="fas fa-users fa-2x"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm inquiry-stat-card">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h6 class="mb-1 text-uppercase">قيد المعالجة</h6>
-                                <h1 class="mb-0">{{ $todayInquiries->where('status', 'in_progress')->count() }}</h1>
-                            </div>
-                            <div class="icon-circle">
-                                <i class="fas fa-spinner fa-2x"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm inquiry-stat-card">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h6 class="mb-1 text-uppercase">مكتملة</h6>
-                                <h1 class="mb-0">{{ $todayInquiries->where('status', 'completed')->count() }}</h1>
-                            </div>
-                            <div class="icon-circle">
-                                <i class="fas fa-check-circle fa-2x"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm inquiry-stat-card">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h6 class="mb-1 text-uppercase">في الانتظار</h6>
-                                <h1 class="mb-0">{{ $todayInquiries->where('status', 'pending')->count() }}</h1>
-                            </div>
-                            <div class="icon-circle">
-                                <i class="fas fa-clock fa-2x"></i>
-                            </div>
-                        </div>
-                    </div>
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="fas fa-clipboard-list me-2 text-primary"></i> التحويلات والإحالات المعلقة
+                </h5>
+                <div class="d-flex gap-2">
+                    @can('create inquiries')
+                    <a href="{{ route('inquiry.search') }}" class="btn btn-primary fw-bold shadow-sm">
+                        <i class="fas fa-plus-circle me-1"></i> طلب جديد
+                    </a>
+                    @endcan
+                    <button class="btn btn-outline-secondary" onclick="window.location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i> تحديث
+                    </button>
                 </div>
             </div>
         </div>
@@ -226,7 +185,7 @@
                                 <i class="fas fa-procedures me-2 animate__animated animate__pulse animate__infinite"></i>
                                 مرضى العيادات الاستشارية المحولين للعمليات الجراحية
                             </h5>
-                            <span class="badge bg-dark text-white fw-bold fs-6">{{ count($consultantSurgeryTransfers) }} مرضى بانتظار حجز العملية</span>
+                            <span class="fw-bold fs-6">({{ count($consultantSurgeryTransfers) }} مرضى بانتظار حجز العملية)</span>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -411,7 +370,7 @@
                                 <i class="fas fa-bed me-2 animate__animated animate__pulse animate__infinite"></i>
                                 مرضى الطوارئ المحولين للرقود (التنويم)
                             </h5>
-                            <span class="badge bg-dark text-white fw-bold fs-6">{{ count($pendingAdmissionTransfers) }} مرضى بانتظار حجز سرير</span>
+                            <span class="fw-bold fs-6">({{ count($pendingAdmissionTransfers) }} مرضى بانتظار حجز سرير)</span>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -458,129 +417,22 @@
             </div>
         @endif
 
-        <!-- قائمة الزيارات -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header border-0 pb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fas fa-calendar-day me-2"></i>
-                                زيارات اليوم
-                            </h5>
-                            <div class="d-flex gap-2">
-                                @can('create inquiries')
-                                <a href="{{ route('inquiry.search') }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-plus-circle me-1"></i> طلب جديد
-                                </a>
-                                @endcan
-                                <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
-                                    <i class="fas fa-sync-alt me-1"></i>
-                                    تحديث
-                                </button>
-                            </div>
+        @if(!$hasAnyTransfers)
+            <div class="row justify-content-center my-4">
+                <div class="col-lg-6 text-center py-5">
+                    <div class="card border-0 shadow-sm rounded-4 p-5 bg-white">
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h4 class="fw-bold text-dark">لا توجد تحويلات أو إحالات معلقة</h4>
+                        <p class="text-muted mb-4">كافة تحويلات العمليات والرقود وإحالات الطوارئ مكتملة ومحجوزة</p>
+                        <div>
+                            <a href="{{ route('inquiry.search') }}" class="btn btn-primary px-4 py-2 fw-bold shadow-sm rounded-pill">
+                                <i class="fas fa-plus-circle me-1"></i> إنشاء طلب جديد
+                            </a>
                         </div>
-                    </div>
-                    <div class="card-body p-0">
-                        @if($todayInquiries->count() > 0)
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0 inquiry-table">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th>وقت الزيارة</th>
-                                            <th>اسم المريض</th>
-                                            <th>العمر</th>
-                                            <th>رقم الهاتف</th>
-                                            <th>الشكوى الرئيسية</th>
-                                            <th>الطبيب المختص</th>
-                                            <th>حالة الزيارة</th>
-                                            <th>العمليات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($todayInquiries as $visit)
-                                        <tr>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-clock me-1"></i>
-                                                    {{ $visit->visit_time ? \Carbon\Carbon::parse($visit->visit_time)->format('H:i') : '-' }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-secondary">{{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</span>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-phone me-1"></i>
-                                                    {{ optional($visit->patient)->phone ?? 'غير محدد' }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    {{ Str::limit($visit->chief_complaint ?? 'لا يوجد', 40) }}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                @if($visit->doctor)
-                                                    <small>د. {{ $visit->doctor->user->name }}</small>
-                                                @else
-                                                    <small class="text-muted">-</small>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($visit->status == 'in_progress')
-                                                    <span class="badge bg-info">قيد المعالجة</span>
-                                                @elseif($visit->status == 'completed')
-                                                    <span class="badge bg-success">مكتمل</span>
-                                                @elseif($visit->status == 'pending')
-                                                    <span class="badge bg-warning">في الانتظار</span>
-                                                @else
-                                                    <span class="badge bg-secondary">{{ $visit->status }}</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm inquiry-actions">
-                                                    <a href="{{ route('visits.edit', $visit) }}" 
-                                                       class="btn btn-sm btn-warning"
-                                                       title="تعديل الحجز">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Pagination -->
-                            <div class="card-footer bg-transparent border-0">
-                                <div class="d-flex justify-content-center">
-                                    {{ $todayInquiries->links() }}
-                                </div>
-                            </div>
-                        @else
-                            <div class="text-center py-5">
-                                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-                                <h5 class="text-muted">لا توجد زيارات اليوم</h5>
-                                <p class="text-muted">ابدأ بإنشاء طلب جديد للمريض</p>
-                                @can('create inquiries')
-                                <div class="d-flex justify-content-center gap-2">
-                                    <a href="{{ route('inquiry.search') }}" class="btn btn-outline-secondary">
-                                        <i class="fas fa-plus-circle me-2"></i>
-                                        طلب جديد
-                                    </a>
-                                </div>
-                                @endcan
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
-        </div>
+        @endif
     @endif
 
 </div>
