@@ -254,7 +254,8 @@
         </div>
     @endif
 
-    <!-- 2. Calling Station Control Bar (مطابق لمحطة الطبيب الرئيسية) -->
+    <!-- 2. Calling Station Control Bar (حصرياً للسونار) -->
+    @if($selectedCategory === 'ultrasound')
     <div class="queue-control-bar">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <!-- Serving Status -->
@@ -292,13 +293,14 @@
             </div>
         </div>
     </div>
+    @endif
 
-    <!-- 3. Navigation Tabs (مطابق لمحطة الطبيب) -->
+    <!-- 3. Navigation Tabs -->
     <ul class="nav nav-tabs mb-3 border-bottom" id="radiologyTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active d-flex align-items-center gap-2" id="station-tab" data-bs-toggle="tab" data-bs-target="#station-pane" type="button" role="tab">
-                <i class="fas fa-bullhorn text-primary"></i>
-                <span>محطة الفحص والمناداة الحية</span>
+                <i class="fas {{ $selectedCategory === 'ultrasound' ? 'fa-bullhorn text-primary' : 'fa-list-check text-primary' }}"></i>
+                <span>{{ $selectedCategory === 'ultrasound' ? 'محطة الفحص والمناداة الحية' : 'قائمة الانتظار والطلبات الجديدة' }}</span>
                 <span class="badge bg-primary text-white rounded-pill px-2 py-1" id="badge-tab-waiting-count">{{ $stats['waiting'] }}</span>
             </button>
         </li>
@@ -429,13 +431,19 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex gap-1 justify-content-end align-items-center">
-                                        @if($isPaid)
-                                            <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="مناداة واستدعاء للغرفة">
-                                                <i class="fas fa-bullhorn"></i> نداء
-                                            </button>
+                                        @if($selectedCategory === 'ultrasound')
+                                            @if($isPaid)
+                                                <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="مناداة واستدعاء للغرفة">
+                                                    <i class="fas fa-bullhorn"></i> نداء
+                                                </button>
+                                            @else
+                                                <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-secondary" title="معاينة الطلب">
+                                                    <i class="fas fa-eye"></i> معاينة
+                                                </a>
+                                            @endif
                                         @else
-                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-secondary" title="معاينة الطلب">
-                                                <i class="fas fa-eye"></i> معاينة
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="بدء الفحص وكتابة التقرير">
+                                                <i class="fas fa-play me-1"></i> بدء الفحص
                                             </a>
                                         @endif
                                     </div>
@@ -872,13 +880,19 @@ async function syncRadiologyQueue() {
                             </td>
                             <td class="text-end">
                                 <div class="d-flex gap-1 justify-content-end align-items-center">
-                                    ${r.is_paid ? `
-                                        <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific(${r.id}, '${r.name}')" title="مناداة واستدعاء للغرفة">
-                                            <i class="fas fa-bullhorn"></i> نداء
-                                        </button>
-                                    ` : `
-                                        <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="معاينة الطلب">
-                                            <i class="fas fa-eye"></i> معاينة
+                                    ${currentSelectedCategory === 'ultrasound' ? (
+                                        r.is_paid ? `
+                                            <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific(${r.id}, '${r.name}')" title="مناداة واستدعاء للغرفة">
+                                                <i class="fas fa-bullhorn"></i> نداء
+                                            </button>
+                                        ` : `
+                                            <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="معاينة الطلب">
+                                                <i class="fas fa-eye"></i> معاينة
+                                            </a>
+                                        `
+                                    ) : `
+                                        <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-primary fw-bold shadow-xs" title="بدء الفحص وكتابة التقرير">
+                                            <i class="fas fa-play me-1"></i> بدء الفحص
                                         </a>
                                     `}
                                 </div>
