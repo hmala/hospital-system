@@ -129,35 +129,22 @@
     @endif
 
     @if(isset($isConsultationReceptionistOnly) && $isConsultationReceptionistOnly)
-        <!-- واجهة موظف استعلامات الاستشارية: واجهة طلب جديد وبحث مباشر عن المرضى بدون جداول -->
-        <div class="row justify-content-center my-4">
-            <div class="col-lg-8 col-md-10">
-                <div class="card border-0 shadow-lg rounded-4 overflow-hidden text-center p-4 p-md-5" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+        <!-- واجهة موظف استعلامات الاستشارية: زر طلب جديد فقط -->
+        <div class="row justify-content-center my-5">
+            <div class="col-lg-6 col-md-8 text-center py-5">
+                <div class="card border-0 shadow-sm rounded-4 p-5" style="background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 100%); border: 1px solid rgba(203, 213, 225, 0.6) !important;">
                     <div class="mb-4">
                         <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow-sm" style="width: 80px; height: 80px;">
                             <i class="fas fa-stethoscope fa-3x"></i>
                         </div>
                     </div>
-                    <h2 class="fw-bold text-dark mb-2">استقبال العيادات الاستشارية</h2>
-                    <p class="text-muted fs-6 mb-4">إنشاء طلبات وحجز كشفيات العيادات الاستشارية للمرضى وتوجيههم للأطباء</p>
-                    
-                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mb-4">
-                        <a href="{{ route('inquiry.search') }}" class="btn btn-primary btn-lg px-4 py-3 fw-bold shadow-sm rounded-pill">
-                            <i class="fas fa-plus-circle me-2"></i> إنشاء طلب كشفية جديد
-                        </a>
-                        <a href="{{ route('patients.create') }}" class="btn btn-outline-dark btn-lg px-4 py-3 fw-bold rounded-pill">
-                            <i class="fas fa-user-plus me-2"></i> تسجيل مريض جديد
+                    <h3 class="fw-bold text-dark mb-2">استقبال العيادات الاستشارية</h3>
+                    <p class="text-muted mb-4">بدء حجز كشفية جديدة لمريض بالعيادات</p>
+                    <div>
+                        <a href="{{ route('inquiry.search') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow rounded-pill fs-5">
+                            <i class="fas fa-plus-circle me-2"></i> طلب جديد
                         </a>
                     </div>
-
-                    <form action="{{ route('inquiry.search') }}" method="GET" class="mt-2">
-                        <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden border">
-                            <input type="text" name="search" class="form-control border-0 px-4 py-3" placeholder="ابحث باسم المريض أو رقم الهاتف أو الرقم الموحد..." autofocus>
-                            <button class="btn btn-dark px-4 fw-bold" type="submit">
-                                <i class="fas fa-search me-1"></i> بحث واختيار
-                            </button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>
