@@ -620,25 +620,21 @@ class CashierController extends Controller
                     ]);
                 }
 
-                // إذا تم اختيار طبيب سونار مناوب من شاشة القبض، ربط وإنشاء موعد في طابوره
+                // إذا تم اختيار طبيب سونار مناوب من شاشة القبض، ربط وإنشاء موعد وزيارة في طابوره
                 $sonarDocId = $httpRequest->sonar_doctor_id;
                 if ($sonarDocId) {
                     $sonarDoctor = Doctor::find($sonarDocId);
                     if ($sonarDoctor) {
-                        $existingAptId = $request->visit->appointment_id;
-                        if ($existingAptId) {
-                            $existingApt = Appointment::find($existingAptId);
-                            if ($existingApt) {
-                                $existingApt->update([
-                                    'doctor_id' => $sonarDoctor->id,
-                                    'department_id' => $sonarDoctor->department_id ?? $existingApt->department_id,
-                                    'status' => 'scheduled',
-                                    'payment_status' => 'paid',
-                                    'payment_id' => $payment->id,
-                                    'insurance_type' => $insuranceType,
-                                ]);
-                            }
+                        // إذا كان الموعد الحالي بالزيارة ينتمي لنفس طبيب السونار (حجز مباشر)
+                        if ($request->visit->doctor_id == $sonarDoctor->id && $request->visit->appointment_id) {
+                            Appointment::where('id', $request->visit->appointment_id)->update([
+                                'status' => 'scheduled',
+                                'payment_status' => 'paid',
+                                'payment_id' => $payment->id,
+                                'insurance_type' => $insuranceType,
+                            ]);
                         } else {
+                            // تحويل من طبيب آخر إلى طبيب السونار: إنشاء موعد وزيارة مستقلة لطبيب السونار
                             $maxQueue = Appointment::where('doctor_id', $sonarDoctor->id)
                                 ->whereDate('appointment_date', today())
                                 ->max('queue_number') ?? 0;
@@ -649,7 +645,7 @@ class CashierController extends Controller
                                 'department_id' => $sonarDoctor->department_id ?? $request->visit->department_id,
                                 'appointment_date' => Carbon::today(),
                                 'queue_number' => $maxQueue + 1,
-                                'reason' => 'سونار محول: ' . ($request->description ?? 'فحص سونار'),
+                                'reason' => 'فحص سونار محول: ' . ($request->description ?? 'سونار'),
                                 'notes' => 'تحويل سونار من الطبيب: ' . optional(optional($request->visit)->doctor)->user->name,
                                 'consultation_fee' => $totalApproved,
                                 'duration' => 15,
@@ -659,7 +655,18 @@ class CashierController extends Controller
                                 'insurance_type' => $insuranceType,
                             ]);
 
-                            $request->visit->update(['appointment_id' => $sonarApt->id]);
+                            // إنشاء زيارة فورية لطبيب السونار لتظهر في شاشة كشف الطبيب (Doctor Station) ومحطة الأشعة
+                            $sonarVisit = Visit::create([
+                                'patient_id' => $request->visit->patient_id,
+                                'doctor_id' => $sonarDoctor->id,
+                                'department_id' => $sonarDoctor->department_id ?? $request->visit->department_id,
+                                'appointment_id' => $sonarApt->id,
+                                'visit_date' => Carbon::today(),
+                                'visit_time' => Carbon::now()->format('H:i'),
+                                'visit_type' => 'radiology',
+                                'chief_complaint' => 'فحص سونار محول: ' . ($request->description ?? 'سونار'),
+                                'status' => 'in_progress',
+                            ]);
                         }
                     }
                 }

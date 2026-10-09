@@ -191,7 +191,6 @@ class DoctorQueueController extends Controller
                     $q->where('payment_status', 'paid')
                       ->orWhereNotNull('emergency_id');
                 })
-                ->whereDoesntHave('visit')
                 ->whereIn('status', ['scheduled', 'confirmed'])
                 ->count();
 
@@ -251,7 +250,7 @@ class DoctorQueueController extends Controller
             ->orderBy('called_at', 'desc')
             ->first();
 
-        // 2. Waiting Queue List (Excluded any patient already entered to doctor with a visit)
+        // 2. Waiting Queue List
         $waitingList = Appointment::with(['patient.user', 'emergency'])
             ->where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
@@ -259,7 +258,6 @@ class DoctorQueueController extends Controller
                 $q->where('payment_status', 'paid')
                   ->orWhereNotNull('emergency_id');
             })
-            ->whereDoesntHave('visit')
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END")
             ->orderBy('queue_number', 'asc')
@@ -794,8 +792,11 @@ class DoctorQueueController extends Controller
             ], 422);
         }
 
-        // Find or create Visit
-        $visit = $appointment->visit;
+        // Find or create Visit for this doctor
+        $visit = Visit::where('appointment_id', $appointment->id)
+            ->where('doctor_id', $appointment->doctor_id)
+            ->first();
+
         if (!$visit) {
             $visit = Visit::create([
                 'patient_id' => $appointment->patient_id,
@@ -804,10 +805,12 @@ class DoctorQueueController extends Controller
                 'appointment_id' => $appointment->id,
                 'visit_date' => $appointment->appointment_date ?? today(),
                 'visit_time' => now()->format('H:i'),
-                'visit_type' => 'checkup',
-                'chief_complaint' => $appointment->reason ?: 'زيارة استشارية',
+                'visit_type' => 'radiology',
+                'chief_complaint' => $appointment->reason ?: 'زيارة استشارية / فحص سونار',
                 'status' => 'in_progress'
             ]);
+        } else {
+            $visit->update(['status' => 'in_progress']);
         }
 
         $appointment->status = 'in_consultation';

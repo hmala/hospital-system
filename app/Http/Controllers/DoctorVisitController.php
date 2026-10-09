@@ -68,10 +68,9 @@ class DoctorVisitController extends Controller
             return $visit->status != 'completed' && $visit->status != 'cancelled' && $visit->visit_date && $visit->visit_date->isPast();
         });
 
-        // جميع المواعيد المجدولة (لم يتم تحويلها إلى زيارات بعد)
+        // جميع المواعيد المجدولة للطبيب
         $appointments = Appointment::where('doctor_id', $doctor->id)
             ->whereIn('status', ['scheduled', 'confirmed'])
-            ->whereDoesntHave('visit')
             ->whereDate('appointment_date', '>=', today())
             ->with(['patient.user', 'department'])
             ->orderBy('appointment_date', 'asc')
