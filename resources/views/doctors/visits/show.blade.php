@@ -4076,16 +4076,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ====== نظام اختيار الفحوصات المخبرية السريع والذكي للطبيب ======
     function setupFastDoctorLabSelection() {
-        const searchInput = document.getElementById('docLabFastSearch');
-        const clearSearchBtn = document.getElementById('docLabClearSearch');
-        const searchDropdown = document.getElementById('docLabSearchDropdown');
+        const searchInput = document.getElementById('docLabSearchInput');
+        const clearSearchBtn = document.getElementById('docLabClearSearchBtn');
+        const searchDropdown = document.getElementById('docLabAutocompleteMenu');
         const categoryPills = document.querySelectorAll('.doc-cat-pill');
         const labCols = Array.from(document.querySelectorAll('.doc-lab-col'));
         const labCheckboxes = Array.from(document.querySelectorAll('.doc-lab-chk'));
         const selectedTray = document.getElementById('docLabSelectedTray');
-        const selectedChipsContainer = document.getElementById('docLabSelectedChips');
+        const selectedChipsContainer = document.getElementById('docLabChipsContainer');
         const countBadges = document.querySelectorAll('.doc-lab-selected-count');
-        const clearAllBtn = document.getElementById('docLabClearAllSelected');
+        const clearAllBtn = document.getElementById('docLabClearAllBtn');
         const groupBtns = document.querySelectorAll('.doc-quick-group-btn');
         const labForm = document.getElementById('doctorLabRequestForm');
 
