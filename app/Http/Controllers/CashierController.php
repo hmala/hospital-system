@@ -12,6 +12,8 @@ use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Surgery;
 use App\Models\Emergency;
+use App\Models\Doctor;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -444,7 +446,25 @@ class CashierController extends Controller
                 ->with('error', 'الطلب غير مرتبط بأي زيارة ولا يمكن عرضه.');
         }
 
-        return view('cashier.request-payment-form', compact('request'));
+        $sonarDoctors = collect();
+        $isUltrasound = ($request->subtype === 'ultrasound' || $request->type === 'radiology');
+        if ($isUltrasound) {
+            $sonarDoctors = Doctor::where('is_active', true)
+                ->where(function($q) {
+                    $q->where('specialization', 'LIKE', '%سونار%')
+                      ->orWhere('specialization', 'LIKE', '%اشعة%')
+                      ->orWhere('specialization', 'LIKE', '%أشعة%')
+                      ->orWhere('specialization', 'LIKE', '%radiology%')
+                      ->orWhere('specialization', 'LIKE', '%ultrasound%')
+                      ->orWhereHas('user.roles', function($rq) {
+                          $rq->whereIn('name', ['radiology_ultrasound', 'radiology_staff']);
+                      });
+                })
+                ->with(['user', 'department'])
+                ->get();
+        }
+
+        return view('cashier.request-payment-form', compact('request', 'sonarDoctors'));
     }
 
     /**
@@ -465,7 +485,11 @@ class CashierController extends Controller
         $httpRequest->validate([
             'payment_method' => 'required|in:cash,card,insurance',
             'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
+            'insurance_type' => 'nullable|in:none,moi,hi',
+            'insurance_card_no' => 'nullable|string|max:100',
+            'copay_percentage' => 'nullable|numeric|min:0|max:100',
+            'sonar_doctor_id' => 'nullable|exists:doctors,id',
         ]);
 
         // التحقق من أن الطلب لم يتم دفعه بعد
@@ -591,9 +615,55 @@ class CashierController extends Controller
                 if ($request->visit->appointment_id) {
                     \App\Models\Appointment::where('id', $request->visit->appointment_id)->update([
                         'payment_status' => 'paid',
-                        'payment_id' => $payment->id
+                        'payment_id' => $payment->id,
+                        'insurance_type' => $insuranceType,
                     ]);
                 }
+
+                // إذا تم اختيار طبيب سونار مناوب من شاشة القبض، ربط وإنشاء موعد في طابوره
+                $sonarDocId = $httpRequest->sonar_doctor_id;
+                if ($sonarDocId) {
+                    $sonarDoctor = Doctor::find($sonarDocId);
+                    if ($sonarDoctor) {
+                        $existingAptId = $request->visit->appointment_id;
+                        if ($existingAptId) {
+                            $existingApt = Appointment::find($existingAptId);
+                            if ($existingApt) {
+                                $existingApt->update([
+                                    'doctor_id' => $sonarDoctor->id,
+                                    'department_id' => $sonarDoctor->department_id ?? $existingApt->department_id,
+                                    'status' => 'scheduled',
+                                    'payment_status' => 'paid',
+                                    'payment_id' => $payment->id,
+                                    'insurance_type' => $insuranceType,
+                                ]);
+                            }
+                        } else {
+                            $maxQueue = Appointment::where('doctor_id', $sonarDoctor->id)
+                                ->whereDate('appointment_date', today())
+                                ->max('queue_number') ?? 0;
+
+                            $sonarApt = Appointment::create([
+                                'patient_id' => $request->visit->patient_id,
+                                'doctor_id' => $sonarDoctor->id,
+                                'department_id' => $sonarDoctor->department_id ?? $request->visit->department_id,
+                                'appointment_date' => Carbon::today(),
+                                'queue_number' => $maxQueue + 1,
+                                'reason' => 'سونار محول: ' . ($request->description ?? 'فحص سونار'),
+                                'notes' => 'تحويل سونار من الطبيب: ' . optional(optional($request->visit)->doctor)->user->name,
+                                'consultation_fee' => $totalApproved,
+                                'duration' => 15,
+                                'status' => 'scheduled',
+                                'payment_status' => 'paid',
+                                'payment_id' => $payment->id,
+                                'insurance_type' => $insuranceType,
+                            ]);
+
+                            $request->visit->update(['appointment_id' => $sonarApt->id]);
+                        }
+                    }
+                }
+
                 \Log::info('Visit and linked appointment status updated to in_progress / paid');
             } else {
                 \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);

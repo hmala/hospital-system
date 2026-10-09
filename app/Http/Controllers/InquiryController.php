@@ -890,7 +890,7 @@ class InquiryController extends Controller
                 'duration' => 20,
                 'status' => 'scheduled',
                 'payment_status' => 'pending',
-                'insurance_type' => 'none' // حجز عادي نقدي دائماً للسونار المباشر من الاستعلامات
+                'insurance_type' => $bookingInsuranceType
             ]);
 
             $visit->appointment_id = $sonarAppointment->id;
@@ -927,7 +927,7 @@ class InquiryController extends Controller
         // تحديد الحالة: إذا تم تحديد الخدمات -> pending للدفع، وإلا -> pending_service_selection
         $requestStatus = $hasServices ? 'pending' : 'pending_service_selection';
         
-        $requestInsuranceType = ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') ? 'none' : $bookingInsuranceType;
+        $requestInsuranceType = $bookingInsuranceType;
 
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,
