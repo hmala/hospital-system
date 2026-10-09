@@ -93,11 +93,11 @@ class ConsultantAvailabilityController extends Controller
             ->select('doctors.*')
             ->get();
 
-        // 1. جلب جميع الزيارات النشطة اليوم للأطباء الاستشاريين
+        // 1. جلب جميع الزيارات النشطة اليوم للأطباء الاستشاريين (المرضى الموجودين داخل غرفة الفحص حالياً)
         $today = today();
         $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
             ->whereDate('visit_date', $today)
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where('status', 'in_progress')
             ->get()
             ->groupBy('doctor_id');
 
@@ -237,7 +237,7 @@ class ConsultantAvailabilityController extends Controller
 
         $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
             ->whereDate('visit_date', $today)
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where('status', 'in_progress')
             ->get()
             ->groupBy('doctor_id');
 

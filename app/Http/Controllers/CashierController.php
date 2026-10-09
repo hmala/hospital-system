@@ -296,7 +296,7 @@ class CashierController extends Controller
             // تحديث الزيارة والطلبات الطبية المرتبطة إن وجدت
             if ($appointment->visit) {
                 $appointment->visit->update([
-                    'status' => 'in_progress'
+                    'status' => 'pending' // في انتظار دخول الطبيب
                 ]);
 
                 $medReqs = \App\Models\Request::where('visit_id', $appointment->visit->id)->get();
@@ -585,19 +585,20 @@ class CashierController extends Controller
 
             \Log::info('Request updated to paid');
 
-            // تحديث حالة الزيارة من pending_payment إلى in_progress لتظهر في المختبر والأشعة
+            // تحديث حالة الزيارة من pending_payment إلى pending لتظهر في قائمة انتظار المختبر والأشعة
             if ($request->visit) {
                 $request->visit->update([
-                    'status' => 'in_progress'
+                    'status' => 'pending'
                 ]);
                 // تحديث الموعد المرتبط إن وجد (مثل حجوزات السونار) لتصبح مدفوعة في شاشة توفر الاستشاريين
                 if ($request->visit->appointment_id) {
                     \App\Models\Appointment::where('id', $request->visit->appointment_id)->update([
                         'payment_status' => 'paid',
+                        'status' => 'confirmed',
                         'payment_id' => $payment->id
                     ]);
                 }
-                \Log::info('Visit and linked appointment status updated to in_progress / paid');
+                \Log::info('Visit and linked appointment status updated to pending / paid');
             } else {
                 \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);
             }
