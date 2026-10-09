@@ -187,39 +187,6 @@
                         @csrf
                         @method('POST')
 
-                        @if(($request->subtype === 'ultrasound' || $request->type === 'radiology') && isset($sonarDoctors) && $sonarDoctors->isNotEmpty())
-                        <!-- اختيار طبيب السونار المناوب لإدراج المريض بطابوره فورياً -->
-                        <div class="p-3 mb-4 rounded-3 border border-info bg-info-subtle">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="fw-bold text-info-emphasis mb-0">
-                                    <i class="fas fa-user-md me-2"></i>
-                                    طبيب السونار المناوب (Sonar Doctor)
-                                </h6>
-                                <span class="badge bg-info text-dark"><i class="fas fa-list-ol me-1"></i>إدراج فوري في طابور السونار</span>
-                            </div>
-                            <p class="small text-muted mb-2">
-                                حدد طبيب السونار المناوب ليتم إدراج المريض تلقائياً في قائمة انتظاره وشاشة الاستدعاء فور تسديد الرسوم:
-                            </p>
-                            <div class="row g-2 align-items-center">
-                                <div class="col-md-8">
-                                    <select class="form-select border-info fw-semibold" id="sonar_doctor_id" name="sonar_doctor_id">
-                                        <option value="">-- اختياري: حدد طبيب السونار المناوب --</option>
-                                        @foreach($sonarDoctors as $doc)
-                                            <option value="{{ $doc->id }}" {{ (old('sonar_doctor_id', optional(optional($request->visit)->appointment)->doctor_id) == $doc->id) ? 'selected' : '' }}>
-                                                د. {{ $doc->user->name ?? 'طبيب سونار' }} ({{ $doc->specialization ?? 'أشعة وسونار' }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-info-emphasis d-block">
-                                        <i class="fas fa-check-double me-1"></i> سيتم توليد رقم تسلسل فوري في عيادة السونار
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
                         <!-- قسم الضمان الصحي ونسبة التحمل التلقائية -->
                         <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
                             <div class="d-flex justify-content-between align-items-center mb-3">

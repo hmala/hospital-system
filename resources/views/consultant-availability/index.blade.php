@@ -598,7 +598,7 @@
                                             </small>
                                         </div>
                                         <div>
-                                            @canany(['process medical requests payments', 'process consultation payments', 'process payments'])
+                                            @canany(['process medical requests payments', 'process payments'])
                                                 <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;">
                                                     <i class="fas fa-cash-register me-1"></i> قبض
                                                 </a>

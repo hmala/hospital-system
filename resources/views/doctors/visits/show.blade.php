@@ -1107,17 +1107,16 @@ datalist option:hover {
                                         'mri' => '🧲 رنين مغناطيسي (MRI)',
                                         'رنين' => '🧲 رنين مغناطيسي (MRI)',
                                         'رنين مغناطيسي' => '🧲 رنين مغناطيسي (MRI)',
-                                        'الرنين' => '🧲 رنين مغناطيسي (MRI)',
                                         'ct' => '🌀 مفراس حلزوني (CT Scan)',
                                         'ct scan' => '🌀 مفراس حلزوني (CT Scan)',
                                         'ct_scan' => '🌀 مفراس حلزوني (CT Scan)',
                                         'مفراس' => '🌀 مفراس حلزوني (CT Scan)',
-                                        'ultrasound' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'u/s' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'us' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'سونار' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'doppler' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'دوبلر' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'ultrasound' => '🔊 سونار (Ultrasound)',
+                                        'u/s' => '🔊 سونار (Ultrasound)',
+                                        'us' => '🔊 سونار (Ultrasound)',
+                                        'سونار' => '🔊 سونار (Ultrasound)',
+                                        'doppler' => '🩺 دوبلر ملون (Doppler)',
+                                        'دوبلر' => '🩺 دوبلر ملون (Doppler)',
                                         'echo' => '❤️ إيكو قلب (Echo)',
                                         'إيكو' => '❤️ إيكو قلب (Echo)',
                                         'ايكو' => '❤️ إيكو قلب (Echo)',
@@ -1127,31 +1126,8 @@ datalist option:hover {
                                     ];
 
                                     $radGrouped = $radiologyTypes->groupBy(function($r) use ($radCatMap) {
-                                        $rawCat = mb_strtolower(trim($r->main_category ?? ''));
-                                        $rawSub = mb_strtolower(trim($r->subcategory ?? ''));
-                                        $rawName = mb_strtolower(trim($r->name ?? ''));
-
-                                        if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
-                                            str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
-                                            str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
-                                            str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
-                                            str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
-                                            return '🔊 السونار والدوبلر (Ultrasound & Doppler)';
-                                        }
-
-                                        if (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
-                                            return '🧲 رنين مغناطيسي (MRI)';
-                                        }
-
-                                        if (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
-                                            return '🌀 مفراس حلزوني (CT Scan)';
-                                        }
-
-                                        if (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
-                                            return '❤️ إيكو قلب (Echo)';
-                                        }
-
-                                        return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
+                                        $rawCat = strtolower(trim($r->main_category ?? ''));
+                                        return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: 'فحوصات أشعة عامة'));
                                     });
                                 @endphp
                                 <div class="d-flex align-items-center gap-1 overflow-x-auto pb-2 mb-3 border-bottom" id="docRadCategoryPills" style="white-space: nowrap;">
@@ -1170,25 +1146,8 @@ datalist option:hover {
                                     <div class="row g-2" id="docRadItemsGrid">
                                         @foreach($radiologyTypes as $type)
                                             @php
-                                                $rawCat = mb_strtolower(trim($type->main_category ?? ''));
-                                                $rawSub = mb_strtolower(trim($type->subcategory ?? ''));
-                                                $rawName = mb_strtolower(trim($type->name ?? ''));
-
-                                                if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
-                                                    str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
-                                                    str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
-                                                    str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
-                                                    str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
-                                                    $radCat = '🔊 السونار والدوبلر (Ultrasound & Doppler)';
-                                                } elseif (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
-                                                    $radCat = '🧲 رنين مغناطيسي (MRI)';
-                                                } elseif (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
-                                                    $radCat = '🌀 مفراس حلزوني (CT Scan)';
-                                                } elseif (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
-                                                    $radCat = '❤️ إيكو قلب (Echo)';
-                                                } else {
-                                                    $radCat = $radCatMap[$rawCat] ?? ($type->main_category ?: ($type->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
-                                                }
+                                                $rawCat = strtolower(trim($type->main_category ?? ''));
+                                                $radCat = $radCatMap[$rawCat] ?? ($type->main_category ?: ($type->subcategory ?: 'فحوصات أشعة عامة'));
                                             @endphp
                                             <div class="col-md-6 col-12 doc-rad-col" 
                                                  data-type-name="{{ strtolower($type->name) }}"

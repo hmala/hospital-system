@@ -191,6 +191,7 @@ class DoctorQueueController extends Controller
                     $q->where('payment_status', 'paid')
                       ->orWhereNotNull('emergency_id');
                 })
+                ->whereDoesntHave('visit')
                 ->whereIn('status', ['scheduled', 'confirmed'])
                 ->count();
 
@@ -250,7 +251,7 @@ class DoctorQueueController extends Controller
             ->orderBy('called_at', 'desc')
             ->first();
 
-        // 2. Waiting Queue List
+        // 2. Waiting Queue List (Excluded any patient already entered to doctor with a visit)
         $waitingList = Appointment::with(['patient.user', 'emergency'])
             ->where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
@@ -258,6 +259,7 @@ class DoctorQueueController extends Controller
                 $q->where('payment_status', 'paid')
                   ->orWhereNotNull('emergency_id');
             })
+            ->whereDoesntHave('visit')
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END")
             ->orderBy('queue_number', 'asc')
@@ -455,15 +457,12 @@ class DoctorQueueController extends Controller
         $formattedWaiting = $waitingList->map(function($apt) {
             $patientUser = $apt->patient ? $apt->patient->user : null;
             $name = $patientUser ? $patientUser->name : ($apt->emergency && $apt->emergency->emergencyPatient ? $apt->emergency->emergencyPatient->name : 'مريض مجهول');
-            $isPaid = ($apt->payment_status === 'paid' || (bool)$apt->emergency_id);
             
             return [
                 'id' => $apt->id,
                 'queue_number' => $apt->queue_number ?: $apt->id,
                 'name' => $name,
                 'is_emergency' => (bool)$apt->emergency_id,
-                'is_paid' => $isPaid,
-                'payment_status' => $apt->payment_status,
                 'status' => $apt->status,
                 'status_text' => $apt->status_text,
             ];
@@ -795,11 +794,8 @@ class DoctorQueueController extends Controller
             ], 422);
         }
 
-        // Find or create Visit for this doctor
-        $visit = Visit::where('appointment_id', $appointment->id)
-            ->where('doctor_id', $appointment->doctor_id)
-            ->first();
-
+        // Find or create Visit
+        $visit = $appointment->visit;
         if (!$visit) {
             $visit = Visit::create([
                 'patient_id' => $appointment->patient_id,
@@ -808,12 +804,10 @@ class DoctorQueueController extends Controller
                 'appointment_id' => $appointment->id,
                 'visit_date' => $appointment->appointment_date ?? today(),
                 'visit_time' => now()->format('H:i'),
-                'visit_type' => 'radiology',
-                'chief_complaint' => $appointment->reason ?: 'زيارة استشارية / فحص سونار',
+                'visit_type' => 'checkup',
+                'chief_complaint' => $appointment->reason ?: 'زيارة استشارية',
                 'status' => 'in_progress'
             ]);
-        } else {
-            $visit->update(['status' => 'in_progress']);
         }
 
         $appointment->status = 'in_consultation';

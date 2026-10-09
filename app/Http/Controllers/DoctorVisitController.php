@@ -68,9 +68,10 @@ class DoctorVisitController extends Controller
             return $visit->status != 'completed' && $visit->status != 'cancelled' && $visit->visit_date && $visit->visit_date->isPast();
         });
 
-        // جميع المواعيد المجدولة للطبيب
+        // جميع المواعيد المجدولة (لم يتم تحويلها إلى زيارات بعد)
         $appointments = Appointment::where('doctor_id', $doctor->id)
             ->whereIn('status', ['scheduled', 'confirmed'])
+            ->whereDoesntHave('visit')
             ->whereDate('appointment_date', '>=', today())
             ->with(['patient.user', 'department'])
             ->orderBy('appointment_date', 'asc')
@@ -943,11 +944,7 @@ class DoctorVisitController extends Controller
                         $cat = mb_strtolower($radiologyType->main_category ?? '');
                         $sub = mb_strtolower($radiologyType->subcategory ?? '');
                         $name = mb_strtolower($radiologyType->name ?? '');
-                        if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') || 
-                            str_contains($cat, 'ultrasound') || str_contains($name, 'ultrasound') || 
-                            str_contains($cat, 'doppler') || str_contains($name, 'doppler') || 
-                            str_contains($cat, 'دوبلر') || str_contains($name, 'دوبلر') || 
-                            str_contains($name, 'sonar') || str_contains($name, 'u/s')) {
+                        if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') || str_contains($cat, 'ultrasound') || str_contains($name, 'doppler') || str_contains($name, 'sonar')) {
                             $detectedSubtype = 'ultrasound';
                         } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($name, 'رنين') || str_contains($cat, 'mri')) {
                             $detectedSubtype = 'mri';
