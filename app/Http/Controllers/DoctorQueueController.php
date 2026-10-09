@@ -199,7 +199,12 @@ class DoctorQueueController extends Controller
                     $q->where('payment_status', 'paid')
                       ->orWhereNotNull('emergency_id');
                 })
-                ->whereDoesntHave('visit')
+                ->where(function ($q) {
+                    $q->whereDoesntHave('visit')
+                      ->orWhereHas('visit', function ($vq) {
+                          $vq->whereNotIn('status', ['in_progress', 'completed', 'cancelled']);
+                      });
+                })
                 ->whereIn('status', ['scheduled', 'confirmed'])
                 ->count();
 
@@ -267,7 +272,12 @@ class DoctorQueueController extends Controller
                 $q->where('payment_status', 'paid')
                   ->orWhereNotNull('emergency_id');
             })
-            ->whereDoesntHave('visit')
+            ->where(function($q) {
+                $q->whereDoesntHave('visit')
+                  ->orWhereHas('visit', function($vq) {
+                      $vq->whereNotIn('status', ['in_progress', 'completed', 'cancelled']);
+                  });
+            })
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END")
             ->orderBy('queue_number', 'asc')
