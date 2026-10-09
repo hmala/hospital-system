@@ -447,18 +447,20 @@ class RadiologyStaffController extends Controller
         $request->save();
 
         // مزامنة الموعد المرتبط لطابور الطبيب وشاشة التلفاز والاستقبال
+        // مزامنة الموعد المرتبط لطابور الطبيب وشاشة التلفاز والاستقبال
+        \App\Models\Appointment::whereDate('appointment_date', today())
+            ->where('status', 'calling')
+            ->update(['status' => 'confirmed']);
+
+        $queueNumber = $request->id;
+
         if ($request->visit) {
             $appointment = $request->visit->appointment ?: ($request->visit->appointment_id ? \App\Models\Appointment::find($request->visit->appointment_id) : null);
             if ($appointment) {
-                \App\Models\Appointment::where('doctor_id', $appointment->doctor_id)
-                    ->whereDate('appointment_date', today())
-                    ->where('status', 'calling')
-                    ->where('id', '!=', $appointment->id)
-                    ->update(['status' => 'confirmed']);
-
                 $appointment->status = 'calling';
                 $appointment->called_at = now();
                 $appointment->save();
+                $queueNumber = $appointment->queue_number ?: $appointment->id;
 
                 try {
                     app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
@@ -473,6 +475,7 @@ class RadiologyStaffController extends Controller
             'message' => 'تمت المناداة على المريض (' . $patientName . ') بنجاح.',
             'request_id' => $request->id,
             'patient_name' => $patientName,
+            'queue_number' => $queueNumber,
             'called_at' => now()->format('H:i:s'),
         ]);
     }

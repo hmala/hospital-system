@@ -848,6 +848,61 @@ async function syncRadiologyQueue() {
     }
 }
 
+// Speech Synthesis & Voice Announcement
+let availableVoices = [];
+function loadVoices() {
+    if ('speechSynthesis' in window) {
+        availableVoices = window.speechSynthesis.getVoices() || [];
+    }
+}
+if ('speechSynthesis' in window) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+async function speakAnnouncement(patientName, queueNumber) {
+    if (!patientName) return;
+    
+    // Play chime sound first
+    playChimeSound();
+    
+    const text = queueNumber 
+        ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لغرفة الفحص.`
+        : `المراجع ${patientName}، تفضل لغرفة الفحص.`;
+
+    // Wait 500ms after chime
+    await new Promise(r => setTimeout(r, 500));
+
+    try {
+        const audioUrl = `/queue/tts?text=${encodeURIComponent(text)}`;
+        const audio = new Audio(audioUrl);
+        const playProm = audio.play();
+        if (playProm !== undefined) {
+            playProm.catch(() => {
+                fallbackSpeech(text);
+            });
+        }
+    } catch (e) {
+        fallbackSpeech(text);
+    }
+}
+
+function fallbackSpeech(text) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 0.88;
+        utterance.pitch = 1.0;
+        if (availableVoices.length === 0) loadVoices();
+        const arVoice = availableVoices.find(v => v.lang && (v.lang.startsWith('ar') || v.name.toLowerCase().includes('arabic')));
+        if (arVoice) utterance.voice = arVoice;
+        window.speechSynthesis.speak(utterance);
+    } catch (err) {}
+}
+
 // 2. Action Handlers
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
@@ -862,7 +917,7 @@ async function radiologyCallNext() {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            playChimeSound();
+            speakAnnouncement(data.patient_name, data.queue_number);
             if (typeof toastr !== 'undefined') toastr.success(data.message || 'تم استدعاء المريض بنجاح.');
             syncRadiologyQueue();
         } else {
@@ -887,7 +942,8 @@ async function radiologyRecall() {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            playChimeSound();
+            const curName = document.getElementById('radiology-station-current-name')?.textContent || data.patient_name;
+            speakAnnouncement(data.patient_name || curName, data.queue_number);
             if (typeof toastr !== 'undefined') toastr.success('تمت إعادة المناداة على المريض بنجاح.');
             syncRadiologyQueue();
         }
@@ -928,7 +984,7 @@ async function radiologyCallSpecific(reqId, patientName) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            playChimeSound();
+            speakAnnouncement(data.patient_name || patientName, data.queue_number);
             if (typeof toastr !== 'undefined') toastr.success(data.message || `تمت المناداة على ${patientName}`);
             syncRadiologyQueue();
         } else {
