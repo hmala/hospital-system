@@ -352,7 +352,7 @@ class RadiologyStaffController extends Controller
             ->whereIn('status', ['pending', 'scheduled'])
             ->where(function($q) {
                 $q->where('payment_status', 'paid')
-                  ->orWhere('priority', 'emergency');
+                  ->orWhere('details->priority', 'emergency');
             })
             ->whereDate('created_at', today());
 
@@ -374,8 +374,11 @@ class RadiologyStaffController extends Controller
             }
         }
 
-        $nextRequest = $query->orderByRaw("CASE WHEN priority = 'emergency' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
-            ->orderBy('id', 'asc')
+        $nextRequest = $query->get()
+            ->sortBy(function($r) {
+                $prio = $r->priority === 'emergency' ? 1 : ($r->priority === 'urgent' ? 2 : 3);
+                return $prio . '_' . str_pad($r->id, 8, '0', STR_PAD_LEFT);
+            })
             ->first();
 
         if (!$nextRequest) {
