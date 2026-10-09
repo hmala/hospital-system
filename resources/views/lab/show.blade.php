@@ -118,6 +118,7 @@ $isImageAttachment = $hasAttachment && str_starts_with($requestDetails['attachme
 $testAttachments = is_array($requestDetails['test_attachments'] ?? null) ? $requestDetails['test_attachments'] : [];
 $hasAnyAttachment = $hasAttachment || count($testAttachments) > 0;
 
+$testsList = buildSelectedLabTests($requestDetails);
 $patient = $request->visit?->patient;
 $patientUser = $patient?->user;
 $gender = $patientUser?->gender ?? ($patient?->gender ?? 'male');
