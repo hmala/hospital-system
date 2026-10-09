@@ -154,6 +154,10 @@ class RadiologyStaffController extends Controller
 
         $stats['emergency'] = $emergencyRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count();
 
+        // جلب المريض الحالي قيد الفحص بالداخل والمريض قيد النداء
+        $currentPatient = $allCategoryRequests->where('status', 'in_progress')->first();
+        $callingPatient = $allCategoryRequests->where('status', 'calling')->first();
+
         return view('radiology-staff.index', compact(
             'requests',
             'emergencyRadiologyRequests',
@@ -162,8 +166,54 @@ class RadiologyStaffController extends Controller
             'userCategory',
             'activeTab',
             'search',
-            'dateFilter'
+            'dateFilter',
+            'currentPatient',
+            'callingPatient'
         ));
+    }
+
+    public function call(MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المريض.'], 403);
+        }
+
+        $this->authorizeMedicalRequestForUser($request, $user);
+
+        if ($request->payment_status !== 'paid' && $request->priority !== 'emergency') {
+            return response()->json([
+                'success' => false, 
+                'message' => 'تنبيه: لا يمكن مناداة المريض قبل تسديد رسوم الفحص في الكاشير أولاً.'
+            ], 422);
+        }
+
+        // إلغاء نداء أي مريض سابق وجعله pending
+        MedicalRequest::where('type', 'radiology')
+            ->where('status', 'calling')
+            ->where('id', '!=', $request->id)
+            ->update(['status' => 'pending']);
+
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($details)) $details = [];
+        $details['called_at'] = now()->toDateTimeString();
+        $details['called_by'] = $user->id;
+
+        $request->details = $details;
+        $request->status = 'calling';
+        $request->save();
+
+        $patientName = $request->visit?->patient?->name ?? $request->visit?->patient?->user?->name ?? 'المريض';
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تمت المناداة على المريض (' . $patientName . ') بنجاح.',
+            'request_id' => $request->id,
+            'patient_name' => $patientName,
+            'called_at' => now()->format('H:i:s'),
+        ]);
     }
 
     public function start(MedicalRequest $request)
@@ -177,10 +227,16 @@ class RadiologyStaffController extends Controller
 
         $this->authorizeMedicalRequestForUser($request, $user);
 
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($details)) $details = [];
+        $details['started_at'] = now()->toDateTimeString();
+        $details['started_by'] = $user->id;
+
+        $request->details = $details;
         $request->status = 'in_progress';
         $request->save();
 
-        return redirect()->route('radiology-staff.show', $request)->with('success', 'تم بدء الفحص بنجاح. يمكنك الآن كتابة التقرير والنتائج.');
+        return redirect()->route('radiology-staff.show', $request)->with('success', 'تم إدخال المريض وبدء الفحص بنجاح. يمكنك الآن كتابة التقرير والنتائج.');
     }
 
     private function getRadiologyCategoryForUser($user)

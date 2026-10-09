@@ -76,7 +76,99 @@
         </div>
     @endif
 
-    <!-- 2. KPI Summary Cards Bar -->
+    <!-- 2. Live Active / Calling Patient Banner (Hero Station) -->
+    <div class="row g-3 mb-3">
+        <!-- Inside Examination Room Card -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100 {{ $currentPatient ? 'bg-info bg-opacity-10 border-start border-4 border-info' : 'bg-white border-dashed' }}">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge {{ $currentPatient ? 'bg-info text-white' : 'bg-secondary' }} px-2 py-1">
+                            <i class="fas fa-door-open me-1"></i> داخل غرفة الفحص الآن
+                        </span>
+                        @if($currentPatient)
+                            <span class="text-muted small">
+                                <i class="fas fa-clock me-1"></i> منذ: {{ $currentPatient->updated_at ? $currentPatient->updated_at->diffForHumans(null, true) : 'الآن' }}
+                            </span>
+                        @endif
+                    </div>
+                    @if($currentPatient)
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h5 class="mb-1 fw-bold text-dark">
+                                    {{ $currentPatient->visit?->patient?->name ?? $currentPatient->visit?->patient?->user?->name ?? 'مريض غير محدد' }}
+                                </h5>
+                                <div class="text-muted small">
+                                    <span>طلب: </span>
+                                    <strong class="text-info">{{ implode(', ', $currentPatient->radiology_names) ?: ($currentPatient->description ?: 'فحص تصوير') }}</strong>
+                                    <span> • د. {{ $currentPatient->visit?->doctor?->user?->name ?? 'الاستشارية' }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <a href="{{ route('radiology-staff.show', $currentPatient) }}" class="btn btn-success btn-sm px-3 fw-bold shadow-xs">
+                                    <i class="fas fa-edit me-1"></i> كتابة التقرير
+                                </a>
+                            </div>
+                        </div>
+                    @else
+                        <div class="text-center py-2 text-muted">
+                            <i class="fas fa-bed text-secondary opacity-50 mb-1"></i>
+                            <div class="small">لا يوجد مريض داخل غرفة الفحص حالياً</div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <!-- Currently Calling Patient Card -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100 {{ $callingPatient ? 'bg-warning bg-opacity-15 border-start border-4 border-warning' : 'bg-white border-dashed' }}">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge {{ $callingPatient ? 'bg-warning text-dark' : 'bg-secondary' }} px-2 py-1">
+                            <i class="fas fa-bullhorn me-1"></i> قيد النداء والاستدعاء 📢
+                        </span>
+                        @if($callingPatient)
+                            <span class="text-dark fw-bold small">
+                                <i class="fas fa-stopwatch me-1"></i> تم النداء: {{ $callingPatient->details['called_at'] ?? $callingPatient->updated_at->format('H:i') }}
+                            </span>
+                        @endif
+                    </div>
+                    @if($callingPatient)
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h5 class="mb-1 fw-bold text-dark">
+                                    {{ $callingPatient->visit?->patient?->name ?? $callingPatient->visit?->patient?->user?->name ?? 'مريض غير محدد' }}
+                                </h5>
+                                <div class="text-muted small">
+                                    <span>الفحص: </span>
+                                    <strong class="text-dark">{{ implode(', ', $callingPatient->radiology_names) ?: 'فحص تصوير' }}</strong>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <form action="{{ route('radiology-staff.start', $callingPatient) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold shadow-xs">
+                                        <i class="fas fa-door-open me-1"></i> إدخال وبدء الفحص
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-outline-dark btn-sm px-2 btn-call-patient" data-request-id="{{ $callingPatient->id }}" data-patient-name="{{ $callingPatient->visit?->patient?->name }}">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="text-center py-2 text-muted">
+                            <i class="fas fa-volume-up text-secondary opacity-50 mb-1"></i>
+                            <div class="small">لا توجد مناداة جارية حالياً</div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. KPI Summary Cards Bar -->
     <div class="row g-2 mb-3">
         <div class="col-6 col-md-3 col-xl-2">
             <div class="card border-0 shadow-xs rounded-3 bg-white p-2 text-center border-start border-4 border-primary h-100">
@@ -116,7 +208,7 @@
         </div>
     </div>
 
-    <!-- 3. Navigation Tabs & Search Toolbar -->
+    <!-- 4. Navigation Tabs & Search Toolbar -->
     <div class="card border-0 shadow-sm rounded-3 bg-white mb-3">
         <div class="card-body p-2 p-md-3">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
@@ -189,12 +281,12 @@
         </div>
     </div>
 
-    <!-- 4. Main Requests Table -->
+    <!-- 5. Main Requests Table (Queue & Calling) -->
     <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
         <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
             <h6 class="mb-0 fw-bold text-dark">
                 @if($activeTab === 'waiting')
-                    <i class="fas fa-hourglass-half text-warning me-2"></i> طابور الانتظار الحالي
+                    <i class="fas fa-hourglass-half text-warning me-2"></i> طابور الانتظار والنداء المباشر
                 @elseif($activeTab === 'in_progress')
                     <i class="fas fa-stethoscope text-info me-2"></i> الفحوصات الجارية الآن وكتابة النتائج
                 @elseif($activeTab === 'completed')
@@ -211,28 +303,39 @@
                     <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
                         <thead class="table-light text-secondary">
                             <tr>
-                                <th style="width: 70px;" class="text-center">#</th>
+                                <th style="width: 70px;" class="text-center">الدور</th>
+                                <th style="width: 70px;" class="text-center">#الطلب</th>
                                 <th>المريض</th>
                                 <th>الفحوصات المطلوبة</th>
                                 <th style="width: 110px;">القسم</th>
                                 <th>الطبيب المحوّل</th>
                                 <th style="width: 80px;" class="text-center">الوقت</th>
                                 <th style="width: 120px;" class="text-center">حالة الدفع</th>
-                                <th style="width: 100px;" class="text-center">الحالة</th>
-                                <th style="width: 150px;" class="text-center">الإجراءات</th>
+                                <th style="width: 110px;" class="text-center">الحالة</th>
+                                <th style="width: 180px;" class="text-center">الإجراءات والنداء</th>
                             </tr>
                         </thead>
                         <tbody>
+                            @php $turnIndex = 1; @endphp
                             @foreach($requests as $req)
                                 @php
                                     $isPaid = $req->payment_status === 'paid';
+                                    $isCalling = $req->status === 'calling';
+                                    $isInProgress = $req->status === 'in_progress';
                                     $radNames = $req->radiology_names;
                                     $patient = $req->visit?->patient;
                                     $patientName = $patient?->name ?? $patient?->user?->name ?? 'مريض غير محدد';
                                 @endphp
-                                <tr class="{{ !$isPaid ? 'table-danger bg-opacity-25' : ($req->status === 'in_progress' ? 'table-info bg-opacity-25' : '') }}">
+                                <tr class="{{ $isCalling ? 'table-warning bg-opacity-50 border-start border-4 border-warning fw-semibold' : (!$isPaid ? 'table-danger bg-opacity-25' : ($isInProgress ? 'table-info bg-opacity-25' : '')) }}" id="request-row-{{ $req->id }}">
+                                    <!-- Turn Number -->
+                                    <td class="text-center">
+                                        <span class="badge bg-dark bg-opacity-10 text-dark border px-2 py-1 font-monospace">
+                                            #{{ $turnIndex++ }}
+                                        </span>
+                                    </td>
+
                                     <!-- Request ID -->
-                                    <td class="text-center fw-bold text-dark">
+                                    <td class="text-center font-monospace text-muted">
                                         #{{ $req->id }}
                                     </td>
 
@@ -321,9 +424,13 @@
                                             <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 fw-bold">
                                                 ✅ مكتمل
                                             </span>
-                                        @elseif($req->status === 'in_progress')
+                                        @elseif($isCalling)
+                                            <span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold pulse-badge">
+                                                📢 قيد النداء
+                                            </span>
+                                        @elseif($isInProgress)
                                             <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2 fw-bold">
-                                                🩺 قيد الفحص
+                                                🩺 بالداخل قيد الفحص
                                             </span>
                                         @elseif($req->status === 'pending_service_selection')
                                             <span class="badge bg-secondary-subtle text-secondary border py-1 px-2">
@@ -336,23 +443,33 @@
                                         @endif
                                     </td>
 
-                                    <!-- Actions -->
+                                    <!-- Actions & Calling -->
                                     <td class="text-center">
-                                        <div class="btn-group btn-group-sm">
-                                            @if($req->status === 'pending' || $req->status === 'pending_service_selection' || $req->status === 'scheduled')
+                                        <div class="d-flex justify-content-center align-items-center gap-1">
+                                            @if($req->status === 'pending' || $req->status === 'calling' || $req->status === 'scheduled')
                                                 @if($isPaid)
+                                                    <!-- زر المناداة الفورية -->
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-warning text-dark fw-bold px-2 btn-call-patient" 
+                                                            data-request-id="{{ $req->id }}" 
+                                                            data-patient-name="{{ $patientName }}"
+                                                            title="مناداة المريض واستدعاؤه للغرفة">
+                                                        <i class="fas fa-bullhorn me-1"></i> نداء
+                                                    </button>
+                                                    
+                                                    <!-- زر إدخال وبدء الفحص -->
                                                     <form action="{{ route('radiology-staff.start', $req) }}" method="POST" class="d-inline">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-primary btn-sm px-2 fw-bold shadow-xs" title="بدء الفحص واستدعاء المريض">
-                                                            <i class="fas fa-play me-1"></i> بدء الفحص
+                                                        <button type="submit" class="btn btn-primary btn-sm px-2 fw-bold shadow-xs" title="إدخال المريض للغرفة وبدء الفحص">
+                                                            <i class="fas fa-door-open me-1"></i> إدخال
                                                         </button>
                                                     </form>
                                                 @else
                                                     <a href="{{ route('radiology-staff.show', $req) }}" class="btn btn-outline-secondary btn-sm px-2" title="معاينة الطلب">
-                                                        <i class="fas fa-eye"></i>
+                                                        <i class="fas fa-eye me-1"></i> معاينة
                                                     </a>
                                                 @endif
-                                            @elseif($req->status === 'in_progress')
+                                            @elseif($isInProgress)
                                                 <a href="{{ route('radiology-staff.show', $req) }}" class="btn btn-success btn-sm px-2 fw-bold shadow-xs" title="إدخال التقرير والنتائج">
                                                     <i class="fas fa-edit me-1"></i> كتابة التقرير
                                                 </a>
@@ -382,13 +499,13 @@
                 <div class="text-center py-5">
                     <i class="fas fa-x-ray fa-3x text-muted mb-3 opacity-50"></i>
                     <h5 class="text-muted fw-bold">لا توجد طلبات في هذا التبويب حالياً</h5>
-                    <p class="text-muted small mb-0">ستظهر الطلبات الجديدة تلقائياً فور تحويلها من العيادات الاستشارية أو الطوارئ.</p>
+                    <p class="text-muted small mb-0">ستظهر الطلبات الجديدة تلقائياً فور تحويلها من العيادات الاستشارية أو الطوارئ وتسديدها.</p>
                 </div>
             @endif
         </div>
     </div>
 
-    <!-- 5. Emergency Radiology Section (If any) -->
+    <!-- 6. Emergency Radiology Section (If any) -->
     @if(isset($emergencyRadiologyRequests) && $emergencyRadiologyRequests->count() > 0)
     <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-danger mb-4" id="emergency-section">
         <div class="card-header bg-danger bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
@@ -461,10 +578,81 @@
 
 </div>
 
-<!-- Realtime Queue Polling -->
+<!-- Audio Chime Synth & AJAX Calling Script -->
 <script>
+// Web Audio API Ding-Dong Chime Synth
+function playChimeSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        
+        // Tone 1
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now); // D5
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.6);
+
+        // Tone 2
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.2); // A5
+        gain2.gain.setValueAtTime(0.3, now + 0.2);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.2);
+        osc2.stop(now + 0.9);
+    } catch(e) {
+        console.log('Audio not supported or allowed', e);
+    }
+}
+
+// Handle Patient Calling Click
+$(document).on('click', '.btn-call-patient', function(e) {
+    e.preventDefault();
+    const btn = $(this);
+    const reqId = btn.data('request-id');
+    const patientName = btn.data('patient-name');
+
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+    $.ajax({
+        url: `/radiology-staff/requests/${reqId}/call`,
+        type: 'POST',
+        data: {
+            _token: '{{ csrf_token() }}'
+        },
+        success: function(res) {
+            playChimeSound();
+            if (typeof toastr !== 'undefined') {
+                toastr.success(res.message || 'تمت المناداة على المريض بنجاح.');
+            }
+            // Auto reload or refresh UI
+            setTimeout(() => {
+                window.location.reload();
+            }, 600);
+        },
+        error: function(xhr) {
+            btn.prop('disabled', false).html('<i class="fas fa-bullhorn me-1"></i> نداء');
+            const err = xhr.responseJSON ? xhr.responseJSON.message : 'حدث خطأ أثناء المناداة';
+            if (typeof toastr !== 'undefined') {
+                toastr.error(err);
+            } else {
+                alert(err);
+            }
+        }
+    });
+});
+
+// Realtime Queue Polling
 let autoRefreshTimer = setInterval(function() {
-    // Only refresh if no modal or input is focused
     if ($('input:focus, select:focus, textarea:focus').length === 0) {
         $.ajax({
             url: window.location.href,
@@ -483,4 +671,18 @@ let autoRefreshTimer = setInterval(function() {
     }
 }, 15000);
 </script>
+
+<style>
+.pulse-badge {
+    animation: pulseGlow 1.5s infinite;
+}
+@keyframes pulseGlow {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+.border-dashed {
+    border: 1px dashed #cbd5e1 !important;
+}
+</style>
 @endsection
