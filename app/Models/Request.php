@@ -185,6 +185,25 @@ class Request extends Model
         };
     }
 
+    public function getRadiologyNamesAttribute()
+    {
+        if ($this->type !== 'radiology') {
+            return [];
+        }
+        $details = $this->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?: [];
+        }
+        $typeIds = $details['radiology_types'] ?? $details['radiology_type_ids'] ?? [];
+        if (!empty($typeIds) && is_array($typeIds)) {
+            return \App\Models\RadiologyType::whereIn('id', $typeIds)->pluck('name')->toArray();
+        }
+        if (!empty($this->description)) {
+            return [str_replace('طلب أشعة: ', '', $this->description)];
+        }
+        return [];
+    }
+
     /**
      * Ensure visit status updates when all related requests complete (only for direct/standalone requests without a doctor consultation).
      */

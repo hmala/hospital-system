@@ -412,20 +412,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
     });
 
-    // ======= مسارات قسم الأشعة =======
+    // ======= مسارات قسم الأشعة والتصوير الطبي =======
     Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
+        Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
     });
-
 
     // إدارة رموز ICD10
     Route::resource('icd10', \App\Http\Controllers\ICD10Controller::class);
 
-    // إدارة الإشعة
+    // إدارة الإشعة (المحطة الموحدة)
     Route::prefix('radiology')->name('radiology.')->group(function () {
-        Route::get('/', [RadiologyController::class, 'index'])->name('index');
+        Route::get('/', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
         Route::get('/create', [RadiologyController::class, 'create'])->name('create');
         Route::post('/', [RadiologyController::class, 'store'])->name('store');
         Route::get('/{radiology}', [RadiologyController::class, 'show'])->name('show');

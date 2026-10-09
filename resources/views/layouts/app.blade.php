@@ -116,7 +116,7 @@
                 $pendingSurgeryRadiology = \App\Models\SurgeryRadiologyTest::where('status', 'pending')->count();
             }
             if (Auth::user()->can('view radiology')) {
-                $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
+                $pendingRadiology = \App\Models\Request::where('type', 'radiology')->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])->whereDate('created_at', today())->count();
             }
             if (Auth::user()->can('view lab tests')) {
                 $pendingLab = \App\Models\LabResult::where('status', 'pending')->count();
@@ -1205,15 +1205,9 @@
                         <div class="collapse collapse-section {{ $isRadiologyActive ? 'show' : '' }}" id="radiologySection">
                         @can('view radiology')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('radiology.index') ? 'active' : '' }}" href="{{ route('radiology.index') }}">
-                                <i class="fas fa-th-list"></i><span> لوحة قسم الأشعة</span>
-                                <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('radiology-staff.*') ? 'active' : '' }}" href="{{ route('radiology-staff.index') }}">
-                                <i class="fas fa-user-md"></i><span> طلبات وفحوصات الأشعة</span>
-                                <span class="badge bg-secondary ms-2">{{ $pendingRadiology }}</span>
+                            <a class="nav-link {{ (request()->routeIs('radiology.index') || request()->routeIs('radiology-staff.*')) ? 'active' : '' }}" href="{{ route('radiology.index') }}">
+                                <i class="fas fa-x-ray"></i><span> طلبات وفحوصات الأشعة والتصوير</span>
+                                <span class="badge bg-primary ms-2">{{ $pendingRadiology }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
