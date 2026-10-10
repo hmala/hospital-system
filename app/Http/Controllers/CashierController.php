@@ -58,9 +58,10 @@ class CashierController extends Controller
 
         if ($canUltrasoundOnly) {
             $previousPendingReqsQuery->where(function($q) {
-                $q->where('subtype', 'ultrasound')
-                  ->orWhere('description', 'LIKE', '%سونار%')
-                  ->orWhere('details', 'LIKE', '%ultrasound%');
+                $q->where(function($sq) {
+                    $sq->where('subtype', 'ultrasound')
+                       ->orWhere('description', 'LIKE', '%سونار%');
+                })->where('details', 'LIKE', '%"created_at_inquiry":true%');
             });
         }
 
@@ -103,11 +104,12 @@ class CashierController extends Controller
             ->whereDoesntHave('visit.surgery');
 
         if ($canUltrasoundOnly) {
-            // تصفية حصرية لطلبات السونار الخارجي المباشر فقط
+            // تصفية حصرية لطلبات السونار الخارجي المباشر فقط (المحجوزة من الاستعلامات)
             $pendingRequestsQuery->where(function($q) {
-                $q->where('subtype', 'ultrasound')
-                  ->orWhere('description', 'LIKE', '%سونار%')
-                  ->orWhere('details', 'LIKE', '%ultrasound%');
+                $q->where(function($sq) {
+                    $sq->where('subtype', 'ultrasound')
+                       ->orWhere('description', 'LIKE', '%سونار%');
+                })->where('details', 'LIKE', '%"created_at_inquiry":true%');
             });
         }
 
