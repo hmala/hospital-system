@@ -847,6 +847,8 @@ class CashierController extends Controller
         // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً أو محاسباً)
         if (!$user->hasRole(['admin', 'accountant', 'super_admin'])) {
             $query->where('cashier_id', $user->id);
+        } elseif ($cashierId) {
+            $query->where('cashier_id', $cashierId);
         }
 
         if ($search) {
@@ -887,12 +889,16 @@ class CashierController extends Controller
             ];
         });
 
+        $cashiers = $user->hasRole(['admin', 'accountant', 'super_admin'])
+            ? \App\Models\User::whereIn('id', \App\Models\Payment::select('cashier_id')->distinct())->orderBy('name')->get()
+            : collect();
+
         // إذا كان الطلب طباعة
         if ($request->query('print') == '1') {
             $payments = $query->orderBy('paid_at', 'desc')->get();
             return view('cashier.report-print', compact(
                 'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
-                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range'
+                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
             ));
         }
 
@@ -900,7 +906,7 @@ class CashierController extends Controller
 
         return view('cashier.report', compact(
             'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
-            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range'
+            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
         ));
     }
 
