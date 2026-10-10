@@ -665,100 +665,6 @@
     transform: translateY(-1px);
 }
 
-/* Clean and Simple Design */
-body {
-    background-color: #f8f9fa !important;
-}
-
-.card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: none !important;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-}
-
-.btn {
-    border-radius: 15px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #28a745, #20c997);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #dc3545, #fd7e14);
-}
-
-.form-check-input:checked {
-    background-color: #28a745;
-    border-color: #28a745;
-}
-
-.availability-text {
-    font-size: 1.1rem;
-    transition: color 0.3s ease;
-}
-
-.doctor-card {
-    background: white;
-}
-
-.table-responsive {
-    border-radius: 1rem;
-}
-
-.table td,
-.table th {
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-}
-
-.display-4 {
-    font-size: 2.5rem;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .display-5 {
-        font-size: 2rem;
-    }
-
-    .display-4 {
-        font-size: 2rem;
-    }
-
-    .btn-lg {
-        padding: 0.75rem 1.5rem;
-        font-size: 1rem;
-    }
-
-    .card-body {
-        padding: 2rem 1.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .btn {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    .d-flex.gap-3 {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
 </style>
 
 <script>
@@ -1422,6 +1328,7 @@ function pollLiveConsultantStatus() {
                         </div>
                     `;
                 }
+            }
             // 5. تحديث طابور الحجوزات والقبض لليوم (Today's Queue & Cashier)
             const apptCountBadge = document.getElementById('todayAppointmentsCountBadge');
             const apptContainer = document.getElementById('todayAppointmentsContainer');
