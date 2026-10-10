@@ -196,8 +196,12 @@ class PaymentObserver
             ]
         );
 
-        $account->balance = round($account->balance + $doctorShare, 2);
-        $account->total_earned = round($account->total_earned + $doctorShare, 2);
+        // احتساب دقيق غير قابل للتكرار بالاعتماد على سجل المستحقات الفعلي
+        $totalEarned = (float) DoctorDue::where('doctor_id', $doctorId)->sum('amount');
+        $totalPaid = (float) ($account->total_paid ?? 0);
+
+        $account->total_earned = $totalEarned;
+        $account->balance = round($totalEarned - $totalPaid, 2);
         $account->last_paid_at = $paidAt;
         $account->save();
     }
