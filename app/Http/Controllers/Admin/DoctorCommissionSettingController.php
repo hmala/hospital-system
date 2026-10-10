@@ -197,6 +197,8 @@ class DoctorCommissionSettingController extends Controller
             'doctor_id.*' => 'required|exists:doctors,id',
             'fixed_amount' => 'nullable|array',
             'fixed_amount.*' => 'nullable|numeric|min:0',
+            'hi_fixed_amount' => 'nullable|array',
+            'hi_fixed_amount.*' => 'nullable|numeric|min:0',
             'consultation_fee' => 'nullable|array',
             'consultation_fee.*' => 'nullable|numeric|min:0',
             'hi_price' => 'nullable|array',
@@ -212,6 +214,7 @@ class DoctorCommissionSettingController extends Controller
 
         $doctorIds = $validated['doctor_id'];
         $fixedAmounts = $request->input('fixed_amount', []);
+        $hiFixedAmounts = $request->input('hi_fixed_amount', []);
         $consultationFees = $request->input('consultation_fee', []);
         $hiPrices = $request->input('hi_price', []);
         $isHiActives = $request->input('is_hi_active', []);
@@ -224,9 +227,10 @@ class DoctorCommissionSettingController extends Controller
             $rowsToSave = min($validated['rows_to_save'] ?? count($doctorIds), count($doctorIds));
         }
 
-        $processRows = function (int $index) use ($doctorIds, $fixedAmounts, $consultationFees, $hiPrices, $isHiActives, $moiPrices, $isMoiActives) {
+        $processRows = function (int $index) use ($doctorIds, $fixedAmounts, $hiFixedAmounts, $consultationFees, $hiPrices, $isHiActives, $moiPrices, $isMoiActives) {
             $doctorId = $doctorIds[$index];
             $fixedAmount = $fixedAmounts[$index] ?? null;
+            $hiFixedAmount = $hiFixedAmounts[$index] ?? null;
 
             $doctor = Doctor::findOrFail($doctorId);
             $departmentId = $doctor->department_id;
@@ -263,6 +267,7 @@ class DoctorCommissionSettingController extends Controller
                     'commission_type' => 'fixed',
                     'commission_value' => 0,
                     'fixed_amount' => $fixedAmount ?? null,
+                    'hi_fixed_amount' => $hiFixedAmount ?? null,
                     'department_id' => $departmentId,
                     'service_type_id' => null,
                     'is_active' => $isActive,
@@ -274,6 +279,7 @@ class DoctorCommissionSettingController extends Controller
                     'commission_type' => 'fixed',
                     'commission_value' => 0,
                     'fixed_amount' => $fixedAmount ?? null,
+                    'hi_fixed_amount' => $hiFixedAmount ?? null,
                     'department_id' => $departmentId,
                     'service_type_id' => null,
                     'is_active' => $isActive,

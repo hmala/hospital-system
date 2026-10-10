@@ -463,6 +463,9 @@ class ConsultantAvailabilityController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
         $filterType = $request->query('filter_type');
+        $search = $request->query('search');
+        $paymentMethod = $request->query('payment_method');
+        $insuranceStatus = $request->query('insurance_status');
 
         if ($fromDate) {
             $query->whereDate('paid_at', '>=', $fromDate);
@@ -486,22 +489,53 @@ class ConsultantAvailabilityController extends Controller
             });
         }
 
+        if ($paymentMethod) {
+            $query->where('payment_method', $paymentMethod);
+        }
+
+        if ($insuranceStatus) {
+            if ($insuranceStatus === 'insurance') {
+                $query->whereHas('appointment', function ($q) {
+                    $q->whereNotNull('insurance_type');
+                });
+            } elseif ($insuranceStatus === 'cash') {
+                $query->whereHas('appointment', function ($q) {
+                    $q->whereNull('insurance_type');
+                });
+            }
+        }
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('receipt_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
+                      $uq->where('name', 'like', '%' . $search . '%')
+                         ->orWhere('phone', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
         $totalsQuery = clone $query;
 
         $totalReceived = (clone $totalsQuery)->where('total_amount', '>=', 0)->sum('total_amount');
         $totalRefunded = abs((clone $totalsQuery)->where('total_amount', '<', 0)->sum('total_amount'));
         $netTotal = (clone $totalsQuery)->sum('total_amount');
+        $totalCount = (clone $totalsQuery)->count();
 
-        $payments = $query->orderBy('paid_at', 'desc')->paginate(25);
+        $payments = $query->orderBy('paid_at', 'desc')->paginate(25)->appends($request->query());
 
         return view('consultant-availability.financial-movements', compact(
             'payments',
             'totalReceived',
             'totalRefunded',
             'netTotal',
+            'totalCount',
             'fromDate',
             'toDate',
-            'filterType'
+            'filterType',
+            'search',
+            'paymentMethod',
+            'insuranceStatus'
         ));
     }
 
@@ -516,9 +550,12 @@ class ConsultantAvailabilityController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
         $filterType = $request->query('filter_type');
+        $search = $request->query('search');
+        $paymentMethod = $request->query('payment_method');
+        $insuranceStatus = $request->query('insurance_status');
 
         return Excel::download(
-            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType),
+            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus),
             'financial_movements_' . now()->format('Ymd_His') . '.xlsx'
         );
     }

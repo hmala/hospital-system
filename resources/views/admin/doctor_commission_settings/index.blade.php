@@ -153,8 +153,9 @@
                             <th style="min-width: 200px;">الطبيب والقسم</th>
                             <th style="width: 150px;" class="text-center">💵 كشفية الكاش (د.ع)</th>
                             <th style="width: 210px;" class="text-center">🛡️ الضمان الصحي (HI)</th>
-                            <th style="width: 160px;" class="text-center">👨‍⚕️ حصة الطبيب (د.ع)</th>
-                            <th style="width: 180px;" class="text-center">🏥 حصة المستشفى</th>
+                            <th style="width: 140px;" class="text-center">👨‍⚕️ حصة كاش (د.ع)</th>
+                            <th style="width: 140px;" class="text-center">👨‍⚕️ حصة HI (د.ع)</th>
+                            <th style="width: 160px;" class="text-center">🏥 حصة المستشفى</th>
                             <th style="width: 90px;" class="text-center">حفظ فوري</th>
                         </tr>
                     </thead>
@@ -165,6 +166,7 @@
                                 $docFee = (float) ($doctor->consultation_fee ?? 0);
                                 $hiFee = (float) ($doctor->hi_price ?? 0);
                                 $docShare = $commission && $commission->fixed_amount !== null ? (float) $commission->fixed_amount : 0;
+                                $hiDocShare = $commission && $commission->hi_fixed_amount !== null ? (float) $commission->hi_fixed_amount : $docShare;
                                 $hospShare = max(0, $docFee - $docShare);
                                 $hospPercent = $docFee > 0 ? round(($hospShare / $docFee) * 100) : 0;
                             @endphp
@@ -247,7 +249,7 @@
                                     </div>
                                 </td>
 
-                                <!-- حصة الطبيب (إدخال) -->
+                                <!-- حصة الطبيب كاش (إدخال) -->
                                 <td>
                                     <div class="input-group input-group-sm">
                                         <input type="number" 
@@ -261,11 +263,27 @@
                                                data-doctor-id="{{ $doctor->id }}"
                                                oninput="onDoctorShareChange({{ $doctor->id }})"
                                                onkeydown="handleInputKeydown(event, {{ $doctor->id }})">
-                                        <span class="input-group-text bg-light text-muted small px-1" style="font-size: 0.7rem;">د.ع</span>
                                     </div>
                                 </td>
 
-                                <!-- حصة المستشفى (معاينة حية) -->
+                                <!-- حصة الطبيب ضمان (إدخال) -->
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" 
+                                               step="500" 
+                                               min="0"
+                                               name="hi_fixed_amount[{{ $index }}]" 
+                                               id="docHiShareInput-{{ $doctor->id }}"
+                                               value="{{ $commission?->hi_fixed_amount ?? '' }}" 
+                                               class="form-control form-control-sm font-monospace text-center fw-bold text-success hi-share-input" 
+                                               placeholder="0"
+                                               data-doctor-id="{{ $doctor->id }}"
+                                               oninput="onDoctorShareChange({{ $doctor->id }})"
+                                               onkeydown="handleInputKeydown(event, {{ $doctor->id }})">
+                                    </div>
+                                </td>
+
+                                <!-- حصة المستشفى (معاينة حية كاش فقط للتبسيط) -->
                                 <td class="text-center">
                                     <div id="hospShareBox-{{ $doctor->id }}" class="d-inline-flex align-items-center gap-1 bg-light p-1 px-2 rounded-3 border">
                                         <span class="fw-bold font-monospace text-info hosp-share-val" id="hospShareVal-{{ $doctor->id }}" style="font-size: 0.8rem;">
@@ -290,7 +308,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">
+                                <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="fas fa-user-md fa-3x mb-3 text-muted opacity-50 d-block"></i>
                                     لا يوجد أي أطباء يطابقون خيارات البحث والفلترة.
                                 </td>

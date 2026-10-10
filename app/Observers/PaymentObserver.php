@@ -40,10 +40,11 @@ class PaymentObserver
         }
 
         $setting = $this->getCommissionSetting($appointment);
-        $amount = $payment->amount;
+        // Use total_amount for revenue distribution (vital for insurance where amount is just copay)
+        $amount = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
         $baseAmount = $this->getCommissionBaseAmount($payment, $appointment);
 
-        $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting);
+        $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting, $payment);
         $hospitalShare = round($amount - $doctorShare, 2);
         $percentage = ((float)$baseAmount != 0.0) ? round((abs($doctorShare) / $baseAmount) * 100, 2) : null;
 
@@ -145,19 +146,20 @@ class PaymentObserver
         return abs((float)$payment->amount);
     }
 
-    protected function calculateDoctorShare(float $amount, float $baseAmount, $appointment, $setting): float
+    protected function calculateDoctorShare(float $amount, float $baseAmount, $appointment, $setting, $payment = null): float
     {
         $absAmount = abs($amount);
         $absBaseAmount = abs($baseAmount);
 
         if ($setting) {
             $type = $setting->commission_type ?? 'percentage';
+            $isInsurance = $payment && (float)($payment->insurance_share ?? 0) > 0;
 
-            if ($type === 'fixed') {
-                $fixedVal = (float) ($setting->fixed_amount ?? 0);
-                $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
-            } elseif ($type === 'custom') {
-                $fixedVal = (float) ($setting->fixed_amount ?? 0);
+            if ($type === 'fixed' || $type === 'custom') {
+                $normalFixed = (float) ($setting->fixed_amount ?? 0);
+                $hiFixed = (float) ($setting->hi_fixed_amount ?? $normalFixed); // fallback to normal fixed
+                
+                $fixedVal = $isInsurance ? $hiFixed : $normalFixed;
                 $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
             } else {
                 // percentage

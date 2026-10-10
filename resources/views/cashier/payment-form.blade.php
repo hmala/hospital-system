@@ -41,9 +41,9 @@
             $serviceCode = $scanType->code;
             $serviceCategory = $scanType->main_category ?? 'سونار';
             $regularPrice = (float)$scanType->base_price;
-            $moiPrice = (float)($scanType->moi_price > 0 ? $scanType->moi_price : $regularPrice);
+            $moiPrice = (float)($scanType->moi_price > 0 ? $scanType->moi_price : 0);
             $isMoiActive = (bool)($scanType->is_moi_active ?? true);
-            $hiPrice = (float)($scanType->hi_price > 0 ? $scanType->hi_price : $regularPrice);
+            $hiPrice = (float)($scanType->hi_price > 0 ? $scanType->hi_price : 0);
             $isHiActive = (bool)($scanType->is_hi_active ?? true);
         } else {
             $serviceName = $appointment->reason ?? 'كشف طبي عام';
@@ -52,9 +52,9 @@
             $regularPrice = (float)($appointment->consultation_fee > 0 
                 ? $appointment->consultation_fee 
                 : ($doctor ? $doctor->getRegularPrice() : 0));
-            $moiPrice = (float)($doctor && $doctor->moi_price > 0 ? $doctor->moi_price : $regularPrice);
+            $moiPrice = (float)($doctor && $doctor->moi_price > 0 ? $doctor->moi_price : 0);
             $isMoiActive = (bool)($doctor ? ($doctor->is_moi_active ?? true) : true);
-            $hiPrice = (float)($doctor && $doctor->hi_price > 0 ? $doctor->hi_price : $regularPrice);
+            $hiPrice = (float)($doctor && $doctor->hi_price > 0 ? $doctor->hi_price : 0);
             $isHiActive = (bool)($doctor ? ($doctor->is_hi_active ?? true) : true);
         }
     @endphp
@@ -320,7 +320,11 @@
 
                     <!-- زر التأكيد والطباعة الكبير -->
                     <div>
-                        <button type="submit" class="btn btn-success btn-lg w-100 py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" style="font-size: 1.15rem;">
+                        <div id="insuranceErrorAlert" class="alert alert-danger d-none fw-bold small mb-2 text-center" style="font-size: 0.85rem;">
+                            <i class="fas fa-ban me-1"></i>
+                            <span id="insuranceErrorText">لا يمكن التسديد! الطبيب/الخدمة غير مشمول بهذا الضمان أو أن التسعيرة غير مدخلة.</span>
+                        </div>
+                        <button type="submit" id="submitPaymentBtn" class="btn btn-success btn-lg w-100 py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" style="font-size: 1.15rem;">
                             <i class="fas fa-print fs-5"></i>
                             <span>تأكيد القبض وإصدار الوصل</span>
                         </button>
@@ -435,10 +439,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let approvedPrice = regularPrice;
         let isCovered = false;
+        let hasError = false;
 
         if (insType === 'moi') {
-            if (isMoiActive) {
-                approvedPrice = moiPrice > 0 ? moiPrice : regularPrice;
+            if (!isMoiActive || moiPrice <= 0) {
+                hasError = true;
+            } else {
+                approvedPrice = moiPrice;
                 isCovered = true;
             }
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
@@ -448,8 +455,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 copayBadge.textContent = 'ضمان قوى الأمن الداخلي';
             }
         } else if (insType === 'hi') {
-            if (isHiActive) {
-                approvedPrice = hiPrice > 0 ? hiPrice : regularPrice;
+            if (!isHiActive || hiPrice <= 0) {
+                hasError = true;
+            } else {
+                approvedPrice = hiPrice;
                 isCovered = true;
             }
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
@@ -474,12 +483,26 @@ document.addEventListener('DOMContentLoaded', function() {
         let patientShare = 0;
         let insuranceShare = 0;
 
-        if (isCovered) {
-            patientShare = Math.round(approvedPrice * (copayPct / 100));
-            insuranceShare = Math.max(0, approvedPrice - patientShare);
-        } else {
-            patientShare = approvedPrice;
+        const alertBox = document.getElementById('insuranceErrorAlert');
+        const submitBtn = document.getElementById('submitPaymentBtn');
+
+        if (hasError) {
+            if (alertBox) alertBox.classList.remove('d-none');
+            if (submitBtn) submitBtn.disabled = true;
+            approvedPrice = 0;
+            patientShare = 0;
             insuranceShare = 0;
+        } else {
+            if (alertBox) alertBox.classList.add('d-none');
+            if (submitBtn) submitBtn.disabled = false;
+            
+            if (isCovered) {
+                patientShare = Math.round(approvedPrice * (copayPct / 100));
+                insuranceShare = Math.max(0, approvedPrice - patientShare);
+            } else {
+                patientShare = approvedPrice;
+                insuranceShare = 0;
+            }
         }
 
         if (displayApproved) displayApproved.textContent = formatNumber(approvedPrice);
