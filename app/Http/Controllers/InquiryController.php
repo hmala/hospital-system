@@ -994,6 +994,9 @@ class InquiryController extends Controller
                 ->with('success', 'تم حجز السونار بنجاح وإدراجه في طابور اليوم! يرجى توجيه المريض للكاشير لدفع الأجور.');
         }
 
+        // تجميع الرسائل النهائية
+        $finalMessage = !empty($messages) ? implode('<br>', $messages) : 'تم إنشاء وحجز الطلب بنجاح! يرجى توجيه المريض للكاشير لدفع الأجور.';
+
         // إرجاع إلى صفحة الاستعلامات مع الرسالة
         return redirect()->route('inquiry.index')
             ->with('success', $finalMessage);
