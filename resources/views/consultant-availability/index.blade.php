@@ -532,13 +532,7 @@
                                                     </button>
                                                 @endif
                                             @else
-                                                @canany(['process consultation payments', 'process payments'])
-                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="قبض رسوم الكشفية فوراً">
-                                                        <i class="fas fa-cash-register me-1"></i> قبض
-                                                    </a>
-                                                @else
-                                                    <span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>
-                                                @endcanany
+                                                <span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>
                                             @endif
 
                                             @if($appointment->is_free_recheck)
