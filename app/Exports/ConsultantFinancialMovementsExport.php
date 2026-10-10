@@ -40,8 +40,42 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             ->when($this->filterType === 'appointment_paid', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'paid')))
             ->when($this->filterType === 'appointment_refunded', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'refunded')))
             ->when($this->paymentMethod, fn($query) => $query->where('payment_method', $this->paymentMethod))
-            ->when($this->insuranceStatus === 'insurance', fn($query) => $query->whereHas('appointment', fn($query) => $query->whereNotNull('insurance_type')))
-            ->when($this->insuranceStatus === 'cash', fn($query) => $query->whereHas('appointment', fn($query) => $query->whereNull('insurance_type')))
+            ->when($this->insuranceStatus === 'insurance', function($query) {
+                $query->where(function($sub) {
+                    $sub->whereHas('appointment', function ($q) {
+                        $q->whereIn('insurance_type', ['hi', 'moi'])
+                          ->orWhere(function($sq) {
+                              $sq->whereNotNull('insurance_type')
+                                 ->whereNotIn('insurance_type', ['none', '']);
+                          });
+                    })->orWhereHas('payment', function ($pq) {
+                        $pq->whereIn('insurance_type', ['hi', 'moi'])
+                           ->orWhere('insurance_share', '>', 0);
+                    });
+                });
+            })
+            ->when($this->insuranceStatus === 'cash', function($query) {
+                $query->where(function($sub) {
+                    $sub->where(function($sq) {
+                        $sq->whereHas('appointment', function ($q) {
+                            $q->whereNull('insurance_type')
+                              ->orWhere('insurance_type', 'none')
+                              ->orWhere('insurance_type', '');
+                        })->orWhereDoesntHave('appointment');
+                    })->where(function($pq) {
+                        $pq->whereHas('payment', function ($p) {
+                            $p->where(function($pp) {
+                                $pp->whereNull('insurance_type')
+                                   ->orWhere('insurance_type', 'none')
+                                   ->orWhere('insurance_type', '');
+                            })->where(function($pp) {
+                                $pp->whereNull('insurance_share')
+                                   ->orWhere('insurance_share', '<=', 0);
+                            });
+                        })->orWhereDoesntHave('payment');
+                    });
+                });
+            })
             ->when($this->search, function($query) {
                 $s = $this->search;
                 $query->where(function($q) use ($s) {

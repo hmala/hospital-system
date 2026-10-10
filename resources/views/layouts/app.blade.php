@@ -766,13 +766,20 @@
                         @endcanany
 
                         <!-- قسم الصندوق والكاشير -->
-                        @canany(['view cashier', 'view cashier surgeries'])
+                        @canany(['view cashier', 'view cashier surgeries', 'view cashier reports'])
+                        @php
+                            $isCashierSectionActive = request()->routeIs('cashier.index') || 
+                                                      request()->routeIs('cashier.payment.*') || 
+                                                      request()->routeIs('cashier.receipt*') ||
+                                                      request()->routeIs('cashier.surgeries.*') ||
+                                                      request()->routeIs('cashier.report');
+                        @endphp
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#cashierSection" aria-expanded="false">
+                        <div class="sidebar-section-title {{ $isCashierSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#cashierSection" aria-expanded="{{ $isCashierSectionActive ? 'true' : 'false' }}">
                             <span><i class="fas fa-cash-register"></i> الصندوق والكاشير</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="cashierSection">
+                        <div class="collapse collapse-section {{ $isCashierSectionActive ? 'show' : '' }}" id="cashierSection">
                         @can('view cashier')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.index') || request()->routeIs('cashier.payment.*') || request()->routeIs('cashier.receipt*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
@@ -803,6 +810,13 @@
                             </a>
                         </li>
                         @endcan
+                        @can('view cashier reports')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
+                                <i class="fas fa-file-invoice-dollar text-success"></i><span> تقرير ومدفوعات الصندوق</span>
+                            </a>
+                        </li>
+                        @endcan
                         </div> <!-- end cashierSection -->
                         @endcanany
 
@@ -811,7 +825,6 @@
                             'review surgery prices', 
                             'manage health insurance', 
                             'manage doctor commissions',
-                            'view cashier reports', 
                             'view consultant financial movements', 
                             'view account statements', 
                             'view doctor accounts', 
@@ -825,7 +838,6 @@
                             $isSurgeryReviewActive = request()->routeIs('accountant.surgeries.*');
                             $isInsuranceActive = request()->routeIs('health-insurance-categories.*');
                             $isConsultantAccountsActive = request()->routeIs('admin.doctor-commission-settings.*') ||
-                                                   request()->routeIs('cashier.report') ||
                                                    request()->routeIs('consultant-availability.financial-movements') ||
                                                    request()->routeIs('cashier.statements') ||
                                                    request()->routeIs('consultant-availability.doctor-accounts');
@@ -866,7 +878,7 @@
                         @endcan
 
                         <!-- القسم الفرعي: الاستشارية والعيادات -->
-                        @canany(['manage doctor commissions', 'view cashier reports', 'view consultant financial movements', 'view account statements', 'view doctor accounts'])
+                        @canany(['manage doctor commissions', 'view consultant financial movements', 'view account statements', 'view doctor accounts'])
                         <div class="sidebar-section-title {{ $isConsultantAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#consultantSubSection" aria-expanded="{{ $isConsultantAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
                             <span><i class="fas fa-clinic-medical me-1"></i> حسابات الاستشارية</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
@@ -876,13 +888,6 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
                                     <i class="fas fa-file-invoice-dollar"></i><span> إعدادات العمولات</span>
-                                </a>
-                            </li>
-                            @endcan
-                            @can('view cashier reports')
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
-                                    <i class="fas fa-chart-line text-success"></i><span> سجل وتقارير الفواتير</span>
                                 </a>
                             </li>
                             @endcan
