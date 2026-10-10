@@ -354,6 +354,7 @@ class RoleManagementController extends Controller
             // 💳 3. الصندوق والكاشير
             'view cashier' => ['label' => 'عرض لوحة الكاشير المركزية العامة', 'action' => 'عرض', 'badge' => 'info'],
             'process consultation payments' => ['label' => 'قبض وتسديد كشفية الاستشارية وحجز السونار', 'action' => 'معالجة', 'badge' => 'success'],
+            'process ultrasound payments' => ['label' => 'قبض وتسديد طلبات السونار الخارجي المباشر فقط', 'action' => 'معالجة', 'badge' => 'primary'],
             'process medical requests payments' => ['label' => 'قبض وتسديد رسوم الفحوصات (مختبر وأشعة)', 'action' => 'معالجة', 'badge' => 'success'],
             'process emergency payments' => ['label' => 'قبض وتسديد فواتير وإجراءات الطوارئ', 'action' => 'معالجة', 'badge' => 'success'],
             'view cashier surgeries' => ['label' => 'عرض كاشير قسم العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],

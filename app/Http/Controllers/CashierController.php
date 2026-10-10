@@ -32,7 +32,10 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('process consultation payments') && !$user->can('process medical requests payments') && !$user->can('process emergency payments')))) {
+        $canFullMedical = $isAdmin || ($user && $user->can('process medical requests payments'));
+        $canUltrasoundOnly = !$canFullMedical && ($user && $user->can('process ultrasound payments'));
+
+        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('process consultation payments') && !$canFullMedical && !$canUltrasoundOnly && !$user->can('process emergency payments')))) {
             abort(403, 'غير مصرح لك بالوصول إلى لوحة الكاشير');
         }
 
@@ -47,12 +50,21 @@ class CashierController extends Controller
             ->whereHas('patient')
             ->count();
 
-        $previousPendingReqsCount = MedicalRequest::where('payment_status', 'pending')
+        $previousPendingReqsQuery = MedicalRequest::where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', '<', $today)
             ->whereHas('visit.patient')
-            ->whereDoesntHave('visit.surgery')
-            ->count();
+            ->whereDoesntHave('visit.surgery');
+
+        if ($canUltrasoundOnly) {
+            $previousPendingReqsQuery->where(function($q) {
+                $q->where('subtype', 'ultrasound')
+                  ->orWhere('description', 'LIKE', '%سونار%')
+                  ->orWhere('details', 'LIKE', '%ultrasound%');
+            });
+        }
+
+        $previousPendingReqsCount = $previousPendingReqsQuery->count();
 
         $previousPendingCount = $previousPendingAptsCount + $previousPendingReqsCount;
 
@@ -89,6 +101,15 @@ class CashierController extends Controller
             })
             ->whereHas('visit.patient')
             ->whereDoesntHave('visit.surgery');
+
+        if ($canUltrasoundOnly) {
+            // تصفية حصرية لطلبات السونار الخارجي المباشر فقط
+            $pendingRequestsQuery->where(function($q) {
+                $q->where('subtype', 'ultrasound')
+                  ->orWhere('description', 'LIKE', '%سونار%')
+                  ->orWhere('details', 'LIKE', '%ultrasound%');
+            });
+        }
 
         if ($dateFilter === 'today') {
             $pendingRequestsQuery->whereDate('created_at', $today);
@@ -429,10 +450,13 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isUltrasoundRequest = ($request->subtype === 'ultrasound' || str_contains($request->description ?? '', 'سونار') || str_contains(json_encode($request->details ?? []), 'ultrasound'));
+        
         $canPay = $isAdmin 
-            || $user->can('process medical requests payments') 
-            || $user->can('process medical request payments')
-            || ($user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
+            || ($user && $user->can('process medical requests payments'))
+            || ($user && $user->can('process medical request payments'))
+            || ($user && $user->can('process ultrasound payments') && $isUltrasoundRequest)
+            || ($user && $user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
 
         if (!$canPay) {
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
@@ -466,10 +490,13 @@ class CashierController extends Controller
         
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isUltrasoundRequest = ($request->subtype === 'ultrasound' || str_contains($request->description ?? '', 'سونار') || str_contains(json_encode($request->details ?? []), 'ultrasound'));
+
         $canPay = $isAdmin 
-            || $user->can('process medical requests payments') 
-            || $user->can('process medical request payments')
-            || ($user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
+            || ($user && $user->can('process medical requests payments'))
+            || ($user && $user->can('process medical request payments'))
+            || ($user && $user->can('process ultrasound payments') && $isUltrasoundRequest)
+            || ($user && $user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
 
         if (!$canPay) {
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');

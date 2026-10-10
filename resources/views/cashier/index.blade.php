@@ -142,7 +142,9 @@
                         <div class="col-12">
                             @php
                                 $canConsultation = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process consultation payments');
-                                $canMedicalRequests = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process medical requests payments');
+                                $canFullMedical = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process medical requests payments');
+                                $canUltrasoundOnly = !$canFullMedical && auth()->user()->can('process ultrasound payments');
+                                $canMedicalRequests = $canFullMedical || $canUltrasoundOnly;
                                 $canEmergency = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process emergency payments');
 
                                 $appointmentsCount = ($canConsultation && isset($pendingAppointments)) ? $pendingAppointments->total() : 0;
@@ -180,7 +182,11 @@
                                             @if($canMedicalRequests)
                                             <li class="nav-item" role="presentation">
                                                 <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-requests-btn" data-bs-toggle="pill" data-bs-target="#tab-requests" type="button" role="tab">
-                                                    <i class="fas fa-flask me-1 text-primary"></i> التحاليل والأشعة
+                                                    @if($canUltrasoundOnly)
+                                                        <i class="fas fa-wave-square me-1 text-primary"></i> السونار الخارجي
+                                                    @else
+                                                        <i class="fas fa-flask me-1 text-primary"></i> التحاليل والأشعة
+                                                    @endif
                                                     <span class="badge bg-primary ms-1 rounded-pill">{{ $requestsCount }}</span>
                                                 </button>
                                             </li>
