@@ -669,10 +669,10 @@
                                                                         </div>
                                                                         @if(!empty($type->pivot->image_path))
                                                                             <div class="d-flex align-items-center gap-2 pt-1">
-                                                                                <a href="{{ asset('storage/' . $type->pivot->image_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold">
+                                                                                <a href="{{ route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $radReq, 'typeId' => $type->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold">
                                                                                     <i class="fas fa-image me-1"></i>معاينة صورة الأشعة المرفقة
                                                                                 </a>
-                                                                                <a href="{{ asset('storage/' . $type->pivot->image_path) }}" download class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                                                                <a href="{{ route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $radReq, 'typeId' => $type->id]) }}" download class="btn btn-sm btn-outline-secondary py-1 px-2">
                                                                                     <i class="fas fa-download me-1"></i>تحميل
                                                                                 </a>
                                                                             </div>

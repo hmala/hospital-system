@@ -456,16 +456,7 @@
 
                 $normalizedPath = str_replace('\\', '/', trim($rawPath));
 
-                // build a safe URL; encode each path segment to escape spaces/special chars
-                $url = null;
-                if (preg_match('/^https?:\/\//i', $normalizedPath)) {
-                    $url = $normalizedPath;
-                } else {
-                    // strip any leading slash
-                    $pathPart = ltrim($normalizedPath, '/');
-                    $encoded = implode('/', array_map('rawurlencode', explode('/', $pathPart)));
-                    $url = asset('storage/' . $encoded);
-                }
+                $url = route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $emergencyRadiology, 'typeId' => $type->id]);
 
                 $extension = strtolower(pathinfo(parse_url($normalizedPath, PHP_URL_PATH) ?? $normalizedPath, PATHINFO_EXTENSION));
                 $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']);

@@ -1428,6 +1428,45 @@ class StaffRequestController extends Controller
     }
 
     /**
+     * عرض وتحميل ملف / صورة أشعة الطوارئ المرفقة
+     */
+    public function emergencyRadiologyAttachment(
+        HttpRequest $request,
+        \App\Models\EmergencyRadiologyRequest $emergencyRadiology,
+        $typeId
+    ) {
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
+            abort(403, 'غير مصرح لك بعرض هذا المرفق');
+        }
+
+        $reqType = $emergencyRadiology->requestTypes()->where('radiology_type_id', $typeId)->first();
+        if (!$reqType || empty($reqType->image_path)) {
+            // التحقق من pivot مباشرة
+            $pivotType = $emergencyRadiology->radiologyTypes()->where('radiology_type_id', $typeId)->first();
+            $path = $pivotType?->pivot?->image_path;
+        } else {
+            $path = $reqType->image_path;
+        }
+
+        if (!$path) {
+            abort(404, 'لا توجد صورة أو ملف مرفق لهذا الفحص');
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+        if (file_exists($fullPath)) {
+            return response()->file($fullPath);
+        }
+
+        abort(404, 'الملف المرفق غير موجود في وحدة التخزين');
+    }
+
+    /**
      * بدء العمل على طلب أشعة من الطوارئ
      */
     public function startEmergencyRadiology(\App\Models\EmergencyRadiologyRequest $emergencyRadiology)

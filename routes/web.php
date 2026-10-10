@@ -394,6 +394,7 @@ Route::middleware(['auth'])->group(function () {
         // طلبات الطوارئ - الأشعة
         Route::get('/emergency-radiology/{emergencyRadiology}', [StaffRequestController::class, 'showEmergencyRadiology'])->name('emergency-radiology.show');
         Route::get('/emergency-radiology/{emergencyRadiology}/print', [StaffRequestController::class, 'printEmergencyRadiology'])->name('emergency-radiology.print');
+        Route::get('/emergency-radiology/{emergencyRadiology}/attachment/{typeId}', [StaffRequestController::class, 'emergencyRadiologyAttachment'])->name('emergency-radiology.attachment');
         Route::post('/emergency-radiology/{emergencyRadiology}/start', [StaffRequestController::class, 'startEmergencyRadiology'])->name('emergency-radiology.start');
         Route::put('/emergency-radiology/{emergencyRadiology}/complete', [StaffRequestController::class, 'completeEmergencyRadiology'])->name('emergency-radiology.complete');
         
