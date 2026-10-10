@@ -566,18 +566,18 @@
                 </div>
             </div>
 
-            <!-- 4. Compact Ultrasound / Lab Requests Card (If Any) -->
-            @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
-                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3">
-                    <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-1">
-                            <i class="fas fa-wave-square text-primary small"></i>
-                            <h6 class="mb-0 fw-bold text-dark small">فحوصات وسونار بانتظار السداد</h6>
-                        </div>
-                        <span class="badge bg-warning text-dark small">{{ $pendingConsultantRequests->count() }}</span>
+            <!-- 4. Compact Ultrasound / Lab Requests Card (Auto-Refreshed) -->
+            <div id="pendingRequestsCard" class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3" style="display: {{ (isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0) ? 'block' : 'none' }};">
+                <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-1">
+                        <i class="fas fa-wave-square text-primary small"></i>
+                        <h6 class="mb-0 fw-bold text-dark small">فحوصات وسونار بانتظار السداد</h6>
                     </div>
-                    <div class="card-body p-2 overflow-auto" style="max-height: 240px;">
-                        <div class="list-group list-group-flush">
+                    <span class="badge bg-warning text-dark small" id="pendingRequestsCountBadge">{{ isset($pendingConsultantRequests) ? $pendingConsultantRequests->count() : 0 }}</span>
+                </div>
+                <div class="card-body p-2 overflow-auto" style="max-height: 240px;" id="pendingRequestsContainer">
+                    <div class="list-group list-group-flush">
+                        @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
                             @foreach($pendingConsultantRequests as $req)
                                 <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
                                     <div class="d-flex justify-content-between align-items-center gap-2">
@@ -590,15 +590,15 @@
                                             </small>
                                         </div>
                                         <div>
-                                                <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
                                         </div>
                                     </div>
                                 </div>
                             @endforeach
-                        </div>
+                        @endif
                     </div>
                 </div>
-            @endif
+            </div>
         </div>
     </div>
 </div>
@@ -1355,15 +1355,7 @@ function pollLiveConsultantStatus() {
                                 `;
                             }
                         } else {
-                            if (app.can_process_payments) {
-                                actionBtnHtml = `
-                                    <a href="${app.payment_url}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="قبض رسوم الكشفية فوراً">
-                                        <i class="fas fa-cash-register me-1"></i> قبض
-                                    </a>
-                                `;
-                            } else {
-                                actionBtnHtml = `<span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>`;
-                            }
+                            actionBtnHtml = `<span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>`;
                         }
 
                         let cancelBtnHtml = '';
@@ -1415,6 +1407,43 @@ function pollLiveConsultantStatus() {
                             <p class="mb-0 small">لا توجد حجوزات مسجلة اليوم</p>
                         </div>
                     `;
+                }
+            }
+            
+            // 6. تحديث طابور فحوصات وسونار بانتظار السداد
+            const reqCard = document.getElementById('pendingRequestsCard');
+            const reqCountBadge = document.getElementById('pendingRequestsCountBadge');
+            const reqContainer = document.getElementById('pendingRequestsContainer');
+            
+            if (reqCard && data.pending_requests !== undefined) {
+                if (data.pending_requests.length > 0) {
+                    reqCard.style.display = 'block';
+                    if (reqCountBadge) reqCountBadge.textContent = data.pending_requests_count;
+                    if (reqContainer) {
+                        let reqHtml = '<div class="list-group list-group-flush">';
+                        data.pending_requests.forEach(req => {
+                            reqHtml += `
+                                <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark small text-truncate">${req.patient_name}</div>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                                ${req.type_label} — <strong class="text-success">${req.total_amount} د.ع</strong>
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        reqHtml += '</div>';
+                        reqContainer.innerHTML = reqHtml;
+                    }
+                } else {
+                    reqCard.style.display = 'none';
+                    if (reqContainer) reqContainer.innerHTML = '';
                 }
             }
         }

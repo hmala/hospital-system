@@ -343,6 +343,29 @@ class ConsultantAvailabilityController extends Controller
                 ];
             })->values();
 
+        // 4. طلبات الفحوصات والسونار بانتظار السداد
+        $pendingRequests = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->where('payment_status', 'pending')
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('created_at', $today)
+            ->where(function($q) {
+                $q->whereHas('visit.doctor', function($dq) {
+                    $dq->where('type', 'consultant');
+                })->orWhere('subtype', 'ultrasound')
+                  ->orWhere('description', 'LIKE', '%سونار%');
+            })
+            ->latest()
+            ->get()
+            ->map(function($req) {
+                $patientName = optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض';
+                return [
+                    'id' => $req->id,
+                    'patient_name' => $patientName,
+                    'type_label' => $req->subtype === 'ultrasound' ? 'سونار' : ($req->type === 'radiology' ? 'أشعة' : $req->type),
+                    'total_amount' => number_format($req->total_amount ?? 0)
+                ];
+            })->values();
+
         return response()->json([
             'success' => true,
             'running_clinics' => $runningClinics,
@@ -354,6 +377,8 @@ class ConsultantAvailabilityController extends Controller
             'all_today_count' => count($allTodayFollowUps),
             'today_appointments' => $todayAppointmentsList,
             'today_appointments_count' => count($todayAppointmentsList),
+            'pending_requests' => $pendingRequests,
+            'pending_requests_count' => count($pendingRequests),
             'timestamp' => now()->format('H:i:s'),
         ]);
     }
