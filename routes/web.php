@@ -18,6 +18,7 @@ use App\Http\Controllers\UserLabTestGroupController;
 use App\Http\Controllers\UserMedicineGroupController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
+use App\Http\Controllers\HospitalTreasuryController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -114,6 +115,16 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.doctor-account.export');
     Route::post('/consultant-availability/doctor-accounts/{doctor}/payout', [ConsultantAvailabilityController::class, 'doctorPayout'])
         ->name('consultant-availability.doctor-payout');
+
+    // خزينة المستشفى المركزية وحركة النقدية والمصروفات
+    Route::prefix('treasury')->name('treasury.')->group(function () {
+        Route::get('/', [HospitalTreasuryController::class, 'index'])->name('index');
+        Route::post('/expense', [HospitalTreasuryController::class, 'storeExpense'])->name('expense.store');
+        Route::post('/income', [HospitalTreasuryController::class, 'storeIncome'])->name('income.store');
+        Route::get('/export', [HospitalTreasuryController::class, 'export'])->name('export');
+        Route::delete('/{transaction}', [HospitalTreasuryController::class, 'destroy'])->name('destroy');
+    });
+
     Route::get('/debug-user', function () {
         return \App\Models\User::with(['roles','permissions'])->limit(10)->get();
     });

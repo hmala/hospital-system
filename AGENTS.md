@@ -61,6 +61,31 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-10 — المرحلة 16: نظام وخزينة المستشفى المركزية وحركة النقدية والمصروفات Hospital Treasury & General Cash Flow)
+
+### Done
+- **نظام وخزينة المستشفى المركزية وحركة النقدية والمصروفات (`HospitalTreasuryController`, `FinancialTransaction`, `resources/views/treasury/index.blade.php`)**:
+  * تأسيس نظام الخزينة العام (General Cash Flow Ledger) لربط كافة المقبوضات النقدية الواردة (Inflows) بمصروفات المستشفى الصادرة (Outflows).
+  * بطاقات إحصائيات مالية لحظية متقدمة (KPI Cards):
+    - 🏦 **الرصيد الفعلي بالخزينة (Net Available Treasury Balance)** = إجمالي الوارد التراكمي - إجمالي المنصرف.
+    - 📥 **إجمالي الوارد للفترة المحددة** (مقبوضات الكاشير، الكشفية، التحاليل، الأشعة، الطوارئ، العمليات، تحصيلات الضمان).
+    - 📤 **إجمالي المنصرف للفترة المحددة** (مستحقات الأطباء + فواتير المشتريات والموردين + المصروفات التشغيلية).
+    - 📊 شريط توزيع المنصرفات بحسب الفئات (أطباء، مشتريات، نثريات وتشغيلية).
+  * إضافة ميغريشن آمن `2026_10_10_200000_add_treasury_fields_to_financial_transactions_table.php` يضيف حقول: `category`, `voucher_type`, `voucher_number`, `payment_method`, `notes`، مع التوافق التام بين MySQL و SQLite.
+  * تحديث `PaymentObserver` لتسجيل كافة مقبوضات المرضى والكاشير تلقائياً كـ وارد (Inflow) مع فئاتها التفصيلية.
+  * مودال تفاعلي ذكي لإصدار **سند صرف مصروفات** (`#expenseModal`):
+    - يدعم صرف مستحقات الأطباء مع خصمها التلقائي الفوري من رصيد حساب الطبيب (`DoctorFinancialAccount`) ومعالجة القيود المعلقة.
+    - يدعم صرف فواتير المشتريات والموردين.
+    - يدعم رواتب الموظفين، الصيانة، الكهرباء والوقود والمولدات، المستلزمات الطبية، والنثريات التشغيلية.
+  * مودال تفاعلي ذكي لإصدار **سند قبض إيراد عام** (`#incomeModal`) لتوريد النقدية ومطالبات الضمان والإيرادات المتنوعة.
+  * تصدير كشف حركة الخزينة إلى Excel (`HospitalTreasuryExport`).
+  * ربط قسم الخزينة في القائمة الجانبية تحت «الحسابات العامة والمالية» مع الحماية بصلاحية `view account statements` والأدوار الإدارية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات الخزينة والمصروفات [HospitalTreasuryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryTest.php): 5 passed (17 assertions).
+  * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (177 assertions).
+- **الرفع إلى GitHub**:
+  * الرفع المباشر على فرع `main`.
+
 ## Session log (2026-10-08 — المرحلة 15: التعديل الجماعي والمفاتيح الفورية لخدمات الطوارئ وتسعير الضمان الصحي)
 
 ### Done

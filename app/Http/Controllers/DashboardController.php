@@ -125,8 +125,132 @@ class DashboardController extends Controller
         $userStats = ['name' => $user->name, 'role' => $user->roles->pluck('name')->join(', ')];
 
         if ($user->hasRole('doctor') && $user->doctor) {
-            $userStats['your_appointments'] = Appointment::where('doctor_id', $user->doctor->id)->count();
-            $userStats['your_visits'] = Visit::where('doctor_id', $user->doctor->id)->count();
+            $doctor = $user->doctor;
+            $selectedMonth = request('month', now()->format('Y-m'));
+            
+            try {
+                $monthDate = \Carbon\Carbon::createFromFormat('Y-m', $selectedMonth);
+            } catch (\Exception $e) {
+                $monthDate = now();
+                $selectedMonth = now()->format('Y-m');
+            }
+
+            $year = $monthDate->year;
+            $month = $monthDate->month;
+
+            // 1. المستحقات المالية للشهر
+            $monthlyEarned = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->sum('amount');
+
+            $monthlyPaid = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'paid')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->sum('amount');
+
+            $monthlyPending = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'pending')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->sum('amount');
+
+            $totalAllTimePending = \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'pending')
+                ->sum('amount');
+
+            // 2. إحصائيات المرضى والزيارات للشهر
+            $monthlyVisitsCount = Visit::where('doctor_id', $doctor->id)
+                ->whereYear('visit_date', $year)
+                ->whereMonth('visit_date', $month)
+                ->count();
+
+            $monthlyRechecksCount = Appointment::where('doctor_id', $doctor->id)
+                ->where('is_free_recheck', true)
+                ->whereYear('appointment_date', $year)
+                ->whereMonth('appointment_date', $month)
+                ->count();
+
+            $monthlySurgeriesCount = \App\Models\Surgery::where('doctor_id', $doctor->id)
+                ->where(function ($q) use ($year, $month) {
+                    $q->where(function ($sq) use ($year, $month) {
+                        $sq->whereYear('scheduled_date', $year)
+                           ->whereMonth('scheduled_date', $month);
+                    })->orWhere(function ($sq) use ($year, $month) {
+                        $sq->whereNull('scheduled_date')
+                           ->whereYear('created_at', $year)
+                           ->whereMonth('created_at', $month);
+                    });
+                })
+                ->count();
+
+            // 3. طابور اليوم للعيادة
+            $todayAppointments = Appointment::with(['patient', 'visit', 'payment'])
+                ->where('doctor_id', $doctor->id)
+                ->whereDate('appointment_date', today())
+                ->orderBy('queue_number')
+                ->get();
+
+            $todayTotal = $todayAppointments->count();
+            $todayCompleted = $todayAppointments->where('status', 'completed')->count();
+            $todayPending = $todayAppointments->whereIn('status', ['pending', 'confirmed', 'waiting'])->count();
+
+            // 4. كشف حساب المستحقات للشهر
+            $monthlyDuesList = \App\Models\DoctorDue::with(['payment.patient', 'payment.appointment'])
+                ->where('doctor_id', $doctor->id)
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->latest()
+                ->paginate(15, ['*'], 'dues_page');
+
+            // 5. قائمة الأشهر للاختيار (آخر 12 شهر)
+            $availableMonths = [];
+            for ($i = 0; $i < 12; $i++) {
+                $m = now()->subMonths($i);
+                $availableMonths[] = [
+                    'value' => $m->format('Y-m'),
+                    'label' => $m->translatedFormat('F Y'),
+                ];
+            }
+
+            // 6. المخطط اليومي لمرضى الشهر المختار
+            $daysInMonth = $monthDate->daysInMonth;
+            $dailyTrend = [];
+            $visitsInMonth = Visit::where('doctor_id', $doctor->id)
+                ->whereYear('visit_date', $year)
+                ->whereMonth('visit_date', $month)
+                ->get()
+                ->groupBy(function($visit) {
+                    return \Carbon\Carbon::parse($visit->visit_date)->day;
+                })
+                ->map->count();
+
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $dailyTrend[$d] = $visitsInMonth[$d] ?? 0;
+            }
+
+            $doctorStats = [
+                'doctor' => $doctor,
+                'selectedMonth' => $selectedMonth,
+                'monthName' => $monthDate->translatedFormat('F Y'),
+                'monthlyEarned' => $monthlyEarned,
+                'monthlyPaid' => $monthlyPaid,
+                'monthlyPending' => $monthlyPending,
+                'totalAllTimePending' => $totalAllTimePending,
+                'monthlyVisitsCount' => $monthlyVisitsCount,
+                'monthlyRechecksCount' => $monthlyRechecksCount,
+                'monthlySurgeriesCount' => $monthlySurgeriesCount,
+                'todayAppointments' => $todayAppointments,
+                'todayTotal' => $todayTotal,
+                'todayCompleted' => $todayCompleted,
+                'todayPending' => $todayPending,
+                'monthlyDuesList' => $monthlyDuesList,
+                'availableMonths' => $availableMonths,
+                'dailyTrend' => $dailyTrend,
+            ];
+
+            return view('dashboard', compact('doctorStats', 'userStats'));
         }
 
         if ($user->hasRole('consultation_receptionist')) {
@@ -194,9 +318,8 @@ class DashboardController extends Controller
             ->get();
 
         // إحصائيات شهرية للمواعيد (آخر 6 أشهر)
-        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
         $monthlyAppointments = Appointment::select(
-                $isSqlite ? DB::raw('strftime("%Y-%m", appointment_date) as month') : DB::raw('DATE_FORMAT(appointment_date, "%Y-%m") as month'),
+                DB::raw('DATE_FORMAT(appointment_date, "%Y-%m") as month'),
                 DB::raw('count(*) as count')
             )
             ->whereBetween('appointment_date', [now()->subMonths(5)->startOfMonth(), now()])

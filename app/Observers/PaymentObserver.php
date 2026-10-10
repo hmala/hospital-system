@@ -14,12 +14,14 @@ class PaymentObserver
     public function created(Payment $payment): void
     {
         $this->handlePaymentRevenue($payment);
+        $this->syncNonAppointmentPayment($payment);
     }
 
     public function updated(Payment $payment): void
     {
         if ($payment->wasChanged('paid_at') && $payment->paid_at !== null) {
             $this->handlePaymentRevenue($payment);
+            $this->syncNonAppointmentPayment($payment);
         }
     }
 
@@ -208,20 +210,11 @@ class PaymentObserver
 
     protected function syncFinancialTransactions(Payment $payment, float $doctorShare, float $hospitalShare): void
     {
-        FinancialTransaction::updateOrCreate(
-            [
-                'related_type' => Payment::class,
-                'related_id' => $payment->id,
-                'transaction_type' => 'doctor_payment',
-            ],
-            [
-                'amount' => $doctorShare,
-                'currency' => 'IQD',
-                'description' => 'حصة الطبيب عن دفعة رقم ' . $payment->receipt_number,
-                'performed_by_id' => $payment->cashier_id,
-                'performed_at' => $payment->paid_at,
-            ]
-        );
+        // حذف أي قيد قديم من نوع doctor_payment لمنع الازدواجية مع سندات الصرف
+        FinancialTransaction::where('related_type', Payment::class)
+            ->where('related_id', $payment->id)
+            ->where('transaction_type', 'doctor_payment')
+            ->delete();
 
         FinancialTransaction::updateOrCreate(
             [
@@ -230,9 +223,41 @@ class PaymentObserver
                 'transaction_type' => 'hospital_revenue',
             ],
             [
-                'amount' => $hospitalShare,
+                'voucher_type' => 'inflow',
+                'category' => 'consultation',
+                'voucher_number' => $payment->receipt_number,
+                'amount' => (float)$payment->amount > 0 ? (float)$payment->amount : (float)$payment->total_amount,
                 'currency' => 'IQD',
-                'description' => 'ربح المستشفى عن دفعة رقم ' . $payment->receipt_number,
+                'payment_method' => $payment->payment_method ?: 'cash',
+                'description' => 'مقبوضات كشفية إيصال رقم ' . $payment->receipt_number,
+                'notes' => 'حصة الطبيب المستحقة: ' . number_format($doctorShare) . ' د.ع | حصة المستشفى: ' . number_format($hospitalShare) . ' د.ع',
+                'performed_by_id' => $payment->cashier_id,
+                'performed_at' => $payment->paid_at,
+            ]
+        );
+    }
+
+    protected function syncNonAppointmentPayment(Payment $payment): void
+    {
+        if (!$payment->paid_at || $payment->appointment_id) {
+            return;
+        }
+
+        FinancialTransaction::updateOrCreate(
+            [
+                'related_type' => Payment::class,
+                'related_id' => $payment->id,
+                'transaction_type' => 'hospital_revenue',
+            ],
+            [
+                'voucher_type' => 'inflow',
+                'category' => $payment->payment_type ?: 'general_income',
+                'voucher_number' => $payment->receipt_number,
+                'amount' => (float)$payment->amount > 0 ? (float)$payment->amount : (float)$payment->total_amount,
+                'currency' => 'IQD',
+                'payment_method' => $payment->payment_method ?: 'cash',
+                'description' => 'مقبوضات ' . (Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات') . ' إيصال رقم ' . $payment->receipt_number,
+                'notes' => $payment->description,
                 'performed_by_id' => $payment->cashier_id,
                 'performed_at' => $payment->paid_at,
             ]

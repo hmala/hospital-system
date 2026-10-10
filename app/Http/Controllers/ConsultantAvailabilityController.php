@@ -769,13 +769,19 @@ class ConsultantAvailabilityController extends Controller
             ]);
         }
 
+        $voucherNumber = 'EXP-DOC-' . now()->format('ymd') . '-' . rand(1000, 9999);
         FinancialTransaction::create([
             'transaction_type' => 'expense',
+            'voucher_type' => 'outflow',
+            'category' => 'doctor_payout',
+            'voucher_number' => $voucherNumber,
             'related_type' => Doctor::class,
             'related_id' => $doctor->id,
             'amount' => $amount,
             'currency' => 'IQD',
-            'description' => 'صرف للطبيب ' . optional($doctor->user)->name,
+            'payment_method' => 'cash',
+            'description' => 'صرف مستحقات للطبيب ' . optional($doctor->user)->name,
+            'notes' => 'سند صرف نقدي - حسابات الاستشارية',
             'performed_by_id' => auth()->id(),
             'performed_at' => now(),
         ]);

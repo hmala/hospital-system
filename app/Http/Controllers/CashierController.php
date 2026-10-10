@@ -2557,13 +2557,19 @@ class CashierController extends Controller
                 'paid_at' => now(),
             ]);
 
+            $voucherNumber = 'EXP-EMG-DOC-' . now()->format('ymd') . '-' . rand(1000, 9999);
             \App\Models\FinancialTransaction::create([
                 'transaction_type' => 'expense',
+                'voucher_type' => 'outflow',
+                'category' => 'doctor_payout',
+                'voucher_number' => $voucherNumber,
                 'related_type' => \App\Models\Doctor::class,
                 'related_id' => $doctor->id,
                 'amount' => $amount,
                 'currency' => 'IQD',
+                'payment_method' => 'cash',
                 'description' => 'صرف مستحقات طوارئ للطبيب ' . optional($doctor->user)->name,
+                'notes' => 'سند صرف نقدي - طوارئ: ' . ($request->notes ?: 'صرف مستحقات أطباء الطوارئ'),
                 'performed_by_id' => $user->id,
                 'performed_at' => now(),
             ]);

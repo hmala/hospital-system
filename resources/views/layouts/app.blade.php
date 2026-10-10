@@ -847,7 +847,8 @@
                                                  request()->routeIs('cashier.emergency.doctor-accounts') ||
                                                  request()->routeIs('cashier.emergency.doctor-account');
                             $isDiagnosticsAccountsActive = request()->routeIs('accountant.diagnostics.*');
-                            $isAccountingSectionActive = $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive;
+                            $isTreasuryActive = request()->routeIs('treasury.*');
+                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -855,6 +856,14 @@
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isAccountingSectionActive ? 'show' : '' }}" id="unifiedAccountingSection">
+                        @can('view account statements')
+                        <li class="nav-item">
+                            <a class="nav-link {{ $isTreasuryActive ? 'active' : '' }}" href="{{ route('treasury.index') }}">
+                                <i class="fas fa-vault text-warning"></i><span class="fw-bold"> خزينة المستشفى والمصروفات</span>
+                            </a>
+                        </li>
+                        @endcan
+
                         @can('review surgery prices')
                         <li class="nav-item">
                             <a class="nav-link {{ $isSurgeryReviewActive ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
