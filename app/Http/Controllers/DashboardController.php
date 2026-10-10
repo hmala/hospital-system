@@ -194,8 +194,9 @@ class DashboardController extends Controller
             ->get();
 
         // إحصائيات شهرية للمواعيد (آخر 6 أشهر)
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
         $monthlyAppointments = Appointment::select(
-                DB::raw('DATE_FORMAT(appointment_date, "%Y-%m") as month'),
+                $isSqlite ? DB::raw('strftime("%Y-%m", appointment_date) as month') : DB::raw('DATE_FORMAT(appointment_date, "%Y-%m") as month'),
                 DB::raw('count(*) as count')
             )
             ->whereBetween('appointment_date', [now()->subMonths(5)->startOfMonth(), now()])

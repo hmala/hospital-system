@@ -61,7 +61,7 @@ class CashierController extends Controller
                 $q->where(function($sq) {
                     $sq->where('subtype', 'ultrasound')
                        ->orWhere('description', 'LIKE', '%سونار%');
-                })->where('details', 'LIKE', '%"created_at_inquiry":true%');
+                })->where('details', 'LIKE', '%created_at_inquiry%');
             });
         }
 
@@ -109,7 +109,7 @@ class CashierController extends Controller
                 $q->where(function($sq) {
                     $sq->where('subtype', 'ultrasound')
                        ->orWhere('description', 'LIKE', '%سونار%');
-                })->where('details', 'LIKE', '%"created_at_inquiry":true%');
+                })->where('details', 'LIKE', '%created_at_inquiry%');
             });
         }
 
