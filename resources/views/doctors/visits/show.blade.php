@@ -4028,125 +4028,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // ====== نظام البحث والفلترة المحسّن ======
-    // دوال مساعدة
+    // ====== دالة توحيد وتنظيف النصوص للبحث والفلترة السريعة ======
     function normalizeText(text) {
-        return (text || '').toLowerCase().trim();
-    }
-
-    // ====== البحث في التحاليل ======
-    function setupLabSearch() {
-        const searchInput = document.getElementById('labSearchInput');
-        const searchBtn = document.getElementById('labSearchBtn');
-        
-        if (!searchInput) {
-            console.warn('Lab search input not found');
-            return;
-        }
-
-        function doLabSearch() {
-            const searchTerm = normalizeText(searchInput.value);
-            
-            const categories = document.querySelectorAll('.lab-category');
-            let totalVisible = 0;
-            
-            categories.forEach(category => {
-                const items = category.querySelectorAll('.lab-test-item');
-                let categoryHasVisible = false;
-                
-                items.forEach(item => {
-                    const testName = normalizeText(item.getAttribute('data-test-name') || '');
-                    const matches = searchTerm === '' || testName.includes(searchTerm);
-                    
-                    // استخدام d-none بدلاً من style.display لتجاوز Bootstrap's flex !important
-                    item.classList.toggle('d-none', !matches);
-                    if (matches) {
-                        categoryHasVisible = true;
-                        totalVisible++;
-                    }
-                });
-                
-                category.classList.toggle('d-none', !categoryHasVisible);
-            });
-        }
-
-        // ربط الأحداث
-        searchInput.addEventListener('input', doLabSearch);
-        searchInput.addEventListener('keyup', doLabSearch);
-        if (searchBtn) {
-            searchBtn.addEventListener('click', doLabSearch);
-        }
-        
-        // تشغيل البحث في البداية
-        doLabSearch();
-    }
-
-    // ====== البحث في الأشعة ======
-    function setupRadiologySearch() {
-        const searchInput = document.getElementById('radiologySearchInput');
-        const searchBtn = document.getElementById('radiologySearchBtn');
-        const modalityCheckboxes = document.querySelectorAll('.radiology-modality-checkbox');
-        
-        if (!searchInput) {
-            console.warn('Radiology search input not found');
-            return;
-        }
-
-        function getCategoryModality(categoryName) {
-            const name = normalizeText(categoryName);
-            if (name.includes('رنين') || name.includes('mri') || name.includes('magnetic')) {
-                return 'mri';
-            }
-            if (name.includes('سونار') || name.includes('ultrasound') || name.includes('echo')) {
-                return 'ultrasound';
-            }
-            return 'xray';
-        }
-
-        function getSelectedModalities() {
-            return Array.from(modalityCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-        }
-
-        function doRadiologySearch() {
-            const searchTerm = normalizeText(searchInput.value);
-            const selectedModalities = getSelectedModalities();
-            const categories = document.querySelectorAll('.radiology-category');
-            
-            categories.forEach(category => {
-                const categoryName = category.getAttribute('data-category') || '';
-                const modality = getCategoryModality(categoryName);
-                const modalityMatches = selectedModalities.length === 0 || selectedModalities.includes(modality);
-                const items = category.querySelectorAll('.radiology-type-item');
-                let categoryHasVisible = false;
-                
-                items.forEach(item => {
-                    const typeName = normalizeText(item.getAttribute('data-type-name') || '');
-                    const matches = (searchTerm === '' || typeName.includes(searchTerm)) && modalityMatches;
-                    item.classList.toggle('d-none', !matches);
-                    if (matches) {
-                        categoryHasVisible = true;
-                    }
-                });
-
-                category.classList.toggle('d-none', !categoryHasVisible);
-            });
-        }
-
-        modalityCheckboxes.forEach(cb => {
-            cb.addEventListener('change', doRadiologySearch);
-        });
-
-        // ربط الأحداث
-        searchInput.addEventListener('input', doRadiologySearch);
-        searchInput.addEventListener('keyup', doRadiologySearch);
-        if (searchBtn) {
-            searchBtn.addEventListener('click', doRadiologySearch);
-        }
-        
-        // تشغيل البحث في البداية
-        doRadiologySearch();
+        if (!text) return '';
+        return String(text).toLowerCase().trim()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي');
     }
 
     // ====== البحث في خدمات التمريض ======
@@ -4154,43 +4042,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('nursingSearchInput');
         const searchBtn = document.getElementById('nursingSearchBtn');
         
-        if (!searchInput) {
-            console.warn('Nursing search input not found');
-            return;
-        }
+        if (!searchInput) return;
 
         function doNursingSearch() {
             const searchTerm = normalizeText(searchInput.value);
-            
             const items = document.querySelectorAll('.nursing-service-item');
             
             items.forEach(item => {
                 const serviceName = normalizeText(item.getAttribute('data-service-name') || '');
                 const matches = searchTerm === '' || serviceName.includes(searchTerm);
-                
-                // استخدام d-none بدلاً من style.display لتجاوز Bootstrap's flex !important
                 item.classList.toggle('d-none', !matches);
             });
         }
 
-        // ربط الأحداث
         searchInput.addEventListener('input', doNursingSearch);
         searchInput.addEventListener('keyup', doNursingSearch);
         if (searchBtn) {
             searchBtn.addEventListener('click', doNursingSearch);
         }
         
-        // تشغيل البحث في البداية
         doNursingSearch();
     }
 
-    // تشغيل جميع أنظمة البحث
-    setupLabSearch();
-    setupRadiologySearch();
-    setupNursingSearch();
-    
-    console.log('Search system initialized');
-    
     // ====== نظام اختيار الفحوصات المخبرية السريع والذكي للطبيب ======
     function setupFastDoctorLabSelection() {
         const searchInput = document.getElementById('docLabSearchInput');
@@ -4203,7 +4076,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedChipsContainer = document.getElementById('docLabChipsContainer');
         const countBadges = document.querySelectorAll('.doc-lab-selected-count');
         const clearAllBtn = document.getElementById('docLabClearAllBtn');
-        const groupBtns = document.querySelectorAll('.doc-quick-group-btn');
+        const pkgBtns = document.querySelectorAll('.doc-lab-quick-pkg-btn');
         const labForm = document.getElementById('doctorLabRequestForm');
 
         if (!searchInput || !labForm) return;
@@ -4234,12 +4107,12 @@ document.addEventListener('DOMContentLoaded', function() {
             countBadges.forEach(b => b.textContent = count);
 
             if (count === 0) {
-                if (selectedTray) selectedTray.style.display = 'none';
+                if (selectedTray) selectedTray.classList.add('d-none');
                 if (selectedChipsContainer) selectedChipsContainer.innerHTML = '';
                 return;
             }
 
-            if (selectedTray) selectedTray.style.display = 'block';
+            if (selectedTray) selectedTray.classList.remove('d-none');
             if (selectedChipsContainer) {
                 selectedChipsContainer.innerHTML = '';
                 checkedBoxes.forEach(chk => {
@@ -4354,7 +4227,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchDropdown.classList.remove('d-none');
         }
 
-        // أحدث البحث
+        // أحداث البحث
         searchInput.addEventListener('input', function() {
             const val = this.value.trim();
             if (clearSearchBtn) {
@@ -4435,10 +4308,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // 7. باقات المفضلات السريعة (Quick Groups)
-        groupBtns.forEach(btn => {
+        pkgBtns.forEach(btn => {
             btn.addEventListener('click', function() {
-                const namesStr = this.getAttribute('data-test-names') || '';
-                const targetNames = namesStr.split('|||').map(s => normalizeText(s)).filter(Boolean);
+                let testsArr = [];
+                try {
+                    testsArr = JSON.parse(this.getAttribute('data-tests') || '[]');
+                } catch(e) {
+                    testsArr = [];
+                }
+                const targetNames = testsArr.map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || ''))).filter(Boolean);
 
                 let allAlreadyChecked = true;
                 targetNames.forEach(tName => {
@@ -4475,7 +4353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     chk.checked = false;
                     updateCardVisual(chk);
                 });
-                groupBtns.forEach(b => {
+                pkgBtns.forEach(b => {
                     b.classList.remove('btn-primary');
                     b.classList.add('btn-outline-primary');
                 });
@@ -4483,7 +4361,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // 9. الإرسال الفوري للطلب (Instant AJAX Submit)
+        // 9. التحقق عند الإرسال
         labForm.addEventListener('submit', function(e) {
             const checkedBoxes = labCheckboxes.filter(cb => cb.checked);
             if (checkedBoxes.length === 0) {
@@ -4506,8 +4384,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderSelectedChips();
     }
 
-    setupFastDoctorLabSelection();
-    
     // ====== نظام الفرز والبحث السريع للأشعة والتصوير ======
     function setupFastDoctorRadiologySelection() {
         const radForm = document.getElementById('doctorRadiologyRequestForm');
@@ -4515,7 +4391,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const searchInput = document.getElementById('docRadSearchInput');
         const clearSearchBtn = document.getElementById('docRadClearSearchBtn');
-        const searchDropdown = document.getElementById('docRadAutocompleteMenu');
         const selectedTray = document.getElementById('docRadSelectedTray');
         const selectedChipsContainer = document.getElementById('docRadChipsContainer');
         const clearAllBtn = document.getElementById('docRadClearAllBtn');
@@ -4525,14 +4400,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const radCheckboxes = Array.from(document.querySelectorAll('.doc-rad-chk'));
 
         let activeCategory = 'ALL';
-
-        function normalizeText(str) {
-            if (!str) return '';
-            return str.toLowerCase().trim()
-                .replace(/[أإآ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/ى/g, 'ي');
-        }
 
         // 1. تحديث حالة البطاقة والشارة
         function updateCardVisual(chk) {
@@ -4652,6 +4519,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     filterGrid();
                 }
             });
+        }
+
         if (clearSearchBtn && searchInput) {
             clearSearchBtn.addEventListener('click', function() {
                 searchInput.value = '';
@@ -4721,6 +4590,9 @@ document.addEventListener('DOMContentLoaded', function() {
         renderSelectedChips();
     }
 
+    // تشغيل أنظمة البحث
+    setupNursingSearch();
+    setupFastDoctorLabSelection();
     setupFastDoctorRadiologySelection();
 }); // End of DOMContentLoaded
 
