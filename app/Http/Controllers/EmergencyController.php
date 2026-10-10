@@ -474,7 +474,9 @@ class EmergencyController extends Controller
             'services',
             'payment',
             'labRequests.labTests',
+            'labRequests.requestTests.labTest',
             'radiologyRequests.radiologyTypes',
+            'radiologyRequests.requestTypes.radiologyType',
             'treatments.creator',
             'vitalSignReadings' => function($query) {
                 $query->latest()->with('recordedBy');

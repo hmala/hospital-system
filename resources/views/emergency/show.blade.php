@@ -476,28 +476,88 @@
                                             @endphp
                                             @if($labRequests->count() > 0)
                                                 @foreach($labRequests as $labReq)
-                                                    <div class="border rounded-3 p-3 mb-2 bg-white shadow-sm">
-                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <div class="border rounded-3 p-3 mb-3 bg-white shadow-sm">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                                                             <div>
-                                                                <span class="fw-bold text-dark">طلب مختبر #{{ $labReq->id }}</span>
-                                                                <small class="text-muted ms-2">{{ optional($labReq->requested_at)->format('d/m H:i') }}</small>
+                                                                <span class="fw-bold text-dark"><i class="fas fa-file-medical-alt text-primary me-1"></i>طلب مختبر #{{ $labReq->id }}</span>
+                                                                <small class="text-muted ms-2">{{ optional($labReq->requested_at)->format('Y/m/d H:i') }}</small>
                                                             </div>
-                                                            <span class="badge {{ $labReq->status == 'completed' ? 'bg-success' : ($labReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}">
-                                                                {{ $labReq->status_text }}
-                                                            </span>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="badge {{ $labReq->status == 'completed' ? 'bg-success' : ($labReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}">
+                                                                    {{ $labReq->status_text }}
+                                                                </span>
+                                                                @if($labReq->status == 'completed')
+                                                                    <a href="{{ route('staff.emergency-lab.print', $labReq) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" title="طباعة النتيجة الرسمية">
+                                                                        <i class="fas fa-print me-1"></i>طباعة
+                                                                    </a>
+                                                                @endif
+                                                            </div>
                                                         </div>
+                                                        @if($labReq->notes)
+                                                            <div class="small text-muted mb-2"><i class="fas fa-sticky-note me-1"></i><strong>ملاحظات:</strong> {{ $labReq->notes }}</div>
+                                                        @endif
                                                         @if($labReq->status == 'completed')
-                                                            <div class="p-2 rounded bg-light border">
-                                                                <strong class="text-success small d-block mb-1"><i class="fas fa-check-circle me-1"></i>نتائج الفحوصات:</strong>
-                                                                @foreach($labReq->labTests as $test)
-                                                                    <div class="d-flex justify-content-between border-bottom py-1 small">
-                                                                        <span>{{ $test->name }}</span>
-                                                                        <span class="fw-bold {{ !empty($test->pivot->result) ? 'text-primary' : 'text-muted' }}">{{ $test->pivot->result ?: 'قيد الإدخال' }}</span>
-                                                                    </div>
-                                                                @endforeach
+                                                            <div class="table-responsive rounded border">
+                                                                <table class="table table-sm table-hover align-middle mb-0 text-center">
+                                                                    <thead class="table-light small">
+                                                                        <tr>
+                                                                            <th class="text-start">الفحص المطلوب</th>
+                                                                            <th>النتيجة</th>
+                                                                            <th>الوحدة</th>
+                                                                            <th>المدى المرجعي</th>
+                                                                            <th>الحالة</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="small">
+                                                                        @foreach($labReq->labTests as $test)
+                                                                            @php
+                                                                                $rawResult = $test->pivot->result;
+                                                                                $parsed = is_string($rawResult) ? json_decode($rawResult, true) : $rawResult;
+                                                                                $isObj = is_array($parsed);
+                                                                                $val = $isObj ? ($parsed['value'] ?? '') : $rawResult;
+                                                                                $unit = $isObj ? ($parsed['unit'] ?? $test->unit) : $test->unit;
+                                                                                $range = $isObj ? ($parsed['reference_range'] ?? '') : '';
+                                                                                $status = $isObj ? ($parsed['status'] ?? '') : '';
+                                                                                $notes = $isObj ? ($parsed['notes'] ?? '') : '';
+                                                                            @endphp
+                                                                            <tr>
+                                                                                <td class="text-start fw-bold text-dark">
+                                                                                    {{ $test->name }}
+                                                                                    @if($notes)
+                                                                                        <div class="text-muted extra-small" style="font-size: 0.75rem;">{{ $notes }}</div>
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td>
+                                                                                    @if(!empty($val))
+                                                                                        <span class="fw-bold fs-6 text-primary">{{ $val }}</span>
+                                                                                    @else
+                                                                                        <span class="text-muted">قيد الإدخال</span>
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td class="text-muted">{{ $unit ?: '-' }}</td>
+                                                                                <td class="text-muted"><small>{{ $range ?: '-' }}</small></td>
+                                                                                <td>
+                                                                                    @if($status === 'normal' || $status === 'طبيعي')
+                                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">طبيعي</span>
+                                                                                    @elseif($status === 'high' || $status === 'مرتفع')
+                                                                                        <span class="badge bg-danger text-white">↑ مرتفع</span>
+                                                                                    @elseif($status === 'low' || $status === 'منخفض')
+                                                                                        <span class="badge bg-warning text-dark">↓ منخفض</span>
+                                                                                    @elseif(!empty($val))
+                                                                                        <span class="badge bg-primary-subtle text-primary">تم الفحص</span>
+                                                                                    @else
+                                                                                        <span class="badge bg-secondary-subtle text-secondary">-</span>
+                                                                                    @endif
+                                                                                </td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
                                                             </div>
                                                         @else
-                                                            <small class="text-muted d-block">الفحوصات قيد الفحص في المختبر...</small>
+                                                            <div class="alert alert-light border small text-muted mb-0 py-2">
+                                                                <i class="fas fa-spinner fa-spin me-1 text-warning"></i> الفحوصات قيد المعالجة في المختبر...
+                                                            </div>
                                                         @endif
                                                     </div>
                                                 @endforeach
@@ -576,28 +636,54 @@
                                             @endphp
                                             @if($radRequests->count() > 0)
                                                 @foreach($radRequests as $radReq)
-                                                    <div class="border rounded-3 p-3 mb-2 bg-white shadow-sm">
-                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <div class="border rounded-3 p-3 mb-3 bg-white shadow-sm">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                                                             <div>
-                                                                <span class="fw-bold text-dark">طلب أشعة #{{ $radReq->id }}</span>
-                                                                <small class="text-muted ms-2">{{ optional($radReq->requested_at)->format('d/m H:i') }}</small>
+                                                                <span class="fw-bold text-dark"><i class="fas fa-x-ray text-info me-1"></i>طلب أشعة #{{ $radReq->id }}</span>
+                                                                <small class="text-muted ms-2">{{ optional($radReq->requested_at)->format('Y/m/d H:i') }}</small>
                                                             </div>
-                                                            <span class="badge {{ $radReq->status == 'completed' ? 'bg-success' : ($radReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}">
-                                                                {{ $radReq->status_text }}
-                                                            </span>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="badge {{ $radReq->status == 'completed' ? 'bg-success' : ($radReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}">
+                                                                    {{ $radReq->status_text }}
+                                                                </span>
+                                                                @if($radReq->status == 'completed')
+                                                                    <a href="{{ route('staff.emergency-radiology.print', $radReq) }}" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 fw-bold" title="طباعة التقرير الشعاعي الرسمي">
+                                                                        <i class="fas fa-print me-1"></i>طباعة
+                                                                    </a>
+                                                                @endif
+                                                            </div>
                                                         </div>
+                                                        @if($radReq->notes)
+                                                            <div class="small text-muted mb-2"><i class="fas fa-sticky-note me-1"></i><strong>ملاحظات الطلب:</strong> {{ $radReq->notes }}</div>
+                                                        @endif
                                                         @if($radReq->status == 'completed')
                                                             <div class="p-2 rounded bg-light border">
-                                                                <strong class="text-success small d-block mb-1"><i class="fas fa-check-circle me-1"></i>تقرير ونتائج الأشعة:</strong>
                                                                 @foreach($radReq->radiologyTypes as $type)
-                                                                    <div class="border-bottom py-1 small">
-                                                                        <div class="fw-bold text-info">{{ $type->name }}</div>
-                                                                        <p class="mb-0 text-muted">{{ $type->pivot->result ?: 'تم إنجاز التصوير بنجاح.' }}</p>
+                                                                    <div class="border-bottom pb-2 mb-2 last-border-0">
+                                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                            <span class="fw-bold text-dark"><i class="fas fa-camera-retro text-info me-1"></i>{{ $type->name }}</span>
+                                                                            <span class="badge bg-success-subtle text-success border border-success-subtle small">مكتمل</span>
+                                                                        </div>
+                                                                        <div class="p-2 bg-white rounded border small text-dark mb-2" style="white-space: pre-wrap; line-height: 1.6;">
+                                                                            {!! nl2br(e($type->pivot->result ?: 'تم إنجاز التصوير والفحص الشعاعي بنجاح.')) !!}
+                                                                        </div>
+                                                                        @if(!empty($type->pivot->image_path))
+                                                                            <div class="d-flex align-items-center gap-2 pt-1">
+                                                                                <a href="{{ asset('storage/' . $type->pivot->image_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold">
+                                                                                    <i class="fas fa-image me-1"></i>معاينة صورة الأشعة المرفقة
+                                                                                </a>
+                                                                                <a href="{{ asset('storage/' . $type->pivot->image_path) }}" download class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                                                                    <i class="fas fa-download me-1"></i>تحميل
+                                                                                </a>
+                                                                            </div>
+                                                                        @endif
                                                                     </div>
                                                                 @endforeach
                                                             </div>
                                                         @else
-                                                            <small class="text-muted d-block">بانتظار تصوير المريض وإعداد التقرير الشعاعي...</small>
+                                                            <div class="alert alert-light border small text-muted mb-0 py-2">
+                                                                <i class="fas fa-spinner fa-spin me-1 text-info"></i> بانتظار تصوير المريض وإعداد التقرير الشعاعي...
+                                                            </div>
                                                         @endif
                                                     </div>
                                                 @endforeach

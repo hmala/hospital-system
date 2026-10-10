@@ -143,10 +143,10 @@ class StaffRequestController extends Controller
     public function printEmergencyLab(\App\Models\EmergencyLabRequest $emergencyLab)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view lab tests')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
-        $emergencyLab->load(['patient.user', 'labTests']);
+        $emergencyLab->load(['patient.user', 'labTests', 'requestTests.labTest']);
         return view('staff.requests.emergency-lab-print', compact('emergencyLab'));
     }
 
@@ -1401,11 +1401,11 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
-        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes']);
+        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes', 'requestTypes.radiologyType']);
 
         return view('staff.requests.emergency-radiology-show', compact('emergencyRadiology'));
     }
@@ -1418,11 +1418,11 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
-        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes']);
+        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes', 'requestTypes.radiologyType']);
 
         return view('staff.requests.emergency-radiology-print', compact('emergencyRadiology'));
     }
