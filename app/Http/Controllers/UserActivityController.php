@@ -32,26 +32,50 @@ class UserActivityController extends Controller
         $totalToday = UserActivity::today()->count();
         $sensitiveToday = UserActivity::today()->sensitiveOnly()->count();
         
-        // المتواجدون الآن (نشاط خلال آخر 5 دقائق)
+        // المتواجدون الآن (نشاط خلال آخر 5 دقائق ولم يسجل خروج)
         $fiveMinutesAgo = now()->subMinutes(5);
         $fifteenMinutesAgo = now()->subMinutes(15);
-        $activeNowCount = User::where('last_activity_at', '>=', $fiveMinutesAgo)->count();
+        $activeNowCount = User::where('last_activity_at', '>=', $fiveMinutesAgo)
+            ->where(function($q) {
+                $q->whereNull('last_logout_at')
+                  ->orWhereColumn('last_activity_at', '>', 'last_logout_at');
+            })
+            ->count();
 
         // الموظفون الذين سجلوا دخولاً أو نشاطاً اليوم
         $staffLoggedInTodayCount = User::where(function($q) {
             $q->whereDate('last_login_at', today())
-              ->orWhereDate('last_activity_at', today());
+              ->orWhereDate('last_activity_at', today())
+              ->orWhereDate('last_logout_at', today())
+              ->orWhereHas('activities', function($actQ) {
+                  $actQ->whereDate('created_at', today());
+              });
         })->count();
 
-        // 2. قائمة المتواجدين حالياً وسجل الدخول اليومي
+        // 2. قائمة المتواجدين حالياً وسجل الدخول والخروج اليومي
         $onlineUsers = User::with('roles')
             ->where(function($q) use ($fifteenMinutesAgo) {
-                $q->where('last_activity_at', '>=', $fifteenMinutesAgo)
-                  ->orWhereDate('last_login_at', today());
+                $q->where(function($sub) use ($fifteenMinutesAgo) {
+                    $sub->where('last_activity_at', '>=', $fifteenMinutesAgo)
+                        ->where(function($lq) {
+                            $lq->whereNull('last_logout_at')
+                               ->orWhereColumn('last_activity_at', '>', 'last_logout_at');
+                        });
+                })
+                ->orWhereDate('last_login_at', today())
+                ->orWhereDate('last_activity_at', today())
+                ->orWhereDate('last_logout_at', today())
+                ->orWhereHas('activities', function($actQ) {
+                    $actQ->whereDate('created_at', today());
+                });
             })
-            ->orderByRaw('CASE WHEN last_activity_at >= ? THEN 1 ELSE 2 END', [$fiveMinutesAgo])
+            ->orderByRaw('CASE 
+                WHEN (last_logout_at IS NOT NULL AND (last_activity_at IS NULL OR last_logout_at >= last_activity_at)) THEN 3 
+                WHEN last_activity_at >= ? THEN 1 
+                ELSE 2 
+            END', [$fiveMinutesAgo])
             ->orderBy('last_activity_at', 'desc')
-            ->limit(30)
+            ->limit(50)
             ->get();
 
         // 3. إنتاجية الموظفين اليوم (Staff Productivity Breakdown)
@@ -139,6 +163,33 @@ class UserActivityController extends Controller
             'security' => 'الرقابة والعمليات الحساسة',
         ];
 
+        // 5. توزيع الحركات حسب الأقسام للرسم البياني
+        $categoryCounts = UserActivity::today()
+            ->select('category', DB::raw('COUNT(*) as total'))
+            ->groupBy('category')
+            ->pluck('total', 'category')
+            ->toArray();
+
+        // 6. النبض الساعي للحركات (Hourly Distribution)
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+        $hourExpr = $isSqlite ? "cast(strftime('%H', created_at) as integer)" : "HOUR(created_at)";
+
+        $hourlyRaw = UserActivity::today()
+            ->select(DB::raw("{$hourExpr} as hr"), DB::raw('COUNT(*) as count'))
+            ->groupBy(DB::raw($hourExpr))
+            ->pluck('count', 'hr')
+            ->toArray();
+
+        $hourlyLabels = [];
+        $hourlyData = [];
+        $currentHour = (int) now()->format('H');
+        $startH = 8;
+        $endH = max(20, $currentHour);
+        for ($h = $startH; $h <= $endH; $h++) {
+            $hourlyLabels[] = sprintf('%02d:00', $h);
+            $hourlyData[] = (int) ($hourlyRaw[$h] ?? 0);
+        }
+
         return view('activity-logs.index', compact(
             'activities',
             'totalToday',
@@ -148,7 +199,10 @@ class UserActivityController extends Controller
             'onlineUsers',
             'staffProductivity',
             'usersList',
-            'categoriesList'
+            'categoriesList',
+            'categoryCounts',
+            'hourlyLabels',
+            'hourlyData'
         ));
     }
 

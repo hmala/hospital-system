@@ -133,14 +133,15 @@
                                 <span class="pulse-dot me-2" id="autoRefreshDot"></span>
                                 <span class="small fw-bold text-white me-2" id="autoRefreshStatusText" style="font-size: 0.8rem;">بث حي:</span>
                                 <select id="autoRefreshIntervalSelect" class="form-select form-select-sm bg-transparent text-white border-0 py-0 pe-4 ps-1 fw-bold shadow-none" style="font-size: 0.82rem; width: auto; cursor: pointer;">
-                                    <option value="15" class="text-dark" selected>كل 15 ثانية</option>
+                                    <option value="5" class="text-dark" selected>كل 5 ثوانٍ (فائق السرعة ⚡)</option>
+                                    <option value="10" class="text-dark">كل 10 ثوانٍ</option>
+                                    <option value="15" class="text-dark">كل 15 ثانية</option>
                                     <option value="30" class="text-dark">كل 30 ثانية</option>
-                                    <option value="60" class="text-dark">كل دقيقة</option>
                                     <option value="0" class="text-dark">إيقاف المؤقت ⏸️</option>
                                 </select>
                                 <div class="vr bg-white bg-opacity-25 mx-2" style="height: 18px;"></div>
                                 <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 font-monospace rounded-pill px-2 py-1" id="countdownBadge" style="font-size: 0.75rem;">
-                                    <i class="fas fa-stopwatch me-1"></i><span id="countdownSeconds">15</span>ث
+                                    <i class="fas fa-stopwatch me-1"></i><span id="countdownSeconds">5</span>ث
                                 </span>
                             </div>
 
@@ -220,9 +221,16 @@
                         <h2 class="fw-black text-dark mb-0" style="font-family: 'Outfit', sans-serif;">
                             {{ number_format($totalToday) }} <small class="fs-6 fw-normal text-muted">عملية</small>
                         </h2>
-                        <span class="text-info small fw-bold">
+                        <span class="text-info small fw-bold d-block">
                             كشفيات، دفعات، تحاليل، أشعة، خزينة
                         </span>
+                        <!-- أشرطة التوزيع السريع للأقسام -->
+                        <div class="d-flex align-items-center gap-1 flex-wrap mt-2 pt-2 border-top border-secondary border-opacity-10" style="font-size: 0.76rem;">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2">كشفية: {{ $categoryCounts['doctor'] ?? 0 }}</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2">دفعات: {{ $categoryCounts['cashier'] ?? 0 }}</span>
+                            <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 rounded-pill px-2">تحاليل: {{ $categoryCounts['lab'] ?? 0 }}</span>
+                            <span class="badge bg-teal bg-opacity-10 text-teal border border-teal border-opacity-25 rounded-pill px-2" style="color: #0d9488;">أشعة: {{ $categoryCounts['radiology'] ?? 0 }}</span>
+                        </div>
                     </div>
                     <div class="rounded-4 p-3 bg-info bg-opacity-10 text-info fs-3 shadow-sm">
                         <i class="fas fa-chart-line"></i>
@@ -248,6 +256,53 @@
                     </div>
                     <div class="rounded-4 p-3 bg-danger bg-opacity-10 text-danger fs-3 shadow-sm">
                         <i class="fas fa-shield-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قسم المخططات البيانية التفاعلية لحركات اليوم -->
+    <div class="row g-3 mb-4" id="chartsRowSection">
+        <!-- 1. مخطط توزيع العمليات حسب الأقسام (Donut Chart) -->
+        <div class="col-xl-5 col-lg-6">
+            <div class="card glass-card-pulse h-100 border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between p-3 pb-0">
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">
+                            <i class="fas fa-chart-pie text-primary me-2"></i> تفصيل حركات اليوم حسب الأقسام
+                        </h6>
+                        <small class="text-muted">مخطط نسبي لكافة العمليات المنفذة اليوم</small>
+                    </div>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1 fw-bold fs-6">
+                        {{ number_format($totalToday) }} حركة
+                    </span>
+                </div>
+                <div class="card-body p-3 d-flex flex-column justify-content-center">
+                    <div style="height: 220px; position: relative;">
+                        <canvas id="categoryDonutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. منحنى النبض الساعي (Hourly Pulse Area Chart) -->
+        <div class="col-xl-7 col-lg-6">
+            <div class="card glass-card-pulse h-100 border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between p-3 pb-0">
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">
+                            <i class="fas fa-wave-square text-info me-2"></i> منحنى النشاط والنبض الساعي (Activity Pulse)
+                        </h6>
+                        <small class="text-muted">كثافة الحركات والعمليات على مدار ساعات العمل اليوم</small>
+                    </div>
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-3 py-1 fw-bold">
+                        <i class="fas fa-clock me-1"></i> توقيت بغداد
+                    </span>
+                </div>
+                <div class="card-body p-3">
+                    <div style="height: 220px; position: relative;">
+                        <canvas id="hourlyPulseChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -473,67 +528,133 @@
                         {{ $onlineUsers->count() }} مسجل دخول اليوم
                     </span>
                 </div>
-                <div class="card-body p-3">
+                <div class="card-body p-0">
                     @if($onlineUsers->isEmpty())
                         <div class="text-center py-5 text-muted">
                             <i class="fas fa-user-slash fa-3x mb-3 text-secondary opacity-50"></i>
-                            <h6 class="fw-bold">لا يوجد مستخدمون متصلون حالياً</h6>
+                            <h6 class="fw-bold">لا يوجد مستخدمون مسجلون لليوم بعد</h6>
                         </div>
                     @else
-                        <div class="row g-3">
-                            @foreach($onlineUsers as $ou)
-                                @php
-                                    $lastAct = $ou->last_activity_at ? \Carbon\Carbon::parse($ou->last_activity_at) : null;
-                                    $lastLog = $ou->last_login_at ? \Carbon\Carbon::parse($ou->last_login_at) : null;
-                                    $isOnlineNow = $lastAct && $lastAct->diffInMinutes(now()) <= 5;
-                                    $wasRecentlyActive = $lastAct && $lastAct->diffInMinutes(now()) <= 15;
-                                @endphp
-                                <div class="col-xl-4 col-md-6">
-                                    <div class="card border rounded-4 p-3 shadow-sm h-100 {{ $isOnlineNow ? 'bg-success bg-opacity-10 border-success' : ($wasRecentlyActive ? 'bg-warning bg-opacity-10 border-warning' : 'bg-light border-secondary border-opacity-25') }}">
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="user-avatar-circle" style="width: 42px; height: 42px; font-size: 1.1rem; background: {{ $isOnlineNow ? '#dcfce7' : '#f1f5f9' }}; color: {{ $isOnlineNow ? '#15803d' : '#475569' }};">
-                                                    {{ mb_substr($ou->name, 0, 1) }}
+                        <!-- شريط التصفية والبحث السريع في جدول المتواجدين -->
+                        <div class="px-3 py-2 border-bottom bg-light bg-opacity-50 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="btn-group btn-group-sm" role="group" id="onlineStatusFilterGroup">
+                                <button type="button" class="btn btn-outline-secondary active fw-bold" data-filter="all">الكل ({{ $onlineUsers->count() }})</button>
+                                <button type="button" class="btn btn-outline-success fw-bold" data-filter="online">🟢 متصل الآن ({{ $activeNowCount }})</button>
+                                <button type="button" class="btn btn-outline-secondary fw-bold" data-filter="loggedout">🚪 سجّل خروج</button>
+                            </div>
+                            <div style="min-width: 240px;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="onlineUserSearchInput" class="form-control border-start-0 shadow-none" placeholder="بحث سريع باسم الموظف أو الدور...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="onlineUsersTable" style="font-size: 0.92rem;">
+                                <thead class="table-light">
+                                    <tr class="text-muted small">
+                                        <th style="width: 45px;">#</th>
+                                        <th>الموظف</th>
+                                        <th>الدور / القسم</th>
+                                        <th class="text-center">الحالة الآن</th>
+                                        <th>أول دخول اليوم</th>
+                                        <th>آخر نشاط</th>
+                                        <th>وقت الخروج</th>
+                                        <th>عنوان الـ IP</th>
+                                        <th class="text-center" style="width: 70px;">إجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($onlineUsers as $ou)
+                                        @php
+                                            $lastAct = $ou->last_activity_at ? \Carbon\Carbon::parse($ou->last_activity_at) : null;
+                                            $lastLog = $ou->last_login_at ? \Carbon\Carbon::parse($ou->last_login_at) : null;
+                                            $lastLogout = $ou->last_logout_at ? \Carbon\Carbon::parse($ou->last_logout_at) : null;
+
+                                            $isLoggedOut = $lastLogout && (!$lastAct || $lastLogout->greaterThanOrEqualTo($lastAct));
+                                            $isOnlineNow = !$isLoggedOut && $lastAct && $lastAct->diffInMinutes(now()) <= 5;
+                                            $wasRecentlyActive = !$isLoggedOut && $lastAct && $lastAct->diffInMinutes(now()) <= 15;
+                                            $statusKey = $isOnlineNow ? 'online' : ($isLoggedOut ? 'loggedout' : ($wasRecentlyActive ? 'idle' : 'offline'));
+                                        @endphp
+                                        <tr class="user-row {{ $isOnlineNow ? 'table-success bg-opacity-25' : ($isLoggedOut ? 'text-muted' : '') }}" data-name="{{ mb_strtolower($ou->name) }}" data-role="{{ mb_strtolower($ou->roles->pluck('name')->join(' ')) }}" data-status="{{ $statusKey }}">
+                                            <td class="fw-bold text-muted">{{ $loop->iteration }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="user-avatar-circle" style="width: 34px; height: 34px; font-size: 0.9rem; background: {{ $isOnlineNow ? '#dcfce7' : ($isLoggedOut ? '#e2e8f0' : '#f1f5f9') }}; color: {{ $isOnlineNow ? '#15803d' : ($isLoggedOut ? '#64748b' : '#475569') }};">
+                                                        {{ mb_substr($ou->name, 0, 1) }}
+                                                    </div>
+                                                    <div>
+                                                        <span class="fw-bold text-dark d-block">{{ $ou->name }}</span>
+                                                        <small class="text-muted" style="font-size: 0.75rem;">{{ $ou->email }}</small>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h6 class="fw-bold mb-0 text-dark">{{ $ou->name }}</h6>
-                                                    <small class="text-muted">{{ $ou->roles->pluck('name')->join(', ') ?: 'مستخدم' }}</small>
-                                                </div>
-                                            </div>
-                                            <div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-secondary border rounded-pill">
+                                                    {{ $ou->roles->pluck('name')->join(', ') ?: 'مستخدم' }}
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
                                                 @if($isOnlineNow)
                                                     <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">
                                                         <span class="pulse-dot me-1"></span> متصل الآن
                                                     </span>
                                                 @elseif($wasRecentlyActive)
                                                     <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">
-                                                        منذ {{ $lastAct->diffInMinutes(now()) }} دقيقة
+                                                        خامل ({{ $lastAct->diffInMinutes(now()) }}د)
+                                                    </span>
+                                                @elseif($isLoggedOut)
+                                                    <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">
+                                                        <i class="fas fa-sign-out-alt me-1"></i> سجّل خروج
                                                     </span>
                                                 @else
-                                                    <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">
-                                                        <i class="fas fa-sign-out-alt me-1"></i> غير متصل (سجّل خروج)
+                                                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1">
+                                                        غير متصل
                                                     </span>
                                                 @endif
-                                            </div>
-                                        </div>
-
-                                        <div class="border-top pt-2 mt-2 small text-muted">
-                                            <div class="d-flex justify-content-between mb-1">
-                                                <span><i class="fas fa-sign-in-alt text-primary me-1"></i> أول دخول اليوم:</span>
-                                                <span class="fw-bold text-dark">{{ $lastLog ? $lastLog->format('h:i A') : 'غير متوفر' }}</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between mb-1">
-                                                <span><i class="fas fa-wave-square text-info me-1"></i> حالة النشاط:</span>
-                                                <span class="fw-bold {{ $isOnlineNow ? 'text-success' : 'text-muted' }}">{{ $lastAct ? $lastAct->diffForHumans() : 'سجّل خروج من النظام' }}</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between">
-                                                <span><i class="fas fa-network-wired text-muted me-1"></i> الـ IP:</span>
-                                                <span class="font-monospace text-muted">{{ $ou->last_login_ip ?: '-' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
+                                            </td>
+                                            <td>
+                                                @if($lastLog)
+                                                    <span class="fw-bold text-dark">{{ $lastLog->format('h:i A') }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($isLoggedOut)
+                                                    <span class="badge bg-light text-muted border">سجّل خروج</span>
+                                                @elseif($lastAct)
+                                                    <span class="fw-bold text-dark">{{ $lastAct->format('h:i A') }}</span>
+                                                    <small class="text-muted d-block" style="font-size: 0.75rem;">{{ $lastAct->diffForHumans() }}</small>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($lastLogout)
+                                                    <span class="text-danger fw-bold">{{ $lastLogout->format('h:i A') }}</span>
+                                                    <small class="text-muted d-block" style="font-size: 0.75rem;">{{ $lastLogout->diffForHumans() }}</small>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($ou->last_login_ip)
+                                                    <span class="font-monospace text-muted small"><i class="fas fa-network-wired me-1"></i>{{ $ou->last_login_ip }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="{{ route('activity-logs.index', ['user_id' => $ou->id]) }}" class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2" title="تصفية حركات هذا الموظف">
+                                                    <i class="fas fa-filter"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
                     @endif
                 </div>
@@ -687,9 +808,31 @@
 </div>
 @endcan
 
+    <!-- بيانات المخططات بتنسيق JSON لتغذية الرسوم البيانية -->
+    <script type="application/json" id="chartDataJson">
+    {
+        "categoryLabels": ["الاستقبال", "العيادات", "الصندوق", "المختبر", "الأشعة", "الخزينة", "العمليات", "الطوارئ", "المصادقة"],
+        "categoryData": [
+            {{ $categoryCounts['reception'] ?? 0 }},
+            {{ $categoryCounts['doctor'] ?? 0 }},
+            {{ $categoryCounts['cashier'] ?? 0 }},
+            {{ $categoryCounts['lab'] ?? 0 }},
+            {{ $categoryCounts['radiology'] ?? 0 }},
+            {{ $categoryCounts['treasury'] ?? 0 }},
+            {{ $categoryCounts['surgery'] ?? 0 }},
+            {{ $categoryCounts['emergency'] ?? 0 }},
+            {{ $categoryCounts['auth'] ?? 0 }}
+        ],
+        "hourlyLabels": {!! json_encode($hourlyLabels) !!},
+        "hourlyData": {!! json_encode($hourlyData) !!}
+    }
+    </script>
+</div>
 @endsection
 
 @section('scripts')
+<!-- تضمين مكتبة Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     function toggleCustomDates(val) {
         if (val === 'custom') {
@@ -697,14 +840,114 @@
         }
     }
 
-    // ==================== محرك التحديث التلقائي والنبض الحي (Auto-Refresh Engine) ====================
+    // ==================== محرك الرسوم البيانية التفاعلية (Chart.js Engine) ====================
+    let categoryDonutChart = null;
+    let hourlyPulseChart = null;
+
+    function initOperationalCharts() {
+        const jsonEl = document.getElementById('chartDataJson');
+        if (!jsonEl) return;
+        const data = JSON.parse(jsonEl.textContent);
+
+        // 1. Donut Chart - توزيع الحركات حسب الأقسام
+        const donutCtx = document.getElementById('categoryDonutChart');
+        if (donutCtx) {
+            categoryDonutChart = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.categoryLabels,
+                    datasets: [{
+                        data: data.categoryData,
+                        backgroundColor: [
+                            '#3b82f6', // الاستقبال
+                            '#06b6d4', // العيادات
+                            '#10b981', // الصندوق
+                            '#f59e0b', // المختبر
+                            '#0d9488', // الأشعة
+                            '#1e293b', // الخزينة
+                            '#ef4444', // العمليات
+                            '#f43f5e', // الطوارئ
+                            '#64748b'  // المصادقة
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { family: 'Tajawal', size: 11, weight: 'bold' }
+                            }
+                        }
+                    },
+                    cutout: '62%'
+                }
+            });
+        }
+
+        // 2. Area/Line Chart - منحنى النبض الساعي
+        const hourlyCtx = document.getElementById('hourlyPulseChart');
+        if (hourlyCtx) {
+            hourlyPulseChart = new Chart(hourlyCtx, {
+                type: 'line',
+                data: {
+                    labels: data.hourlyLabels,
+                    datasets: [{
+                        label: 'عدد الحركات المنفذة بالساعة',
+                        data: data.hourlyData,
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0284c7',
+                        pointBorderColor: '#ffffff',
+                        pointHoverRadius: 6,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                font: { family: 'Outfit', size: 11 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            ticks: { font: { family: 'Outfit', size: 11 } },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    }
+
+    // ==================== محرك التحديث التلقائي والنبض الحي (Fast Realtime Engine) ====================
     let countdownTimer = null;
-    let refreshInterval = 15;
-    let currentSeconds = 15;
+    let refreshInterval = 5; // Default fast 5 seconds
+    let currentSeconds = 5;
     let isRefreshing = false;
 
     document.addEventListener('DOMContentLoaded', function() {
         initAutoRefresh();
+        initOperationalCharts();
+        initOnlineTableFilter();
     });
 
     function initAutoRefresh() {
@@ -827,11 +1070,12 @@
                     curTL.innerHTML = newTL.innerHTML;
                 }
 
-                // 4. تحديث بطاقات المتواجدين الآن
+                // 4. تحديث جدول المتواجدين الآن
                 const newOnline = doc.getElementById('onlineCardWrapper');
                 const curOnline = document.getElementById('onlineCardWrapper');
                 if (newOnline && curOnline) {
                     curOnline.innerHTML = newOnline.innerHTML;
+                    initOnlineTableFilter();
                 }
 
                 // 5. تحديث جدول الإنتاجية
@@ -841,7 +1085,22 @@
                     curProd.innerHTML = newProd.innerHTML;
                 }
 
-                // 6. تحديث توقيت آخر تحديث
+                // 6. تحديث بيانات المخططات البيانية لحظياً
+                const newJsonEl = doc.getElementById('chartDataJson');
+                if (newJsonEl) {
+                    const freshData = JSON.parse(newJsonEl.textContent);
+                    if (categoryDonutChart) {
+                        categoryDonutChart.data.datasets[0].data = freshData.categoryData;
+                        categoryDonutChart.update('none');
+                    }
+                    if (hourlyPulseChart) {
+                        hourlyPulseChart.data.labels = freshData.hourlyLabels;
+                        hourlyPulseChart.data.datasets[0].data = freshData.hourlyData;
+                        hourlyPulseChart.update('none');
+                    }
+                }
+
+                // 7. تحديث توقيت آخر تحديث
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const lastUpdatedElem = document.getElementById('lastRefreshTimestamp');
@@ -855,6 +1114,51 @@
             if (icon) icon.classList.remove('fa-spin');
             isRefreshing = false;
             resetCountdown();
+        }
+    }
+
+    function initOnlineTableFilter() {
+        const searchInput = document.getElementById('onlineUserSearchInput');
+        const filterGroup = document.getElementById('onlineStatusFilterGroup');
+        const rows = document.querySelectorAll('#onlineUsersTable tbody tr.user-row');
+
+        if (!rows.length) return;
+
+        let activeFilter = 'all';
+
+        function applyFilter() {
+            const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+            rows.forEach(row => {
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const role = (row.getAttribute('data-role') || '').toLowerCase();
+                const status = row.getAttribute('data-status') || '';
+
+                const matchesQuery = !query || name.includes(query) || role.includes(query);
+                const matchesStatus = (activeFilter === 'all') ||
+                    (activeFilter === 'online' && status === 'online') ||
+                    (activeFilter === 'loggedout' && status === 'loggedout');
+
+                if (matchesQuery && matchesStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', applyFilter);
+        }
+
+        if (filterGroup) {
+            filterGroup.querySelectorAll('button[data-filter]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    activeFilter = this.getAttribute('data-filter');
+                    applyFilter();
+                });
+            });
         }
     }
 </script>

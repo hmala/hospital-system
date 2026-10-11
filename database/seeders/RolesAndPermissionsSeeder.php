@@ -189,10 +189,12 @@ class RolesAndPermissionsSeeder extends Seeder
             // صلاحيات توفر الأطباء الاستشاريين
             'manage consultant availability',
             
-            // صلاحيات إدارة النظام
+            // صلاحيات إدارة النظام والرقابة الإدارية
             'manage users',
             'manage roles',
             'manage permissions',
+            'view activity logs',
+            'delete activity logs',
             
             // صلاحيات الطوارئ
             'view emergencies',

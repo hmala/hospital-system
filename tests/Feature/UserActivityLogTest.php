@@ -221,8 +221,8 @@ class UserActivityLogTest extends TestCase
             'category' => 'auth',
         ]);
 
-        // التحقق من تصفير last_activity_at حتى لا يظهر متصلاً
+        // التحقق من تثبيت last_logout_at لتمييز أنه مسجل خروج
         $user->refresh();
-        $this->assertNull($user->last_activity_at);
+        $this->assertNotNull($user->last_logout_at);
     }
 }

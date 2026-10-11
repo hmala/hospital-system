@@ -51,6 +51,7 @@ class LoginController extends Controller
             'last_login_at' => now(),
             'last_activity_at' => now(),
             'last_login_ip' => $request->ip(),
+            'last_logout_at' => null,
         ])->saveQuietly();
 
         \App\Services\UserActivityLogger::log(
@@ -83,9 +84,9 @@ class LoginController extends Controller
                 user: $user
             );
 
-            // فور تسجيل الخروج، نصفر آخر نشاط حتى يُظهر النظام فوراً أنه غير متصل
+            // تثبيت وقت تسجيل الخروج الفعلي
             $user->forceFill([
-                'last_activity_at' => null,
+                'last_logout_at' => now(),
             ])->saveQuietly();
         }
 

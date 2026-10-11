@@ -19,11 +19,12 @@ class TrackUserActivity
         if (Auth::check()) {
             $user = Auth::user();
             
-            // Only update DB once every 60 seconds to avoid unnecessary queries
-            if (!$user->last_activity_at || $user->last_activity_at->diffInSeconds(now()) >= 60) {
+            // Only update DB once every 60 seconds to avoid unnecessary queries, or if last_logout_at was set
+            if (!$user->last_activity_at || $user->last_activity_at->diffInSeconds(now()) >= 60 || $user->last_logout_at !== null) {
                 $user->forceFill([
                     'last_activity_at' => now(),
                     'last_login_ip' => $user->last_login_ip ?: $request->ip(),
+                    'last_logout_at' => null,
                 ])->saveQuietly();
             }
         }
