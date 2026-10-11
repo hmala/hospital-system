@@ -197,16 +197,24 @@
                         </div>
 
                         <div class="row">
-                            <!-- الرقم الوطني -->
+                            <!-- رقم البطاقة الموحدة / الرقم الوطني -->
                             <div class="col-md-6 mb-3">
-                                <label for="national_id" class="form-label">الرقم الوطني *</label>
+                                <label for="national_id" class="form-label fw-bold">
+                                    <i class="fas fa-id-card text-primary me-1"></i> رقم البطاقة الموحدة *
+                                </label>
                                 <input type="text" 
-                                       class="form-control @error('national_id') is-invalid @enderror" 
+                                       class="form-control font-monospace @error('national_id') is-invalid @enderror" 
                                        id="national_id" 
                                        name="national_id" 
                                        value="{{ old('national_id') }}"
                                        required
-                                       placeholder="الرقم الوطني">
+                                       inputmode="numeric"
+                                       pattern="[0-9]*"
+                                       oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');"
+                                       placeholder="ادخل رقم البطاقة الموحدة (أرقام فقط)">
+                                <div class="form-text text-muted" style="font-size: 0.78rem;">
+                                    <i class="fas fa-info-circle text-primary me-1"></i>يقبل أرقاماً فقط بدون أي أحرف أو رموز.
+                                </div>
                                 @error('national_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

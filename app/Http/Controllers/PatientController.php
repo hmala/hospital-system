@@ -20,7 +20,7 @@ class PatientController extends Controller
 
         $search = trim($request->get('search', ''));
 
-        $query = Patient::with('user')
+        $query = Patient::with(['user', 'creator', 'healthInsuranceCategory'])
             ->withCount(['appointments as total_appointments']);
 
         if ($search !== '') {
@@ -29,29 +29,42 @@ class PatientController extends Controller
                     $uq->where('name', 'like', "%{$search}%")
                        ->orWhere('email', 'like', "%{$search}%")
                        ->orWhere('phone', 'like', "%{$search}%");
-                })->orWhere('national_id', 'like', "%{$search}%");
+                })->orWhere('national_id', 'like', "%{$search}%")
+                  ->orWhere('insurance_card_no', 'like', "%{$search}%")
+                  ->orWhere('insurance_number', 'like', "%{$search}%");
             });
         }
 
-        $patients = $query->latest()->paginate(15)->appends($request->query());
+        $patients = $query->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(15)
+            ->appends($request->query());
 
         // AJAX → أرجع JSON
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'patients' => $patients->getCollection()->map(fn($p) => [
-                    'id'                 => $p->id,
-                    'user'               => $p->user ? [
+                    'id'                   => $p->id,
+                    'user'                 => $p->user ? [
                         'name'   => $p->user->name,
                         'phone'  => $p->user->phone,
                         'email'  => $p->user->email,
                         'gender' => $p->user->gender,
                     ] : null,
-                    'age'                => $p->age,
-                    'blood_type'         => $p->blood_type,
-                    'emergency_contact'  => $p->emergency_contact,
-                    'national_id'        => $p->national_id,
-                    'total_appointments' => $p->total_appointments,
-                    'last_visit_date'    => $p->getLastVisitDate()
+                    'age'                  => $p->age,
+                    'blood_type'           => $p->blood_type,
+                    'emergency_contact'    => $p->emergency_contact,
+                    'national_id'          => $p->national_id,
+                    'insurance_type'       => $p->insurance_type,
+                    'covered_by_insurance' => (bool)($p->insurance_type !== 'none' || $p->covered_by_insurance),
+                    'insurance_number'     => $p->insurance_card_no ?: ($p->insurance_number ?: $p->insurance_booklet_number),
+                    'insurance_category'   => $p->healthInsuranceCategory ? $p->healthInsuranceCategory->name : null,
+                    'copay_percentage'     => $p->copay_percentage,
+                    'creator_name'         => $p->creator ? $p->creator->name : null,
+                    'created_at_formatted' => $p->created_at ? $p->created_at->format('Y-m-d h:i A') : null,
+                    'created_at_diff'      => $p->created_at ? $p->created_at->diffForHumans() : null,
+                    'total_appointments'   => $p->total_appointments,
+                    'last_visit_date'      => $p->getLastVisitDate()
                         ? $p->getLastVisitDate()->format('Y-m-d') : null,
                 ])->values(),
                 'pagination'   => $patients->links('vendor.pagination.bootstrap-5')->toHtml(),
@@ -86,6 +99,15 @@ class PatientController extends Controller
             abort(403, 'غير مصرح لك بإضافة مريض جديد');
         }
 
+        // تنظيف وتحويل أرقام البطاقة الموحدة (دعم الأرقام المشرقية وإزالة المسافات)
+        if ($request->filled('national_id')) {
+            $nid = $request->input('national_id');
+            $arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            $englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            $nid = str_replace($arabicNumbers, $englishNumbers, $nid);
+            $request->merge(['national_id' => trim($nid)]);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email',
@@ -94,7 +116,7 @@ class PatientController extends Controller
             'gender' => 'required|in:male,female',
             'emergency_contact' => 'nullable|string',
             'blood_type' => 'nullable|string|max:10',
-            'national_id' => 'required|string|unique:patients,national_id',
+            'national_id' => ['required', 'regex:/^[0-9]+$/', 'unique:patients,national_id'],
             'mother_name' => 'required|string|max:255',
             'country' => 'nullable|exists:countries,id',
             'governorate' => 'nullable|string|max:255',
@@ -115,9 +137,10 @@ class PatientController extends Controller
             'gender.required' => 'النوع مطلوب',
             'mother_name.required' => 'اسم الأم مطلوب',
             'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
-            'national_id.required' => 'الرقم الوطني مطلوب',
+            'national_id.required' => 'رقم البطاقة الموحدة مطلوب',
+            'national_id.regex' => 'رقم البطاقة الموحدة يجب أن يحتوي على أرقام فقط بدون أحرف أو رموز',
             'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
-            'national_id.unique' => 'الرقم الوطني مستخدم من قبل',
+            'national_id.unique' => 'رقم البطاقة الموحدة مستخدم من قبل لمريض آخر',
         ]);
 
         // التحقق من عدم تكرار الاسم واسم الأم
@@ -152,6 +175,7 @@ class PatientController extends Controller
         // إنشاء سجل المريض
         Patient::create([
             'user_id' => $user->id,
+            'created_by' => auth()->id(),
             'emergency_contact' => $request->emergency_contact,
             'blood_type' => $request->blood_type,
             'medical_history' => $request->medical_history,
@@ -214,6 +238,15 @@ class PatientController extends Controller
             abort(403, 'غير مصرح لك بتعديل بيانات المريض');
         }
 
+        // تنظيف وتحويل أرقام البطاقة الموحدة
+        if ($request->filled('national_id')) {
+            $nid = $request->input('national_id');
+            $arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            $englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            $nid = str_replace($arabicNumbers, $englishNumbers, $nid);
+            $request->merge(['national_id' => trim($nid)]);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email,' . $patient->user_id,
@@ -222,7 +255,7 @@ class PatientController extends Controller
             'gender' => 'required|in:male,female',
             'emergency_contact' => 'nullable|string',
             'blood_type' => 'nullable|string|max:10',
-            'national_id' => 'required|string|unique:patients,national_id,' . $patient->id,
+            'national_id' => ['required', 'regex:/^[0-9]+$/', 'unique:patients,national_id,' . $patient->id],
             'mother_name' => 'required|string|max:255',
             'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
             'covered_by_insurance' => 'nullable|in:0,1',
@@ -241,9 +274,10 @@ class PatientController extends Controller
             'gender.required' => 'النوع مطلوب',
             'mother_name.required' => 'اسم الأم مطلوب',
             'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
-            'national_id.required' => 'الرقم الوطني مطلوب',
+            'national_id.required' => 'رقم البطاقة الموحدة مطلوب',
+            'national_id.regex' => 'رقم البطاقة الموحدة يجب أن يحتوي على أرقام فقط بدون أحرف أو رموز',
             'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
-            'national_id.unique' => 'الرقم الوطني مستخدم من قبل',
+            'national_id.unique' => 'رقم البطاقة الموحدة مستخدم من قبل لمريض آخر',
         ]);
 
         // التحقق من عدم تكرار الاسم واسم الأم (استثناء المريض الحالي)

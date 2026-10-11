@@ -11,7 +11,7 @@ class Patient extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'emergency_contact', 'blood_type', 'medical_history', 'allergies',
+        'user_id', 'created_by', 'emergency_contact', 'blood_type', 'medical_history', 'allergies',
         'current_medications', 'insurance_company', 'insurance_number',
         'insurance_type', 'health_insurance_category_id', 'insurance_card_no', 'copay_percentage',
         'national_id', 'first_visit_date', 'notes', 'mother_name', 'country_id',
@@ -24,7 +24,22 @@ class Patient extends Model
         'first_visit_date' => 'date',
         'copay_percentage' => 'decimal:2',
         'health_insurance_category_id' => 'integer',
+        'created_by' => 'integer',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($patient) {
+            if (empty($patient->created_by) && auth()->check()) {
+                $patient->created_by = auth()->id();
+            }
+        });
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function healthInsuranceCategory()
     {

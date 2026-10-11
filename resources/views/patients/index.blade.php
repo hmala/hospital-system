@@ -54,95 +54,152 @@
                         <table class="table table-hover" id="patients-table">
                             <thead class="table-light">
                                 <tr>
-                                    <th>#</th>
+                                    <th style="width: 45px;">#</th>
                                     <th>المريض</th>
                                     <th>معلومات الاتصال</th>
-                                    <th>العمر</th>
-                                    <th>فصيلة الدم</th>
-                                    <th>رقم الطوارئ</th>
-                                    <th>عدد الزيارات</th>
-                                    <th>آخر زيارة</th>
-                                    <th>الإجراءات</th>
+                                    <th>الضمان الصحي ورقم الضمان</th>
+                                    <th class="table-primary bg-opacity-25" style="border-bottom: 2px solid #3b82f6;">
+                                        <i class="fas fa-sort-amount-down-alt text-primary me-1"></i> تاريخ الإدخال والمنشئ
+                                        <span class="badge bg-primary text-white ms-1" style="font-size: 0.68rem;">تنازلي ⬇️</span>
+                                    </th>
+                                    <th>الزيارات</th>
+                                    <th class="text-center" style="width: 140px;">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="patients-tbody">
                                 @forelse($patients as $patient)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td class="fw-bold text-muted">{{ $loop->iteration }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-sm bg-success rounded-circle me-3 d-flex align-items-center justify-content-center">
-                                                <span class="text-white fw-bold">
-                                                    {{ $patient->user ? substr($patient->user->name, 0, 1) : '?' }}
-                                                </span>
+                                            <div class="avatar-sm bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-circle me-2 d-flex align-items-center justify-content-center fw-bold fs-5">
+                                                {{ $patient->user ? mb_substr($patient->user->name, 0, 1) : '?' }}
                                             </div>
                                             <div>
-                                                <strong>{{ $patient->user ? $patient->user->name : 'مريض بدون بيانات' }}</strong>
-                                                <br>
-                                                <small class="text-muted">
-                                                    {{ $patient->user && $patient->user->gender == 'male' ? 'ذكر' : ($patient->user && $patient->user->gender == 'female' ? 'أنثى' : 'غير محدد') }}
-                                                </small>
+                                                <strong class="text-dark d-block">{{ $patient->user ? $patient->user->name : 'مريض بدون بيانات' }}</strong>
+                                                <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                                    <span class="badge bg-light text-secondary border" style="font-size: 0.72rem;">
+                                                        {{ $patient->user && $patient->user->gender == 'male' ? 'ذكر' : ($patient->user && $patient->user->gender == 'female' ? 'أنثى' : 'غير محدد') }}
+                                                    </span>
+                                                    @if($patient->age)
+                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style="font-size: 0.72rem;">{{ $patient->age }} سنة</span>
+                                                    @endif
+                                                    @if($patient->blood_type)
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.72rem;">{{ $patient->blood_type }}</span>
+                                                    @endif
+                                                </div>
+                                                @if($patient->national_id)
+                                                    <small class="text-muted font-monospace d-block mt-1" style="font-size: 0.75rem;">
+                                                        <i class="fas fa-fingerprint me-1"></i>{{ $patient->national_id }}
+                                                    </small>
+                                                @endif
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <small>
-                                            <i class="fas fa-phone me-1 text-muted"></i>{{ $patient->user ? $patient->user->phone : 'غير متوفر' }}<br>
-                                            <i class="fas fa-envelope me-1 text-muted"></i>{{ $patient->user ? $patient->user->email : 'غير متوفر' }}
+                                        <small class="d-block text-dark fw-bold">
+                                            <i class="fas fa-phone me-1 text-primary"></i>{{ $patient->user ? $patient->user->phone : 'غير متوفر' }}
                                         </small>
-                                    </td>
-                                    <td>
-                                        @if($patient->age)
-                                            <span class="badge bg-info">{{ $patient->age }} سنة</span>
-                                        @else
-                                            <span class="text-muted">---</span>
+                                        @if($patient->emergency_contact)
+                                            <small class="d-block text-muted mt-1" style="font-size: 0.75rem;">
+                                                <i class="fas fa-phone-alt me-1 text-danger"></i>طوارئ: {{ $patient->emergency_contact }}
+                                            </small>
+                                        @endif
+                                        @if($patient->user && $patient->user->email && !str_contains($patient->user->email, '@hospital.local'))
+                                            <small class="d-block text-muted mt-1" style="font-size: 0.75rem;">
+                                                <i class="fas fa-envelope me-1 text-secondary"></i>{{ $patient->user->email }}
+                                            </small>
                                         @endif
                                     </td>
                                     <td>
-                                        @if($patient->blood_type)
-                                            <span class="badge bg-danger">{{ $patient->blood_type }}</span>
+                                        @php
+                                            $isInsured = $patient->insurance_type !== 'none' || $patient->covered_by_insurance;
+                                            $insNum = $patient->insurance_card_no ?: ($patient->insurance_number ?: $patient->insurance_booklet_number);
+                                        @endphp
+                                        @if($patient->insurance_type === 'hi')
+                                            <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-50 px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 mb-1">
+                                                <i class="fas fa-shield-alt"></i> ضمان صحي (HI)
+                                            </span>
+                                            @if($patient->healthInsuranceCategory)
+                                                <small class="d-block text-muted" style="font-size: 0.75rem;">{{ $patient->healthInsuranceCategory->name }} (تحمّل {{ (float)$patient->copay_percentage }}%)</small>
+                                            @endif
+                                        @elseif($patient->insurance_type === 'moi')
+                                            <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-50 px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 mb-1">
+                                                <i class="fas fa-user-shield"></i> قوى الأمن / الداخلية
+                                            </span>
+                                        @elseif($isInsured)
+                                            <span class="badge bg-info bg-opacity-15 text-info border border-info border-opacity-50 px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 mb-1">
+                                                <i class="fas fa-check-circle"></i> مشمول بالضمان
+                                            </span>
                                         @else
-                                            <span class="text-muted">---</span>
+                                            <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill mb-1">
+                                                <i class="fas fa-times-circle text-muted me-1"></i> غير مشمول (كاش)
+                                            </span>
                                         @endif
+
+                                        <div class="mt-1">
+                                            @if($insNum)
+                                                <span class="badge bg-white text-dark border font-monospace px-2 py-1" title="رقم الضمان / البطاقة">
+                                                    <i class="fas fa-id-card text-muted me-1"></i>{{ $insNum }}
+                                                </span>
+                                            @else
+                                                <small class="text-muted">-</small>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td>
-                                        <small>{{ $patient->emergency_contact ?? '---' }}</small>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-dark small">
+                                                <i class="fas fa-calendar-alt text-primary me-1"></i>{{ $patient->created_at ? $patient->created_at->format('Y-m-d') : '-' }}
+                                            </span>
+                                            <div class="d-flex align-items-center gap-1 text-muted" style="font-size: 0.75rem;">
+                                                <span><i class="fas fa-clock me-1"></i>{{ $patient->created_at ? $patient->created_at->format('h:i A') : '' }}</span>
+                                                @if($patient->created_at)
+                                                    <span>• ({{ $patient->created_at->diffForHumans() }})</span>
+                                                @endif
+                                            </div>
+                                            <div class="mt-1">
+                                                <span class="badge bg-light text-dark border" title="الموظف الذي أنشأ السجل">
+                                                    <i class="fas fa-user-edit text-primary me-1"></i>{{ $patient->creator ? $patient->creator->name : 'النظام' }}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">{{ $patient->total_appointments }}</span>
-                                    </td>
-                                    <td>
+                                        <span class="badge bg-primary rounded-pill px-2 py-1 mb-1">{{ $patient->total_appointments }} زيارة</span>
                                         @if($patient->getLastVisitDate())
-                                            <small class="text-success">
-                                                {{ $patient->getLastVisitDate() ? $patient->getLastVisitDate()->format('Y-m-d') : 'لا توجد' }}
+                                            <small class="d-block text-success" style="font-size: 0.75rem;">
+                                                <i class="fas fa-clock me-1"></i>{{ $patient->getLastVisitDate()->format('Y-m-d') }}
                                             </small>
                                         @else
-                                            <span class="text-muted">لا توجد زيارات</span>
+                                            <small class="text-muted d-block" style="font-size: 0.75rem;">لا توجد زيارات</small>
                                         @endif
                                     </td>
-                                    <td>
-                                        @if(Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || Auth::user()->can('edit patients'))
-                                        <a href="{{ route('patients.edit', $patient) }}" 
-                                           class="btn btn-warning btn-sm rounded-3 me-1" title="تعديل">
-                                            <i class="fas fa-user-edit me-1"></i>تعديل
-                                        </a>
-                                        @endif
-                                        @if(Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || Auth::user()->can('delete patients'))
-                                        <form action="{{ route('patients.destroy', $patient) }}" 
-                                              method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger btn-sm rounded-3" 
-                                                    title="حذف" onclick="return confirm('هل أنت متأكد من حذف المريض؟')">
-                                                <i class="fas fa-user-times me-1"></i>حذف
-                                            </button>
-                                        </form>
-                                        @endif
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            @if(Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || Auth::user()->can('edit patients'))
+                                            <a href="{{ route('patients.edit', $patient) }}" 
+                                               class="btn btn-warning rounded-2 me-1" title="تعديل">
+                                                <i class="fas fa-user-edit"></i>
+                                            </a>
+                                            @endif
+                                            @if(Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || Auth::user()->can('delete patients'))
+                                            <form action="{{ route('patients.destroy', $patient) }}" 
+                                               method="POST" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger rounded-2" 
+                                                        title="حذف" onclick="return confirm('هل أنت متأكد من حذف المريض؟')">
+                                                    <i class="fas fa-user-times"></i>
+                                                </button>
+                                            </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr id="no-results-row">
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                         <i class="fas fa-user-injured fa-3x mb-3"></i>
                                         <br>
                                         لا توجد مرضى مسجلين حتى الآن
@@ -250,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // إضافة صف "لا توجد نتائج"
             const noResultsRow = document.createElement('tr');
             noResultsRow.innerHTML = `
-                <td colspan="9" class="text-center text-muted py-4">
+                <td colspan="7" class="text-center text-muted py-4">
                     <i class="fas fa-search fa-3x mb-3"></i>
                     <br>
                     لا توجد نتائج للبحث
@@ -262,53 +319,89 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // إضافة الصفوف الجديدة
         patients.forEach((patient, index) => {
+            // شارة الضمان ورقم البطاقة
+            let insBadge = '';
+            if (patient.insurance_type === 'hi') {
+                insBadge = `<span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-50 px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 mb-1"><i class="fas fa-shield-alt"></i> ضمان صحي (HI)</span>`;
+                if (patient.insurance_category) {
+                    insBadge += `<small class="d-block text-muted" style="font-size: 0.75rem;">${patient.insurance_category} (تحمّل ${patient.copay_percentage || 0}%)</small>`;
+                }
+            } else if (patient.insurance_type === 'moi') {
+                insBadge = `<span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-50 px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 mb-1"><i class="fas fa-user-shield"></i> قوى الأمن / الداخلية</span>`;
+            } else if (patient.covered_by_insurance) {
+                insBadge = `<span class="badge bg-info bg-opacity-15 text-info border border-info border-opacity-50 px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 mb-1"><i class="fas fa-check-circle"></i> مشمول بالضمان</span>`;
+            } else {
+                insBadge = `<span class="badge bg-light text-secondary border px-2 py-1 rounded-pill mb-1"><i class="fas fa-times-circle text-muted me-1"></i> غير مشمول (كاش)</span>`;
+            }
+
+            const insNumHtml = patient.insurance_number 
+                ? `<div class="mt-1"><span class="badge bg-white text-dark border font-monospace px-2 py-1"><i class="fas fa-id-card text-muted me-1"></i>${patient.insurance_number}</span></div>` 
+                : `<div class="mt-1"><small class="text-muted">-</small></div>`;
+
+            const creatorHtml = patient.creator_name || 'النظام';
+            const createdAtHtml = patient.created_at_formatted ? patient.created_at_formatted.split(' ') : ['-', ''];
+
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${index + 1}</td>
+                <td class="fw-bold text-muted">${index + 1}</td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-success rounded-circle me-3 d-flex align-items-center justify-content-center">
-                            <span class="text-white fw-bold">
-                                ${patient.user ? patient.user.name.charAt(0) : '?'}
-                            </span>
+                        <div class="avatar-sm bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-circle me-2 d-flex align-items-center justify-content-center fw-bold fs-5">
+                            ${patient.user ? patient.user.name.charAt(0) : '?'}
                         </div>
                         <div>
-                            <strong>${patient.user ? patient.user.name : 'مريض بدون بيانات'}</strong>
-                            <br>
-                            <small class="text-muted">
-                                ${patient.user && patient.user.gender === 'male' ? 'ذكر' : (patient.user && patient.user.gender === 'female' ? 'أنثى' : 'غير محدد')}
-                            </small>
+                            <strong class="text-dark d-block">${patient.user ? patient.user.name : 'مريض بدون بيانات'}</strong>
+                            <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.72rem;">
+                                    ${patient.user && patient.user.gender === 'male' ? 'ذكر' : (patient.user && patient.user.gender === 'female' ? 'أنثى' : 'غير محدد')}
+                                </span>
+                                ${patient.age ? `<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style="font-size: 0.72rem;">${patient.age} سنة</span>` : ''}
+                                ${patient.blood_type ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.72rem;">${patient.blood_type}</span>` : ''}
+                            </div>
+                            ${patient.national_id ? `<small class="text-muted font-monospace d-block mt-1" style="font-size: 0.75rem;"><i class="fas fa-fingerprint me-1"></i>${patient.national_id}</small>` : ''}
                         </div>
                     </div>
                 </td>
                 <td>
-                    <small>
-                        <i class="fas fa-phone me-1 text-muted"></i>${patient.user ? patient.user.phone : 'غير متوفر'}<br>
-                        <i class="fas fa-envelope me-1 text-muted"></i>${patient.user ? patient.user.email : 'غير متوفر'}
+                    <small class="d-block text-dark fw-bold">
+                        <i class="fas fa-phone me-1 text-primary"></i>${patient.user ? patient.user.phone : 'غير متوفر'}
                     </small>
+                    ${patient.emergency_contact ? `<small class="d-block text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-phone-alt me-1 text-danger"></i>طوارئ: ${patient.emergency_contact}</small>` : ''}
+                    ${patient.user && patient.user.email && !patient.user.email.includes('@hospital.local') ? `<small class="d-block text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-envelope me-1 text-secondary"></i>${patient.user.email}</small>` : ''}
                 </td>
                 <td>
-                    ${patient.age ? `<span class="badge bg-info">${patient.age} سنة</span>` : '<span class="text-muted">---</span>'}
+                    ${insBadge}
+                    ${insNumHtml}
                 </td>
                 <td>
-                    ${patient.blood_type ? `<span class="badge bg-danger">${patient.blood_type}</span>` : '<span class="text-muted">---</span>'}
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold text-dark small">
+                            <i class="fas fa-calendar-alt text-primary me-1"></i>${createdAtHtml[0] || '-'}
+                        </span>
+                        <div class="d-flex align-items-center gap-1 text-muted" style="font-size: 0.75rem;">
+                            <span><i class="fas fa-clock me-1"></i>${createdAtHtml.slice(1).join(' ')}</span>
+                            ${patient.created_at_diff ? `<span>• (${patient.created_at_diff})</span>` : ''}
+                        </div>
+                        <div class="mt-1">
+                            <span class="badge bg-light text-dark border" title="الموظف الذي أنشأ السجل">
+                                <i class="fas fa-user-edit text-primary me-1"></i>${creatorHtml}
+                            </span>
+                        </div>
+                    </div>
                 </td>
                 <td>
-                    <small>${patient.emergency_contact || '---'}</small>
+                    <span class="badge bg-primary rounded-pill px-2 py-1 mb-1">${patient.total_appointments || 0} زيارة</span>
+                    ${patient.last_visit_date ? `<small class="d-block text-success" style="font-size: 0.75rem;"><i class="fas fa-clock me-1"></i>${patient.last_visit_date}</small>` : '<small class="text-muted d-block" style="font-size: 0.75rem;">لا توجد زيارات</small>'}
                 </td>
-                <td>
-                    <span class="badge bg-primary">${patient.total_appointments || 0}</span>
-                </td>
-                <td>
-                    ${patient.last_visit_date ? `<small class="text-success">${patient.last_visit_date}</small>` : '<span class="text-muted">لا توجد زيارات</span>'}
-                </td>
-                <td>
-                    <a href="${patientsBaseUrl}/${patient.id}/edit" class="btn btn-warning btn-sm rounded-3 me-1" title="تعديل">
-                        <i class="fas fa-user-edit me-1"></i>تعديل
-                    </a>
-                    <button type="button" class="btn btn-danger btn-sm rounded-3 btn-delete-patient" data-patient-id="${patient.id}" title="حذف">
-                        <i class="fas fa-user-times me-1"></i>حذف
-                    </button>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                        <a href="${patientsBaseUrl}/${patient.id}/edit" class="btn btn-warning rounded-2 me-1" title="تعديل">
+                            <i class="fas fa-user-edit"></i>
+                        </a>
+                        <button type="button" class="btn btn-danger rounded-2 btn-delete-patient" data-patient-id="${patient.id}" title="حذف">
+                            <i class="fas fa-user-times"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             patientsTbody.appendChild(row);
