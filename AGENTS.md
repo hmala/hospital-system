@@ -61,6 +61,18 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 28: تنظيف جدول الحركات المالية وإلغاء زر التعديل اليدوي لحماية القيود المحاسبية Clean Financial Movements Table)
+
+### Done
+- **إلغاء زر وعمود التعديل اليدوي من جدول الحركات المالية (`resources/views/consultant-availability/financial-movements.blade.php`)**:
+  * حذف عمود «إجراءات» وزر «✏️ تعديل» من جدول الحركات المالية للعيادات الاستشارية.
+  * حذف مودال التعديل `#editRevenueModal` وكافة معالجات الـ JavaScript المرتبطة به.
+  * تحويل جدول الحركات المالية إلى سجل تدقيق وقراءة وطباعة محاسبي نقي (`Read-Only & Auditing Ledger`) لا يسمح بالتعديل العشوائي من داخل جدول الحركات.
+  * حصر كافة تسويات وتعديلات الحصص في شاشة **«إعدادات عمولات الأطباء»** عبر محرك إعادة الاحتساب الذكي `🔄`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 4 passed (14 assertions).
+  * اجتياز كامل لاختبارات [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+
 ## Session log (2026-10-11 — المرحلة 27: ميزة إعادة الاحتساب المالي الذكي والجماعي لكشفيات اليوم Batch Financial Recalculation)
 
 ### Done
