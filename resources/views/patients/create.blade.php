@@ -106,29 +106,51 @@
                                     @enderror
                                 </div>
 
-                                <!-- تاريخ الميلاد وحساب العمر -->
-                                <div class="col-md-4">
+                                <!-- تاريخ الميلاد (إدخال سريع: يوم / شهر / سنة) -->
+                                <div class="col-md-5">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label for="date_of_birth" class="form-label fw-bold small text-dark mb-0">
+                                        <label class="form-label fw-bold small text-dark mb-0">
                                             <i class="fas fa-calendar-alt text-primary me-1"></i> تاريخ الميلاد <span class="text-danger">*</span>
                                         </label>
                                         <span id="calculatedAgeBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0" style="display: none; font-size: 0.72rem;">
                                             -
                                         </span>
                                     </div>
-                                    <input type="date" 
-                                           class="form-control @error('date_of_birth') is-invalid @enderror" 
-                                           id="date_of_birth" 
-                                           name="date_of_birth" 
-                                           value="{{ old('date_of_birth') }}"
-                                           required>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <input type="text" 
+                                               class="form-control text-center font-monospace px-1" 
+                                               id="dob_day" 
+                                               placeholder="يوم" 
+                                               maxlength="2" 
+                                               style="max-width: 80px;"
+                                               inputmode="numeric"
+                                               title="اليوم (1 - 31)">
+                                        <span class="text-muted fw-bold">/</span>
+                                        <input type="text" 
+                                               class="form-control text-center font-monospace px-1" 
+                                               id="dob_month" 
+                                               placeholder="شهر" 
+                                               maxlength="2" 
+                                               style="max-width: 80px;"
+                                               inputmode="numeric"
+                                               title="الشهر (1 - 12)">
+                                        <span class="text-muted fw-bold">/</span>
+                                        <input type="text" 
+                                               class="form-control text-center font-monospace px-2" 
+                                               id="dob_year" 
+                                               placeholder="السنة (مثال: 1990)" 
+                                               maxlength="4" 
+                                               inputmode="numeric"
+                                               title="السنة (4 أرقام)">
+                                    </div>
+                                    <input type="hidden" name="date_of_birth" id="date_of_birth" value="{{ old('date_of_birth') }}" required>
                                     @error('date_of_birth')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
                                 </div>
 
                                 <!-- الجنس -->
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label for="gender" class="form-label fw-bold small text-dark mb-1">
                                         <i class="fas fa-venus-mars text-primary me-1"></i> الجنس <span class="text-danger">*</span>
                                     </label>
@@ -335,16 +357,18 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const dobDayInput = document.getElementById('dob_day');
+    const dobMonthInput = document.getElementById('dob_month');
+    const dobYearInput = document.getElementById('dob_year');
     const dateOfBirthInput = document.getElementById('date_of_birth');
     const calculatedAgeBadge = document.getElementById('calculatedAgeBadge');
-    const insuranceTypeHidden = document.getElementById('insurance_type');
-    const insuranceDetailsBox = document.getElementById('insurance_details_box');
-    const hiCategoryContainer = document.getElementById('hi_category_container');
-    const hiCategorySelect = document.getElementById('health_insurance_category_id');
-    const insuranceCardNoInput = document.getElementById('insurance_card_no');
-    const activeInsuranceBadge = document.getElementById('activeInsuranceBadge');
 
-    // 1. حساب العمر تلقائياً
+    function cleanDigits(val) {
+        if (!val) return '';
+        return val.toString().replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');
+    }
+
+    // 1. حساب العمر وتجميع التاريخ
     function calculateAge(birthDateStr) {
         if (!birthDateStr) return null;
         const birthDate = new Date(birthDateStr);
@@ -358,21 +382,91 @@ document.addEventListener('DOMContentLoaded', function() {
         return age >= 0 ? age : null;
     }
 
-    function updateAgeBadge() {
-        if (!dateOfBirthInput || !calculatedAgeBadge) return;
-        const age = calculateAge(dateOfBirthInput.value);
-        if (age !== null) {
-            calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
-            calculatedAgeBadge.style.display = 'inline-block';
-        } else {
-            calculatedAgeBadge.style.display = 'none';
+    function syncDateOfBirth() {
+        if (!dobYearInput || !dateOfBirthInput) return;
+        const y = cleanDigits(dobYearInput.value);
+        let m = cleanDigits(dobMonthInput.value);
+        let d = cleanDigits(dobDayInput.value);
+
+        if (y.length === 4) {
+            let yearNum = parseInt(y, 10);
+            let currentYear = new Date().getFullYear();
+            if (yearNum >= 1900 && yearNum <= currentYear) {
+                let monthNum = m ? parseInt(m, 10) : 1;
+                let dayNum = d ? parseInt(d, 10) : 1;
+                if (monthNum < 1 || monthNum > 12) monthNum = 1;
+                if (dayNum < 1 || dayNum > 31) dayNum = 1;
+
+                const formatted = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                dateOfBirthInput.value = formatted;
+
+                const age = calculateAge(formatted);
+                if (age !== null && age <= 130) {
+                    calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
+                    calculatedAgeBadge.style.display = 'inline-block';
+                } else {
+                    calculatedAgeBadge.style.display = 'none';
+                }
+                return;
+            }
         }
+        dateOfBirthInput.value = '';
+        calculatedAgeBadge.style.display = 'none';
     }
 
-    if (dateOfBirthInput) {
-        dateOfBirthInput.addEventListener('change', updateAgeBadge);
-        dateOfBirthInput.addEventListener('input', updateAgeBadge);
-        updateAgeBadge();
+    if (dobDayInput && dobMonthInput && dobYearInput) {
+        dobDayInput.addEventListener('input', function() {
+            this.value = cleanDigits(this.value);
+            if (this.value.length >= 2) {
+                dobMonthInput.focus();
+                dobMonthInput.select();
+            }
+            syncDateOfBirth();
+        });
+
+        dobMonthInput.addEventListener('input', function() {
+            this.value = cleanDigits(this.value);
+            if (this.value.length >= 2) {
+                dobYearInput.focus();
+                dobYearInput.select();
+            }
+            syncDateOfBirth();
+        });
+
+        dobYearInput.addEventListener('input', function() {
+            this.value = cleanDigits(this.value);
+            syncDateOfBirth();
+        });
+
+        // تنقل سريع بـ Backspace
+        dobMonthInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value) {
+                dobDayInput.focus();
+            }
+        });
+        dobYearInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value) {
+                dobMonthInput.focus();
+            }
+        });
+
+        // تعبئة تلقائية إذا كانت القيمة مخزنة مسبقاً
+        if (dateOfBirthInput && dateOfBirthInput.value) {
+            const parts = dateOfBirthInput.value.split('-');
+            if (parts.length === 3) {
+                dobYearInput.value = parts[0];
+                dobMonthInput.value = parts[1];
+                dobDayInput.value = parts[2];
+                syncDateOfBirth();
+            }
+        }
+
+        const patientForm = document.getElementById('patientCreateForm');
+        if (patientForm) {
+            patientForm.addEventListener('submit', function() {
+                syncDateOfBirth();
+            });
+        }
     }
 
     // 2. إدارة بطاقات اختيار الضمان التفاعلية
