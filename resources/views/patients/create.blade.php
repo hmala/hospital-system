@@ -28,9 +28,9 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row justify-content-center">
         <!-- الاستمارة الرئيسية -->
-        <div class="col-lg-8">
+        <div class="col-xl-9 col-lg-10 col-12">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden patient-form-card">
                 <div class="card-header bg-white border-bottom border-light-subtle py-3 px-4">
                     <div class="d-flex align-items-center justify-content-between">
@@ -213,7 +213,7 @@
                                                required
                                                inputmode="numeric"
                                                pattern="[0-9]*"
-                                               oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, ''); updatePreviewCard();"
+                                               oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');"
                                                placeholder="مثال: 199012345678">
                                     </div>
                                     <div class="form-text text-muted small mt-1">
@@ -368,74 +368,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- اللوحة الجانبية: معاينة البطاقة الذكية للمريض + الإرشادات -->
-        <div class="col-lg-4">
-            <!-- البطاقة الطبية الرقمية المباشرة (Live Digital ID Card) -->
-            <div class="digital-patient-card shadow-lg rounded-4 p-4 mb-4 text-white position-relative overflow-hidden">
-                <div class="card-chip-badge mb-3 d-flex justify-content-between align-items-center">
-                    <div class="chip-graphic">
-                        <i class="fas fa-microchip fs-3 text-warning"></i>
-                    </div>
-                    <span class="card-hospital-brand small fw-bold tracking-wide">
-                        <i class="fas fa-hospital me-1"></i> نظام المستشفى الأهلي
-                    </span>
-                </div>
-
-                <div class="patient-card-body">
-                    <span class="text-uppercase text-white-50 small d-block mb-1 font-monospace" style="font-size: 0.7rem; letter-spacing: 1px;">بطاقة مريض رقمية • PATIENT ID</span>
-                    <h5 class="fw-bold mb-2 text-truncate" id="preview_name" style="min-height: 28px;">
-                        اسم المريض
-                    </h5>
-
-                    <div class="row g-2 small mt-2 pt-2 border-top border-white-subtle">
-                        <div class="col-6">
-                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">العمر والجنس:</span>
-                            <strong id="preview_age_gender" class="text-white">-</strong>
-                        </div>
-                        <div class="col-6">
-                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">الهاتف:</span>
-                            <strong id="preview_phone" class="font-monospace text-white">-</strong>
-                        </div>
-                        <div class="col-6 mt-2">
-                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">رقم البطاقة الموحدة:</span>
-                            <strong id="preview_national_id" class="font-monospace text-warning">-</strong>
-                        </div>
-                        <div class="col-6 mt-2">
-                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">جهة الضمان:</span>
-                            <span class="badge bg-white text-primary fw-bold" id="preview_insurance" style="font-size: 0.7rem;">دفع نقدي (كاش)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card-watermark-icon">
-                    <i class="fas fa-heartbeat"></i>
-                </div>
-            </div>
-
-            <!-- بطاقة التوجيهات السريعة -->
-            <div class="card border-0 shadow-sm rounded-4 bg-white">
-                <div class="card-body p-3">
-                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2 small">
-                        <i class="fas fa-lightbulb text-warning"></i> نصائح لتسجيل فائق السرعة
-                    </h6>
-                    <div class="d-flex flex-column gap-2 small text-muted">
-                        <div class="d-flex align-items-start gap-2">
-                            <i class="fas fa-check text-success mt-1"></i>
-                            <span><strong>البطاقة الموحدة:</strong> تُنظف الأرقام تلقائياً لمنع أي أخطاء إملائية.</span>
-                        </div>
-                        <div class="d-flex align-items-start gap-2">
-                            <i class="fas fa-check text-success mt-1"></i>
-                            <span><strong>تاريخ الميلاد:</strong> يحسب العمر لحظياً دون الحاجة لحسابه يدوياً.</span>
-                        </div>
-                        <div class="d-flex align-items-start gap-2">
-                            <i class="fas fa-check text-success mt-1"></i>
-                            <span><strong>التنقل بالـ Tab:</strong> انتقل بين الحقول بسرعة بواسطة زر Tab واضغط Enter للحفظ.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 @endsection
@@ -443,20 +375,9 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.getElementById('name');
-    const phoneInput = document.getElementById('phone');
     const dateOfBirthInput = document.getElementById('date_of_birth');
-    const genderSelect = document.getElementById('gender');
-    const nationalIdInput = document.getElementById('national_id');
-    const insuranceTypeHidden = document.getElementById('insurance_type');
     const calculatedAgeBadge = document.getElementById('calculatedAgeBadge');
-
-    const previewName = document.getElementById('preview_name');
-    const previewAgeGender = document.getElementById('preview_age_gender');
-    const previewPhone = document.getElementById('preview_phone');
-    const previewNationalId = document.getElementById('preview_national_id');
-    const previewInsurance = document.getElementById('preview_insurance');
-
+    const insuranceTypeHidden = document.getElementById('insurance_type');
     const insuranceDetailsBox = document.getElementById('insurance_details_box');
     const hiCategoryContainer = document.getElementById('hi_category_container');
     const hiCategorySelect = document.getElementById('health_insurance_category_id');
@@ -477,50 +398,26 @@ document.addEventListener('DOMContentLoaded', function() {
         return age >= 0 ? age : null;
     }
 
-    // 2. تحديث البطاقة الرقمية المباشرة (Live Preview Card)
-    window.updatePreviewCard = function() {
-        const nameVal = (nameInput.value || '').trim();
-        previewName.textContent = nameVal ? nameVal : 'اسم المريض';
-
-        const phoneVal = (phoneInput.value || '').trim();
-        previewPhone.textContent = phoneVal ? phoneVal : '-';
-
-        const nidVal = (nationalIdInput.value || '').trim();
-        previewNationalId.textContent = nidVal ? nidVal : '-';
-
+    function updateAgeBadge() {
+        if (!dateOfBirthInput || !calculatedAgeBadge) return;
         const age = calculateAge(dateOfBirthInput.value);
-        const genderText = genderSelect.value === 'male' ? 'ذكر' : (genderSelect.value === 'female' ? 'أنثى' : '');
-
         if (age !== null) {
             calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
             calculatedAgeBadge.style.display = 'inline-block';
-            previewAgeGender.textContent = age + ' سنة' + (genderText ? ' • ' + genderText : '');
         } else {
             calculatedAgeBadge.style.display = 'none';
-            previewAgeGender.textContent = genderText ? genderText : '-';
         }
+    }
 
-        const insType = insuranceTypeHidden.value;
-        if (insType === 'hi') {
-            previewInsurance.textContent = 'ضمان صحي وطني (HI)';
-            previewInsurance.className = 'badge bg-info text-white fw-bold';
-        } else if (insType === 'moi') {
-            previewInsurance.textContent = 'قوى الأمن (MOI)';
-            previewInsurance.className = 'badge bg-primary text-white fw-bold';
-        } else {
-            previewInsurance.textContent = 'دفع نقدي (كاش)';
-            previewInsurance.className = 'badge bg-white text-success fw-bold';
-        }
-    };
+    if (dateOfBirthInput) {
+        dateOfBirthInput.addEventListener('change', updateAgeBadge);
+        dateOfBirthInput.addEventListener('input', updateAgeBadge);
+        updateAgeBadge();
+    }
 
-    nameInput.addEventListener('input', updatePreviewCard);
-    phoneInput.addEventListener('input', updatePreviewCard);
-    dateOfBirthInput.addEventListener('change', updatePreviewCard);
-    genderSelect.addEventListener('change', updatePreviewCard);
-    nationalIdInput.addEventListener('input', updatePreviewCard);
-
-    // 3. إدارة بطاقات اختيار الضمان التفاعلية
+    // 2. إدارة بطاقات اختيار الضمان التفاعلية
     function setInsuranceType(val) {
+        if (!insuranceTypeHidden) return;
         insuranceTypeHidden.value = val;
 
         // تحديث تصميم البلاطات (Tiles)
@@ -536,28 +433,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (val !== 'none') {
-            insuranceDetailsBox.style.display = 'block';
+            if (insuranceDetailsBox) insuranceDetailsBox.style.display = 'block';
             if (insuranceCardNoInput) insuranceCardNoInput.setAttribute('required', 'required');
 
             if (val === 'hi') {
                 if (hiCategoryContainer) hiCategoryContainer.style.display = 'block';
                 if (hiCategorySelect) hiCategorySelect.setAttribute('required', 'required');
-                activeInsuranceBadge.textContent = 'هيئة الضمان الصحي الوطني';
-                activeInsuranceBadge.className = 'badge bg-info text-white rounded-pill px-3 py-1 small';
+                if (activeInsuranceBadge) {
+                    activeInsuranceBadge.textContent = 'هيئة الضمان الصحي الوطني';
+                    activeInsuranceBadge.className = 'badge bg-info text-white rounded-pill px-3 py-1 small';
+                }
             } else {
                 if (hiCategoryContainer) hiCategoryContainer.style.display = 'none';
                 if (hiCategorySelect) hiCategorySelect.removeAttribute('required');
-                activeInsuranceBadge.textContent = 'ضمان وزارة الداخلية (MOI)';
-                activeInsuranceBadge.className = 'badge bg-primary text-white rounded-pill px-3 py-1 small';
+                if (activeInsuranceBadge) {
+                    activeInsuranceBadge.textContent = 'ضمان وزارة الداخلية (MOI)';
+                    activeInsuranceBadge.className = 'badge bg-primary text-white rounded-pill px-3 py-1 small';
+                }
             }
         } else {
-            insuranceDetailsBox.style.display = 'none';
+            if (insuranceDetailsBox) insuranceDetailsBox.style.display = 'none';
             if (insuranceCardNoInput) insuranceCardNoInput.removeAttribute('required');
             if (hiCategoryContainer) hiCategoryContainer.style.display = 'none';
             if (hiCategorySelect) hiCategorySelect.removeAttribute('required');
         }
-
-        updatePreviewCard();
     }
 
     document.querySelectorAll('.insurance-card-tile').forEach(tile => {
@@ -570,15 +469,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // تهيئة أولية
-    setInsuranceType(insuranceTypeHidden.value || 'none');
-    updatePreviewCard();
+    if (insuranceTypeHidden) {
+        setInsuranceType(insuranceTypeHidden.value || 'none');
+    }
 });
 </script>
 @endpush
 
 @section('styles')
 <style>
-/* تجميل وتنسيق الواجهة المتقدمة */
+/* تجميل وتنسيق الواجهة */
 .header-icon-box {
     width: 52px;
     height: 52px;
@@ -681,28 +581,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .text-xs {
     font-size: 0.72rem;
     line-height: 1.2;
-}
-
-/* البطاقة الرقمية للمريض في الجانب (Digital ID Card) */
-.digital-patient-card {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #0369a1 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    min-height: 220px;
-    box-shadow: 0 15px 35px rgba(30, 58, 138, 0.25) !important;
-    transition: transform 0.3s ease;
-}
-
-.digital-patient-card:hover {
-    transform: translateY(-3px);
-}
-
-.card-watermark-icon {
-    position: absolute;
-    bottom: -20px;
-    left: -20px;
-    font-size: 8rem;
-    color: rgba(255, 255, 255, 0.05);
-    pointer-events: none;
 }
 
 .btn-save-patient {
