@@ -421,7 +421,7 @@
                             <p class="welcome-subtitle mb-0">
                                 <i class="fas fa-stethoscope me-1 opacity-75"></i> {{ $doctorStats['doctor']->specialization ?? 'استشاري' }}
                                 <span class="mx-2">•</span>
-                                <i class="fas fa-calendar-alt me-1 opacity-75"></i> تقرير الحسابات للشهر: <strong>{{ $doctorStats['monthName'] }}</strong>
+                                <i class="fas fa-calendar-alt me-1 opacity-75"></i> نشاط وإحصائيات العيادة للشهر: <strong>{{ $doctorStats['monthName'] }}</strong>
                             </p>
                         </div>
                     </div>
@@ -450,98 +450,98 @@
         </div>
     </div>
 
-    <!-- بطاقات المؤشرات المالية والسريرية الشهرية (KPI Cards) -->
+    <!-- بطاقات المؤشرات والنشاط السريري للشهر (KPI Cards) -->
     <div class="row g-3 mb-4">
-        <!-- 1. مستحقات الشهر المكتسبة -->
+        <!-- 1. إجمالي مراجعي الشهر -->
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
             <div class="card stat-card-premium h-100 border-start border-primary border-4 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-primary fw-bold mb-1">
-                            <i class="fas fa-coins me-1"></i> مستحقات الشهر المكتسبة
+                            <i class="fas fa-users me-1"></i> مراجعو العيادة للشهر
                         </h6>
-                        <h3 class="stat-card-value text-primary mb-1">{{ number_format($doctorStats['monthlyEarned'], 0) }} <small class="fs-6 fw-normal text-muted">د.ع</small></h3>
+                        <h3 class="stat-card-value text-primary mb-1">{{ $doctorStats['monthlyVisitsCount'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
                         <span class="stat-card-sub text-muted">
-                            من كشفيات وعمليات شهر {{ $doctorStats['monthName'] }}
+                            كشفيات عيادة شهر {{ $doctorStats['monthName'] }}
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%); color: #fff;">
-                        <i class="fas fa-hand-holding-usd"></i>
+                        <i class="fas fa-user-injured"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 2. المسحوبات المصروفة للشهر -->
+        <!-- 2. المراجعات المجانية للشهر -->
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
             <div class="card stat-card-premium h-100 border-start border-success border-4 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-success fw-bold mb-1">
-                            <i class="fas fa-money-bill-wave me-1"></i> المصروف والمستلم فعلياً
+                            <i class="fas fa-redo-alt me-1"></i> المراجعات المجانية
                         </h6>
-                        <h3 class="stat-card-value text-success mb-1">{{ number_format($doctorStats['monthlyPaid'], 0) }} <small class="fs-6 fw-normal text-muted">د.ع</small></h3>
+                        <h3 class="stat-card-value text-success mb-1">{{ $doctorStats['monthlyRechecksCount'] }} <small class="fs-6 fw-normal text-muted">مراجعة</small></h3>
                         <span class="stat-card-sub text-success fw-bold">
-                            <i class="fas fa-check-circle me-1"></i> تم صرفها من الصندوق
+                            <i class="fas fa-check-circle me-1"></i> مراجعات واستشارات مجانية
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #dcfce7 0%, #10b981 100%); color: #fff;">
-                        <i class="fas fa-receipt"></i>
+                        <i class="fas fa-history"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. الرصيد المتبقي بذمة المستشفى -->
+        <!-- 3. العمليات الجراحية للشهر -->
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
             <div class="card stat-card-premium h-100 border-start border-warning border-4 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-warning fw-bold mb-1">
-                            <i class="fas fa-hourglass-half me-1"></i> المتبقي بذمة المستشفى
+                            <i class="fas fa-procedures me-1"></i> العمليات الجراحية
                         </h6>
-                        <h3 class="stat-card-value text-dark mb-1">{{ number_format($doctorStats['monthlyPending'], 0) }} <small class="fs-6 fw-normal text-muted">د.ع</small></h3>
+                        <h3 class="stat-card-value text-dark mb-1">{{ $doctorStats['monthlySurgeriesCount'] }} <small class="fs-6 fw-normal text-muted">عملية</small></h3>
                         <span class="stat-card-sub text-warning fw-bold">
-                            قيد التسوية والمحاسبة
+                            عمليات مجدولة ومنجزة للشهر
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%); color: #fff;">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-syringe"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. إجمالي مرضى الشهر -->
+        <!-- 4. طابور مراجعي اليوم -->
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
             <div class="card stat-card-premium h-100 border-start border-info border-4 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-info fw-bold mb-1">
-                            <i class="fas fa-users me-1"></i> مراجعو العيادة للشهر
+                            <i class="fas fa-user-clock me-1"></i> طابور مراجعي اليوم
                         </h6>
-                        <h3 class="stat-card-value text-info mb-1">{{ $doctorStats['monthlyVisitsCount'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
+                        <h3 class="stat-card-value text-info mb-1">{{ $doctorStats['todayTotal'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
                         <span class="stat-card-sub text-muted">
-                            {{ $doctorStats['monthlyRechecksCount'] }} مراجعة مجانية • {{ $doctorStats['monthlySurgeriesCount'] }} عملية
+                            مكتمل: {{ $doctorStats['todayCompleted'] }} • بالانتظار: {{ $doctorStats['todayPending'] }}
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #cffafe 0%, #06b6d4 100%); color: #fff;">
-                        <i class="fas fa-user-injured"></i>
+                        <i class="fas fa-clipboard-list"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- قسم طابور اليوم الحي + جدول كشف الحساب الشهري -->
+    <!-- قسم طابور اليوم الحي للعيادة (عرض كامل) -->
     <div class="row g-4 mb-4">
         <!-- طابور اليوم للعيادة -->
-        <div class="col-xl-6">
-            <div class="card glass-card-dashboard h-100 shadow-sm">
+        <div class="col-12">
+            <div class="card glass-card-dashboard shadow-sm">
                 <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h5 class="mb-0 text-primary">
                         <i class="fas fa-list-ol text-primary"></i>
-                        طابور مراجعي اليوم
+                        طابور مراجعي اليوم بالعيادة
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">{{ $doctorStats['todayTotal'] }} مراجع</span>
                     </h5>
                     <div class="d-flex align-items-center gap-2">
@@ -551,8 +551,8 @@
                         <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
                             <i class="fas fa-hourglass-start me-1"></i> بالانتظار: {{ $doctorStats['todayPending'] }}
                         </span>
-                        <a href="{{ route('visits.index') }}" class="btn btn-xs btn-outline-primary fw-bold" style="font-size: 0.8rem; border-radius: 8px;">
-                            <i class="fas fa-external-link-alt"></i> شاشة الطابور
+                        <a href="{{ route('visits.index') }}" class="btn btn-sm btn-primary fw-bold px-3" style="border-radius: 8px;">
+                            <i class="fas fa-stethoscope me-1"></i> الانتقال لمحطة الكشف والعيادة
                         </a>
                     </div>
                 </div>
@@ -571,7 +571,7 @@
                                         <th class="text-center" style="width: 50px;">#</th>
                                         <th>اسم المريض</th>
                                         <th>النوع / الكشفية</th>
-                                        <th>الحالة المالية</th>
+                                        <th>حالة الحجز</th>
                                         <th class="text-center">الإجراء</th>
                                     </tr>
                                 </thead>
@@ -598,8 +598,8 @@
                                             </td>
                                             <td>
                                                 @if($appt->is_free_recheck)
-                                                    <span class="badge bg-success-subtle text-success">
-                                                        <i class="fas fa-gift me-1"></i> مجانية
+                                                    <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                                        <i class="fas fa-gift me-1"></i> مراجعة مجانية
                                                     </span>
                                                 @elseif($appt->payment && $appt->payment->paid_at)
                                                     @if($appt->payment->payment_method === 'insurance' || $appt->payment->insurance_company_id)
@@ -608,12 +608,12 @@
                                                         </span>
                                                     @else
                                                         <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                            <i class="fas fa-check-circle me-1"></i> مسدد ({{ number_format($appt->payment->amount, 0) }})
+                                                            <i class="fas fa-check-circle me-1"></i> مسدد
                                                         </span>
                                                     @endif
                                                 @else
-                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                                        <i class="fas fa-exclamation-circle me-1"></i> بانتظار الصندوق
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار الصندوق
                                                     </span>
                                                 @endif
                                             </td>
@@ -633,84 +633,6 @@
                                 </tbody>
                             </table>
                         </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        <!-- كشف حساب ومستحقات الشهر التفصيلي -->
-        <div class="col-xl-6">
-            <div class="card glass-card-dashboard h-100 shadow-sm">
-                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <h5 class="mb-0 text-success">
-                        <i class="fas fa-file-invoice-dollar text-success"></i>
-                        سجل مستحقات شهر {{ $doctorStats['monthName'] }}
-                    </h5>
-                    <span class="badge bg-success text-white rounded-pill px-3 py-2 fw-bold">
-                        إجمالي الشهر: {{ number_format($doctorStats['monthlyEarned'], 0) }} د.ع
-                    </span>
-                </div>
-                <div class="card-body p-0">
-                    @if($doctorStats['monthlyDuesList']->isEmpty())
-                        <div class="text-center py-5 text-muted">
-                            <i class="fas fa-receipt fa-3x mb-3 text-secondary opacity-50"></i>
-                            <h6 class="fw-bold">لا توجد مستحقات مسجلة لهذا الشهر حتى الآن</h6>
-                            <p class="small text-muted mb-0">يتم احتساب نسبة الطبيب آلياً عند تسديد كل كشفية أو إجراء جراحي.</p>
-                        </div>
-                    @else
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>التاريخ</th>
-                                        <th>المريض / الوصل</th>
-                                        <th>المبلغ المستحق</th>
-                                        <th>حالة الصرف</th>
-                                        <th>تاريخ الصرف</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($doctorStats['monthlyDuesList'] as $due)
-                                        <tr>
-                                            <td>
-                                                <div class="fw-bold text-dark">{{ $due->created_at->format('Y-m-d') }}</div>
-                                                <small class="text-muted">{{ $due->created_at->format('h:i A') }}</small>
-                                            </td>
-                                            <td>
-                                                <div class="fw-bold text-dark">{{ $due->payment->patient->name ?? 'مريض كشفية' }}</div>
-                                                <small class="text-muted">وصل #{{ $due->payment_id ?? $due->id }}</small>
-                                            </td>
-                                            <td>
-                                                <span class="fw-bold text-primary">{{ number_format($due->amount, 0) }} د.ع</span>
-                                            </td>
-                                            <td>
-                                                @if($due->status === 'paid')
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                        <i class="fas fa-check-circle me-1"></i> تم الصرف
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                                        <i class="fas fa-clock me-1"></i> قيد الانتظار
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($due->paid_at)
-                                                    <small class="text-success fw-bold">{{ $due->paid_at->format('Y-m-d') }}</small>
-                                                @else
-                                                    <small class="text-muted">-</small>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        @if($doctorStats['monthlyDuesList']->hasPages())
-                            <div class="p-3 border-top d-flex justify-content-center">
-                                {{ $doctorStats['monthlyDuesList']->appends(['month' => $doctorStats['selectedMonth']])->links() }}
-                            </div>
-                        @endif
                     @endif
                 </div>
             </div>
