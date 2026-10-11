@@ -116,32 +116,34 @@
                                             -
                                         </span>
                                     </div>
-                                    <div class="d-flex gap-1 align-items-center">
-                                        <input type="text" 
-                                               class="form-control text-center font-monospace px-1" 
-                                               id="dob_day" 
-                                               placeholder="يوم" 
-                                               maxlength="2" 
-                                               style="max-width: 80px;"
-                                               inputmode="numeric"
-                                               title="اليوم (1 - 31)">
-                                        <span class="text-muted fw-bold">/</span>
-                                        <input type="text" 
-                                               class="form-control text-center font-monospace px-1" 
-                                               id="dob_month" 
-                                               placeholder="شهر" 
-                                               maxlength="2" 
-                                               style="max-width: 80px;"
-                                               inputmode="numeric"
-                                               title="الشهر (1 - 12)">
-                                        <span class="text-muted fw-bold">/</span>
-                                        <input type="text" 
-                                               class="form-control text-center font-monospace px-2" 
-                                               id="dob_year" 
-                                               placeholder="السنة (مثال: 1990)" 
-                                               maxlength="4" 
-                                               inputmode="numeric"
-                                               title="السنة (4 أرقام)">
+                                    <div class="row g-1">
+                                        <!-- اليوم -->
+                                        <div class="col-4">
+                                            <select class="form-select text-center px-1" id="dob_day" title="اليوم">
+                                                <option value="">اليوم</option>
+                                                @for($d = 1; $d <= 31; $d++)
+                                                    <option value="{{ sprintf('%02d', $d) }}">{{ $d }}</option>
+                                                @endfor
+                                            </select>
+                                        </div>
+                                        <!-- الشهر -->
+                                        <div class="col-4">
+                                            <select class="form-select text-center px-1" id="dob_month" title="الشهر">
+                                                <option value="">الشهر</option>
+                                                @for($m = 1; $m <= 12; $m++)
+                                                    <option value="{{ sprintf('%02d', $m) }}">{{ $m }}</option>
+                                                @endfor
+                                            </select>
+                                        </div>
+                                        <!-- السنة -->
+                                        <div class="col-4">
+                                            <select class="form-select text-center px-1" id="dob_year" title="السنة">
+                                                <option value="">السنة</option>
+                                                @for($y = (int)date('Y'); $y >= 1920; $y--)
+                                                    <option value="{{ $y }}">{{ $y }}</option>
+                                                @endfor
+                                            </select>
+                                        </div>
                                     </div>
                                     <input type="hidden" name="date_of_birth" id="date_of_birth" value="{{ old('date_of_birth') }}" required>
                                     @error('date_of_birth')
@@ -357,18 +359,13 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const dobDayInput = document.getElementById('dob_day');
-    const dobMonthInput = document.getElementById('dob_month');
-    const dobYearInput = document.getElementById('dob_year');
+    const dobDaySelect = document.getElementById('dob_day');
+    const dobMonthSelect = document.getElementById('dob_month');
+    const dobYearSelect = document.getElementById('dob_year');
     const dateOfBirthInput = document.getElementById('date_of_birth');
     const calculatedAgeBadge = document.getElementById('calculatedAgeBadge');
 
-    function cleanDigits(val) {
-        if (!val) return '';
-        return val.toString().replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');
-    }
-
-    // 1. حساب العمر وتجميع التاريخ
+    // 1. حساب العمر وتجميع التاريخ من القوائم المنسدلة
     function calculateAge(birthDateStr) {
         if (!birthDateStr) return null;
         const birthDate = new Date(birthDateStr);
@@ -382,90 +379,43 @@ document.addEventListener('DOMContentLoaded', function() {
         return age >= 0 ? age : null;
     }
 
-    function syncDateOfBirth() {
-        if (!dobYearInput || !dateOfBirthInput) return;
-        const y = cleanDigits(dobYearInput.value);
-        let m = cleanDigits(dobMonthInput.value);
-        let d = cleanDigits(dobDayInput.value);
+    function syncDropdownDateOfBirth() {
+        if (!dobYearSelect || !dateOfBirthInput) return;
+        const y = dobYearSelect.value;
+        const m = dobMonthSelect ? (dobMonthSelect.value || '01') : '01';
+        const d = dobDaySelect ? (dobDaySelect.value || '01') : '01';
 
-        if (y.length === 4) {
-            let yearNum = parseInt(y, 10);
-            let currentYear = new Date().getFullYear();
-            if (yearNum >= 1900 && yearNum <= currentYear) {
-                let monthNum = m ? parseInt(m, 10) : 1;
-                let dayNum = d ? parseInt(d, 10) : 1;
-                if (monthNum < 1 || monthNum > 12) monthNum = 1;
-                if (dayNum < 1 || dayNum > 31) dayNum = 1;
+        if (y) {
+            const formatted = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            dateOfBirthInput.value = formatted;
 
-                const formatted = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                dateOfBirthInput.value = formatted;
-
-                const age = calculateAge(formatted);
-                if (age !== null && age <= 130) {
-                    calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
-                    calculatedAgeBadge.style.display = 'inline-block';
-                } else {
-                    calculatedAgeBadge.style.display = 'none';
-                }
-                return;
+            const age = calculateAge(formatted);
+            if (age !== null && age <= 130) {
+                calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
+                calculatedAgeBadge.style.display = 'inline-block';
+            } else {
+                calculatedAgeBadge.style.display = 'none';
             }
+        } else {
+            dateOfBirthInput.value = '';
+            calculatedAgeBadge.style.display = 'none';
         }
-        dateOfBirthInput.value = '';
-        calculatedAgeBadge.style.display = 'none';
     }
 
-    if (dobDayInput && dobMonthInput && dobYearInput) {
-        dobDayInput.addEventListener('input', function() {
-            this.value = cleanDigits(this.value);
-            if (this.value.length >= 2) {
-                dobMonthInput.focus();
-                dobMonthInput.select();
-            }
-            syncDateOfBirth();
-        });
+    if (dobDaySelect && dobMonthSelect && dobYearSelect) {
+        dobDaySelect.addEventListener('change', syncDropdownDateOfBirth);
+        dobMonthSelect.addEventListener('change', syncDropdownDateOfBirth);
+        dobYearSelect.addEventListener('change', syncDropdownDateOfBirth);
 
-        dobMonthInput.addEventListener('input', function() {
-            this.value = cleanDigits(this.value);
-            if (this.value.length >= 2) {
-                dobYearInput.focus();
-                dobYearInput.select();
-            }
-            syncDateOfBirth();
-        });
-
-        dobYearInput.addEventListener('input', function() {
-            this.value = cleanDigits(this.value);
-            syncDateOfBirth();
-        });
-
-        // تنقل سريع بـ Backspace
-        dobMonthInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Backspace' && !this.value) {
-                dobDayInput.focus();
-            }
-        });
-        dobYearInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Backspace' && !this.value) {
-                dobMonthInput.focus();
-            }
-        });
-
-        // تعبئة تلقائية إذا كانت القيمة مخزنة مسبقاً
+        // تعبئة أولية إذا كانت القيمة مخزنة
         if (dateOfBirthInput && dateOfBirthInput.value) {
             const parts = dateOfBirthInput.value.split('-');
             if (parts.length === 3) {
-                dobYearInput.value = parts[0];
-                dobMonthInput.value = parts[1];
-                dobDayInput.value = parts[2];
-                syncDateOfBirth();
+                dobYearSelect.value = parts[0];
+                dobMonthSelect.value = String(parseInt(parts[1], 10)).padStart(2, '0');
+                dobDaySelect.value = String(parseInt(parts[2], 10)).padStart(2, '0');
+                syncDropdownDateOfBirth();
             }
-        }
-
-        const patientForm = document.getElementById('patientCreateForm');
-        if (patientForm) {
-            patientForm.addEventListener('submit', function() {
-                syncDateOfBirth();
-            });
         }
     }
 
