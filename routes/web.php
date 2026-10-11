@@ -106,6 +106,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.search-follow-ups');
     Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
         ->name('consultant-availability.financial-movements');
+    Route::post('/consultant-availability/financial-movements/{revenue}/update-shares', [ConsultantAvailabilityController::class, 'updateRevenueShares'])
+        ->name('consultant-availability.financial-movements.update-shares');
     Route::get('/consultant-availability/financial-movements/export', [ConsultantAvailabilityController::class, 'exportFinancialMovements'])
         ->name('consultant-availability.financial-movements.export');
     Route::get('/consultant-availability/doctor-accounts', [ConsultantAvailabilityController::class, 'doctorAccounts'])

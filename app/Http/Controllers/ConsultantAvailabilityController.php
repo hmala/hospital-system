@@ -10,6 +10,7 @@ use App\Models\DoctorDue;
 use App\Models\DoctorFinancialAccount;
 use App\Models\FinancialTransaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ConsultantAvailabilityController extends Controller
@@ -584,6 +585,107 @@ class ConsultantAvailabilityController extends Controller
             new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus),
             'financial_movements_' . now()->format('Ymd_His') . '.xlsx'
         );
+    }
+
+    /**
+     * تعديل يدوي لحصة الطبيب والمستشفى لقيد مالي محدد من قبل الإدارة
+     */
+    public function updateRevenueShares(Request $request, ConsultationRevenue $revenue)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage doctor commissions'))) {
+            abort(403, 'غير مصرح لك بتعديل الحصص المالية للكشفيات.');
+        }
+
+        $total = abs((float) $revenue->total_amount);
+
+        $data = $request->validate([
+            'doctor_share' => 'required|numeric|min:0|max:' . $total,
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $oldDoctorShare = (float) $revenue->doctor_share;
+        $oldHospitalShare = (float) $revenue->hospital_share;
+        $newDoctorShare = round((float) $data['doctor_share'], 2);
+        $newHospitalShare = round($total - $newDoctorShare, 2);
+        $newPercentage = $total > 0 ? round(($newDoctorShare / $total) * 100, 2) : 0;
+
+        DB::transaction(function () use ($revenue, $newDoctorShare, $newHospitalShare, $newPercentage, $data, $oldDoctorShare, $oldHospitalShare) {
+            // 1. تحديث سجل إيرادات الاستشارة
+            $notes = $revenue->notes ?? '';
+            $reasonNote = !empty($data['reason']) ? " [تعديل إداري: {$data['reason']}]" : " [تعديل إداري للحصص بواسطة " . auth()->user()->name . "]";
+            
+            $revenue->update([
+                'doctor_share' => $newDoctorShare,
+                'hospital_share' => $newHospitalShare,
+                'doctor_percentage' => $newPercentage,
+                'notes' => trim($notes . $reasonNote),
+            ]);
+
+            // 2. تحديث سجل مستحقات الطبيب
+            if ($revenue->doctor_id && $revenue->payment_id) {
+                if ($newDoctorShare > 0) {
+                    DoctorDue::updateOrCreate(
+                        [
+                            'doctor_id' => $revenue->doctor_id,
+                            'payment_id' => $revenue->payment_id,
+                        ],
+                        [
+                            'amount' => $newDoctorShare,
+                            'status' => 'pending',
+                            'notes' => 'مستحقات الطبيب بعد تعديل يدوي للقيد ' . ($revenue->receipt_number ?? $revenue->id),
+                        ]
+                    );
+                } else {
+                    DoctorDue::where('doctor_id', $revenue->doctor_id)
+                        ->where('payment_id', $revenue->payment_id)
+                        ->where('status', 'pending')
+                        ->delete();
+                }
+
+                // 3. إعادة مزامنة حساب الطبيب المالي
+                $account = DoctorFinancialAccount::firstOrCreate(
+                    ['doctor_id' => $revenue->doctor_id],
+                    ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+                );
+
+                $totalEarned = (float) DoctorDue::where('doctor_id', $revenue->doctor_id)->sum('amount');
+                $totalPaid = (float) ($account->total_paid ?? 0);
+                $account->total_earned = $totalEarned;
+                $account->balance = round($totalEarned - $totalPaid, 2);
+                $account->save();
+            }
+
+            // 4. تسجيل الرقابة في سجل الأنشطة الإدارية
+            \App\Services\UserActivityLogger::log(
+                action: 'update_financial_shares',
+                category: 'treasury',
+                description: "تعديل يدوي لحصة الطبيب بالقيد #{$revenue->receipt_number} من " . number_format($oldDoctorShare, 0) . " د.ع إلى " . number_format($newDoctorShare, 0) . " د.ع",
+                subject: $revenue,
+                isSensitive: true,
+                properties: [
+                    'old_doctor_share' => $oldDoctorShare,
+                    'new_doctor_share' => $newDoctorShare,
+                    'old_hospital_share' => $oldHospitalShare,
+                    'new_hospital_share' => $newHospitalShare,
+                    'reason' => $data['reason'] ?? null,
+                ]
+            );
+        });
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تعديل الحصص المالية وتحديث حساب الطبيب بنجاح 💾',
+                'doctor_share' => $newDoctorShare,
+                'hospital_share' => $newHospitalShare,
+                'doctor_share_formatted' => number_format($newDoctorShare, 2) . ' IQD',
+                'hospital_share_formatted' => number_format($newHospitalShare, 2) . ' IQD',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'تم تعديل الحصص المالية وتحديث حساب الطبيب بنجاح');
     }
 
     public function exportDoctorAccount(Request $request, Doctor $doctor)

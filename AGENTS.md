@@ -61,6 +61,30 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 22: ميزة التعديل اليدوي للآدمن للحصص المالية وإلغاء نسبة الـ 70% التخمينية Manual Revenue Shares Adjustment & Fixed Commissions)
+
+### Done
+- **إلغاء النسبة الافتراضية 70% نهائياً (`PaymentObserver.php`)**:
+  * إلغاء معادلة الضرب بـ `0.7` عند عدم وجود إعداد عمولة محدد للطبيب؛ تصبح حصة الطبيب تلقائياً `0.00` وحصة المستشفى 100% لحين قيام الإدارة بتحديد مبلغه الثابت.
+  * اعتماد مبدأ أن عمولات الأطباء دائماً مبالغ نقدية ثابتة وليست نسباً مئوية، والتطبيق على الكشفيات الجديدة فقط من الآن فصاعداً.
+- **ميزة التعديل اليدوي للحصص المالية في واجهة الحركات المالية (`ConsultantAvailabilityController`, `financial-movements.blade.php`, `web.php`)**:
+  * إضافة عمود وزر «✏️ تعديل» حصري للآدمن ومن يملك صلاحية `manage doctor commissions` في جدول الحركات المالية للعيادات الاستشارية.
+  * مودال تفاعلي سريع `#editRevenueModal`:
+    - عرض تفاصيل القيد (المريض، الطبيب، القسم، والمبلغ الإجمالي).
+    - حقل إدخال لحصة الطبيب (د.ع) مع احتساب فوري لحظي لحصة المستشفى ونسبتها المئوية بالـ JavaScript.
+    - حقل سبب التعديل الإداري (لأغراض الرقابة وتاريخ الحركة).
+  * محرك المعالجة المحاسبية (`updateRevenueShares`):
+    - تحديث سجل الكشفية في `consultation_revenues` (`doctor_share`, `hospital_share`, `doctor_percentage`).
+    - تحديث سجل مستحقات الطبيب المعلقة في `doctor_dues` (`amount`).
+    - إعادة مزامنة رصيد الطبيب المالي في `doctor_financial_accounts` (`balance`, `total_earned`).
+    - تسجيل حركة التعديل تلقائياً في سجل الأنشطة والرقابة الإدارية `UserActivityLogger` كحركة حساسة (Sensitive Action).
+    - تحديث خلايا الجدول فورياً عبر الـ AJAX دون الحاجة لإعادة تحميل الصفحة.
+- **تصحيح قيد الدكتور علي حسين (`REC-20261011-0004`)**:
+  * تصحيح القيد المالي في قاعدة البيانات المحلية وعلى سيرفر هوستنجر الأونلاين (`remote_hostinger`): حصة الطبيب 25,000 د.ع وحصة المستشفى 10,000 د.ع.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات التعديل اليدوي [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز كامل اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
 ## Session log (2026-10-11 — المرحلة 21: مركز سحب ومزامنة قاعدة البيانات من سيرفر هوستنجر بنقرة زر واحدة One-Click Hostinger Cloud Database Sync)
 
 ### Done

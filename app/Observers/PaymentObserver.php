@@ -188,7 +188,7 @@ class PaymentObserver
         $absBaseAmount = abs($baseAmount);
 
         if ($setting) {
-            $type = $setting->commission_type ?? 'percentage';
+            $type = $setting->commission_type ?? 'fixed';
             $isInsurance = $payment && (float)($payment->insurance_share ?? 0) > 0;
 
             if ($type === 'fixed' || $type === 'custom') {
@@ -198,12 +198,14 @@ class PaymentObserver
                 $fixedVal = $isInsurance ? $hiFixed : $normalFixed;
                 $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
             } else {
-                // percentage
+                // percentage (إذا كانت مسجلة تاريخياً كنسبة)
                 $perc = (float) ($setting->commission_value ?? 0);
                 if ($perc <= 0 && (float)($setting->fixed_amount ?? 0) > 0) {
                     $doctorShare = (float) $setting->fixed_amount;
-                } else {
+                } elseif ($perc > 0) {
                     $doctorShare = round($absBaseAmount * ($perc / 100), 2);
+                } else {
+                    $doctorShare = 0.00;
                 }
             }
 
@@ -211,14 +213,9 @@ class PaymentObserver
             return $amount < 0 ? -$doctorShare : $doctorShare;
         }
 
-        if ($appointment->consultation_fee && (float)$appointment->consultation_fee > 0) {
-            $defaultShare = round(abs($appointment->consultation_fee) * 0.7, 2);
-            $doctorShare = min($defaultShare, $absAmount);
-            return $amount < 0 ? -$doctorShare : $doctorShare;
-        }
-
-        $defaultShare = round($absBaseAmount * 0.7, 2);
-        return $amount < 0 ? -$defaultShare : $defaultShare;
+        // في حال عدم وجود إعداد عمولة مسجل للطبيب، تكون حصته 0.00 (لا توجد نسبة افتراضية تخمينية 70%)
+        // وتبقى كامل الكشفية للمستشفى لحين ضبط المبلغ الثابت للطبيب
+        return 0.00;
     }
 
     protected function syncDoctorAccount(int $doctorId, float $doctorShare, $paidAt): void
