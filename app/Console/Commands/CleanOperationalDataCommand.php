@@ -84,14 +84,22 @@ class CleanOperationalDataCommand extends Command
             'surgery_type_changes',
             'anesthesia_stations',
             'surgeon_stations',
+            'resident_stations',
+            'resident_station_readings',
+            'resident_station_follow_ups',
             'operating_rooms_stations',
+            'operation_theater_stations',
             'recovery_stations',
             'inquiry_reception_stations',
+            'nursing_stations',
             'bed_reservations',
             'incubator_reservations',
+            'blood_bank_requests',
 
-            // 7. الإشعارات
+            // 7. الإشعارات والمهام وسجلات الطوابير
             'notifications',
+            'jobs',
+            'failed_jobs',
         ];
 
         Schema::disableForeignKeyConstraints();
