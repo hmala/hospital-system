@@ -2,433 +2,727 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>
-                    <i class="fas fa-user-plus me-2"></i>
-                    إضافة مريض جديد
-                </h2>
-                <a href="{{ route('patients.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>العودة للقائمة
-                </a>
+<div class="container-fluid px-3 px-md-4 py-3">
+    <!-- رأس الصفحة العصري -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-7 mb-3 mb-md-0">
+            <div class="d-flex align-items-center gap-3">
+                <div class="header-icon-box shadow-sm">
+                    <i class="fas fa-user-plus text-primary fs-3"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h3 class="fw-bold mb-0 text-dark">إضافة مريض جديد</h3>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fs-7 fw-semibold">
+                            <i class="fas fa-bolt me-1 text-warning"></i> تسجيل سريع
+                        </span>
+                    </div>
+                    <p class="text-muted mb-0 small">استمارة فتح الإضبارة الطبية السريعة لمراجعي الاستقبال والعيادات.</p>
+                </div>
             </div>
+        </div>
+        <div class="col-md-5 text-md-start">
+            <a href="{{ route('patients.index') }}" class="btn btn-outline-secondary rounded-pill px-4 py-2 shadow-sm transition-all">
+                <i class="fas fa-arrow-right me-2"></i>العودة لقائمة المرضى
+            </a>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">البيانات الأساسية</h5>
+    <div class="row g-4">
+        <!-- الاستمارة الرئيسية -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden patient-form-card">
+                <div class="card-header bg-white border-bottom border-light-subtle py-3 px-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
+                            <i class="fas fa-file-medical text-primary"></i> بيانات استمارة التسجيل
+                        </span>
+                        <span class="badge bg-light text-muted border rounded-pill px-3 py-1 small">
+                            الحقول بـ <span class="text-danger fw-bold">*</span> إلزامية
+                        </span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('patients.store') }}">
+
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ route('patients.store') }}" id="patientCreateForm" autocomplete="off">
                         @csrf
 
                         @if($errors->any())
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <h6 class="alert-heading fw-bold mb-2">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    يرجى تصحيح الأخطاء التالية قبل الحفظ:
-                                </h6>
-                                <ul class="mb-0 ps-3">
+                            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm border-0 mb-4" role="alert">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="fas fa-exclamation-triangle fs-5 text-danger"></i>
+                                    <strong class="text-danger">يرجى تصحيح الأخطاء التالية قبل الحفظ:</strong>
+                                </div>
+                                <ul class="mb-0 ps-4 small">
                                     @foreach($errors->all() as $error)
                                         <li>{{ $error }}</li>
                                     @endforeach
                                 </ul>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
                             </div>
                         @endif
 
-                        <div class="row">
-                            <!-- الاسم -->
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">الاسم الكامل *</label>
-                                <input type="text" 
-                                       class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" 
-                                       name="name" 
-                                       value="{{ old('name') }}"
-                                       required 
-                                       placeholder="ادخل الاسم الكامل">
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                        <!-- القسم 1: البيانات الشخصية والاتصال -->
+                        <div class="form-section mb-4">
+                            <div class="section-badge mb-3">
+                                <span class="step-num">1</span>
+                                <span class="step-title">المعلومات الشخصية والاتصال</span>
                             </div>
 
-                            <!-- البريد الإلكتروني -->
-                            <div class="col-md-6 mb-3">
-                                <label for="email" class="form-label">البريد الإلكتروني</label>
-                                <input type="email" 
-                                       class="form-control @error('email') is-invalid @enderror" 
-                                       id="email" 
-                                       name="email" 
-                                       value="{{ old('email') }}"
-                                       placeholder="example@email.com">
-                                @error('email')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <!-- الهاتف -->
-                            <div class="col-md-6 mb-3">
-                                <label for="phone" class="form-label">رقم الهاتف *</label>
-                                <input type="text" 
-                                       class="form-control @error('phone') is-invalid @enderror" 
-                                       id="phone" 
-                                       name="phone" 
-                                       value="{{ old('phone') }}"
-                                       required 
-                                       placeholder="ادخل رقم الهاتف">
-                                @error('phone')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- تاريخ الميلاد -->
-                            <div class="col-md-6 mb-3">
-                                <label for="date_of_birth" class="form-label">تاريخ الميلاد *</label>
-                                <input type="date" 
-                                       class="form-control @error('date_of_birth') is-invalid @enderror" 
-                                       id="date_of_birth" 
-                                       name="date_of_birth" 
-                                       value="{{ old('date_of_birth') }}"
-                                       required>
-                                @error('date_of_birth')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <!-- النوع -->
-                            <div class="col-md-6 mb-3">
-                                <label for="gender" class="form-label">الجنس *</label>
-                                <select class="form-select @error('gender') is-invalid @enderror" 
-                                        id="gender" name="gender" required>
-                                    <option value="">اختر النوع</option>
-                                    <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>ذكر</option>
-                                    <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>أنثى</option>
-                                </select>
-                                @error('gender')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- العنوان -->
-                           
-                        </div>
-
-                        <div class="row">
-                            <!-- اسم الأم الثلاثي -->
-                            <div class="col-md-6 mb-3">
-                                <label for="mother_name" class="form-label">اسم الأم الثلاثي *</label>
-                                <input type="text" 
-                                       class="form-control @error('mother_name') is-invalid @enderror" 
-                                       id="mother_name" 
-                                       name="mother_name" 
-                                       value="{{ old('mother_name') }}"
-                                       required
-                                       placeholder="ادخل اسم الأم الثلاثي">
-                                @error('mother_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- الحالة الاجتماعية -->
-                            <div class="col-md-6 mb-3">
-                                <label for="marital_status" class="form-label">الحالة الاجتماعية *</label>
-                                <select class="form-select @error('marital_status') is-invalid @enderror" 
-                                        id="marital_status" name="marital_status" required>
-                                    <option value="">اختر الحالة الاجتماعية</option>
-                                    <option value="أعزب" {{ old('marital_status') == 'أعزب' ? 'selected' : '' }}>أعزب</option>
-                                    <option value="متزوج" {{ old('marital_status') == 'متزوج' ? 'selected' : '' }}>متزوج</option>
-                                    <option value="مطلق" {{ old('marital_status') == 'مطلق' ? 'selected' : '' }}>مطلق</option>
-                                    <option value="أرمل" {{ old('marital_status') == 'أرمل' ? 'selected' : '' }}>أرمل</option>
-                                </select>
-                                @error('marital_status')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <h6 class="mb-3">المعلومات الطبية</h6>
-
-                        <div class="row">
-                            <!-- رقم الطوارئ -->
-                            <div class="col-md-6 mb-3">
-                                <label for="emergency_contact" class="form-label">رقم الطوارئ</label>
-                                <input type="text" 
-                                       class="form-control @error('emergency_contact') is-invalid @enderror" 
-                                       id="emergency_contact" 
-                                       name="emergency_contact" 
-                                       value="{{ old('emergency_contact') }}"
-                                       placeholder="رقم شخص للطوارئ">
-                                @error('emergency_contact')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- فصيلة الدم -->
-                            <div class="col-md-6 mb-3">
-                                <label for="blood_type" class="form-label">فصيلة الدم</label>
-                                <select class="form-select @error('blood_type') is-invalid @enderror" 
-                                        id="blood_type" name="blood_type">
-                                    <option value="">اختر فصيلة الدم</option>
-                                    <option value="A+" {{ old('blood_type') == 'A+' ? 'selected' : '' }}>A+</option>
-                                    <option value="A-" {{ old('blood_type') == 'A-' ? 'selected' : '' }}>A-</option>
-                                    <option value="B+" {{ old('blood_type') == 'B+' ? 'selected' : '' }}>B+</option>
-                                    <option value="B-" {{ old('blood_type') == 'B-' ? 'selected' : '' }}>B-</option>
-                                    <option value="AB+" {{ old('blood_type') == 'AB+' ? 'selected' : '' }}>AB+</option>
-                                    <option value="AB-" {{ old('blood_type') == 'AB-' ? 'selected' : '' }}>AB-</option>
-                                    <option value="O+" {{ old('blood_type') == 'O+' ? 'selected' : '' }}>O+</option>
-                                    <option value="O-" {{ old('blood_type') == 'O-' ? 'selected' : '' }}>O-</option>
-                                </select>
-                                @error('blood_type')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <!-- رقم البطاقة الموحدة / الرقم الوطني -->
-                            <div class="col-md-6 mb-3">
-                                <label for="national_id" class="form-label fw-bold">
-                                    <i class="fas fa-id-card text-primary me-1"></i> رقم البطاقة الموحدة *
-                                </label>
-                                <input type="text" 
-                                       class="form-control font-monospace @error('national_id') is-invalid @enderror" 
-                                       id="national_id" 
-                                       name="national_id" 
-                                       value="{{ old('national_id') }}"
-                                       required
-                                       inputmode="numeric"
-                                       pattern="[0-9]*"
-                                       oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');"
-                                       placeholder="ادخل رقم البطاقة الموحدة (أرقام فقط)">
-                                <div class="form-text text-muted" style="font-size: 0.78rem;">
-                                    <i class="fas fa-info-circle text-primary me-1"></i>يقبل أرقاماً فقط بدون أي أحرف أو رموز.
+                            <div class="row g-3">
+                                <!-- الاسم الكامل -->
+                                <div class="col-md-7">
+                                    <label for="name" class="form-label fw-bold small text-dark mb-1">
+                                        الاسم الكامل للمريض <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-user"></i>
+                                        </span>
+                                        <input type="text" 
+                                               class="form-control border-start-0 ps-0 @error('name') is-invalid @enderror" 
+                                               id="name" 
+                                               name="name" 
+                                               value="{{ old('name') }}"
+                                               required 
+                                               autofocus
+                                               placeholder="الاسم الثلاثي أو الرباعي للمريض">
+                                    </div>
+                                    @error('name')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                                @error('national_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
 
-                            <!-- جهة الضمان / التأمين -->
-                            <div class="col-md-6 mb-3">
-                                <label for="insurance_type" class="form-label fw-bold">جهة الضمان / التأمين *</label>
-                                <select class="form-select @error('insurance_type') is-invalid @enderror" id="insurance_type" name="insurance_type" required>
-                                    <option value="none" {{ old('insurance_type', 'none') == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل)</option>
-                                    <option value="moi" {{ old('insurance_type') == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
-                                    <option value="hi" {{ old('insurance_type') == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
-                                </select>
-                                @error('insurance_type')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+                                <!-- الهاتف -->
+                                <div class="col-md-5">
+                                    <label for="phone" class="form-label fw-bold small text-dark mb-1">
+                                        رقم الهاتف المحمول <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-phone-alt"></i>
+                                        </span>
+                                        <input type="tel" 
+                                               class="form-control border-start-0 ps-0 font-monospace @error('phone') is-invalid @enderror" 
+                                               id="phone" 
+                                               name="phone" 
+                                               value="{{ old('phone') }}"
+                                               required 
+                                               inputmode="numeric"
+                                               placeholder="07XXXXXXXXX">
+                                    </div>
+                                    @error('phone')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
 
-                        <!-- تفاصيل الضمان الصحي في حال تم اختياره -->
-                        <div class="row p-3 mb-3 bg-light rounded border" id="insurance_details_box" style="display: none;">
-                            <div class="col-12 mb-2">
-                                <span class="badge bg-primary"><i class="fas fa-shield-alt me-1"></i> بيانات بطاقة / دفتر الضمان</span>
-                            </div>
+                                <!-- تاريخ الميلاد وحساب العمر -->
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label for="date_of_birth" class="form-label fw-bold small text-dark mb-0">
+                                            تاريخ الميلاد <span class="text-danger">*</span>
+                                        </label>
+                                        <span id="calculatedAgeBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0" style="display: none; font-size: 0.72rem;">
+                                            -
+                                        </span>
+                                    </div>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </span>
+                                        <input type="date" 
+                                               class="form-control border-start-0 ps-0 @error('date_of_birth') is-invalid @enderror" 
+                                               id="date_of_birth" 
+                                               name="date_of_birth" 
+                                               value="{{ old('date_of_birth') }}"
+                                               required>
+                                    </div>
+                                    @error('date_of_birth')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
 
-                            <!-- فئة الضمان الصحي الوطني -->
-                            <div class="col-md-6 mb-2" id="hi_category_container" style="display: none;">
-                                <label for="health_insurance_category_id" class="form-label fw-bold">فئة المشمول بالضمان الصحي *</label>
-                                <select class="form-select @error('health_insurance_category_id') is-invalid @enderror" id="health_insurance_category_id" name="health_insurance_category_id">
-                                    <option value="">-- اختر فئة الضمان (A - I) --</option>
-                                    @foreach($healthInsuranceCategories as $cat)
-                                        <option value="{{ $cat->id }}" 
-                                                data-code="{{ $cat->code }}"
-                                                data-stamp="{{ $cat->requires_thermal_stamp ? 1 : 0 }}"
-                                                {{ old('health_insurance_category_id') == $cat->id ? 'selected' : '' }}>
-                                            {{ $cat->name }} ({{ $cat->code }}) - {{ Str::limit($cat->description, 50) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <small class="text-muted d-block mt-1">تُحدد نسب الاستقطاع للخدمات تلقائياً بحسب الفئة المختارة.</small>
-                                @error('health_insurance_category_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                                <!-- الجنس -->
+                                <div class="col-md-4">
+                                    <label for="gender" class="form-label fw-bold small text-dark mb-1">
+                                        الجنس <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-venus-mars"></i>
+                                        </span>
+                                        <select class="form-select border-start-0 ps-0 @error('gender') is-invalid @enderror" 
+                                                id="gender" name="gender" required>
+                                            <option value="">اختر الجنس</option>
+                                            <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>ذكر 👨</option>
+                                            <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>أنثى 👩</option>
+                                        </select>
+                                    </div>
+                                    @error('gender')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
 
-                            <div class="col-md-6 mb-2" id="insurance_card_container">
-                                <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة / دفتر الضمان *</label>
-                                <input type="text" 
-                                       class="form-control @error('insurance_card_no') is-invalid @enderror" 
-                                       id="insurance_card_no" 
-                                       name="insurance_card_no" 
-                                       value="{{ old('insurance_card_no', old('insurance_booklet_number')) }}"
-                                       placeholder="أدخل رقم الهوية أو الدفتر التأميني">
-                                <small class="text-muted d-block mt-1">رقم الهوية أو الدفتر الصادر من هيئة الضمان أو وزارة الداخلية.</small>
-                                @error('insurance_card_no')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <!-- البلد -->
-                            <div class="col-md-3 mb-3">
-                                <label for="country" class="form-label">البلد</label>
-                                <select class="form-select @error('country') is-invalid @enderror" 
-                                        id="country" name="country">
-                                    <option value="">اختر البلد</option>
-                                    @foreach($countries as $countryItem)
-                                        <option value="{{ $countryItem->id }}" {{ old('country') == $countryItem->id ? 'selected' : ($countryItem->id == $iraq_id ? 'selected' : '') }}>{{ $countryItem->name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('country')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- المحافظة -->
-                            <div class="col-md-3 mb-3">
-                                <label for="governorate" class="form-label">المحافظة</label>
-                                <select class="form-select @error('governorate') is-invalid @enderror" 
-                                        id="governorate" name="governorate">
-                                    <option value="">اختر المحافظة</option>
-                                    @foreach($governorates as $governorate)
-                                        <option value="{{ $governorate->name }}" {{ old('governorate') == $governorate->name ? 'selected' : '' }}>{{ $governorate->name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('governorate')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- القضاء -->
-                            <div class="col-md-3 mb-3">
-                                <label for="district" class="form-label">القضاء</label>
-                                <input type="text" 
-                                       class="form-control @error('district') is-invalid @enderror" 
-                                       id="district" 
-                                       name="district" 
-                                       value="{{ old('district') }}"
-                                       placeholder="القضاء">
-                                @error('district')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- الناحية -->
-                            <div class="col-md-3 mb-3">
-                                <label for="neighborhood" class="form-label">الناحية</label>
-                                <input type="text" 
-                                       class="form-control @error('neighborhood') is-invalid @enderror" 
-                                       id="neighborhood" 
-                                       name="neighborhood" 
-                                       value="{{ old('neighborhood') }}"
-                                       placeholder="الناحية">
-                                @error('neighborhood')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <!-- الحالة الاجتماعية -->
+                                <div class="col-md-4">
+                                    <label for="marital_status" class="form-label fw-bold small text-dark mb-1">
+                                        الحالة الاجتماعية <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-ring"></i>
+                                        </span>
+                                        <select class="form-select border-start-0 ps-0 @error('marital_status') is-invalid @enderror" 
+                                                id="marital_status" name="marital_status" required>
+                                            <option value="أعزب" {{ old('marital_status', 'أعزب') == 'أعزب' ? 'selected' : '' }}>أعزب</option>
+                                            <option value="متزوج" {{ old('marital_status') == 'متزوج' ? 'selected' : '' }}>متزوج</option>
+                                            <option value="مطلق" {{ old('marital_status') == 'مطلق' ? 'selected' : '' }}>مطلق</option>
+                                            <option value="أرمل" {{ old('marital_status') == 'أرمل' ? 'selected' : '' }}>أرمل</option>
+                                        </select>
+                                    </div>
+                                    @error('marital_status')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
 
-                        <hr>
+                        <!-- القسم 2: إثبات الهوية -->
+                        <div class="form-section mb-4">
+                            <div class="section-badge mb-3">
+                                <span class="step-num">2</span>
+                                <span class="step-title">إثبات الهوية الوطنية</span>
+                            </div>
 
-                    
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>حفظ المريض
-                            </button>
-                            <a href="{{ route('patients.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times me-2"></i>إلغاء
+                            <div class="row g-3">
+                                <!-- رقم البطاقة الموحدة -->
+                                <div class="col-md-6">
+                                    <label for="national_id" class="form-label fw-bold small text-dark mb-1 d-flex justify-content-between">
+                                        <span><i class="fas fa-id-card text-primary me-1"></i> رقم البطاقة الموحدة <span class="text-danger">*</span></span>
+                                        <span class="badge bg-light text-muted border font-monospace">أرقام فقط</span>
+                                    </label>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-fingerprint text-primary"></i>
+                                        </span>
+                                        <input type="text" 
+                                               class="form-control border-start-0 ps-0 font-monospace fs-6 fw-bold @error('national_id') is-invalid @enderror" 
+                                               id="national_id" 
+                                               name="national_id" 
+                                               value="{{ old('national_id') }}"
+                                               required
+                                               inputmode="numeric"
+                                               pattern="[0-9]*"
+                                               oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, ''); updatePreviewCard();"
+                                               placeholder="مثال: 199012345678">
+                                    </div>
+                                    <div class="form-text text-muted small mt-1">
+                                        <i class="fas fa-shield-alt text-success me-1"></i>يمنع تكرار المريض ويُعتمد كمعرّف وحيد.
+                                    </div>
+                                    @error('national_id')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <!-- اسم الأم (اختياري) -->
+                                <div class="col-md-6">
+                                    <label for="mother_name" class="form-label fw-semibold small text-dark mb-1">
+                                        اسم الأم <span class="text-muted fw-normal">(اختياري / للتمييز)</span>
+                                    </label>
+                                    <div class="input-group modern-input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted">
+                                            <i class="fas fa-female"></i>
+                                        </span>
+                                        <input type="text" 
+                                               class="form-control border-start-0 ps-0 @error('mother_name') is-invalid @enderror" 
+                                               id="mother_name" 
+                                               name="mother_name" 
+                                               value="{{ old('mother_name') }}"
+                                               placeholder="اسم الأم (اختياري)">
+                                    </div>
+                                    <div class="form-text text-muted small mt-1">
+                                        مفيد لتمييز حالات تشابه الأسماء الرباعية.
+                                    </div>
+                                    @error('mother_name')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- القسم 3: الضمان الصحي والتأمين -->
+                        <div class="form-section mb-4">
+                            <div class="section-badge mb-3">
+                                <span class="step-num">3</span>
+                                <span class="step-title">جهة الضمان الصحي والتأمين</span>
+                            </div>
+
+                            <!-- بطاقات اختيار جهة الضمان التفاعلية -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100" id="tile_none">
+                                        <input type="radio" name="insurance_selector" value="none" class="d-none" {{ old('insurance_type', 'none') == 'none' ? 'checked' : '' }}>
+                                        <div class="tile-icon-circle bg-success-subtle text-success mb-2">
+                                            <i class="fas fa-wallet fs-5"></i>
+                                        </div>
+                                        <strong class="tile-title text-dark small mb-1">دفع نقدي (كاش)</strong>
+                                        <span class="text-muted text-xs">غير مشمول بأي ضمان صحي</span>
+                                    </label>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100" id="tile_moi">
+                                        <input type="radio" name="insurance_selector" value="moi" class="d-none" {{ old('insurance_type') == 'moi' ? 'checked' : '' }}>
+                                        <div class="tile-icon-circle bg-primary-subtle text-primary mb-2">
+                                            <i class="fas fa-user-shield fs-5"></i>
+                                        </div>
+                                        <strong class="tile-title text-dark small mb-1">قوى الأمن الداخلي</strong>
+                                        <span class="text-muted text-xs">منتسبو وزارة الداخلية (MOI)</span>
+                                    </label>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100" id="tile_hi">
+                                        <input type="radio" name="insurance_selector" value="hi" class="d-none" {{ old('insurance_type') == 'hi' ? 'checked' : '' }}>
+                                        <div class="tile-icon-circle bg-info-subtle text-info mb-2">
+                                            <i class="fas fa-hospital-user fs-5"></i>
+                                        </div>
+                                        <strong class="tile-title text-dark small mb-1">الضمان الصحي الوطني</strong>
+                                        <span class="text-muted text-xs">مشمول بهيئة الضمان (A - I)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- الحقل المخفي للـ Backend -->
+                            <input type="hidden" id="insurance_type" name="insurance_type" value="{{ old('insurance_type', 'none') }}">
+
+                            <!-- صندوق تفاصيل بطاقة الضمان المنبثق -->
+                            <div class="p-3 bg-light rounded-4 border border-primary-subtle mt-2 shadow-sm transition-all" id="insurance_details_box" style="display: none;">
+                                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                                    <span class="fw-bold small text-primary d-flex align-items-center gap-2">
+                                        <i class="fas fa-id-badge fs-6"></i> بيانات البطاقة أو الدفتر التأميني
+                                    </span>
+                                    <span class="badge bg-primary rounded-pill px-2 py-1 small" id="activeInsuranceBadge">ضمان صحي</span>
+                                </div>
+
+                                <div class="row g-3">
+                                    <!-- فئة الضمان الصحي الوطني -->
+                                    <div class="col-md-6" id="hi_category_container" style="display: none;">
+                                        <label for="health_insurance_category_id" class="form-label fw-bold small text-dark mb-1">
+                                            فئة المشمول بالضمان <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select @error('health_insurance_category_id') is-invalid @enderror" 
+                                                id="health_insurance_category_id" 
+                                                name="health_insurance_category_id">
+                                            <option value="">-- اختر فئة الضمان (A - I) --</option>
+                                            @foreach($healthInsuranceCategories as $cat)
+                                                <option value="{{ $cat->id }}" 
+                                                        data-code="{{ $cat->code }}"
+                                                        data-stamp="{{ $cat->requires_thermal_stamp ? 1 : 0 }}"
+                                                        {{ old('health_insurance_category_id') == $cat->id ? 'selected' : '' }}>
+                                                    {{ $cat->name }} ({{ $cat->code }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">تُحدد نسب الاستقطاع للخدمات الطبية بحسب الفئة.</small>
+                                        @error('health_insurance_category_id')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+
+                                    <!-- رقم البطاقة التأمينية -->
+                                    <div class="col-md-6" id="insurance_card_container">
+                                        <label for="insurance_card_no" class="form-label fw-bold small text-dark mb-1">
+                                            رقم بطاقة / دفتر الضمان <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group modern-input-group">
+                                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                                <i class="fas fa-barcode"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   class="form-control border-start-0 ps-0 font-monospace @error('insurance_card_no') is-invalid @enderror" 
+                                                   id="insurance_card_no" 
+                                                   name="insurance_card_no" 
+                                                   value="{{ old('insurance_card_no', old('insurance_booklet_number')) }}"
+                                                   placeholder="أدخل رقم الهوية أو الدفتر">
+                                        </div>
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">الرقم المطبوع على بطاقة الضمان الصادرة.</small>
+                                        @error('insurance_card_no')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- شريط الأزرار والحفظ -->
+                        <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center pt-3 border-top mt-4">
+                            <a href="{{ route('patients.index') }}" class="btn btn-light rounded-pill px-4 text-muted fw-semibold">
+                                إلغاء
                             </a>
+                            <button type="submit" class="btn btn-primary btn-save-patient rounded-pill px-5 py-2 fw-bold shadow">
+                                <i class="fas fa-check-circle me-2"></i> حفظ المريض وفتح الإضبارة
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- معلومات سريعة -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>معلومات مهمة</h6>
+        <!-- اللوحة الجانبية: معاينة البطاقة الذكية للمريض + الإرشادات -->
+        <div class="col-lg-4">
+            <!-- البطاقة الطبية الرقمية المباشرة (Live Digital ID Card) -->
+            <div class="digital-patient-card shadow-lg rounded-4 p-4 mb-4 text-white position-relative overflow-hidden">
+                <div class="card-chip-badge mb-3 d-flex justify-content-between align-items-center">
+                    <div class="chip-graphic">
+                        <i class="fas fa-microchip fs-3 text-warning"></i>
+                    </div>
+                    <span class="card-hospital-brand small fw-bold tracking-wide">
+                        <i class="fas fa-hospital me-1"></i> نظام المستشفى الأهلي
+                    </span>
                 </div>
-                <div class="card-body">
-                    
-                    <hr>
-                    <h6>إرشادات:</h6>
-                    <ul class="small text-muted">
-                        <li>جميع الحقول المميزة بـ * إجبارية</li>
-                        <li>يجب إدخال اسم الأم، الحالة الاجتماعية، حالة الضمان، والرقم الوطني</li>
-                        <li>البريد الإلكتروني ورقم الطوارئ غير مطلوبين لكن يُستحسن إدخالهما</li>
-                        <li>رقم الطوارئ مهم للحالات الطارئة</li>
-                        <li>الايميل مهم للتواصل مع المريض</li>
-                        <li>تاريخ الميلاد مهم لتحديد العمر</li>
-                        <li>يرجى التأكد من صحة المعلومات قبل الحفظ</li>
 
-                    </ul>
+                <div class="patient-card-body">
+                    <span class="text-uppercase text-white-50 small d-block mb-1 font-monospace" style="font-size: 0.7rem; letter-spacing: 1px;">بطاقة مريض رقمية • PATIENT ID</span>
+                    <h5 class="fw-bold mb-2 text-truncate" id="preview_name" style="min-height: 28px;">
+                        اسم المريض
+                    </h5>
+
+                    <div class="row g-2 small mt-2 pt-2 border-top border-white-subtle">
+                        <div class="col-6">
+                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">العمر والجنس:</span>
+                            <strong id="preview_age_gender" class="text-white">-</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">الهاتف:</span>
+                            <strong id="preview_phone" class="font-monospace text-white">-</strong>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">رقم البطاقة الموحدة:</span>
+                            <strong id="preview_national_id" class="font-monospace text-warning">-</strong>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <span class="text-white-50 d-block" style="font-size: 0.7rem;">جهة الضمان:</span>
+                            <span class="badge bg-white text-primary fw-bold" id="preview_insurance" style="font-size: 0.7rem;">دفع نقدي (كاش)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-watermark-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+            </div>
+
+            <!-- بطاقة التوجيهات السريعة -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2 small">
+                        <i class="fas fa-lightbulb text-warning"></i> نصائح لتسجيل فائق السرعة
+                    </h6>
+                    <div class="d-flex flex-column gap-2 small text-muted">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="fas fa-check text-success mt-1"></i>
+                            <span><strong>البطاقة الموحدة:</strong> تُنظف الأرقام تلقائياً لمنع أي أخطاء إملائية.</span>
+                        </div>
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="fas fa-check text-success mt-1"></i>
+                            <span><strong>تاريخ الميلاد:</strong> يحسب العمر لحظياً دون الحاجة لحسابه يدوياً.</span>
+                        </div>
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="fas fa-check text-success mt-1"></i>
+                            <span><strong>التنقل بالـ Tab:</strong> انتقل بين الحقول بسرعة بواسطة زر Tab واضغط Enter للحفظ.</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // حساب العمر تلقائياً
+    const nameInput = document.getElementById('name');
+    const phoneInput = document.getElementById('phone');
     const dateOfBirthInput = document.getElementById('date_of_birth');
-    
-    dateOfBirthInput.addEventListener('change', function() {
-        const birthDate = new Date(this.value);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        
-        // التحقق من عيد الميلاد لهذا العام
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        
-        // يمكن إظهار العمر في مكان ما إذا أردت
-        console.log('العمر:', age, 'سنة');
-    });
+    const genderSelect = document.getElementById('gender');
+    const nationalIdInput = document.getElementById('national_id');
+    const insuranceTypeHidden = document.getElementById('insurance_type');
+    const calculatedAgeBadge = document.getElementById('calculatedAgeBadge');
 
-    // التحكم في إظهار حقول الضمان الصحي
-    const insuranceTypeSelect = document.getElementById('insurance_type');
+    const previewName = document.getElementById('preview_name');
+    const previewAgeGender = document.getElementById('preview_age_gender');
+    const previewPhone = document.getElementById('preview_phone');
+    const previewNationalId = document.getElementById('preview_national_id');
+    const previewInsurance = document.getElementById('preview_insurance');
+
     const insuranceDetailsBox = document.getElementById('insurance_details_box');
     const hiCategoryContainer = document.getElementById('hi_category_container');
     const hiCategorySelect = document.getElementById('health_insurance_category_id');
     const insuranceCardNoInput = document.getElementById('insurance_card_no');
+    const activeInsuranceBadge = document.getElementById('activeInsuranceBadge');
 
-    function toggleInsuranceDetails() {
-        const val = insuranceTypeSelect.value;
+    // 1. حساب العمر تلقائياً
+    function calculateAge(birthDateStr) {
+        if (!birthDateStr) return null;
+        const birthDate = new Date(birthDateStr);
+        if (isNaN(birthDate.getTime())) return null;
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age >= 0 ? age : null;
+    }
+
+    // 2. تحديث البطاقة الرقمية المباشرة (Live Preview Card)
+    window.updatePreviewCard = function() {
+        const nameVal = (nameInput.value || '').trim();
+        previewName.textContent = nameVal ? nameVal : 'اسم المريض';
+
+        const phoneVal = (phoneInput.value || '').trim();
+        previewPhone.textContent = phoneVal ? phoneVal : '-';
+
+        const nidVal = (nationalIdInput.value || '').trim();
+        previewNationalId.textContent = nidVal ? nidVal : '-';
+
+        const age = calculateAge(dateOfBirthInput.value);
+        const genderText = genderSelect.value === 'male' ? 'ذكر' : (genderSelect.value === 'female' ? 'أنثى' : '');
+
+        if (age !== null) {
+            calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
+            calculatedAgeBadge.style.display = 'inline-block';
+            previewAgeGender.textContent = age + ' سنة' + (genderText ? ' • ' + genderText : '');
+        } else {
+            calculatedAgeBadge.style.display = 'none';
+            previewAgeGender.textContent = genderText ? genderText : '-';
+        }
+
+        const insType = insuranceTypeHidden.value;
+        if (insType === 'hi') {
+            previewInsurance.textContent = 'ضمان صحي وطني (HI)';
+            previewInsurance.className = 'badge bg-info text-white fw-bold';
+        } else if (insType === 'moi') {
+            previewInsurance.textContent = 'قوى الأمن (MOI)';
+            previewInsurance.className = 'badge bg-primary text-white fw-bold';
+        } else {
+            previewInsurance.textContent = 'دفع نقدي (كاش)';
+            previewInsurance.className = 'badge bg-white text-success fw-bold';
+        }
+    };
+
+    nameInput.addEventListener('input', updatePreviewCard);
+    phoneInput.addEventListener('input', updatePreviewCard);
+    dateOfBirthInput.addEventListener('change', updatePreviewCard);
+    genderSelect.addEventListener('change', updatePreviewCard);
+    nationalIdInput.addEventListener('input', updatePreviewCard);
+
+    // 3. إدارة بطاقات اختيار الضمان التفاعلية
+    function setInsuranceType(val) {
+        insuranceTypeHidden.value = val;
+
+        // تحديث تصميم البلاطات (Tiles)
+        document.querySelectorAll('.insurance-card-tile').forEach(tile => {
+            tile.classList.remove('active-tile');
+        });
+
+        const activeTile = document.getElementById('tile_' + val);
+        if (activeTile) {
+            activeTile.classList.add('active-tile');
+            const radio = activeTile.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+        }
+
         if (val !== 'none') {
-            insuranceDetailsBox.style.display = 'flex';
-            insuranceCardNoInput.setAttribute('required', 'required');
+            insuranceDetailsBox.style.display = 'block';
+            if (insuranceCardNoInput) insuranceCardNoInput.setAttribute('required', 'required');
 
             if (val === 'hi') {
                 if (hiCategoryContainer) hiCategoryContainer.style.display = 'block';
                 if (hiCategorySelect) hiCategorySelect.setAttribute('required', 'required');
+                activeInsuranceBadge.textContent = 'هيئة الضمان الصحي الوطني';
+                activeInsuranceBadge.className = 'badge bg-info text-white rounded-pill px-3 py-1 small';
             } else {
                 if (hiCategoryContainer) hiCategoryContainer.style.display = 'none';
                 if (hiCategorySelect) hiCategorySelect.removeAttribute('required');
+                activeInsuranceBadge.textContent = 'ضمان وزارة الداخلية (MOI)';
+                activeInsuranceBadge.className = 'badge bg-primary text-white rounded-pill px-3 py-1 small';
             }
         } else {
             insuranceDetailsBox.style.display = 'none';
-            insuranceCardNoInput.removeAttribute('required');
+            if (insuranceCardNoInput) insuranceCardNoInput.removeAttribute('required');
             if (hiCategoryContainer) hiCategoryContainer.style.display = 'none';
             if (hiCategorySelect) hiCategorySelect.removeAttribute('required');
         }
+
+        updatePreviewCard();
     }
 
-    insuranceTypeSelect.addEventListener('change', toggleInsuranceDetails);
-    toggleInsuranceDetails();
+    document.querySelectorAll('.insurance-card-tile').forEach(tile => {
+        tile.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                setInsuranceType(radio.value);
+            }
+        });
+    });
+
+    // تهيئة أولية
+    setInsuranceType(insuranceTypeHidden.value || 'none');
+    updatePreviewCard();
 });
 </script>
-@endsection
+@endpush
+
+@section('styles')
+<style>
+/* تجميل وتنسيق الواجهة المتقدمة */
+.header-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.22));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.patient-form-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(241, 245, 249, 0.85);
+    border-radius: 30px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.step-num {
+    width: 22px;
+    height: 22px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.step-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.modern-input-group .input-group-text {
+    border-radius: 12px 0 0 12px;
+    border-color: #cbd5e1;
+    transition: border-color 0.2s ease;
+}
+
+.modern-input-group .form-control,
+.modern-input-group .form-select {
+    border-radius: 0 12px 12px 0;
+    border-color: #cbd5e1;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.modern-input-group .form-control:focus,
+.modern-input-group .form-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* بطاقات اختيار التأمين */
+.insurance-card-tile {
+    background: #ffffff;
+    border-color: #e2e8f0 !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.insurance-card-tile:hover {
+    border-color: #93c5fd !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.08);
+}
+
+.insurance-card-tile.active-tile {
+    background: linear-gradient(145deg, #eff6ff 0%, #ffffff 100%);
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px #2563eb, 0 8px 20px rgba(37, 99, 235, 0.15) !important;
+}
+
+.tile-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.insurance-card-tile:hover .tile-icon-circle {
+    transform: scale(1.08);
+}
+
+.text-xs {
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
+/* البطاقة الرقمية للمريض في الجانب (Digital ID Card) */
+.digital-patient-card {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #0369a1 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    min-height: 220px;
+    box-shadow: 0 15px 35px rgba(30, 58, 138, 0.25) !important;
+    transition: transform 0.3s ease;
+}
+
+.digital-patient-card:hover {
+    transform: translateY(-3px);
+}
+
+.card-watermark-icon {
+    position: absolute;
+    bottom: -20px;
+    left: -20px;
+    font-size: 8rem;
+    color: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+}
+
+.btn-save-patient {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+    transition: all 0.25s ease;
+}
+
+.btn-save-patient:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.transition-all {
+    transition: all 0.2s ease;
+}
+</style>
 @endsection

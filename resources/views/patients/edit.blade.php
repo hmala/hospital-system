@@ -121,16 +121,15 @@
                                 @enderror
                             </div>
 
-                            <!-- اسم الأم الثلاثي -->
+                            <!-- اسم الأم (اختياري) -->
                             <div class="col-md-6 mb-3">
-                                <label for="mother_name" class="form-label">اسم الأم الثلاثي *</label>
+                                <label for="mother_name" class="form-label">اسم الأم <span class="text-muted small">(اختياري)</span></label>
                                 <input type="text"
                                        class="form-control @error('mother_name') is-invalid @enderror"
                                        id="mother_name"
                                        name="mother_name"
                                        value="{{ old('mother_name', $patient->mother_name) }}"
-                                       required
-                                       placeholder="ادخل اسم الأم الثلاثي">
+                                       placeholder="ادخل اسم الأم (اختياري)">
                                 @error('mother_name')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

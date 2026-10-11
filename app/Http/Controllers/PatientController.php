@@ -190,7 +190,7 @@ class PatientController extends Controller
             'emergency_contact' => 'nullable|string',
             'blood_type' => 'nullable|string|max:10',
             'national_id' => ['required', 'regex:/^[0-9]+$/', 'unique:patients,national_id'],
-            'mother_name' => 'required|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
             'country' => 'nullable|exists:countries,id',
             'governorate' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
@@ -208,7 +208,6 @@ class PatientController extends Controller
             'phone.required' => 'رقم الهاتف مطلوب',
             'date_of_birth.required' => 'تاريخ الميلاد مطلوب',
             'gender.required' => 'النوع مطلوب',
-            'mother_name.required' => 'اسم الأم مطلوب',
             'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
             'national_id.required' => 'رقم البطاقة الموحدة مطلوب',
             'national_id.regex' => 'رقم البطاقة الموحدة يجب أن يحتوي على أرقام فقط بدون أحرف أو رموز',
@@ -216,15 +215,17 @@ class PatientController extends Controller
             'national_id.unique' => 'رقم البطاقة الموحدة مستخدم من قبل لمريض آخر',
         ]);
 
-        // التحقق من عدم تكرار الاسم واسم الأم
-        $existingPatient = Patient::whereHas('user', function($query) use ($request) {
-            $query->where('name', $request->name);
-        })->where('mother_name', $request->mother_name)->first();
+        // التحقق من عدم تكرار الاسم واسم الأم في حال تم إدخال اسم الأم
+        if ($request->filled('mother_name')) {
+            $existingPatient = Patient::whereHas('user', function($query) use ($request) {
+                $query->where('name', $request->name);
+            })->where('mother_name', $request->mother_name)->first();
 
-        if ($existingPatient) {
-            return back()->withErrors([
-                'duplicate_patient' => 'يوجد مريض آخر بنفس الاسم واسم الأم. يرجى التأكد من صحة البيانات.'
-            ])->withInput();
+            if ($existingPatient) {
+                return back()->withErrors([
+                    'duplicate_patient' => 'يوجد مريض آخر بنفس الاسم واسم الأم. يرجى التأكد من صحة البيانات.'
+                ])->withInput();
+            }
         }
         $email = $request->email;
         if (!$email) {
@@ -329,7 +330,7 @@ class PatientController extends Controller
             'emergency_contact' => 'nullable|string',
             'blood_type' => 'nullable|string|max:10',
             'national_id' => ['required', 'regex:/^[0-9]+$/', 'unique:patients,national_id,' . $patient->id],
-            'mother_name' => 'required|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
             'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
             'covered_by_insurance' => 'nullable|in:0,1',
             'insurance_type' => 'nullable|in:none,moi,hi',
@@ -345,7 +346,6 @@ class PatientController extends Controller
             'phone.required' => 'رقم الهاتف مطلوب',
             'date_of_birth.required' => 'تاريخ الميلاد مطلوب',
             'gender.required' => 'النوع مطلوب',
-            'mother_name.required' => 'اسم الأم مطلوب',
             'marital_status.required' => 'الحالة الاجتماعية مطلوبة',
             'national_id.required' => 'رقم البطاقة الموحدة مطلوب',
             'national_id.regex' => 'رقم البطاقة الموحدة يجب أن يحتوي على أرقام فقط بدون أحرف أو رموز',
@@ -353,17 +353,19 @@ class PatientController extends Controller
             'national_id.unique' => 'رقم البطاقة الموحدة مستخدم من قبل لمريض آخر',
         ]);
 
-        // التحقق من عدم تكرار الاسم واسم الأم (استثناء المريض الحالي)
-        $existingPatient = Patient::whereHas('user', function($query) use ($request) {
-            $query->where('name', $request->name);
-        })->where('mother_name', $request->mother_name)
-          ->where('id', '!=', $patient->id)
-          ->first();
+        // التحقق من عدم تكرار الاسم واسم الأم (استثناء المريض الحالي) في حال تم إدخال اسم الأم
+        if ($request->filled('mother_name')) {
+            $existingPatient = Patient::whereHas('user', function($query) use ($request) {
+                $query->where('name', $request->name);
+            })->where('mother_name', $request->mother_name)
+              ->where('id', '!=', $patient->id)
+              ->first();
 
-        if ($existingPatient) {
-            return back()->withErrors([
-                'duplicate_patient' => 'يوجد مريض آخر بنفس الاسم واسم الأم. يرجى التأكد من صحة البيانات.'
-            ])->withInput();
+            if ($existingPatient) {
+                return back()->withErrors([
+                    'duplicate_patient' => 'يوجد مريض آخر بنفس الاسم واسم الأم. يرجى التأكد من صحة البيانات.'
+                ])->withInput();
+            }
         }
 
         // تحديث بيانات المستخدم

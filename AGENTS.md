@@ -61,6 +61,26 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 24: تسريع وتبسيط استمارة إدخال المرضى وحذف الحقول غير الضرورية Streamline Patient Registration Form)
+
+### Done
+- **تبسيط واجهة إدخال المرضى (`resources/views/patients/create.blade.php`, `resources/views/patients/edit.blade.php`)**:
+  * **إزالة الحقول غير الضرورية التي كانت تعطل الاستقبال وتُبطئ الطابور**:
+    - حذف حقول العنوان التفصيلي (البلد، المحافظة، القضاء، الناحية).
+    - حذف حقل البريد الإلكتروني (النظام يقوم تلقائياً بإنشاء إيميل داخلي افتراضي بصيغة `patient.PHONE.TIMESTAMP@hospital.local`).
+    - حذف حقل فصيلة الدم (تُفحص مخبرياً عند أي تداخل طبي ولا يُعتمد على كلام المريض).
+    - حذف حقل رقم الطوارئ من استمارة الاستقبال الأولية.
+  * **جعل اسم الأم اختيارياً بالكامل**:
+    - تحويل حقل `mother_name` في واجهتي الإضافة والتعديل إلى حقل اختياري `(اختياري)` وإزالة قيد `required` وعلامة `*`.
+  * **تحديث البطاقة الجانبية للإرشادات**: تحديث إرشادات موظف الاستقبال لتوضيح الحقول المطلوبة الأساسية وسرعة الإدخال.
+- **تحديث التحقق البرمجي (`app/Http/Controllers/PatientController.php`)**:
+  * تعديل قواعد التحقق (Validation) في دالتي `store` و `update` ليصبح `mother_name` يقبل `nullable|string|max:255`.
+  * تحديث فحص عدم تكرار الاسم واسم الأم بحيث يعمل فقط عند إدخال اسم الأم `if ($request->filled('mother_name'))`. الاعتماد الأساسي لمنع التكرار هو رقم البطاقة الموحدة `national_id` الإجباري والفريد.
+- **تحديث المخطط المعرفي (`graphify update .`)**:
+  * إعادة بناء وتحديث شجرة العلاقات (4173 عقدة و 5636 حافة عبر 866 مجتمع).
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لكافة اختبارات المرضى: [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php), [EmergencyWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php), [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (31 assertions).
+
 ## Session log (2026-10-11 — المرحلة 23: إصلاح وتطوير مودال التعديل اليدوي للحصص المالية Fix Financial Movements Edit Modal)
 
 ### Done
