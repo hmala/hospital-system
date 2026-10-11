@@ -6,7 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\DoctorCommissionSetting;
+use App\Models\ConsultationRevenue;
+use App\Models\DoctorDue;
+use App\Models\DoctorFinancialAccount;
+use App\Services\UserActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DoctorCommissionSettingController extends Controller
 {
@@ -324,5 +329,155 @@ class DoctorCommissionSettingController extends Controller
 
         return redirect()->route('admin.doctor-commission-settings.index')
             ->with('success', 'تم حذف إعداد العمولة بنجاح');
+    }
+
+    /**
+     * إعادة احتساب كشفيات اليوم (أو تاريخ محدد) جماعياً وفق إعدادات العمولات الحالية
+     */
+    public function recalculateToday(Request $request)
+    {
+        $request->validate([
+            'doctor_id' => 'nullable|exists:doctors,id',
+            'date' => 'nullable|date',
+        ]);
+
+        $targetDate = $request->input('date', now()->toDateString());
+        $doctorId = $request->input('doctor_id');
+
+        $query = ConsultationRevenue::with(['payment', 'appointment.patient', 'doctor.currentCommissionSetting'])
+            ->where(function ($q) use ($targetDate) {
+                $q->whereDate('paid_at', $targetDate)
+                  ->orWhereDate('revenue_date', $targetDate);
+            });
+
+        if ($doctorId) {
+            $query->where('doctor_id', $doctorId);
+        }
+
+        $revenues = $query->get();
+        $updatedCount = 0;
+        $affectedDoctors = [];
+
+        DB::transaction(function () use ($revenues, &$updatedCount, &$affectedDoctors) {
+            foreach ($revenues as $revenue) {
+                $doctor = $revenue->doctor;
+                if (!$doctor) {
+                    continue;
+                }
+
+                $payment = $revenue->payment;
+                $appointment = $revenue->appointment;
+
+                // حماية الأموال المصروفة: إذا كان مستحق الطبيب لهذه الدفعة قد صُرف نقداً بالفعل (paid)، نتجاوزه
+                $existingDue = DoctorDue::where('payment_id', $revenue->payment_id)
+                    ->where('doctor_id', $revenue->doctor_id)
+                    ->first();
+
+                if ($existingDue && $existingDue->status === 'paid') {
+                    continue;
+                }
+
+                // فحص هل الكشفية ضمان صحي أم كاش
+                $isInsurance = ($payment && (
+                    (float)($payment->insurance_share ?? 0) > 0 ||
+                    in_array($payment->insurance_type ?? '', ['hi', 'moi', 'interior_ministry', 'health_insurance'])
+                )) || ($appointment && in_array($appointment->insurance_type ?? '', ['hi', 'moi']));
+
+                $setting = $doctor->currentCommissionSetting;
+                $amount = (float) $revenue->total_amount;
+                $absAmount = abs($amount);
+
+                $doctorShare = 0.0;
+                if ($setting) {
+                    if ($isInsurance) {
+                        $doctorHiFixed = (float) ($setting->hi_fixed_amount ?? 0);
+                        $doctorShare = ($doctorHiFixed > 0) ? $doctorHiFixed : 15000.00;
+                    } else {
+                        $doctorShare = (float) ($setting->fixed_amount ?? 0);
+                    }
+                } else {
+                    if ($isInsurance) {
+                        $doctorShare = 15000.00;
+                    } else {
+                        $doctorShare = 0.00;
+                    }
+                }
+
+                // صمام أمان رياضي: حصة الطبيب لا تتجاوز إجمالي المبلغ المحصل
+                $doctorShare = min($absAmount, abs($doctorShare));
+                if ($amount < 0) {
+                    $doctorShare = -$doctorShare;
+                }
+
+                $hospitalShare = round($amount - $doctorShare, 2);
+                $percentage = ($absAmount > 0) ? round((abs($doctorShare) / $absAmount) * 100, 2) : 0;
+
+                // تحديث سجل الإيراد
+                $revenue->update([
+                    'doctor_share' => $doctorShare,
+                    'hospital_share' => $hospitalShare,
+                    'doctor_percentage' => $percentage,
+                ]);
+
+                // تحديث مستحقات الطبيب
+                if ($doctorShare > 0 && $revenue->payment_id) {
+                    DoctorDue::updateOrCreate(
+                        [
+                            'doctor_id' => $revenue->doctor_id,
+                            'payment_id' => $revenue->payment_id,
+                        ],
+                        [
+                            'amount' => round($doctorShare, 2),
+                            'status' => 'pending',
+                            'notes' => 'مستحقات الطبيب بعد إعادة الاحتساب الآلي لدفعة ' . ($revenue->receipt_number ?? $revenue->payment_id),
+                        ]
+                    );
+                } elseif ($doctorShare <= 0 && $existingDue) {
+                    $existingDue->delete();
+                }
+
+                $affectedDoctors[$revenue->doctor_id] = true;
+                $updatedCount++;
+            }
+
+            // إعادة مزامنة الأرصدة المالية للأطباء المتأثرين
+            foreach (array_keys($affectedDoctors) as $docId) {
+                $account = DoctorFinancialAccount::firstOrCreate(
+                    ['doctor_id' => $docId],
+                    ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+                );
+
+                $totalEarned = (float) DoctorDue::where('doctor_id', $docId)->sum('amount');
+                $totalPaid = (float) ($account->total_paid ?? 0);
+
+                $account->total_earned = $totalEarned;
+                $account->balance = round($totalEarned - $totalPaid, 2);
+                $account->save();
+            }
+        });
+
+        // تسجيل العملية في سجل الأنشطة والرقابة
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'update',
+                'treasury',
+                "إعادة احتساب مالي آلي لـ {$updatedCount} كشفية لتاريخ {$targetDate}" . ($doctorId ? " للطبيب رقم {$doctorId}" : " لجميع الأطباء"),
+                $doctorId ? Doctor::find($doctorId) : null,
+                true,
+                [
+                    'doctor_id' => $doctorId,
+                    'date' => $targetDate,
+                    'updated_count' => $updatedCount,
+                    'affected_doctors_count' => count($affectedDoctors),
+                ]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'updated_count' => $updatedCount,
+            'affected_doctors' => count($affectedDoctors),
+            'message' => "تمت بنجاح إعادة احتساب {$updatedCount} كشفية لـ " . count($affectedDoctors) . " طبيب وفق الإعدادات الحالية.",
+        ]);
     }
 }

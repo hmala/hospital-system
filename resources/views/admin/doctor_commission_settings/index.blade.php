@@ -16,6 +16,9 @@
             </p>
         </div>
         <div class="col-lg-5 d-flex justify-content-lg-end gap-2 mt-3 mt-lg-0 flex-wrap">
+            <button type="button" class="btn btn-warning btn-sm px-3 shadow-xs fw-bold text-dark" onclick="recalculateTodayAll()" id="btnRecalculateAll" title="إعادة احتساب وتطبيق الحصص على كافة كشفيات اليوم غير المسواة">
+                <i class="fas fa-sync-alt me-1"></i> إعادة احتساب كشفيات اليوم للكل
+            </button>
             <button type="button" class="btn btn-success btn-sm px-3 shadow-xs fw-bold" onclick="saveAllRows()" id="btnSaveAll">
                 <i class="fas fa-save me-1"></i> حفظ جميع التعديلات
             </button>
@@ -156,7 +159,7 @@
                             <th style="width: 140px;" class="text-center">👨‍⚕️ حصة كاش (د.ع)</th>
                             <th style="width: 140px;" class="text-center">👨‍⚕️ حصة HI (د.ع)</th>
                             <th style="width: 160px;" class="text-center">🏥 حصة المستشفى</th>
-                            <th style="width: 90px;" class="text-center">حفظ فوري</th>
+                            <th style="width: 115px;" class="text-center">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -295,15 +298,24 @@
                                     </div>
                                 </td>
 
-                                <!-- زر الحفظ الفوري السريع -->
+                                <!-- أزرار الإجراءات للطبيب -->
                                 <td class="text-center">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-success px-2 py-1 btn-save-row" 
-                                            id="btnSaveRow-{{ $doctor->id }}"
-                                            onclick="saveSingleRow({{ $doctor->id }}, this)"
-                                            title="حفظ فوري لأسعار وحصة هذا الطبيب">
-                                        <i class="fas fa-save me-1"></i> حفظ
-                                    </button>
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-success px-2 py-1 btn-save-row" 
+                                                id="btnSaveRow-{{ $doctor->id }}"
+                                                onclick="saveSingleRow({{ $doctor->id }}, this)"
+                                                title="حفظ فوري لأسعار وحصة هذا الطبيب">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-warning px-2 py-1" 
+                                                id="btnRecalcRow-{{ $doctor->id }}"
+                                                onclick="recalculateTodayDoctor({{ $doctor->id }}, '{{ addslashes($doctor->name) }}', this)"
+                                                title="إعادة احتساب وتطبيق الحصص على كشفيات اليوم لهذا الطبيب">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -555,5 +567,117 @@ window.saveAllRows = function() {
         }
     });
 };
+
+// 5. إعادة احتساب كشفيات اليوم لطبيب محدد
+window.recalculateTodayDoctor = function(doctorId, doctorName, btn) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'إعادة احتساب كشفيات اليوم',
+            html: `هل أنت متأكد من إعادة احتساب وتطبيق الحصص على كافة كشفيات اليوم لـ <b>${doctorName}</b> وفق الإعدادات الحالية؟`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، أعد الاحتساب',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                executeRecalculate(doctorId, btn);
+            }
+        });
+    } else {
+        if (confirm(`هل أنت متأكد من إعادة احتساب كشفيات اليوم لـ ${doctorName}؟`)) {
+            executeRecalculate(doctorId, btn);
+        }
+    }
+};
+
+// 6. إعادة احتساب كشفيات اليوم لكافة الأطباء
+window.recalculateTodayAll = function() {
+    const btn = document.getElementById('btnRecalculateAll');
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'إعادة احتساب كشفيات اليوم للجميع',
+            html: 'هل أنت متأكد من إعادة احتساب وتطبيق الحصص المالية لكافة كشفيات اليوم <b>لجميع الأطباء</b> وفق الإعدادات الحالية؟',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، أعد احتساب الكل',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                executeRecalculate(null, btn);
+            }
+        });
+    } else {
+        if (confirm('هل أنت متأكد من إعادة احتساب كشفيات اليوم لجميع الأطباء؟')) {
+            executeRecalculate(null, btn);
+        }
+    }
+};
+
+function executeRecalculate(doctorId, btn) {
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    fetch('{{ route('admin.doctor-commission-settings.recalculate-today') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            doctor_id: doctorId
+        })
+    })
+    .then(async res => {
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'حدث خطأ أثناء إعادة الاحتساب');
+        }
+        return data;
+    })
+    .then(data => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'اكتملت إعادة الاحتساب بنجاح 🔄',
+                text: data.message,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#198754'
+            });
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(err => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+        console.error('Error recalculating:', err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'فشلت إعادة الاحتساب',
+                text: err.message || 'حدث خطأ في النظام',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert(err.message || 'حدث خطأ في النظام');
+        }
+    });
+}
 </script>
 @endsection

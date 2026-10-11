@@ -61,6 +61,30 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 27: ميزة إعادة الاحتساب المالي الذكي والجماعي لكشفيات اليوم Batch Financial Recalculation)
+
+### Done
+- **محرك إعادة الاحتساب المالي الذكي والجماعي (`DoctorCommissionSettingController::recalculateToday`, `routes/web.php`)**:
+  * إضافة مسار `POST /admin/doctor-commission-settings/recalculate-today` مخصص لإعادة احتساب وتطبيق الحصص المالية وفق أحدث إعدادات العمولات المسجلة.
+  * **مرونة النطاق (Doctor & Date Scope)**: إمكانية إعادة الاحتساب لطبيب معين أو لكافة أطباء المستشفى دفعة واحدة لتاريخ اليوم.
+  * **معايير الأمان المالي والمحاسبي الصارمة**:
+    - حماية المبالغ المصروفة نقداً: فحص حالة مستحقات الطبيب (`doctor_dues`) وتجاوز أي كشفية صُرفت للطبيب بالفعل (`status = paid`) لحماية الأرصدة المصروفة.
+    - التمييز الدقيق بين كشفيات الكاش وكشفيات الضمان الصحي (`HI`).
+    - تطبيق قاعدة صمام الأمان الرياضي لمنع تجاوز حصة الطبيب لإجمالي المبلغ المقبوض.
+    - تحديث ثلاثي مترابط ومتزامن داخل `DB::transaction`:
+      1. تحديث جدول إيرادات الاستشارية `consultation_revenues` (`doctor_share`, `hospital_share`, `doctor_percentage`).
+      2. تحديث جدول مستحقات الطبيب `doctor_dues` (`amount`).
+      3. إعادة احتساب ومزامنة الحساب المالي التراكمي للطبيب `doctor_financial_accounts` (`total_earned`, `balance`).
+  * توثيق العملية الحساسة تلقائياً في سجل الأنشطة والرقابة `UserActivityLogger` مع أعداد الكشفيات والأطباء المتأثرين.
+- **واجهة المستخدم التفاعلية (`resources/views/admin/doctor_commission_settings/index.blade.php`)**:
+  * إضافة زر عام بارز في الشريط العلوي: **«🔄 إعادة احتساب كشفيات اليوم للكل»** لإعادة تسوية حسابات اليوم بضغطة واحدة.
+  * إضافة زر فرعي بجانب زر الحفظ في سطر كل طبيب: **«🔄»** لإعادة احتساب كشفيات هذا الطبيب تحديداً.
+  * مربعات حوار وتأكيد تفاعلية عبر `SweetAlert2` مع شارات تحميل وتنبيهات فورية بالنتيجة وأعداد الكشفيات المحدّثة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إضافة واجتياز اختبار الميزة الجديد في [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 4 passed (14 assertions).
+  * اجتياز كامل لاختبارات [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز كامل لاختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
 ## Session log (2026-10-11 — المرحلة 26: إصلاح حفظ جميع العمولات وإزالة الكسور العشرية من المبالغ Fix Save All Commissions & Remove Decimal Zeros)
 
 ### Done

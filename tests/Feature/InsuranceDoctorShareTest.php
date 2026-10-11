@@ -191,4 +191,93 @@ class InsuranceDoctorShareTest extends TestCase
             'hi_price' => 25000,
         ]);
     }
+
+    public function test_admin_can_recalculate_today_consultations_batch()
+    {
+        Permission::findOrCreate('manage doctor commissions');
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('manage doctor commissions');
+
+        // Create an initial commission setting
+        $setting = DoctorCommissionSetting::create([
+            'doctor_id' => $this->doctor->id,
+            'commission_type' => 'fixed',
+            'fixed_amount' => 20000,
+            'hi_fixed_amount' => 15000,
+            'is_active' => true,
+        ]);
+
+        $appointment = Appointment::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'appointment_date' => now(),
+            'appointment_time' => '10:00:00',
+            'consultation_fee' => 30000,
+            'insurance_type' => 'none',
+            'payment_status' => 'paid',
+            'status' => 'confirmed',
+        ]);
+
+        $payment = Payment::create([
+            'appointment_id' => $appointment->id,
+            'patient_id' => $this->patient->id,
+            'amount' => 30000,
+            'total_amount' => 30000,
+            'payment_method' => 'cash',
+            'status' => 'completed',
+            'paid_at' => now(),
+            'receipt_number' => 'REC-TEST-RECALC',
+        ]);
+
+        $revenue = ConsultationRevenue::create([
+            'payment_id' => $payment->id,
+            'appointment_id' => $appointment->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'total_amount' => 30000,
+            'doctor_share' => 10000, // Old incorrect share
+            'hospital_share' => 20000,
+            'doctor_percentage' => 33.33,
+            'paid_at' => now(),
+            'revenue_date' => now()->toDateString(),
+        ]);
+
+        // Now Admin updates commission setting to 25,000 IQD fixed share
+        $setting->update([
+            'fixed_amount' => 25000,
+        ]);
+
+        // Admin triggers recalculate
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.doctor-commission-settings.recalculate-today'), [
+                'doctor_id' => $this->doctor->id,
+            ]);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        // Verify revenue was recalculated
+        $this->assertDatabaseHas('consultation_revenues', [
+            'id' => $revenue->id,
+            'doctor_share' => 25000,
+            'hospital_share' => 5000,
+        ]);
+
+        // Verify doctor dues updated
+        $this->assertDatabaseHas('doctor_dues', [
+            'doctor_id' => $this->doctor->id,
+            'payment_id' => $payment->id,
+            'amount' => 25000,
+            'status' => 'pending',
+        ]);
+
+        // Verify doctor financial account synced
+        $this->assertDatabaseHas('doctor_financial_accounts', [
+            'doctor_id' => $this->doctor->id,
+            'total_earned' => 25000,
+            'balance' => 25000,
+        ]);
+    }
 }

@@ -562,6 +562,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('doctor-commission-settings', \App\Http\Controllers\Admin\DoctorCommissionSettingController::class)->except(['show']);
         Route::post('doctor-commission-settings/save', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'save'])
             ->name('doctor-commission-settings.save');
+        Route::post('doctor-commission-settings/recalculate-today', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'recalculateToday'])
+            ->name('doctor-commission-settings.recalculate-today');
         Route::resource('packages', \App\Http\Controllers\Admin\PackageController::class)->except(['show']);
     });
 
