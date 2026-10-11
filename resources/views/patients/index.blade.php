@@ -26,21 +26,112 @@
         </div>
     @endif
 
-    <!-- شريط البحث -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <i class="fas fa-search"></i>
-                </span>
-                <input type="text" id="search-input" class="form-control" placeholder="ابحث باسم المريض، الهاتف، البريد أو الرقم الوطني..." value="{{ request('search') }}">
-                <button class="btn btn-outline-secondary" type="button" id="clear-search" title="مسح البحث">
-                    <i class="fas fa-times"></i>
-                </button>
-                <div class="input-group-text d-none" id="search-loading">
-                    <div class="spinner-border spinner-border-sm" role="status">
-                        <span class="visually-hidden">جاري البحث...</span>
+    <!-- شريط البحث والفلاتر الذكية -->
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-center">
+                <!-- البحث المباشر -->
+                <div class="col-xl-4 col-lg-4 col-md-12">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" id="search-input" class="form-control border-start-0" placeholder="ابحث بالاسم، الهاتف، الرقم الوطني، رقم الضمان..." value="{{ request('search') }}">
+                        <button class="btn btn-outline-secondary" type="button" id="clear-search" title="مسح البحث">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="input-group-text d-none bg-white" id="search-loading">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">جاري البحث...</span>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- فلتر الموظف المنشئ -->
+                <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-user-edit text-primary"></i></span>
+                        <select id="creator-filter" class="form-select form-select-sm" title="فلترة بحسب الموظف المدخل">
+                            <option value="">كل الموظفين المدخلين</option>
+                            <option value="system" {{ request('created_by') === 'system' ? 'selected' : '' }}>النظام (بدون موظف)</option>
+                            @if(isset($creators))
+                                @foreach($creators as $cr)
+                                    <option value="{{ $cr->id }}" {{ request('created_by') == $cr->id ? 'selected' : '' }}>
+                                        {{ $cr->name }}
+                                    </option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                </div>
+
+                <!-- فلتر الضمان الصحي -->
+                <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-shield-alt text-success"></i></span>
+                        <select id="insurance-filter" class="form-select form-select-sm" title="فلترة بحسب حالة الضمان">
+                            <option value="">كل حالات الضمان</option>
+                            <option value="hi" {{ request('insurance_type') == 'hi' ? 'selected' : '' }}>🛡️ ضمان صحي (HI)</option>
+                            <option value="moi" {{ request('insurance_type') == 'moi' ? 'selected' : '' }}>👮 قوى الأمن / الداخلية</option>
+                            <option value="covered" {{ request('insurance_type') == 'covered' ? 'selected' : '' }}>✅ مشمول بالضمان</option>
+                            <option value="cash" {{ request('insurance_type') == 'cash' ? 'selected' : '' }}>💵 كاش (غير مشمول)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- فلتر الجنس -->
+                <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-venus-mars text-info"></i></span>
+                        <select id="gender-filter" class="form-select form-select-sm" title="فلترة بحسب الجنس">
+                            <option value="">الجنس (الكل)</option>
+                            <option value="male" {{ request('gender') == 'male' ? 'selected' : '' }}>ذكر</option>
+                            <option value="female" {{ request('gender') == 'female' ? 'selected' : '' }}>أنثى</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- فلتر التاريخ وإعادة الضبط -->
+                <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6">
+                    <div class="d-flex gap-1 align-items-center">
+                        <div class="input-group input-group-sm flex-grow-1">
+                            <span class="input-group-text bg-white"><i class="fas fa-calendar-day text-secondary"></i></span>
+                            <select id="date-filter" class="form-select form-select-sm" title="فلترة بحسب تاريخ الإدخال">
+                                <option value="">كل التواريخ</option>
+                                <option value="today" {{ request('date_filter') == 'today' ? 'selected' : '' }}>📅 اليوم</option>
+                                <option value="yesterday" {{ request('date_filter') == 'yesterday' ? 'selected' : '' }}>أمس</option>
+                                <option value="this_week" {{ request('date_filter') == 'this_week' ? 'selected' : '' }}>هذا الأسبوع</option>
+                                <option value="this_month" {{ request('date_filter') == 'this_month' ? 'selected' : '' }}>هذا الشهر</option>
+                                <option value="custom" {{ (request('date_from') || request('date_to') || request('date_filter') == 'custom') ? 'selected' : '' }}>تحديد فترة ⏳</option>
+                            </select>
+                        </div>
+                        <button type="button" id="reset-filters" class="btn btn-sm btn-outline-secondary" title="إعادة تعيين الفلاتر">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- صف التواريخ المخصصة (من - إلى) يظهر عند اختيار "تحديد فترة" -->
+            <div class="row g-2 mt-2 pt-2 border-top {{ (request('date_from') || request('date_to') || request('date_filter') == 'custom') ? '' : 'd-none' }}" id="custom-date-row">
+                <div class="col-md-3 col-sm-6">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white">من تاريخ:</span>
+                        <input type="date" id="date-from" class="form-control" value="{{ request('date_from') }}">
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white">إلى تاريخ:</span>
+                        <input type="date" id="date-to" class="form-control" value="{{ request('date_to') }}">
+                    </div>
+                </div>
+                <div class="col-md-6 col-sm-12 d-flex align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1 text-primary"></i>
+                        تحديث فوري وتلقائي لقائمة المرضى بحسب الفلاتر المحددة.
+                    </small>
                 </div>
             </div>
         </div>
@@ -274,6 +365,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('search-input');
     const clearSearchBtn = document.getElementById('clear-search');
+    const creatorFilter = document.getElementById('creator-filter');
+    const insuranceFilter = document.getElementById('insurance-filter');
+    const genderFilter = document.getElementById('gender-filter');
+    const dateFilter = document.getElementById('date-filter');
+    const dateFromInput = document.getElementById('date-from');
+    const dateToInput = document.getElementById('date-to');
+    const customDateRow = document.getElementById('custom-date-row');
+    const resetFiltersBtn = document.getElementById('reset-filters');
+
     const patientsTable = document.getElementById('patients-table');
     const patientsTbody = document.getElementById('patients-tbody');
     const paginationContainer = document.getElementById('pagination-container');
@@ -288,9 +388,63 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let searchTimeout;
 
-    // دالة البحث
-    function performSearch(searchTerm) {
-        performSearchWithPage(searchTerm, 1);
+    // تجميع معاملات البحث والفلاتر
+    function getFilterParams(page = 1) {
+        var params = new URLSearchParams();
+        const search = searchInput ? searchInput.value.trim() : '';
+        if (search) params.set('search', search);
+
+        if (creatorFilter && creatorFilter.value) params.set('created_by', creatorFilter.value);
+        if (insuranceFilter && insuranceFilter.value) params.set('insurance_type', insuranceFilter.value);
+        if (genderFilter && genderFilter.value) params.set('gender', genderFilter.value);
+
+        if (dateFilter && dateFilter.value) {
+            params.set('date_filter', dateFilter.value);
+            if (dateFilter.value === 'custom') {
+                if (dateFromInput && dateFromInput.value) params.set('date_from', dateFromInput.value);
+                if (dateToInput && dateToInput.value) params.set('date_to', dateToInput.value);
+            }
+        }
+        params.set('page', page);
+        return params;
+    }
+
+    // دالة البحث مع الفلاتر ورقم الصفحة
+    function performSearchWithPage(page) {
+        page = page || 1;
+        document.getElementById('search-loading').classList.remove('d-none');
+        patientsTable.classList.add('search-loading');
+
+        var params = getFilterParams(page);
+
+        fetch(patientsBaseUrl + '?' + params.toString(), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken()
+            }
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        })
+        .then(function(data) {
+            updateTable(Array.isArray(data.patients) ? data.patients : []);
+            updatePagination(data.pagination || '');
+            document.getElementById('search-loading').classList.add('d-none');
+            patientsTable.classList.remove('search-loading');
+        })
+        .catch(function(err) {
+            console.error('خطأ في تصفية وبحث المرضى:', err);
+            document.getElementById('search-loading').classList.add('d-none');
+            patientsTable.classList.remove('search-loading');
+        });
+    }
+
+    function performSearch() {
+        performSearchWithPage(1);
     }
 
     // تحديث الجدول
@@ -418,82 +572,84 @@ document.addEventListener('DOMContentLoaded', function() {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
                 const url = new URL(this.href);
-                const page = url.searchParams.get('page');
-                const searchTerm = searchInput.value.trim();
-
-                if (searchTerm) {
-                    performSearchWithPage(searchTerm, page);
-                } else {
-                    window.location.href = this.href;
-                }
+                const page = url.searchParams.get('page') || 1;
+                performSearchWithPage(page);
             });
         });
     }
 
-    // البحث مع رقم الصفحة
-    function performSearchWithPage(searchTerm, page) {
-        page = page || 1;
-        document.getElementById('search-loading').classList.remove('d-none');
-        patientsTable.classList.add('search-loading');
+    // ربط فلاتر القوائم المنسدلة
+    [creatorFilter, insuranceFilter, genderFilter].forEach(el => {
+        if (el) {
+            el.addEventListener('change', function() {
+                performSearchWithPage(1);
+            });
+        }
+    });
 
-        var params = new URLSearchParams();
-        params.set('search', searchTerm);
-        params.set('page', page);
-
-        fetch(patientsBaseUrl + '?' + params.toString(), {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken()
+    // فلتر التاريخ
+    if (dateFilter) {
+        dateFilter.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                if (customDateRow) customDateRow.classList.remove('d-none');
+            } else {
+                if (customDateRow) customDateRow.classList.add('d-none');
+                performSearchWithPage(1);
             }
-        })
-        .then(function(response) {
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            return response.json();
-        })
-        .then(function(data) {
-            updateTable(Array.isArray(data.patients) ? data.patients : []);
-            updatePagination(data.pagination || '');
-            document.getElementById('search-loading').classList.add('d-none');
-            patientsTable.classList.remove('search-loading');
-        })
-        .catch(function(err) {
-            console.error('خطأ في البحث:', err);
-            document.getElementById('search-loading').classList.add('d-none');
-            patientsTable.classList.remove('search-loading');
         });
     }
 
-    // البحث التلقائي
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.trim();
-
-        // مسح المهلة السابقة
-        clearTimeout(searchTimeout);
-
-        // انتظار 300ms قبل البحث لتجنب الطلبات المتكررة
-        searchTimeout = setTimeout(() => {
-            performSearch(searchTerm);
-        }, 300);
-    });
-
-    // مسح البحث
-    clearSearchBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        performSearch('');
-        searchInput.focus();
-    });
-
-    // البحث عند الضغط على Enter
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const searchTerm = this.value.trim();
-            performSearch(searchTerm);
+    // مدخلات التواريخ المخصصة
+    [dateFromInput, dateToInput].forEach(el => {
+        if (el) {
+            el.addEventListener('change', function() {
+                performSearchWithPage(1);
+            });
         }
     });
+
+    // إعادة تعيين الفلاتر
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            if (searchInput) searchInput.value = '';
+            if (creatorFilter) creatorFilter.value = '';
+            if (insuranceFilter) insuranceFilter.value = '';
+            if (genderFilter) genderFilter.value = '';
+            if (dateFilter) dateFilter.value = '';
+            if (dateFromInput) dateFromInput.value = '';
+            if (dateToInput) dateToInput.value = '';
+            if (customDateRow) customDateRow.classList.add('d-none');
+            performSearchWithPage(1);
+        });
+    }
+
+    // البحث التلقائي بالنص
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                performSearchWithPage(1);
+            }, 300);
+        });
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearchWithPage(1);
+            }
+        });
+    }
+
+    // مسح خانة البحث
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+            performSearchWithPage(1);
+        });
+    }
 
     // حذف المريض عبر نموذج HTML مخفي (أكثر موثوقية ضد 419)
     patientsTbody.addEventListener('click', function(e) {

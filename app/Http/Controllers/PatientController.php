@@ -19,6 +19,12 @@ class PatientController extends Controller
         }
 
         $search = trim($request->get('search', ''));
+        $createdBy = $request->get('created_by', '');
+        $insuranceType = $request->get('insurance_type', '');
+        $gender = $request->get('gender', '');
+        $dateFilter = $request->get('date_filter', '');
+        $dateFrom = $request->get('date_from', '');
+        $dateTo = $request->get('date_to', '');
 
         $query = Patient::with(['user', 'creator', 'healthInsuranceCategory'])
             ->withCount(['appointments as total_appointments']);
@@ -33,6 +39,64 @@ class PatientController extends Controller
                   ->orWhere('insurance_card_no', 'like', "%{$search}%")
                   ->orWhere('insurance_number', 'like', "%{$search}%");
             });
+        }
+
+        // فلتر الموظف المنشئ
+        if ($createdBy !== '') {
+            if ($createdBy === 'system') {
+                $query->whereNull('created_by');
+            } else {
+                $query->where('created_by', $createdBy);
+            }
+        }
+
+        // فلتر حالة الضمان
+        if ($insuranceType !== '') {
+            if ($insuranceType === 'hi') {
+                $query->where('insurance_type', 'hi');
+            } elseif ($insuranceType === 'moi') {
+                $query->where('insurance_type', 'moi');
+            } elseif ($insuranceType === 'covered') {
+                $query->where(function ($q) {
+                    $q->whereIn('insurance_type', ['hi', 'moi'])
+                      ->orWhere('covered_by_insurance', true);
+                });
+            } elseif ($insuranceType === 'cash') {
+                $query->where(function ($q) {
+                    $q->where('insurance_type', 'none')
+                      ->orWhereNull('insurance_type');
+                })->where(function ($q) {
+                    $q->where('covered_by_insurance', false)
+                      ->orWhereNull('covered_by_insurance');
+                });
+            }
+        }
+
+        // فلتر الجنس
+        if ($gender !== '') {
+            $query->whereHas('user', function ($uq) use ($gender) {
+                $uq->where('gender', $gender);
+            });
+        }
+
+        // فلتر التاريخ
+        if ($dateFilter !== '') {
+            if ($dateFilter === 'today') {
+                $query->whereDate('created_at', Carbon::today());
+            } elseif ($dateFilter === 'yesterday') {
+                $query->whereDate('created_at', Carbon::yesterday());
+            } elseif ($dateFilter === 'this_week') {
+                $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+            } elseif ($dateFilter === 'this_month') {
+                $query->whereBetween('created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+            }
+        }
+
+        if ($dateFrom !== '') {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo !== '') {
+            $query->whereDate('created_at', '<=', $dateTo);
         }
 
         $patients = $query->orderBy('created_at', 'desc')
@@ -74,7 +138,16 @@ class PatientController extends Controller
             ]);
         }
 
-        return view('patients.index', compact('patients'));
+        // جلب قائمة الموظفين الذين أدخلوا مرضى مع موظفي الاستقبال والإدارة لفلترة العرض
+        $creatorIds = Patient::whereNotNull('created_by')->distinct()->pluck('created_by')->filter()->toArray();
+        $creators = User::whereIn('id', $creatorIds)
+            ->orWhereHas('roles', function ($r) {
+                $r->whereIn('name', ['admin', 'admin-hsop', 'hospital_admin', 'receptionist']);
+            })
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('patients.index', compact('patients', 'creators'));
     }
 
     public function create()

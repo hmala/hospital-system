@@ -61,6 +61,21 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 19: فلاتر جدول المرضى الذكية والسريعة Smart Patient Filters)
+
+### Done
+- **فلاتر جدول المرضى الذكية (`PatientController`, `resources/views/patients/index.blade.php`)**:
+  * إضافة شريط فلاتر متقدم فوق جدول المرضى بتصميم متناسق وسريع:
+    - 👤 **فلتر الموظف المُدخِل (`created_by`)**: تصفية فورية بحسب موظف الاستقبال أو الإدخال أو اختيار «النظام (بدون موظف)».
+    - 🛡️ **فلتر الضمان الصحي (`insurance_type`)**: تصفية بحسب نوع الضمان (ضمان صحي HI، قوى الأمن MOI، مشمول بأي ضمان، كاش غير مشمول).
+    - ⚧️ **فلتر الجنس (`gender`)**: تصفية (الكل، ذكر، أنثى).
+    - 📅 **فلتر التاريخ (`date_filter` و Range)**: خيارات سريعة (اليوم، أمس، هذا الأسبوع، هذا الشهر) مع حقول مرنة لتحديد فترة (من تاريخ - إلى تاريخ).
+    - 🔄 **زر إعادة تعيين الفلاتر**: تصفية بضغطة زر واحدة.
+  * تحديث فوري بالـ AJAX بدون إعادة تحميل كامل الصفحة (No Page Reload) مع الحفاظ على الفلاتر أثناء الترقيم (Pagination).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات الفلاتر [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php): 4 passed (16 assertions).
+  * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
 ## Session log (2026-10-11 — المرحلة 17: نظام سجل حركات ونشاط الموظفين والرقابة الإدارية Staff Activity Logs & Pulse)
 
 ### Done
