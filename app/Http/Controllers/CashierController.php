@@ -242,26 +242,34 @@ class CashierController extends Controller
                 ->with('error', 'هذا الموعد تم دفعه مسبقاً');
         }
 
-        DB::beginTransaction();
-        try {
-            $patient = $appointment->patient;
-            $insuranceType = $request->input('insurance_type', $patient->insurance_type ?? 'none');
-            $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
-            $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
+        $patient = $appointment->patient;
+        $insuranceType = $request->input('insurance_type', $patient->insurance_type ?? 'none');
 
-            // فحص ما إذا كان الموعد مرتبطاً بفحص سونار أو أشعة
-            $scanType = null;
-            $appointment->load('visit');
-            if ($appointment->visit) {
-                $medReq = \App\Models\Request::where('visit_id', $appointment->visit->id)->where('type', 'radiology')->first();
-                if ($medReq) {
-                    $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
-                    $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
-                    if ($radTypeId) {
-                        $scanType = \App\Models\RadiologyType::find($radTypeId);
-                    }
+        // فحص ما إذا كان الموعد مرتبطاً بفحص سونار أو أشعة
+        $scanType = null;
+        $appointment->load('visit');
+        if ($appointment->visit) {
+            $medReq = \App\Models\Request::where('visit_id', $appointment->visit->id)->where('type', 'radiology')->first();
+            if ($medReq) {
+                $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
+                $radTypeId = $details['ultrasound_type_id'] ?? ($details['radiology_type_ids'][0] ?? null);
+                if ($radTypeId) {
+                    $scanType = \App\Models\RadiologyType::find($radTypeId);
                 }
             }
+        }
+
+        if (!$scanType && $appointment->doctor && $insuranceType === 'hi') {
+            $docCommission = \App\Models\DoctorCommissionSetting::where('doctor_id', $appointment->doctor->id)->first();
+            if (!$docCommission || (float)($docCommission->hi_fixed_amount ?? 0) <= 0) {
+                return back()->with('error', 'لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.');
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
             if ($scanType) {
                 $servicePricing = $scanType->calculateInsurancePricing($insuranceType, $copayPercentage);

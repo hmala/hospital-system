@@ -208,7 +208,7 @@ class DoctorCommissionSettingController extends Controller
             'moi_price.*' => 'nullable|numeric|min:0',
             'is_moi_active' => 'nullable|array',
             'save_mode' => 'required|in:row,all,first_n',
-            'doctor_row' => 'required_if:save_mode,row|exists:doctors,id',
+            'doctor_row' => 'required_if:save_mode,row|nullable|exists:doctors,id',
             'rows_to_save' => 'nullable|integer|min:1',
         ]);
 

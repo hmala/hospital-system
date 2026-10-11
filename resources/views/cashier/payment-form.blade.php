@@ -57,6 +57,10 @@
             $hiPrice = (float)($doctor && $doctor->hi_price > 0 ? $doctor->hi_price : 0);
             $isHiActive = (bool)($doctor ? ($doctor->is_hi_active ?? true) : true);
         }
+
+        $doctorCommission = $doctor ? \App\Models\DoctorCommissionSetting::where('doctor_id', $doctor->id)->first() : null;
+        $doctorHiShare = $doctorCommission ? (float)($doctorCommission->hi_fixed_amount ?? 0) : 0;
+        $isDoctorConsultation = (!$scanType && $doctor);
     @endphp
 
     @if((!$appointment->doctor && !$scanType) || $regularPrice <= 0)
@@ -414,6 +418,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const isMoiActive = @json($isMoiActive);
     const hiPrice = @json($hiPrice);
     const isHiActive = @json($isHiActive);
+    const doctorHiShare = @json($doctorHiShare);
+    const isDoctorConsultation = @json($isDoctorConsultation);
 
     const insuranceTypeSelect = document.getElementById('insurance_type');
     const copayInput = document.getElementById('copay_percentage');
@@ -440,10 +446,12 @@ document.addEventListener('DOMContentLoaded', function() {
         let approvedPrice = regularPrice;
         let isCovered = false;
         let hasError = false;
+        let errorMsg = '';
 
         if (insType === 'moi') {
             if (!isMoiActive || moiPrice <= 0) {
                 hasError = true;
+                errorMsg = 'لا يمكن التسديد! الطبيب/الخدمة غير مشمول بضمان قوى الأمن أو أن التسعيرة غير مدخلة.';
             } else {
                 approvedPrice = moiPrice;
                 isCovered = true;
@@ -457,6 +465,10 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (insType === 'hi') {
             if (!isHiActive || hiPrice <= 0) {
                 hasError = true;
+                errorMsg = 'لا يمكن التسديد! الطبيب/الخدمة غير مشمول بالضمان الصحي أو أن تسعيرة الضمان غير مدخلة.';
+            } else if (isDoctorConsultation && doctorHiShare <= 0) {
+                hasError = true;
+                errorMsg = 'لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.';
             } else {
                 approvedPrice = hiPrice;
                 isCovered = true;
@@ -484,10 +496,14 @@ document.addEventListener('DOMContentLoaded', function() {
         let insuranceShare = 0;
 
         const alertBox = document.getElementById('insuranceErrorAlert');
+        const alertText = document.getElementById('insuranceErrorText');
         const submitBtn = document.getElementById('submitPaymentBtn');
 
         if (hasError) {
-            if (alertBox) alertBox.classList.remove('d-none');
+            if (alertBox) {
+                alertBox.classList.remove('d-none');
+                if (alertText && errorMsg) alertText.textContent = errorMsg;
+            }
             if (submitBtn) submitBtn.disabled = true;
             approvedPrice = 0;
             patientShare = 0;

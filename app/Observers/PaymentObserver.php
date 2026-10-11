@@ -82,7 +82,7 @@ class PaymentObserver
 
         $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting, $payment);
         $hospitalShare = round($amount - $doctorShare, 2);
-        $percentage = ((float)$baseAmount != 0.0) ? round((abs($doctorShare) / $baseAmount) * 100, 2) : null;
+        $percentage = ($amount != 0.0) ? round((abs($doctorShare) / abs($amount)) * 100, 2) : null;
 
         if ($amount < 0) {
             $hospitalShare = round($amount - $doctorShare, 2);
@@ -186,16 +186,25 @@ class PaymentObserver
     {
         $absAmount = abs($amount);
         $absBaseAmount = abs($baseAmount);
+        $isInsurance = $payment && (
+            (float)($payment->insurance_share ?? 0) > 0 ||
+            in_array($payment->insurance_type ?? '', ['hi', 'moi', 'interior_ministry', 'health_insurance']) ||
+            ($appointment && in_array($appointment->insurance_type ?? '', ['hi', 'moi']))
+        );
 
         if ($setting) {
             $type = $setting->commission_type ?? 'fixed';
-            $isInsurance = $payment && (float)($payment->insurance_share ?? 0) > 0;
 
             if ($type === 'fixed' || $type === 'custom') {
                 $normalFixed = (float) ($setting->fixed_amount ?? 0);
-                $hiFixed = (float) ($setting->hi_fixed_amount ?? $normalFixed); // fallback to normal fixed
-                
-                $fixedVal = $isInsurance ? $hiFixed : $normalFixed;
+                if ($isInsurance) {
+                    $hiFixed = (float) ($setting->hi_fixed_amount ?? 0);
+                    // إذا لم تكن محددة للطبيب في الضمان، القاعدة الثابتة للمستشفى هي 15,000 د.ع للطبيب (من كشفية الضمان 25,000)
+                    $fixedVal = $hiFixed > 0 ? $hiFixed : 15000.00;
+                } else {
+                    $fixedVal = $normalFixed;
+                }
+
                 $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
             } else {
                 // percentage (إذا كانت مسجلة تاريخياً كنسبة)
@@ -203,14 +212,21 @@ class PaymentObserver
                 if ($perc <= 0 && (float)($setting->fixed_amount ?? 0) > 0) {
                     $doctorShare = (float) $setting->fixed_amount;
                 } elseif ($perc > 0) {
-                    $doctorShare = round($absBaseAmount * ($perc / 100), 2);
+                    $doctorShare = round($absAmount * ($perc / 100), 2);
                 } else {
                     $doctorShare = 0.00;
                 }
             }
 
-            $doctorShare = min($absBaseAmount, abs($doctorShare));
+            // صمام أمان صارم: حصة الطبيب لا يمكن أن تتجاوز إجمالي المبلغ المحصل للكشفية نهائياً لمنع أي حصة سالبة للمستشفى
+            $doctorShare = min($absAmount, abs($doctorShare));
             return $amount < 0 ? -$doctorShare : $doctorShare;
+        }
+
+        // في حال عدم وجود إعداد عمولة مسجل للطبيب ولكنها كشفية ضمان صحي
+        if ($isInsurance) {
+            $defaultHiShare = min($absAmount, 15000.00);
+            return $amount < 0 ? -$defaultHiShare : $defaultHiShare;
         }
 
         // في حال عدم وجود إعداد عمولة مسجل للطبيب، تكون حصته 0.00 (لا توجد نسبة افتراضية تخمينية 70%)

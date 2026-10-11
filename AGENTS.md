@@ -61,6 +61,42 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 26: إصلاح حفظ جميع العمولات وإزالة الكسور العشرية من المبالغ Fix Save All Commissions & Remove Decimal Zeros)
+
+### Done
+- **إصلاح زر «حفظ جميع التعديلات» (`app/Http/Controllers/Admin/DoctorCommissionSettingController.php`)**:
+  * **اكتشاف السبب الجذري**: في دالة الحفظ `save()`، كانت قاعدة التحقق لحقل `doctor_row` مكتوبة بصيغة: `'doctor_row' => 'required_if:save_mode,row|exists:doctors,id'`. عند اختيار وضع حفظ الكل (`save_mode = all`)، يكون حقل `doctor_row` فارغاً (`null`)، وبسبب غياب قيد `nullable`، كان محرك التحقق في لارافيل يفحص وجود القيمة `null` في جدول الأطباء فيفشل التحقق دائماً بخطأ (HTTP 422: The selected doctor row is invalid).
+  * **الحل**: إضافة `nullable` لقاعدة التحقق لتصبح: `'doctor_row' => 'required_if:save_mode,row|nullable|exists:doctors,id'`. الآن يعمل حفظ الكل بنجاح تام وسرعة فائقة لكافة أطباء الصفحة دفعة واحدة.
+- **إزالة الأصفار العشرية (.00) من حقول المبالغ والعمولات (`resources/views/admin/doctor_commission_settings/index.blade.php`)**:
+  * تحويل قيم حقول الكشفيات والعمولات (`consultation_fee`, `hi_price`, `fixed_amount`, `hi_fixed_amount`) في الواجهة إلى أرقام صحيحة `(int)` بدلاً من طباعة سلاسل أرقام `DECIMAL` القادمة من قاعدة البيانات، فتظهر الآن نظيفة ومقروءة (مثلاً: `25000` و `15000` بدلاً من `25000.00` و `15000.00`).
+- **تحسين استجابة الـ AJAX والإشعارات التفاعلية**:
+  * تحسين دالتي `saveAllRows` و `saveSingleRow` لفحص حالة استجابة السيرفر `res.ok` والبيانات `data.success` قبل إظهار شارات النجاح، مع عرض رسالة الخطأ الفعلية وتنبيهات `SweetAlert2` عند وجود أي مشكلة في الاتصال أو التحقق.
+- **الاختبارات الآلية والمخطط المعرفي (Automated Tests & Graphify)**:
+  * إضافة واجتياز اختبار ميزة حفظ جميع العمولات دفعة واحدة في [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 3 passed (9 assertions).
+  * تحديث شجرة المعرفة عبر `python -m graphify update .` (4521 عقدة و 5693 حافة).
+
+## Session log (2026-10-11 — المرحلة 25: حماية وتقسيم كشفيات الضمان الصحي ومنع الحصص السالبة وتنبيه الكاشير Insurance Consultation Shares & Zero/Negative Balance Guard)
+
+### Done
+- **حماية وضبط كشفيات الضمان الصحي وإلغاء التراجع للحصة العادية (`app/Observers/PaymentObserver.php`)**:
+  * إلغاء الاعتماد التلقائي الكارثي على الحصة العادية (`fallback to normalFixed`) في كشفيات الضمان الصحي عند فراغ حقل `hi_fixed_amount`، حيث كان ذلك يخصم 30,000 أو 25,000 د.ع من كشفية قيمتها 25,000 د.ع فقط فيتسبب برصيد سالب للمستشفى (-5,000) أو صفر (0.00).
+  * اعتماد القاعدة الثابتة والموحدة لكشفيات الضمان الصحي: كشفية 25,000 د.ع تتوزع **15,000 د.ع للطبيب** و **10,000 د.ع للمستشفى** (بنسبة 60% للطبيب و 40% للمستشفى).
+  * إضافة صمام أمان رياضي وبرمجي صارم: `$doctorShare = min($absAmount, abs($doctorShare))` يمنع تجاوز حصة الطبيب لإجمالي المبلغ المقبوض للكشفية تحت أي ظرف، مما يجعل حصة المستشفى دائماً $\ge 0$ وموجبة.
+  * حساب نسبة الطبيب الدقيقة بالاعتماد على إجمالي المبلغ الفعلي المقبوض وليس الأجور الافتراضية.
+- **تنبيه شاشة الكاشير وتعطيل زر التسديد عند عدم تحديد حصة الضمان (`resources/views/cashier/payment-form.blade.php`, `app/Http/Controllers/CashierController.php`)**:
+  * إضافة فحص لحظي في واجهة الكاشير (`payment-form.blade.php`): إذا كان الموعد تابعاً لعيادة استشارية والمريض مشمولاً بالضمان الصحي (`HI`)، ولم تقم الإدارة بإدخال حصة الطبيب للضمان في جدول العمولات (`hi_fixed_amount <= 0`)، يتعطل زر التسديد تلقائياً (`submitPaymentBtn.disabled = true`) ويظهر شريط تحذيري أحمر:
+    > ⛔ «لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.»
+  * تأمين المعالجة البرمجية الصارمة في الباك إند (`CashierController::processPayment`) قبل بدء المعاملة المالية لمنع أي تجاوز للواجهة.
+- **تحديث وضبط إعدادات الأطباء وتصحيح القيود السابقة في قاعدة البيانات**:
+  * تحديث كافة إعدادات الأطباء في جدول `doctor_commission_settings` لضبط حصة الضمان الصحي الافتراضية الثابتة `hi_fixed_amount = 15000.00`.
+  * تصحيح كامل القيود الـ 25 المتأثرة اليوم في `consultation_revenues` لتصبح حصة الطبيب 15,000 د.ع وحصة المستشفى 10,000 د.ع.
+  * تصحيح مستحقات الأطباء في `doctor_dues`، وسندات الخزينة في `financial_transactions`، وإعادة مزامنة أرصدة الأطباء في `doctor_financial_accounts`.
+- **المخطط المعرفي والاختبارات الآلية (Knowledge Graph & Automated Tests)**:
+  * تحديث شجرة المعرفة عبر `python -m graphify update .` (4518 عقدة، 5686 حافة عبر 1165 مجتمع).
+  * إنشاء واجتياز اختبار الميزة الجديد [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 2 passed (5 assertions).
+  * اجتياز اختبارات التعديل اليدوي [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
 ## Session log (2026-10-11 — المرحلة 24: تسريع وتبسيط استمارة إدخال المرضى وحذف الحقول غير الضرورية Streamline Patient Registration Form)
 
 ### Done

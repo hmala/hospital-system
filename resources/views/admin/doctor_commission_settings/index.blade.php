@@ -210,7 +210,7 @@
                                                min="0"
                                                name="consultation_fee[{{ $index }}]" 
                                                id="cashFeeInput-{{ $doctor->id }}"
-                                               value="{{ $docFee > 0 ? $docFee : '' }}" 
+                                               value="{{ $docFee > 0 ? (int)$docFee : '' }}" 
                                                class="form-control form-control-sm font-monospace text-center fw-semibold fee-input" 
                                                placeholder="0"
                                                data-doctor-id="{{ $doctor->id }}"
@@ -238,7 +238,7 @@
                                                    min="0"
                                                    name="hi_price[{{ $index }}]" 
                                                    id="hiPriceInput-{{ $doctor->id }}"
-                                                   value="{{ $hiFee > 0 ? $hiFee : '' }}" 
+                                                   value="{{ $hiFee > 0 ? (int)$hiFee : '' }}" 
                                                    class="form-control form-control-sm font-monospace text-center hi-input" 
                                                    placeholder="سعر HI"
                                                    data-doctor-id="{{ $doctor->id }}"
@@ -257,7 +257,7 @@
                                                min="0"
                                                name="fixed_amount[{{ $index }}]" 
                                                id="docShareInput-{{ $doctor->id }}"
-                                               value="{{ $commission?->fixed_amount ?? '' }}" 
+                                               value="{{ $commission?->fixed_amount !== null && $commission->fixed_amount !== '' ? (int)$commission->fixed_amount : '' }}" 
                                                class="form-control form-control-sm font-monospace text-center fw-bold text-primary doctor-share-input" 
                                                placeholder="0"
                                                data-doctor-id="{{ $doctor->id }}"
@@ -274,7 +274,7 @@
                                                min="0"
                                                name="hi_fixed_amount[{{ $index }}]" 
                                                id="docHiShareInput-{{ $doctor->id }}"
-                                               value="{{ $commission?->hi_fixed_amount ?? '' }}" 
+                                               value="{{ $commission?->hi_fixed_amount !== null && $commission->hi_fixed_amount !== '' ? (int)$commission->hi_fixed_amount : '' }}" 
                                                class="form-control form-control-sm font-monospace text-center fw-bold text-success hi-share-input" 
                                                placeholder="0"
                                                data-doctor-id="{{ $doctor->id }}"
@@ -400,9 +400,6 @@ window.saveSingleRow = function(doctorId, btn) {
     const row = document.querySelector(`.doctor-row-item[data-doctor-id="${doctorId}"]`);
     if (!row) return;
 
-    const input = document.getElementById(`docShareInput-${doctorId}`);
-    const fixedAmount = input ? input.value : '';
-
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> حفظ...';
@@ -421,7 +418,13 @@ window.saveSingleRow = function(doctorId, btn) {
         },
         body: formData
     })
-    .then(res => res.json())
+    .then(async res => {
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'حدث خطأ أثناء الحفظ');
+        }
+        return data;
+    })
     .then(data => {
         if (btn) {
             btn.disabled = false;
@@ -459,6 +462,17 @@ window.saveSingleRow = function(doctorId, btn) {
             }, 2000);
         }
         console.error('Error saving commission setting:', err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'فشل الحفظ',
+                text: err.message || 'حدث خطأ أثناء الحفظ',
+                toast: true,
+                position: 'top-end',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        }
     });
 };
 
@@ -473,6 +487,7 @@ window.saveAllRows = function() {
     const form = document.getElementById('doctor-commission-settings-form');
     const formData = new FormData(form);
     formData.set('save_mode', 'all');
+    formData.delete('doctor_row');
 
     fetch(form.action, {
         method: 'POST',
@@ -482,18 +497,27 @@ window.saveAllRows = function() {
         },
         body: formData
     })
-    .then(res => res.json())
+    .then(async res => {
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'حدث خطأ أثناء حفظ التعديلات');
+        }
+        return data;
+    })
     .then(data => {
         if (btn) {
             btn.disabled = false;
+            btn.className = 'btn btn-success btn-sm px-3 shadow-xs fw-bold';
             btn.innerHTML = '<i class="fas fa-check me-1"></i> تم حفظ الكل بنجاح';
             setTimeout(() => {
                 btn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ جميع التعديلات';
-            }, 2000);
+            }, 2500);
         }
 
         document.querySelectorAll('.doctor-row-item.table-warning').forEach(row => {
             row.classList.remove('table-warning');
+            row.classList.add('table-success');
+            setTimeout(() => row.classList.remove('table-success'), 1500);
         });
 
         if (typeof Swal !== 'undefined') {
@@ -510,9 +534,25 @@ window.saveAllRows = function() {
     .catch(err => {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ جميع التعديلات';
+            btn.className = 'btn btn-danger btn-sm px-3 shadow-xs fw-bold';
+            btn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> فشل الحفظ';
+            setTimeout(() => {
+                btn.className = 'btn btn-success btn-sm px-3 shadow-xs fw-bold';
+                btn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ جميع التعديلات';
+            }, 3000);
         }
         console.error('Error saving all commission settings:', err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'فشل الحفظ',
+                text: err.message || 'يرجى التأكد من صحة المدخلات وإعادة المحاولة',
+                toast: true,
+                position: 'top-end',
+                timer: 3500,
+                showConfirmButton: false
+            });
+        }
     });
 };
 </script>
