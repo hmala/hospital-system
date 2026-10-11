@@ -204,4 +204,25 @@ class UserActivityLogTest extends TestCase
         $this->assertDatabaseMissing('user_activities', ['id' => $oldActivity->id]);
         $this->assertDatabaseHas('user_activities', ['id' => $recentActivity->id]);
     }
+
+    public function test_user_logout_records_activity_and_clears_active_status()
+    {
+        $user = User::factory()->create(['name' => 'علي حسن', 'last_activity_at' => now()]);
+        $user->assignRole('receptionist');
+
+        $response = $this->actingAs($user)->post(route('logout'));
+
+        $response->assertRedirect('/login');
+
+        // التحقق من تسجيل حركة الخروج في جدول user_activities
+        $this->assertDatabaseHas('user_activities', [
+            'user_id' => $user->id,
+            'action' => 'logout',
+            'category' => 'auth',
+        ]);
+
+        // التحقق من تصفير last_activity_at حتى لا يظهر متصلاً
+        $user->refresh();
+        $this->assertNull($user->last_activity_at);
+    }
 }

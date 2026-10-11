@@ -77,7 +77,7 @@ Consult these files before making changes or proposing fixes:
     3. 📊 **إنتاجية الكادر والموظفين اليوم**: جدول إحصائي يوضح حجم إنجاز كل موظف حسب الأقسام (استقبال، كاشير، عيادات، مختبر، أشعة، خزينة).
   * التتبع التلقائي للعمليات (Auto-tracking Observers & Middleware):
     - `TrackUserActivity` Middleware: تحديث تلقائي لـ `last_activity_at` و `last_login_ip` للمستخدم النشط.
-    - أحداث المصادقة: تسجيل تلقائي لـ `login` و `logout` مع تحديث `last_login_at`.
+    - أحداث المصادقة: تسجيل تلقائي لـ `login` و `logout` في `LoginController` مع تحديث `last_login_at` وتصفير فوري لـ `last_activity_at` عند الخروج لإسقاط المستخدم فوراً من عداد المتصلين وتحويل حالته إلى «غير متصل (سجّل خروج)».
     - `AppointmentObserver`: تسجيل تلقائي لحجوزات الاستقبال، وإلغاء الحجوزات كحركات حساسة.
     - `VisitObserver`: تسجيل تلقائي لكشفيات الأطباء وإكمال التشخيص.
     - `PaymentObserver`: تسجيل تحصيل المبالغ المالية واسترجاع الأموال (Refunds) كحركات حساسة.
@@ -91,7 +91,7 @@ Consult these files before making changes or proposing fixes:
     - تحديث صامت بالـ AJAX للـ Live Feed والـ KPI وقوائم المتواجدين والإنتاجية دون إعادة تحميل الصفحة (بدون Reload كامل ودون فقدان مكان التمرير أو الفلاتر).
     - حماية التفاعل: إيقاف التحديث التلقائي مؤقتاً أثناء كتابة المستخدم في خانات البحث أو عند فتح المودالات.
 - **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 6 passed (15 assertions).
+  * إنشاء واجتياز اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 7 passed (19 assertions).
   * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
 
 ## Session log (2026-10-10 — المرحلة 16: نظام وخزينة المستشفى المركزية وحركة النقدية والمصروفات Hospital Treasury & General Cash Flow)

@@ -91,6 +91,13 @@ class UserActivity extends Model
 
     public function getCategoryColorAttribute(): string
     {
+        if ($this->action === 'logout') {
+            return 'secondary';
+        }
+        if ($this->action === 'login') {
+            return 'success';
+        }
+
         return match ($this->category) {
             'auth' => 'secondary',
             'reception' => 'primary',
@@ -109,6 +116,13 @@ class UserActivity extends Model
 
     public function getCategoryIconAttribute(): string
     {
+        if ($this->action === 'logout') {
+            return 'fas fa-sign-out-alt';
+        }
+        if ($this->action === 'login') {
+            return 'fas fa-sign-in-alt';
+        }
+
         return match ($this->category) {
             'auth' => 'fas fa-key',
             'reception' => 'fas fa-calendar-check',

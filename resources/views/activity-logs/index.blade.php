@@ -489,7 +489,7 @@
                                     $wasRecentlyActive = $lastAct && $lastAct->diffInMinutes(now()) <= 15;
                                 @endphp
                                 <div class="col-xl-4 col-md-6">
-                                    <div class="card border rounded-4 p-3 shadow-sm h-100 {{ $isOnlineNow ? 'bg-success bg-opacity-10 border-success' : ($wasRecentlyActive ? 'bg-warning bg-opacity-10 border-warning' : 'bg-light border-light') }}">
+                                    <div class="card border rounded-4 p-3 shadow-sm h-100 {{ $isOnlineNow ? 'bg-success bg-opacity-10 border-success' : ($wasRecentlyActive ? 'bg-warning bg-opacity-10 border-warning' : 'bg-light border-secondary border-opacity-25') }}">
                                         <div class="d-flex align-items-center justify-content-between mb-2">
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="user-avatar-circle" style="width: 42px; height: 42px; font-size: 1.1rem; background: {{ $isOnlineNow ? '#dcfce7' : '#f1f5f9' }}; color: {{ $isOnlineNow ? '#15803d' : '#475569' }};">
@@ -510,8 +510,8 @@
                                                         منذ {{ $lastAct->diffInMinutes(now()) }} دقيقة
                                                     </span>
                                                 @else
-                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1">
-                                                        غير متصل
+                                                    <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">
+                                                        <i class="fas fa-sign-out-alt me-1"></i> غير متصل (سجّل خروج)
                                                     </span>
                                                 @endif
                                             </div>
@@ -523,8 +523,8 @@
                                                 <span class="fw-bold text-dark">{{ $lastLog ? $lastLog->format('h:i A') : 'غير متوفر' }}</span>
                                             </div>
                                             <div class="d-flex justify-content-between mb-1">
-                                                <span><i class="fas fa-wave-square text-info me-1"></i> آخر نشاط:</span>
-                                                <span class="fw-bold text-dark">{{ $lastAct ? $lastAct->diffForHumans() : '-' }}</span>
+                                                <span><i class="fas fa-wave-square text-info me-1"></i> حالة النشاط:</span>
+                                                <span class="fw-bold {{ $isOnlineNow ? 'text-success' : 'text-muted' }}">{{ $lastAct ? $lastAct->diffForHumans() : 'سجّل خروج من النظام' }}</span>
                                             </div>
                                             <div class="d-flex justify-content-between">
                                                 <span><i class="fas fa-network-wired text-muted me-1"></i> الـ IP:</span>

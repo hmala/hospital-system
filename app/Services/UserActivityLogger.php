@@ -36,6 +36,17 @@ class UserActivityLogger
             $userName = $currentUser?->name ?? 'النظام / غير مسجل';
             $roleName = $currentUser?->roles?->first()?->name ?? 'مستخدم';
 
+            // منع تكرار نفس حركة الدخول أو الخروج لنفس المستخدم خلال ثانيتين
+            if ($currentUser && in_array($action, ['login', 'logout'])) {
+                $recentlyLogged = UserActivity::where('user_id', $currentUser->id)
+                    ->where('action', $action)
+                    ->where('created_at', '>=', now()->subSeconds(2))
+                    ->exists();
+                if ($recentlyLogged) {
+                    return null;
+                }
+            }
+
             $activity = UserActivity::create([
                 'user_id' => $currentUser?->id,
                 'user_name' => $userName,
@@ -51,9 +62,8 @@ class UserActivityLogger
                 'is_sensitive' => $isSensitive,
             ]);
 
-            // Update user last activity timestamp if logged in
-            if ($currentUser) {
-                // Update every ~1 min at most or now
+            // تحديث وقت آخر نشاط للمستخدم (إلا إذا كانت الحركة تسجيل خروج)
+            if ($currentUser && $action !== 'logout') {
                 $currentUser->forceFill([
                     'last_activity_at' => now(),
                 ])->saveQuietly();
