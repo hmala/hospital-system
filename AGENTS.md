@@ -61,6 +61,21 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 23: إصلاح وتطوير مودال التعديل اليدوي للحصص المالية Fix Financial Movements Edit Modal)
+
+### Done
+- **إصلاح مشاكل مودال تعديل الحصص المالية (`resources/views/consultant-availability/financial-movements.blade.php`)**:
+  * **معالجة عزل الخلفية والطبقات (Backdrop Stacking Context)**: نقل المودال `#editRevenueModal` إلى ستاك `@push('modals')` في نهاية المستند لمنع احتجازه داخل `.main-content` وتأثره بـ `backdrop-filter: blur(16px)`، مما كان يسبب ظهور طبقة التعتيم الرمادية فوق المودال وتعطيل النقر.
+  * **منع لودر الصفحة الإجباري (`no-loader`)**: إضافة كلاس `no-loader` لنموذج المودال `#editRevenueForm` لمنع معالج الـ Submit العام في `layouts.app` من تشغيل شاشة التحميل الكاملة وتعليق الواجهة أثناء طلب الـ AJAX.
+  * **تأمين تمرير البيانات وتفويض الأحداث (Safe Data Attributes & Event Delegation)**: استبدال استدعاء الـ `onclick` المباشر المتأثر بأخطاء الهروب النصي (`addslashes`) بسمات `data-*` وتفويض الحدث `document.addEventListener('click', ...)` لفتح المودال بأمان تام مع أسماء المرضى والأطباء العربية.
+  * **توسيع التحقق من صلاحيات الآدمن**: دعم كافة أدوار الإدارة `['admin', 'admin-hsop', 'hospital_admin']` في الواجهة بما يتوافق تماماً مع الكونترولر.
+  * **تحديث فوري لزر التعديل والإشعارات**: تحديث قيمة `data-doctor-share` للزر بعد الحفظ لضمان فتح المودال بالقيمة الجديدة عند إعادة النقر دون تحديث الصفحة، ودعم إشعارات `toastr` المدمجة.
+- **تحديث المخطط المعرفي (`graphify update .`)**:
+  * إعادة استخراج وتحديث شجرة العلاقات والمخطط المعرفي للمشروع (4127 عقدة و 5630 حافة عبر 802 مجتمع).
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز كامل لاختبارات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
 ## Session log (2026-10-11 — المرحلة 22: ميزة التعديل اليدوي للآدمن للحصص المالية وإلغاء نسبة الـ 70% التخمينية Manual Revenue Shares Adjustment & Fixed Commissions)
 
 ### Done

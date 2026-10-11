@@ -132,7 +132,7 @@
                                         <th>الطبيب</th>
                                         <th>القسم</th>
                                         <th>المبلغ</th>
-                                        @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole('admin'))
+                                        @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
                                         <th>حصة الطبيب</th>
                                         <th>حصة المستشفى</th>
                                         <th class="no-print text-center" style="width: 80px;">إجراءات</th>
@@ -154,14 +154,20 @@
                                             <td class="fw-bold {{ $payment->total_amount < 0 ? 'text-danger' : 'text-success' }}">
                                                 {{ number_format(abs($payment->total_amount), 2) }} IQD
                                             </td>
-                                            @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole('admin'))
+                                            @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
                                             <td class="text-success fw-semibold" id="doc-share-val-{{ $payment->id }}">{{ number_format($payment->doctor_share, 2) }} IQD</td>
                                             <td class="text-info fw-semibold" id="hosp-share-val-{{ $payment->id }}">{{ number_format($payment->hospital_share, 2) }} IQD</td>
                                             <td class="no-print text-center">
                                                 <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary px-2 py-1" 
+                                                        class="btn btn-sm btn-outline-primary px-2 py-1 btn-edit-revenue" 
                                                         title="تعديل حصة الطبيب والمستشفى لهذا القيد يدوياً"
-                                                        onclick="openEditRevenueModal({{ $payment->id }}, '{{ addslashes($payment->receipt_number ?? '-') }}', '{{ addslashes(optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-') }}', '{{ addslashes(optional(optional(optional($payment->appointment)->doctor)->user)->name ?? '-') }}', '{{ addslashes(optional(optional($payment->appointment)->department)->name ?? '-') }}', {{ abs((float)$payment->total_amount) }}, {{ (float)$payment->doctor_share }})">
+                                                        data-id="{{ $payment->id }}"
+                                                        data-receipt="{{ $payment->receipt_number ?? '-' }}"
+                                                        data-patient="{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-' }}"
+                                                        data-doctor="{{ optional(optional(optional($payment->appointment)->doctor)->user)->name ?? '-' }}"
+                                                        data-department="{{ optional(optional($payment->appointment)->department)->name ?? '-' }}"
+                                                        data-total="{{ abs((float)$payment->total_amount) }}"
+                                                        data-doctor-share="{{ (float)$payment->doctor_share }}">
                                                     <i class="fas fa-edit me-1"></i> تعديل
                                                 </button>
                                             </td>
@@ -205,8 +211,11 @@
     </div>
 </div>
 
+@endsection
+
+@push('modals')
+@if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
 <!-- مودال تعديل الحصص المالية للقيد -->
-@if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole('admin'))
 <div class="modal fade" id="editRevenueModal" tabindex="-1" aria-labelledby="editRevenueModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -216,7 +225,7 @@
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
-            <form id="editRevenueForm" onsubmit="submitRevenueShareEdit(event)">
+            <form id="editRevenueForm" class="no-loader" onsubmit="submitRevenueShareEdit(event)">
                 @csrf
                 <div class="modal-body p-3">
                     <input type="hidden" id="modalRevenueId" value="">
@@ -288,41 +297,66 @@
         </div>
     </div>
 </div>
+@endif
+@endpush
 
+@push('scripts')
+@if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
 <script>
-let editModalInstance = null;
+let currentEditingBtn = null;
 
-function openEditRevenueModal(id, receipt, patient, doctor, dept, total, doctorShare) {
-    document.getElementById('modalRevenueId').value = id;
-    document.getElementById('modalTotalAmount').value = total;
-    document.getElementById('modalReceiptBadge').textContent = '#' + receipt;
-    document.getElementById('modalPatientName').textContent = patient;
-    document.getElementById('modalDoctorDept').textContent = doctor + ' (' + dept + ')';
-    document.getElementById('modalTotalDisplay').textContent = Number(total).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' IQD';
-    document.getElementById('modalDoctorShareInput').value = doctorShare;
-    document.getElementById('modalDoctorShareInput').max = total;
-    document.getElementById('modalReasonInput').value = '';
-
-    calculateModalShares();
-
-    const modalEl = document.getElementById('editRevenueModal');
-    if (!editModalInstance) {
-        editModalInstance = new bootstrap.Modal(modalEl);
-    }
-    editModalInstance.show();
+function getEditRevenueModal() {
+    const el = document.getElementById('editRevenueModal');
+    if (!el || typeof bootstrap === 'undefined') return null;
+    return bootstrap.Modal.getOrCreateInstance(el);
 }
+
+// فتح المودال عبر تفويض الأحداث عند الضغط على زر تعديل
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-revenue');
+        if (!btn) return;
+
+        currentEditingBtn = btn;
+        const id = btn.dataset.id;
+        const receipt = btn.dataset.receipt || '-';
+        const patient = btn.dataset.patient || '-';
+        const doctor = btn.dataset.doctor || '-';
+        const dept = btn.dataset.department || '-';
+        const total = parseFloat(btn.dataset.total || '0');
+        const doctorShare = parseFloat(btn.dataset.doctorShare || '0');
+
+        document.getElementById('modalRevenueId').value = id;
+        document.getElementById('modalTotalAmount').value = total;
+        document.getElementById('modalReceiptBadge').textContent = '#' + receipt;
+        document.getElementById('modalPatientName').textContent = patient;
+        document.getElementById('modalDoctorDept').textContent = doctor + (dept !== '-' ? ' (' + dept + ')' : '');
+        document.getElementById('modalTotalDisplay').textContent = Number(total).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' IQD';
+        
+        const docShareInput = document.getElementById('modalDoctorShareInput');
+        docShareInput.value = doctorShare;
+        docShareInput.max = total;
+        document.getElementById('modalReasonInput').value = '';
+
+        calculateModalShares();
+
+        const modal = getEditRevenueModal();
+        if (modal) {
+            modal.show();
+        }
+    });
+});
 
 function calculateModalShares() {
     const total = parseFloat(document.getElementById('modalTotalAmount').value || '0');
     let docShare = parseFloat(document.getElementById('modalDoctorShareInput').value || '0');
 
+    if (isNaN(docShare) || docShare < 0) {
+        docShare = 0;
+    }
     if (docShare > total) {
         docShare = total;
         document.getElementById('modalDoctorShareInput').value = total;
-    }
-    if (docShare < 0) {
-        docShare = 0;
-        document.getElementById('modalDoctorShareInput').value = 0;
     }
 
     const hospShare = Math.max(0, total - docShare);
@@ -338,6 +372,8 @@ function submitRevenueShareEdit(e) {
     const docShare = document.getElementById('modalDoctorShareInput').value;
     const reason = document.getElementById('modalReasonInput').value;
     const btn = document.getElementById('btnSaveRevenueEdit');
+
+    if (!id) return;
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
@@ -355,23 +391,41 @@ function submitRevenueShareEdit(e) {
             reason: reason
         })
     })
-    .then(res => res.json())
+    .then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            let msg = data.message || 'حدث خطأ أثناء حفظ التعديل';
+            if (data.errors) {
+                msg = Object.values(data.errors).flat().join('\n');
+            }
+            throw new Error(msg);
+        }
+        return data;
+    })
     .then(data => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ التعديل المالي وتحديث الحساب';
 
         if (data.success) {
-            // تحديث الجدول مباشرة
+            // تحديث خلايا الجدول مباشرة
             const docCell = document.getElementById('doc-share-val-' + id);
             const hospCell = document.getElementById('hosp-share-val-' + id);
             if (docCell) docCell.textContent = data.doctor_share_formatted;
             if (hospCell) hospCell.textContent = data.hospital_share_formatted;
 
-            if (editModalInstance) {
-                editModalInstance.hide();
+            // تحديث زر التعديل بالقيمة الجديدة
+            if (currentEditingBtn) {
+                currentEditingBtn.dataset.doctorShare = docShare;
             }
 
-            if (typeof Swal !== 'undefined') {
+            const modal = getEditRevenueModal();
+            if (modal) {
+                modal.hide();
+            }
+
+            if (typeof toastr !== 'undefined') {
+                toastr.success(data.message || 'تم تحديث الحصص المالية بنجاح');
+            } else if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'success',
                     title: data.message,
@@ -381,23 +435,32 @@ function submitRevenueShareEdit(e) {
                     showConfirmButton: false
                 });
             } else {
-                alert(data.message);
+                alert(data.message || 'تم تحديث الحصص المالية بنجاح');
             }
         } else {
-            alert(data.message || 'حدث خطأ أثناء حفظ التعديل');
+            const errorMsg = data.message || 'حدث خطأ أثناء حفظ التعديل';
+            if (typeof toastr !== 'undefined') {
+                toastr.error(errorMsg);
+            } else {
+                alert(errorMsg);
+            }
         }
     })
     .catch(err => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ التعديل المالي وتحديث الحساب';
         console.error('Error updating shares:', err);
-        alert('حدث خطأ أثناء الاتصال بالسيرفر');
+        const errorMsg = err.message || 'حدث خطأ أثناء الاتصال بالسيرفر';
+        if (typeof toastr !== 'undefined') {
+            toastr.error(errorMsg);
+        } else {
+            alert(errorMsg);
+        }
     });
 }
 </script>
 @endif
-
-@endsection
+@endpush
 
 @section('styles')
 <style>
