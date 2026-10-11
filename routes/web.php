@@ -19,6 +19,7 @@ use App\Http\Controllers\UserMedicineGroupController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\HospitalTreasuryController;
+use App\Http\Controllers\UserActivityController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -123,6 +124,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/income', [HospitalTreasuryController::class, 'storeIncome'])->name('income.store');
         Route::get('/export', [HospitalTreasuryController::class, 'export'])->name('export');
         Route::delete('/{transaction}', [HospitalTreasuryController::class, 'destroy'])->name('destroy');
+    });
+
+    // سجل حركات ونشاط الموظفين والرقابة الإدارية
+    Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+        Route::get('/', [UserActivityController::class, 'index'])->name('index');
+        Route::get('/feed-ajax', [UserActivityController::class, 'feedAjax'])->name('feed-ajax');
+        Route::get('/export', [UserActivityController::class, 'export'])->name('export');
+        Route::post('/purge', [UserActivityController::class, 'purgeOld'])->name('purge');
     });
 
     Route::get('/debug-user', function () {

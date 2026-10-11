@@ -15,6 +15,7 @@ class PaymentObserver
     {
         $this->handlePaymentRevenue($payment);
         $this->syncNonAppointmentPayment($payment);
+        $this->logPaymentActivity($payment);
     }
 
     public function updated(Payment $payment): void
@@ -22,6 +23,39 @@ class PaymentObserver
         if ($payment->wasChanged('paid_at') && $payment->paid_at !== null) {
             $this->handlePaymentRevenue($payment);
             $this->syncNonAppointmentPayment($payment);
+            $this->logPaymentActivity($payment);
+        }
+    }
+
+    protected function logPaymentActivity(Payment $payment): void
+    {
+        if (!$payment->paid_at) {
+            return;
+        }
+
+        $patientName = $payment->patient?->name ?? ($payment->appointment?->patient?->name ?? 'مريض');
+        $amountFormatted = number_format(abs((float)$payment->amount), 0);
+        $receipt = $payment->receipt_number ? " (وصل #{$payment->receipt_number})" : '';
+        $isRefund = (float)$payment->amount < 0;
+
+        if ($isRefund) {
+            \App\Services\UserActivityLogger::log(
+                action: 'refund',
+                category: 'cashier',
+                description: "استرجاع مبلغ مالي بقيمة {$amountFormatted} د.ع للمريض: {$patientName}{$receipt}",
+                subject: $payment,
+                isSensitive: true,
+                properties: ['amount' => $payment->amount, 'receipt_number' => $payment->receipt_number]
+            );
+        } else {
+            \App\Services\UserActivityLogger::log(
+                action: 'payment',
+                category: 'cashier',
+                description: "تحصيل دفعة مالية بقيمة {$amountFormatted} د.ع للمريض: {$patientName}{$receipt}",
+                subject: $payment,
+                isSensitive: false,
+                properties: ['amount' => $payment->amount, 'receipt_number' => $payment->receipt_number]
+            );
         }
     }
 

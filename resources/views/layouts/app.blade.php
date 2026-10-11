@@ -1298,13 +1298,24 @@
                         @endcanany
 
                         <!-- قسم الإدارة والإعدادات -->
-                        @canany(['manage users', 'manage roles', 'manage permissions', 'manage radiology types', 'view lab tests'])
+                        @canany(['manage users', 'manage roles', 'manage permissions', 'view activity logs', 'manage radiology types', 'view lab tests'])
+                        @php
+                            $isAdminSettingsActive = request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('activity-logs.*') || request()->routeIs('admin.doctor-commission-settings.*') || request()->routeIs('lab-tests.pricing-settings.*');
+                        @endphp
                         <div class="sidebar-divider"></div>
-                        <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#adminSettingsSection" aria-expanded="false">
+                        <div class="sidebar-section-title {{ $isAdminSettingsActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#adminSettingsSection" aria-expanded="{{ $isAdminSettingsActive ? 'true' : 'false' }}">
                             <span><i class="fas fa-tools"></i> الإدارة والإعدادات</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
-                        <div class="collapse collapse-section" id="adminSettingsSection">
+                        <div class="collapse collapse-section {{ $isAdminSettingsActive ? 'show' : '' }}" id="adminSettingsSection">
+
+                        @can('view activity logs')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('activity-logs.*') ? 'active' : '' }}" href="{{ route('activity-logs.index') }}">
+                                <i class="fas fa-satellite-dish text-success"></i><span> سجل الحركات ونشاط الموظفين</span>
+                            </a>
+                        </li>
+                        @endcan
 
                         @can('manage users')
                         <li class="nav-item">
@@ -1505,6 +1516,7 @@
                         @endcanany
                     </div>
                     @endcanany
+
                     <!-- نهاية القائمة القديمة -->
                 </div>
             </nav>

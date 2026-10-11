@@ -122,6 +122,8 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -447,6 +449,8 @@ class RoleManagementController extends Controller
             'manage users' => ['label' => 'إدارة حسابات المستخدمين والموظفين', 'action' => 'إدارة', 'badge' => 'danger'],
             'manage roles' => ['label' => 'إدارة الأدوار والمسميات الوظيفية', 'action' => 'إدارة', 'badge' => 'danger'],
             'manage permissions' => ['label' => 'إدارة وتخصيص صلاحيات النظام', 'action' => 'إدارة', 'badge' => 'danger'],
+            'view activity logs' => ['label' => 'عرض سجل حركات ونشاط الموظفين والرقابة الإدارية', 'action' => 'عرض', 'badge' => 'info'],
+            'delete activity logs' => ['label' => 'تنظيف وأرشفة سجل الحركات القديم', 'action' => 'حذف', 'badge' => 'danger'],
         ];
     }
 
@@ -525,7 +529,7 @@ class RoleManagementController extends Controller
         }
 
         // 9. System Admin & Settings
-        if (str_contains($permissionName, 'user') || str_contains($permissionName, 'role') || str_contains($permissionName, 'permission')) {
+        if (str_contains($permissionName, 'user') || str_contains($permissionName, 'role') || str_contains($permissionName, 'permission') || str_contains($permissionName, 'activity log')) {
             return 'system_admin';
         }
 

@@ -40,9 +40,44 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
         Paginator::useBootstrapFive();
 
-        // تسجيل Observer لمزامنة حالة الغرف مع الحجوزات
+        // تسجيل Observers للحجوزات والمدفوعات والزيارات والنشاطات
         BedReservation::observe(BedReservationObserver::class);
         Payment::observe(PaymentObserver::class);
+        Appointment::observe(\App\Observers\AppointmentObserver::class);
+        Visit::observe(\App\Observers\VisitObserver::class);
+
+        // تتبع وتسجيل الدخول والخروج في سجل الحركات
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Login::class, function ($event) {
+            if ($event->user) {
+                $event->user->forceFill([
+                    'last_login_at' => now(),
+                    'last_activity_at' => now(),
+                    'last_login_ip' => request()?->ip(),
+                ])->saveQuietly();
+
+                \App\Services\UserActivityLogger::log(
+                    action: 'login',
+                    category: 'auth',
+                    description: 'تسجيل دخول ناجح إلى النظام',
+                    subject: $event->user,
+                    isSensitive: false,
+                    user: $event->user
+                );
+            }
+        });
+
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Logout::class, function ($event) {
+            if ($event->user) {
+                \App\Services\UserActivityLogger::log(
+                    action: 'logout',
+                    category: 'auth',
+                    description: 'تسجيل خروج من النظام',
+                    subject: $event->user,
+                    isSensitive: false,
+                    user: $event->user
+                );
+            }
+        });
 
         // تسجيل Blade directives لـ Spatie Permission
         Blade::if('role', function ($role) {

@@ -213,7 +213,7 @@ class HospitalTreasuryController extends Controller
             }
 
             // إنشاء قيد الصرف بالخزينة
-            FinancialTransaction::create([
+            $tx = FinancialTransaction::create([
                 'transaction_type' => 'expense',
                 'voucher_type'     => 'outflow',
                 'category'         => $request->category,
@@ -228,6 +228,15 @@ class HospitalTreasuryController extends Controller
                 'performed_by_id'  => Auth::id(),
                 'performed_at'     => $performedAt,
             ]);
+
+            \App\Services\UserActivityLogger::log(
+                action: 'treasury_expense',
+                category: 'treasury',
+                description: "إصدار سند صرف مصروفات بمبلغ " . number_format($amount) . " د.ع ({$request->description}) - سند #{$voucherNumber}",
+                subject: $tx,
+                isSensitive: true,
+                properties: ['amount' => $amount, 'voucher' => $voucherNumber, 'category' => $request->category]
+            );
 
             DB::commit();
             return redirect()->route('treasury.index')->with('success', "تم تسجيل سند الصرف رقم {$voucherNumber} بمبلغ " . number_format($amount) . ' د.ع بنجاح.');
@@ -258,7 +267,7 @@ class HospitalTreasuryController extends Controller
             $performedAt = $request->filled('performed_at') ? Carbon::parse($request->performed_at) : now();
             $voucherNumber = 'REV-' . now()->format('ymd') . '-' . rand(1000, 9999);
 
-            FinancialTransaction::create([
+            $tx = FinancialTransaction::create([
                 'transaction_type' => 'hospital_revenue',
                 'voucher_type'     => 'inflow',
                 'category'         => $request->category,
@@ -271,6 +280,15 @@ class HospitalTreasuryController extends Controller
                 'performed_by_id'  => Auth::id(),
                 'performed_at'     => $performedAt,
             ]);
+
+            \App\Services\UserActivityLogger::log(
+                action: 'treasury_income',
+                category: 'treasury',
+                description: "إصدار سند قبض إيراد عام بمبلغ " . number_format($amount) . " د.ع ({$request->description}) - سند #{$voucherNumber}",
+                subject: $tx,
+                isSensitive: false,
+                properties: ['amount' => $amount, 'voucher' => $voucherNumber]
+            );
 
             return redirect()->route('treasury.index')->with('success', "تم تسجيل سند القبض رقم {$voucherNumber} بمبلغ " . number_format($amount) . ' د.ع بنجاح.');
         } catch (\Exception $e) {
@@ -290,7 +308,17 @@ class HospitalTreasuryController extends Controller
         }
 
         $voucherNo = $transaction->voucher_number ?: '#' . $transaction->id;
+        $desc = $transaction->description;
+        $amt = number_format($transaction->amount);
         $transaction->delete();
+
+        \App\Services\UserActivityLogger::log(
+            action: 'delete_treasury_voucher',
+            category: 'treasury',
+            description: "حذف سند من الخزينة: {$voucherNo} بمبلغ {$amt} د.ع ({$desc})",
+            subject: $transaction,
+            isSensitive: true
+        );
 
         return redirect()->route('treasury.index')->with('success', "تم حذف السند {$voucherNo} بنجاح.");
     }

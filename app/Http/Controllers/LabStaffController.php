@@ -460,6 +460,17 @@ class LabStaffController extends Controller
         $request->result = json_encode($existingRes);
         $request->save();
 
+        $patientName = $request->visit?->patient?->name ?? 'مريض';
+        $countInfo = $savedResults > 0 ? " ({$savedResults} نتيجة تحليل)" : ($hasNewAttachment ? ' (تقرير جهاز مرفق)' : '');
+        \App\Services\UserActivityLogger::log(
+            action: 'save_lab_results',
+            category: 'lab',
+            description: "حفظ واعتماد نتائج التحاليل المخبرية للمريض: {$patientName}{$countInfo} - طلب #{$request->id}",
+            subject: $request,
+            isSensitive: false,
+            properties: ['saved_results' => $savedResults, 'status' => $targetStatus]
+        );
+
         if ($targetStatus === 'completed') {
             try {
                 app(\App\Services\TelegramService::class)->sendResultsReady($request);

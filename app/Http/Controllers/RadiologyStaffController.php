@@ -733,6 +733,17 @@ class RadiologyStaffController extends Controller
             $request->status = $newStatus;
             $request->save();
 
+            $patientName = $request->visit?->patient?->name ?? 'مريض';
+            $cat = $request->subtype ?: 'radiology';
+            \App\Services\UserActivityLogger::log(
+                action: 'save_radiology_results',
+                category: 'radiology',
+                description: "حفظ واعتماد تقرير الأشعة والتصوير للمريض: {$patientName} ({$cat}) - طلب #{$request->id}",
+                subject: $request,
+                isSensitive: false,
+                properties: ['status' => $newStatus, 'subtype' => $cat]
+            );
+
             // Sync with RadiologyRequest if exists
             if ($request->visit_id) {
                 $radReq = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)->first();
