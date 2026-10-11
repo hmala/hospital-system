@@ -225,4 +225,69 @@ class UserActivityLogTest extends TestCase
         $user->refresh();
         $this->assertNotNull($user->last_logout_at);
     }
+
+    public function test_patient_creation_automatically_logs_reception_activity()
+    {
+        $receptionist = User::factory()->create(['name' => 'موظف الاستقبال']);
+        $receptionist->assignRole('receptionist');
+
+        $patientUser = User::factory()->create(['name' => 'المريض قاسم']);
+
+        $this->actingAs($receptionist);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'insurance_type' => 'none',
+        ]);
+
+        $this->assertDatabaseHas('user_activities', [
+            'user_id' => $receptionist->id,
+            'category' => 'reception',
+            'action' => 'create',
+            'subject_type' => Patient::class,
+            'subject_id' => $patient->id,
+        ]);
+    }
+
+    public function test_productivity_table_excludes_auth_logins_and_measures_actual_entries()
+    {
+        $admin = User::factory()->create(['name' => 'المسؤول']);
+        $admin->assignRole('admin');
+
+        $staff = User::factory()->create(['name' => 'موظف كاشير']);
+        $staff->assignRole('receptionist');
+
+        // تسجيل حركة دخول (auth)
+        UserActivity::create([
+            'user_id' => $staff->id,
+            'user_name' => $staff->name,
+            'role_name' => 'receptionist',
+            'action' => 'login',
+            'category' => 'auth',
+            'description' => 'تسجيل دخول',
+            'created_at' => now(),
+        ]);
+
+        // حركة كاشير حقيقية (cashier)
+        UserActivity::create([
+            'user_id' => $staff->id,
+            'user_name' => $staff->name,
+            'role_name' => 'receptionist',
+            'action' => 'payment',
+            'category' => 'cashier',
+            'description' => 'قبض وصل مالي',
+            'created_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('activity-logs.index'));
+        $response->assertOk();
+
+        // يجب أن يظهر إجمالي الإدخالات = 1 فقط (حركة الكاشير) وليس 2
+        $staffProd = $response->viewData('staffProductivity');
+        $staffRow = $staffProd->firstWhere('user_id', $staff->id);
+
+        $this->assertNotNull($staffRow);
+        $this->assertEquals(1, $staffRow->total_actions);
+        $this->assertEquals(1, $staffRow->cashier_count);
+        $this->assertEquals(0, $staffRow->reception_count);
+    }
 }

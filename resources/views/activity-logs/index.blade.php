@@ -329,8 +329,8 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link d-flex align-items-center gap-2" id="productivity-tab" data-bs-toggle="pill" data-bs-target="#productivityPane" type="button" role="tab">
-                        <i class="fas fa-medal text-warning"></i>
-                        <span>إنتاجية الكادر والموظفين اليوم</span>
+                        <i class="fas fa-keyboard text-warning"></i>
+                        <span>إدخالات وإنتاجية الكادر اليوم</span>
                         <span class="badge bg-warning text-dark rounded-pill" id="productivityCountBadge">{{ $staffProductivity->count() }}</span>
                     </button>
                 </li>
@@ -667,16 +667,19 @@
                 <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between p-3 pb-0">
                     <div>
                         <h5 class="fw-bold mb-1 text-dark">
-                            <i class="fas fa-medal text-warning me-2"></i> جدول إنتاجية وإنجاز الكادر اليومي
+                            <i class="fas fa-keyboard text-primary me-2"></i> جدول إنتاجية وإدخالات الكادر اليومي
                         </h5>
-                        <p class="small text-muted mb-0">إحصائيات فورية توضح عدد العمليات المنجزة من قبل كل موظف حسب القسم لليوم الحالي.</p>
+                        <p class="small text-muted mb-0">
+                            إحصائيات الإدخالات والعمليات التشغيلية الفعلية المنجزة اليوم لكل موظف (استقبال، وصولات، كشفيات، تحاليل، أشعة، خزينة) — <span class="badge bg-light text-secondary border">لا تحتسب تسجيل الدخول والخروج</span>
+                        </p>
                     </div>
                 </div>
                 <div class="card-body p-0 mt-3">
                     @if($staffProductivity->isEmpty())
                         <div class="text-center py-5 text-muted">
                             <i class="fas fa-chart-bar fa-3x mb-3 text-secondary opacity-50"></i>
-                            <h6 class="fw-bold">لم تسجل أي حركات للموظفين لليوم بعد</h6>
+                            <h6 class="fw-bold">لم تسجل أي إدخالات أو عمليات تشغيلية للموظفين لليوم بعد</h6>
+                            <p class="small text-muted">ستظهر أسماء الموظفين وإحصائيات إدخالاتهم هنا فور قيامهم بإدخال مريض أو حجز أو وصل مالي أو كشفية.</p>
                         </div>
                     @else
                         <div class="table-responsive">
@@ -686,14 +689,30 @@
                                         <th>#</th>
                                         <th>الموظف</th>
                                         <th>الصفة / الدور</th>
-                                        <th class="text-center">إجمالي الإنجاز اليوم</th>
-                                        <th class="text-center">الاستقبال</th>
-                                        <th class="text-center">الكاشير</th>
-                                        <th class="text-center">العيادات</th>
-                                        <th class="text-center">المختبر</th>
-                                        <th class="text-center">الأشعة</th>
-                                        <th class="text-center">الخزينة</th>
-                                        <th class="text-center">حساسة</th>
+                                        <th class="text-center text-primary" title="مجموع الإدخالات والعمليات التشغيلية الفعلية اليوم (بدون تسجيل الدخول/الخروج)">
+                                            <i class="fas fa-keyboard me-1"></i> إجمالي الإدخالات اليوم
+                                        </th>
+                                        <th class="text-center" title="إدخال مرضى جدد وحجوزات ومواعيد الاستقبال">
+                                            <i class="fas fa-user-plus text-info me-1"></i> الاستقبال
+                                        </th>
+                                        <th class="text-center" title="وصولات ومقبوضات مالية">
+                                            <i class="fas fa-cash-register text-success me-1"></i> الكاشير
+                                        </th>
+                                        <th class="text-center" title="كشفيات وتشخيصات الأطباء">
+                                            <i class="fas fa-stethoscope text-primary me-1"></i> العيادات
+                                        </th>
+                                        <th class="text-center" title="اعتماد نتائج التحاليل والفحوصات">
+                                            <i class="fas fa-flask text-warning me-1"></i> المختبر
+                                        </th>
+                                        <th class="text-center" title="اعتماد تقارير الأشعة والسونار">
+                                            <i class="fas fa-x-ray text-teal me-1"></i> الأشعة
+                                        </th>
+                                        <th class="text-center" title="سندات صرف وقبض الخزينة">
+                                            <i class="fas fa-university text-dark me-1"></i> الخزينة
+                                        </th>
+                                        <th class="text-center text-danger" title="حركات حساسة تتطلب رقابة وتدقيق">
+                                            <i class="fas fa-shield-alt me-1"></i> حساسة
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>

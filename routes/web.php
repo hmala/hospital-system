@@ -134,6 +134,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/purge', [UserActivityController::class, 'purgeOld'])->name('purge');
     });
 
+    // مركز مزامنة وسحب قاعدة البيانات من هوستنجر (Cloud Sync)
+    Route::prefix('system/database-sync')->name('system.database-sync.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\DatabaseSyncController::class, 'index'])->name('index');
+        Route::post('/test', [\App\Http\Controllers\DatabaseSyncController::class, 'test'])->name('test');
+        Route::post('/pull', [\App\Http\Controllers\DatabaseSyncController::class, 'pull'])->name('pull');
+    });
+
     Route::get('/debug-user', function () {
         return \App\Models\User::with(['roles','permissions'])->limit(10)->get();
     });

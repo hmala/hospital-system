@@ -1300,7 +1300,7 @@
                         <!-- قسم الإدارة والإعدادات -->
                         @canany(['manage users', 'manage roles', 'manage permissions', 'view activity logs', 'manage radiology types', 'view lab tests'])
                         @php
-                            $isAdminSettingsActive = request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('activity-logs.*') || request()->routeIs('admin.doctor-commission-settings.*') || request()->routeIs('lab-tests.pricing-settings.*');
+                            $isAdminSettingsActive = request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('activity-logs.*') || request()->routeIs('system.database-sync.*') || request()->routeIs('admin.doctor-commission-settings.*') || request()->routeIs('lab-tests.pricing-settings.*');
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAdminSettingsActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#adminSettingsSection" aria-expanded="{{ $isAdminSettingsActive ? 'true' : 'false' }}">
@@ -1353,6 +1353,14 @@
                             </a>
                         </li>
                         @endcanany
+
+                        @if(auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('system.database-sync.*') ? 'active' : '' }}" href="{{ route('system.database-sync.index') }}">
+                                <i class="fas fa-cloud-download-alt text-primary"></i><span> سحب الداتا بيس من هوستنجر</span>
+                            </a>
+                        </li>
+                        @endif
 
                         </div>
                         @endcanany

@@ -34,6 +34,24 @@ class Patient extends Model
                 $patient->created_by = auth()->id();
             }
         });
+
+        static::created(function ($patient) {
+            if (class_exists(\App\Services\UserActivityLogger::class) && auth()->check()) {
+                $patientName = $patient->user?->name ?? 'مريض #' . $patient->id;
+                \App\Services\UserActivityLogger::log(
+                    action: 'create',
+                    category: 'reception',
+                    description: "تسجيل وإدخال مريض جديد: {$patientName}",
+                    subject: $patient,
+                    isSensitive: false,
+                    properties: [
+                        'patient_id' => $patient->id,
+                        'national_id' => $patient->national_id,
+                        'insurance_type' => $patient->insurance_type,
+                    ]
+                );
+            }
+        });
     }
 
     public function creator()

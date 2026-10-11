@@ -61,6 +61,32 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-11 — المرحلة 21: مركز سحب ومزامنة قاعدة البيانات من سيرفر هوستنجر بنقرة زر واحدة One-Click Hostinger Cloud Database Sync)
+
+### Done
+- **مركز سحب ومزامنة قاعدة البيانات من سيرفر هوستنجر بنقرة زر واحدة (`DatabaseSyncService`, `DatabaseSyncController`, `resources/views/system/database-sync.blade.php`, `PullHostingerDatabaseCommand`)**:
+  * ربط قاعدة هوستنجر عن بُعد (`remote_hostinger`) على السيرفر `srv1687.hstgr.io:3306` بقاعدة البيانات `u175868711_her2020`، والتأكد من إمكانية الوصول إلى الـ 106 جدول.
+  * تأسيس محرك النسخ الاحتياطي التلقائي للوكل (`backupLocalDatabase`) لتأمين النسخة الحالية في `storage/app/backups` قبل تنفيذ أي سحب.
+  * تأسيس محرك السحب الذكي (`pullFromRemote`): يسحب الجداول والبيانات بنظام الدفعات (Chunks) مع تعطيل قيود المفاتيح وإعادة تفعيلها وتنظيف كاش الصلاحيات.
+  * تصميم واجهة مركز المزامنة مع فحص الاتصال وسرعة الاستجابة وزر بدء السحب وشريط تقدم وتنبيهات نجاح وتاريخ النسخ الاحتياطية.
+  * إضافة أمر تيرمينال مباشر: `php artisan db:pull-hostinger`.
+  * إضافة رابط في القائمة الجانبية تحت «الإدارة والإعدادات».
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات المزامنة [DatabaseSyncTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DatabaseSyncTest.php): 3 passed (10 assertions).
+  * اجتياز كامل اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+  * اجتياز كامل اختبارات فلاتر المرضى [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php): 4 passed (16 assertions).
+
+## Session log (2026-10-11 — المرحلة 20: احتساب إدخالات الكادر الفعلية واستبعاد الدخول والخروج من الإنتاجية Real Staff Entries & Productivity)
+
+### Done
+- **احتساب إدخالات الكادر الفعلية واستبعاد تسجيل الدخول والخروج (`UserActivityController`, `Patient`, `resources/views/activity-logs/index.blade.php`)**:
+  * استبعاد فئة `auth` (تسجيل الدخول وتسجيل الخروج) كلياً من جدول إنتاجية الكادر اليومي بحيث يقتصر إجمالي الإنجاز على الإدخالات والعمليات التشغيلية الفعلية.
+  * إضافة تتبع إدخال المرضى الجدد برمجياً عبر `Patient::created` وإسنادها تلقائياً لفئة الاستقبال `reception`.
+  * تحديث مسمى التبويب إلى «إدخالات وإنتاجية الكادر اليوم» ورأس العمود إلى «إجمالي الإدخالات اليوم».
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+  * اجتياز كامل اختبارات فلاتر المرضى [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php): 4 passed (16 assertions).
+
 ## Session log (2026-10-11 — المرحلة 19: فلاتر جدول المرضى الذكية والسريعة Smart Patient Filters)
 
 ### Done

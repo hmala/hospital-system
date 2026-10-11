@@ -29,7 +29,8 @@ class UserActivityController extends Controller
         $this->authorizeActivityAccess();
 
         // 1. حساب بطاقات المؤشرات (KPI Cards)
-        $totalToday = UserActivity::today()->count();
+        $totalOperationalToday = UserActivity::today()->where('category', '!=', 'auth')->count();
+        $totalToday = $totalOperationalToday;
         $sensitiveToday = UserActivity::today()->sensitiveOnly()->count();
         
         // المتواجدون الآن (نشاط خلال آخر 5 دقائق ولم يسجل خروج)
@@ -78,8 +79,10 @@ class UserActivityController extends Controller
             ->limit(50)
             ->get();
 
-        // 3. إنتاجية الموظفين اليوم (Staff Productivity Breakdown)
+        // 3. إنتاجية وإدخالات الموظفين اليوم (العمليات والإدخالات الفعلية فقط - استبعاد تسجيل الدخول والخروج)
         $staffProductivity = UserActivity::today()
+            ->where('category', '!=', 'auth')
+            ->whereNotNull('user_id')
             ->select(
                 'user_id',
                 'user_name',
@@ -93,7 +96,6 @@ class UserActivityController extends Controller
                 DB::raw('SUM(CASE WHEN category = "treasury" THEN 1 ELSE 0 END) as treasury_count'),
                 DB::raw('SUM(CASE WHEN is_sensitive = 1 THEN 1 ELSE 0 END) as sensitive_count')
             )
-            ->whereNotNull('user_id')
             ->groupBy('user_id', 'user_name', 'role_name')
             ->orderByDesc('total_actions')
             ->get();
