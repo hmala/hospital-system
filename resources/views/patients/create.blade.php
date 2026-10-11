@@ -31,7 +31,7 @@
     <div class="row justify-content-center">
         <!-- الاستمارة الرئيسية -->
         <div class="col-xl-9 col-lg-10 col-12">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden patient-form-card">
+            <div class="card border-0 shadow-sm rounded-4 patient-form-card bg-white">
                 <div class="card-header bg-white border-bottom border-light-subtle py-3 px-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
@@ -43,7 +43,7 @@
                     </div>
                 </div>
 
-                <div class="card-body p-4">
+                <div class="card-body p-4 p-md-5">
                     <form method="POST" action="{{ route('patients.store') }}" id="patientCreateForm" autocomplete="off">
                         @csrf
 
@@ -63,7 +63,7 @@
                         @endif
 
                         <!-- القسم 1: البيانات الشخصية والاتصال -->
-                        <div class="form-section mb-4">
+                        <div class="form-section mb-4 pb-3 border-bottom border-light-subtle">
                             <div class="section-badge mb-3">
                                 <span class="step-num">1</span>
                                 <span class="step-title">المعلومات الشخصية والاتصال</span>
@@ -73,21 +73,16 @@
                                 <!-- الاسم الكامل -->
                                 <div class="col-md-7">
                                     <label for="name" class="form-label fw-bold small text-dark mb-1">
-                                        الاسم الكامل للمريض <span class="text-danger">*</span>
+                                        <i class="fas fa-user text-primary me-1"></i> الاسم الكامل للمريض <span class="text-danger">*</span>
                                     </label>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-user"></i>
-                                        </span>
-                                        <input type="text" 
-                                               class="form-control border-start-0 ps-0 @error('name') is-invalid @enderror" 
-                                               id="name" 
-                                               name="name" 
-                                               value="{{ old('name') }}"
-                                               required 
-                                               autofocus
-                                               placeholder="الاسم الثلاثي أو الرباعي للمريض">
-                                    </div>
+                                    <input type="text" 
+                                           class="form-control @error('name') is-invalid @enderror" 
+                                           id="name" 
+                                           name="name" 
+                                           value="{{ old('name') }}"
+                                           required 
+                                           autofocus
+                                           placeholder="الاسم الثلاثي أو الرباعي للمريض">
                                     @error('name')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
@@ -96,21 +91,16 @@
                                 <!-- الهاتف -->
                                 <div class="col-md-5">
                                     <label for="phone" class="form-label fw-bold small text-dark mb-1">
-                                        رقم الهاتف المحمول <span class="text-danger">*</span>
+                                        <i class="fas fa-phone-alt text-primary me-1"></i> رقم الهاتف المحمول <span class="text-danger">*</span>
                                     </label>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-phone-alt"></i>
-                                        </span>
-                                        <input type="tel" 
-                                               class="form-control border-start-0 ps-0 font-monospace @error('phone') is-invalid @enderror" 
-                                               id="phone" 
-                                               name="phone" 
-                                               value="{{ old('phone') }}"
-                                               required 
-                                               inputmode="numeric"
-                                               placeholder="07XXXXXXXXX">
-                                    </div>
+                                    <input type="tel" 
+                                           class="form-control font-monospace @error('phone') is-invalid @enderror" 
+                                           id="phone" 
+                                           name="phone" 
+                                           value="{{ old('phone') }}"
+                                           required 
+                                           inputmode="numeric"
+                                           placeholder="07XXXXXXXXX">
                                     @error('phone')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
@@ -120,23 +110,18 @@
                                 <div class="col-md-4">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <label for="date_of_birth" class="form-label fw-bold small text-dark mb-0">
-                                            تاريخ الميلاد <span class="text-danger">*</span>
+                                            <i class="fas fa-calendar-alt text-primary me-1"></i> تاريخ الميلاد <span class="text-danger">*</span>
                                         </label>
                                         <span id="calculatedAgeBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0" style="display: none; font-size: 0.72rem;">
                                             -
                                         </span>
                                     </div>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </span>
-                                        <input type="date" 
-                                               class="form-control border-start-0 ps-0 @error('date_of_birth') is-invalid @enderror" 
-                                               id="date_of_birth" 
-                                               name="date_of_birth" 
-                                               value="{{ old('date_of_birth') }}"
-                                               required>
-                                    </div>
+                                    <input type="date" 
+                                           class="form-control @error('date_of_birth') is-invalid @enderror" 
+                                           id="date_of_birth" 
+                                           name="date_of_birth" 
+                                           value="{{ old('date_of_birth') }}"
+                                           required>
                                     @error('date_of_birth')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
@@ -145,19 +130,14 @@
                                 <!-- الجنس -->
                                 <div class="col-md-4">
                                     <label for="gender" class="form-label fw-bold small text-dark mb-1">
-                                        الجنس <span class="text-danger">*</span>
+                                        <i class="fas fa-venus-mars text-primary me-1"></i> الجنس <span class="text-danger">*</span>
                                     </label>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-venus-mars"></i>
-                                        </span>
-                                        <select class="form-select border-start-0 ps-0 @error('gender') is-invalid @enderror" 
-                                                id="gender" name="gender" required>
-                                            <option value="">اختر الجنس</option>
-                                            <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>ذكر 👨</option>
-                                            <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>أنثى 👩</option>
-                                        </select>
-                                    </div>
+                                    <select class="form-select @error('gender') is-invalid @enderror" 
+                                            id="gender" name="gender" required>
+                                        <option value="">اختر الجنس</option>
+                                        <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>ذكر 👨</option>
+                                        <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>أنثى 👩</option>
+                                    </select>
                                     @error('gender')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
@@ -166,20 +146,15 @@
                                 <!-- الحالة الاجتماعية -->
                                 <div class="col-md-4">
                                     <label for="marital_status" class="form-label fw-bold small text-dark mb-1">
-                                        الحالة الاجتماعية <span class="text-danger">*</span>
+                                        <i class="fas fa-ring text-primary me-1"></i> الحالة الاجتماعية <span class="text-danger">*</span>
                                     </label>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-ring"></i>
-                                        </span>
-                                        <select class="form-select border-start-0 ps-0 @error('marital_status') is-invalid @enderror" 
-                                                id="marital_status" name="marital_status" required>
-                                            <option value="أعزب" {{ old('marital_status', 'أعزب') == 'أعزب' ? 'selected' : '' }}>أعزب</option>
-                                            <option value="متزوج" {{ old('marital_status') == 'متزوج' ? 'selected' : '' }}>متزوج</option>
-                                            <option value="مطلق" {{ old('marital_status') == 'مطلق' ? 'selected' : '' }}>مطلق</option>
-                                            <option value="أرمل" {{ old('marital_status') == 'أرمل' ? 'selected' : '' }}>أرمل</option>
-                                        </select>
-                                    </div>
+                                    <select class="form-select @error('marital_status') is-invalid @enderror" 
+                                            id="marital_status" name="marital_status" required>
+                                        <option value="أعزب" {{ old('marital_status', 'أعزب') == 'أعزب' ? 'selected' : '' }}>أعزب</option>
+                                        <option value="متزوج" {{ old('marital_status') == 'متزوج' ? 'selected' : '' }}>متزوج</option>
+                                        <option value="مطلق" {{ old('marital_status') == 'مطلق' ? 'selected' : '' }}>مطلق</option>
+                                        <option value="أرمل" {{ old('marital_status') == 'أرمل' ? 'selected' : '' }}>أرمل</option>
+                                    </select>
                                     @error('marital_status')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
@@ -188,7 +163,7 @@
                         </div>
 
                         <!-- القسم 2: إثبات الهوية -->
-                        <div class="form-section mb-4">
+                        <div class="form-section mb-4 pb-3 border-bottom border-light-subtle">
                             <div class="section-badge mb-3">
                                 <span class="step-num">2</span>
                                 <span class="step-title">إثبات الهوية الوطنية</span>
@@ -198,24 +173,19 @@
                                 <!-- رقم البطاقة الموحدة -->
                                 <div class="col-md-6">
                                     <label for="national_id" class="form-label fw-bold small text-dark mb-1 d-flex justify-content-between">
-                                        <span><i class="fas fa-id-card text-primary me-1"></i> رقم البطاقة الموحدة <span class="text-danger">*</span></span>
+                                        <span><i class="fas fa-fingerprint text-primary me-1"></i> رقم البطاقة الموحدة <span class="text-danger">*</span></span>
                                         <span class="badge bg-light text-muted border font-monospace">أرقام فقط</span>
                                     </label>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-fingerprint text-primary"></i>
-                                        </span>
-                                        <input type="text" 
-                                               class="form-control border-start-0 ps-0 font-monospace fs-6 fw-bold @error('national_id') is-invalid @enderror" 
-                                               id="national_id" 
-                                               name="national_id" 
-                                               value="{{ old('national_id') }}"
-                                               required
-                                               inputmode="numeric"
-                                               pattern="[0-9]*"
-                                               oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');"
-                                               placeholder="مثال: 199012345678">
-                                    </div>
+                                    <input type="text" 
+                                           class="form-control font-monospace fs-6 fw-bold @error('national_id') is-invalid @enderror" 
+                                           id="national_id" 
+                                           name="national_id" 
+                                           value="{{ old('national_id') }}"
+                                           required
+                                           inputmode="numeric"
+                                           pattern="[0-9]*"
+                                           oninput="this.value = this.value.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[^0-9]/g, '');"
+                                           placeholder="مثال: 199012345678">
                                     <div class="form-text text-muted small mt-1">
                                         <i class="fas fa-shield-alt text-success me-1"></i>يمنع تكرار المريض ويُعتمد كمعرّف وحيد.
                                     </div>
@@ -227,19 +197,14 @@
                                 <!-- اسم الأم (اختياري) -->
                                 <div class="col-md-6">
                                     <label for="mother_name" class="form-label fw-semibold small text-dark mb-1">
-                                        اسم الأم <span class="text-muted fw-normal">(اختياري / للتمييز)</span>
+                                        <i class="fas fa-female text-primary me-1"></i> اسم الأم <span class="text-muted fw-normal">(اختياري / للتمييز)</span>
                                     </label>
-                                    <div class="input-group modern-input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted">
-                                            <i class="fas fa-female"></i>
-                                        </span>
-                                        <input type="text" 
-                                               class="form-control border-start-0 ps-0 @error('mother_name') is-invalid @enderror" 
-                                               id="mother_name" 
-                                               name="mother_name" 
-                                               value="{{ old('mother_name') }}"
-                                               placeholder="اسم الأم (اختياري)">
-                                    </div>
+                                    <input type="text" 
+                                           class="form-control @error('mother_name') is-invalid @enderror" 
+                                           id="mother_name" 
+                                           name="mother_name" 
+                                           value="{{ old('mother_name') }}"
+                                           placeholder="اسم الأم (اختياري)">
                                     <div class="form-text text-muted small mt-1">
                                         مفيد لتمييز حالات تشابه الأسماء الرباعية.
                                     </div>
@@ -335,17 +300,12 @@
                                         <label for="insurance_card_no" class="form-label fw-bold small text-dark mb-1">
                                             رقم بطاقة / دفتر الضمان <span class="text-danger">*</span>
                                         </label>
-                                        <div class="input-group modern-input-group">
-                                            <span class="input-group-text bg-white border-end-0 text-muted">
-                                                <i class="fas fa-barcode"></i>
-                                            </span>
-                                            <input type="text" 
-                                                   class="form-control border-start-0 ps-0 font-monospace @error('insurance_card_no') is-invalid @enderror" 
-                                                   id="insurance_card_no" 
-                                                   name="insurance_card_no" 
-                                                   value="{{ old('insurance_card_no', old('insurance_booklet_number')) }}"
-                                                   placeholder="أدخل رقم الهوية أو الدفتر">
-                                        </div>
+                                        <input type="text" 
+                                               class="form-control font-monospace @error('insurance_card_no') is-invalid @enderror" 
+                                               id="insurance_card_no" 
+                                               name="insurance_card_no" 
+                                               value="{{ old('insurance_card_no', old('insurance_booklet_number')) }}"
+                                               placeholder="أدخل رقم الهوية أو الدفتر">
                                         <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">الرقم المطبوع على بطاقة الضمان الصادرة.</small>
                                         @error('insurance_card_no')
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -491,7 +451,25 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .patient-form-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.04) !important;
+}
+
+.patient-form-card .form-control,
+.patient-form-card .form-select {
+    border-radius: 10px;
+    border: 1.5px solid #d1d5db;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease-in-out;
+    background-color: #fbfcfe;
+}
+
+.patient-form-card .form-control:focus,
+.patient-form-card .form-select:focus {
+    background-color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .section-badge {
@@ -499,9 +477,9 @@ document.addEventListener('DOMContentLoaded', function() {
     align-items: center;
     gap: 8px;
     padding: 6px 14px;
-    background: rgba(241, 245, 249, 0.85);
+    background: #f1f5f9;
     border-radius: 30px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    border: 1px solid #e2e8f0;
 }
 
 .step-num {
@@ -521,27 +499,6 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.85rem;
     font-weight: 700;
     color: #334155;
-}
-
-.modern-input-group .input-group-text {
-    border-radius: 12px 0 0 12px;
-    border-color: #cbd5e1;
-    transition: border-color 0.2s ease;
-}
-
-.modern-input-group .form-control,
-.modern-input-group .form-select {
-    border-radius: 0 12px 12px 0;
-    border-color: #cbd5e1;
-    padding: 10px 14px;
-    font-size: 0.95rem;
-    transition: all 0.2s ease;
-}
-
-.modern-input-group .form-control:focus,
-.modern-input-group .form-select:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 /* بطاقات اختيار التأمين */
