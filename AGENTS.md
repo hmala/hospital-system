@@ -60,6 +60,17 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-12 — المرحلة 38: نقل شريط التحكم بالمخططات ومؤقت التحديث لأعلى الصفحة وإلغاء أزرار السندات Move Charts & Refresh Toolbar to Header & Remove Voucher Buttons)
+
+### Done
+- **نقل شريط التحكم بالمخططات البيانية والتحديث التلقائي لأعلى ترويسة الصفحة (`resources/views/treasury/index.blade.php`)**:
+  * نقل أزرار التحكم بالمخططات الأربعة (`#masterChartButtonGroup`: `📊 أعمدة`, `📶 أفقي`, `📈 منحنى`, `🍩 دائري`) إلى ترويسة الصفحة الرئيسية بجانب أزرار الطباعة والتصدير.
+  * نقل أداة التحديث التلقائي والتوقيت الذكية (العد التنازلي المباشر، زر الإيقاف والتشغيل، قائمة الفترات الزمنية 15ث/30ث/60ث/120ث، وزر التحديث الفوري) لأعلى الصفحة.
+  * حذف أزرار السندات (`+ سند صرف مصروفات` و `+ سند قبض إيراد`) من الترويسة العلوية تلبية لطلب المستخدم.
+  * إزالة بطاقة التحكم المكررة من داخل التبويب الأول (`#analytics-tab-pane`)، مما جعل المخططات البيانية تبدأ فوراً في أعلى مساحة العرض دون حجز مساحات إضافية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات لوحة الخزينة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (20 assertions).
+
 ## Session log (2026-10-12 — المرحلة 37: توحيد أزرار التحكم بالمخططات، التبديل الفوري لكامل الصفحة، ونظام التحديث التلقائي الذكي Unified Master Charts & Smart Auto-Refresh Engine)
 
 ### Done

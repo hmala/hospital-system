@@ -22,30 +22,55 @@
             <p class="text-muted small mb-0">نظام الخزينة الموحد (Unified Hospital Treasury) - توزيع الإيرادات حسب الأقسام، التحليلات البيانية، وسجل القيود المحاسبية</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <!-- مؤشر التحديث التلقائي العام في ترويسة الصفحة -->
-            <div class="d-inline-flex align-items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-3 border shadow-sm">
-                <span class="spinner-grow spinner-grow-sm text-success" id="headerAutoRefreshPulse" style="width: 8px; height: 8px;" role="status"></span>
-                <span class="small fw-bold text-dark font-monospace" id="headerAutoRefreshCountdown" title="الوقت المتبقي حتى التحديث التلقائي">30ث</span>
-                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0.5 ms-1" onclick="toggleAutoRefresh()" title="إيقاف مؤقت / تشغيل">
-                    <i class="fas fa-pause text-warning" id="headerAutoRefreshIcon"></i>
+            <!-- شريط التحكم الموحد بأنماط المخططات البيانية -->
+            <div class="btn-group btn-group-sm p-1 bg-white rounded-pill border shadow-sm" role="group" id="masterChartButtonGroup" title="نمط عرض المخططات البيانية">
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold active btn-primary" onclick="setMasterChartMode('bar')" id="btnMasterBar">
+                    <i class="fas fa-chart-column me-1.5"></i>📊 أعمدة
                 </button>
-                <button type="button" class="btn btn-xs btn-light rounded-circle p-1" onclick="triggerManualRefresh()" title="تحديث فوري الآن">
-                    <i class="fas fa-sync-alt text-primary" id="headerRefreshSpin"></i>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('horizontal')" id="btnMasterHorizontal">
+                    <i class="fas fa-bars-staggered me-1.5 text-warning"></i>📶 أفقي
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('line')" id="btnMasterLine">
+                    <i class="fas fa-chart-line me-1.5 text-success"></i>📈 منحنى
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('donut')" id="btnMasterDonut">
+                    <i class="fas fa-chart-pie me-1.5 text-info"></i>🍩 دائري
                 </button>
             </div>
-            <button type="button" class="btn btn-danger d-flex align-items-center gap-2 shadow-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                <i class="fas fa-minus-circle"></i>
-                <span>+ سند صرف مصروفات</span>
-            </button>
-            <button type="button" class="btn btn-success d-flex align-items-center gap-2 shadow-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#incomeModal">
-                <i class="fas fa-plus-circle"></i>
-                <span>+ سند قبض إيراد</span>
-            </button>
-            <button type="button" onclick="window.print()" class="btn btn-outline-dark d-flex align-items-center gap-2 shadow-sm rounded-3">
+
+            <!-- أداة التحديث التلقائي والتوقيت الذكية (Auto-Refresh Controller) -->
+            <div class="d-inline-flex align-items-center gap-2 bg-white p-1 px-3 rounded-pill border shadow-sm">
+                <div class="d-flex align-items-center gap-1.5">
+                    <span class="spinner-grow spinner-grow-sm text-success" id="autoRefreshPulse" role="status" style="width: 8px; height: 8px;"></span>
+                    <span class="small fw-bold text-dark font-monospace" id="autoRefreshCountdown" title="العد التنازلي للتحديث التلقائي">30ث</span>
+                </div>
+                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-0.5 fw-bold" id="btnToggleAutoRefresh" onclick="toggleAutoRefresh()" title="إيقاف مؤقت / استئناف التحديث">
+                    <i class="fas fa-pause me-1 text-warning" id="autoRefreshIcon"></i><span id="autoRefreshText">نشط</span>
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-xs btn-light rounded-circle p-1 border" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="ضبط فترة التحديث التلقائي">
+                        <i class="fas fa-clock text-muted"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
+                        <li><h6 class="dropdown-header fw-bold">فترة التحديث التلقائي</h6></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="setAutoRefreshInterval(15)">⚡ كل 15 ثانية</a></li>
+                        <li><a class="dropdown-item active" href="javascript:void(0)" id="itemRefresh30" onclick="setAutoRefreshInterval(30)">⏱️ كل 30 ثانية (افتراضي)</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" id="itemRefresh60" onclick="setAutoRefreshInterval(60)">🕐 كل 60 ثانية (دقيقة)</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" id="itemRefresh120" onclick="setAutoRefreshInterval(120)">⏳ كل دقيقتين</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="setAutoRefreshInterval(0)">🛑 إيقاف التحديث التلقائي</a></li>
+                    </ul>
+                </div>
+                <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 fw-bold shadow-2xs" onclick="triggerManualRefresh()" title="تحديث البيانات والصفحة فوراً">
+                    <i class="fas fa-sync-alt me-1" id="manualRefreshSpin"></i>تحديث الآن
+                </button>
+            </div>
+
+            <button type="button" onclick="window.print()" class="btn btn-outline-dark d-flex align-items-center gap-1.5 shadow-sm rounded-pill px-3 py-1.5">
                 <i class="fas fa-print"></i>
-                <span>طباعة التقرير</span>
+                <span>طباعة</span>
             </button>
-            <a href="{{ route('treasury.export', request()->query()) }}" class="btn btn-outline-success d-flex align-items-center gap-2 shadow-sm rounded-3">
+            <a href="{{ route('treasury.export', request()->query()) }}" class="btn btn-outline-success d-flex align-items-center gap-1.5 shadow-sm rounded-pill px-3 py-1.5">
                 <i class="fas fa-file-excel"></i>
                 <span>تصدير Excel</span>
             </a>
@@ -264,65 +289,6 @@
 
         <!-- ================= التبويب 1: المخططات البيانية والتحليل المالي ================= -->
         <div class="tab-pane fade show active" id="analytics-tab-pane" role="tabpanel" tabindex="0">
-            <!-- شريط التحكم الشامل بأنماط المخططات البيانية والتحديث التلقائي لكامل الصفحة -->
-            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white border-start border-4 border-primary">
-                <div class="card-body p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary">
-                            <i class="fas fa-sliders fa-lg"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold mb-0 text-dark">التحكم الموحد بالمخططات والتحديث التلقائي</h6>
-                            <small class="text-muted">التحكم الفوري بكافة رسوم ومخططات الصفحة بضغطة زر واحدة مع التحديث اللحظي المباشر</small>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <!-- أزرار النمط الموحد الرئيسية -->
-                        <div class="btn-group btn-group-sm p-1 bg-light rounded-pill border shadow-2xs" role="group" id="masterChartButtonGroup">
-                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold active btn-primary" onclick="setMasterChartMode('bar')" id="btnMasterBar">
-                                <i class="fas fa-chart-column me-1.5"></i>📊 أعمدة رأسية
-                            </button>
-                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('horizontal')" id="btnMasterHorizontal">
-                                <i class="fas fa-bars-staggered me-1.5 text-warning"></i>📶 أعمدة أفقية
-                            </button>
-                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('line')" id="btnMasterLine">
-                                <i class="fas fa-chart-line me-1.5 text-success"></i>📈 منحنيات مساحية
-                            </button>
-                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('donut')" id="btnMasterDonut">
-                                <i class="fas fa-chart-pie me-1.5 text-info"></i>🍩 دائري ونسب
-                            </button>
-                        </div>
-
-                        <!-- أداة التحديث التلقائي الذكية (Auto-Refresh Controller) -->
-                        <div class="d-flex align-items-center gap-2 bg-light p-1 px-3 rounded-pill border shadow-2xs">
-                            <div class="d-flex align-items-center gap-1.5">
-                                <span class="spinner-grow spinner-grow-sm text-success" id="autoRefreshPulse" role="status" style="width: 8px; height: 8px;"></span>
-                                <span class="small fw-bold text-dark font-monospace" id="autoRefreshCountdown" title="العد التنازلي للتحديث التلقائي">30ث</span>
-                            </div>
-                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-0.5 fw-bold" id="btnToggleAutoRefresh" onclick="toggleAutoRefresh()" title="إيقاف مؤقت / استئناف التحديث">
-                                <i class="fas fa-pause me-1 text-warning" id="autoRefreshIcon"></i><span id="autoRefreshText">نشط</span>
-                            </button>
-                            <div class="dropdown">
-                                <button class="btn btn-xs btn-light rounded-circle p-1 border" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="ضبط فترة التحديث التلقائي">
-                                    <i class="fas fa-clock text-muted"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
-                                    <li><h6 class="dropdown-header fw-bold">فترة التحديث التلقائي</h6></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="setAutoRefreshInterval(15)">⚡ كل 15 ثانية</a></li>
-                                    <li><a class="dropdown-item active" href="javascript:void(0)" id="itemRefresh30" onclick="setAutoRefreshInterval(30)">⏱️ كل 30 ثانية (افتراضي)</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" id="itemRefresh60" onclick="setAutoRefreshInterval(60)">🕐 كل 60 ثانية (دقيقة)</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" id="itemRefresh120" onclick="setAutoRefreshInterval(120)">⏳ كل دقيقتين</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="setAutoRefreshInterval(0)">🛑 إيقاف التحديث التلقائي</a></li>
-                                </ul>
-                            </div>
-                            <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 fw-bold shadow-2xs" onclick="triggerManualRefresh()" title="تحديث البيانات والصفحة فوراً">
-                                <i class="fas fa-sync-alt me-1" id="manualRefreshSpin"></i>تحديث الآن
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <div class="row g-4 mb-4">
                 <!-- مخطط توزيع الإيرادات حسب الأقسام (Department Revenues Chart) -->
                 <div class="col-12 col-xl-6">
