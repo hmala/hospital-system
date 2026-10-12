@@ -448,12 +448,12 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
         Route::get('/queue-status', [\App\Http\Controllers\RadiologyStaffController::class, 'queueStatus'])->name('queue-status');
-        Route::post('/call-next', [\App\Http\Controllers\RadiologyStaffController::class, 'callNext'])->name('call-next');
-        Route::post('/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
-        Route::post('/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
+        Route::match(['GET', 'POST'], '/call-next', [\App\Http\Controllers\RadiologyStaffController::class, 'callNext'])->name('call-next');
+        Route::match(['GET', 'POST'], '/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
+        Route::match(['GET', 'POST'], '/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\RadiologyStaffController::class, 'print'])->name('print');
-        Route::post('/requests/{request}/call', [\App\Http\Controllers\RadiologyStaffController::class, 'call'])->name('call');
+        Route::match(['GET', 'POST'], '/requests/{request}/call', [\App\Http\Controllers\RadiologyStaffController::class, 'call'])->name('call');
         Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
     });
@@ -464,6 +464,10 @@ Route::middleware(['auth'])->group(function () {
     // إدارة الإشعة (المحطة الموحدة)
     Route::prefix('radiology')->name('radiology.')->group(function () {
         Route::get('/', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
+        Route::get('/queue-status', [\App\Http\Controllers\RadiologyStaffController::class, 'queueStatus'])->name('queue-status');
+        Route::match(['GET', 'POST'], '/call-next', [\App\Http\Controllers\RadiologyStaffController::class, 'callNext'])->name('call-next');
+        Route::match(['GET', 'POST'], '/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
+        Route::match(['GET', 'POST'], '/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
         Route::get('/create', [RadiologyController::class, 'create'])->name('create');
         Route::post('/', [RadiologyController::class, 'store'])->name('store');
         Route::get('/{radiology}', [RadiologyController::class, 'show'])->name('show');

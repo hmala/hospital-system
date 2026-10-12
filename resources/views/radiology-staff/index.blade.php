@@ -713,6 +713,7 @@
 
 <!-- Audio Chime Synth & Realtime Queue Engine -->
 <script>
+const radiologyBaseUrl = '{{ url('/') }}';
 let currentSelectedCategory = '{{ $selectedCategory }}';
 let currentCallingRequestId = null;
 let currentCallingVisitId = null;
@@ -756,7 +757,7 @@ function playChimeSound() {
 // 1. Realtime Sync Function (Silent JSON Polling)
 async function syncRadiologyQueue() {
     try {
-        const res = await fetch(`/radiology-staff/queue-status?category=${currentSelectedCategory}`, {
+        const res = await fetch(`${radiologyBaseUrl}/radiology-staff/queue-status?category=${currentSelectedCategory}`, {
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
@@ -896,12 +897,12 @@ async function syncRadiologyQueue() {
                                                 <i class="fas fa-bullhorn"></i> نداء
                                             </button>
                                         ` : `
-                                            <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="معاينة الطلب">
+                                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="معاينة الطلب">
                                                 <i class="fas fa-eye"></i> معاينة
                                             </a>
                                         `
                                     ) : `
-                                        <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-primary fw-bold shadow-xs" title="بدء الفحص وكتابة التقرير">
+                                        <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-primary fw-bold shadow-xs" title="بدء الفحص وكتابة التقرير">
                                             <i class="fas fa-play me-1"></i> بدء الفحص
                                         </a>
                                     `}
@@ -934,7 +935,7 @@ async function syncRadiologyQueue() {
                         <td>د. ${r.doctor_name}</td>
                         <td class="text-center font-monospace small">${r.started_time}</td>
                         <td class="text-end">
-                            <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-success fw-bold shadow-xs">
+                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-success fw-bold shadow-xs">
                                 <i class="fas fa-edit"></i> كتابة التقرير
                             </a>
                         </td>
@@ -963,7 +964,7 @@ async function syncRadiologyQueue() {
                         <td>د. ${r.doctor_name}</td>
                         <td class="text-center font-monospace small">${r.completed_time}</td>
                         <td class="text-end">
-                            <a href="/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-primary" title="عرض وطباعة">
+                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-primary" title="عرض وطباعة">
                                 <i class="fas fa-print"></i> عرض / طباعة
                             </a>
                         </td>
@@ -1042,7 +1043,7 @@ async function radiologyCallNext() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الاستدعاء...';
     try {
-        const res = await fetch(`/radiology-staff/call-next?category=${currentSelectedCategory}`, {
+        const res = await fetch(`${radiologyBaseUrl}/radiology-staff/call-next?category=${currentSelectedCategory}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }
         });
@@ -1067,7 +1068,7 @@ async function radiologyRecall() {
     const btn = document.getElementById('btn-recall');
     btn.disabled = true;
     try {
-        const res = await fetch(`/radiology-staff/recall`, {
+        const res = await fetch(`${radiologyBaseUrl}/radiology-staff/recall`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }
         });
@@ -1087,13 +1088,13 @@ async function radiologyRecall() {
 
 async function radiologyStartExam() {
     if (!currentCallingRequestId) return;
-    window.location.href = `/radiology-staff/requests/${currentCallingRequestId}/show`;
+    window.location.href = `${radiologyBaseUrl}/radiology-staff/requests/${currentCallingRequestId}/show`;
 }
 
 async function radiologySkip() {
     if (!confirm('هل تريد تأخير دور هذا المريض ونقله لآخر الطابور؟')) return;
     try {
-        const res = await fetch(`/radiology-staff/skip`, {
+        const res = await fetch(`${radiologyBaseUrl}/radiology-staff/skip`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }
         });
@@ -1109,7 +1110,7 @@ async function radiologySkip() {
 
 async function radiologyCallSpecific(reqId, patientName) {
     try {
-        const res = await fetch(`/radiology-staff/requests/${reqId}/call`, {
+        const res = await fetch(`${radiologyBaseUrl}/radiology-staff/requests/${reqId}/call`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }
         });
@@ -1129,7 +1130,7 @@ async function radiologyCallSpecific(reqId, patientName) {
 }
 
 function radiologyStartSpecific(reqId) {
-    window.location.href = `/radiology-staff/requests/${reqId}/show`;
+    window.location.href = `${radiologyBaseUrl}/radiology-staff/requests/${reqId}/show`;
 }
 
 // Auto poll every 4s (matching doctor's main station)
