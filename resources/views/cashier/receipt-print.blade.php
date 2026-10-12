@@ -230,49 +230,51 @@
             font-weight: 700;
         }
 
+        @page {
+            size: 80mm auto;
+            margin: 0mm;
+        }
+
         @media print {
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
 
-            body {
-                background: none !important;
+            html, body {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;
             }
 
             .thermal-ticket {
-                width: 78mm !important;
-                max-width: 78mm !important;
+                width: 100% !important;
+                max-width: 76mm !important;
                 margin: 0 auto !important;
                 box-shadow: none !important;
-                border: 1px solid #000000 !important;
+                border: none !important;
                 border-radius: 0 !important;
-                padding: 3mm 3mm !important;
+                padding: 1mm 2mm !important;
             }
 
             .no-print {
                 display: none !important;
-            }
-
-            @page {
-                size: auto;
-                margin: 0;
             }
         }
     </style>
 </head>
 <body>
     <div class="no-print">
-        <button class="btn-print" onclick="window.print()">🖨️ طباعة الإيصال</button>
-        <button class="btn-back" onclick="window.history.back()">⬅️ العودة</button>
+        <button type="button" class="btn-print" onclick="doPrint()">🖨️ طباعة الإيصال</button>
+        <button type="button" class="btn-back" onclick="window.close(); if(!window.closed) window.history.back();">⬅️ إغلاق / عودة</button>
     </div>
 
     <div class="thermal-ticket">
         <!-- Header Box with Logo & Name -->
         <div class="header-box">
-            <img src="{{ asset('images/لوغو.png') }}" class="header-logo" alt="Logo" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
+            <img src="{{ asset('images/hospital-logo.svg') }}" class="header-logo" alt="Logo" onerror="this.style.display='none';">
             <div class="header-titles">
                 <div class="ar-title">مستشفى الكفاءات الاهلي</div>
                 <div class="en-title">Al-Kafaat Hospital</div>
@@ -526,7 +528,7 @@
             @endphp
             <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; text-align: center;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <img src="{{ $qrUrl }}" alt="QR" style="width: 60px; height: 60px; border: 1px solid #000;">
+                    <img src="{{ $qrUrl }}" alt="QR" style="width: 60px; height: 60px; border: 1px solid #000;" onerror="this.closest('.qr-box')?.remove();">
                     <div style="text-align: right; font-size: 10px; font-weight: 800; line-height: 1.3;">
                         <span>📱 امسح الرمز بهاتفك</span><br>
                         <span style="color: #0088cc;">لمتابعة الدور واستلام نداء التيليجرام</span><br>
@@ -549,8 +551,16 @@
     </div>
 
     <script>
-        // Auto print trigger
-        // window.onload = function() { window.print(); };
+        function doPrint() {
+            window.print();
+        }
+
+        // الطباعة التلقائية عند اكتمال تحميل الصفحة
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                window.print();
+            }, 350);
+        });
     </script>
 </body>
 </html>

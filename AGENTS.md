@@ -61,6 +61,18 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-12 — المرحلة 30: ضبط طباعة وصولات الكاشير الحرارية وتفعيل الطباعة التلقائية Fix Cashier POS Thermal Receipt Print)
+
+### Done
+- **ضبط قالب إيصال الكاشير الحراري (`resources/views/cashier/receipt-print.blade.php`)**:
+  * تفعيل أمر الطباعة التلقائية `window.print()` عند فتح الصفحة بدلاً من تعطيله.
+  * ضبط قواعد الطباعة وهوامش الصفحة `@page { size: 80mm auto; margin: 0; }` لمنع تحويل المقاس إلى A4 أو تعليق درايفر طابعة الكاشير.
+  * إزالة الإطار الخارجي الأسود في وضع الطباعة لمنع قص الهوامش (`76mm - 78mm` عرض قياسي متوافق مع طابعات 80mm).
+  * استبدال مسار اللوغو بصيغة `hospital-logo.svg` الثابتة لحمايته من أخطاء أسماء الملفات في السيرفر، وإضافة معالج خطأ فوري لصورة الـ QR لمنع تجميد مربع الطباعة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز اختبارات الكاشير والصلاحيات [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php) و [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 4 passed (33 assertions).
+  * رفع التعديلات مباشرة على فرع `main`.
+
 ## Session log (2026-10-12 — المرحلة 29: إصلاح تفاعل بطاقات جهة الضمان في واجهتي إضافة وتعديل المرضى Fix Patient Insurance Selection Tiles)
 
 ### Done
