@@ -850,4 +850,25 @@ Route::get('/api/telegram/test-call', function () {
     ]);
 });
 
+// خدمة وتقديم ملفات التخزين العام (Fallback Storage File Server)
+// يضمن فتح صور ومرفقات الأشعة والمختبر والتقارير دون أخطاء 403 في السيرفرات المشتركة
+Route::get('/storage/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $fullPath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullPath) || is_dir($fullPath)) {
+        abort(404, 'الملف المطلوب غير موجود في وحدة التخزين');
+    }
+
+    $mime = @mime_content_type($fullPath) ?: 'application/octet-stream';
+
+    return response()->file($fullPath, [
+        'Content-Type' => $mime,
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*')->name('storage.file.serve');
+
 

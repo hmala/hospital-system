@@ -60,6 +60,19 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-12 — المرحلة 32: حل مشكلة الخطأ 403 عند فتح صور ومرفقات الأشعة والإيكو أونلاين Fix Storage File Access 403 Forbidden)
+
+### Done
+- **اكتشاف وتشخيص السبب الجذري للخطأ 403 أونلاين**:
+  * في لارافيل 12، تم تفعيل خاصية `'serve' => true` افتراضياً للقرص الخاص `local` داخل `config/filesystems.php`.
+  * بسبب غياب حقل `url` للقرص `local` ووجود النظام في مسار فرعي على هوستنجر (`/hearmz`)، قام لارافيل بحجز المسار العام `/storage/{path}` للقرص الخاص المشفر، مما جعل النظام يطلب توقيعاً رقمياً خاصاً (`hasValidSignature`) ويرفض فتح أي رابط عادي لصور ومرفقات الأشعة والمختبر برمز `403 Forbidden`.
+  * غياب ارتباط Symlink أو قيود `FollowSymLinks` في استضافات أباتشي المشتركة زاد من تعذر القراءة المباشرة من نظام الملفات.
+- **الحل الجذري والآمن**:
+  * ضبط قرص التخزين الخاص في `config/filesystems.php` ليصبح `'serve' => false` لمنع احتكار مسار `/storage/`.
+  * إضافة مسار برميجي مخصص وعالي الكفاءة في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php): `Route::get('/storage/{path}')` يقوم بقراءة ملفات التخزين العام (`storage/app/public/`) وإعادتها كاستجابة ملف نظامية (`BinaryFileResponse`) مع نوع المحتوى المباشر وتأمين كامل ضد ثغرات التخطي (`Directory Traversal Guard: str_contains($path, '..')`).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [StorageFileAccessTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/StorageFileAccessTest.php): 3 passed (5 assertions).
+  * اجتياز كامل لكافة اختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
 
 ## Session log (2026-10-12 — المرحلة 31: استعادة ورفع أحدث قاعدة بيانات من eva.sql بالكامل إلى هوستنجر Restore Latest Eva Database to Hostinger)
 
