@@ -60,6 +60,27 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-12 — المرحلة 36: إضافة شريط التحكم الشامل بأنماط المخططات البيانية Master Chart Controller & Dynamic Multi-Chart Engine)
+
+### Done
+- **إضافة شريط التحكم الشامل للمخططات البيانية (Master Chart Controller) في تبويب التحليل المالي (`resources/views/treasury/index.blade.php`)**:
+  * **شريط تحكم رئيسي وموحد أعلى التبويب (`#masterChartButtonGroup`)**:
+    - يوفر 4 أنماط بيانية متقدمة يمكن التبديل بينها بضغطة زر واحدة لتتحكم في كامل الصفحة بشكل متزامن:
+      1. `📊 أعمدة رأسية (Vertical Bar / Clustered)`: أعمدة قائمة مع كتابة الأرقام والمبالغ فوق كل عمود مباشرة.
+      2. `📶 أعمدة أفقية (Horizontal Bar)`: تحويل الأعمدة إلى مسارات أفقية مع كتابة المبالغ بجانب كل مسار (مناسب للمقارنة السريعة للأقسام).
+      3. `📈 منحنيات مساحية (Area / Line Curve)`: تحويل المخططات إلى منحنيات انسيابية ملونة ذات شفافية مساحية لمراقبة الذروات والسيولة.
+      4. `🍩 دائري وحصص (Donut / Pie)`: عرض التوزيع النسبي والدائري مع إجمالي الوارد في المركز ودليل الألوان.
+  * **التحكم الفردي في كل بطاقة (Per-Card Independent Switchers)**:
+    - بطاقة إيرادات الأقسام: أزرار تحكم مستقلة `[ 📊 أعمدة | 📶 أفقي | 📈 منحنى | 🍩 دائري ]`.
+    - بطاقة حركة النقدية اليومية: أزرار تحكم مستقلة `[ 📊 أعمدة | 📶 أفقي | 📈 منحنى ]`.
+  * **استجابة البيانات والأرقام والتسميات (Smart Data Labels)**:
+    - تم تكييف بلجن الأرقام المباشرة (`barLabelsPlugin` و `deptBarDataLabels`) ليتعامل بذكاء مع الاتجاهين: يكتب الأرقام أعلى الأعمدة في الوضع الرأسي، ويكتبها على يمين الأعمدة في الوضع الأفقي.
+  * **حفظ التفضيل التلقائي في المتصفح (Persistent Memory)**:
+    - حفظ النمط المختار في `localStorage` (`treasury_chart_mode`) واستعادته تلقائياً عند إعادة تحميل الصفحة أو العودة إليها لاحقاً.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات لوحة الخزينة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (20 assertions).
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
 ## Session log (2026-10-12 — المرحلة 35: إظهار الأرقام والمبالغ مباشرة على المخططات البيانية في الخزينة Display Direct Data Labels on Treasury Charts)
 
 ### Done

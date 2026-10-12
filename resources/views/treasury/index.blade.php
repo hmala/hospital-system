@@ -253,6 +253,36 @@
 
         <!-- ================= التبويب 1: المخططات البيانية والتحليل المالي ================= -->
         <div class="tab-pane fade show active" id="analytics-tab-pane" role="tabpanel" tabindex="0">
+            <!-- شريط التحكم الشامل بأنماط المخططات البيانية لكامل الصفحة -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white border-start border-4 border-primary">
+                <div class="card-body p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary">
+                            <i class="fas fa-sliders fa-lg"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">شريط التحكم الشامل بأنماط المخططات البيانية</h6>
+                            <small class="text-muted">التحكم الفوري والموحد في طريقة تمثيل كافة الرسوم البيانية في الصفحة بضغطة زر واحدة</small>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="btn-group btn-group-sm p-1 bg-light rounded-pill border shadow-2xs" role="group" id="masterChartButtonGroup">
+                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold active btn-primary" onclick="setMasterChartMode('bar')" id="btnMasterBar">
+                                <i class="fas fa-chart-column me-1.5"></i>📊 أعمدة رأسية
+                            </button>
+                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('horizontal')" id="btnMasterHorizontal">
+                                <i class="fas fa-bars-staggered me-1.5 text-warning"></i>📶 أعمدة أفقية
+                            </button>
+                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('line')" id="btnMasterLine">
+                                <i class="fas fa-chart-line me-1.5 text-success"></i>📈 منحنيات مساحية
+                            </button>
+                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('donut')" id="btnMasterDonut">
+                                <i class="fas fa-chart-pie me-1.5 text-info"></i>🍩 دائري وحصص
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="row g-4 mb-4">
                 <!-- مخطط توزيع الإيرادات حسب الأقسام (Donut Chart) -->
                 <div class="col-12 col-xl-6">
@@ -263,11 +293,17 @@
                                 <small class="text-muted">الأرقام الدقيقة لمساهمة كل قسم في إجمالي دخل المستشفى</small>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary active" id="btnShowDeptBar" onclick="switchDeptChart('bar')">
+                                <div class="btn-group btn-group-sm" role="group" id="deptChartButtonGroup">
+                                    <button type="button" class="btn btn-sm btn-primary active" id="btnShowDeptBar" onclick="switchDeptChart('bar')" title="أعمدة رأسية">
                                         <i class="fas fa-chart-column me-1"></i>أعمدة
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptDonut" onclick="switchDeptChart('donut')">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptHorizontal" onclick="switchDeptChart('horizontal')" title="أعمدة أفقية">
+                                        <i class="fas fa-bars-staggered me-1"></i>أفقي
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptLine" onclick="switchDeptChart('line')" title="منحنى خطي">
+                                        <i class="fas fa-chart-line me-1"></i>منحنى
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptDonut" onclick="switchDeptChart('donut')" title="مخطط دائري">
                                         <i class="fas fa-chart-pie me-1"></i>دائري
                                     </button>
                                 </div>
@@ -329,12 +365,23 @@
                 <!-- مخطط المنحنى الزمني لحركة النقدية (Cash Flow Trend Chart) -->
                 <div class="col-12 col-xl-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center">
+                        <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
                                 <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-line text-success me-2"></i>منحنى حركة النقدية اليومية (الوارد مقابل المنصرف)</h6>
                                 <small class="text-muted">مقارنة السيولة الداخلة والخارجة لاكتشاف أوقات الذروة</small>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="btn-group btn-group-sm" role="group" id="trendChartButtonGroup">
+                                    <button type="button" class="btn btn-sm btn-primary active" id="btnTrendBar" onclick="switchTrendChart('bar')">
+                                        <i class="fas fa-chart-column me-1"></i>أعمدة
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnTrendHorizontal" onclick="switchTrendChart('horizontal')">
+                                        <i class="fas fa-bars-staggered me-1"></i>أفقي
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnTrendLine" onclick="switchTrendChart('line')">
+                                        <i class="fas fa-chart-line me-1"></i>منحنى
+                                    </button>
+                                </div>
                                 <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-square me-1"></i>الوارد: {{ number_format($periodInflow) }} د.ع</span>
                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-square me-1"></i>المنصرف: {{ number_format($periodOutflow) }} د.ع</span>
                             </div>
@@ -1171,32 +1218,174 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // 3. محرك الرسوم البيانية (Chart.js Engine)
+    // 3. محرك الرسوم البيانية الشامل (Full Master Chart.js Engine)
     let deptBarChartInstance = null;
     let deptDonutChartInstance = null;
+    let trendChartInstance = null;
 
-    // دالة التبديل بين مخطط الأعمدة والمخطط الدائري للأقسام
+    // دالة التحكم الشامل بكافة مخططات الصفحة (Master Mode Switcher)
+    window.setMasterChartMode = function(mode) {
+        // 1. تحديث أزرار شريط التحكم العام
+        const masterBtns = {
+            'bar': document.getElementById('btnMasterBar'),
+            'horizontal': document.getElementById('btnMasterHorizontal'),
+            'line': document.getElementById('btnMasterLine'),
+            'donut': document.getElementById('btnMasterDonut')
+        };
+        Object.entries(masterBtns).forEach(([k, btn]) => {
+            if (btn) {
+                if (k === mode) {
+                    btn.classList.add('active', 'btn-primary');
+                    btn.classList.remove('btn-light', 'text-dark');
+                } else {
+                    btn.classList.remove('active', 'btn-primary');
+                    btn.classList.add('btn-light', 'text-dark');
+                }
+            }
+        });
+
+        // 2. تطبيق النمط على مخطط إيرادات الأقسام
+        window.switchDeptChart(mode);
+
+        // 3. تطبيق النمط على منحنى حركة النقدية اليومية
+        const trendMode = (mode === 'donut') ? 'bar' : mode;
+        window.switchTrendChart(trendMode);
+
+        // 4. حفظ التفضيل في المتصفح للزيارات القادمة
+        try {
+            localStorage.setItem('treasury_chart_mode', mode);
+        } catch(e) {}
+    };
+
+    // دالة التحكم الفردي بمخطط الأقسام
     window.switchDeptChart = function(type) {
         const barBox = document.getElementById('deptBarChartContainer');
         const donutBox = document.getElementById('deptDonutChartContainer');
-        const btnBar = document.getElementById('btnShowDeptBar');
-        const btnDonut = document.getElementById('btnShowDeptDonut');
+        
+        // تحديث أزرار بطاقة الأقسام
+        const deptBtns = {
+            'bar': document.getElementById('btnShowDeptBar'),
+            'horizontal': document.getElementById('btnShowDeptHorizontal'),
+            'line': document.getElementById('btnShowDeptLine'),
+            'donut': document.getElementById('btnShowDeptDonut')
+        };
+        Object.entries(deptBtns).forEach(([k, btn]) => {
+            if (btn) {
+                if (k === type) {
+                    btn.classList.add('active', 'btn-primary');
+                    btn.classList.remove('btn-outline-primary');
+                } else {
+                    btn.classList.remove('active', 'btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                }
+            }
+        });
+
         if (type === 'donut') {
             if (barBox) barBox.style.display = 'none';
             if (donutBox) donutBox.style.display = 'block';
-            if (btnBar) { btnBar.classList.remove('active', 'btn-primary'); btnBar.classList.add('btn-outline-primary'); }
-            if (btnDonut) { btnDonut.classList.add('active', 'btn-primary'); btnDonut.classList.remove('btn-outline-primary'); }
-            if (deptDonutChartInstance) {
-                deptDonutChartInstance.resize();
-            }
+            if (deptDonutChartInstance) deptDonutChartInstance.resize();
         } else {
             if (donutBox) donutBox.style.display = 'none';
             if (barBox) barBox.style.display = 'block';
-            if (btnDonut) { btnDonut.classList.remove('active', 'btn-primary'); btnDonut.classList.add('btn-outline-primary'); }
-            if (btnBar) { btnBar.classList.add('active', 'btn-primary'); btnBar.classList.remove('btn-outline-primary'); }
+            
             if (deptBarChartInstance) {
+                const maxDeptVal = Math.max(...deptData, 1000);
+                if (type === 'horizontal') {
+                    deptBarChartInstance.config.type = 'bar';
+                    deptBarChartInstance.config.options.indexAxis = 'y';
+                    deptBarChartInstance.config.data.datasets[0].backgroundColor = deptColors;
+                    deptBarChartInstance.config.data.datasets[0].borderColor = deptColors;
+                    deptBarChartInstance.config.data.datasets[0].fill = false;
+                    deptBarChartInstance.config.options.scales.x.beginAtZero = true;
+                    deptBarChartInstance.config.options.scales.x.suggestedMax = maxDeptVal * 1.25;
+                    deptBarChartInstance.config.options.scales.y.suggestedMax = undefined;
+                    deptBarChartInstance.config.options.layout.padding = { top: 15, right: 65, left: 10, bottom: 10 };
+                } else if (type === 'line') {
+                    deptBarChartInstance.config.type = 'line';
+                    deptBarChartInstance.config.options.indexAxis = 'x';
+                    deptBarChartInstance.config.data.datasets[0].backgroundColor = 'rgba(2, 132, 199, 0.2)';
+                    deptBarChartInstance.config.data.datasets[0].borderColor = '#0284c7';
+                    deptBarChartInstance.config.data.datasets[0].pointBackgroundColor = deptColors;
+                    deptBarChartInstance.config.data.datasets[0].pointRadius = 6;
+                    deptBarChartInstance.config.data.datasets[0].fill = true;
+                    deptBarChartInstance.config.data.datasets[0].tension = 0.35;
+                    deptBarChartInstance.config.options.scales.y.beginAtZero = true;
+                    deptBarChartInstance.config.options.scales.y.suggestedMax = maxDeptVal * 1.25;
+                    deptBarChartInstance.config.options.scales.x.suggestedMax = undefined;
+                    deptBarChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
+                } else { // vertical bar (default)
+                    deptBarChartInstance.config.type = 'bar';
+                    deptBarChartInstance.config.options.indexAxis = 'x';
+                    deptBarChartInstance.config.data.datasets[0].backgroundColor = deptColors;
+                    deptBarChartInstance.config.data.datasets[0].borderColor = deptColors;
+                    deptBarChartInstance.config.data.datasets[0].fill = false;
+                    deptBarChartInstance.config.options.scales.y.beginAtZero = true;
+                    deptBarChartInstance.config.options.scales.y.suggestedMax = maxDeptVal * 1.25;
+                    deptBarChartInstance.config.options.scales.x.suggestedMax = undefined;
+                    deptBarChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
+                }
+                deptBarChartInstance.update();
                 deptBarChartInstance.resize();
             }
+        }
+    };
+
+    // دالة التحكم الفردي بمخطط حركة النقدية اليومية
+    window.switchTrendChart = function(type) {
+        const trendBtns = {
+            'bar': document.getElementById('btnTrendBar'),
+            'horizontal': document.getElementById('btnTrendHorizontal'),
+            'line': document.getElementById('btnTrendLine')
+        };
+        Object.entries(trendBtns).forEach(([k, btn]) => {
+            if (btn) {
+                if (k === type) {
+                    btn.classList.add('active', 'btn-primary');
+                    btn.classList.remove('btn-outline-primary');
+                } else {
+                    btn.classList.remove('active', 'btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                }
+            }
+        });
+
+        if (trendChartInstance) {
+            const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
+            if (type === 'horizontal') {
+                trendChartInstance.config.type = 'bar';
+                trendChartInstance.config.options.indexAxis = 'y';
+                trendChartInstance.config.data.datasets[0].fill = false;
+                trendChartInstance.config.data.datasets[1].fill = false;
+                trendChartInstance.config.options.scales.x.beginAtZero = true;
+                trendChartInstance.config.options.scales.x.suggestedMax = maxFlow * 1.25;
+                trendChartInstance.config.options.scales.y.suggestedMax = undefined;
+                trendChartInstance.config.options.layout.padding = { top: 15, right: 55, left: 10, bottom: 10 };
+            } else if (type === 'line') {
+                trendChartInstance.config.type = 'line';
+                trendChartInstance.config.options.indexAxis = 'x';
+                trendChartInstance.config.data.datasets[0].fill = true;
+                trendChartInstance.config.data.datasets[0].tension = 0.35;
+                trendChartInstance.config.data.datasets[0].backgroundColor = 'rgba(34, 197, 94, 0.15)';
+                trendChartInstance.config.data.datasets[1].fill = true;
+                trendChartInstance.config.data.datasets[1].tension = 0.35;
+                trendChartInstance.config.data.datasets[1].backgroundColor = 'rgba(239, 68, 68, 0.15)';
+                trendChartInstance.config.options.scales.y.beginAtZero = true;
+                trendChartInstance.config.options.scales.y.suggestedMax = maxFlow * 1.25;
+                trendChartInstance.config.options.scales.x.suggestedMax = undefined;
+                trendChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
+            } else { // vertical bar
+                trendChartInstance.config.type = 'bar';
+                trendChartInstance.config.options.indexAxis = 'x';
+                trendChartInstance.config.data.datasets[0].fill = false;
+                trendChartInstance.config.data.datasets[1].fill = false;
+                trendChartInstance.config.options.scales.y.beginAtZero = true;
+                trendChartInstance.config.options.scales.y.suggestedMax = maxFlow * 1.25;
+                trendChartInstance.config.options.scales.x.suggestedMax = undefined;
+                trendChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
+            }
+            trendChartInstance.update();
+            trendChartInstance.resize();
         }
     };
 
@@ -1205,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const deptData = @json($deptChartData);
     const deptColors = @json($deptChartColors);
 
-    // أ) مخطط الأعمدة البيانية التفصيلي للأقسام (Department Bar Chart - مطابق لصورة المستخدم)
+    // أ) تهيئة مخطط إيرادات الأقسام التفاعلي
     const deptBarCtx = document.getElementById('deptRevenueBarChart');
     if (deptBarCtx && deptData.length > 0) {
         const maxDeptVal = Math.max(...deptData);
@@ -1228,18 +1417,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 id: 'deptBarDataLabels',
                 afterDatasetsDraw(chart) {
                     const ctx = chart.ctx;
+                    const isHoriz = chart.options.indexAxis === 'y';
                     const meta = chart.getDatasetMeta(0);
                     if (!meta.hidden) {
                         meta.data.forEach((element, index) => {
                             const val = chart.data.datasets[0].data[index];
                             if (val !== null && val !== undefined && val > 0) {
                                 ctx.save();
-                                ctx.font = 'bold 12px "Segoe UI", Cairo, sans-serif';
-                                ctx.fillStyle = '#0f172a'; // خط داكن واضح ومباشر فوق كل عمود
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
+                                ctx.font = 'bold 11px "Segoe UI", Cairo, sans-serif';
+                                ctx.fillStyle = '#0f172a';
                                 const labelText = Number(val).toLocaleString() + ' د.ع';
-                                ctx.fillText(labelText, element.x, element.y - 6);
+                                if (isHoriz) {
+                                    ctx.textAlign = 'left';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(labelText, element.x + 8, element.y);
+                                } else {
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText(labelText, element.x, element.y - 6);
+                                }
                                 ctx.restore();
                             }
                         });
@@ -1250,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: {
-                    padding: { top: 32 }
+                    padding: { top: 32, right: 15, left: 10, bottom: 10 }
                 },
                 plugins: {
                     legend: { display: false },
@@ -1287,7 +1483,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ب) مخطط توزيع الإيرادات الدائري البديل (Donut Chart)
+    // ب) تهيئة مخطط توزيع الإيرادات الدائري البديل (Donut Chart)
     const donutCenterPlugin = {
         id: 'donutCenterText',
         beforeDraw(chart) {
@@ -1378,11 +1574,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ج) مخطط حركة النقدية اليومية (Cash Flow Bar / Line Chart)
+    // ج) تهيئة مخطط حركة النقدية اليومية (Daily Cash Flow Trend)
     const barLabelsPlugin = {
         id: 'barLabels',
         afterDatasetsDraw(chart) {
-            const { ctx } = chart;
+            const ctx = chart.ctx;
+            const isHoriz = chart.options.indexAxis === 'y';
             chart.data.datasets.forEach((dataset, datasetIndex) => {
                 const meta = chart.getDatasetMeta(datasetIndex);
                 if (!meta.hidden) {
@@ -1392,8 +1589,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             ctx.save();
                             ctx.font = 'bold 11px "Segoe UI", Tahoma, sans-serif';
                             ctx.fillStyle = datasetIndex === 0 ? '#15803d' : '#b91c1c';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
                             
                             let formatted = Number(dataVal).toLocaleString();
                             if (dataVal >= 1000000) {
@@ -1401,7 +1596,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else if (dataVal >= 1000) {
                                 formatted = Math.round(dataVal / 1000) + 'K';
                             }
-                            ctx.fillText(formatted, element.x, element.y - 4);
+
+                            if (isHoriz) {
+                                ctx.textAlign = 'left';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(formatted, element.x + 6, element.y);
+                            } else {
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(formatted, element.x, element.y - 4);
+                            }
                             ctx.restore();
                         }
                     });
@@ -1417,7 +1621,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const trendCtx = document.getElementById('cashFlowTrendChart');
     if (trendCtx) {
         const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
-        new Chart(trendCtx, {
+        trendChartInstance = new Chart(trendCtx, {
             type: 'bar',
             data: {
                 labels: trendLabels,
@@ -1445,9 +1649,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: {
-                    padding: {
-                        top: 28
-                    }
+                    padding: { top: 28, right: 15, left: 10, bottom: 10 }
                 },
                 plugins: {
                     legend: {
@@ -1485,8 +1687,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
 
+    // استعادة نمط المخططات المفضل المحفوظ في المتصفح تلقائياً
+    try {
+        const savedMode = localStorage.getItem('treasury_chart_mode');
+        if (savedMode && savedMode !== 'bar') {
+            window.setMasterChartMode(savedMode);
+        }
+    } catch(e) {}
+});
 // دالة الفلاتر الزمنية السريعة
 function setQuickDate(period) {
     const fromInput = document.getElementById('from_date_input');
