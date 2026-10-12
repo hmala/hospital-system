@@ -21,7 +21,18 @@
             </h3>
             <p class="text-muted small mb-0">نظام الخزينة الموحد (Unified Hospital Treasury) - توزيع الإيرادات حسب الأقسام، التحليلات البيانية، وسجل القيود المحاسبية</p>
         </div>
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- مؤشر التحديث التلقائي العام في ترويسة الصفحة -->
+            <div class="d-inline-flex align-items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-3 border shadow-sm">
+                <span class="spinner-grow spinner-grow-sm text-success" id="headerAutoRefreshPulse" style="width: 8px; height: 8px;" role="status"></span>
+                <span class="small fw-bold text-dark font-monospace" id="headerAutoRefreshCountdown" title="الوقت المتبقي حتى التحديث التلقائي">30ث</span>
+                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0.5 ms-1" onclick="toggleAutoRefresh()" title="إيقاف مؤقت / تشغيل">
+                    <i class="fas fa-pause text-warning" id="headerAutoRefreshIcon"></i>
+                </button>
+                <button type="button" class="btn btn-xs btn-light rounded-circle p-1" onclick="triggerManualRefresh()" title="تحديث فوري الآن">
+                    <i class="fas fa-sync-alt text-primary" id="headerRefreshSpin"></i>
+                </button>
+            </div>
             <button type="button" class="btn btn-danger d-flex align-items-center gap-2 shadow-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#expenseModal">
                 <i class="fas fa-minus-circle"></i>
                 <span>+ سند صرف مصروفات</span>
@@ -253,7 +264,7 @@
 
         <!-- ================= التبويب 1: المخططات البيانية والتحليل المالي ================= -->
         <div class="tab-pane fade show active" id="analytics-tab-pane" role="tabpanel" tabindex="0">
-            <!-- شريط التحكم الشامل بأنماط المخططات البيانية لكامل الصفحة -->
+            <!-- شريط التحكم الشامل بأنماط المخططات البيانية والتحديث التلقائي لكامل الصفحة -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white border-start border-4 border-primary">
                 <div class="card-body p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div class="d-flex align-items-center gap-2.5">
@@ -261,11 +272,12 @@
                             <i class="fas fa-sliders fa-lg"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold mb-0 text-dark">شريط التحكم الشامل بأنماط المخططات البيانية</h6>
-                            <small class="text-muted">التحكم الفوري والموحد في طريقة تمثيل كافة الرسوم البيانية في الصفحة بضغطة زر واحدة</small>
+                            <h6 class="fw-bold mb-0 text-dark">التحكم الموحد بالمخططات والتحديث التلقائي</h6>
+                            <small class="text-muted">التحكم الفوري بكافة رسوم ومخططات الصفحة بضغطة زر واحدة مع التحديث اللحظي المباشر</small>
                         </div>
                     </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <!-- أزرار النمط الموحد الرئيسية -->
                         <div class="btn-group btn-group-sm p-1 bg-light rounded-pill border shadow-2xs" role="group" id="masterChartButtonGroup">
                             <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold active btn-primary" onclick="setMasterChartMode('bar')" id="btnMasterBar">
                                 <i class="fas fa-chart-column me-1.5"></i>📊 أعمدة رأسية
@@ -277,14 +289,42 @@
                                 <i class="fas fa-chart-line me-1.5 text-success"></i>📈 منحنيات مساحية
                             </button>
                             <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-light text-dark" onclick="setMasterChartMode('donut')" id="btnMasterDonut">
-                                <i class="fas fa-chart-pie me-1.5 text-info"></i>🍩 دائري وحصص
+                                <i class="fas fa-chart-pie me-1.5 text-info"></i>🍩 دائري ونسب
+                            </button>
+                        </div>
+
+                        <!-- أداة التحديث التلقائي الذكية (Auto-Refresh Controller) -->
+                        <div class="d-flex align-items-center gap-2 bg-light p-1 px-3 rounded-pill border shadow-2xs">
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="spinner-grow spinner-grow-sm text-success" id="autoRefreshPulse" role="status" style="width: 8px; height: 8px;"></span>
+                                <span class="small fw-bold text-dark font-monospace" id="autoRefreshCountdown" title="العد التنازلي للتحديث التلقائي">30ث</span>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-0.5 fw-bold" id="btnToggleAutoRefresh" onclick="toggleAutoRefresh()" title="إيقاف مؤقت / استئناف التحديث">
+                                <i class="fas fa-pause me-1 text-warning" id="autoRefreshIcon"></i><span id="autoRefreshText">نشط</span>
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-xs btn-light rounded-circle p-1 border" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="ضبط فترة التحديث التلقائي">
+                                    <i class="fas fa-clock text-muted"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
+                                    <li><h6 class="dropdown-header fw-bold">فترة التحديث التلقائي</h6></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="setAutoRefreshInterval(15)">⚡ كل 15 ثانية</a></li>
+                                    <li><a class="dropdown-item active" href="javascript:void(0)" id="itemRefresh30" onclick="setAutoRefreshInterval(30)">⏱️ كل 30 ثانية (افتراضي)</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" id="itemRefresh60" onclick="setAutoRefreshInterval(60)">🕐 كل 60 ثانية (دقيقة)</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" id="itemRefresh120" onclick="setAutoRefreshInterval(120)">⏳ كل دقيقتين</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="setAutoRefreshInterval(0)">🛑 إيقاف التحديث التلقائي</a></li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 fw-bold shadow-2xs" onclick="triggerManualRefresh()" title="تحديث البيانات والصفحة فوراً">
+                                <i class="fas fa-sync-alt me-1" id="manualRefreshSpin"></i>تحديث الآن
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="row g-4 mb-4">
-                <!-- مخطط توزيع الإيرادات حسب الأقسام (Donut Chart) -->
+                <!-- مخطط توزيع الإيرادات حسب الأقسام (Department Revenues Chart) -->
                 <div class="col-12 col-xl-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -293,26 +333,15 @@
                                 <small class="text-muted">الأرقام الدقيقة لمساهمة كل قسم في إجمالي دخل المستشفى</small>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="btn-group btn-group-sm" role="group" id="deptChartButtonGroup">
-                                    <button type="button" class="btn btn-sm btn-primary active" id="btnShowDeptBar" onclick="switchDeptChart('bar')" title="أعمدة رأسية">
-                                        <i class="fas fa-chart-column me-1"></i>أعمدة
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptHorizontal" onclick="switchDeptChart('horizontal')" title="أعمدة أفقية">
-                                        <i class="fas fa-bars-staggered me-1"></i>أفقي
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptLine" onclick="switchDeptChart('line')" title="منحنى خطي">
-                                        <i class="fas fa-chart-line me-1"></i>منحنى
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptDonut" onclick="switchDeptChart('donut')" title="مخطط دائري">
-                                        <i class="fas fa-chart-pie me-1"></i>دائري
-                                    </button>
-                                </div>
-                                <span class="badge bg-light text-dark border font-monospace">{{ number_format($periodInflow) }} د.ع</span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5" id="deptChartModeBadge">
+                                    <i class="fas fa-chart-column me-1"></i>أعمدة رأسية
+                                </span>
+                                <span class="badge bg-light text-dark border font-monospace px-2.5 py-1.5">إجمالي الوارد: {{ number_format($periodInflow) }} د.ع</span>
                             </div>
                         </div>
                         <div class="card-body p-4">
                             @if(count($deptChartData) > 0 && $periodInflow > 0)
-                                <!-- الحاوية الأساسية: مخطط الأعمدة البيانية مع الأرقام مباشرة فوق كل عمود -->
+                                <!-- الحاوية الأساسية: مخطط الأعمدة والمنحنيات مع الأرقام والمبالغ المباشرة -->
                                 <div id="deptBarChartContainer" style="position: relative; height: 300px; width: 100%;">
                                     <canvas id="deptRevenueBarChart"></canvas>
                                 </div>
@@ -362,33 +391,33 @@
                     </div>
                 </div>
 
-                <!-- مخطط المنحنى الزمني لحركة النقدية (Cash Flow Trend Chart) -->
+                <!-- مخطط حركة النقدية اليومية (Daily Cash Flow Chart) -->
                 <div class="col-12 col-xl-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-line text-success me-2"></i>منحنى حركة النقدية اليومية (الوارد مقابل المنصرف)</h6>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-line text-success me-2"></i>حركة النقدية اليومية (الوارد مقابل المنصرف)</h6>
                                 <small class="text-muted">مقارنة السيولة الداخلة والخارجة لاكتشاف أوقات الذروة</small>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <div class="btn-group btn-group-sm" role="group" id="trendChartButtonGroup">
-                                    <button type="button" class="btn btn-sm btn-primary active" id="btnTrendBar" onclick="switchTrendChart('bar')">
-                                        <i class="fas fa-chart-column me-1"></i>أعمدة
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnTrendHorizontal" onclick="switchTrendChart('horizontal')">
-                                        <i class="fas fa-bars-staggered me-1"></i>أفقي
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnTrendLine" onclick="switchTrendChart('line')">
-                                        <i class="fas fa-chart-line me-1"></i>منحنى
-                                    </button>
-                                </div>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-square me-1"></i>الوارد: {{ number_format($periodInflow) }} د.ع</span>
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-square me-1"></i>المنصرف: {{ number_format($periodOutflow) }} د.ع</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5" id="trendChartModeBadge">
+                                    <i class="fas fa-chart-column me-1"></i>أعمدة رأسية
+                                </span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace"><i class="fas fa-arrow-down me-1"></i>الوارد: {{ number_format($periodInflow) }} د.ع</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-monospace"><i class="fas fa-arrow-up me-1"></i>المنصرف: {{ number_format($periodOutflow) }} د.ع</span>
                             </div>
                         </div>
                         <div class="card-body p-4">
-                            <div style="position: relative; height: 320px; width: 100%;">
+                            <!-- الحاوية الأساسية: مخطط الأعمدة أو المنحنيات -->
+                            <div id="cashFlowTrendContainer" style="position: relative; height: 320px; width: 100%;">
                                 <canvas id="cashFlowTrendChart"></canvas>
+                            </div>
+
+                            <!-- الحاوية البديلة: المخطط الدائري لمقارنة الوارد مقابل المنصرف -->
+                            <div id="cashFlowDonutContainer" style="position: relative; height: 320px; width: 100%; display: none;">
+                                <div style="position: relative; height: 280px; width: 100%; max-width: 340px; margin: 0 auto;">
+                                    <canvas id="cashFlowDonutChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1218,206 +1247,88 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // 3. محرك الرسوم البيانية الشامل (Full Master Chart.js Engine)
+    // =========================================================================
+    // 3. محرك الرسوم البيانية الشامل والتحكم الموحد (Master Chart.js Engine)
+    // =========================================================================
     let deptBarChartInstance = null;
     let deptDonutChartInstance = null;
     let trendChartInstance = null;
+    let cashFlowDonutChartInstance = null;
 
-    // دالة التحكم الشامل بكافة مخططات الصفحة (Master Mode Switcher)
-    window.setMasterChartMode = function(mode) {
-        // 1. تحديث أزرار شريط التحكم العام
-        const masterBtns = {
-            'bar': document.getElementById('btnMasterBar'),
-            'horizontal': document.getElementById('btnMasterHorizontal'),
-            'line': document.getElementById('btnMasterLine'),
-            'donut': document.getElementById('btnMasterDonut')
-        };
-        Object.entries(masterBtns).forEach(([k, btn]) => {
-            if (btn) {
-                if (k === mode) {
-                    btn.classList.add('active', 'btn-primary');
-                    btn.classList.remove('btn-light', 'text-dark');
-                } else {
-                    btn.classList.remove('active', 'btn-primary');
-                    btn.classList.add('btn-light', 'text-dark');
-                }
-            }
-        });
-
-        // 2. تطبيق النمط على مخطط إيرادات الأقسام
-        window.switchDeptChart(mode);
-
-        // 3. تطبيق النمط على منحنى حركة النقدية اليومية
-        const trendMode = (mode === 'donut') ? 'bar' : mode;
-        window.switchTrendChart(trendMode);
-
-        // 4. حفظ التفضيل في المتصفح للزيارات القادمة
-        try {
-            localStorage.setItem('treasury_chart_mode', mode);
-        } catch(e) {}
-    };
-
-    // دالة التحكم الفردي بمخطط الأقسام
-    window.switchDeptChart = function(type) {
-        const barBox = document.getElementById('deptBarChartContainer');
-        const donutBox = document.getElementById('deptDonutChartContainer');
-        
-        // تحديث أزرار بطاقة الأقسام
-        const deptBtns = {
-            'bar': document.getElementById('btnShowDeptBar'),
-            'horizontal': document.getElementById('btnShowDeptHorizontal'),
-            'line': document.getElementById('btnShowDeptLine'),
-            'donut': document.getElementById('btnShowDeptDonut')
-        };
-        Object.entries(deptBtns).forEach(([k, btn]) => {
-            if (btn) {
-                if (k === type) {
-                    btn.classList.add('active', 'btn-primary');
-                    btn.classList.remove('btn-outline-primary');
-                } else {
-                    btn.classList.remove('active', 'btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                }
-            }
-        });
-
-        if (type === 'donut') {
-            if (barBox) barBox.style.display = 'none';
-            if (donutBox) donutBox.style.display = 'block';
-            if (deptDonutChartInstance) deptDonutChartInstance.resize();
-        } else {
-            if (donutBox) donutBox.style.display = 'none';
-            if (barBox) barBox.style.display = 'block';
-            
-            if (deptBarChartInstance) {
-                const maxDeptVal = Math.max(...deptData, 1000);
-                if (type === 'horizontal') {
-                    deptBarChartInstance.config.type = 'bar';
-                    deptBarChartInstance.config.options.indexAxis = 'y';
-                    deptBarChartInstance.config.data.datasets[0].backgroundColor = deptColors;
-                    deptBarChartInstance.config.data.datasets[0].borderColor = deptColors;
-                    deptBarChartInstance.config.data.datasets[0].fill = false;
-                    deptBarChartInstance.config.options.scales.x.beginAtZero = true;
-                    deptBarChartInstance.config.options.scales.x.suggestedMax = maxDeptVal * 1.25;
-                    deptBarChartInstance.config.options.scales.y.suggestedMax = undefined;
-                    deptBarChartInstance.config.options.layout.padding = { top: 15, right: 65, left: 10, bottom: 10 };
-                } else if (type === 'line') {
-                    deptBarChartInstance.config.type = 'line';
-                    deptBarChartInstance.config.options.indexAxis = 'x';
-                    deptBarChartInstance.config.data.datasets[0].backgroundColor = 'rgba(2, 132, 199, 0.2)';
-                    deptBarChartInstance.config.data.datasets[0].borderColor = '#0284c7';
-                    deptBarChartInstance.config.data.datasets[0].pointBackgroundColor = deptColors;
-                    deptBarChartInstance.config.data.datasets[0].pointRadius = 6;
-                    deptBarChartInstance.config.data.datasets[0].fill = true;
-                    deptBarChartInstance.config.data.datasets[0].tension = 0.35;
-                    deptBarChartInstance.config.options.scales.y.beginAtZero = true;
-                    deptBarChartInstance.config.options.scales.y.suggestedMax = maxDeptVal * 1.25;
-                    deptBarChartInstance.config.options.scales.x.suggestedMax = undefined;
-                    deptBarChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
-                } else { // vertical bar (default)
-                    deptBarChartInstance.config.type = 'bar';
-                    deptBarChartInstance.config.options.indexAxis = 'x';
-                    deptBarChartInstance.config.data.datasets[0].backgroundColor = deptColors;
-                    deptBarChartInstance.config.data.datasets[0].borderColor = deptColors;
-                    deptBarChartInstance.config.data.datasets[0].fill = false;
-                    deptBarChartInstance.config.options.scales.y.beginAtZero = true;
-                    deptBarChartInstance.config.options.scales.y.suggestedMax = maxDeptVal * 1.25;
-                    deptBarChartInstance.config.options.scales.x.suggestedMax = undefined;
-                    deptBarChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
-                }
-                deptBarChartInstance.update();
-                deptBarChartInstance.resize();
-            }
-        }
-    };
-
-    // دالة التحكم الفردي بمخطط حركة النقدية اليومية
-    window.switchTrendChart = function(type) {
-        const trendBtns = {
-            'bar': document.getElementById('btnTrendBar'),
-            'horizontal': document.getElementById('btnTrendHorizontal'),
-            'line': document.getElementById('btnTrendLine')
-        };
-        Object.entries(trendBtns).forEach(([k, btn]) => {
-            if (btn) {
-                if (k === type) {
-                    btn.classList.add('active', 'btn-primary');
-                    btn.classList.remove('btn-outline-primary');
-                } else {
-                    btn.classList.remove('active', 'btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                }
-            }
-        });
-
-        if (trendChartInstance) {
-            const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
-            if (type === 'horizontal') {
-                trendChartInstance.config.type = 'bar';
-                trendChartInstance.config.options.indexAxis = 'y';
-                trendChartInstance.config.data.datasets[0].fill = false;
-                trendChartInstance.config.data.datasets[1].fill = false;
-                trendChartInstance.config.options.scales.x.beginAtZero = true;
-                trendChartInstance.config.options.scales.x.suggestedMax = maxFlow * 1.25;
-                trendChartInstance.config.options.scales.y.suggestedMax = undefined;
-                trendChartInstance.config.options.layout.padding = { top: 15, right: 55, left: 10, bottom: 10 };
-            } else if (type === 'line') {
-                trendChartInstance.config.type = 'line';
-                trendChartInstance.config.options.indexAxis = 'x';
-                trendChartInstance.config.data.datasets[0].fill = true;
-                trendChartInstance.config.data.datasets[0].tension = 0.35;
-                trendChartInstance.config.data.datasets[0].backgroundColor = 'rgba(34, 197, 94, 0.15)';
-                trendChartInstance.config.data.datasets[1].fill = true;
-                trendChartInstance.config.data.datasets[1].tension = 0.35;
-                trendChartInstance.config.data.datasets[1].backgroundColor = 'rgba(239, 68, 68, 0.15)';
-                trendChartInstance.config.options.scales.y.beginAtZero = true;
-                trendChartInstance.config.options.scales.y.suggestedMax = maxFlow * 1.25;
-                trendChartInstance.config.options.scales.x.suggestedMax = undefined;
-                trendChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
-            } else { // vertical bar
-                trendChartInstance.config.type = 'bar';
-                trendChartInstance.config.options.indexAxis = 'x';
-                trendChartInstance.config.data.datasets[0].fill = false;
-                trendChartInstance.config.data.datasets[1].fill = false;
-                trendChartInstance.config.options.scales.y.beginAtZero = true;
-                trendChartInstance.config.options.scales.y.suggestedMax = maxFlow * 1.25;
-                trendChartInstance.config.options.scales.x.suggestedMax = undefined;
-                trendChartInstance.config.options.layout.padding = { top: 32, right: 15, left: 10, bottom: 10 };
-            }
-            trendChartInstance.update();
-            trendChartInstance.resize();
-        }
-    };
-
-    // بيانات الأقسام المشتركة
+    // بيانات الرسوم المشتركة الممررة من الخادم
     const deptLabels = @json($deptChartLabels);
     const deptData = @json($deptChartData);
     const deptColors = @json($deptChartColors);
+    const trendLabels = @json($trendLabels);
+    const trendInflows = @json($trendInflows);
+    const trendOutflows = @json($trendOutflows);
+    const periodInflowTotal = {{ (float)$periodInflow }};
+    const periodOutflowTotal = {{ (float)$periodOutflow }};
+    const periodNetTotal = {{ (float)($periodInflow - $periodOutflow) }};
 
-    // أ) تهيئة مخطط إيرادات الأقسام التفاعلي
-    const deptBarCtx = document.getElementById('deptRevenueBarChart');
-    if (deptBarCtx && deptData.length > 0) {
-        const maxDeptVal = Math.max(...deptData);
-        deptBarChartInstance = new Chart(deptBarCtx, {
-            type: 'bar',
+    // دالة بناء وتحديث مخطط إيرادات الأقسام الفورية
+    function renderDeptChart(mode) {
+        const barBox = document.getElementById('deptBarChartContainer');
+        const donutBox = document.getElementById('deptDonutChartContainer');
+        const badgeEl = document.getElementById('deptChartModeBadge');
+
+        const badgeLabels = {
+            'bar': '<i class="fas fa-chart-column me-1"></i>أعمدة رأسية',
+            'horizontal': '<i class="fas fa-bars-staggered me-1"></i>أعمدة أفقية',
+            'line': '<i class="fas fa-chart-line me-1"></i>منحنيات مساحية',
+            'donut': '<i class="fas fa-chart-pie me-1"></i>دائري ونسب'
+        };
+        if (badgeEl && badgeLabels[mode]) badgeEl.innerHTML = badgeLabels[mode];
+
+        if (mode === 'donut') {
+            if (barBox) barBox.style.display = 'none';
+            if (donutBox) donutBox.style.display = 'block';
+            if (deptDonutChartInstance) deptDonutChartInstance.resize();
+            return;
+        }
+
+        if (donutBox) donutBox.style.display = 'none';
+        if (barBox) barBox.style.display = 'block';
+
+        const canvas = document.getElementById('deptRevenueBarChart');
+        if (!canvas || !deptData || deptData.length === 0) return;
+
+        // تدمير النسخة السابقة لضمان التبديل الجذري والآمن في Chart.js v4
+        if (deptBarChartInstance) {
+            deptBarChartInstance.destroy();
+            deptBarChartInstance = null;
+        }
+
+        const maxDeptVal = Math.max(...deptData, 1000);
+        const isHoriz = (mode === 'horizontal');
+        const isLine = (mode === 'line');
+
+        deptBarChartInstance = new Chart(canvas, {
+            type: isLine ? 'line' : 'bar',
             data: {
                 labels: deptLabels,
                 datasets: [{
                     label: 'إيراد القسم',
                     data: deptData,
-                    backgroundColor: deptColors,
-                    borderColor: deptColors,
-                    borderWidth: 1.5,
-                    borderRadius: 8,
-                    barPercentage: 0.5,
-                    categoryPercentage: 0.7
+                    backgroundColor: isLine ? 'rgba(2, 132, 199, 0.22)' : deptColors,
+                    borderColor: isLine ? '#0284c7' : deptColors,
+                    borderWidth: isLine ? 2.5 : 1.5,
+                    borderRadius: isLine ? 0 : 8,
+                    fill: isLine,
+                    tension: isLine ? 0.35 : 0,
+                    pointBackgroundColor: isLine ? deptColors : undefined,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: isLine ? 6 : 0,
+                    pointHoverRadius: 8,
+                    barPercentage: 0.55,
+                    categoryPercentage: 0.72
                 }]
             },
             plugins: [{
-                id: 'deptBarDataLabels',
+                id: 'deptDirectDataLabels',
                 afterDatasetsDraw(chart) {
                     const ctx = chart.ctx;
-                    const isHoriz = chart.options.indexAxis === 'y';
                     const meta = chart.getDatasetMeta(0);
                     if (!meta.hidden) {
                         meta.data.forEach((element, index) => {
@@ -1445,8 +1356,11 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                indexAxis: isHoriz ? 'y' : 'x',
                 layout: {
-                    padding: { top: 32, right: 15, left: 10, bottom: 10 }
+                    padding: isHoriz 
+                        ? { top: 15, right: 75, left: 10, bottom: 10 }
+                        : { top: 32, right: 15, left: 10, bottom: 10 }
                 },
                 plugins: {
                     legend: { display: false },
@@ -1459,7 +1373,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 },
-                scales: {
+                scales: isHoriz ? {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: maxDeptVal * 1.3,
+                        ticks: {
+                            callback: function(v) {
+                                if (v >= 1000000) return (v / 1000000) + 'M';
+                                if (v >= 1000) return (v / 1000) + 'K';
+                                return v;
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' },
+                            color: '#334155'
+                        }
+                    }
+                } : {
                     x: {
                         grid: { display: false },
                         ticks: {
@@ -1471,10 +1404,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         beginAtZero: true,
                         suggestedMax: maxDeptVal * 1.25,
                         ticks: {
-                            callback: function(value) {
-                                if (value >= 1000000) return (value / 1000000) + 'M';
-                                if (value >= 1000) return (value / 1000) + 'K';
-                                return value;
+                            callback: function(v) {
+                                if (v >= 1000000) return (v / 1000000) + 'M';
+                                if (v >= 1000) return (v / 1000) + 'K';
+                                return v;
                             }
                         }
                     }
@@ -1483,32 +1416,245 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ب) تهيئة مخطط توزيع الإيرادات الدائري البديل (Donut Chart)
-    const donutCenterPlugin = {
-        id: 'donutCenterText',
-        beforeDraw(chart) {
-            const { width, height, ctx } = chart;
-            ctx.save();
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const centerX = width / 2;
-            const centerY = height / 2;
-            
-            ctx.font = '600 12px Cairo, sans-serif';
-            ctx.fillStyle = '#64748b';
-            ctx.fillText('إجمالي الوارد', centerX, centerY - 14);
-            
-            ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
-            ctx.fillStyle = '#0f172a';
-            ctx.fillText(Number({{ (float)$periodInflow }}).toLocaleString() + ' د.ع', centerX, centerY + 12);
-            
-            ctx.restore();
+    // دالة بناء وتحديث مخطط حركة النقدية اليومية الفورية
+    function renderTrendChart(mode) {
+        const trendBox = document.getElementById('cashFlowTrendContainer');
+        const donutBox = document.getElementById('cashFlowDonutContainer');
+        const badgeEl = document.getElementById('trendChartModeBadge');
+
+        const badgeLabels = {
+            'bar': '<i class="fas fa-chart-column me-1"></i>أعمدة رأسية',
+            'horizontal': '<i class="fas fa-bars-staggered me-1"></i>أعمدة أفقية',
+            'line': '<i class="fas fa-chart-line me-1"></i>منحنيات مساحية',
+            'donut': '<i class="fas fa-chart-pie me-1"></i>دائري ونسب'
+        };
+        if (badgeEl && badgeLabels[mode]) badgeEl.innerHTML = badgeLabels[mode];
+
+        if (mode === 'donut') {
+            if (trendBox) trendBox.style.display = 'none';
+            if (donutBox) donutBox.style.display = 'block';
+            if (cashFlowDonutChartInstance) cashFlowDonutChartInstance.resize();
+            return;
         }
+
+        if (donutBox) donutBox.style.display = 'none';
+        if (trendBox) trendBox.style.display = 'block';
+
+        const canvas = document.getElementById('cashFlowTrendChart');
+        if (!canvas) return;
+
+        // تدمير النسخة السابقة لإعادة البناء بنقاء
+        if (trendChartInstance) {
+            trendChartInstance.destroy();
+            trendChartInstance = null;
+        }
+
+        const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
+        const isHoriz = (mode === 'horizontal');
+        const isLine = (mode === 'line');
+
+        const datasets = isLine ? [
+            {
+                label: 'الوارد (+)',
+                data: trendInflows,
+                borderColor: '#16a34a',
+                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#16a34a',
+                pointRadius: 5
+            },
+            {
+                label: 'المنصرف (-)',
+                data: trendOutflows,
+                borderColor: '#dc2626',
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#dc2626',
+                pointRadius: 5
+            }
+        ] : [
+            {
+                label: 'الوارد (+)',
+                data: trendInflows,
+                backgroundColor: 'rgba(34, 197, 94, 0.75)',
+                borderColor: '#16a34a',
+                borderWidth: 1.5,
+                borderRadius: 6
+            },
+            {
+                label: 'المنصرف (-)',
+                data: trendOutflows,
+                backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                borderColor: '#dc2626',
+                borderWidth: 1.5,
+                borderRadius: 6
+            }
+        ];
+
+        trendChartInstance = new Chart(canvas, {
+            type: isLine ? 'line' : 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: datasets
+            },
+            plugins: [{
+                id: 'trendDirectDataLabels',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, datasetIndex) => {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        if (!meta.hidden) {
+                            meta.data.forEach((element, index) => {
+                                const dataVal = dataset.data[index];
+                                if (dataVal !== null && dataVal !== undefined && dataVal > 0) {
+                                    ctx.save();
+                                    ctx.font = 'bold 11px "Segoe UI", Tahoma, sans-serif';
+                                    ctx.fillStyle = datasetIndex === 0 ? '#15803d' : '#b91c1c';
+                                    
+                                    let formatted = Number(dataVal).toLocaleString();
+                                    if (dataVal >= 1000000) {
+                                        formatted = (dataVal / 1000000).toFixed(1) + 'M';
+                                    } else if (dataVal >= 1000) {
+                                        formatted = Math.round(dataVal / 1000) + 'K';
+                                    }
+
+                                    if (isHoriz) {
+                                        ctx.textAlign = 'left';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.fillText(formatted, element.x + 6, element.y);
+                                    } else {
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'bottom';
+                                        ctx.fillText(formatted, element.x, element.y - 4);
+                                    }
+                                    ctx.restore();
+                                }
+                            });
+                        }
+                    });
+                }
+            }],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: isHoriz ? 'y' : 'x',
+                layout: {
+                    padding: isHoriz
+                        ? { top: 15, right: 65, left: 10, bottom: 10 }
+                        : { top: 28, right: 15, left: 10, bottom: 10 }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        rtl: true,
+                        labels: {
+                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
+                            }
+                        }
+                    }
+                },
+                scales: isHoriz ? {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: maxFlow * 1.25,
+                        ticks: {
+                            callback: function(v) {
+                                if (v >= 1000000) return (v / 1000000) + 'M';
+                                if (v >= 1000) return (v / 1000) + 'K';
+                                return v;
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                } : {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: maxFlow * 1.2,
+                        ticks: {
+                            callback: function(v) {
+                                if (v >= 1000000) return (v / 1000000) + 'M';
+                                if (v >= 1000) return (v / 1000) + 'K';
+                                return v;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // دالة التحكم الشامل والتبديل الفوري لكافة مخططات الصفحة (Master Switcher)
+    window.setMasterChartMode = function(mode) {
+        // 1. تحديث أزرار شريط التحكم الموحد
+        const masterBtns = {
+            'bar': document.getElementById('btnMasterBar'),
+            'horizontal': document.getElementById('btnMasterHorizontal'),
+            'line': document.getElementById('btnMasterLine'),
+            'donut': document.getElementById('btnMasterDonut')
+        };
+        Object.entries(masterBtns).forEach(([k, btn]) => {
+            if (btn) {
+                if (k === mode) {
+                    btn.classList.add('active', 'btn-primary');
+                    btn.classList.remove('btn-light', 'text-dark');
+                } else {
+                    btn.classList.remove('active', 'btn-primary');
+                    btn.classList.add('btn-light', 'text-dark');
+                }
+            }
+        });
+
+        // 2. تحديث المخطط الأول (إيرادات الأقسام) فورياً
+        renderDeptChart(mode);
+
+        // 3. تحديث المخطط الثاني (حركة النقدية اليومية) فورياً
+        renderTrendChart(mode);
+
+        // 4. حفظ النمط المختار في المتصفح تلقائياً
+        try {
+            localStorage.setItem('treasury_chart_mode', mode);
+        } catch(e) {}
     };
 
+    // تهيئة المخططات الدائرية الثابتة عند تحميل الصفحة
+    // أ) المخطط الدائري لإيرادات الأقسام
     const donutCtx = document.getElementById('deptRevenueDonutChart');
     if (donutCtx && deptData.length > 0) {
+        const donutCenterPlugin = {
+            id: 'deptDonutCenterText',
+            beforeDraw(chart) {
+                const { width, height, ctx } = chart;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const centerX = width / 2;
+                const centerY = height / 2;
+                ctx.font = '600 12px Cairo, sans-serif';
+                ctx.fillStyle = '#64748b';
+                ctx.fillText('إجمالي الوارد', centerX, centerY - 14);
+                ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(Number(periodInflowTotal).toLocaleString() + ' د.ع', centerX, centerY + 12);
+                ctx.restore();
+            }
+        };
+
         deptDonutChartInstance = new Chart(donutCtx, {
             type: 'doughnut',
             data: {
@@ -1538,7 +1684,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             generateLabels: function(chart) {
                                 const data = chart.data;
                                 if (data.labels.length && data.datasets.length) {
-                                    const total = {{ (float) max(1, $periodInflow) }};
+                                    const total = Math.max(1, periodInflowTotal);
                                     return data.labels.map(function(label, i) {
                                         const val = data.datasets[0].data[i];
                                         const color = data.datasets[0].backgroundColor[i];
@@ -1562,7 +1708,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         callbacks: {
                             label: function(context) {
                                 const val = context.raw || 0;
-                                const total = {{ (float) max(1, $periodInflow) }};
+                                const total = Math.max(1, periodInflowTotal);
                                 const pct = ((val / total) * 100).toFixed(1);
                                 return ' ' + context.label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)';
                             }
@@ -1574,127 +1720,217 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ج) تهيئة مخطط حركة النقدية اليومية (Daily Cash Flow Trend)
-    const barLabelsPlugin = {
-        id: 'barLabels',
-        afterDatasetsDraw(chart) {
-            const ctx = chart.ctx;
-            const isHoriz = chart.options.indexAxis === 'y';
-            chart.data.datasets.forEach((dataset, datasetIndex) => {
-                const meta = chart.getDatasetMeta(datasetIndex);
-                if (!meta.hidden) {
-                    meta.data.forEach((element, index) => {
-                        const dataVal = dataset.data[index];
-                        if (dataVal !== null && dataVal !== undefined && dataVal > 0) {
-                            ctx.save();
-                            ctx.font = 'bold 11px "Segoe UI", Tahoma, sans-serif';
-                            ctx.fillStyle = datasetIndex === 0 ? '#15803d' : '#b91c1c';
-                            
-                            let formatted = Number(dataVal).toLocaleString();
-                            if (dataVal >= 1000000) {
-                                formatted = (dataVal / 1000000).toFixed(1) + 'M';
-                            } else if (dataVal >= 1000) {
-                                formatted = Math.round(dataVal / 1000) + 'K';
-                            }
+    // ب) المخطط الدائري لمقارنة الوارد والمنصرف في حركة النقدية
+    const cashFlowDonutCtx = document.getElementById('cashFlowDonutChart');
+    if (cashFlowDonutCtx) {
+        const flowDonutCenterPlugin = {
+            id: 'flowDonutCenterText',
+            beforeDraw(chart) {
+                const { width, height, ctx } = chart;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const centerX = width / 2;
+                const centerY = height / 2;
+                ctx.font = '600 12px Cairo, sans-serif';
+                ctx.fillStyle = '#64748b';
+                ctx.fillText('صافي الحركة', centerX, centerY - 14);
+                ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
+                ctx.fillStyle = periodNetTotal >= 0 ? '#16a34a' : '#dc2626';
+                ctx.fillText((periodNetTotal >= 0 ? '+' : '') + Number(periodNetTotal).toLocaleString() + ' د.ع', centerX, centerY + 12);
+                ctx.restore();
+            }
+        };
 
-                            if (isHoriz) {
-                                ctx.textAlign = 'left';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillText(formatted, element.x + 6, element.y);
-                            } else {
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
-                                ctx.fillText(formatted, element.x, element.y - 4);
-                            }
-                            ctx.restore();
-                        }
-                    });
-                }
-            });
-        }
-    };
-
-    const trendLabels = @json($trendLabels);
-    const trendInflows = @json($trendInflows);
-    const trendOutflows = @json($trendOutflows);
-
-    const trendCtx = document.getElementById('cashFlowTrendChart');
-    if (trendCtx) {
-        const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
-        trendChartInstance = new Chart(trendCtx, {
-            type: 'bar',
+        cashFlowDonutChartInstance = new Chart(cashFlowDonutCtx, {
+            type: 'doughnut',
             data: {
-                labels: trendLabels,
-                datasets: [
-                    {
-                        label: 'الوارد (+)',
-                        data: trendInflows,
-                        backgroundColor: 'rgba(34, 197, 94, 0.75)',
-                        borderColor: '#16a34a',
-                        borderWidth: 1.5,
-                        borderRadius: 6,
-                    },
-                    {
-                        label: 'المنصرف (-)',
-                        data: trendOutflows,
-                        backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                        borderColor: '#dc2626',
-                        borderWidth: 1.5,
-                        borderRadius: 6,
-                    }
-                ]
+                labels: ['إجمالي الوارد (+)', 'إجمالي المنصرف (-)'],
+                datasets: [{
+                    data: [periodInflowTotal, periodOutflowTotal],
+                    backgroundColor: ['#22c55e', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
             },
-            plugins: [barLabelsPlugin],
+            plugins: [flowDonutCenterPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: {
-                    padding: { top: 28, right: 15, left: 10, bottom: 10 }
-                },
                 plugins: {
                     legend: {
-                        position: 'top',
+                        display: true,
+                        position: 'bottom',
                         rtl: true,
                         labels: {
-                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' }
+                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' },
+                            boxWidth: 12,
+                            boxHeight: 12,
+                            padding: 10
                         }
                     },
                     tooltip: {
                         rtl: true,
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
+                                return ' ' + context.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
                             }
                         }
                     }
                 },
-                scales: {
-                    x: {
-                        grid: { display: false }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: maxFlow * 1.2,
-                        ticks: {
-                            callback: function(value) {
-                                if (value >= 1000000) return (value / 1000000) + 'M';
-                                if (value >= 1000) return (value / 1000) + 'K';
-                                return value;
-                            }
-                        }
-                    }
-                }
+                cutout: '70%'
             }
         });
     }
 
-    // استعادة نمط المخططات المفضل المحفوظ في المتصفح تلقائياً
+    // تفعيل النمط الأولي المحفوظ
+    let initialMode = 'bar';
     try {
         const savedMode = localStorage.getItem('treasury_chart_mode');
-        if (savedMode && savedMode !== 'bar') {
-            window.setMasterChartMode(savedMode);
-        }
+        if (savedMode) initialMode = savedMode;
     } catch(e) {}
+    window.setMasterChartMode(initialMode);
+
+    // =========================================================================
+    // 4. نظام التحديث التلقائي الذكي للصفحة (Intelligent Auto-Refresh Engine)
+    // =========================================================================
+    let autoRefreshCountdownInterval = null;
+    let autoRefreshTotalSeconds = 5; // 5 ثانية افتراضياً
+    let autoRefreshRemainingSeconds = 30;
+    let autoRefreshPaused = false;
+
+    function initAutoRefresh() {
+        try {
+            const savedInterval = localStorage.getItem('treasury_refresh_interval');
+            if (savedInterval !== null) {
+                autoRefreshTotalSeconds = parseInt(savedInterval, 10);
+            }
+            const savedPaused = localStorage.getItem('treasury_refresh_paused');
+            if (savedPaused === 'true') {
+                autoRefreshPaused = true;
+            }
+        } catch(e) {}
+
+        autoRefreshRemainingSeconds = autoRefreshTotalSeconds > 0 ? autoRefreshTotalSeconds : 30;
+        updateAutoRefreshUI();
+
+        if (!autoRefreshPaused && autoRefreshTotalSeconds > 0) {
+            startAutoRefreshCountdown();
+        }
+    }
+
+    function startAutoRefreshCountdown() {
+        clearInterval(autoRefreshCountdownInterval);
+        autoRefreshCountdownInterval = setInterval(() => {
+            // التحقق من عدم وجود نافذة منبثقة (Modal) مفتوحة لتجنب قطع عمل المستخدم
+            const openModal = document.querySelector('.modal.show');
+            if (openModal) {
+                return; // تأجيل التحديث طالما المودال مفتوح
+            }
+
+            if (autoRefreshRemainingSeconds > 0) {
+                autoRefreshRemainingSeconds--;
+                updateAutoRefreshUI();
+            }
+
+            if (autoRefreshRemainingSeconds <= 0) {
+                executePageRefresh();
+            }
+        }, 1000);
+    }
+
+    function updateAutoRefreshUI() {
+        const countdownEl = document.getElementById('autoRefreshCountdown');
+        const headerCountdownEl = document.getElementById('headerAutoRefreshCountdown');
+        const pulseEl = document.getElementById('autoRefreshPulse');
+        const headerPulseEl = document.getElementById('headerAutoRefreshPulse');
+        const iconEl = document.getElementById('autoRefreshIcon');
+        const headerIconEl = document.getElementById('headerAutoRefreshIcon');
+        const textEl = document.getElementById('autoRefreshText');
+
+        if (autoRefreshPaused || autoRefreshTotalSeconds === 0) {
+            if (countdownEl) countdownEl.textContent = 'متوقف';
+            if (headerCountdownEl) headerCountdownEl.textContent = 'متوقف';
+            if (pulseEl) { pulseEl.classList.remove('text-success'); pulseEl.classList.add('text-secondary'); }
+            if (headerPulseEl) { headerPulseEl.classList.remove('text-success'); headerPulseEl.classList.add('text-secondary'); }
+            if (iconEl) { iconEl.className = 'fas fa-play me-1 text-success'; }
+            if (headerIconEl) { headerIconEl.className = 'fas fa-play text-success'; }
+            if (textEl) textEl.textContent = 'تشغيل';
+        } else {
+            const displaySec = autoRefreshRemainingSeconds + 'ث';
+            if (countdownEl) countdownEl.textContent = displaySec;
+            if (headerCountdownEl) headerCountdownEl.textContent = displaySec;
+            if (pulseEl) { pulseEl.classList.add('text-success'); pulseEl.classList.remove('text-secondary'); }
+            if (headerPulseEl) { headerPulseEl.classList.add('text-success'); headerPulseEl.classList.remove('text-secondary'); }
+            if (iconEl) { iconEl.className = 'fas fa-pause me-1 text-warning'; }
+            if (headerIconEl) { headerIconEl.className = 'fas fa-pause text-warning'; }
+            if (textEl) textEl.textContent = 'نشط';
+        }
+    }
+
+    window.toggleAutoRefresh = function() {
+        if (autoRefreshPaused || autoRefreshTotalSeconds === 0) {
+            autoRefreshPaused = false;
+            if (autoRefreshTotalSeconds === 0) autoRefreshTotalSeconds = 30;
+            autoRefreshRemainingSeconds = autoRefreshTotalSeconds;
+            try {
+                localStorage.setItem('treasury_refresh_paused', 'false');
+                localStorage.setItem('treasury_refresh_interval', autoRefreshTotalSeconds);
+            } catch(e) {}
+            startAutoRefreshCountdown();
+        } else {
+            autoRefreshPaused = true;
+            clearInterval(autoRefreshCountdownInterval);
+            try {
+                localStorage.setItem('treasury_refresh_paused', 'true');
+            } catch(e) {}
+        }
+        updateAutoRefreshUI();
+    };
+
+    window.setAutoRefreshInterval = function(sec) {
+        autoRefreshTotalSeconds = sec;
+        try {
+            localStorage.setItem('treasury_refresh_interval', sec);
+        } catch(e) {}
+
+        if (sec === 0) {
+            autoRefreshPaused = true;
+            clearInterval(autoRefreshCountdownInterval);
+            try { localStorage.setItem('treasury_refresh_paused', 'true'); } catch(e) {}
+        } else {
+            autoRefreshPaused = false;
+            autoRefreshRemainingSeconds = sec;
+            try { localStorage.setItem('treasury_refresh_paused', 'false'); } catch(e) {}
+            startAutoRefreshCountdown();
+        }
+        updateAutoRefreshUI();
+    };
+
+    window.triggerManualRefresh = function() {
+        const spin = document.getElementById('manualRefreshSpin');
+        const headerSpin = document.getElementById('headerRefreshSpin');
+        if (spin) spin.classList.add('fa-spin');
+        if (headerSpin) headerSpin.classList.add('fa-spin');
+        executePageRefresh();
+    };
+
+    function executePageRefresh() {
+        clearInterval(autoRefreshCountdownInterval);
+        // حفظ التبويب النشط في الـ Hash لضمان بقاء المستخدم في نفس التبويب تماماً
+        const activeTab = document.querySelector('#treasuryTabs button.nav-link.active');
+        if (activeTab) {
+            if (activeTab.id === 'departments-tab-btn') window.location.hash = 'departments';
+            else if (activeTab.id === 'ledger-tab-btn') window.location.hash = 'ledger';
+            else if (activeTab.id === 'doctors-tab-btn') window.location.hash = 'doctors';
+            else window.location.hash = 'analytics';
+        }
+        window.location.reload();
+    }
+
+    // تشغيل التحديث التلقائي
+    initAutoRefresh();
 });
 // دالة الفلاتر الزمنية السريعة
 function setQuickDate(period) {
