@@ -273,13 +273,16 @@
                                     <div class="row g-2">
                                         @foreach($departmentStats as $dKey => $dStat)
                                             @if($dStat['gross'] > 0)
-                                                <div class="col-6">
+                                                <div class="col-12 col-sm-6">
                                                     <div class="p-2 rounded-3 border bg-light small d-flex justify-content-between align-items-center">
-                                                        <span class="d-flex align-items-center gap-1.5 text-truncate">
-                                                            <span class="rounded-circle d-inline-block" style="width: 10px; height: 10px; background-color: {{ $dStat['color'] }};"></span>
-                                                            <strong class="text-dark">{{ $dStat['name'] }}</strong>
+                                                        <span class="d-flex align-items-center gap-1.5 text-truncate me-2">
+                                                            <span class="rounded-circle d-inline-block flex-shrink-0" style="width: 10px; height: 10px; background-color: {{ $dStat['color'] }};"></span>
+                                                            <strong class="text-dark text-truncate">{{ $dStat['name'] }}</strong>
                                                         </span>
-                                                        <span class="fw-bold font-monospace" style="color: {{ $dStat['color'] }};">{{ $dStat['percentage'] }}%</span>
+                                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                            <span class="fw-bold font-monospace text-dark">{{ number_format($dStat['gross']) }} <small class="text-muted">د.ع</small></span>
+                                                            <span class="badge rounded-pill fw-bold" style="background-color: {{ $dStat['color'] }}20; color: {{ $dStat['color'] }}; border: 1px solid {{ $dStat['color'] }}40;">{{ $dStat['percentage'] }}%</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             @endif
@@ -305,9 +308,9 @@
                                 <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-line text-success me-2"></i>منحنى حركة النقدية اليومية (الوارد مقابل المنصرف)</h6>
                                 <small class="text-muted">مقارنة السيولة الداخلة والخارجة لاكتشاف أوقات الذروة</small>
                             </div>
-                            <div class="d-flex gap-2">
-                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-square me-1"></i>الوارد (+)</span>
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-square me-1"></i>المنصرف (-)</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-square me-1"></i>الوارد: {{ number_format($periodInflow) }} د.ع</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-square me-1"></i>المنصرف: {{ number_format($periodOutflow) }} د.ع</span>
                             </div>
                         </div>
                         <div class="card-body p-4">
@@ -1143,6 +1146,31 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // 3. محرك الرسوم البيانية (Chart.js Engine)
+    
+    // أ) بلجن رسم إجمالي الإيراد في قلب الدائرة (Donut Center Text Plugin)
+    const donutCenterPlugin = {
+        id: 'donutCenterText',
+        beforeDraw(chart) {
+            const { width, height, ctx } = chart;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.font = '600 12px Cairo, sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('إجمالي الوارد', centerX, centerY - 14);
+            
+            ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText(Number({{ (float)$periodInflow }}).toLocaleString() + ' د.ع', centerX, centerY + 12);
+            
+            ctx.restore();
+        }
+    };
+
     // أ) مخطط توزيع الإيرادات الدائري (Donut Chart)
     const deptLabels = @json($deptChartLabels);
     const deptData = @json($deptChartData);
@@ -1162,6 +1190,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     hoverOffset: 6
                 }]
             },
+            plugins: [donutCenterPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1174,7 +1203,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         callbacks: {
                             label: function(context) {
                                 const val = context.raw || 0;
-                                return ' ' + Number(val).toLocaleString() + ' د.ع';
+                                const total = {{ (float) max(1, $periodInflow) }};
+                                const pct = ((val / total) * 100).toFixed(1);
+                                return ' ' + context.label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)';
                             }
                         }
                     }
@@ -1184,7 +1215,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ب) مخطط حركة النقدية اليومية (Cash Flow Bar / Line Chart)
+    // ب) بلجن إظهار الأرقام والمبالغ مباشرة فوق كل عمود (Bar Data Labels Plugin)
+    const barLabelsPlugin = {
+        id: 'barLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                if (!meta.hidden) {
+                    meta.data.forEach((element, index) => {
+                        const dataVal = dataset.data[index];
+                        if (dataVal !== null && dataVal !== undefined && dataVal > 0) {
+                            ctx.save();
+                            ctx.font = 'bold 11px "Segoe UI", Tahoma, sans-serif';
+                            ctx.fillStyle = datasetIndex === 0 ? '#15803d' : '#b91c1c';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            
+                            let formatted = Number(dataVal).toLocaleString();
+                            if (dataVal >= 1000000) {
+                                formatted = (dataVal / 1000000).toFixed(1) + 'M';
+                            } else if (dataVal >= 10000) {
+                                formatted = Math.round(dataVal / 1000) + 'K';
+                            }
+                            ctx.fillText(formatted, element.x, element.y - 4);
+                            ctx.restore();
+                        }
+                    });
+                }
+            });
+        }
+    };
+
+    // مخطط حركة النقدية اليومية (Cash Flow Bar / Line Chart)
     const trendLabels = @json($trendLabels);
     const trendInflows = @json($trendInflows);
     const trendOutflows = @json($trendOutflows);
@@ -1214,9 +1277,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 ]
             },
+            plugins: [barLabelsPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 24
+                    }
+                },
                 plugins: {
                     legend: {
                         position: 'top',
