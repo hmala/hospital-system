@@ -239,4 +239,88 @@ class DatabaseSyncService
 
         $stmt->execute($params);
     }
+
+    /**
+     * رفع وزرع كافة الجداول والبيانات من اللوكل إلى سيرفر هوستنجر (استعادة / Push)
+     */
+    public function pushToRemote(callable $progressCallback = null): array
+    {
+        set_time_limit(900); // 15 دقيقة
+        ini_set('memory_limit', '1024M');
+
+        $startTime = microtime(true);
+
+        $remotePdo = DB::connection('remote_hostinger')->getPdo();
+        $localPdo = DB::connection('mysql')->getPdo();
+
+        // تعطيل قيود المفاتيح الأجنبية على السيرفر البعيد
+        $remotePdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+        $remotePdo->exec("SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';");
+
+        $localTablesStmt = $localPdo->query("SHOW TABLES");
+        $localTables = $localTablesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $totalTables = count($localTables);
+        $syncedTables = 0;
+        $totalRowsSynced = 0;
+
+        foreach ($localTables as $index => $tableName) {
+            try {
+                // جلب جملة CREATE TABLE من اللوكل
+                $createStmt = $localPdo->query("SHOW CREATE TABLE `{$tableName}`");
+                $createRow = $createStmt->fetch(PDO::FETCH_ASSOC);
+                $createSql = $createRow['Create Table'] ?? '';
+
+                if (empty($createSql)) continue;
+
+                // حذف وإنشاء الجدول على هوستنجر
+                $remotePdo->exec("DROP TABLE IF EXISTS `{$tableName}`;");
+                $remotePdo->exec($createSql);
+
+                // نقل البيانات على دفعات
+                $selectStmt = $localPdo->query("SELECT * FROM `{$tableName}`");
+                $batch = [];
+                $batchSize = 200;
+                $tableRowsCount = 0;
+
+                while ($row = $selectStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $batch[] = $row;
+                    $tableRowsCount++;
+                    $totalRowsSynced++;
+
+                    if (count($batch) >= $batchSize) {
+                        $this->insertBatch($remotePdo, $tableName, $batch);
+                        $batch = [];
+                    }
+                }
+
+                if (!empty($batch)) {
+                    $this->insertBatch($remotePdo, $tableName, $batch);
+                }
+
+                $syncedTables++;
+
+                if ($progressCallback) {
+                    $progressCallback($tableName, $index + 1, $totalTables, $tableRowsCount);
+                }
+            } catch (\Throwable $e) {
+                Log::error("Failed pushing table {$tableName} to remote: " . $e->getMessage());
+            }
+        }
+
+        // إعادة تفعيل قيود المفاتيح الأجنبية
+        $remotePdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+
+        $elapsedSeconds = round(microtime(true) - $startTime, 2);
+
+        return [
+            'success' => true,
+            'message' => "تم رفع واستعادة قاعدة البيانات بالكامل إلى سيرفر هوستنجر بنجاح!",
+            'total_tables' => $totalTables,
+            'synced_tables' => $syncedTables,
+            'total_rows' => $totalRowsSynced,
+            'elapsed_seconds' => $elapsedSeconds,
+        ];
+    }
 }
+

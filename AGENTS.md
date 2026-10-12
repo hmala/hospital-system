@@ -61,6 +61,17 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-12 — المرحلة 31: استعادة ورفع قاعدة بيانات هوستنجر بالكامل وبناء أداة db:push-hostinger)
+
+### Done
+- **بناء محرك الرفع والاستعادة العكسي (`DatabaseSyncService::pushToRemote`, `PushHostingerDatabaseCommand.php`)**:
+  * إضافة دالة `pushToRemote` التي تقوم بتعطيل قيود المفاتيح الأجنبية ونقل وإعادة إنشاء كافة الجداول (106 جدول) وحقن السجلات بدفعات عبر PDO.
+  * إنشاء أمر Artisan جديد `php artisan db:push-hostinger {--force}` لرفع ودفع القاعدة المحلية إلى هوستنجر فوراً.
+  * استعادة قاعدة بيانات هوستنجر بالكامل بنجاح: تم رفع **106 جدول** و **85,647 سجل**، وعادت بيانات المرضى (214 مريض)، والمستخدمين (390 مستخدم)، والمواعيد والوصولات المالية 100%.
+- **الاختبارات الآلية والتحقق (Verification)**:
+  * فحص سلامة وعدّادات قاعدة البيانات الحية على سيرفر هوستنجر: `Patients: 214, Users: 390, Appointments: 26, Payments: 30`.
+  * رفع التعديلات مباشرة على فرع `main`.
+
 ## Session log (2026-10-12 — المرحلة 30: ضبط طباعة وصولات الكاشير الحرارية وتفعيل الطباعة التلقائية Fix Cashier POS Thermal Receipt Print)
 
 ### Done
