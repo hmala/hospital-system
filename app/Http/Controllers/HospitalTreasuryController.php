@@ -25,7 +25,7 @@ class HospitalTreasuryController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view account statements'))) {
+        if (!$isAdmin && (!$user || (!$user->can('view treasury') && !$user->can('view account statements')))) {
             abort(403, 'غير مصرح لك بالوصول إلى خزينة وحسابات المستشفى العامة');
         }
     }

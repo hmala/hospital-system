@@ -60,6 +60,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
             'manage health insurance',        // إدارة فئات ونسب استقطاع الضمان الصحي الوطني
             'manage doctor commissions',      // إعدادات وتخصيص عمولات ونسب الأطباء
+            'view treasury',                  // عرض خزينة المستشفى المركزية وحركة الصناديق
+            'manage treasury',                // تسجيل إيرادات ومصروفات وسندات الخزينة
             'view consultant financial movements', // عرض الحركات والقيود المالية للاستشارية
             'view account statements',        // عرض كشوفات الحسابات العامة
             'view doctor accounts',           // عرض حسابات ومستحقات أرباح الأطباء الاستشاريين
@@ -195,6 +197,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage permissions',
             'view activity logs',
             'delete activity logs',
+            'manage database sync',
             
             // صلاحيات الطوارئ
             'view emergencies',

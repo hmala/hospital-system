@@ -367,6 +367,8 @@ class RoleManagementController extends Controller
             'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار وتكاليف العمليات (محاسب)', 'action' => 'مراجعة', 'badge' => 'warning'],
             'manage health insurance' => ['label' => 'إدارة نسب وفئات استقطاع الضمان الصحي الوطني', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage doctor commissions' => ['label' => 'إعدادات وتخصيص عمولات ونسب الأطباء', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view treasury' => ['label' => 'عرض خزينة المستشفى المركزية وحركة الصناديق', 'action' => 'عرض', 'badge' => 'info'],
+            'manage treasury' => ['label' => 'تسجيل إيرادات ومصروفات وسندات الخزينة', 'action' => 'إدارة', 'badge' => 'primary'],
             'view cashier reports' => ['label' => 'عرض سجل وتقارير الفواتير والإيرادات', 'action' => 'عرض', 'badge' => 'info'],
             'view consultant financial movements' => ['label' => 'عرض الحركات والقيود المالية للاستشارية', 'action' => 'عرض', 'badge' => 'info'],
             'view account statements' => ['label' => 'عرض كشوفات الحسابات العامة وتصديرها', 'action' => 'عرض', 'badge' => 'info'],
@@ -451,6 +453,7 @@ class RoleManagementController extends Controller
             'manage permissions' => ['label' => 'إدارة وتخصيص صلاحيات النظام', 'action' => 'إدارة', 'badge' => 'danger'],
             'view activity logs' => ['label' => 'عرض سجل حركات ونشاط الموظفين والرقابة الإدارية', 'action' => 'عرض', 'badge' => 'info'],
             'delete activity logs' => ['label' => 'تنظيف وأرشفة سجل الحركات القديم', 'action' => 'حذف', 'badge' => 'danger'],
+            'manage database sync' => ['label' => 'مزامنة وسحب ورفع قواعد البيانات السحابية', 'action' => 'إدارة', 'badge' => 'danger'],
         ];
     }
 
@@ -473,6 +476,8 @@ class RoleManagementController extends Controller
             'review surgery prices', 
             'manage health insurance',
             'manage doctor commissions',
+            'view treasury',
+            'manage treasury',
             'view cashier reports', 
             'view consultant financial movements',
             'view account statements',
@@ -483,7 +488,7 @@ class RoleManagementController extends Controller
             'view emergency doctor accounts',
             'view diagnostic analytics',
             'view doctor profits',
-        ]) || str_contains($permissionName, 'insurance')) {
+        ]) || str_contains($permissionName, 'insurance') || str_contains($permissionName, 'treasury')) {
             return 'accounting';
         }
 

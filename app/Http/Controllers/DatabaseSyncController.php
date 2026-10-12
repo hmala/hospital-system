@@ -16,7 +16,7 @@ class DatabaseSyncController extends Controller
         }
 
         $isAdmin = $user->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']);
-        if (!$isAdmin && !$user->can('manage settings')) {
+        if (!$isAdmin && (!$user->can('manage database sync') && !$user->can('manage settings'))) {
             abort(403, 'غير مصرح لك بالوصول إلى مركز مزامنة وسحب قواعد البيانات.');
         }
     }
