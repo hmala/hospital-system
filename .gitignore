@@ -25,3 +25,4 @@ Thumbs.db
 /graphify-out/
 # Antigravity Chat & Agent Sync
 !.antigravity-local/
+*.sql
