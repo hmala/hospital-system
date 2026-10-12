@@ -249,13 +249,25 @@
                             </div>
 
                             @php
-                                $currentInsuranceType = old('insurance_type', $patient->insurance_type ?? 'none');
+                                $currentInsuranceType = old('insurance_type');
+                                if (!$currentInsuranceType) {
+                                    if (!empty($patient->health_insurance_category_id)) {
+                                        $currentInsuranceType = 'hi';
+                                    } elseif (!empty($patient->insurance_type) && in_array($patient->insurance_type, ['none', 'moi', 'hi'])) {
+                                        $currentInsuranceType = $patient->insurance_type;
+                                    } elseif (!empty($patient->covered_by_insurance)) {
+                                        $currentInsuranceType = 'moi';
+                                    } else {
+                                        $currentInsuranceType = 'none';
+                                    }
+                                }
                             @endphp
 
                             <!-- بطاقات اختيار جهة الضمان التفاعلية -->
                             <div class="row g-2 mb-3">
                                 <div class="col-md-4">
-                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100" id="tile_none">
+                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100 {{ $currentInsuranceType == 'none' ? 'active-tile' : '' }}" 
+                                           id="tile_none" data-insurance="none" onclick="setInsuranceType('none')">
                                         <input type="radio" name="insurance_selector" value="none" class="d-none" {{ $currentInsuranceType == 'none' ? 'checked' : '' }}>
                                         <div class="tile-icon-circle bg-success-subtle text-success mb-2">
                                             <i class="fas fa-wallet fs-5"></i>
@@ -266,7 +278,8 @@
                                 </div>
 
                                 <div class="col-md-4">
-                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100" id="tile_moi">
+                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100 {{ $currentInsuranceType == 'moi' ? 'active-tile' : '' }}" 
+                                           id="tile_moi" data-insurance="moi" onclick="setInsuranceType('moi')">
                                         <input type="radio" name="insurance_selector" value="moi" class="d-none" {{ $currentInsuranceType == 'moi' ? 'checked' : '' }}>
                                         <div class="tile-icon-circle bg-primary-subtle text-primary mb-2">
                                             <i class="fas fa-user-shield fs-5"></i>
@@ -277,7 +290,8 @@
                                 </div>
 
                                 <div class="col-md-4">
-                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100" id="tile_hi">
+                                    <label class="insurance-card-tile p-3 rounded-3 border d-flex flex-column align-items-center text-center cursor-pointer transition-all h-100 {{ $currentInsuranceType == 'hi' ? 'active-tile' : '' }}" 
+                                           id="tile_hi" data-insurance="hi" onclick="setInsuranceType('hi')">
                                         <input type="radio" name="insurance_selector" value="hi" class="d-none" {{ $currentInsuranceType == 'hi' ? 'checked' : '' }}>
                                         <div class="tile-icon-circle bg-info-subtle text-info mb-2">
                                             <i class="fas fa-hospital-user fs-5"></i>
@@ -427,9 +441,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 2. إدارة بطاقات اختيار الضمان التفاعلية
     function setInsuranceType(val) {
-        if (!insuranceTypeHidden) return;
-        insuranceTypeHidden.value = val;
+        if (!val) val = 'none';
 
+        const insuranceTypeHidden = document.getElementById('insurance_type');
+        const insuranceDetailsBox = document.getElementById('insurance_details_box');
+        const insuranceCardNoInput = document.getElementById('insurance_card_no');
+        const hiCategoryContainer = document.getElementById('hi_category_container');
+        const hiCategorySelect = document.getElementById('health_insurance_category_id');
+        const activeInsuranceBadge = document.getElementById('activeInsuranceBadge');
+
+        if (insuranceTypeHidden) {
+            insuranceTypeHidden.value = val;
+        }
+
+        // تحديث تصميم البلاطات (Tiles)
         document.querySelectorAll('.insurance-card-tile').forEach(tile => {
             tile.classList.remove('active-tile');
         });
@@ -437,9 +462,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const activeTile = document.getElementById('tile_' + val);
         if (activeTile) {
             activeTile.classList.add('active-tile');
-            const radio = activeTile.querySelector('input[type="radio"]');
-            if (radio) radio.checked = true;
         }
+
+        // مزامنة أزرار الراديو
+        document.querySelectorAll('input[name="insurance_selector"]').forEach(radio => {
+            radio.checked = (radio.value === val);
+        });
 
         if (val !== 'none') {
             if (insuranceDetailsBox) insuranceDetailsBox.style.display = 'block';
@@ -468,19 +496,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // إتاحتها على النطاق العام
+    window.setInsuranceType = setInsuranceType;
+
     document.querySelectorAll('.insurance-card-tile').forEach(tile => {
-        tile.addEventListener('click', function() {
-            const radio = this.querySelector('input[type="radio"]');
-            if (radio) {
-                setInsuranceType(radio.value);
+        tile.addEventListener('click', function(e) {
+            const val = this.getAttribute('data-insurance');
+            if (val) {
+                setInsuranceType(val);
             }
         });
     });
 
-    // تهيئة أولية
-    if (insuranceTypeHidden) {
-        setInsuranceType(insuranceTypeHidden.value || 'none');
-    }
+    document.querySelectorAll('input[name="insurance_selector"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                setInsuranceType(this.value);
+            }
+        });
+    });
+
+    // تهيئة أولية عند تحميل الصفحة
+    const insuranceTypeHidden = document.getElementById('insurance_type');
+    setInsuranceType(insuranceTypeHidden ? (insuranceTypeHidden.value || 'none') : 'none');
 });
 </script>
 @endpush

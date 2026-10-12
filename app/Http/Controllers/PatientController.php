@@ -334,6 +334,7 @@ class PatientController extends Controller
             'marital_status' => 'required|in:أعزب,متزوج,مطلق,أرمل',
             'covered_by_insurance' => 'nullable|in:0,1',
             'insurance_type' => 'nullable|in:none,moi,hi',
+            'health_insurance_category_id' => 'nullable|exists:health_insurance_categories,id',
             'insurance_card_no' => 'nullable|string|max:255',
             'copay_percentage' => 'nullable|numeric|min:0|max:100',
             'insurance_booklet_number' => 'nullable|string|max:255',
