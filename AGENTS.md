@@ -61,6 +61,20 @@ Consult these files before making changes or proposing fixes:
 
 
 
+## Session log (2026-10-12 — المرحلة 29: إصلاح تفاعل بطاقات جهة الضمان في واجهتي إضافة وتعديل المرضى Fix Patient Insurance Selection Tiles)
+
+### Done
+- **إصلاح أخطاء الجافاسكريبت وبطاقات الضمان (`resources/views/patients/create.blade.php`, `resources/views/patients/edit.blade.php`)**:
+  * معالجة خطأ `ReferenceError` الحاصل بسبب متغيرات DOM غير المعرفة محلياً.
+  * ربط دالة `window.setInsuranceType` عالمياً وتأمين التبديل عبر `onclick` وسمات `data-insurance` ومزامنة أزرار الراديو.
+  * إظهار وإخفاء صندوق تفاصيل بطاقة الضمان وقائمة فئات الضمان الوطني وتفعيل خاصية الإلزامية `required` تلقائياً بحسب نوع الضمان المختار (`none`, `moi`, `hi`).
+  * في التعديل: استرجاع دقيق لنوع الضمان للمرضى المسجلين مسبقاً حتى في حال خلو حقل `insurance_type` بالاعتماد على الفئة وحالة الشمول.
+- **تحديث التحقق بالكونترولر (`app/Http/Controllers/PatientController.php`)**:
+  * إضافة قاعدة تحقق `'health_insurance_category_id' => 'nullable|exists:health_insurance_categories,id'` في دالة `update`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات [PatientInsuranceRegistrationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientInsuranceRegistrationTest.php): 4 passed (26 assertions).
+  * رفع التعديلات مباشرة على فرع `main`.
+
 ## Session log (2026-10-11 — المرحلة 28: تنظيف جدول الحركات المالية وإلغاء زر التعديل اليدوي لحماية القيود المحاسبية Clean Financial Movements Table)
 
 ### Done
