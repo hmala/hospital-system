@@ -255,19 +255,37 @@
         <div class="tab-pane fade show active" id="analytics-tab-pane" role="tabpanel" tabindex="0">
             <div class="row g-4 mb-4">
                 <!-- مخطط توزيع الإيرادات حسب الأقسام (Donut Chart) -->
-                <div class="col-12 col-xl-5">
+                <div class="col-12 col-xl-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center">
+                        <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-pie text-primary me-2"></i>توزيع مصادر الإيرادات حسب الأقسام</h6>
-                                <small class="text-muted">نسبة مساهمة كل قسم في إجمالي دخل المستشفى</small>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-column text-primary me-2"></i>إيرادات الأقسام والمراكز</h6>
+                                <small class="text-muted">الأرقام الدقيقة لمساهمة كل قسم في إجمالي دخل المستشفى</small>
                             </div>
-                            <span class="badge bg-light text-dark border font-monospace">{{ number_format($periodInflow) }} د.ع</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-sm btn-primary active" id="btnShowDeptBar" onclick="switchDeptChart('bar')">
+                                        <i class="fas fa-chart-column me-1"></i>أعمدة
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnShowDeptDonut" onclick="switchDeptChart('donut')">
+                                        <i class="fas fa-chart-pie me-1"></i>دائري
+                                    </button>
+                                </div>
+                                <span class="badge bg-light text-dark border font-monospace">{{ number_format($periodInflow) }} د.ع</span>
+                            </div>
                         </div>
-                        <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                        <div class="card-body p-4">
                             @if(count($deptChartData) > 0 && $periodInflow > 0)
-                                <div style="position: relative; height: 280px; width: 100%; max-width: 340px;">
-                                    <canvas id="deptRevenueDonutChart"></canvas>
+                                <!-- الحاوية الأساسية: مخطط الأعمدة البيانية مع الأرقام مباشرة فوق كل عمود -->
+                                <div id="deptBarChartContainer" style="position: relative; height: 300px; width: 100%;">
+                                    <canvas id="deptRevenueBarChart"></canvas>
+                                </div>
+
+                                <!-- الحاوية البديلة: المخطط الدائري -->
+                                <div id="deptDonutChartContainer" style="position: relative; height: 300px; width: 100%; display: none;">
+                                    <div style="position: relative; height: 280px; width: 100%; max-width: 340px; margin: 0 auto;">
+                                        <canvas id="deptRevenueDonutChart"></canvas>
+                                    </div>
                                 </div>
                                 <div class="w-100 mt-4 pt-3 border-top">
                                     <h6 class="small fw-bold text-muted mb-3 d-flex justify-content-between align-items-center">
@@ -309,7 +327,7 @@
                 </div>
 
                 <!-- مخطط المنحنى الزمني لحركة النقدية (Cash Flow Trend Chart) -->
-                <div class="col-12 col-xl-7">
+                <div class="col-12 col-xl-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center">
                             <div>
@@ -1155,7 +1173,113 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. محرك الرسوم البيانية (Chart.js Engine)
     
-    // أ) بلجن رسم إجمالي الإيراد في قلب الدائرة (Donut Center Text Plugin)
+    // دالة التبديل بين مخطط الأعمدة والمخطط الدائري للأقسام
+    window.switchDeptChart = function(type) {
+        const barBox = document.getElementById('deptBarChartContainer');
+        const donutBox = document.getElementById('deptDonutChartContainer');
+        const btnBar = document.getElementById('btnShowDeptBar');
+        const btnDonut = document.getElementById('btnShowDeptDonut');
+        if (type === 'donut') {
+            if (barBox) barBox.style.display = 'none';
+            if (donutBox) donutBox.style.display = 'block';
+            if (btnBar) { btnBar.classList.remove('active', 'btn-primary'); btnBar.classList.add('btn-outline-primary'); }
+            if (btnDonut) { btnDonut.classList.add('active', 'btn-primary'); btnDonut.classList.remove('btn-outline-primary'); }
+        } else {
+            if (donutBox) donutBox.style.display = 'none';
+            if (barBox) barBox.style.display = 'block';
+            if (btnDonut) { btnDonut.classList.remove('active', 'btn-primary'); btnDonut.classList.add('btn-outline-primary'); }
+            if (btnBar) { btnBar.classList.add('active', 'btn-primary'); btnBar.classList.remove('btn-outline-primary'); }
+        }
+    };
+
+    // بيانات الأقسام المشتركة
+    const deptLabels = @json($deptChartLabels);
+    const deptData = @json($deptChartData);
+    const deptColors = @json($deptChartColors);
+
+    // أ) مخطط الأعمدة البيانية التفصيلي للأقسام (Department Bar Chart - مطابق لصورة المستخدم)
+    const deptBarCtx = document.getElementById('deptRevenueBarChart');
+    if (deptBarCtx && deptData.length > 0) {
+        const maxDeptVal = Math.max(...deptData);
+        new Chart(deptBarCtx, {
+            type: 'bar',
+            data: {
+                labels: deptLabels,
+                datasets: [{
+                    label: 'إيراد القسم',
+                    data: deptData,
+                    backgroundColor: deptColors,
+                    borderColor: deptColors,
+                    borderWidth: 1.5,
+                    borderRadius: 8,
+                    barPercentage: 0.5,
+                    categoryPercentage: 0.7
+                }]
+            },
+            plugins: [{
+                id: 'deptBarDataLabels',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            const val = chart.data.datasets[0].data[index];
+                            if (val !== null && val !== undefined && val > 0) {
+                                ctx.save();
+                                ctx.font = 'bold 12px "Segoe UI", Cairo, sans-serif';
+                                ctx.fillStyle = '#0f172a'; // خط داكن واضح ومباشر فوق كل عمود
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                const labelText = Number(val).toLocaleString() + ' د.ع';
+                                ctx.fillText(labelText, element.x, element.y - 6);
+                                ctx.restore();
+                            }
+                        });
+                    }
+                }
+            }],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 32 }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        rtl: true,
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + context.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' },
+                            color: '#334155'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: maxDeptVal * 1.25,
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000) return (value / 1000000) + 'M';
+                                if (value >= 1000) return (value / 1000) + 'K';
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ب) بلجن رسم إجمالي الإيراد في قلب الدائرة (Donut Center Text Plugin)
     const donutCenterPlugin = {
         id: 'donutCenterText',
         beforeDraw(chart) {
