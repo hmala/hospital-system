@@ -341,44 +341,8 @@
                         </div>
                         <div class="card-body p-4">
                             @if(count($deptChartData) > 0 && $periodInflow > 0)
-                                <!-- الحاوية الأساسية: مخطط الأعمدة والمنحنيات مع الأرقام والمبالغ المباشرة -->
-                                <div id="deptBarChartContainer" style="position: relative; height: 300px; width: 100%;">
-                                    <canvas id="deptRevenueBarChart"></canvas>
-                                </div>
-
-                                <!-- الحاوية البديلة: المخطط الدائري -->
-                                <div id="deptDonutChartContainer" style="position: relative; height: 300px; width: 100%; display: none;">
-                                    <div style="position: relative; height: 280px; width: 100%; max-width: 340px; margin: 0 auto;">
-                                        <canvas id="deptRevenueDonutChart"></canvas>
-                                    </div>
-                                </div>
-                                <div class="w-100 mt-4 pt-3 border-top">
-                                    <h6 class="small fw-bold text-muted mb-3 d-flex justify-content-between align-items-center">
-                                        <span><i class="fas fa-list-ul me-1.5 text-primary"></i>تفاصيل إيرادات الأقسام المسجلة:</span>
-                                        <span class="badge bg-light text-dark border font-monospace">{{ count($deptChartData) }} أقسام</span>
-                                    </h6>
-                                    <div class="d-flex flex-column gap-2">
-                                        @foreach($departmentStats as $dKey => $dStat)
-                                            @if($dStat['gross'] > 0)
-                                                <div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center">
-                                                    <div class="d-flex align-items-center gap-2.5 text-truncate">
-                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" 
-                                                              style="width: 24px; height: 24px; background-color: {{ $dStat['color'] }}20; color: {{ $dStat['color'] }}; border: 1px solid {{ $dStat['color'] }}40;">
-                                                            <i class="fas {{ $dStat['icon'] }} fs-7"></i>
-                                                        </span>
-                                                        <div class="text-truncate">
-                                                            <strong class="text-dark d-block text-truncate small">{{ $dStat['name'] }}</strong>
-                                                            <small class="text-muted font-monospace">{{ $dStat['count'] }} حركة / إيصال</small>
-                                                        </div>
-                                                    </div>
-                                                    <div class="text-end flex-shrink-0 ms-2">
-                                                        <div class="fw-bold font-monospace text-dark fs-6">{{ number_format($dStat['gross']) }} <small class="text-muted">د.ع</small></div>
-                                                        <span class="badge rounded-pill fw-bold" style="background-color: {{ $dStat['color'] }}20; color: {{ $dStat['color'] }}; border: 1px solid {{ $dStat['color'] }}40;">{{ $dStat['percentage'] }}%</span>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
+                                <div id="deptChartContainer" style="position: relative; height: 340px; width: 100%;">
+                                    <canvas id="deptChartCanvas"></canvas>
                                 </div>
                             @else
                                 <div class="text-center py-5 text-muted">
@@ -408,16 +372,8 @@
                             </div>
                         </div>
                         <div class="card-body p-4">
-                            <!-- الحاوية الأساسية: مخطط الأعمدة أو المنحنيات -->
-                            <div id="cashFlowTrendContainer" style="position: relative; height: 320px; width: 100%;">
-                                <canvas id="cashFlowTrendChart"></canvas>
-                            </div>
-
-                            <!-- الحاوية البديلة: المخطط الدائري لمقارنة الوارد مقابل المنصرف -->
-                            <div id="cashFlowDonutContainer" style="position: relative; height: 320px; width: 100%; display: none;">
-                                <div style="position: relative; height: 280px; width: 100%; max-width: 340px; margin: 0 auto;">
-                                    <canvas id="cashFlowDonutChart"></canvas>
-                                </div>
+                            <div id="trendChartContainer" style="position: relative; height: 340px; width: 100%;">
+                                <canvas id="trendChartCanvas"></canvas>
                             </div>
                         </div>
                     </div>
@@ -1250,10 +1206,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
     // 3. محرك الرسوم البيانية الشامل والتحكم الموحد (Master Chart.js Engine)
     // =========================================================================
-    let deptBarChartInstance = null;
-    let deptDonutChartInstance = null;
+    let deptChartInstance = null;
     let trendChartInstance = null;
-    let cashFlowDonutChartInstance = null;
 
     // بيانات الرسوم المشتركة الممررة من الخادم
     const deptLabels = @json($deptChartLabels);
@@ -1266,12 +1220,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const periodOutflowTotal = {{ (float)$periodOutflow }};
     const periodNetTotal = {{ (float)($periodInflow - $periodOutflow) }};
 
+    // دالة إنشاء كانفاس نقي وخالي من أي بقايا سابقة
+    function recreateCanvas(containerId, canvasId) {
+        const container = document.getElementById(containerId);
+        if (!container) return null;
+
+        const oldCanvas = document.getElementById(canvasId);
+        if (oldCanvas) {
+            const oldChart = Chart.getChart(oldCanvas);
+            if (oldChart) {
+                oldChart.destroy();
+            }
+            oldCanvas.remove();
+        }
+
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = canvasId;
+        container.appendChild(newCanvas);
+        return newCanvas;
+    }
+
     // دالة بناء وتحديث مخطط إيرادات الأقسام الفورية
     function renderDeptChart(mode) {
-        const barBox = document.getElementById('deptBarChartContainer');
-        const donutBox = document.getElementById('deptDonutChartContainer');
         const badgeEl = document.getElementById('deptChartModeBadge');
-
         const badgeLabels = {
             'bar': '<i class="fas fa-chart-column me-1"></i>أعمدة رأسية',
             'horizontal': '<i class="fas fa-bars-staggered me-1"></i>أعمدة أفقية',
@@ -1280,30 +1251,103 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         if (badgeEl && badgeLabels[mode]) badgeEl.innerHTML = badgeLabels[mode];
 
+        if (!deptData || deptData.length === 0) return;
+
+        const canvas = recreateCanvas('deptChartContainer', 'deptChartCanvas');
+        if (!canvas) return;
+
+        const maxDeptVal = Math.max(...deptData, 1000);
+
         if (mode === 'donut') {
-            if (barBox) barBox.style.display = 'none';
-            if (donutBox) donutBox.style.display = 'block';
-            if (deptDonutChartInstance) deptDonutChartInstance.resize();
+            const donutCenterPlugin = {
+                id: 'deptCenterText',
+                beforeDraw(chart) {
+                    const { width, height, ctx } = chart;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    ctx.font = '600 12px Cairo, sans-serif';
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillText('إجمالي الوارد', centerX, centerY - 14);
+                    ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillText(Number(periodInflowTotal).toLocaleString() + ' د.ع', centerX, centerY + 12);
+                    ctx.restore();
+                }
+            };
+
+            deptChartInstance = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: deptLabels,
+                    datasets: [{
+                        data: deptData,
+                        backgroundColor: deptColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 6
+                    }]
+                },
+                plugins: [donutCenterPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            rtl: true,
+                            labels: {
+                                font: { family: 'Cairo, sans-serif', size: 11, weight: 'bold' },
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                padding: 10,
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        const total = Math.max(1, periodInflowTotal);
+                                        return data.labels.map(function(label, i) {
+                                            const val = data.datasets[0].data[i];
+                                            const color = data.datasets[0].backgroundColor[i];
+                                            const pct = ((val / total) * 100).toFixed(1);
+                                            return {
+                                                text: label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)',
+                                                fillStyle: color,
+                                                strokeStyle: '#ffffff',
+                                                lineWidth: 1.5,
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        tooltip: {
+                            rtl: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    const total = Math.max(1, periodInflowTotal);
+                                    const pct = ((val / total) * 100).toFixed(1);
+                                    return ' ' + context.label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)';
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
             return;
         }
 
-        if (donutBox) donutBox.style.display = 'none';
-        if (barBox) barBox.style.display = 'block';
-
-        const canvas = document.getElementById('deptRevenueBarChart');
-        if (!canvas || !deptData || deptData.length === 0) return;
-
-        // تدمير النسخة السابقة لضمان التبديل الجذري والآمن في Chart.js v4
-        if (deptBarChartInstance) {
-            deptBarChartInstance.destroy();
-            deptBarChartInstance = null;
-        }
-
-        const maxDeptVal = Math.max(...deptData, 1000);
         const isHoriz = (mode === 'horizontal');
         const isLine = (mode === 'line');
 
-        deptBarChartInstance = new Chart(canvas, {
+        deptChartInstance = new Chart(canvas, {
             type: isLine ? 'line' : 'bar',
             data: {
                 labels: deptLabels,
@@ -1326,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }]
             },
             plugins: [{
-                id: 'deptDirectDataLabels',
+                id: 'deptDirectLabels',
                 afterDatasetsDraw(chart) {
                     const ctx = chart.ctx;
                     const meta = chart.getDatasetMeta(0);
@@ -1418,10 +1462,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // دالة بناء وتحديث مخطط حركة النقدية اليومية الفورية
     function renderTrendChart(mode) {
-        const trendBox = document.getElementById('cashFlowTrendContainer');
-        const donutBox = document.getElementById('cashFlowDonutContainer');
         const badgeEl = document.getElementById('trendChartModeBadge');
-
         const badgeLabels = {
             'bar': '<i class="fas fa-chart-column me-1"></i>أعمدة رأسية',
             'horizontal': '<i class="fas fa-bars-staggered me-1"></i>أعمدة أفقية',
@@ -1430,23 +1471,70 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         if (badgeEl && badgeLabels[mode]) badgeEl.innerHTML = badgeLabels[mode];
 
-        if (mode === 'donut') {
-            if (trendBox) trendBox.style.display = 'none';
-            if (donutBox) donutBox.style.display = 'block';
-            if (cashFlowDonutChartInstance) cashFlowDonutChartInstance.resize();
-            return;
-        }
-
-        if (donutBox) donutBox.style.display = 'none';
-        if (trendBox) trendBox.style.display = 'block';
-
-        const canvas = document.getElementById('cashFlowTrendChart');
+        const canvas = recreateCanvas('trendChartContainer', 'trendChartCanvas');
         if (!canvas) return;
 
-        // تدمير النسخة السابقة لإعادة البناء بنقاء
-        if (trendChartInstance) {
-            trendChartInstance.destroy();
-            trendChartInstance = null;
+        if (mode === 'donut') {
+            const flowDonutCenterPlugin = {
+                id: 'flowCenterText',
+                beforeDraw(chart) {
+                    const { width, height, ctx } = chart;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    ctx.font = '600 12px Cairo, sans-serif';
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillText('صافي الحركة', centerX, centerY - 14);
+                    ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
+                    ctx.fillStyle = periodNetTotal >= 0 ? '#16a34a' : '#dc2626';
+                    ctx.fillText((periodNetTotal >= 0 ? '+' : '') + Number(periodNetTotal).toLocaleString() + ' د.ع', centerX, centerY + 12);
+                    ctx.restore();
+                }
+            };
+
+            trendChartInstance = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['إجمالي الوارد (+)', 'إجمالي المنصرف (-)'],
+                    datasets: [{
+                        data: [periodInflowTotal, periodOutflowTotal],
+                        backgroundColor: ['#22c55e', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 6
+                    }]
+                },
+                plugins: [flowDonutCenterPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            rtl: true,
+                            labels: {
+                                font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' },
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                padding: 10
+                            }
+                        },
+                        tooltip: {
+                            rtl: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+            return;
         }
 
         const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
@@ -1502,7 +1590,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: datasets
             },
             plugins: [{
-                id: 'trendDirectDataLabels',
+                id: 'trendDirectLabels',
                 afterDatasetsDraw(chart) {
                     const ctx = chart.ctx;
                     chart.data.datasets.forEach((dataset, datasetIndex) => {
@@ -1632,159 +1720,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) {}
     };
 
-    // تهيئة المخططات الدائرية الثابتة عند تحميل الصفحة
-    // أ) المخطط الدائري لإيرادات الأقسام
-    const donutCtx = document.getElementById('deptRevenueDonutChart');
-    if (donutCtx && deptData.length > 0) {
-        const donutCenterPlugin = {
-            id: 'deptDonutCenterText',
-            beforeDraw(chart) {
-                const { width, height, ctx } = chart;
-                ctx.save();
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                const centerX = width / 2;
-                const centerY = height / 2;
-                ctx.font = '600 12px Cairo, sans-serif';
-                ctx.fillStyle = '#64748b';
-                ctx.fillText('إجمالي الوارد', centerX, centerY - 14);
-                ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
-                ctx.fillStyle = '#0f172a';
-                ctx.fillText(Number(periodInflowTotal).toLocaleString() + ' د.ع', centerX, centerY + 12);
-                ctx.restore();
-            }
-        };
-
-        deptDonutChartInstance = new Chart(donutCtx, {
-            type: 'doughnut',
-            data: {
-                labels: deptLabels,
-                datasets: [{
-                    data: deptData,
-                    backgroundColor: deptColors,
-                    borderWidth: 2,
-                    borderColor: '#ffffff',
-                    hoverOffset: 6
-                }]
-            },
-            plugins: [donutCenterPlugin],
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        rtl: true,
-                        labels: {
-                            font: { family: 'Cairo, sans-serif', size: 11, weight: 'bold' },
-                            boxWidth: 12,
-                            boxHeight: 12,
-                            padding: 10,
-                            generateLabels: function(chart) {
-                                const data = chart.data;
-                                if (data.labels.length && data.datasets.length) {
-                                    const total = Math.max(1, periodInflowTotal);
-                                    return data.labels.map(function(label, i) {
-                                        const val = data.datasets[0].data[i];
-                                        const color = data.datasets[0].backgroundColor[i];
-                                        const pct = ((val / total) * 100).toFixed(1);
-                                        return {
-                                            text: label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)',
-                                            fillStyle: color,
-                                            strokeStyle: '#ffffff',
-                                            lineWidth: 1.5,
-                                            hidden: false,
-                                            index: i
-                                        };
-                                    });
-                                }
-                                return [];
-                            }
-                        }
-                    },
-                    tooltip: {
-                        rtl: true,
-                        callbacks: {
-                            label: function(context) {
-                                const val = context.raw || 0;
-                                const total = Math.max(1, periodInflowTotal);
-                                const pct = ((val / total) * 100).toFixed(1);
-                                return ' ' + context.label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)';
-                            }
-                        }
-                    }
-                },
-                cutout: '72%'
-            }
-        });
-    }
-
-    // ب) المخطط الدائري لمقارنة الوارد والمنصرف في حركة النقدية
-    const cashFlowDonutCtx = document.getElementById('cashFlowDonutChart');
-    if (cashFlowDonutCtx) {
-        const flowDonutCenterPlugin = {
-            id: 'flowDonutCenterText',
-            beforeDraw(chart) {
-                const { width, height, ctx } = chart;
-                ctx.save();
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                const centerX = width / 2;
-                const centerY = height / 2;
-                ctx.font = '600 12px Cairo, sans-serif';
-                ctx.fillStyle = '#64748b';
-                ctx.fillText('صافي الحركة', centerX, centerY - 14);
-                ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif';
-                ctx.fillStyle = periodNetTotal >= 0 ? '#16a34a' : '#dc2626';
-                ctx.fillText((periodNetTotal >= 0 ? '+' : '') + Number(periodNetTotal).toLocaleString() + ' د.ع', centerX, centerY + 12);
-                ctx.restore();
-            }
-        };
-
-        cashFlowDonutChartInstance = new Chart(cashFlowDonutCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['إجمالي الوارد (+)', 'إجمالي المنصرف (-)'],
-                datasets: [{
-                    data: [periodInflowTotal, periodOutflowTotal],
-                    backgroundColor: ['#22c55e', '#ef4444'],
-                    borderWidth: 2,
-                    borderColor: '#ffffff',
-                    hoverOffset: 6
-                }]
-            },
-            plugins: [flowDonutCenterPlugin],
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        rtl: true,
-                        labels: {
-                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' },
-                            boxWidth: 12,
-                            boxHeight: 12,
-                            padding: 10
-                        }
-                    },
-                    tooltip: {
-                        rtl: true,
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
-                            }
-                        }
-                    }
-                },
-                cutout: '70%'
-            }
-        });
-    }
-
-    // تفعيل النمط الأولي المحفوظ
+    // تفعيل النمط الأولي المحفوظ تلقائياً
     let initialMode = 'bar';
     try {
         const savedMode = localStorage.getItem('treasury_chart_mode');
@@ -1796,7 +1732,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. نظام التحديث التلقائي الذكي للصفحة (Intelligent Auto-Refresh Engine)
     // =========================================================================
     let autoRefreshCountdownInterval = null;
-    let autoRefreshTotalSeconds = 5; // 5 ثانية افتراضياً
+    let autoRefreshTotalSeconds = 30; // 5 ثانية افتراضياً
     let autoRefreshRemainingSeconds = 30;
     let autoRefreshPaused = false;
 
