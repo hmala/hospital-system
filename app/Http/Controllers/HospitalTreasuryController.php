@@ -247,6 +247,161 @@ class HospitalTreasuryController extends Controller
             'cheque' => (float) (clone $basePeriodQuery)->inflow()->where('payment_method', 'cheque')->sum('amount'),
         ];
 
+        // 7. التحليل المالي والتحويلي لأطباء الاستشارية (Doctor BI & Referrals Analysis)
+        // أ) استعلام الكشوفات (كاش مقابل ضمان)
+        $apptQuery = DB::table('appointments')->where('status', '!=', 'cancelled');
+        if ($request->filled('from_date')) {
+            $apptQuery->whereDate('appointment_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $apptQuery->whereDate('appointment_date', '<=', $request->to_date);
+        }
+        $doctorAppts = $apptQuery->select(
+            'doctor_id',
+            DB::raw("SUM(CASE WHEN insurance_type IN ('hi', 'moi', 'interior_ministry', 'health_insurance') THEN 1 ELSE 0 END) as insurance_cnt"),
+            DB::raw("SUM(CASE WHEN insurance_type IS NULL OR insurance_type = '' OR insurance_type = 'none' THEN 1 ELSE 0 END) as cash_cnt"),
+            DB::raw("count(*) as total_cnt")
+        )->groupBy('doctor_id')->get()->keyBy('doctor_id');
+
+        // ب) استعلام الإيرادات وحصص الأطباء والمستشفى
+        $revQuery = DB::table('consultation_revenues');
+        if ($request->filled('from_date')) {
+            $revQuery->whereDate('revenue_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $revQuery->whereDate('revenue_date', '<=', $request->to_date);
+        }
+        $doctorRevenues = $revQuery->select(
+            'doctor_id',
+            DB::raw('SUM(total_amount) as gross'),
+            DB::raw('SUM(doctor_share) as doc_share'),
+            DB::raw('SUM(hospital_share) as hosp_share')
+        )->groupBy('doctor_id')->get()->keyBy('doctor_id');
+
+        // ج) استعلام تحويلات الفحوصات التشخيصية (مختبر وأشعة) الناتجة عن زيارات أطباء الاستشارية
+        $referralReqQuery = DB::table('requests')
+            ->join('visits', 'requests.visit_id', '=', 'visits.id')
+            ->whereNotNull('visits.doctor_id');
+        if ($request->filled('from_date')) {
+            $referralReqQuery->whereDate('requests.created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $referralReqQuery->whereDate('requests.created_at', '<=', $request->to_date);
+        }
+        $doctorReferrals = $referralReqQuery->select(
+            'visits.doctor_id',
+            'requests.type',
+            DB::raw('count(*) as cnt')
+        )->groupBy('visits.doctor_id', 'requests.type')->get();
+
+        $doctorLabReferrals = [];
+        $doctorRadReferrals = [];
+        foreach ($doctorReferrals as $dr) {
+            if ($dr->type === 'lab' || $dr->type === 'blood_bank') {
+                $doctorLabReferrals[$dr->doctor_id] = ($doctorLabReferrals[$dr->doctor_id] ?? 0) + $dr->cnt;
+            } elseif ($dr->type === 'radiology') {
+                $doctorRadReferrals[$dr->doctor_id] = ($doctorRadReferrals[$dr->doctor_id] ?? 0) + $dr->cnt;
+            }
+        }
+
+        // د) استعلام تحويلات العمليات الجراحية
+        $surgQuery = DB::table('surgeries');
+        if ($request->filled('from_date')) {
+            $surgQuery->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $surgQuery->whereDate('created_at', '<=', $request->to_date);
+        }
+        $doctorSurgeries = $surgQuery->select('doctor_id', DB::raw('count(*) as cnt'))
+            ->whereNotNull('doctor_id')
+            ->groupBy('doctor_id')->pluck('cnt', 'doctor_id')->toArray();
+
+        // هـ) تجميع وتنسيق جدول تحليلات الأطباء
+        $consultantDoctors = Doctor::with(['user', 'department'])
+            ->where(function ($q) {
+                $q->where('type', 'consultant')->orWhereNull('type');
+            })
+            ->where('is_active', true)
+            ->get();
+
+        $doctorAnalytics = [];
+        $totalDoctorCashAppts = 0;
+        $totalDoctorInsuranceAppts = 0;
+        $totalDoctorGross = 0;
+        $totalDoctorDocShare = 0;
+        $totalDoctorHospShare = 0;
+        $totalDoctorLabRefs = 0;
+        $totalDoctorRadRefs = 0;
+        $totalDoctorSurgRefs = 0;
+
+        foreach ($consultantDoctors as $doc) {
+            $docId = $doc->id;
+            $appts = $doctorAppts->get($docId);
+            $rev = $doctorRevenues->get($docId);
+
+            $cashCnt = (int) ($appts->cash_cnt ?? 0);
+            $insCnt = (int) ($appts->insurance_cnt ?? 0);
+            $totalAppts = $cashCnt + $insCnt;
+
+            $gross = (float) ($rev->gross ?? 0);
+            $docShare = (float) ($rev->doc_share ?? 0);
+            $hospShare = (float) ($rev->hosp_share ?? 0);
+
+            $labRefs = (int) ($doctorLabReferrals[$docId] ?? 0);
+            $radRefs = (int) ($doctorRadReferrals[$docId] ?? 0);
+            $surgRefs = (int) ($doctorSurgeries[$docId] ?? 0);
+            $totalRefs = $labRefs + $radRefs + $surgRefs;
+
+            // ندرج الأطباء الذين لديهم حجوزات أو مبالغ أو تحويلات
+            if ($totalAppts > 0 || $gross > 0 || $totalRefs > 0) {
+                $doctorAnalytics[] = [
+                    'id' => $docId,
+                    'name' => optional($doc->user)->name ?? 'طبيب',
+                    'department' => optional($doc->department)->name ?? ($doc->specialization ?: 'استشارية'),
+                    'cash_cnt' => $cashCnt,
+                    'insurance_cnt' => $insCnt,
+                    'total_appts' => $totalAppts,
+                    'gross' => $gross,
+                    'doc_share' => $docShare,
+                    'hosp_share' => $hospShare,
+                    'lab_refs' => $labRefs,
+                    'rad_refs' => $radRefs,
+                    'surg_refs' => $surgRefs,
+                    'total_refs' => $totalRefs,
+                ];
+
+                $totalDoctorCashAppts += $cashCnt;
+                $totalDoctorInsuranceAppts += $insCnt;
+                $totalDoctorGross += $gross;
+                $totalDoctorDocShare += $docShare;
+                $totalDoctorHospShare += $hospShare;
+                $totalDoctorLabRefs += $labRefs;
+                $totalDoctorRadRefs += $radRefs;
+                $totalDoctorSurgRefs += $surgRefs;
+            }
+        }
+
+        // ترتيب الأطباء حسب إجمالي المقبوض ثم عدد الحالات
+        usort($doctorAnalytics, function ($a, $b) {
+            if ($b['gross'] != $a['gross']) {
+                return $b['gross'] <=> $a['gross'];
+            }
+            return $b['total_appts'] <=> $a['total_appts'];
+        });
+
+        $doctorSummaryTotals = [
+            'total_cash_appts' => $totalDoctorCashAppts,
+            'total_insurance_appts' => $totalDoctorInsuranceAppts,
+            'total_appts' => $totalDoctorCashAppts + $totalDoctorInsuranceAppts,
+            'total_gross' => $totalDoctorGross,
+            'total_doc_share' => $totalDoctorDocShare,
+            'total_hosp_share' => $totalDoctorHospShare,
+            'total_lab_refs' => $totalDoctorLabRefs,
+            'total_rad_refs' => $totalDoctorRadRefs,
+            'total_surg_refs' => $totalDoctorSurgRefs,
+            'total_refs' => $totalDoctorLabRefs + $totalDoctorRadRefs + $totalDoctorSurgRefs,
+        ];
+
         // جلب الحركات المفلترة مرتبة من الأحدث
         $transactions = $query->orderBy('performed_at', 'desc')
             ->orderBy('id', 'desc')
@@ -278,6 +433,8 @@ class HospitalTreasuryController extends Controller
             'trendInflows',
             'trendOutflows',
             'paymentMethodStats',
+            'doctorAnalytics',
+            'doctorSummaryTotals',
             'doctors',
             'suppliers',
             'categories',

@@ -238,6 +238,14 @@
                 <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">{{ $transactions->total() }}</span>
             </button>
         </li>
+        <li class="nav-item flex-fill" role="presentation">
+            <button class="nav-link w-100 py-2.5 rounded-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                    id="doctors-tab-btn" data-bs-toggle="pill" data-bs-target="#doctors-tab-pane" type="button" role="tab" aria-selected="false">
+                <i class="fas fa-user-md text-info fs-6"></i>
+                <span>4. 🩺 تحليل أطباء الاستشارية والتحويلات</span>
+                <span class="badge bg-info-subtle text-info border rounded-pill px-2">{{ count($doctorAnalytics) }} أطباء</span>
+            </button>
+        </li>
     </ul>
 
     <!-- محتوى التبويبات -->
@@ -476,10 +484,22 @@
                                         </div>
                                     </td>
                                     <td class="text-center pe-4">
-                                        <a href="{{ route('treasury.index', array_merge(request()->query(), ['category' => $deptKey])) }}#ledger" 
-                                           class="btn btn-xs btn-outline-primary px-2.5 py-1 rounded-pill" title="عرض قيود هذا القسم">
-                                            <i class="fas fa-filter me-1"></i> تصفية
-                                        </a>
+                                        @if($deptKey === 'consultation')
+                                            <div class="d-flex justify-content-center gap-1">
+                                                <button type="button" class="btn btn-xs btn-primary px-2.5 py-1 rounded-pill shadow-xs" onclick="switchToDoctorTab()" title="عرض تفاصيل كشوفات الأطباء والتحويلات">
+                                                    <i class="fas fa-user-md me-1"></i> تحليل الأطباء
+                                                </button>
+                                                <a href="{{ route('treasury.index', array_merge(request()->query(), ['category' => $deptKey])) }}#ledger" 
+                                                   class="btn btn-xs btn-outline-secondary px-2 py-1 rounded-pill" title="عرض وصولات الاستشارية">
+                                                    <i class="fas fa-filter"></i>
+                                                </a>
+                                            </div>
+                                        @else
+                                            <a href="{{ route('treasury.index', array_merge(request()->query(), ['category' => $deptKey])) }}#ledger" 
+                                               class="btn btn-xs btn-outline-primary px-2.5 py-1 rounded-pill" title="عرض قيود هذا القسم">
+                                                <i class="fas fa-filter me-1"></i> تصفية
+                                            </a>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -637,6 +657,220 @@
                     {{ $transactions->links() }}
                 </div>
                 @endif
+            </div>
+        </div>
+
+        <!-- ================= التبويب 4: التحليل المالي والتحويلي لأطباء الاستشارية (Doctor BI & Referrals) ================= -->
+        <div class="tab-pane fade" id="doctors-tab-pane" role="tabpanel" tabindex="0">
+            <!-- بطاقات مؤشرات الأداء السريعة للأطباء (KPIs) -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                        <div class="card-body p-3.5 border-start border-4 border-primary">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-bold text-muted text-uppercase">إجمالي الكشوفات المسجلة</span>
+                                <div class="rounded-circle p-2 bg-primary bg-opacity-10 text-primary">
+                                    <i class="fas fa-stethoscope fa-lg"></i>
+                                </div>
+                            </div>
+                            <h3 class="fw-bold text-dark mb-1 font-monospace">
+                                {{ number_format($doctorSummaryTotals['total_appts']) }} <small class="fs-6 text-muted">كشفية</small>
+                            </h3>
+                            <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                                <span><i class="fas fa-money-bill-wave text-success me-1"></i> كاش: <strong>{{ number_format($doctorSummaryTotals['total_cash_appts']) }}</strong></span>
+                                <span><i class="fas fa-id-card text-info me-1"></i> ضمان صحي: <strong>{{ number_format($doctorSummaryTotals['total_insurance_appts']) }}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                        <div class="card-body p-3.5 border-start border-4 border-success">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-bold text-muted text-uppercase">إجمالي الدخل وصافي المستشفى</span>
+                                <div class="rounded-circle p-2 bg-success bg-opacity-10 text-success">
+                                    <i class="fas fa-hand-holding-dollar fa-lg"></i>
+                                </div>
+                            </div>
+                            <h3 class="fw-bold text-success mb-1 font-monospace">
+                                {{ number_format($doctorSummaryTotals['total_hosp_share']) }} <small class="fs-6 text-muted">د.ع (صافي)</small>
+                            </h3>
+                            <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                                <span>إجمالي المقبوض: <strong>{{ number_format($doctorSummaryTotals['total_gross']) }}</strong></span>
+                                <span>حصص الأطباء: <strong class="text-danger">{{ number_format($doctorSummaryTotals['total_doc_share']) }}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                        <div class="card-body p-3.5 border-start border-4 border-info">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-bold text-muted text-uppercase">إجمالي الخدمات والإحالات الصادرة</span>
+                                <div class="rounded-circle p-2 bg-info bg-opacity-10 text-info">
+                                    <i class="fas fa-network-wired fa-lg"></i>
+                                </div>
+                            </div>
+                            <h3 class="fw-bold text-info mb-1 font-monospace">
+                                {{ number_format($doctorSummaryTotals['total_refs']) }} <small class="fs-6 text-muted">إحالة طبية</small>
+                            </h3>
+                            <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                                <span>🧪 مختبر: <strong>{{ number_format($doctorSummaryTotals['total_lab_refs']) }}</strong></span>
+                                <span>🩻 أشعة/إيكو: <strong>{{ number_format($doctorSummaryTotals['total_rad_refs']) }}</strong></span>
+                                <span>🏥 عمليات: <strong>{{ number_format($doctorSummaryTotals['total_surg_refs']) }}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- جدول تحليلات الأطباء والتحويلات التفصيلي -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3.5 px-4 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-user-md text-info"></i>
+                            <span>كشف إنتاجية أطباء العيادات الاستشارية وتحويلات الأقسام (Doctor Referrals Matrix)</span>
+                        </h5>
+                        <small class="text-muted">تحليل رقمي شامل لحجم عمل كل طبيب: الكشوفات (نقدي وضمان)، الإيرادات، وحجم الإحالات الصادرة للمختبر والأشعة والعمليات</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary px-3">
+                            <i class="fas fa-print me-1"></i> طباعة كشف الأطباء
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4" style="width: 40px;">#</th>
+                                <th style="min-width: 200px;">الطبيب / الاختصاص</th>
+                                <th class="text-center" style="width: 100px;">كاش 💵</th>
+                                <th class="text-center" style="width: 100px;">ضمان 💳</th>
+                                <th class="text-center" style="width: 110px;">إجمالي الكشوفات</th>
+                                <th class="text-end" style="width: 140px;">إجمالي المقبوض</th>
+                                <th class="text-end" style="width: 140px;">مستحقات الطبيب</th>
+                                <th class="text-end" style="width: 140px;">صافي المستشفى</th>
+                                <th class="text-center" style="width: 100px;">🧪 مختبر</th>
+                                <th class="text-center" style="width: 100px;">🩻 أشعة/إيكو</th>
+                                <th class="text-center" style="width: 90px;">🏥 عمليات</th>
+                                <th class="text-center pe-4" style="width: 120px;">مجموع التحويلات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($doctorAnalytics as $index => $docRow)
+                            <tr>
+                                <td class="ps-4 text-muted small font-monospace">{{ $index + 1 }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="avatar-circle rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center" 
+                                             style="width: 36px; height: 36px;">
+                                            <i class="fas fa-user-md"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-dark d-block">{{ $docRow['name'] }}</strong>
+                                            <small class="text-muted">{{ $docRow['department'] }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $docRow['cash_cnt'] > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-muted' }} px-2 py-1 font-monospace">
+                                        {{ number_format($docRow['cash_cnt']) }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $docRow['insurance_cnt'] > 0 ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-light text-muted' }} px-2 py-1 font-monospace">
+                                        {{ number_format($docRow['insurance_cnt']) }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <strong class="font-monospace text-dark">{{ number_format($docRow['total_appts']) }}</strong>
+                                </td>
+                                <td class="text-end">
+                                    <strong class="font-monospace text-dark">{{ number_format($docRow['gross']) }}</strong> <small class="text-muted fs-8">د.ع</small>
+                                </td>
+                                <td class="text-end font-monospace text-danger">
+                                    {{ $docRow['doc_share'] > 0 ? number_format($docRow['doc_share']) : '0' }} <small class="text-muted fs-8">د.ع</small>
+                                </td>
+                                <td class="text-end font-monospace text-success fw-bold">
+                                    {{ number_format($docRow['hosp_share']) }} <small class="text-muted fs-8">د.ع</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $docRow['lab_refs'] > 0 ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted' }} px-2 py-1 font-monospace">
+                                        {{ number_format($docRow['lab_refs']) }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $docRow['rad_refs'] > 0 ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-light text-muted' }} px-2 py-1 font-monospace">
+                                        {{ number_format($docRow['rad_refs']) }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $docRow['surg_refs'] > 0 ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-light text-muted' }} px-2 py-1 font-monospace">
+                                        {{ number_format($docRow['surg_refs']) }}
+                                    </span>
+                                </td>
+                                <td class="text-center pe-4">
+                                    <span class="badge {{ $docRow['total_refs'] > 0 ? 'bg-dark text-white' : 'bg-light text-muted border' }} px-2.5 py-1 font-monospace fs-7">
+                                        <i class="fas fa-share-alt me-1"></i> {{ number_format($docRow['total_refs']) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="12" class="text-center py-5">
+                                    <div class="py-4">
+                                        <i class="fas fa-user-md fa-3x text-muted opacity-50 mb-3"></i>
+                                        <h6 class="text-muted fw-bold">لا توجد كشوفات أو تحويلات مسجلة لأطباء الاستشارية في هذه الفترة</h6>
+                                        <p class="text-muted small mb-0">يمكنك تعديل نطاق التاريخ للتحقق من بيانات فترات سابقة.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot class="table-light border-top border-2">
+                            <tr class="fw-bold">
+                                <td colspan="2" class="ps-4 py-3 text-dark">
+                                    <i class="fas fa-calculator text-primary me-2"></i> المجموع الإجمالي لكافة الأطباء
+                                </td>
+                                <td class="text-center font-monospace text-success py-3">
+                                    {{ number_format($doctorSummaryTotals['total_cash_appts']) }}
+                                </td>
+                                <td class="text-center font-monospace text-info py-3">
+                                    {{ number_format($doctorSummaryTotals['total_insurance_appts']) }}
+                                </td>
+                                <td class="text-center font-monospace text-dark py-3">
+                                    {{ number_format($doctorSummaryTotals['total_appts']) }}
+                                </td>
+                                <td class="text-end font-monospace text-dark py-3">
+                                    {{ number_format($doctorSummaryTotals['total_gross']) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace text-danger py-3">
+                                    {{ number_format($doctorSummaryTotals['total_doc_share']) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace text-success py-3">
+                                    {{ number_format($doctorSummaryTotals['total_hosp_share']) }} د.ع
+                                </td>
+                                <td class="text-center font-monospace text-primary py-3">
+                                    {{ number_format($doctorSummaryTotals['total_lab_refs']) }}
+                                </td>
+                                <td class="text-center font-monospace text-warning-emphasis py-3">
+                                    {{ number_format($doctorSummaryTotals['total_rad_refs']) }}
+                                </td>
+                                <td class="text-center font-monospace text-danger py-3">
+                                    {{ number_format($doctorSummaryTotals['total_surg_refs']) }}
+                                </td>
+                                <td class="text-center font-monospace pe-4 py-3">
+                                    <span class="badge bg-primary px-3 py-1.5 fs-7">{{ number_format($doctorSummaryTotals['total_refs']) }} إحالة</span>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -853,6 +1087,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (hash === '#ledger') {
             const tabBtn = document.getElementById('ledger-tab-btn');
             if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+        } else if (hash === '#doctors') {
+            const tabBtn = document.getElementById('doctors-tab-btn');
+            if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
         }
     }
 
@@ -862,9 +1099,20 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('shown.bs.tab', function(e) {
             if (e.target.id === 'departments-tab-btn') window.location.hash = 'departments';
             else if (e.target.id === 'ledger-tab-btn') window.location.hash = 'ledger';
+            else if (e.target.id === 'doctors-tab-btn') window.location.hash = 'doctors';
             else window.location.hash = 'analytics';
         });
     });
+
+    // دالة الانتقال السريع لتبويب الأطباء
+    window.switchToDoctorTab = function() {
+        const tabBtn = document.getElementById('doctors-tab-btn');
+        if (tabBtn) {
+            bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            window.location.hash = 'doctors';
+            tabBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    };
 
     // 3. محرك الرسوم البيانية (Chart.js Engine)
     // أ) مخطط توزيع الإيرادات الدائري (Donut Chart)
