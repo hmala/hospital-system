@@ -697,8 +697,8 @@
                                 {{ number_format($doctorSummaryTotals['total_hosp_share']) }} <small class="fs-6 text-muted">د.ع (صافي)</small>
                             </h3>
                             <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
-                                <span>إجمالي المقبوض: <strong>{{ number_format($doctorSummaryTotals['total_gross']) }}</strong></span>
-                                <span>حصص الأطباء: <strong class="text-danger">{{ number_format($doctorSummaryTotals['total_doc_share']) }}</strong></span>
+                                <span>نقد الدرج: <strong class="text-dark">{{ number_format($doctorSummaryTotals['total_cash_revenue'] + $doctorSummaryTotals['total_insurance_copay']) }}</strong></span>
+                                <span>مطالبة الضمان: <strong class="text-info">{{ number_format($doctorSummaryTotals['total_insurance_claim']) }}</strong></span>
                             </div>
                         </div>
                     </div>
@@ -734,7 +734,7 @@
                             <i class="fas fa-user-md text-info"></i>
                             <span>كشف إنتاجية أطباء العيادات الاستشارية وتحويلات الأقسام (Doctor Referrals Matrix)</span>
                         </h5>
-                        <small class="text-muted">تحليل رقمي شامل لحجم عمل كل طبيب: الكشوفات (نقدي وضمان)، الإيرادات، وحجم الإحالات الصادرة للمختبر والأشعة والعمليات</small>
+                        <small class="text-muted">تحليل رقمي شامل لحجم عمل كل طبيب: الكشوفات، مقبوض الكاش، تحمل الضمان، مطالبات التأمين، وحجم الإحالات الصادرة</small>
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary px-3">
@@ -747,18 +747,21 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-4" style="width: 40px;">#</th>
-                                <th style="min-width: 200px;">الطبيب / الاختصاص</th>
-                                <th class="text-center" style="width: 100px;">كاش 💵</th>
-                                <th class="text-center" style="width: 100px;">ضمان 💳</th>
-                                <th class="text-center" style="width: 110px;">إجمالي الكشوفات</th>
-                                <th class="text-end" style="width: 140px;">إجمالي المقبوض</th>
-                                <th class="text-end" style="width: 140px;">مستحقات الطبيب</th>
-                                <th class="text-end" style="width: 140px;">صافي المستشفى</th>
-                                <th class="text-center" style="width: 100px;">🧪 مختبر</th>
-                                <th class="text-center" style="width: 100px;">🩻 أشعة/إيكو</th>
-                                <th class="text-center" style="width: 90px;">🏥 عمليات</th>
-                                <th class="text-center pe-4" style="width: 120px;">مجموع التحويلات</th>
+                                <th class="ps-4" style="width: 35px;">#</th>
+                                <th style="min-width: 170px;">الطبيب / الاختصاص</th>
+                                <th class="text-center" style="width: 75px;">كاش 💵</th>
+                                <th class="text-center" style="width: 75px;">ضمان 💳</th>
+                                <th class="text-center" style="width: 85px;">الكشوفات</th>
+                                <th class="text-end" style="width: 120px;">مقبوض كاش 💵</th>
+                                <th class="text-end" style="width: 125px;">تحمل الضمان 💳</th>
+                                <th class="text-end" style="width: 120px;">مطالبة الضمان 📑</th>
+                                <th class="text-end" style="width: 125px;">إجمالي القيمة (Gross)</th>
+                                <th class="text-end" style="width: 120px;">مستحقات الطبيب</th>
+                                <th class="text-end" style="width: 120px;">صافي المستشفى</th>
+                                <th class="text-center" style="width: 80px;">🧪 مختبر</th>
+                                <th class="text-center" style="width: 80px;">🩻 أشعة</th>
+                                <th class="text-center" style="width: 75px;">🏥 عمليات</th>
+                                <th class="text-center pe-4" style="width: 110px;">التحويلات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -768,7 +771,7 @@
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="avatar-circle rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center" 
-                                             style="width: 36px; height: 36px;">
+                                             style="width: 34px; height: 34px;">
                                             <i class="fas fa-user-md"></i>
                                         </div>
                                         <div>
@@ -790,8 +793,17 @@
                                 <td class="text-center">
                                     <strong class="font-monospace text-dark">{{ number_format($docRow['total_appts']) }}</strong>
                                 </td>
-                                <td class="text-end">
-                                    <strong class="font-monospace text-dark">{{ number_format($docRow['gross']) }}</strong> <small class="text-muted fs-8">د.ع</small>
+                                <td class="text-end font-monospace text-dark fw-bold">
+                                    {{ number_format($docRow['cash_revenue']) }} <small class="text-muted fs-8">د.ع</small>
+                                </td>
+                                <td class="text-end font-monospace text-info fw-bold">
+                                    {{ number_format($docRow['insurance_copay']) }} <small class="text-muted fs-8">د.ع</small>
+                                </td>
+                                <td class="text-end font-monospace text-muted">
+                                    {{ number_format($docRow['insurance_claim']) }} <small class="text-muted fs-8">د.ع</small>
+                                </td>
+                                <td class="text-end font-monospace text-dark fw-bold">
+                                    {{ number_format($docRow['gross']) }} <small class="text-muted fs-8">د.ع</small>
                                 </td>
                                 <td class="text-end font-monospace text-danger">
                                     {{ $docRow['doc_share'] > 0 ? number_format($docRow['doc_share']) : '0' }} <small class="text-muted fs-8">د.ع</small>
@@ -822,7 +834,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="12" class="text-center py-5">
+                                <td colspan="15" class="text-center py-5">
                                     <div class="py-4">
                                         <i class="fas fa-user-md fa-3x text-muted opacity-50 mb-3"></i>
                                         <h6 class="text-muted fw-bold">لا توجد كشوفات أو تحويلات مسجلة لأطباء الاستشارية في هذه الفترة</h6>
@@ -845,6 +857,15 @@
                                 </td>
                                 <td class="text-center font-monospace text-dark py-3">
                                     {{ number_format($doctorSummaryTotals['total_appts']) }}
+                                </td>
+                                <td class="text-end font-monospace text-dark py-3">
+                                    {{ number_format($doctorSummaryTotals['total_cash_revenue']) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace text-info py-3">
+                                    {{ number_format($doctorSummaryTotals['total_insurance_copay']) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace text-muted py-3">
+                                    {{ number_format($doctorSummaryTotals['total_insurance_claim']) }} د.ع
                                 </td>
                                 <td class="text-end font-monospace text-dark py-3">
                                     {{ number_format($doctorSummaryTotals['total_gross']) }} د.ع

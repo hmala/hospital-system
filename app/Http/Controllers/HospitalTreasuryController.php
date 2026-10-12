@@ -248,9 +248,10 @@ class HospitalTreasuryController extends Controller
         ];
 
         // 7. التحليل المالي والتحويلي لأطباء الاستشارية (Doctor BI & Referrals Analysis)
-        // استعلام كشوفات وإيرادات الاستشارية المحصلة (كاش مقابل ضمان) من واقع القيود المالية الفعلية
+        // استعلام كشوفات وإيرادات الاستشارية المحصلة (كاش مقابل ضمان) مفصلة بين نقد الدرج ومطالبات الضمان
         $revQuery = DB::table('consultation_revenues')
-            ->leftJoin('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id');
+            ->leftJoin('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id')
+            ->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
         if ($request->filled('from_date')) {
             $revQuery->whereDate('consultation_revenues.revenue_date', '>=', $request->from_date);
         }
@@ -262,6 +263,9 @@ class HospitalTreasuryController extends Controller
             DB::raw("SUM(CASE WHEN appointments.insurance_type IN ('hi', 'moi', 'interior_ministry', 'health_insurance') THEN 1 ELSE 0 END) as insurance_cnt"),
             DB::raw("SUM(CASE WHEN appointments.insurance_type IS NULL OR appointments.insurance_type = '' OR appointments.insurance_type = 'none' THEN 1 ELSE 0 END) as cash_cnt"),
             DB::raw('count(*) as total_cnt'),
+            DB::raw("SUM(CASE WHEN appointments.insurance_type IS NULL OR appointments.insurance_type = '' OR appointments.insurance_type = 'none' THEN consultation_revenues.total_amount ELSE 0 END) as cash_revenue"),
+            DB::raw("SUM(CASE WHEN appointments.insurance_type IN ('hi', 'moi', 'interior_ministry', 'health_insurance') THEN COALESCE(payments.amount, 0) ELSE 0 END) as insurance_copay"),
+            DB::raw("SUM(CASE WHEN appointments.insurance_type IN ('hi', 'moi', 'interior_ministry', 'health_insurance') THEN COALESCE(payments.insurance_share, consultation_revenues.total_amount - COALESCE(payments.amount, 0)) ELSE 0 END) as insurance_claim"),
             DB::raw('SUM(consultation_revenues.total_amount) as gross'),
             DB::raw('SUM(consultation_revenues.doctor_share) as doc_share'),
             DB::raw('SUM(consultation_revenues.hospital_share) as hosp_share')
@@ -316,6 +320,9 @@ class HospitalTreasuryController extends Controller
         $doctorAnalytics = [];
         $totalDoctorCashAppts = 0;
         $totalDoctorInsuranceAppts = 0;
+        $totalDoctorCashRevenue = 0;
+        $totalDoctorInsuranceCopay = 0;
+        $totalDoctorInsuranceClaim = 0;
         $totalDoctorGross = 0;
         $totalDoctorDocShare = 0;
         $totalDoctorHospShare = 0;
@@ -331,6 +338,9 @@ class HospitalTreasuryController extends Controller
             $insCnt = (int) ($rev->insurance_cnt ?? 0);
             $totalAppts = (int) ($rev->total_cnt ?? ($cashCnt + $insCnt));
 
+            $cashRevenue = (float) ($rev->cash_revenue ?? 0);
+            $insuranceCopay = (float) ($rev->insurance_copay ?? 0);
+            $insuranceClaim = (float) ($rev->insurance_claim ?? 0);
             $gross = (float) ($rev->gross ?? 0);
             $docShare = (float) ($rev->doc_share ?? 0);
             $hospShare = (float) ($rev->hosp_share ?? 0);
@@ -349,6 +359,9 @@ class HospitalTreasuryController extends Controller
                     'cash_cnt' => $cashCnt,
                     'insurance_cnt' => $insCnt,
                     'total_appts' => $totalAppts,
+                    'cash_revenue' => $cashRevenue,
+                    'insurance_copay' => $insuranceCopay,
+                    'insurance_claim' => $insuranceClaim,
                     'gross' => $gross,
                     'doc_share' => $docShare,
                     'hosp_share' => $hospShare,
@@ -360,6 +373,9 @@ class HospitalTreasuryController extends Controller
 
                 $totalDoctorCashAppts += $cashCnt;
                 $totalDoctorInsuranceAppts += $insCnt;
+                $totalDoctorCashRevenue += $cashRevenue;
+                $totalDoctorInsuranceCopay += $insuranceCopay;
+                $totalDoctorInsuranceClaim += $insuranceClaim;
                 $totalDoctorGross += $gross;
                 $totalDoctorDocShare += $docShare;
                 $totalDoctorHospShare += $hospShare;
@@ -381,6 +397,9 @@ class HospitalTreasuryController extends Controller
             'total_cash_appts' => $totalDoctorCashAppts,
             'total_insurance_appts' => $totalDoctorInsuranceAppts,
             'total_appts' => $totalDoctorCashAppts + $totalDoctorInsuranceAppts,
+            'total_cash_revenue' => $totalDoctorCashRevenue,
+            'total_insurance_copay' => $totalDoctorInsuranceCopay,
+            'total_insurance_claim' => $totalDoctorInsuranceClaim,
             'total_gross' => $totalDoctorGross,
             'total_doc_share' => $totalDoctorDocShare,
             'total_hosp_share' => $totalDoctorHospShare,

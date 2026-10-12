@@ -176,6 +176,9 @@ class HospitalTreasuryDashboardTest extends TestCase
         $response->assertSee('تحليل أطباء الاستشارية والتحويلات');
         $response->assertSee('د. حسام العلي');
         $response->assertSee('باطنية وقلبية');
+        $response->assertSee('مقبوض كاش');
+        $response->assertSee('تحمل الضمان');
+        $response->assertSee('مطالبة الضمان');
         $response->assertSee('50,000');
         $response->assertSee('30,000');
         $response->assertSee('20,000');
