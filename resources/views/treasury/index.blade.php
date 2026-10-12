@@ -734,7 +734,7 @@
                             <i class="fas fa-user-md text-info"></i>
                             <span>كشف إنتاجية أطباء العيادات الاستشارية وتحويلات الأقسام (Doctor Referrals Matrix)</span>
                         </h5>
-                        <small class="text-muted">تحليل رقمي شامل لحجم عمل كل طبيب: الكشوفات، مقبوض الكاش، تحمل الضمان، مطالبات التأمين، وحجم الإحالات الصادرة</small>
+                        <small class="text-muted">تحليل رقمي شامل لحجم عمل كل طبيب: الكشوفات، مقبوض الكاش، تحمل المريض، مطالبات التأمين، وحجم الإحالات الصادرة</small>
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary px-3">
@@ -752,9 +752,10 @@
                                 <th class="text-center" style="width: 75px;">كاش 💵</th>
                                 <th class="text-center" style="width: 75px;">ضمان 💳</th>
                                 <th class="text-center" style="width: 85px;">الكشوفات</th>
-                                <th class="text-end" style="width: 120px;">مقبوض كاش 💵</th>
-                                <th class="text-end" style="width: 125px;">تحمل الضمان 💳</th>
-                                <th class="text-end" style="width: 120px;">مطالبة الضمان 📑</th>
+                                <th class="text-end" style="width: 110px;">مقبوض كاش 💵</th>
+                                <th class="text-end" style="width: 115px;">تحمل المريض 💳</th>
+                                <th class="text-end" style="width: 125px; background-color: #ecfdf5;">نقد الدرج 💰</th>
+                                <th class="text-end" style="width: 115px;">مطالبة الضمان 📑</th>
                                 <th class="text-end" style="width: 125px;">إجمالي القيمة (Gross)</th>
                                 <th class="text-end" style="width: 120px;">مستحقات الطبيب</th>
                                 <th class="text-end" style="width: 120px;">صافي المستشفى</th>
@@ -799,6 +800,9 @@
                                 <td class="text-end font-monospace text-info fw-bold">
                                     {{ number_format($docRow['insurance_copay']) }} <small class="text-muted fs-8">د.ع</small>
                                 </td>
+                                <td class="text-end font-monospace fw-bold" style="background-color: #f0fdf4; color: #15803d;">
+                                    {{ number_format($docRow['cash_revenue'] + $docRow['insurance_copay']) }} <small class="text-success fs-8">د.ع</small>
+                                </td>
                                 <td class="text-end font-monospace text-muted">
                                     {{ number_format($docRow['insurance_claim']) }} <small class="text-muted fs-8">د.ع</small>
                                 </td>
@@ -834,7 +838,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="15" class="text-center py-5">
+                                <td colspan="16" class="text-center py-5">
                                     <div class="py-4">
                                         <i class="fas fa-user-md fa-3x text-muted opacity-50 mb-3"></i>
                                         <h6 class="text-muted fw-bold">لا توجد كشوفات أو تحويلات مسجلة لأطباء الاستشارية في هذه الفترة</h6>
@@ -863,6 +867,9 @@
                                 </td>
                                 <td class="text-end font-monospace text-info py-3">
                                     {{ number_format($doctorSummaryTotals['total_insurance_copay']) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace py-3 fw-bold" style="background-color: #dcfce7; color: #166534;">
+                                    {{ number_format($doctorSummaryTotals['total_cash_revenue'] + $doctorSummaryTotals['total_insurance_copay']) }} د.ع
                                 </td>
                                 <td class="text-end font-monospace text-muted py-3">
                                     {{ number_format($doctorSummaryTotals['total_insurance_claim']) }} د.ع
