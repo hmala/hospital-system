@@ -1172,7 +1172,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // 3. محرك الرسوم البيانية (Chart.js Engine)
-    
+    let deptBarChartInstance = null;
+    let deptDonutChartInstance = null;
+
     // دالة التبديل بين مخطط الأعمدة والمخطط الدائري للأقسام
     window.switchDeptChart = function(type) {
         const barBox = document.getElementById('deptBarChartContainer');
@@ -1184,11 +1186,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (donutBox) donutBox.style.display = 'block';
             if (btnBar) { btnBar.classList.remove('active', 'btn-primary'); btnBar.classList.add('btn-outline-primary'); }
             if (btnDonut) { btnDonut.classList.add('active', 'btn-primary'); btnDonut.classList.remove('btn-outline-primary'); }
+            if (deptDonutChartInstance) {
+                deptDonutChartInstance.resize();
+            }
         } else {
             if (donutBox) donutBox.style.display = 'none';
             if (barBox) barBox.style.display = 'block';
             if (btnDonut) { btnDonut.classList.remove('active', 'btn-primary'); btnDonut.classList.add('btn-outline-primary'); }
             if (btnBar) { btnBar.classList.add('active', 'btn-primary'); btnBar.classList.remove('btn-outline-primary'); }
+            if (deptBarChartInstance) {
+                deptBarChartInstance.resize();
+            }
         }
     };
 
@@ -1201,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const deptBarCtx = document.getElementById('deptRevenueBarChart');
     if (deptBarCtx && deptData.length > 0) {
         const maxDeptVal = Math.max(...deptData);
-        new Chart(deptBarCtx, {
+        deptBarChartInstance = new Chart(deptBarCtx, {
             type: 'bar',
             data: {
                 labels: deptLabels,
@@ -1279,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ب) بلجن رسم إجمالي الإيراد في قلب الدائرة (Donut Center Text Plugin)
+    // ب) مخطط توزيع الإيرادات الدائري البديل (Donut Chart)
     const donutCenterPlugin = {
         id: 'donutCenterText',
         beforeDraw(chart) {
@@ -1303,14 +1311,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // أ) مخطط توزيع الإيرادات الدائري (Donut Chart)
-    const deptLabels = @json($deptChartLabels);
-    const deptData = @json($deptChartData);
-    const deptColors = @json($deptChartColors);
-
     const donutCtx = document.getElementById('deptRevenueDonutChart');
     if (donutCtx && deptData.length > 0) {
-        new Chart(donutCtx, {
+        deptDonutChartInstance = new Chart(donutCtx, {
             type: 'doughnut',
             data: {
                 labels: deptLabels,
@@ -1375,7 +1378,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ب) بلجن إظهار الأرقام والمبالغ مباشرة فوق كل عمود (Bar Data Labels Plugin)
+    // ج) مخطط حركة النقدية اليومية (Cash Flow Bar / Line Chart)
     const barLabelsPlugin = {
         id: 'barLabels',
         afterDatasetsDraw(chart) {
@@ -1395,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             let formatted = Number(dataVal).toLocaleString();
                             if (dataVal >= 1000000) {
                                 formatted = (dataVal / 1000000).toFixed(1) + 'M';
-                            } else if (dataVal >= 10000) {
+                            } else if (dataVal >= 1000) {
                                 formatted = Math.round(dataVal / 1000) + 'K';
                             }
                             ctx.fillText(formatted, element.x, element.y - 4);
@@ -1407,13 +1410,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // مخطط حركة النقدية اليومية (Cash Flow Bar / Line Chart)
     const trendLabels = @json($trendLabels);
     const trendInflows = @json($trendInflows);
     const trendOutflows = @json($trendOutflows);
 
     const trendCtx = document.getElementById('cashFlowTrendChart');
     if (trendCtx) {
+        const maxFlow = Math.max(...trendInflows, ...trendOutflows, 1000);
         new Chart(trendCtx, {
             type: 'bar',
             data: {
@@ -1443,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
-                        top: 24
+                        top: 28
                     }
                 },
                 plugins: {
@@ -1469,6 +1472,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     y: {
                         beginAtZero: true,
+                        suggestedMax: maxFlow * 1.2,
                         ticks: {
                             callback: function(value) {
                                 if (value >= 1000000) return (value / 1000000) + 'M';
