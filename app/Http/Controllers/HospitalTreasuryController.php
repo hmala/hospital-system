@@ -10,11 +10,13 @@ use App\Models\Payment;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\HospitalTreasuryExport;
+use App\Models\ConsultationRevenue;
 
 class HospitalTreasuryController extends Controller
 {
@@ -82,16 +84,170 @@ class HospitalTreasuryController extends Controller
             });
         }
 
-        // إحصائيات الفترة المفلترة
-        $periodInflow = (clone $query)->inflow()->sum('amount');
-        $periodOutflow = (clone $query)->outflow()->sum('amount');
-        $periodDoctorPayouts = (clone $query)->where('category', 'doctor_payout')->sum('amount');
-        $periodPurchases = (clone $query)->where('category', 'purchase')->sum('amount');
-        $periodOperational = (clone $query)->whereIn('category', [
+        // 3. استعلام أساسي للفترة الزمنية المحددة بدون تقييد بنوع أو بند محدد
+        $basePeriodQuery = FinancialTransaction::query();
+        if ($request->filled('from_date')) {
+            $basePeriodQuery->whereDate('performed_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $basePeriodQuery->whereDate('performed_at', '<=', $request->to_date);
+        }
+
+        $periodInflow = (float) (clone $basePeriodQuery)->inflow()->sum('amount');
+        $periodOutflow = (float) (clone $basePeriodQuery)->outflow()->sum('amount');
+        $periodDoctorPayouts = (float) (clone $basePeriodQuery)->where('category', 'doctor_payout')->sum('amount');
+        $periodPurchases = (float) (clone $basePeriodQuery)->where('category', 'purchase')->sum('amount');
+        $periodOperational = (float) (clone $basePeriodQuery)->whereIn('category', [
             'operational', 'salary', 'maintenance', 'utilities', 'medical_supplies', 'other'
         ])->sum('amount');
 
-        // جلب الحركات مرتبة من الأحدث
+        // 4. مصفوفة إعداد وتوزيع الأقسام (Modular Config-Driven Departments)
+        // إذا أردت إضافة أي قسم بالمستقبل، يكفي إضافة سطر واحد هنا
+        $departmentsConfig = [
+            'consultation' => [
+                'name' => 'العيادات الاستشارية',
+                'icon' => 'fa-stethoscope',
+                'color' => '#0284c7', // Primary Sky
+                'bg_class' => 'bg-primary-subtle',
+                'text_class' => 'text-primary',
+                'border_class' => 'border-primary-subtle',
+            ],
+            'radiology' => [
+                'name' => 'الأشعة والسونار والإيكو',
+                'icon' => 'fa-x-ray',
+                'color' => '#0d9488', // Teal
+                'bg_class' => 'bg-info-subtle',
+                'text_class' => 'text-info',
+                'border_class' => 'border-info-subtle',
+            ],
+            'lab' => [
+                'name' => 'المختبر والتحاليل الطبية',
+                'icon' => 'fa-vial',
+                'color' => '#7c3aed', // Purple
+                'bg_class' => 'bg-purple-subtle',
+                'text_class' => 'text-purple',
+                'border_class' => 'border-purple-subtle',
+            ],
+            'surgery' => [
+                'name' => 'العمليات الجراحية والرقود',
+                'icon' => 'fa-procedures',
+                'color' => '#d97706', // Amber/Orange
+                'bg_class' => 'bg-warning-subtle',
+                'text_class' => 'text-warning',
+                'border_class' => 'border-warning-subtle',
+            ],
+            'emergency' => [
+                'name' => 'قسم الطوارئ والإسعاف',
+                'icon' => 'fa-ambulance',
+                'color' => '#dc2626', // Danger Red
+                'bg_class' => 'bg-danger-subtle',
+                'text_class' => 'text-danger',
+                'border_class' => 'border-danger-subtle',
+            ],
+            'pharmacy' => [
+                'name' => 'الصيدلية ونقطة البيع',
+                'icon' => 'fa-pills',
+                'color' => '#059669', // Emerald Green
+                'bg_class' => 'bg-success-subtle',
+                'text_class' => 'text-success',
+                'border_class' => 'border-success-subtle',
+            ],
+            'general_income' => [
+                'name' => 'إيرادات وتحصيلات عامة',
+                'icon' => 'fa-coins',
+                'color' => '#475569', // Slate
+                'bg_class' => 'bg-secondary-subtle',
+                'text_class' => 'text-secondary',
+                'border_class' => 'border-secondary-subtle',
+            ],
+        ];
+
+        // احتساب إحصائيات كل قسم
+        $departmentStats = [];
+        $deptChartLabels = [];
+        $deptChartData = [];
+        $deptChartColors = [];
+
+        foreach ($departmentsConfig as $catKey => $config) {
+            $catQuery = (clone $basePeriodQuery)->where('category', $catKey)->inflow();
+            $count = (int) $catQuery->count();
+            $gross = (float) $catQuery->sum('amount');
+            $percentage = $periodInflow > 0 ? round(($gross / $periodInflow) * 100, 1) : 0;
+
+            // حصص وتكاليف القسم
+            $costs = 0;
+            $net = $gross;
+
+            if ($catKey === 'consultation') {
+                $crQuery = ConsultationRevenue::query();
+                if ($request->filled('from_date')) {
+                    $crQuery->whereDate('revenue_date', '>=', $request->from_date);
+                }
+                if ($request->filled('to_date')) {
+                    $crQuery->whereDate('revenue_date', '<=', $request->to_date);
+                }
+                $docShare = (float) $crQuery->sum('doctor_share');
+                $hospShare = (float) $crQuery->sum('hospital_share');
+                if ($docShare > 0) {
+                    $costs = $docShare;
+                    $net = $hospShare;
+                }
+            }
+
+            $departmentStats[$catKey] = array_merge($config, [
+                'count' => $count,
+                'gross' => $gross,
+                'costs' => $costs,
+                'net' => $net,
+                'percentage' => $percentage,
+            ]);
+
+            if ($gross > 0) {
+                $deptChartLabels[] = $config['name'];
+                $deptChartData[] = $gross;
+                $deptChartColors[] = $config['color'];
+            }
+        }
+
+        // 5. بيانات المنحنى البياني الزمني (Daily Cash Flow Trend)
+        $trendStartDate = $request->filled('from_date') 
+            ? Carbon::parse($request->from_date)->startOfDay() 
+            : now()->subDays(6)->startOfDay();
+        $trendEndDate = $request->filled('to_date') 
+            ? Carbon::parse($request->to_date)->endOfDay() 
+            : now()->endOfDay();
+
+        if ($trendStartDate->diffInDays($trendEndDate) > 30) {
+            $trendStartDate = (clone $trendEndDate)->subDays(13)->startOfDay();
+        }
+
+        $trendLabels = [];
+        $trendInflows = [];
+        $trendOutflows = [];
+
+        try {
+            $dateRange = CarbonPeriod::create($trendStartDate, $trendEndDate);
+            foreach ($dateRange as $dt) {
+                $dString = $dt->toDateString();
+                $trendLabels[] = $dt->format('m/d');
+                $trendInflows[] = (float) FinancialTransaction::inflow()->whereDate('performed_at', $dString)->sum('amount');
+                $trendOutflows[] = (float) FinancialTransaction::outflow()->whereDate('performed_at', $dString)->sum('amount');
+            }
+        } catch (\Throwable $e) {
+            $trendLabels = [now()->format('m/d')];
+            $trendInflows = [(float) $periodInflow];
+            $trendOutflows = [(float) $periodOutflow];
+        }
+
+        // 6. توزيع طرق الدفع (Cash vs Digital)
+        $paymentMethodStats = [
+            'cash' => (float) (clone $basePeriodQuery)->inflow()->where('payment_method', 'cash')->sum('amount'),
+            'card' => (float) (clone $basePeriodQuery)->inflow()->where('payment_method', 'card')->sum('amount'),
+            'bank_transfer' => (float) (clone $basePeriodQuery)->inflow()->where('payment_method', 'bank_transfer')->sum('amount'),
+            'cheque' => (float) (clone $basePeriodQuery)->inflow()->where('payment_method', 'cheque')->sum('amount'),
+        ];
+
+        // جلب الحركات المفلترة مرتبة من الأحدث
         $transactions = $query->orderBy('performed_at', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(25)
@@ -113,6 +269,15 @@ class HospitalTreasuryController extends Controller
             'periodDoctorPayouts',
             'periodPurchases',
             'periodOperational',
+            'departmentStats',
+            'departmentsConfig',
+            'deptChartLabels',
+            'deptChartData',
+            'deptChartColors',
+            'trendLabels',
+            'trendInflows',
+            'trendOutflows',
+            'paymentMethodStats',
             'doctors',
             'suppliers',
             'categories',

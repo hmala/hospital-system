@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'خزينة المستشفى المركزية والمصروفات')
+@section('title', 'خزينة المستشفى المركزية والحسابات العامة')
 
 @section('content')
 <div class="container-fluid px-4 py-3">
@@ -11,25 +11,30 @@
                 <ol class="breadcrumb mb-1">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="#">الحسابات والمالية</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">خزينة المستشفى والمصروفات</li>
+                    <li class="breadcrumb-item active" aria-current="page">خزينة المستشفى المركزية</li>
                 </ol>
             </nav>
-            <h3 class="fw-bold mb-0 text-dark">
-                <i class="fas fa-vault text-warning me-2"></i>
-                خزينة المستشفى المركزية وحركة النقدية
+            <h3 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                <i class="fas fa-vault text-warning"></i>
+                <span>خزينة المستشفى المركزية والتحليل المالي</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-7 fw-normal">لوحة قيادة تفاعلية</span>
             </h3>
-            <p class="text-muted small mb-0">دفتر الخزينة العام (General Cash Flow Ledger) لربط كافة المقبوضات بمصروفات الأطباء والمشتريات والنثريات</p>
+            <p class="text-muted small mb-0">نظام الخزينة الموحد (Unified Hospital Treasury) - توزيع الإيرادات حسب الأقسام، التحليلات البيانية، وسجل القيود المحاسبية</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-danger d-flex align-items-center gap-2 shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#expenseModal">
+            <button type="button" class="btn btn-danger d-flex align-items-center gap-2 shadow-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#expenseModal">
                 <i class="fas fa-minus-circle"></i>
                 <span>+ سند صرف مصروفات</span>
             </button>
-            <button type="button" class="btn btn-success d-flex align-items-center gap-2 shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#incomeModal">
+            <button type="button" class="btn btn-success d-flex align-items-center gap-2 shadow-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#incomeModal">
                 <i class="fas fa-plus-circle"></i>
                 <span>+ سند قبض إيراد</span>
             </button>
-            <a href="{{ route('treasury.export', request()->query()) }}" class="btn btn-outline-success d-flex align-items-center gap-2 shadow-sm">
+            <button type="button" onclick="window.print()" class="btn btn-outline-dark d-flex align-items-center gap-2 shadow-sm rounded-3">
+                <i class="fas fa-print"></i>
+                <span>طباعة التقرير</span>
+            </button>
+            <a href="{{ route('treasury.export', request()->query()) }}" class="btn btn-outline-success d-flex align-items-center gap-2 shadow-sm rounded-3">
                 <i class="fas fa-file-excel"></i>
                 <span>تصدير Excel</span>
             </a>
@@ -37,7 +42,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-3" role="alert">
             <i class="fas fa-check-circle me-2"></i>
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -45,21 +50,21 @@
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-3" role="alert">
             <i class="fas fa-exclamation-triangle me-2"></i>
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
-    <!-- بطاقات الإحصائيات المالية المتقدمة (KPI Cards) -->
+    <!-- بطاقات المؤشرات المالية العامة (KPI Cards) -->
     <div class="row g-3 mb-4">
-        <!-- رصيد الخزينة الإجمالي اللحظي -->
+        <!-- رصيد الخزينة الإجمالي الفعلي اللحظي -->
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff;">
-                <div class="card-body p-4 position-relative">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff;">
+                <div class="card-body p-3.5 position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-white-50 small">الرصيد الفعلي بالخزينة</span>
+                        <span class="text-uppercase fw-bold text-white-50 small">الرصيد الفعلي المتوفر بالخزينة</span>
                         <div class="rounded-circle p-2 bg-white bg-opacity-10 text-warning">
                             <i class="fas fa-vault fa-lg"></i>
                         </div>
@@ -67,9 +72,9 @@
                     <h2 class="fw-bold mb-1 {{ $currentTreasuryBalance >= 0 ? 'text-warning' : 'text-danger' }}">
                         {{ number_format($currentTreasuryBalance) }} <small class="fs-6 text-white-50">د.ع</small>
                     </h2>
-                    <div class="small text-white-50 mt-2 d-flex justify-content-between">
-                        <span>إجمالي الوارد: {{ number_format($totalAllTimeInflow) }}</span>
-                        <span>المنصرف: {{ number_format($totalAllTimeOutflow) }}</span>
+                    <div class="small text-white-50 mt-2 d-flex justify-content-between pt-2 border-top border-secondary border-opacity-25">
+                        <span>إجمالي كل الوارد: <strong class="text-success">{{ number_format($totalAllTimeInflow) }}</strong></span>
+                        <span>المنصرف: <strong class="text-danger">{{ number_format($totalAllTimeOutflow) }}</strong></span>
                     </div>
                 </div>
             </div>
@@ -78,9 +83,9 @@
         <!-- إجمالي المقبوضات للفترة -->
         <div class="col-12 col-md-6 col-xl-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-4 border-start border-4 border-success">
+                <div class="card-body p-3.5 border-start border-4 border-success">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-muted small">إجمالي الوارد (الفترة)</span>
+                        <span class="text-uppercase fw-bold text-muted small">إجمالي الوارد (الفترة المحددة)</span>
                         <div class="rounded-circle p-2 bg-success bg-opacity-10 text-success">
                             <i class="fas fa-arrow-down fa-lg"></i>
                         </div>
@@ -88,7 +93,10 @@
                     <h3 class="fw-bold text-success mb-1">
                         + {{ number_format($periodInflow) }} <small class="fs-6 text-muted">د.ع</small>
                     </h3>
-                    <span class="small text-muted">كافة مقبوضات الكاشير والإيرادات</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between">
+                        <span>كافة إيرادات الأقسام والكاشير</span>
+                        <span class="badge bg-success-subtle text-success">وارد (+)</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -96,9 +104,9 @@
         <!-- إجمالي المصروفات للفترة -->
         <div class="col-12 col-md-6 col-xl-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-4 border-start border-4 border-danger">
+                <div class="card-body p-3.5 border-start border-4 border-danger">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-muted small">إجمالي المنصرف (الفترة)</span>
+                        <span class="text-uppercase fw-bold text-muted small">إجمالي المنصرف (الفترة المحددة)</span>
                         <div class="rounded-circle p-2 bg-danger bg-opacity-10 text-danger">
                             <i class="fas fa-arrow-up fa-lg"></i>
                         </div>
@@ -106,192 +114,532 @@
                     <h3 class="fw-bold text-danger mb-1">
                         - {{ number_format($periodOutflow) }} <small class="fs-6 text-muted">د.ع</small>
                     </h3>
-                    <span class="small text-muted">مستحقات أطباء + مشتريات + مصاريف</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between">
+                        <span>مستحقات أطباء ومشتريات ونثريات</span>
+                        <span class="badge bg-danger-subtle text-danger">صادر (-)</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- توزيع المنصرفات -->
+        <!-- صافي حركة الفترة (Net Period Balance) -->
+        @php
+            $netPeriod = $periodInflow - $periodOutflow;
+        @endphp
         <div class="col-12 col-md-6 col-xl-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3 d-flex flex-column justify-content-around">
-                    <div class="d-flex justify-content-between align-items-center small">
-                        <span class="text-muted"><i class="fas fa-user-md text-primary me-1"></i> صرفيات الأطباء:</span>
-                        <span class="fw-bold text-dark">{{ number_format($periodDoctorPayouts) }} د.ع</span>
+                <div class="card-body p-3.5 border-start border-4 {{ $netPeriod >= 0 ? 'border-primary' : 'border-warning' }}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-uppercase fw-bold text-muted small">صافي حركة الفترة (الفائض / العجز)</span>
+                        <div class="rounded-circle p-2 {{ $netPeriod >= 0 ? 'bg-primary bg-opacity-10 text-primary' : 'bg-warning bg-opacity-10 text-warning' }}">
+                            <i class="fas fa-scale-balanced fa-lg"></i>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center small mt-2">
-                        <span class="text-muted"><i class="fas fa-boxes text-warning me-1"></i> فواتير المشتريات:</span>
-                        <span class="fw-bold text-dark">{{ number_format($periodPurchases) }} د.ع</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center small mt-2">
-                        <span class="text-muted"><i class="fas fa-cogs text-info me-1"></i> نثريات وتشغيلية:</span>
-                        <span class="fw-bold text-dark">{{ number_format($periodOperational) }} د.ع</span>
+                    <h3 class="fw-bold {{ $netPeriod >= 0 ? 'text-primary' : 'text-warning' }} mb-1">
+                        {{ $netPeriod >= 0 ? '+' : '' }}{{ number_format($netPeriod) }} <small class="fs-6 text-muted">د.ع</small>
+                    </h3>
+                    <div class="small text-muted mt-2 d-flex justify-content-between">
+                        <span>الوارد مطروحاً منه المصروفات</span>
+                        <span class="badge {{ $netPeriod >= 0 ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning' }}">
+                            {{ $netPeriod >= 0 ? 'فائض نقدي' : 'عجز مؤقت' }}
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- شريط الفلاتر والبحث -->
+    <!-- شريط الفلاتر والبحث الزمني الموحد -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-3">
-            <form method="GET" action="{{ route('treasury.index') }}" class="row g-2 align-items-end">
-                <div class="col-12 col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1">من تاريخ</label>
-                    <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request('from_date') }}">
-                </div>
-                <div class="col-12 col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1">إلى تاريخ</label>
-                    <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request('to_date') }}">
-                </div>
-                <div class="col-12 col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1">نوع الحركة</label>
-                    <select name="voucher_type" class="form-select form-select-sm">
-                        <option value="all">كافة الحركات</option>
-                        <option value="inflow" {{ request('voucher_type') === 'inflow' ? 'selected' : '' }}>وارد فقط (+)</option>
-                        <option value="outflow" {{ request('voucher_type') === 'outflow' ? 'selected' : '' }}>صادر فقط (-)</option>
-                    </select>
-                </div>
-                <div class="col-12 col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1">البند / التصنيف</label>
-                    <select name="category" class="form-select form-select-sm">
-                        <option value="all">كافة التصنيفات</option>
-                        @foreach($categories as $key => $name)
-                            <option value="{{ $key }}" {{ request('category') === $key ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label small fw-bold text-muted mb-1">بحث برقم السند أو البيان</label>
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control" placeholder="رقم السند، الملاحظات..." value="{{ request('search') }}">
-                        <button type="submit" class="btn btn-primary px-3">
-                            <i class="fas fa-search me-1"></i> تصفية
-                        </button>
+            <form method="GET" action="{{ route('treasury.index') }}" id="treasuryFilterForm">
+                <!-- أزرار الاختيار السريع للفترات -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                    <div class="d-flex flex-wrap align-items-center gap-1.5">
+                        <span class="small fw-bold text-muted me-1"><i class="fas fa-calendar-day me-1"></i> فترات سريعة:</span>
+                        <button type="button" onclick="setQuickDate('today')" class="btn btn-xs btn-outline-secondary rounded-pill px-3 py-1">اليوم</button>
+                        <button type="button" onclick="setQuickDate('yesterday')" class="btn btn-xs btn-outline-secondary rounded-pill px-3 py-1">أمس</button>
+                        <button type="button" onclick="setQuickDate('week')" class="btn btn-xs btn-outline-secondary rounded-pill px-3 py-1">هذا الأسبوع</button>
+                        <button type="button" onclick="setQuickDate('month')" class="btn btn-xs btn-outline-secondary rounded-pill px-3 py-1">هذا الشهر</button>
+                        <button type="button" onclick="setQuickDate('all')" class="btn btn-xs btn-outline-secondary rounded-pill px-3 py-1">كل الوقت</button>
+                    </div>
+                    <div>
+                        <span class="small text-muted font-monospace">الفترة الحالية: {{ request('from_date') ?: 'البداية' }} ⬅ {{ request('to_date') ?: 'الآن' }}</span>
                     </div>
                 </div>
-                <div class="col-12 col-md-1">
-                    <a href="{{ route('treasury.index') }}" class="btn btn-sm btn-outline-secondary w-100" title="إعادة ضبط">
-                        <i class="fas fa-redo"></i>
-                    </a>
+
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">من تاريخ</label>
+                        <input type="date" name="from_date" id="from_date_input" class="form-control form-control-sm" value="{{ request('from_date') }}">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">إلى تاريخ</label>
+                        <input type="date" name="to_date" id="to_date_input" class="form-control form-control-sm" value="{{ request('to_date') }}">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">نوع الحركة</label>
+                        <select name="voucher_type" class="form-select form-select-sm">
+                            <option value="all">كافة الحركات</option>
+                            <option value="inflow" {{ request('voucher_type') === 'inflow' ? 'selected' : '' }}>وارد فقط (+)</option>
+                            <option value="outflow" {{ request('voucher_type') === 'outflow' ? 'selected' : '' }}>صادر فقط (-)</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">البند / التصنيف</label>
+                        <select name="category" class="form-select form-select-sm">
+                            <option value="all">كافة التصنيفات والأقسام</option>
+                            @foreach($categories as $key => $name)
+                                <option value="{{ $key }}" {{ request('category') === $key ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-bold text-muted mb-1">بحث برقم السند أو البيان</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" placeholder="رقم السند، الوصف، الملاحظات..." value="{{ request('search') }}">
+                            <button type="submit" class="btn btn-primary px-3">
+                                <i class="fas fa-search me-1"></i> تصفية
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-1">
+                        <a href="{{ route('treasury.index') }}" class="btn btn-sm btn-outline-secondary w-100" title="إعادة ضبط الفلاتر">
+                            <i class="fas fa-redo"></i>
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- جدول كشف حركة الخزينة -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <div class="card-header bg-white py-3 px-4 border-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0 text-dark">
-                <i class="fas fa-list-check text-primary me-2"></i>
-                سجل القيود وحركات الخزينة
-            </h5>
-            <span class="badge bg-light text-dark border px-3 py-2">
-                إجمالي السجلات: {{ $transactions->total() }}
-            </span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">#</th>
-                        <th>رقم السند</th>
-                        <th>التاريخ والوقت</th>
-                        <th>الاتجاه</th>
-                        <th>البند / التصنيف</th>
-                        <th>البيان والوصف</th>
-                        <th>المبلغ</th>
-                        <th>طريقة الدفع</th>
-                        <th>المستخدم</th>
-                        <th class="text-center pe-4">الإجراء</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($transactions as $index => $trx)
-                    <tr>
-                        <td class="ps-4 text-muted small">{{ $transactions->firstItem() + $index }}</td>
-                        <td>
-                            <span class="badge bg-light text-dark border fw-bold px-2 py-1">
-                                {{ $trx->voucher_number ?: ('#' . $trx->id) }}
-                            </span>
-                        </td>
-                        <td class="small text-muted">
-                            <i class="far fa-clock me-1"></i>
-                            {{ $trx->performed_at ? $trx->performed_at->format('Y-m-d H:i') : $trx->created_at->format('Y-m-d H:i') }}
-                        </td>
-                        <td>
-                            @if($trx->isInflow())
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                    <i class="fas fa-arrow-down me-1"></i> وارد (+)
-                                </span>
+    <!-- ================= شريط التبويبات الثلاثة (Modern 3-Tab Architecture) ================= -->
+    <ul class="nav nav-pills p-1.5 bg-white border shadow-sm rounded-4 mb-4 gap-2" id="treasuryTabs" role="tablist">
+        <li class="nav-item flex-fill" role="presentation">
+            <button class="nav-link active w-100 py-2.5 rounded-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                    id="analytics-tab-btn" data-bs-toggle="pill" data-bs-target="#analytics-tab-pane" type="button" role="tab" aria-selected="true">
+                <i class="fas fa-chart-pie text-primary fs-6"></i>
+                <span>1. المخططات البيانية والتحليل المالي</span>
+            </button>
+        </li>
+        <li class="nav-item flex-fill" role="presentation">
+            <button class="nav-link w-100 py-2.5 rounded-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                    id="departments-tab-btn" data-bs-toggle="pill" data-bs-target="#departments-tab-pane" type="button" role="tab" aria-selected="false">
+                <i class="fas fa-sitemap text-teal fs-6" style="color: #0d9488;"></i>
+                <span>2. جدول إيرادات ومصروفات الأقسام</span>
+                <span class="badge bg-teal-subtle text-teal border rounded-pill px-2" style="background:#ccfbf1; color:#0f766e;">{{ count($departmentStats) }} أقسام</span>
+            </button>
+        </li>
+        <li class="nav-item flex-fill" role="presentation">
+            <button class="nav-link w-100 py-2.5 rounded-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                    id="ledger-tab-btn" data-bs-toggle="pill" data-bs-target="#ledger-tab-pane" type="button" role="tab" aria-selected="false">
+                <i class="fas fa-receipt text-success fs-6"></i>
+                <span>3. سجل القيود والوصولات التفصيلية</span>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">{{ $transactions->total() }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- محتوى التبويبات -->
+    <div class="tab-content" id="treasuryTabsContent">
+
+        <!-- ================= التبويب 1: المخططات البيانية والتحليل المالي ================= -->
+        <div class="tab-pane fade show active" id="analytics-tab-pane" role="tabpanel" tabindex="0">
+            <div class="row g-4 mb-4">
+                <!-- مخطط توزيع الإيرادات حسب الأقسام (Donut Chart) -->
+                <div class="col-12 col-xl-5">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-pie text-primary me-2"></i>توزيع مصادر الإيرادات حسب الأقسام</h6>
+                                <small class="text-muted">نسبة مساهمة كل قسم في إجمالي دخل المستشفى</small>
+                            </div>
+                            <span class="badge bg-light text-dark border font-monospace">{{ number_format($periodInflow) }} د.ع</span>
+                        </div>
+                        <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                            @if(count($deptChartData) > 0 && $periodInflow > 0)
+                                <div style="position: relative; height: 260px; width: 100%; max-width: 320px;">
+                                    <canvas id="deptRevenueDonutChart"></canvas>
+                                </div>
+                                <div class="w-100 mt-4 pt-3 border-top">
+                                    <div class="row g-2">
+                                        @foreach($departmentStats as $dKey => $dStat)
+                                            @if($dStat['gross'] > 0)
+                                                <div class="col-6">
+                                                    <div class="p-2 rounded-3 border bg-light small d-flex justify-content-between align-items-center">
+                                                        <span class="d-flex align-items-center gap-1.5 text-truncate">
+                                                            <span class="rounded-circle d-inline-block" style="width: 10px; height: 10px; background-color: {{ $dStat['color'] }};"></span>
+                                                            <strong class="text-dark">{{ $dStat['name'] }}</strong>
+                                                        </span>
+                                                        <span class="fw-bold font-monospace" style="color: {{ $dStat['color'] }};">{{ $dStat['percentage'] }}%</span>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
                             @else
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                                    <i class="fas fa-arrow-up me-1"></i> صادر (-)
-                                </span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
-                                {{ $trx->category_label }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="fw-bold text-dark">{{ $trx->description }}</div>
-                            @if($trx->notes)
-                                <div class="text-muted small text-truncate" style="max-width: 320px;" title="{{ $trx->notes }}">
-                                    <i class="far fa-comment-dots me-1"></i>{{ $trx->notes }}
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-chart-pie fa-3x opacity-25 mb-3"></i>
+                                    <h6 class="fw-bold">لا توجد إيرادات مسجلة لهذه الفترة</h6>
+                                    <small>قم باختيار فترة زمنية أوسع لعرض المخطط البياني</small>
                                 </div>
                             @endif
-                        </td>
-                        <td>
-                            <span class="fw-bold fs-6 {{ $trx->isInflow() ? 'text-success' : 'text-danger' }}">
-                                {{ $trx->isInflow() ? '+' : '-' }} {{ number_format($trx->amount) }} <small class="text-muted fs-7">د.ع</small>
-                            </span>
-                        </td>
-                        <td class="small">
-                            <span class="badge bg-light text-muted border">
-                                <i class="fas fa-money-bill-wave me-1"></i>{{ $trx->payment_method_label }}
-                            </span>
-                        </td>
-                        <td class="small text-muted">
-                            <i class="far fa-user me-1"></i>
-                            {{ optional($trx->performer)->name ?: 'النظام' }}
-                        </td>
-                        <td class="text-center pe-4">
-                            @if($trx->related_type !== \App\Models\Payment::class)
-                                <form method="POST" action="{{ route('treasury.destroy', $trx) }}" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا السند؟');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger p-1 px-2" title="حذف السند">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            @else
-                                <span class="text-muted small" title="مرتبط بإيصال كاشير">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="text-center py-5">
-                            <div class="py-4">
-                                <i class="fas fa-vault text-muted fa-3x mb-3 opacity-50"></i>
-                                <h6 class="text-muted fw-bold">لا توجد حركات مسجلة في الخزينة حالياً</h6>
-                                <p class="text-muted small mb-0">يمكنك تسجيل سند صرف أو قبض جديد عبر الأزرار بالأعلى.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- مخطط المنحنى الزمني لحركة النقدية (Cash Flow Trend Chart) -->
+                <div class="col-12 col-xl-7">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white py-3 px-4 border-bottom border-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-line text-success me-2"></i>منحنى حركة النقدية اليومية (الوارد مقابل المنصرف)</h6>
+                                <small class="text-muted">مقارنة السيولة الداخلة والخارجة لاكتشاف أوقات الذروة</small>
                             </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-square me-1"></i>الوارد (+)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-square me-1"></i>المنصرف (-)</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div style="position: relative; height: 320px; width: 100%;">
+                                <canvas id="cashFlowTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- بطاقات ملخص طرق الدفع والمصروفات -->
+            <div class="row g-4">
+                <!-- توزيع طرق التحصيل (Cash vs Electronic) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white py-3 px-4 border-bottom border-light">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-credit-card text-info me-2"></i>توزيع طرق التحصيل المالي (النقد مقابل الرقمي)</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <div class="p-3 rounded-4 border bg-light h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small fw-bold"><i class="fas fa-money-bill-wave text-success me-1"></i> النقد في الدرج (Cash)</span>
+                                            <span class="badge bg-success-subtle text-success">نقدي</span>
+                                        </div>
+                                        <h4 class="fw-bold text-dark mb-1 font-monospace">{{ number_format($paymentMethodStats['cash']) }} <small class="fs-7 text-muted">د.ع</small></h4>
+                                        <small class="text-muted">السيولة النقدية المباشرة في صندوق الكاشير</small>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="p-3 rounded-4 border bg-light h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small fw-bold"><i class="fas fa-qrcode text-primary me-1"></i> دفع إلكتروني وبطاقات (Card)</span>
+                                            <span class="badge bg-primary-subtle text-primary">إلكتروني</span>
+                                        </div>
+                                        <h4 class="fw-bold text-dark mb-1 font-monospace">{{ number_format($paymentMethodStats['card']) }} <small class="fs-7 text-muted">د.ع</small></h4>
+                                        <small class="text-muted">زين كاش، ماستركارد، وأجهزة الدفع الإلكتروني (POS)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تحليل وتوزيع المصروفات التشغيلية -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white py-3 px-4 border-bottom border-light">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-money-bill-transfer text-danger me-2"></i>توزيع المصروفات والمدفوعات</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex flex-column gap-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-dark small fw-bold"><i class="fas fa-user-md text-primary me-2"></i> صرفيات مستحقات الأطباء (Consultant & ER Payouts)</span>
+                                    <strong class="font-monospace text-dark">{{ number_format($periodDoctorPayouts) }} د.ع</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-primary" style="width: {{ $periodOutflow > 0 ? ($periodDoctorPayouts / $periodOutflow) * 100 : 0 }}%;"></div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-dark small fw-bold"><i class="fas fa-boxes text-warning me-2"></i> فواتير المشتريات والموردين (Purchases & Supplies)</span>
+                                    <strong class="font-monospace text-dark">{{ number_format($periodPurchases) }} د.ع</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ $periodOutflow > 0 ? ($periodPurchases / $periodOutflow) * 100 : 0 }}%;"></div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-dark small fw-bold"><i class="fas fa-cogs text-info me-2"></i> نثريات، رواتب ومصاريف تشغيلية (Operational Costs)</span>
+                                    <strong class="font-monospace text-dark">{{ number_format($periodOperational) }} د.ع</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-info" style="width: {{ $periodOutflow > 0 ? ($periodOperational / $periodOutflow) * 100 : 0 }}%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        @if($transactions->hasPages())
-        <div class="card-footer bg-white border-0 py-3">
-            {{ $transactions->links() }}
+
+        <!-- ================= التبويب 2: جدول إيرادات ومصروفات الأقسام التفصيلي ================= -->
+        <div class="tab-pane fade" id="departments-tab-pane" role="tabpanel" tabindex="0">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3.5 px-4 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-sitemap text-teal" style="color: #0d9488;"></i>
+                            <span>كشف إيرادات ومساهمة الأقسام والخدمات الطبية</span>
+                        </h5>
+                        <small class="text-muted">جدول تحليلي معياري يقيس دخل كل قسم، عدد الوصولات، وصافي عائد المستشفى بعد خصم حصص الأطباء</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary px-3">
+                            <i class="fas fa-print me-1"></i> طباعة جدول الأقسام
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4" style="width: 50px;">#</th>
+                                <th style="width: 250px;">القسم / المركز الطبي</th>
+                                <th class="text-center" style="width: 140px;">عدد الوصولات / الحالات</th>
+                                <th class="text-end" style="width: 180px;">إجمالي المقبوض (Gross)</th>
+                                <th class="text-end" style="width: 180px;">حصص الأطباء / التكاليف</th>
+                                <th class="text-end" style="width: 180px;">صافي عائد المستشفى (Net)</th>
+                                <th style="width: 180px;">النسبة من الدخل العام</th>
+                                <th class="text-center pe-4" style="width: 120px;">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $totalDeptCount = 0;
+                                $totalDeptGross = 0;
+                                $totalDeptCosts = 0;
+                                $totalDeptNet = 0;
+                                $counter = 1;
+                            @endphp
+                            @foreach($departmentStats as $deptKey => $dept)
+                                @php
+                                    $totalDeptCount += $dept['count'];
+                                    $totalDeptGross += $dept['gross'];
+                                    $totalDeptCosts += $dept['costs'];
+                                    $totalDeptNet += $dept['net'];
+                                @endphp
+                                <tr>
+                                    <td class="ps-4 text-muted small font-monospace">{{ $counter++ }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center shadow-xs" 
+                                                 style="width: 38px; height: 38px; background-color: {{ $dept['color'] }}15; color: {{ $dept['color'] }};">
+                                                <i class="fas {{ $dept['icon'] }} fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <strong class="text-dark d-block">{{ $dept['name'] }}</strong>
+                                                <small class="text-muted font-monospace">{{ $deptKey }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {{ $dept['count'] > 0 ? 'bg-light text-dark border' : 'bg-secondary-subtle text-muted' }} px-3 py-1.5 font-monospace fs-7">
+                                            {{ number_format($dept['count']) }} حالة
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="font-monospace fs-6 text-dark">
+                                            {{ number_format($dept['gross']) }} <small class="fs-8 text-muted">د.ع</small>
+                                        </strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="font-monospace text-muted">
+                                            {{ $dept['costs'] > 0 ? ('- ' . number_format($dept['costs'])) : '0' }} <small class="fs-8 text-muted">د.ع</small>
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="font-monospace fs-6 text-success">
+                                            {{ number_format($dept['net']) }} <small class="fs-8 text-muted">د.ع</small>
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height: 7px;">
+                                                <div class="progress-bar" role="progressbar" style="width: {{ $dept['percentage'] }}%; background-color: {{ $dept['color'] }};"></div>
+                                            </div>
+                                            <span class="font-monospace small fw-bold" style="width: 42px; text-align: left; color: {{ $dept['color'] }};">
+                                                {{ $dept['percentage'] }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <a href="{{ route('treasury.index', array_merge(request()->query(), ['category' => $deptKey])) }}#ledger" 
+                                           class="btn btn-xs btn-outline-primary px-2.5 py-1 rounded-pill" title="عرض قيود هذا القسم">
+                                            <i class="fas fa-filter me-1"></i> تصفية
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="table-light border-top border-2">
+                            <tr class="fw-bold">
+                                <td colspan="2" class="ps-4 py-3 fs-6 text-dark">
+                                    <i class="fas fa-calculator text-primary me-2"></i> المجموع العام لإيرادات الأقسام
+                                </td>
+                                <td class="text-center font-monospace fs-6 py-3">
+                                    <span class="badge bg-primary px-3 py-1.5 fs-7">{{ number_format($totalDeptCount) }} معاملة</span>
+                                </td>
+                                <td class="text-end font-monospace fs-6 py-3 text-dark">
+                                    {{ number_format($totalDeptGross) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace fs-6 py-3 text-danger">
+                                    - {{ number_format($totalDeptCosts) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace fs-6 py-3 text-success">
+                                    {{ number_format($totalDeptNet) }} د.ع
+                                </td>
+                                <td class="py-3 font-monospace fw-bold text-dark">100%</td>
+                                <td class="pe-4 text-center"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ملاحظة هندسية توضح مرونة وإمكانية إضافة أقسام جديدة -->
+            <div class="alert alert-info bg-info-subtle border-info-subtle rounded-4 p-3 d-flex align-items-center gap-3">
+                <i class="fas fa-lightbulb text-info fs-3"></i>
+                <div class="small text-dark">
+                    <strong>💡 بنية معيارية قابلة للتوسع الفوري (Modular Architecture):</strong>
+                    إذا رغبت مستقبلاً في إضافة أي قسم جديد (مثل: الصيدلية، الغسيل الكلوي، العناية المركزة، أو أي عيادة خاصة)،
+                    يتم إدراجه في مصفوفة الإعدادات تلقائياً ليظهر فوراً في هذا الجدول وفي الرسوم البيانية دون الحاجة لإعادة كتابة كود الواجهة.
+                </div>
+            </div>
         </div>
-        @endif
+
+        <!-- ================= التبويب 3: سجل القيود والوصولات التفصيلية ================= -->
+        <div class="tab-pane fade" id="ledger-tab-pane" role="tabpanel" tabindex="0">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-white py-3.5 px-4 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-receipt text-primary"></i>
+                            <span>سجل القيود وحركات الخزينة والوصولات</span>
+                        </h5>
+                        <small class="text-muted">دفتر النقدية المحاسبي المباشر (Audit Ledger) لكافة الإيصالات المالية وحركات الصرف والقبض</small>
+                    </div>
+                    <span class="badge bg-light text-dark border px-3 py-2 font-monospace">
+                        إجمالي القيود المسجلة: {{ $transactions->total() }}
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">#</th>
+                                <th>رقم السند</th>
+                                <th>التاريخ والوقت</th>
+                                <th>الاتجاه</th>
+                                <th>البند / القسم</th>
+                                <th>البيان والوصف</th>
+                                <th>المبلغ</th>
+                                <th>طريقة الدفع</th>
+                                <th>المستخدم القائم</th>
+                                <th class="text-center pe-4">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($transactions as $index => $trx)
+                            <tr>
+                                <td class="ps-4 text-muted small font-monospace">{{ $transactions->firstItem() + $index }}</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-bold px-2 py-1 font-monospace">
+                                        {{ $trx->voucher_number ?: ('#' . $trx->id) }}
+                                    </span>
+                                </td>
+                                <td class="small text-muted font-monospace">
+                                    <i class="far fa-clock me-1"></i>
+                                    {{ $trx->performed_at ? $trx->performed_at->format('Y-m-d H:i') : $trx->created_at->format('Y-m-d H:i') }}
+                                </td>
+                                <td>
+                                    @if($trx->isInflow())
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                            <i class="fas fa-arrow-down me-1"></i> وارد (+)
+                                        </span>
+                                    @else
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                            <i class="fas fa-arrow-up me-1"></i> صادر (-)
+                                        </span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                        {{ $trx->category_label }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ $trx->description }}</div>
+                                    @if($trx->notes)
+                                        <div class="text-muted small text-truncate" style="max-width: 320px;" title="{{ $trx->notes }}">
+                                            <i class="far fa-comment-dots me-1"></i>{{ $trx->notes }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-6 font-monospace {{ $trx->isInflow() ? 'text-success' : 'text-danger' }}">
+                                        {{ $trx->isInflow() ? '+' : '-' }} {{ number_format($trx->amount) }} <small class="text-muted fs-7">د.ع</small>
+                                    </span>
+                                </td>
+                                <td class="small">
+                                    <span class="badge bg-light text-muted border font-monospace">
+                                        <i class="fas fa-money-bill-wave me-1"></i>{{ $trx->payment_method_label }}
+                                    </span>
+                                </td>
+                                <td class="small text-muted">
+                                    <i class="far fa-user me-1"></i>
+                                    {{ optional($trx->performer)->name ?: 'النظام' }}
+                                </td>
+                                <td class="text-center pe-4">
+                                    @if($trx->related_type !== \App\Models\Payment::class)
+                                        <form method="POST" action="{{ route('treasury.destroy', $trx) }}" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا السند؟');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger p-1 px-2" title="حذف السند اليدوي">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-muted small" title="مرتبط بإيصال كاشير رسمي">
+                                            <i class="fas fa-lock"></i>
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+                                    <div class="py-4">
+                                        <i class="fas fa-vault text-muted fa-3x mb-3 opacity-50"></i>
+                                        <h6 class="text-muted fw-bold">لا توجد حركات مسجلة في الخزينة لهذه الفترة</h6>
+                                        <p class="text-muted small mb-0">يمكنك تسجيل سند صرف أو قبض جديد عبر الأزرار بالأعلى.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @if($transactions->hasPages())
+                <div class="card-footer bg-white border-0 py-3">
+                    {{ $transactions->links() }}
+                </div>
+                @endif
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -323,7 +671,7 @@
                         </select>
                     </div>
 
-                    <!-- حقل اختيار الطبيب (يظهر فقط عند اختيار صرف مستحقات طبيب) -->
+                    <!-- حقل اختيار الطبيب -->
                     <div class="mb-3 d-none" id="doctorSelectDiv">
                         <label class="form-label fw-bold text-dark small">اختر الطبيب المستفيد <span class="text-danger">*</span></label>
                         <select name="doctor_id" id="doctorIdInput" class="form-select">
@@ -335,7 +683,7 @@
                         <small class="text-muted">سيتم تسجيل الدفعة وخصمها من الرصيد المالي المستحق للطبيب تلقائياً.</small>
                     </div>
 
-                    <!-- حقل اختيار المورد (يظهر فقط عند اختيار فواتير مشتريات) -->
+                    <!-- حقل اختيار المورد -->
                     <div class="mb-3 d-none" id="supplierSelectDiv">
                         <label class="form-label fw-bold text-dark small">اختر المورد / الشركة</label>
                         <select name="supplier_id" id="supplierIdInput" class="form-select">
@@ -348,25 +696,26 @@
 
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-md-7">
-                            <label class="form-label fw-bold text-dark small">المبلغ المطلوب صرفه (د.ع) <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold text-dark small">المبلغ المطلوب صرفه <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="number" step="any" min="1" name="amount" class="form-control fw-bold fs-5 text-danger" placeholder="0" required>
-                                <span class="input-group-text bg-light text-muted">د.ع</span>
+                                <input type="number" step="any" min="1" name="amount" class="form-control" placeholder="0" required>
+                                <span class="input-group-text bg-light">د.ع</span>
                             </div>
                         </div>
                         <div class="col-12 col-md-5">
                             <label class="form-label fw-bold text-dark small">طريقة الدفع</label>
                             <select name="payment_method" class="form-select">
-                                <option value="cash" selected>نقدي (القاصة)</option>
-                                <option value="bank_transfer">تحويل مصرفي</option>
+                                <option value="cash" selected>نقدي (صندوق الخزينة)</option>
+                                <option value="bank_transfer">تحويل بنكي</option>
                                 <option value="cheque">صك بنكي</option>
+                                <option value="card">دفع إلكتروني</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark small">البيان / الوصف <span class="text-danger">*</span></label>
-                        <input type="text" name="description" class="form-control" placeholder="مثال: صرف مستحقات الطبيب فلان / شراء وقود للمولدات..." required>
+                        <input type="text" name="description" class="form-control" placeholder="مثال: صرف مستحقات كشفيات الدكتور أحمد..." required>
                     </div>
 
                     <div class="row g-2 mb-3">
@@ -407,31 +756,30 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark small">بند الإيراد / التصنيف <span class="text-danger">*</span></label>
                         <select name="category" class="form-select" required>
-                            <option value="general_income" selected>💵 إيرادات وتحصيلات عامة</option>
-                            <option value="consultation">🩺 إيرادات العيادات الاستشارية</option>
-                            <option value="emergency">🚨 إيرادات خدمات الطوارئ</option>
-                            <option value="lab">🔬 إيرادات المختبر</option>
-                            <option value="radiology">🩻 إيرادات الأشعة والتصوير</option>
-                            <option value="surgery">🏥 إيرادات العمليات الجراحية</option>
-                            <option value="other">📌 أخرى</option>
+                            <option value="general_income" selected>تحصيلات وإيرادات عامة</option>
+                            <option value="consultation">إيراد كشفية العيادات الاستشارية</option>
+                            <option value="emergency">إيراد قسم الطوارئ</option>
+                            <option value="lab">إيراد التحاليل المختبرية</option>
+                            <option value="radiology">إيراد الأشعة والتصوير</option>
+                            <option value="surgery">إيراد العمليات الجراحية</option>
                         </select>
                     </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-md-7">
-                            <label class="form-label fw-bold text-dark small">المبلغ المقبوض (د.ع) <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold text-dark small">المبلغ المقبوض <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="number" step="any" min="1" name="amount" class="form-control fw-bold fs-5 text-success" placeholder="0" required>
-                                <span class="input-group-text bg-light text-muted">د.ع</span>
+                                <input type="number" step="any" min="1" name="amount" class="form-control" placeholder="0" required>
+                                <span class="input-group-text bg-light">د.ع</span>
                             </div>
                         </div>
                         <div class="col-12 col-md-5">
-                            <label class="form-label fw-bold text-dark small">طريقة القبض</label>
+                            <label class="form-label fw-bold text-dark small">طريقة الدفع</label>
                             <select name="payment_method" class="form-select">
-                                <option value="cash" selected>نقدي (القاصة)</option>
-                                <option value="bank_transfer">تحويل مصرفي</option>
+                                <option value="cash" selected>نقدي (صندوق الخزينة)</option>
+                                <option value="bank_transfer">تحويل بنكي</option>
                                 <option value="cheque">صك بنكي</option>
-                                <option value="card">بطاقة / POS</option>
+                                <option value="card">دفع إلكتروني</option>
                             </select>
                         </div>
                     </div>
@@ -463,9 +811,13 @@
     </div>
 </div>
 
+<!-- تضمين مكتبة Chart.js للرسوم البيانية التفاعلية -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. التحكم في الحقول الشرطية لسند الصرف
     const expenseCategorySelect = document.getElementById('expenseCategorySelect');
     const doctorSelectDiv = document.getElementById('doctorSelectDiv');
     const doctorIdInput = document.getElementById('doctorIdInput');
@@ -491,7 +843,199 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // 2. تفعيل التبويب المختار عبر الرابط (URL Hash Memory)
+    if (window.location.hash) {
+        const hash = window.location.hash;
+        if (hash === '#departments') {
+            const tabBtn = document.getElementById('departments-tab-btn');
+            if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+        } else if (hash === '#ledger') {
+            const tabBtn = document.getElementById('ledger-tab-btn');
+            if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+        }
+    }
+
+    // تحديث الهاش عند تغيير التبويب
+    const tabButtons = document.querySelectorAll('#treasuryTabs button[data-bs-toggle="pill"]');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function(e) {
+            if (e.target.id === 'departments-tab-btn') window.location.hash = 'departments';
+            else if (e.target.id === 'ledger-tab-btn') window.location.hash = 'ledger';
+            else window.location.hash = 'analytics';
+        });
+    });
+
+    // 3. محرك الرسوم البيانية (Chart.js Engine)
+    // أ) مخطط توزيع الإيرادات الدائري (Donut Chart)
+    const deptLabels = @json($deptChartLabels);
+    const deptData = @json($deptChartData);
+    const deptColors = @json($deptChartColors);
+
+    const donutCtx = document.getElementById('deptRevenueDonutChart');
+    if (donutCtx && deptData.length > 0) {
+        new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: deptLabels,
+                datasets: [{
+                    data: deptData,
+                    backgroundColor: deptColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        rtl: true,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                return ' ' + Number(val).toLocaleString() + ' د.ع';
+                            }
+                        }
+                    }
+                },
+                cutout: '72%'
+            }
+        });
+    }
+
+    // ب) مخطط حركة النقدية اليومية (Cash Flow Bar / Line Chart)
+    const trendLabels = @json($trendLabels);
+    const trendInflows = @json($trendInflows);
+    const trendOutflows = @json($trendOutflows);
+
+    const trendCtx = document.getElementById('cashFlowTrendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        label: 'الوارد (+)',
+                        data: trendInflows,
+                        backgroundColor: 'rgba(34, 197, 94, 0.75)',
+                        borderColor: '#16a34a',
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                    },
+                    {
+                        label: 'المنصرف (-)',
+                        data: trendOutflows,
+                        backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                        borderColor: '#dc2626',
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        rtl: true,
+                        labels: {
+                            font: { family: 'Cairo, sans-serif', size: 12, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + Number(context.raw).toLocaleString() + ' د.ع';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000) return (value / 1000000) + 'M';
+                                if (value >= 1000) return (value / 1000) + 'K';
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 });
+
+// دالة الفلاتر الزمنية السريعة
+function setQuickDate(period) {
+    const fromInput = document.getElementById('from_date_input');
+    const toInput = document.getElementById('to_date_input');
+    const now = new Date();
+
+    const formatDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    if (period === 'today') {
+        const todayStr = formatDate(now);
+        fromInput.value = todayStr;
+        toInput.value = todayStr;
+    } else if (period === 'yesterday') {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const yStr = formatDate(yesterday);
+        fromInput.value = yStr;
+        toInput.value = yStr;
+    } else if (period === 'week') {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 6);
+        fromInput.value = formatDate(weekAgo);
+        toInput.value = formatDate(now);
+    } else if (period === 'month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        fromInput.value = formatDate(firstDay);
+        toInput.value = formatDate(now);
+    } else if (period === 'all') {
+        fromInput.value = '';
+        toInput.value = '';
+    }
+
+    document.getElementById('treasuryFilterForm').submit();
+}
 </script>
 @endpush
+
+<style>
+@media print {
+    .btn, nav, #treasuryTabs, #treasuryFilterForm, .modal, .alert {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+    .tab-content > .tab-pane {
+        display: block !important;
+        opacity: 1 !important;
+    }
+    body {
+        background: #fff !important;
+    }
+}
+</style>
 @endsection
