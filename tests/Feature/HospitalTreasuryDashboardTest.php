@@ -109,7 +109,7 @@ class HospitalTreasuryDashboardTest extends TestCase
         ]);
 
         // موعد كاش وموعد ضمان
-        \App\Models\Appointment::create([
+        $appt1 = \App\Models\Appointment::create([
             'doctor_id' => $doc->id,
             'department_id' => $dept->id,
             'patient_id' => $patient->id,
@@ -120,7 +120,7 @@ class HospitalTreasuryDashboardTest extends TestCase
             'status' => 'completed',
         ]);
 
-        \App\Models\Appointment::create([
+        $appt2 = \App\Models\Appointment::create([
             'doctor_id' => $doc->id,
             'department_id' => $dept->id,
             'patient_id' => $patient->id,
@@ -131,13 +131,24 @@ class HospitalTreasuryDashboardTest extends TestCase
             'status' => 'completed',
         ]);
 
-        // إيراد كشفية
+        // إيراد كشفية كاش
         \App\Models\ConsultationRevenue::create([
             'doctor_id' => $doc->id,
+            'appointment_id' => $appt1->id,
             'revenue_date' => now()->toDateString(),
-            'total_amount' => 50000,
-            'doctor_share' => 30000,
-            'hospital_share' => 20000,
+            'total_amount' => 25000,
+            'doctor_share' => 15000,
+            'hospital_share' => 10000,
+        ]);
+
+        // إيراد كشفية ضمان
+        \App\Models\ConsultationRevenue::create([
+            'doctor_id' => $doc->id,
+            'appointment_id' => $appt2->id,
+            'revenue_date' => now()->toDateString(),
+            'total_amount' => 25000,
+            'doctor_share' => 15000,
+            'hospital_share' => 10000,
         ]);
 
         // زيارة وإحالة تحاليل

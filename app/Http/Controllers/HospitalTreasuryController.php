@@ -248,35 +248,24 @@ class HospitalTreasuryController extends Controller
         ];
 
         // 7. التحليل المالي والتحويلي لأطباء الاستشارية (Doctor BI & Referrals Analysis)
-        // أ) استعلام الكشوفات (كاش مقابل ضمان)
-        $apptQuery = DB::table('appointments')->where('status', '!=', 'cancelled');
+        // استعلام كشوفات وإيرادات الاستشارية المحصلة (كاش مقابل ضمان) من واقع القيود المالية الفعلية
+        $revQuery = DB::table('consultation_revenues')
+            ->leftJoin('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id');
         if ($request->filled('from_date')) {
-            $apptQuery->whereDate('appointment_date', '>=', $request->from_date);
+            $revQuery->whereDate('consultation_revenues.revenue_date', '>=', $request->from_date);
         }
         if ($request->filled('to_date')) {
-            $apptQuery->whereDate('appointment_date', '<=', $request->to_date);
-        }
-        $doctorAppts = $apptQuery->select(
-            'doctor_id',
-            DB::raw("SUM(CASE WHEN insurance_type IN ('hi', 'moi', 'interior_ministry', 'health_insurance') THEN 1 ELSE 0 END) as insurance_cnt"),
-            DB::raw("SUM(CASE WHEN insurance_type IS NULL OR insurance_type = '' OR insurance_type = 'none' THEN 1 ELSE 0 END) as cash_cnt"),
-            DB::raw("count(*) as total_cnt")
-        )->groupBy('doctor_id')->get()->keyBy('doctor_id');
-
-        // ب) استعلام الإيرادات وحصص الأطباء والمستشفى
-        $revQuery = DB::table('consultation_revenues');
-        if ($request->filled('from_date')) {
-            $revQuery->whereDate('revenue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $revQuery->whereDate('revenue_date', '<=', $request->to_date);
+            $revQuery->whereDate('consultation_revenues.revenue_date', '<=', $request->to_date);
         }
         $doctorRevenues = $revQuery->select(
-            'doctor_id',
-            DB::raw('SUM(total_amount) as gross'),
-            DB::raw('SUM(doctor_share) as doc_share'),
-            DB::raw('SUM(hospital_share) as hosp_share')
-        )->groupBy('doctor_id')->get()->keyBy('doctor_id');
+            'consultation_revenues.doctor_id',
+            DB::raw("SUM(CASE WHEN appointments.insurance_type IN ('hi', 'moi', 'interior_ministry', 'health_insurance') THEN 1 ELSE 0 END) as insurance_cnt"),
+            DB::raw("SUM(CASE WHEN appointments.insurance_type IS NULL OR appointments.insurance_type = '' OR appointments.insurance_type = 'none' THEN 1 ELSE 0 END) as cash_cnt"),
+            DB::raw('count(*) as total_cnt'),
+            DB::raw('SUM(consultation_revenues.total_amount) as gross'),
+            DB::raw('SUM(consultation_revenues.doctor_share) as doc_share'),
+            DB::raw('SUM(consultation_revenues.hospital_share) as hosp_share')
+        )->groupBy('consultation_revenues.doctor_id')->get()->keyBy('doctor_id');
 
         // ج) استعلام تحويلات الفحوصات التشخيصية (مختبر وأشعة) الناتجة عن زيارات أطباء الاستشارية
         $referralReqQuery = DB::table('requests')
@@ -336,12 +325,11 @@ class HospitalTreasuryController extends Controller
 
         foreach ($consultantDoctors as $doc) {
             $docId = $doc->id;
-            $appts = $doctorAppts->get($docId);
             $rev = $doctorRevenues->get($docId);
 
-            $cashCnt = (int) ($appts->cash_cnt ?? 0);
-            $insCnt = (int) ($appts->insurance_cnt ?? 0);
-            $totalAppts = $cashCnt + $insCnt;
+            $cashCnt = (int) ($rev->cash_cnt ?? 0);
+            $insCnt = (int) ($rev->insurance_cnt ?? 0);
+            $totalAppts = (int) ($rev->total_cnt ?? ($cashCnt + $insCnt));
 
             $gross = (float) ($rev->gross ?? 0);
             $docShare = (float) ($rev->doc_share ?? 0);
