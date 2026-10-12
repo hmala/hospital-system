@@ -266,23 +266,31 @@
                         </div>
                         <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
                             @if(count($deptChartData) > 0 && $periodInflow > 0)
-                                <div style="position: relative; height: 260px; width: 100%; max-width: 320px;">
+                                <div style="position: relative; height: 280px; width: 100%; max-width: 340px;">
                                     <canvas id="deptRevenueDonutChart"></canvas>
                                 </div>
                                 <div class="w-100 mt-4 pt-3 border-top">
-                                    <div class="row g-2">
+                                    <h6 class="small fw-bold text-muted mb-3 d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-list-ul me-1.5 text-primary"></i>تفاصيل إيرادات الأقسام المسجلة:</span>
+                                        <span class="badge bg-light text-dark border font-monospace">{{ count($deptChartData) }} أقسام</span>
+                                    </h6>
+                                    <div class="d-flex flex-column gap-2">
                                         @foreach($departmentStats as $dKey => $dStat)
                                             @if($dStat['gross'] > 0)
-                                                <div class="col-12 col-sm-6">
-                                                    <div class="p-2 rounded-3 border bg-light small d-flex justify-content-between align-items-center">
-                                                        <span class="d-flex align-items-center gap-1.5 text-truncate me-2">
-                                                            <span class="rounded-circle d-inline-block flex-shrink-0" style="width: 10px; height: 10px; background-color: {{ $dStat['color'] }};"></span>
-                                                            <strong class="text-dark text-truncate">{{ $dStat['name'] }}</strong>
+                                                <div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center">
+                                                    <div class="d-flex align-items-center gap-2.5 text-truncate">
+                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" 
+                                                              style="width: 24px; height: 24px; background-color: {{ $dStat['color'] }}20; color: {{ $dStat['color'] }}; border: 1px solid {{ $dStat['color'] }}40;">
+                                                            <i class="fas {{ $dStat['icon'] }} fs-7"></i>
                                                         </span>
-                                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                                            <span class="fw-bold font-monospace text-dark">{{ number_format($dStat['gross']) }} <small class="text-muted">د.ع</small></span>
-                                                            <span class="badge rounded-pill fw-bold" style="background-color: {{ $dStat['color'] }}20; color: {{ $dStat['color'] }}; border: 1px solid {{ $dStat['color'] }}40;">{{ $dStat['percentage'] }}%</span>
+                                                        <div class="text-truncate">
+                                                            <strong class="text-dark d-block text-truncate small">{{ $dStat['name'] }}</strong>
+                                                            <small class="text-muted font-monospace">{{ $dStat['count'] }} حركة / إيصال</small>
                                                         </div>
+                                                    </div>
+                                                    <div class="text-end flex-shrink-0 ms-2">
+                                                        <div class="fw-bold font-monospace text-dark fs-6">{{ number_format($dStat['gross']) }} <small class="text-muted">د.ع</small></div>
+                                                        <span class="badge rounded-pill fw-bold" style="background-color: {{ $dStat['color'] }}20; color: {{ $dStat['color'] }}; border: 1px solid {{ $dStat['color'] }}40;">{{ $dStat['percentage'] }}%</span>
                                                     </div>
                                                 </div>
                                             @endif
@@ -1196,7 +1204,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false
+                        display: true,
+                        position: 'bottom',
+                        rtl: true,
+                        labels: {
+                            font: { family: 'Cairo, sans-serif', size: 11, weight: 'bold' },
+                            boxWidth: 12,
+                            boxHeight: 12,
+                            padding: 10,
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    const total = {{ (float) max(1, $periodInflow) }};
+                                    return data.labels.map(function(label, i) {
+                                        const val = data.datasets[0].data[i];
+                                        const color = data.datasets[0].backgroundColor[i];
+                                        const pct = ((val / total) * 100).toFixed(1);
+                                        return {
+                                            text: label + ': ' + Number(val).toLocaleString() + ' د.ع (' + pct + '%)',
+                                            fillStyle: color,
+                                            strokeStyle: '#ffffff',
+                                            lineWidth: 1.5,
+                                            hidden: false,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
                     },
                     tooltip: {
                         rtl: true,
