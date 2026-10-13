@@ -224,32 +224,55 @@ class Appointment extends Model
     {
         // معالجة استرجاع المبلغ إذا تم الدفع مسبقاً
         if ($this->payment_status === 'paid') {
-            $refundAmount = $this->payment ? -abs($this->payment->amount) : -abs($this->consultation_fee);
-            $paymentMethod = $this->payment ? $this->payment->payment_method : 'cash';
+            // البحث بدقة عن دفعة الكشفية الخاصة بهذا الموعد حصراً لتجنب أخذ دفعات الفحوصات والتحاليل
+            $consultationPayment = Payment::where('appointment_id', $this->id)
+                ->where('payment_type', 'appointment')
+                ->where('amount', '>', 0)
+                ->latest('id')
+                ->first();
 
-            DB::transaction(function () use ($refundAmount, $paymentMethod) {
-                Payment::create([
-                    'appointment_id' => $this->id,
-                    'patient_id' => $this->patient_id,
-                    'cashier_id' => auth()->id(),
-                    'receipt_number' => Payment::generateReceiptNumber(),
-                    'amount' => $refundAmount,
-                    'payment_method' => $paymentMethod,
-                    'payment_type' => 'appointment',
-                    'description' => 'استرجاع دفعة موعد #' . $this->id,
-                    'notes' => 'تم استرجاع الدفع بعد إلغاء الموعد',
-                    'paid_at' => now()
-                ]);
+            // إذا لم يتم العثور عليها بالـ appointment_id، تحقق من العلاقة المباشرة payment بشرط أن تكون دفعة كشفية موجبة
+            if (!$consultationPayment && $this->payment && $this->payment->payment_type === 'appointment' && $this->payment->amount > 0) {
+                $consultationPayment = $this->payment;
+            }
 
+            $refundAmount = $consultationPayment ? -abs($consultationPayment->amount) : -abs($this->consultation_fee);
+            $paymentMethod = $consultationPayment ? $consultationPayment->payment_method : ($this->payment ? $this->payment->payment_method : 'cash');
+
+            if ($refundAmount < 0) {
+                DB::transaction(function () use ($refundAmount, $paymentMethod) {
+                    Payment::create([
+                        'appointment_id' => $this->id,
+                        'patient_id' => $this->patient_id,
+                        'cashier_id' => auth()->id(),
+                        'receipt_number' => Payment::generateReceiptNumber(),
+                        'amount' => $refundAmount,
+                        'payment_method' => $paymentMethod,
+                        'payment_type' => 'appointment',
+                        'description' => 'استرجاع دفعة كشفية موعد #' . $this->id,
+                        'notes' => 'تم استرجاع الكشفية بعد إلغاء الموعد',
+                        'paid_at' => now()
+                    ]);
+
+                    $this->update(['payment_status' => 'refunded']);
+                });
+            } else {
                 $this->update(['payment_status' => 'refunded']);
-            });
+            }
         }
 
-        // إلغاء الزيارة والطلبات الطبية غير المكتملة المرتبطة بالموعد إن وجدت
+        // إلغاء الزيارة والطلبات الطبية غير المكتملة وغير المسددة المرتبطة بالموعد إن وجدت
         if ($this->visit && $this->visit->status !== 'completed' && !$this->visit->is_completed) {
             $this->visit->update(['status' => 'cancelled']);
-            \App\Models\Request::where('visit_id', $this->visit->id)->where('status', '!=', 'completed')->update(['status' => 'cancelled']);
-            \App\Models\RadiologyRequest::where('visit_id', $this->visit->id)->where('status', '!=', 'completed')->update(['status' => 'cancelled']);
+            // إلغاء الطلبات غير المسددة فقط؛ الطلبات المسددة تبقى سارية أو تسترجع رسمياً عبر الكاشير
+            \App\Models\Request::where('visit_id', $this->visit->id)
+                ->where('status', '!=', 'completed')
+                ->where('payment_status', '!=', 'paid')
+                ->update(['status' => 'cancelled']);
+            \App\Models\RadiologyRequest::where('visit_id', $this->visit->id)
+                ->where('status', '!=', 'completed')
+                ->where('payment_status', '!=', 'paid')
+                ->update(['status' => 'cancelled']);
         }
 
         $this->update([

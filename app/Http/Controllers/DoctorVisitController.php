@@ -820,7 +820,15 @@ class DoctorVisitController extends Controller
                 ]
             );
 
-            return redirect()->back()->with('success', 'تم إلغاء الحجز وإرسال إشعار لموظف الاستعلامات والكاشير');
+            $hasPaidRequests = \App\Models\Request::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists()
+                || \App\Models\RadiologyRequest::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists();
+
+            $successMsg = 'تم إلغاء كشفية الطبيب بنجاح واسترجاع رسوم الكشف للمريض.';
+            if ($hasPaidRequests) {
+                $successMsg .= ' (تنبيه: توجد فحوصات طبية مسددة تبقى سارية، أو تسترجع عبر الكاشير حصراً).';
+            }
+
+            return redirect()->back()->with('success', $successMsg);
         }
 
         // حذف الزيارة نهائياً بدلاً من إلغائها

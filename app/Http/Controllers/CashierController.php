@@ -632,20 +632,26 @@ class CashierController extends Controller
 
             \Log::info('Request updated to paid');
 
-            // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة
+            // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة (فقط للزيارات قيد انتظار الدفع)
             if ($request->visit) {
-                $request->visit->update([
-                    'status' => 'scheduled'
-                ]);
-                // تحديث الموعد المرتبط إن وجد (مثل حجوزات السونار) لتصبح مدفوعة في شاشة توفر الاستشاريين
-                if ($request->visit->appointment_id) {
-                    \App\Models\Appointment::where('id', $request->visit->appointment_id)->update([
-                        'payment_status' => 'paid',
-                        'status' => 'confirmed',
-                        'payment_id' => $payment->id
+                if ($request->visit->status === 'pending_payment') {
+                    $request->visit->update([
+                        'status' => 'scheduled'
                     ]);
                 }
-                \Log::info('Visit and linked appointment status updated to pending / paid');
+
+                // تحديث الموعد المرتبط إن وجد (حصراً لحجوزات السونار المباشرة الخالية من كشفية طبيب مستقلة ولم تدفع بعد)
+                if ($request->visit->appointment_id) {
+                    $linkedAppt = \App\Models\Appointment::find($request->visit->appointment_id);
+                    if ($linkedAppt && empty($linkedAppt->payment_id) && (float)$linkedAppt->consultation_fee == 0) {
+                        $linkedAppt->update([
+                            'payment_status' => 'paid',
+                            'status' => 'confirmed',
+                            'payment_id' => $payment->id
+                        ]);
+                    }
+                }
+                \Log::info('Visit and linked appointment status handled after request payment');
             } else {
                 \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);
             }

@@ -408,7 +408,7 @@ datalist option:hover {
                         <form action="{{ route('doctor.visits.cancel', $visit) }}" method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟ سيتم إعلام موظف الاستعلامات والكاشير.')">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من إلغاء كشفية هذا المريض؟ سيتم استرجاع مبلغ الكشفية فقط وإعلام موظف الاستعلامات والكاشير.')">
                                 <i class="fas fa-times me-1"></i>
                                 إلغاء الحجز
                             </button>
