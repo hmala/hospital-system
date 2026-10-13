@@ -684,6 +684,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reservations/{reservation}/statement', [\App\Http\Controllers\NicuController::class, 'statement'])->name('statement');
         Route::get('/reservations/{reservation}/print-wristband', [\App\Http\Controllers\NicuController::class, 'wristbandPrint'])->name('print.wristband');
         Route::get('/reservations/{reservation}/print-crib-card', [\App\Http\Controllers\NicuController::class, 'cribCardPrint'])->name('print.crib-card');
+
+        // إدارة وتسعير خدمات وباقات الخدج
+        Route::get('/services', [\App\Http\Controllers\NicuServiceController::class, 'index'])->name('services.index');
+        Route::post('/services', [\App\Http\Controllers\NicuServiceController::class, 'store'])->name('services.store');
+        Route::put('/services/{service}', [\App\Http\Controllers\NicuServiceController::class, 'update'])->name('services.update');
+        Route::post('/services/{service}/toggle', [\App\Http\Controllers\NicuServiceController::class, 'toggle'])->name('services.toggle');
     });
 
     // إدارة أجور العمليات الجراحية

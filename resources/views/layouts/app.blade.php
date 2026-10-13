@@ -1242,6 +1242,11 @@
                                     <i class="fas fa-cogs text-warning"></i><span> إدارة الحاضنات والكبسولات</span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.services.*') ? 'active' : '' }}" href="{{ route('nicu.services.index') }}">
+                                    <i class="fas fa-tags text-warning"></i><span> تسعير وباقات خدمات الخدج</span>
+                                </a>
+                            </li>
                         </div>
                         @endcanany
 

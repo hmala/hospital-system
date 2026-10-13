@@ -22,6 +22,9 @@
                     <a href="{{ route('incubator-reservations.index') }}" class="btn btn-outline-primary shadow-sm">
                         <i class="fas fa-list me-1"></i> سجل وإضبارات الخدج
                     </a>
+                    <a href="{{ route('nicu.services.index') }}" class="btn btn-outline-warning shadow-sm">
+                        <i class="fas fa-tags me-1"></i> إعدادات وأسعار الخدمات
+                    </a>
                     <a href="{{ route('rooms.index') }}" class="btn btn-outline-secondary shadow-sm">
                         <i class="fas fa-door-open me-1"></i> ردهات وغرف الأطفال
                     </a>

@@ -19,6 +19,10 @@
                         إضافة حاضنة جديدة
                     </a>
                     @endcan
+                    <a href="{{ route('nicu.services.index') }}" class="btn btn-warning">
+                        <i class="fas fa-tags me-1"></i>
+                        تسعير وباقات خدمات الخدج
+                    </a>
                     <a href="{{ route('incubator-reservations.occupied') }}" class="btn btn-info">
                         <i class="fas fa-list me-1"></i>
                         الحاضنات المشغولة

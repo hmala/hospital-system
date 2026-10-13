@@ -58,6 +58,22 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-10-13 — واجهة إدارة وتسعير باقات وخدمات الخدج NICU Services Pricing)
+
+### Done
+- **شاشة إدارة وتسعير باقات الخدج (`NicuServiceController.php` و `resources/views/nicu/services/index.blade.php`)**:
+  * بناء كونترولر وواجهة كاملة لعرض الباقات الثمانية المعرفة لخدمات الخدج مع السعر اليومي لكل باقة وحالة التفعيل وعدد الحجوزات السابقة.
+  * إتاحة تعديل السعر اليومي الفندقي والاسم والوصف بضغطة زر عبر Modal تعديل فوري.
+  * إتاحة إضافة باقات خدمات جديدة بالمسمى والرمز والأجرة اليومية.
+  * مفتاح تفعيل/تعطيل لحظي عبر AJAX (Toggle Switch) دون إعادة تحميل الصفحة.
+- **التوجيه والقوائم والشريط الجانبي**:
+  * إضافة المسارات: `nicu.services.index`, `nicu.services.store`, `nicu.services.update`, `nicu.services.toggle`.
+  * إضافة رابط «تسعير وباقات خدمات الخدج» إلى القائمة الجانبية أسفل قسم الخدج.
+  * إضافة زر وصول سريع في لوحة الحاضنات اللحظية (`/nicu`) وشاشة إدارة الحاضنات (`/incubators`).
+- **الاختبارات الآلية والمعرفية**:
+  * إضافة 3 اختبارات جديدة في `NicuWorkflowTest.php` واجتياز 14 اختباراً بنجاح 100% (62 assertions).
+  * تحديث الشجرة المعرفية Graphify: 4,698 عقدة و 7,511 علاقة عبر 1,126 ملفاً.
+
 ## Session log (2026-10-13 — تشغيل الهجرات المعلقة وإصلاح حقل last_activity_at ومحرك جداول الخدج InnoDB)
 
 ### Done

@@ -378,4 +378,41 @@ class NicuWorkflowTest extends TestCase
         $response->assertSee('كشف حساب الإقامة والرعاية السريرية التفصيلي');
         $response->assertSee('طفل الاختبار');
     }
+
+    public function test_admin_can_view_nicu_services_settings(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('nicu.services.index'));
+        $response->assertStatus(200);
+        $response->assertSee('إعدادات وتسعير باقات وخدمات الخدج');
+        $response->assertSee('حاضنة + جهاز تنفس اصطناعي (Ventilator)');
+        $response->assertSee('360,000');
+    }
+
+    public function test_admin_can_update_nicu_service_price(): void
+    {
+        $service = NicuService::where('code', 'incubator_ventilator')->first();
+
+        $response = $this->actingAs($this->admin)->put(route('nicu.services.update', $service), [
+            'name' => 'حاضنة + جهاز تنفس اصطناعي (محدث)',
+            'daily_fee' => 380000,
+            'description' => 'تسعيرة محدثة',
+            'is_active' => '1',
+        ]);
+
+        $response->assertRedirect(route('nicu.services.index'));
+        $this->assertEquals(380000, $service->fresh()->daily_fee);
+        $this->assertEquals('حاضنة + جهاز تنفس اصطناعي (محدث)', $service->fresh()->name);
+    }
+
+    public function test_admin_can_toggle_nicu_service_status(): void
+    {
+        $service = NicuService::where('code', 'incubator_o2')->first();
+        $this->assertTrue((bool)$service->is_active);
+
+        $response = $this->actingAs($this->admin)->post(route('nicu.services.toggle', $service));
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true, 'is_active' => false]);
+        $this->assertFalse((bool)$service->fresh()->is_active);
+    }
 }
+
