@@ -184,6 +184,13 @@ class LabStaffController extends Controller
 
     public function attachment(HttpRequest $httpRequest, MedicalRequest $request)
     {
+        $user = Auth::user();
+
+        // السماح لكافة الكوادر المعنية (المختبر، الأطباء، الطوارئ، الاستقبال، الإدارة) أو من يملك صلاحية عرض الفحوصات
+        if (!$user->hasAnyRole(['admin', 'doctor', 'lab_staff', 'emergency_staff', 'receptionist', 'nurse']) && !$user->can('view lab tests')) {
+            abort(403, 'غير مصرح لك بعرض المرفقات');
+        }
+
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         $testName = $httpRequest->query('test');
 
@@ -452,6 +459,17 @@ class LabStaffController extends Controller
 
         $request->result = json_encode($existingRes);
         $request->save();
+
+        $patientName = $request->visit?->patient?->name ?? 'مريض';
+        $countInfo = $savedResults > 0 ? " ({$savedResults} نتيجة تحليل)" : ($hasNewAttachment ? ' (تقرير جهاز مرفق)' : '');
+        \App\Services\UserActivityLogger::log(
+            action: 'save_lab_results',
+            category: 'lab',
+            description: "حفظ واعتماد نتائج التحاليل المخبرية للمريض: {$patientName}{$countInfo} - طلب #{$request->id}",
+            subject: $request,
+            isSensitive: false,
+            properties: ['saved_results' => $savedResults, 'status' => $targetStatus]
+        );
 
         if ($targetStatus === 'completed') {
             try {

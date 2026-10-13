@@ -10,6 +10,7 @@ use App\Models\DoctorDue;
 use App\Models\DoctorFinancialAccount;
 use App\Models\FinancialTransaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ConsultantAvailabilityController extends Controller
@@ -82,18 +83,22 @@ class ConsultantAvailabilityController extends Controller
 
         $consultantDoctors = Doctor::with(['user', 'department'])
             ->join('users', 'doctors.user_id', '=', 'users.id')
-            ->where('doctors.type', 'consultant')
+            ->where(function($q) {
+                $q->where('doctors.type', 'consultant')
+                  ->orWhere('doctors.type', 'sonar')
+                  ->orWhere('doctors.specialization', 'LIKE', '%سونار%');
+            })
             ->where('doctors.is_active', true)
             ->orderBy('doctors.specialization')
             ->orderBy('users.name')
             ->select('doctors.*')
             ->get();
 
-        // 1. جلب جميع الزيارات النشطة اليوم للأطباء الاستشاريين
+        // 1. جلب جميع الزيارات النشطة اليوم للأطباء الاستشاريين (المرضى الموجودين داخل غرفة الفحص حالياً)
         $today = today();
         $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
             ->whereDate('visit_date', $today)
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where('status', 'in_progress')
             ->get()
             ->groupBy('doctor_id');
 
@@ -110,7 +115,12 @@ class ConsultantAvailabilityController extends Controller
                 $q->where('payment_status', 'paid')
                   ->orWhereNotNull('emergency_id');
             })
-            ->whereDoesntHave('visit')
+            ->where(function($q) {
+                $q->whereDoesntHave('visit')
+                  ->orWhereHas('visit', function($vq) {
+                      $vq->whereNotIn('status', ['completed', 'cancelled']);
+                  });
+            })
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->selectRaw('doctor_id, count(*) as count')
             ->groupBy('doctor_id')
@@ -218,13 +228,17 @@ class ConsultantAvailabilityController extends Controller
 
         // 1. العيادات الجارية الآن
         $consultantDoctors = Doctor::with(['user', 'department'])
-            ->where('type', 'consultant')
+            ->where(function($q) {
+                $q->where('type', 'consultant')
+                  ->orWhere('type', 'sonar')
+                  ->orWhere('specialization', 'LIKE', '%سونار%');
+            })
             ->where('is_active', true)
             ->get();
 
         $activeVisits = \App\Models\Visit::with(['patient.user', 'appointment'])
             ->whereDate('visit_date', $today)
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where('status', 'in_progress')
             ->get()
             ->groupBy('doctor_id');
 
@@ -296,6 +310,63 @@ class ConsultantAvailabilityController extends Controller
             return !empty($f->printed_at) || ($f->print_count ?? 0) > 0;
         })->map($mapFollowUp)->values();
 
+        // 3. طابور الحجوزات والقبض لليوم
+        $canProcessPayments = auth()->check() && auth()->user()->canAny(['process consultation payments', 'process payments']);
+        $todayAppointmentsList = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'emergency.emergencyPatient'])
+            ->whereDate('appointment_date', $today)
+            ->whereIn('status', ['scheduled', 'confirmed', 'calling'])
+            ->orderByRaw("CASE WHEN status = 'calling' THEN 1 ELSE 2 END")
+            ->orderBy('queue_number', 'asc')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function($app) use ($canProcessPayments) {
+                $patientName = 'مريض غير محدد';
+                if ($app->patient && $app->patient->user) {
+                    $patientName = $app->patient->user->name;
+                } elseif ($app->emergency && $app->emergency->emergencyPatient) {
+                    $patientName = $app->emergency->emergencyPatient->name;
+                }
+
+                return [
+                    'id' => $app->id,
+                    'queue_number' => $app->queue_number ?: $app->id,
+                    'patient_name' => $patientName,
+                    'is_emergency' => (bool)$app->emergency_id,
+                    'doctor_name' => optional(optional($app->doctor)->user)->name ?? 'غير محدد',
+                    'status' => $app->status,
+                    'payment_status' => $app->payment_status,
+                    'is_free_recheck' => (bool)$app->is_free_recheck,
+                    'can_process_payments' => $canProcessPayments,
+                    'payment_url' => route('cashier.payment.form', $app->id),
+                    'print_url' => route('appointments.print', $app->id),
+                    'can_cancel' => $app->canBeCancelled(),
+                    'cancel_url' => route('appointments.cancel', $app->id),
+                ];
+            })->values();
+
+        // 4. طلبات الفحوصات والسونار بانتظار السداد
+        $pendingRequests = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->where('payment_status', 'pending')
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('created_at', $today)
+            ->where(function($q) {
+                $q->whereHas('visit.doctor', function($dq) {
+                    $dq->where('type', 'consultant');
+                })->orWhere('subtype', 'ultrasound')
+                  ->orWhere('description', 'LIKE', '%سونار%');
+            })
+            ->latest()
+            ->get()
+            ->map(function($req) {
+                $patientName = optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض';
+                return [
+                    'id' => $req->id,
+                    'patient_name' => $patientName,
+                    'type_label' => $req->subtype === 'ultrasound' ? 'سونار' : ($req->type === 'radiology' ? 'أشعة' : $req->type),
+                    'total_amount' => number_format($req->total_amount ?? 0)
+                ];
+            })->values();
+
         return response()->json([
             'success' => true,
             'running_clinics' => $runningClinics,
@@ -305,6 +376,10 @@ class ConsultantAvailabilityController extends Controller
             'printed_today_follow_ups' => $printedTodayFollowUps,
             'printed_today_follow_ups_count' => count($printedTodayFollowUps),
             'all_today_count' => count($allTodayFollowUps),
+            'today_appointments' => $todayAppointmentsList,
+            'today_appointments_count' => count($todayAppointmentsList),
+            'pending_requests' => $pendingRequests,
+            'pending_requests_count' => count($pendingRequests),
             'timestamp' => now()->format('H:i:s'),
         ]);
     }
@@ -389,6 +464,9 @@ class ConsultantAvailabilityController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
         $filterType = $request->query('filter_type');
+        $search = $request->query('search');
+        $paymentMethod = $request->query('payment_method');
+        $insuranceStatus = $request->query('insurance_status');
 
         if ($fromDate) {
             $query->whereDate('paid_at', '>=', $fromDate);
@@ -412,22 +490,79 @@ class ConsultantAvailabilityController extends Controller
             });
         }
 
+        if ($paymentMethod) {
+            $query->where('payment_method', $paymentMethod);
+        }
+
+        if ($insuranceStatus) {
+            if ($insuranceStatus === 'insurance') {
+                $query->where(function($sub) {
+                    $sub->whereHas('appointment', function ($q) {
+                        $q->whereIn('insurance_type', ['hi', 'moi'])
+                          ->orWhere(function($sq) {
+                              $sq->whereNotNull('insurance_type')
+                                 ->whereNotIn('insurance_type', ['none', '']);
+                          });
+                    })->orWhereHas('payment', function ($pq) {
+                        $pq->whereIn('insurance_type', ['hi', 'moi'])
+                           ->orWhere('insurance_share', '>', 0);
+                    });
+                });
+            } elseif ($insuranceStatus === 'cash') {
+                $query->where(function($sub) {
+                    $sub->where(function($sq) {
+                        $sq->whereHas('appointment', function ($q) {
+                            $q->whereNull('insurance_type')
+                              ->orWhere('insurance_type', 'none')
+                              ->orWhere('insurance_type', '');
+                        })->orWhereDoesntHave('appointment');
+                    })->where(function($pq) {
+                        $pq->whereHas('payment', function ($p) {
+                            $p->where(function($pp) {
+                                $pp->whereNull('insurance_type')
+                                   ->orWhere('insurance_type', 'none')
+                                   ->orWhere('insurance_type', '');
+                            })->where(function($pp) {
+                                $pp->whereNull('insurance_share')
+                                   ->orWhere('insurance_share', '<=', 0);
+                            });
+                        })->orWhereDoesntHave('payment');
+                    });
+                });
+            }
+        }
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('receipt_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
+                      $uq->where('name', 'like', '%' . $search . '%')
+                         ->orWhere('phone', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
         $totalsQuery = clone $query;
 
         $totalReceived = (clone $totalsQuery)->where('total_amount', '>=', 0)->sum('total_amount');
         $totalRefunded = abs((clone $totalsQuery)->where('total_amount', '<', 0)->sum('total_amount'));
         $netTotal = (clone $totalsQuery)->sum('total_amount');
+        $totalCount = (clone $totalsQuery)->count();
 
-        $payments = $query->orderBy('paid_at', 'desc')->paginate(25);
+        $payments = $query->orderBy('paid_at', 'desc')->paginate(25)->appends($request->query());
 
         return view('consultant-availability.financial-movements', compact(
             'payments',
             'totalReceived',
             'totalRefunded',
             'netTotal',
+            'totalCount',
             'fromDate',
             'toDate',
-            'filterType'
+            'filterType',
+            'search',
+            'paymentMethod',
+            'insuranceStatus'
         ));
     }
 
@@ -442,11 +577,115 @@ class ConsultantAvailabilityController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
         $filterType = $request->query('filter_type');
+        $search = $request->query('search');
+        $paymentMethod = $request->query('payment_method');
+        $insuranceStatus = $request->query('insurance_status');
 
         return Excel::download(
-            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType),
+            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus),
             'financial_movements_' . now()->format('Ymd_His') . '.xlsx'
         );
+    }
+
+    /**
+     * تعديل يدوي لحصة الطبيب والمستشفى لقيد مالي محدد من قبل الإدارة
+     */
+    public function updateRevenueShares(Request $request, ConsultationRevenue $revenue)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage doctor commissions'))) {
+            abort(403, 'غير مصرح لك بتعديل الحصص المالية للكشفيات.');
+        }
+
+        $total = abs((float) $revenue->total_amount);
+
+        $data = $request->validate([
+            'doctor_share' => 'required|numeric|min:0|max:' . $total,
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $oldDoctorShare = (float) $revenue->doctor_share;
+        $oldHospitalShare = (float) $revenue->hospital_share;
+        $newDoctorShare = round((float) $data['doctor_share'], 2);
+        $newHospitalShare = round($total - $newDoctorShare, 2);
+        $newPercentage = $total > 0 ? round(($newDoctorShare / $total) * 100, 2) : 0;
+
+        DB::transaction(function () use ($revenue, $newDoctorShare, $newHospitalShare, $newPercentage, $data, $oldDoctorShare, $oldHospitalShare) {
+            // 1. تحديث سجل إيرادات الاستشارة
+            $notes = $revenue->notes ?? '';
+            $reasonNote = !empty($data['reason']) ? " [تعديل إداري: {$data['reason']}]" : " [تعديل إداري للحصص بواسطة " . auth()->user()->name . "]";
+            
+            $revenue->update([
+                'doctor_share' => $newDoctorShare,
+                'hospital_share' => $newHospitalShare,
+                'doctor_percentage' => $newPercentage,
+                'notes' => trim($notes . $reasonNote),
+            ]);
+
+            // 2. تحديث سجل مستحقات الطبيب
+            if ($revenue->doctor_id && $revenue->payment_id) {
+                if ($newDoctorShare > 0) {
+                    DoctorDue::updateOrCreate(
+                        [
+                            'doctor_id' => $revenue->doctor_id,
+                            'payment_id' => $revenue->payment_id,
+                        ],
+                        [
+                            'amount' => $newDoctorShare,
+                            'status' => 'pending',
+                            'notes' => 'مستحقات الطبيب بعد تعديل يدوي للقيد ' . ($revenue->receipt_number ?? $revenue->id),
+                        ]
+                    );
+                } else {
+                    DoctorDue::where('doctor_id', $revenue->doctor_id)
+                        ->where('payment_id', $revenue->payment_id)
+                        ->where('status', 'pending')
+                        ->delete();
+                }
+
+                // 3. إعادة مزامنة حساب الطبيب المالي
+                $account = DoctorFinancialAccount::firstOrCreate(
+                    ['doctor_id' => $revenue->doctor_id],
+                    ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+                );
+
+                $totalEarned = (float) DoctorDue::where('doctor_id', $revenue->doctor_id)->sum('amount');
+                $totalPaid = (float) ($account->total_paid ?? 0);
+                $account->total_earned = $totalEarned;
+                $account->balance = round($totalEarned - $totalPaid, 2);
+                $account->save();
+            }
+
+            // 4. تسجيل الرقابة في سجل الأنشطة الإدارية
+            \App\Services\UserActivityLogger::log(
+                action: 'update_financial_shares',
+                category: 'treasury',
+                description: "تعديل يدوي لحصة الطبيب بالقيد #{$revenue->receipt_number} من " . number_format($oldDoctorShare, 0) . " د.ع إلى " . number_format($newDoctorShare, 0) . " د.ع",
+                subject: $revenue,
+                isSensitive: true,
+                properties: [
+                    'old_doctor_share' => $oldDoctorShare,
+                    'new_doctor_share' => $newDoctorShare,
+                    'old_hospital_share' => $oldHospitalShare,
+                    'new_hospital_share' => $newHospitalShare,
+                    'reason' => $data['reason'] ?? null,
+                ]
+            );
+        });
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تعديل الحصص المالية وتحديث حساب الطبيب بنجاح 💾',
+                'doctor_share' => $newDoctorShare,
+                'hospital_share' => $newHospitalShare,
+                'doctor_share_formatted' => number_format($newDoctorShare, 2) . ' IQD',
+                'hospital_share_formatted' => number_format($newHospitalShare, 2) . ' IQD',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'تم تعديل الحصص المالية وتحديث حساب الطبيب بنجاح');
     }
 
     public function exportDoctorAccount(Request $request, Doctor $doctor)
@@ -632,13 +871,19 @@ class ConsultantAvailabilityController extends Controller
             ]);
         }
 
+        $voucherNumber = 'EXP-DOC-' . now()->format('ymd') . '-' . rand(1000, 9999);
         FinancialTransaction::create([
             'transaction_type' => 'expense',
+            'voucher_type' => 'outflow',
+            'category' => 'doctor_payout',
+            'voucher_number' => $voucherNumber,
             'related_type' => Doctor::class,
             'related_id' => $doctor->id,
             'amount' => $amount,
             'currency' => 'IQD',
-            'description' => 'صرف للطبيب ' . optional($doctor->user)->name,
+            'payment_method' => 'cash',
+            'description' => 'صرف مستحقات للطبيب ' . optional($doctor->user)->name,
+            'notes' => 'سند صرف نقدي - حسابات الاستشارية',
             'performed_by_id' => auth()->id(),
             'performed_at' => now(),
         ]);

@@ -40,21 +40,8 @@ class InquiryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى صفحة الاستعلامات');
         }
 
-        // جلب آخر الزيارات في الاستعلامات ومصرف الدم (اليوم)
-        $todayInquiries = Visit::whereIn('department_id', function($query) {
-            $query->select('id')
-                  ->from('departments')
-                  ->where('name', 'LIKE', '%استعلامات%')
-                  ->orWhere('name', 'LIKE', '%استقبال%')
-                  ->orWhere('name', 'LIKE', '%مصرف دم%');
-        })
-        ->whereDate('visit_date', Carbon::today())
-        ->with(['patient.user', 'doctor.user'])
-        ->latest()
-        ->paginate(15);
-
-        // موظف استعلامات الاستشارية فقط لا تظهر له تحويلات الطوارئ للعمليات أو الرقود
-        $isConsultationReceptionistOnly = $user->hasRole('consultation_receptionist') && !$user->hasRole(['admin', 'receptionist', 'staff', 'inquiry_staff']);
+        // موظف استعلامات الاستشارية فقط لا تظهر له تحويلات الطوارئ للعمليات أو الرقود أو الجداول العامة
+        $isConsultationReceptionistOnly = $user->hasRole('consultation_receptionist') && !$user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'staff', 'inquiry_staff']);
 
         // جلب المرضى المحولين من الطوارئ بانتظار حجز العمليات الجراحية
         $pendingTransfers = $isConsultationReceptionistOnly ? collect() : \App\Models\Emergency::with(['patient.user', 'doctor.user'])
@@ -83,14 +70,14 @@ class InquiryController extends Controller
             ->get();
 
         // جلب المرضى المحولين من العيادات الاستشارية بانتظار حجز العمليات الجراحية
-        $consultantSurgeryTransfers = Visit::with(['patient.user', 'doctor.user', 'department'])
+        $consultantSurgeryTransfers = $isConsultationReceptionistOnly ? collect() : Visit::with(['patient.user', 'doctor.user', 'department'])
             ->where('needs_surgery', true)
             ->whereDoesntHave('surgery')
             ->latest('updated_at')
             ->get();
 
         // جلب إحالات الطوارئ المشمولة بالضمان الصحي الواردة من العيادات الاستشارية
-        $pendingInsuranceEmergencyReferrals = \App\Models\Request::where('type', 'nursing')
+        $pendingInsuranceEmergencyReferrals = $isConsultationReceptionistOnly ? collect() : \App\Models\Request::where('type', 'nursing')
             ->where('status', 'pending')
             ->where('insurance_type', '!=', 'none')
             ->whereDate('created_at', Carbon::today())
@@ -98,7 +85,7 @@ class InquiryController extends Controller
             ->latest()
             ->get();
 
-        return view('inquiry.index', compact('todayInquiries', 'pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals'));
+        return view('inquiry.index', compact('pendingTransfers', 'pendingAdmissionTransfers', 'consultantSurgeryTransfers', 'pendingInsuranceEmergencyReferrals', 'isConsultationReceptionistOnly'));
     }
 
     /**
@@ -111,6 +98,10 @@ class InquiryController extends Controller
         $canBookAny = $isAdmin || (
             $user && (
                 $user->can('create inquiries') ||
+                $user->can('create emergencies') ||
+                $user->can('create surgeries') ||
+                $user->can('create bed reservations') ||
+                $user->can('create incubator reservations') ||
                 $user->can('inquiry.create.checkup') ||
                 $user->can('inquiry.create.radiology.general') ||
                 $user->can('inquiry.create.radiology.ultrasound') ||
@@ -416,39 +407,74 @@ class InquiryController extends Controller
                 // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
                 $appointmentDate = $httpRequest->appointment_date ? Carbon::parse($httpRequest->appointment_date) : Carbon::today();
 
-                // فحص ما إذا كان للمريض زيارة سابقة مكتملة لدى نفس الطبيب ضمن فترة صلاحية المراجعة المجانية
+                // فحص ما إذا كان للمريض موعد مراجعة مجانية مجدول مسبقاً أو زيارة سابقة حدد فيها الطبيب صراحة موعد مراجعة وما زالت صالحة
                 $validityDays = $doctor->recheck_validity_days ?: 7;
-                $recentVisit = Visit::where('patient_id', $patient->id)
+
+                // 1. هل يوجد موعد مراجعة مجانية مجدول مسبقاً من محطة الطبيب لدى نفس الطبيب؟
+                $scheduledRecheckAppt = Appointment::where('patient_id', $patient->id)
                     ->where('doctor_id', $doctor->id)
-                    ->where('status', 'completed')
-                    ->where('visit_date', '>=', Carbon::today()->subDays($validityDays))
-                    ->latest('visit_date')
+                    ->where('is_free_recheck', true)
+                    ->whereIn('status', ['scheduled', 'confirmed'])
+                    ->latest()
                     ->first();
 
-                $isFreeRecheck = ($recentVisit !== null);
+                // 2. هل توجد زيارة سابقة مكتملة حدد فيها الطبيب صراحة موعد مراجعة (follow_up_date) وما زالت ضمن الصلاحية ولم تُستهلك بعد؟
+                $recentVisitWithFollowUp = null;
+                if (!$scheduledRecheckAppt) {
+                    $recentVisitWithFollowUp = Visit::where('patient_id', $patient->id)
+                        ->where('doctor_id', $doctor->id)
+                        ->where('status', 'completed')
+                        ->whereNotNull('follow_up_date')
+                        ->where(function($q) use ($validityDays) {
+                            $q->where('follow_up_date', '>=', Carbon::today())
+                              ->orWhere('visit_date', '>=', Carbon::today()->subDays($validityDays));
+                        })
+                        ->whereDoesntHave('recheckAppointments', function($q) {
+                            $q->whereIn('status', ['completed', 'in_consultation']);
+                        })
+                        ->latest('visit_date')
+                        ->first();
+                }
+
+                $parentVisit = $scheduledRecheckAppt?->recheckParentVisit ?: $recentVisitWithFollowUp;
+                $isFreeRecheck = ($scheduledRecheckAppt !== null || $recentVisitWithFollowUp !== null);
+
                 $fee = $isFreeRecheck ? 0 : ($doctor->consultation_fee ?? $department->consultation_fee ?? 0);
                 $payStatus = $isFreeRecheck ? 'paid' : 'pending';
                 $reasonText = $isFreeRecheck ? 'مراجعة مجانية' : ($httpRequest->description ?? 'كشف طبي عام');
                 $noteText = $isFreeRecheck 
-                    ? ("مراجعة مجانية سارية حتى " . Carbon::parse($recentVisit->visit_date)->addDays($validityDays)->format('Y-m-d') . " (مرتبطة بالزيارة #{$recentVisit->id})")
+                    ? ("مراجعة مجانية صالحة حتى " . Carbon::parse($parentVisit?->visit_date ?? now())->addDays($validityDays)->format('Y-m-d') . ($parentVisit ? " (مرتبطة بالزيارة #{$parentVisit->id})" : ""))
                     : 'تم الحجز من الاستعلامات - بانتظار الدفع';
 
-                // إنشاء موعد
-                $appointment = Appointment::create([
-                    'patient_id' => $patient->id,
-                    'doctor_id' => $doctor->id,
-                    'department_id' => $department->id,
-                    'appointment_date' => $appointmentDate,
-                    'reason' => $reasonText,
-                    'notes' => $noteText,
-                    'consultation_fee' => $fee,
-                    'is_free_recheck' => $isFreeRecheck,
-                    'recheck_parent_visit_id' => $recentVisit?->id,
-                    'duration' => 30,
-                    'status' => $isFreeRecheck ? 'confirmed' : 'scheduled',
-                    'payment_status' => $payStatus, // إذا كانت مراجعة مجانية تصبح مدفوعة/معفية فوراً
-                    'insurance_type' => $bookingInsuranceType
-                ]);
+                // إنشاء أو تحديث الموعد
+                if ($scheduledRecheckAppt) {
+                    $appointment = $scheduledRecheckAppt;
+                    $appointment->update([
+                        'department_id' => $department->id,
+                        'appointment_date' => $appointmentDate,
+                        'reason' => $reasonText,
+                        'notes' => $noteText,
+                        'status' => 'confirmed',
+                        'payment_status' => 'paid',
+                        'insurance_type' => $bookingInsuranceType
+                    ]);
+                } else {
+                    $appointment = Appointment::create([
+                        'patient_id' => $patient->id,
+                        'doctor_id' => $doctor->id,
+                        'department_id' => $department->id,
+                        'appointment_date' => $appointmentDate,
+                        'reason' => $reasonText,
+                        'notes' => $noteText,
+                        'consultation_fee' => $fee,
+                        'is_free_recheck' => $isFreeRecheck,
+                        'recheck_parent_visit_id' => $parentVisit?->id,
+                        'duration' => 30,
+                        'status' => $isFreeRecheck ? 'confirmed' : 'scheduled',
+                        'payment_status' => $payStatus,
+                        'insurance_type' => $bookingInsuranceType
+                    ]);
+                }
 
                 if ($isFreeRecheck) {
                     $messages[] = "✨ تم تسجيل المريض كمراجعة مجانية صالحة لدى د. " . ($doctor->user?->name ?? '') . " برسم (0 د.ع) ودخوله لطابور الطبيب مباشرة.";
@@ -846,7 +872,6 @@ class InquiryController extends Controller
 
             // إنشاء موعد في طابور الأطباء الاستشاريين ليظهر في شاشة توفر الاستشاريين
             $sonarTypeName = $sonarTypeObj ? $sonarTypeObj->name : 'فحص سونار';
-            $sonarFee = $sonarTypeObj ? ($sonarTypeObj->base_price ?? 0) : ($sonarDoc->consultation_fee ?? 0);
 
             $maxQueue = \App\Models\Appointment::where('doctor_id', $sonarDoc?->id)
                 ->whereDate('appointment_date', today())
@@ -860,7 +885,7 @@ class InquiryController extends Controller
                 'queue_number' => $maxQueue + 1,
                 'reason' => 'حجز سونار - ' . $sonarTypeName,
                 'notes' => 'حجز سونار من الاستعلامات' . ($sonarTypeObj ? ' (كود: ' . $sonarTypeObj->code . ')' : ''),
-                'consultation_fee' => $sonarFee,
+                'consultation_fee' => 0, // الرسوم مسجلة ومسعرة بالكامل على الطلب الطبي للفحص
                 'duration' => 20,
                 'status' => 'scheduled',
                 'payment_status' => 'pending',
@@ -968,6 +993,9 @@ class InquiryController extends Controller
             return redirect()->route('consultant-availability.index')
                 ->with('success', 'تم حجز السونار بنجاح وإدراجه في طابور اليوم! يرجى توجيه المريض للكاشير لدفع الأجور.');
         }
+
+        // تجميع الرسائل النهائية
+        $finalMessage = !empty($messages) ? implode('<br>', $messages) : 'تم إنشاء وحجز الطلب بنجاح! يرجى توجيه المريض للكاشير لدفع الأجور.';
 
         // إرجاع إلى صفحة الاستعلامات مع الرسالة
         return redirect()->route('inquiry.index')

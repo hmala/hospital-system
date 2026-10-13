@@ -63,6 +63,24 @@ return [
             ]) : [],
         ],
 
+        'remote_hostinger' => [
+            'driver' => 'mysql',
+            'host' => env('REMOTE_DB_HOST', 'srv1687.hstgr.io'),
+            'port' => env('REMOTE_DB_PORT', '3306'),
+            'database' => env('REMOTE_DB_DATABASE', 'u175868711_her2020'),
+            'username' => env('REMOTE_DB_USERNAME', 'u175868711_her2020'),
+            'password' => env('REMOTE_DB_PASSWORD', 'U175868711_her2020'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+            'options' => [
+                PDO::ATTR_TIMEOUT => 30,
+            ],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

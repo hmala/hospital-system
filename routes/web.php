@@ -18,6 +18,8 @@ use App\Http\Controllers\UserLabTestGroupController;
 use App\Http\Controllers\UserMedicineGroupController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
+use App\Http\Controllers\HospitalTreasuryController;
+use App\Http\Controllers\UserActivityController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -108,6 +110,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.search-follow-ups');
     Route::get('/consultant-availability/financial-movements', [ConsultantAvailabilityController::class, 'financialMovements'])
         ->name('consultant-availability.financial-movements');
+    Route::post('/consultant-availability/financial-movements/{revenue}/update-shares', [ConsultantAvailabilityController::class, 'updateRevenueShares'])
+        ->name('consultant-availability.financial-movements.update-shares');
     Route::get('/consultant-availability/financial-movements/export', [ConsultantAvailabilityController::class, 'exportFinancialMovements'])
         ->name('consultant-availability.financial-movements.export');
     Route::get('/consultant-availability/doctor-accounts', [ConsultantAvailabilityController::class, 'doctorAccounts'])
@@ -118,6 +122,31 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.doctor-account.export');
     Route::post('/consultant-availability/doctor-accounts/{doctor}/payout', [ConsultantAvailabilityController::class, 'doctorPayout'])
         ->name('consultant-availability.doctor-payout');
+
+    // خزينة المستشفى المركزية وحركة النقدية والمصروفات
+    Route::prefix('treasury')->name('treasury.')->group(function () {
+        Route::get('/', [HospitalTreasuryController::class, 'index'])->name('index');
+        Route::post('/expense', [HospitalTreasuryController::class, 'storeExpense'])->name('expense.store');
+        Route::post('/income', [HospitalTreasuryController::class, 'storeIncome'])->name('income.store');
+        Route::get('/export', [HospitalTreasuryController::class, 'export'])->name('export');
+        Route::delete('/{transaction}', [HospitalTreasuryController::class, 'destroy'])->name('destroy');
+    });
+
+    // سجل حركات ونشاط الموظفين والرقابة الإدارية
+    Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+        Route::get('/', [UserActivityController::class, 'index'])->name('index');
+        Route::get('/feed-ajax', [UserActivityController::class, 'feedAjax'])->name('feed-ajax');
+        Route::get('/export', [UserActivityController::class, 'export'])->name('export');
+        Route::post('/purge', [UserActivityController::class, 'purgeOld'])->name('purge');
+    });
+
+    // مركز مزامنة وسحب قاعدة البيانات من هوستنجر (Cloud Sync)
+    Route::prefix('system/database-sync')->name('system.database-sync.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\DatabaseSyncController::class, 'index'])->name('index');
+        Route::post('/test', [\App\Http\Controllers\DatabaseSyncController::class, 'test'])->name('test');
+        Route::post('/pull', [\App\Http\Controllers\DatabaseSyncController::class, 'pull'])->name('pull');
+    });
+
     Route::get('/debug-user', function () {
         return \App\Models\User::with(['roles','permissions'])->limit(10)->get();
     });
@@ -398,6 +427,7 @@ Route::middleware(['auth'])->group(function () {
         // طلبات الطوارئ - الأشعة
         Route::get('/emergency-radiology/{emergencyRadiology}', [StaffRequestController::class, 'showEmergencyRadiology'])->name('emergency-radiology.show');
         Route::get('/emergency-radiology/{emergencyRadiology}/print', [StaffRequestController::class, 'printEmergencyRadiology'])->name('emergency-radiology.print');
+        Route::get('/emergency-radiology/{emergencyRadiology}/attachment/{typeId}', [StaffRequestController::class, 'emergencyRadiologyAttachment'])->name('emergency-radiology.attachment');
         Route::post('/emergency-radiology/{emergencyRadiology}/start', [StaffRequestController::class, 'startEmergencyRadiology'])->name('emergency-radiology.start');
         Route::put('/emergency-radiology/{emergencyRadiology}/complete', [StaffRequestController::class, 'completeEmergencyRadiology'])->name('emergency-radiology.complete');
         
@@ -407,29 +437,41 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 
+    // مسار فتح وتحميل مرفقات التحاليل الطبية (متاح لكافة الكوادر الطبية والمختبر)
+    Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('lab.attachment');
+
     // ======= مسارات قسم المختبر =======
     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\LabStaffController::class, 'index'])->name('index');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
-        Route::get('/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('attachment');
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
     });
 
-    // ======= مسارات قسم الأشعة =======
+    // ======= مسارات قسم الأشعة والتصوير الطبي =======
     Route::prefix('radiology-staff')->name('radiology-staff.')->middleware('can:view radiology')->group(function () {
         Route::get('/requests', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
+        Route::get('/queue-status', [\App\Http\Controllers\RadiologyStaffController::class, 'queueStatus'])->name('queue-status');
+        Route::match(['GET', 'POST'], '/call-next', [\App\Http\Controllers\RadiologyStaffController::class, 'callNext'])->name('call-next');
+        Route::match(['GET', 'POST'], '/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
+        Route::match(['GET', 'POST'], '/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
         Route::get('/requests/{request}/show', [\App\Http\Controllers\RadiologyStaffController::class, 'show'])->name('show');
+        Route::get('/requests/{request}/print', [\App\Http\Controllers\RadiologyStaffController::class, 'print'])->name('print');
+        Route::match(['GET', 'POST'], '/requests/{request}/call', [\App\Http\Controllers\RadiologyStaffController::class, 'call'])->name('call');
+        Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
     });
-
 
     // إدارة رموز ICD10
     Route::resource('icd10', \App\Http\Controllers\ICD10Controller::class);
 
-    // إدارة الإشعة
+    // إدارة الإشعة (المحطة الموحدة)
     Route::prefix('radiology')->name('radiology.')->group(function () {
-        Route::get('/', [RadiologyController::class, 'index'])->name('index');
+        Route::get('/', [\App\Http\Controllers\RadiologyStaffController::class, 'index'])->name('index');
+        Route::get('/queue-status', [\App\Http\Controllers\RadiologyStaffController::class, 'queueStatus'])->name('queue-status');
+        Route::match(['GET', 'POST'], '/call-next', [\App\Http\Controllers\RadiologyStaffController::class, 'callNext'])->name('call-next');
+        Route::match(['GET', 'POST'], '/recall', [\App\Http\Controllers\RadiologyStaffController::class, 'recall'])->name('recall');
+        Route::match(['GET', 'POST'], '/skip', [\App\Http\Controllers\RadiologyStaffController::class, 'skip'])->name('skip');
         Route::get('/create', [RadiologyController::class, 'create'])->name('create');
         Route::post('/', [RadiologyController::class, 'store'])->name('store');
         Route::get('/{radiology}', [RadiologyController::class, 'show'])->name('show');
@@ -450,8 +492,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [RadiologyTypeController::class, 'index'])->name('index');
             Route::get('/create', [RadiologyTypeController::class, 'create'])->name('create');
             Route::post('/', [RadiologyTypeController::class, 'store'])->name('store');
+            Route::post('/bulk-action', [RadiologyTypeController::class, 'bulkAction'])->name('bulk-action');
+            Route::post('/global-toggle', [RadiologyTypeController::class, 'globalToggle'])->name('global-toggle');
             Route::post('/bulk-delete', [RadiologyTypeController::class, 'bulkDelete'])->name('bulk-delete');
             Route::post('/bulk-toggle-status', [RadiologyTypeController::class, 'bulkToggleStatus'])->name('bulk-toggle-status');
+            Route::post('/{type}/quick-toggle', [RadiologyTypeController::class, 'quickToggle'])->name('quick-toggle');
             Route::post('/{type}/quick-price', [RadiologyTypeController::class, 'quickPriceUpdate'])->name('quick-price');
             Route::get('/{type}', [RadiologyTypeController::class, 'show'])->name('show');
             Route::get('/{type}/edit', [RadiologyTypeController::class, 'edit'])->name('edit');
@@ -525,6 +570,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('doctor-commission-settings', \App\Http\Controllers\Admin\DoctorCommissionSettingController::class)->except(['show']);
         Route::post('doctor-commission-settings/save', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'save'])
             ->name('doctor-commission-settings.save');
+        Route::post('doctor-commission-settings/recalculate-today', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'recalculateToday'])
+            ->name('doctor-commission-settings.recalculate-today');
         Route::resource('packages', \App\Http\Controllers\Admin\PackageController::class)->except(['show']);
     });
 
@@ -688,6 +735,9 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // إدارة خدمات الطوارئ
+    Route::post('emergency-services/global-toggle', [\App\Http\Controllers\EmergencyServiceController::class, 'globalToggle'])->name('emergency-services.global-toggle');
+    Route::post('emergency-services/bulk-action', [\App\Http\Controllers\EmergencyServiceController::class, 'bulkAction'])->name('emergency-services.bulk-action');
+    Route::post('emergency-services/{emergencyService}/quick-toggle', [\App\Http\Controllers\EmergencyServiceController::class, 'quickToggle'])->name('emergency-services.quick-toggle');
     Route::resource('emergency-services', \App\Http\Controllers\EmergencyServiceController::class)->except(['create', 'show', 'edit']);
     Route::post('emergency-services/{emergencyService}/toggle', [\App\Http\Controllers\EmergencyServiceController::class, 'toggleStatus'])->name('emergency-services.toggle');
 
@@ -865,6 +915,27 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
+// خدمة وتقديم ملفات التخزين العام (Fallback Storage File Server)
+// يضمن فتح صور ومرفقات الأشعة والمختبر والتقارير دون أخطاء 403 في السيرفرات المشتركة
+Route::get('/storage/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $fullPath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullPath) || is_dir($fullPath)) {
+        abort(404, 'الملف المطلوب غير موجود في وحدة التخزين');
+    }
+
+    $mime = @mime_content_type($fullPath) ?: 'application/octet-stream';
+
+    return response()->file($fullPath, [
+        'Content-Type' => $mime,
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*')->name('storage.file.serve');
 
 
 

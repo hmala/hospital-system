@@ -488,13 +488,11 @@
                         <i class="fas fa-users-line text-success fs-6"></i>
                         <h6 class="mb-0 fw-bold text-dark small">طابور الحجوزات والقبض</h6>
                     </div>
-                    @if(isset($todayAppointments))
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small">
-                            {{ $todayAppointments->count() }} مريض
-                        </span>
-                    @endif
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small" id="todayAppointmentsCountBadge">
+                        {{ isset($todayAppointments) ? $todayAppointments->count() : 0 }} مريض
+                    </span>
                 </div>
-                <div class="card-body p-2 overflow-auto" style="max-height: 340px;">
+                <div class="card-body p-2 overflow-auto" id="todayAppointmentsContainer" style="max-height: 340px;">
                     @if(isset($todayAppointments) && $todayAppointments->count() > 0)
                         <div class="list-group list-group-flush">
                             @foreach($todayAppointments as $appointment)
@@ -534,13 +532,7 @@
                                                     </button>
                                                 @endif
                                             @else
-                                                @canany(['process consultation payments', 'process payments'])
-                                                    <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;" title="قبض رسوم الكشفية فوراً">
-                                                        <i class="fas fa-cash-register me-1"></i> قبض
-                                                    </a>
-                                                @else
-                                                    <span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>
-                                                @endcanany
+                                                <span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>
                                             @endif
 
                                             @if($appointment->is_free_recheck)
@@ -574,18 +566,18 @@
                 </div>
             </div>
 
-            <!-- 4. Compact Ultrasound / Lab Requests Card (If Any) -->
-            @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
-                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3">
-                    <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-1">
-                            <i class="fas fa-wave-square text-primary small"></i>
-                            <h6 class="mb-0 fw-bold text-dark small">فحوصات وسونار بانتظار السداد</h6>
-                        </div>
-                        <span class="badge bg-warning text-dark small">{{ $pendingConsultantRequests->count() }}</span>
+            <!-- 4. Compact Ultrasound / Lab Requests Card (Auto-Refreshed) -->
+            <div id="pendingRequestsCard" class="card border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning mb-3" style="display: {{ (isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0) ? 'block' : 'none' }};">
+                <div class="card-header bg-warning bg-opacity-10 border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-1">
+                        <i class="fas fa-wave-square text-primary small"></i>
+                        <h6 class="mb-0 fw-bold text-dark small">فحوصات وسونار بانتظار السداد</h6>
                     </div>
-                    <div class="card-body p-2 overflow-auto" style="max-height: 240px;">
-                        <div class="list-group list-group-flush">
+                    <span class="badge bg-warning text-dark small" id="pendingRequestsCountBadge">{{ isset($pendingConsultantRequests) ? $pendingConsultantRequests->count() : 0 }}</span>
+                </div>
+                <div class="card-body p-2 overflow-auto" style="max-height: 240px;" id="pendingRequestsContainer">
+                    <div class="list-group list-group-flush">
+                        @if(isset($pendingConsultantRequests) && $pendingConsultantRequests->count() > 0)
                             @foreach($pendingConsultantRequests as $req)
                                 <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
                                     <div class="d-flex justify-content-between align-items-center gap-2">
@@ -598,21 +590,15 @@
                                             </small>
                                         </div>
                                         <div>
-                                            @canany(['process medical requests payments', 'process payments'])
-                                                <a href="{{ route('cashier.request.payment.form', $req->id) }}" class="btn btn-xs btn-success text-white fw-bold shadow-xs py-1 px-2" style="font-size: 0.75rem;">
-                                                    <i class="fas fa-cash-register me-1"></i> قبض
-                                                </a>
-                                            @else
-                                                <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
-                                            @endcan
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
                                         </div>
                                     </div>
                                 </div>
                             @endforeach
-                        </div>
+                        @endif
                     </div>
                 </div>
-            @endif
+            </div>
         </div>
     </div>
 </div>
@@ -667,100 +653,6 @@
     transform: translateY(-1px);
 }
 
-/* Clean and Simple Design */
-body {
-    background-color: #f8f9fa !important;
-}
-
-.card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: none !important;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-}
-
-.btn {
-    border-radius: 15px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #28a745, #20c997);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #dc3545, #fd7e14);
-}
-
-.form-check-input:checked {
-    background-color: #28a745;
-    border-color: #28a745;
-}
-
-.availability-text {
-    font-size: 1.1rem;
-    transition: color 0.3s ease;
-}
-
-.doctor-card {
-    background: white;
-}
-
-.table-responsive {
-    border-radius: 1rem;
-}
-
-.table td,
-.table th {
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-}
-
-.display-4 {
-    font-size: 2.5rem;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .display-5 {
-        font-size: 2rem;
-    }
-
-    .display-4 {
-        font-size: 2rem;
-    }
-
-    .btn-lg {
-        padding: 0.75rem 1.5rem;
-        font-size: 1rem;
-    }
-
-    .card-body {
-        padding: 2rem 1.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .btn {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    .d-flex.gap-3 {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
 </style>
 
 <script>
@@ -1423,6 +1315,135 @@ function pollLiveConsultantStatus() {
                             <small class="text-muted" style="font-size: 0.7rem;">ستنتقل المراجعات المطبوعة إلى هنا فور طباعتها</small>
                         </div>
                     `;
+                }
+            }
+            // 5. تحديث طابور الحجوزات والقبض لليوم (Today's Queue & Cashier)
+            const apptCountBadge = document.getElementById('todayAppointmentsCountBadge');
+            const apptContainer = document.getElementById('todayAppointmentsContainer');
+            
+            if (apptCountBadge && data.today_appointments_count !== undefined) {
+                apptCountBadge.textContent = `${data.today_appointments_count} مريض`;
+            }
+
+            if (apptContainer && data.today_appointments) {
+                const csrfToken = '{{ csrf_token() }}';
+                if (data.today_appointments.length > 0) {
+                    let apptHtml = '<div class="list-group list-group-flush">';
+                    data.today_appointments.forEach(app => {
+                        const isCalling = (app.status === 'calling');
+                        const isPaid = (app.payment_status === 'paid');
+                        const itemClass = isCalling 
+                            ? 'border-primary bg-primary bg-opacity-10' 
+                            : (isPaid ? 'border-light bg-light' : 'border-warning bg-warning bg-opacity-10');
+                        const queueBadgeClass = isPaid ? 'bg-success' : 'bg-warning text-dark';
+                        const emergencyBadge = app.is_emergency ? `<span class="badge bg-danger p-1" style="font-size: 0.65rem;">طوارئ</span>` : '';
+                        const recheckBadge = app.is_free_recheck ? `<span class="badge bg-success text-white px-1 py-0 rounded-pill" style="font-size: 0.65rem;">مراجعة مجانية</span>` : '';
+
+                        let actionBtnHtml = '';
+                        if (isPaid || app.is_emergency) {
+                            if (isCalling) {
+                                actionBtnHtml = `
+                                    <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2" style="font-size: 0.75rem;" onclick="callPatient(${app.id}, this)" title="إعادة النداء للشاشة الخارجية">
+                                        <i class="fas fa-redo me-1"></i> إعادة نداء
+                                    </button>
+                                `;
+                            } else {
+                                actionBtnHtml = `
+                                    <button type="button" class="btn btn-xs btn-primary text-white py-1 px-2" style="font-size: 0.75rem;" onclick="callPatient(${app.id}, this)" title="استدعاء للشاشة الخارجية">
+                                        <i class="fas fa-bullhorn me-1"></i> استدعاء
+                                    </button>
+                                `;
+                            }
+                        } else {
+                            actionBtnHtml = `<span class="badge bg-secondary" style="font-size: 0.72rem;">غير مدفوع</span>`;
+                        }
+
+                        let cancelBtnHtml = '';
+                        if (app.can_cancel) {
+                            cancelBtnHtml = `
+                                <form method="POST" action="${app.cancel_url}" class="d-inline m-0">
+                                    <input type="hidden" name="_token" value="${csrfToken}">
+                                    <button type="submit" class="btn btn-xs btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')" title="إلغاء الحجز">
+                                        <i class="fas fa-times me-1"></i> إلغاء
+                                    </button>
+                                </form>
+                            `;
+                        }
+
+                        apptHtml += `
+                            <div class="list-group-item px-2 py-2 border rounded-2 mb-2 ${itemClass}">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 text-truncate">
+                                        <span class="badge ${queueBadgeClass} rounded-pill px-2 flex-shrink-0" style="font-size: 0.8rem;">
+                                            #${app.queue_number}
+                                        </span>
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark small text-truncate">
+                                                ${app.patient_name} ${emergencyBadge}
+                                            </div>
+                                            <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                                د. ${app.doctor_name}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                        ${actionBtnHtml}
+                                        ${recheckBadge}
+                                        <a href="${app.print_url}" target="_blank" class="btn btn-xs btn-outline-dark py-1 px-2" style="font-size: 0.75rem;" title="طباعة وصل الموعد والمراجعة للمريض">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                        ${cancelBtnHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    apptHtml += '</div>';
+                    apptContainer.innerHTML = apptHtml;
+                } else {
+                    apptContainer.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-calendar-check fa-2x mb-2 text-secondary"></i>
+                            <p class="mb-0 small">لا توجد حجوزات مسجلة اليوم</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // 6. تحديث طابور فحوصات وسونار بانتظار السداد
+            const reqCard = document.getElementById('pendingRequestsCard');
+            const reqCountBadge = document.getElementById('pendingRequestsCountBadge');
+            const reqContainer = document.getElementById('pendingRequestsContainer');
+            
+            if (reqCard && data.pending_requests !== undefined) {
+                if (data.pending_requests.length > 0) {
+                    reqCard.style.display = 'block';
+                    if (reqCountBadge) reqCountBadge.textContent = data.pending_requests_count;
+                    if (reqContainer) {
+                        let reqHtml = '<div class="list-group list-group-flush">';
+                        data.pending_requests.forEach(req => {
+                            reqHtml += `
+                                <div class="list-group-item px-2 py-2 border rounded-2 mb-1 bg-light">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark small text-truncate">${req.patient_name}</div>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                                ${req.type_label} — <strong class="text-success">${req.total_amount} د.ع</strong>
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">بانتظار الصندوق</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        reqHtml += '</div>';
+                        reqContainer.innerHTML = reqHtml;
+                    }
+                } else {
+                    reqCard.style.display = 'none';
+                    if (reqContainer) reqContainer.innerHTML = '';
                 }
             }
         }

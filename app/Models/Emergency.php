@@ -13,6 +13,8 @@ class Emergency extends Model
 {
     protected $fillable = [
         'patient_id',
+        'is_insured',
+        'insurance_type',
         'doctor_id',
         'nurse_id',
         'priority',
@@ -47,6 +49,7 @@ class Emergency extends Model
         'discharge_time' => 'datetime',
         'requires_surgery' => 'boolean',
         'requires_admission' => 'boolean',
+        'is_insured' => 'boolean',
         'doctor_follow_up_fee' => 'integer',
         'is_active' => 'boolean',
         'patient_migrated' => 'boolean',
@@ -195,24 +198,41 @@ class Emergency extends Model
             return 0.0;
         }
 
+        $isInsurance = (bool)($this->patient && ($this->patient->insurance_type === 'hi' || $this->patient->healthInsuranceCategory));
+        $insuranceType = $isInsurance ? 'hi' : 'none';
+        $emergencyCopay = $isInsurance ? $this->patient->getCopayPercentageFor('emergency') : 100.0;
+        $labCopay       = $isInsurance ? $this->patient->getCopayPercentageFor('lab') : 100.0;
+        $radCopay       = $isInsurance ? $this->patient->getCopayPercentageFor('radiology') : 100.0;
+
         $unpaidServiceIds = \DB::table('emergency_emergency_service')
             ->where('emergency_id', $this->id)
             ->whereNull('payment_id')
             ->pluck('emergency_service_id');
+
+        $unpaidServices = $this->services()->whereIn('emergency_services.id', $unpaidServiceIds)->get();
+        $servicesPatientAmount = 0.0;
+        foreach ($unpaidServices as $service) {
+            $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+            $servicesPatientAmount += (float)$pricing['patient_share'];
+        }
         
-        $servicesAmount = $this->services()->whereIn('emergency_services.id', $unpaidServiceIds)->sum('price');
-        
-        $labAmount = $this->labRequests()
-            ->whereNull('payment_id')
-            ->with('labTests')
-            ->get()
-            ->sum(fn($r) => $r->labTests->sum('price'));
+        $labPatientAmount = 0.0;
+        $unpaidLabRequests = $this->labRequests()->whereNull('payment_id')->with('labTests')->get();
+        foreach ($unpaidLabRequests as $req) {
+            foreach ($req->labTests as $test) {
+                $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
+                $labPatientAmount += (float)$pricing['patient_share'];
+            }
+        }
             
-        $radiologyAmount = $this->radiologyRequests()
-            ->whereNull('payment_id')
-            ->with('radiologyTypes')
-            ->get()
-            ->sum(fn($r) => $r->radiologyTypes->sum('base_price'));
+        $radiologyPatientAmount = 0.0;
+        $unpaidRadRequests = $this->radiologyRequests()->whereNull('payment_id')->with('radiologyTypes')->get();
+        foreach ($unpaidRadRequests as $req) {
+            foreach ($req->radiologyTypes as $rad) {
+                $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
+                $radiologyPatientAmount += (float)$pricing['patient_share'];
+            }
+        }
 
         $consultationAmount = $this->appointments()
             ->where('payment_status', 'pending')
@@ -222,8 +242,9 @@ class Emergency extends Model
         $followUpFee = ($this->doctor_follow_up_fee > 0 && !$this->follow_up_payment_id) 
             ? $this->doctor_follow_up_fee 
             : 0;
+        $followUpPatientFee = $isInsurance ? (float)round($followUpFee * ($emergencyCopay / 100.0), 2) : (float)$followUpFee;
 
-        return (float) ($servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee);
+        return (float) ($servicesPatientAmount + $labPatientAmount + $radiologyPatientAmount + $consultationAmount + $followUpPatientFee);
     }
 
     /**

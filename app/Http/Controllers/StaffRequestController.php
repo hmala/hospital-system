@@ -143,10 +143,10 @@ class StaffRequestController extends Controller
     public function printEmergencyLab(\App\Models\EmergencyLabRequest $emergencyLab)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view lab tests')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
-        $emergencyLab->load(['patient.user', 'labTests']);
+        $emergencyLab->load(['patient.user', 'labTests', 'requestTests.labTest']);
         return view('staff.requests.emergency-lab-print', compact('emergencyLab'));
     }
 
@@ -1401,11 +1401,11 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
-        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes']);
+        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes', 'requestTypes.radiologyType']);
 
         return view('staff.requests.emergency-radiology-show', compact('emergencyRadiology'));
     }
@@ -1418,13 +1418,52 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'admin'])) {
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
-        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes']);
+        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes', 'requestTypes.radiologyType']);
 
         return view('staff.requests.emergency-radiology-print', compact('emergencyRadiology'));
+    }
+
+    /**
+     * عرض وتحميل ملف / صورة أشعة الطوارئ المرفقة
+     */
+    public function emergencyRadiologyAttachment(
+        HttpRequest $request,
+        \App\Models\EmergencyRadiologyRequest $emergencyRadiology,
+        $typeId
+    ) {
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
+            abort(403, 'غير مصرح لك بعرض هذا المرفق');
+        }
+
+        $reqType = $emergencyRadiology->requestTypes()->where('radiology_type_id', $typeId)->first();
+        if (!$reqType || empty($reqType->image_path)) {
+            // التحقق من pivot مباشرة
+            $pivotType = $emergencyRadiology->radiologyTypes()->where('radiology_type_id', $typeId)->first();
+            $path = $pivotType?->pivot?->image_path;
+        } else {
+            $path = $reqType->image_path;
+        }
+
+        if (!$path) {
+            abort(404, 'لا توجد صورة أو ملف مرفق لهذا الفحص');
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+        if (file_exists($fullPath)) {
+            return response()->file($fullPath);
+        }
+
+        abort(404, 'الملف المرفق غير موجود في وحدة التخزين');
     }
 
     /**

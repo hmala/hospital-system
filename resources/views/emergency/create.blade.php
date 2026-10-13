@@ -10,8 +10,15 @@
                     <i class="fas fa-plus-circle me-2"></i>
                     إضافة حالة طوارئ جديدة
                 </h2>
-                <a href="{{ route('emergency.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>العودة للقائمة
+                @php
+                    $isFromInquiry = request('return_to') === 'inquiry' 
+                        || request('from_inquiry') 
+                        || (!auth()->user()->can('view emergencies') && !auth()->user()->hasRole(['emergency_staff', 'doctor', 'nurse']));
+                    $backUrl = $isFromInquiry ? route('inquiry.index') : route('emergency.index');
+                    $backLabel = $isFromInquiry ? 'العودة للاستعلامات' : 'العودة لقائمة الطوارئ';
+                @endphp
+                <a href="{{ $backUrl }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>{{ $backLabel }}
                 </a>
             </div>
         </div>
@@ -47,6 +54,7 @@
                 <div class="card-body">
                     <form method="POST" action="{{ route('emergency.store') }}">
                         @csrf
+                        <input type="hidden" name="return_to" value="{{ request('return_to', $isFromInquiry ? 'inquiry' : 'emergency') }}">
                         @if(isset($referralRequest) && $referralRequest)
                             <input type="hidden" name="referral_request_id" value="{{ $referralRequest->id }}">
                         @endif
@@ -91,12 +99,15 @@
                                             </div>
                                             <div>
                                                 <h6 class="mb-0 fw-bold text-primary" id="selectedPatientName">{{ $selectedPatient->user->name ?? '' }}</h6>
-                                                <div class="small text-muted d-flex flex-wrap gap-2 mt-1">
+                                                <div class="small text-muted d-flex flex-wrap gap-2 mt-1 align-items-center">
                                                     <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ $selectedPatient->user->phone ?? ($selectedPatient->phone ?? 'لا يوجد') }}</span></span>
                                                     <span class="badge bg-secondary" id="selectedPatientIdBadge">#{{ $selectedPatient->id ?? '' }}</span>
                                                     @if(isset($selectedPatient) && $selectedPatient->national_id)
                                                         <span class="badge bg-info text-dark" id="selectedPatientRefBadge">{{ $selectedPatient->national_id }}</span>
                                                     @endif
+                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25" id="selectedPatientInsuranceBadge" style="{{ isset($selectedPatient) && ($selectedPatient->healthInsuranceCategory || ($selectedPatient->insurance_type && $selectedPatient->insurance_type !== 'none')) ? '' : 'display: none;' }}">
+                                                        <i class="fas fa-shield-alt me-1"></i><span id="selectedPatientInsuranceText">{{ $selectedPatient->healthInsuranceCategory->name ?? 'مشمول بالضمان الصحي' }}</span>
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -109,6 +120,36 @@
                                 @error('patient_id')
                                     <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ $message }}</div>
                                 @enderror
+                            </div>
+
+                            <!-- قسم تحديد تغطية الضمان للطوارئ -->
+                            <div class="col-md-12 mb-3" id="emergencyInsuranceSection" style="{{ isset($selectedPatient) && ($selectedPatient->healthInsuranceCategory || ($selectedPatient->insurance_type && $selectedPatient->insurance_type !== 'none')) ? '' : 'display: none;' }}">
+                                <div class="card border-success bg-success-subtle bg-opacity-10 p-3 shadow-sm rounded-3">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <h6 class="fw-bold text-success mb-1">
+                                                <i class="fas fa-shield-alt me-1"></i> مظلة الضمان الصحي للمريض: <span id="selectedPatientInsuranceCategoryText">{{ $selectedPatient->healthInsuranceCategory->name ?? ($selectedPatient && $selectedPatient->insurance_type !== 'none' ? 'مشمول بالضمان الصحي' : '') }}</span>
+                                            </h6>
+                                            <p class="small text-muted mb-0">
+                                                حدد ما إذا كانت هذه الحالة الطارئة والخدمات المقدمة سيتم احتسابها على ذمة الضمان الصحي أم حساب كاش مباشر للمريض.
+                                            </p>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3 bg-white p-2 rounded-3 border shadow-xs">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-success cursor-pointer" for="apply_insurance_yes">
+                                                    🛡️ حجز تحت مظلة الضمان
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-secondary cursor-pointer" for="apply_insurance_no">
+                                                    💵 حجز كاش عادي (بدون ضمان)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- حقول إنشاء مريض جديد -->
@@ -293,8 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 class="list-group-item list-group-item-action text-end d-flex justify-content-between align-items-center py-2 patient-result-item" 
                                 data-patient-id="${p.id}">
                             <div>
-                                <div class="fw-bold text-primary mb-1">
-                                    <i class="fas fa-user-circle me-1"></i>${p.name}
+                                <div class="fw-bold text-primary mb-1 d-flex align-items-center gap-2">
+                                    <span><i class="fas fa-user-circle me-1"></i>${p.name}</span>
+                                    ${p.is_insurance ? `<span class="badge bg-success-subtle text-success border border-success border-opacity-25 py-0 px-1" style="font-size: 0.7rem;"><i class="fas fa-shield-alt me-1"></i>${p.insurance_name || 'ضمان صحي'}</span>` : ''}
                                 </div>
                                 <div class="small text-muted">
                                     <i class="fas fa-phone-alt me-1 text-secondary"></i>${p.phone} 
@@ -357,6 +399,25 @@ document.addEventListener('DOMContentLoaded', function() {
             refBadge.style.display = 'none';
         }
 
+        const insBadge = document.getElementById('selectedPatientInsuranceBadge');
+        const insText = document.getElementById('selectedPatientInsuranceText');
+        const insuranceSection = document.getElementById('emergencyInsuranceSection');
+        const insuranceCatText = document.getElementById('selectedPatientInsuranceCategoryText');
+        const applyYes = document.getElementById('apply_insurance_yes');
+        const applyNo = document.getElementById('apply_insurance_no');
+
+        if (patient.is_insurance) {
+            if (insText) insText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+            if (insBadge) insBadge.style.display = 'inline-block';
+            if (insuranceCatText) insuranceCatText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+            if (insuranceSection) insuranceSection.style.display = 'block';
+            if (applyYes) applyYes.checked = true;
+        } else {
+            if (insBadge) insBadge.style.display = 'none';
+            if (insuranceSection) insuranceSection.style.display = 'none';
+            if (applyNo) applyNo.checked = true;
+        }
+
         searchResults.style.display = 'none';
         searchResults.innerHTML = '';
         searchInput.value = '';
@@ -375,6 +436,10 @@ document.addEventListener('DOMContentLoaded', function() {
         clearPatientBtn.addEventListener('click', function() {
             hiddenPatientId.value = '';
             selectedCard.style.display = 'none';
+            const insuranceSection = document.getElementById('emergencyInsuranceSection');
+            if (insuranceSection) insuranceSection.style.display = 'none';
+            const applyNo = document.getElementById('apply_insurance_no');
+            if (applyNo) applyNo.checked = true;
             searchContainer.style.display = 'block';
             if (searchInput) {
                 searchInput.value = '';

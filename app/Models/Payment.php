@@ -54,12 +54,12 @@ class Payment extends Model
 
     // أنواع الدفع
     const PAYMENT_TYPES = [
-        'appointment' => 'موعد',
-        'lab' => 'مختبر',
-        'radiology' => 'أشعة',
-        'pharmacy' => 'صيدلية',
-        'surgery' => 'جراحة',
-        'emergency' => 'طوارئ',
+        'appointment' => 'العيادات الاستشارية (كشفية)',
+        'lab' => 'المختبر والتحاليل',
+        'radiology' => 'الأشعة والتصوير',
+        'pharmacy' => 'الصيدلية والعلاج',
+        'surgery' => 'العمليات الجراحية',
+        'emergency' => 'طوارئ وإسعاف',
         'other' => 'أخرى'
     ];
 

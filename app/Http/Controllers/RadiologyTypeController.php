@@ -94,13 +94,178 @@ class RadiologyTypeController extends Controller
         $sortDir = $request->get('sort_dir', 'asc');
         $query->orderBy($sortBy, $sortDir);
 
-        $types = $query->paginate(20)->withQueryString();
+        $types = $query->paginate(25)->withQueryString();
         
         // الحصول على التصنيفات المتاحة
         $mainCategories = RadiologyType::whereNotNull('main_category')->distinct()->pluck('main_category');
         $subcategories = RadiologyType::whereNotNull('subcategory')->distinct()->pluck('subcategory');
 
-        return view('radiology.types.index', compact('types', 'mainCategories', 'subcategories'));
+        $stats = [
+            'total' => RadiologyType::count(),
+            'active' => RadiologyType::where('is_active', true)->count(),
+            'inactive' => RadiologyType::where('is_active', false)->count(),
+            'hi_active' => RadiologyType::where('is_hi_active', true)->count(),
+            'hi_inactive' => RadiologyType::where(function($q) {
+                $q->where('is_hi_active', false)->orWhereNull('is_hi_active');
+            })->count(),
+        ];
+
+        return view('radiology.types.index', compact('types', 'mainCategories', 'subcategories', 'stats'));
+    }
+
+    /**
+     * تبديل فوري لأي خاصية (AJAX Quick Toggle)
+     */
+    public function quickToggle(Request $request, RadiologyType $type)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل خصائص الأشعة'], 403);
+        }
+
+        $field = $request->input('field');
+        if (!in_array($field, ['is_hi_active', 'is_moi_active', 'is_active'])) {
+            return response()->json(['success' => false, 'message' => 'حقل غير صالح'], 422);
+        }
+
+        $newValue = $request->has('value') 
+            ? filter_var($request->input('value'), FILTER_VALIDATE_BOOLEAN)
+            : !$type->{$field};
+
+        $type->update([$field => $newValue]);
+
+        $fieldLabels = [
+            'is_hi_active' => 'الضمان الصحي (HI)',
+            'is_moi_active' => 'ضمان الداخلية (MOI)',
+            'is_active' => 'حالة الفحص',
+        ];
+
+        $actionText = $newValue ? 'تفعيل' : 'تعطيل';
+        $label = $fieldLabels[$field] ?? $field;
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم {$actionText} {$label} لفحص ({$type->name}) بنجاح",
+            'new_state' => $newValue,
+        ]);
+    }
+
+    /**
+     * تنفيذ إجراء جماعي على الفحوصات المحددة (Bulk Actions)
+     */
+    public function bulkAction(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+            abort(403, 'غير مصرح لك بتنفيذ إجراءات جماعية');
+        }
+
+        $action = $request->input('action');
+        $serviceIds = $request->input('service_ids', $request->input('ids', []));
+
+        if (empty($serviceIds) || !is_array($serviceIds)) {
+            return redirect()->back()->with('error', 'يرجى تحديد فحص واحد على الأقل لتنفيذ الإجراء الجماعي.');
+        }
+
+        $count = count($serviceIds);
+
+        switch ($action) {
+            case 'hi_enable':
+                RadiologyType::whereIn('id', $serviceIds)->update(['is_hi_active' => true]);
+                $msg = "تم تفعيل التغطية بالضمان الصحي لـ ({$count}) فحص بنجاح 🛡️";
+                break;
+
+            case 'hi_disable':
+                RadiologyType::whereIn('id', $serviceIds)->update(['is_hi_active' => false]);
+                $msg = "تم استبعاد ({$count}) فحص من الضمان الصحي (لتصبح كاش عادي) 🚫";
+                break;
+
+            case 'moi_enable':
+                RadiologyType::whereIn('id', $serviceIds)->update(['is_moi_active' => true]);
+                $msg = "تم تفعيل ضمان الداخلية لـ ({$count}) فحص بنجاح 👮";
+                break;
+
+            case 'moi_disable':
+                RadiologyType::whereIn('id', $serviceIds)->update(['is_moi_active' => false]);
+                $msg = "تم استبعاد ({$count}) فحص من ضمان الداخلية 🚫";
+                break;
+
+            case 'activate':
+                RadiologyType::whereIn('id', $serviceIds)->update(['is_active' => true]);
+                $msg = "تم تفعيل ({$count}) فحص بنجاح ✅";
+                break;
+
+            case 'deactivate':
+                RadiologyType::whereIn('id', $serviceIds)->update(['is_active' => false]);
+                $msg = "تم تعطيل ({$count}) فحص بنجاح ⏸️";
+                break;
+
+            case 'delete':
+                $usedCount = RadiologyType::whereIn('id', $serviceIds)
+                    ->whereHas('requests')
+                    ->count();
+
+                $deleted = RadiologyType::whereIn('id', $serviceIds)
+                    ->whereDoesntHave('requests')
+                    ->delete();
+
+                if ($usedCount > 0) {
+                    $msg = "تم حذف ({$deleted}) فحص، وتخطي ({$usedCount}) فحص لأنها مرتبطة بسجلات سابقة للمرضى.";
+                } else {
+                    $msg = "تم حذف ({$deleted}) فحص بنجاح 🗑️";
+                }
+                break;
+
+            default:
+                return redirect()->back()->with('error', 'إجراء جماعي غير معروف.');
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * تفعيل أو إطفاء الكل لعمود معين (الضمان الصحي HI، ضمان الداخلية MOI، أو حالة الفحص)
+     * مع دعم التحديد لصنف معين (Subcategory) أو لكافة الأصناف
+     */
+    public function globalToggle(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage radiology types'))) {
+            abort(403, 'غير مصرح لك بالتحكم الشامل');
+        }
+
+        $field = $request->input('field');
+        $state = filter_var($request->input('state', true), FILTER_VALIDATE_BOOLEAN);
+        $subcategory = $request->input('subcategory');
+
+        if (!in_array($field, ['is_hi_active', 'is_moi_active', 'is_active'])) {
+            return redirect()->back()->with('error', 'حقل غير صالح.');
+        }
+
+        $query = RadiologyType::query();
+        if (!empty($subcategory)) {
+            $query->where('subcategory', $subcategory);
+            $catLabel = "لقسم ({$subcategory})";
+        } else {
+            $catLabel = "لكافة الفحوصات والأقسام";
+        }
+
+        $count = $query->count();
+        $query->update([$field => $state]);
+
+        $fieldLabels = [
+            'is_hi_active' => 'الضمان الصحي (HI)',
+            'is_moi_active' => 'ضمان الداخلية (MOI)',
+            'is_active' => 'حالة التفعيل',
+        ];
+
+        $actionText = $state ? 'تفعيل' : 'إطفاء/استبعاد';
+        $label = $fieldLabels[$field] ?? $field;
+
+        return redirect()->back()->with('success', "تم {$actionText} {$label} بنجاح {$catLabel} (إجمالي {$count} فحص).");
     }
 
     /**

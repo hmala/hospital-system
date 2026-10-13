@@ -59,6 +59,7 @@
                 </div>
             </div>
         </div>
+        @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole('admin'))
         <div class="col-lg-4 no-print">
             <div class="row g-3">
                 <div class="col-12">
@@ -102,6 +103,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
     <div class="row">
@@ -130,8 +132,10 @@
                                         <th>الطبيب</th>
                                         <th>القسم</th>
                                         <th>المبلغ</th>
+                                        @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
                                         <th>حصة الطبيب</th>
                                         <th>حصة المستشفى</th>
+                                        @endif
                                         <th>نوع الحركة</th>
                                         <th>طريقة الدفع</th>
                                         <th>رقم الإيصال</th>
@@ -149,8 +153,10 @@
                                             <td class="fw-bold {{ $payment->total_amount < 0 ? 'text-danger' : 'text-success' }}">
                                                 {{ number_format(abs($payment->total_amount), 2) }} IQD
                                             </td>
-                                            <td class="text-success">{{ number_format($payment->doctor_share, 2) }} IQD</td>
-                                            <td class="text-info">{{ number_format($payment->hospital_share, 2) }} IQD</td>
+                                            @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
+                                            <td class="text-success fw-semibold">{{ number_format($payment->doctor_share, 2) }} IQD</td>
+                                            <td class="text-info fw-semibold">{{ number_format($payment->hospital_share, 2) }} IQD</td>
+                                            @endif
                                             <td>
                                                 @if($payment->movement_type === 'refund' || $payment->total_amount < 0)
                                                     <span class="badge bg-danger">استرجاع</span>
@@ -189,6 +195,7 @@
         </div>
     </div>
 </div>
+
 @endsection
 
 @section('styles')

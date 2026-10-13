@@ -14,12 +14,48 @@ class PaymentObserver
     public function created(Payment $payment): void
     {
         $this->handlePaymentRevenue($payment);
+        $this->syncNonAppointmentPayment($payment);
+        $this->logPaymentActivity($payment);
     }
 
     public function updated(Payment $payment): void
     {
         if ($payment->wasChanged('paid_at') && $payment->paid_at !== null) {
             $this->handlePaymentRevenue($payment);
+            $this->syncNonAppointmentPayment($payment);
+            $this->logPaymentActivity($payment);
+        }
+    }
+
+    protected function logPaymentActivity(Payment $payment): void
+    {
+        if (!$payment->paid_at) {
+            return;
+        }
+
+        $patientName = $payment->patient?->name ?? ($payment->appointment?->patient?->name ?? 'مريض');
+        $amountFormatted = number_format(abs((float)$payment->amount), 0);
+        $receipt = $payment->receipt_number ? " (وصل #{$payment->receipt_number})" : '';
+        $isRefund = (float)$payment->amount < 0;
+
+        if ($isRefund) {
+            \App\Services\UserActivityLogger::log(
+                action: 'refund',
+                category: 'cashier',
+                description: "استرجاع مبلغ مالي بقيمة {$amountFormatted} د.ع للمريض: {$patientName}{$receipt}",
+                subject: $payment,
+                isSensitive: true,
+                properties: ['amount' => $payment->amount, 'receipt_number' => $payment->receipt_number]
+            );
+        } else {
+            \App\Services\UserActivityLogger::log(
+                action: 'payment',
+                category: 'cashier',
+                description: "تحصيل دفعة مالية بقيمة {$amountFormatted} د.ع للمريض: {$patientName}{$receipt}",
+                subject: $payment,
+                isSensitive: false,
+                properties: ['amount' => $payment->amount, 'receipt_number' => $payment->receipt_number]
+            );
         }
     }
 
@@ -40,12 +76,13 @@ class PaymentObserver
         }
 
         $setting = $this->getCommissionSetting($appointment);
-        $amount = $payment->amount;
+        // Use total_amount for revenue distribution (vital for insurance where amount is just copay)
+        $amount = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
         $baseAmount = $this->getCommissionBaseAmount($payment, $appointment);
 
-        $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting);
+        $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting, $payment);
         $hospitalShare = round($amount - $doctorShare, 2);
-        $percentage = ((float)$baseAmount != 0.0) ? round((abs($doctorShare) / $baseAmount) * 100, 2) : null;
+        $percentage = ($amount != 0.0) ? round((abs($doctorShare) / abs($amount)) * 100, 2) : null;
 
         if ($amount < 0) {
             $hospitalShare = round($amount - $doctorShare, 2);
@@ -145,42 +182,56 @@ class PaymentObserver
         return abs((float)$payment->amount);
     }
 
-    protected function calculateDoctorShare(float $amount, float $baseAmount, $appointment, $setting): float
+    protected function calculateDoctorShare(float $amount, float $baseAmount, $appointment, $setting, $payment = null): float
     {
         $absAmount = abs($amount);
         $absBaseAmount = abs($baseAmount);
+        $isInsurance = $payment && (
+            (float)($payment->insurance_share ?? 0) > 0 ||
+            in_array($payment->insurance_type ?? '', ['hi', 'moi', 'interior_ministry', 'health_insurance']) ||
+            ($appointment && in_array($appointment->insurance_type ?? '', ['hi', 'moi']))
+        );
 
         if ($setting) {
-            $type = $setting->commission_type ?? 'percentage';
+            $type = $setting->commission_type ?? 'fixed';
 
-            if ($type === 'fixed') {
-                $fixedVal = (float) ($setting->fixed_amount ?? 0);
-                $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
-            } elseif ($type === 'custom') {
-                $fixedVal = (float) ($setting->fixed_amount ?? 0);
+            if ($type === 'fixed' || $type === 'custom') {
+                $normalFixed = (float) ($setting->fixed_amount ?? 0);
+                if ($isInsurance) {
+                    $hiFixed = (float) ($setting->hi_fixed_amount ?? 0);
+                    // إذا لم تكن محددة للطبيب في الضمان، القاعدة الثابتة للمستشفى هي 15,000 د.ع للطبيب (من كشفية الضمان 25,000)
+                    $fixedVal = $hiFixed > 0 ? $hiFixed : 15000.00;
+                } else {
+                    $fixedVal = $normalFixed;
+                }
+
                 $doctorShare = $fixedVal > 0 ? $fixedVal : (float) ($setting->commission_value ?? 0);
             } else {
-                // percentage
+                // percentage (إذا كانت مسجلة تاريخياً كنسبة)
                 $perc = (float) ($setting->commission_value ?? 0);
                 if ($perc <= 0 && (float)($setting->fixed_amount ?? 0) > 0) {
                     $doctorShare = (float) $setting->fixed_amount;
+                } elseif ($perc > 0) {
+                    $doctorShare = round($absAmount * ($perc / 100), 2);
                 } else {
-                    $doctorShare = round($absBaseAmount * ($perc / 100), 2);
+                    $doctorShare = 0.00;
                 }
             }
 
-            $doctorShare = min($absBaseAmount, abs($doctorShare));
+            // صمام أمان صارم: حصة الطبيب لا يمكن أن تتجاوز إجمالي المبلغ المحصل للكشفية نهائياً لمنع أي حصة سالبة للمستشفى
+            $doctorShare = min($absAmount, abs($doctorShare));
             return $amount < 0 ? -$doctorShare : $doctorShare;
         }
 
-        if ($appointment->consultation_fee && (float)$appointment->consultation_fee > 0) {
-            $defaultShare = round(abs($appointment->consultation_fee) * 0.7, 2);
-            $doctorShare = min($defaultShare, $absAmount);
-            return $amount < 0 ? -$doctorShare : $doctorShare;
+        // في حال عدم وجود إعداد عمولة مسجل للطبيب ولكنها كشفية ضمان صحي
+        if ($isInsurance) {
+            $defaultHiShare = min($absAmount, 15000.00);
+            return $amount < 0 ? -$defaultHiShare : $defaultHiShare;
         }
 
-        $defaultShare = round($absBaseAmount * 0.7, 2);
-        return $amount < 0 ? -$defaultShare : $defaultShare;
+        // في حال عدم وجود إعداد عمولة مسجل للطبيب، تكون حصته 0.00 (لا توجد نسبة افتراضية تخمينية 70%)
+        // وتبقى كامل الكشفية للمستشفى لحين ضبط المبلغ الثابت للطبيب
+        return 0.00;
     }
 
     protected function syncDoctorAccount(int $doctorId, float $doctorShare, $paidAt): void
@@ -194,28 +245,23 @@ class PaymentObserver
             ]
         );
 
-        $account->balance = round($account->balance + $doctorShare, 2);
-        $account->total_earned = round($account->total_earned + $doctorShare, 2);
+        // احتساب دقيق غير قابل للتكرار بالاعتماد على سجل المستحقات الفعلي
+        $totalEarned = (float) DoctorDue::where('doctor_id', $doctorId)->sum('amount');
+        $totalPaid = (float) ($account->total_paid ?? 0);
+
+        $account->total_earned = $totalEarned;
+        $account->balance = round($totalEarned - $totalPaid, 2);
         $account->last_paid_at = $paidAt;
         $account->save();
     }
 
     protected function syncFinancialTransactions(Payment $payment, float $doctorShare, float $hospitalShare): void
     {
-        FinancialTransaction::updateOrCreate(
-            [
-                'related_type' => Payment::class,
-                'related_id' => $payment->id,
-                'transaction_type' => 'doctor_payment',
-            ],
-            [
-                'amount' => $doctorShare,
-                'currency' => 'IQD',
-                'description' => 'حصة الطبيب عن دفعة رقم ' . $payment->receipt_number,
-                'performed_by_id' => $payment->cashier_id,
-                'performed_at' => $payment->paid_at,
-            ]
-        );
+        // حذف أي قيد قديم من نوع doctor_payment لمنع الازدواجية مع سندات الصرف
+        FinancialTransaction::where('related_type', Payment::class)
+            ->where('related_id', $payment->id)
+            ->where('transaction_type', 'doctor_payment')
+            ->delete();
 
         FinancialTransaction::updateOrCreate(
             [
@@ -224,9 +270,41 @@ class PaymentObserver
                 'transaction_type' => 'hospital_revenue',
             ],
             [
-                'amount' => $hospitalShare,
+                'voucher_type' => 'inflow',
+                'category' => 'consultation',
+                'voucher_number' => $payment->receipt_number,
+                'amount' => (float)$payment->amount > 0 ? (float)$payment->amount : (float)$payment->total_amount,
                 'currency' => 'IQD',
-                'description' => 'ربح المستشفى عن دفعة رقم ' . $payment->receipt_number,
+                'payment_method' => $payment->payment_method ?: 'cash',
+                'description' => 'مقبوضات كشفية إيصال رقم ' . $payment->receipt_number,
+                'notes' => 'حصة الطبيب المستحقة: ' . number_format($doctorShare) . ' د.ع | حصة المستشفى: ' . number_format($hospitalShare) . ' د.ع',
+                'performed_by_id' => $payment->cashier_id,
+                'performed_at' => $payment->paid_at,
+            ]
+        );
+    }
+
+    protected function syncNonAppointmentPayment(Payment $payment): void
+    {
+        if (!$payment->paid_at || $payment->appointment_id) {
+            return;
+        }
+
+        FinancialTransaction::updateOrCreate(
+            [
+                'related_type' => Payment::class,
+                'related_id' => $payment->id,
+                'transaction_type' => 'hospital_revenue',
+            ],
+            [
+                'voucher_type' => 'inflow',
+                'category' => $payment->payment_type ?: 'general_income',
+                'voucher_number' => $payment->receipt_number,
+                'amount' => (float)$payment->amount > 0 ? (float)$payment->amount : (float)$payment->total_amount,
+                'currency' => 'IQD',
+                'payment_method' => $payment->payment_method ?: 'cash',
+                'description' => 'مقبوضات ' . (Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات') . ' إيصال رقم ' . $payment->receipt_number,
+                'notes' => $payment->description,
                 'performed_by_id' => $payment->cashier_id,
                 'performed_at' => $payment->paid_at,
             ]

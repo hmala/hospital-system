@@ -820,7 +820,15 @@ class DoctorVisitController extends Controller
                 ]
             );
 
-            return redirect()->back()->with('success', 'تم إلغاء الحجز وإرسال إشعار لموظف الاستعلامات والكاشير');
+            $hasPaidRequests = \App\Models\Request::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists()
+                || \App\Models\RadiologyRequest::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists();
+
+            $successMsg = 'تم إلغاء كشفية الطبيب بنجاح واسترجاع رسوم الكشف للمريض.';
+            if ($hasPaidRequests) {
+                $successMsg .= ' (تنبيه: توجد فحوصات طبية مسددة تبقى سارية، أو تسترجع عبر الكاشير حصراً).';
+            }
+
+            return redirect()->back()->with('success', $successMsg);
         }
 
         // حذف الزيارة نهائياً بدلاً من إلغائها
@@ -941,15 +949,24 @@ class DoctorVisitController extends Controller
                     $details['radiology_type_id'] = $typeId; // حفظ أول نوع لاستخدامه لاحقاً
 
                     if (!$detectedSubtype) {
-                        $cat = mb_strtolower($radiologyType->main_category ?? '');
-                        $sub = mb_strtolower($radiologyType->subcategory ?? '');
-                        $name = mb_strtolower($radiologyType->name ?? '');
-                        if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') || str_contains($cat, 'ultrasound') || str_contains($name, 'doppler') || str_contains($name, 'sonar')) {
+                        $cat = mb_strtolower(trim($radiologyType->main_category ?? ''));
+                        $sub = mb_strtolower(trim($radiologyType->subcategory ?? ''));
+                        $name = mb_strtolower(trim($radiologyType->name ?? ''));
+
+                        if (
+                            str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($name, 'سونار') ||
+                            str_contains($cat, 'ultrasound') || str_contains($sub, 'ultrasound') || str_contains($name, 'ultrasound') ||
+                            str_contains($cat, 'doppler') || str_contains($sub, 'doppler') || str_contains($name, 'doppler') ||
+                            str_contains($cat, 'دوبلر') || str_contains($sub, 'دوبلر') || str_contains($name, 'دوبلر') ||
+                            str_contains($name, 'sonar') || str_contains($name, 'u/s')
+                        ) {
                             $detectedSubtype = 'ultrasound';
                         } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($name, 'رنين') || str_contains($cat, 'mri')) {
                             $detectedSubtype = 'mri';
                         } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($name, 'إيكو') || str_contains($cat, 'echo')) {
                             $detectedSubtype = 'echo';
+                        } elseif (str_contains($cat, 'مفراس') || str_contains($sub, 'مفراس') || str_contains($name, 'مفراس') || str_contains($cat, 'ct')) {
+                            $detectedSubtype = 'ct';
                         } else {
                             $detectedSubtype = 'general';
                         }

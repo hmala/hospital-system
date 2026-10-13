@@ -447,7 +447,7 @@
                                                 @if($totalAttachmentsCount > 0)
                                                     <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
                                                         @if($hasAttachment)
-                                                            <a href="{{ asset('storage/' . $det['attachment']) }}" 
+                                                            <a href="{{ route('lab.attachment', $req) }}" 
                                                                target="_blank" 
                                                                class="badge bg-info-subtle text-info border border-info text-decoration-none shadow-sm py-1 px-2 d-inline-flex align-items-center gap-1" 
                                                                title="معاينة التقرير المرفق العام">
@@ -457,7 +457,7 @@
                                                         @endif
 
                                                         @foreach($testAttachments as $tName => $tData)
-                                                            <a href="{{ asset('storage/' . $tData['path']) }}" 
+                                                            <a href="{{ route('lab.attachment', ['request' => $req, 'test' => $tName]) }}" 
                                                                target="_blank" 
                                                                class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none shadow-sm py-1 px-2 d-inline-flex align-items-center gap-1" 
                                                                title="معاينة تقرير {{ $tName }}">
@@ -536,6 +536,12 @@
                                                        class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-sm" 
                                                        title="إدخال نتائج الفحص واعتمادها">
                                                         <i class="fas fa-bolt me-1"></i> إدخال النتائج
+                                                    </a>
+                                                    <a href="{{ route('lab.print', $req) }}" 
+                                                       class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-sm" 
+                                                       target="_blank" 
+                                                       title="طباعة طلب التحاليل / أمر العمل">
+                                                        <i class="fas fa-print me-1"></i> طباعة الطلب
                                                     </a>
                                                 @endif
                                             </div>

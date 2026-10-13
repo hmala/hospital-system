@@ -52,7 +52,15 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
+            'last_login_at' => 'datetime',
+            'last_activity_at' => 'datetime',
+            'last_logout_at' => 'datetime',
         ];
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(\App\Models\UserActivity::class);
     }
 
     // العلاقات

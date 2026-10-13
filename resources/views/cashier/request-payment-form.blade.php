@@ -50,8 +50,8 @@
                                             'code' => $test->code,
                                             'type' => 'lab',
                                             'base_price' => (float)$test->getRegularPrice(),
-                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
-                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
+                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
                                             'is_moi_active' => (bool)($test->is_moi_active ?? true),
                                             'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                         ];
@@ -67,8 +67,8 @@
                                             'code' => $test->code,
                                             'type' => 'lab',
                                             'base_price' => (float)$test->getRegularPrice(),
-                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : $test->getRegularPrice()),
-                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : $test->getRegularPrice()),
+                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
                                             'is_moi_active' => (bool)($test->is_moi_active ?? true),
                                             'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                         ];
@@ -90,8 +90,8 @@
                                             'code' => $rad->code,
                                             'type' => 'radiology',
                                             'base_price' => (float)$rad->getRegularPrice(),
-                                            'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : $rad->getRegularPrice()),
-                                            'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : $rad->getRegularPrice()),
+                                            'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : 0),
+                                            'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : 0),
                                             'is_moi_active' => (bool)($rad->is_moi_active ?? true),
                                             'is_hi_active' => (bool)($rad->is_hi_active ?? true),
                                         ];
@@ -109,10 +109,10 @@
                                 $rowApp = $itm['base_price'];
                                 $rowCov = false;
                                 if ($defaultInsurance === 'moi' && $itm['is_moi_active']) {
-                                    $rowApp = $itm['moi_price'] > 0 ? $itm['moi_price'] : $itm['base_price'];
+                                    $rowApp = $itm['moi_price'];
                                     $rowCov = true;
                                 } elseif ($defaultInsurance === 'hi' && $itm['is_hi_active']) {
-                                    $rowApp = $itm['hi_price'] > 0 ? $itm['hi_price'] : $itm['base_price'];
+                                    $rowApp = $itm['hi_price'];
                                     $rowCov = true;
                                 }
                                 $rowPat = $rowCov ? round($rowApp * ($defaultCopay / 100)) : $rowApp;
@@ -428,12 +428,16 @@
                             @enderror
                         </div>
 
+                        <div id="insuranceErrorAlert" class="alert alert-danger d-none fw-bold small mb-3 text-center">
+                            <i class="fas fa-ban me-1"></i>
+                            لا يمكن التسديد! أحد الفحوصات المختارة غير مشمول بالضمان أو أن التسعيرة الخاصة به غير مدخلة.
+                        </div>
                         <div class="d-flex justify-content-between align-items-center">
                             <a href="{{ auth()->user()->hasRole('consultation_receptionist') && !auth()->user()->hasRole('admin') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-right me-1"></i>
                                 العودة
                             </a>
-                            <button type="submit" class="btn btn-success btn-lg px-4">
+                            <button type="submit" id="submitPaymentBtn" class="btn btn-success btn-lg px-4">
                                 <i class="fas fa-check-circle me-2"></i>
                                 تأكيد الدفع وإصدار الإيصال
                             </button>
@@ -522,11 +526,12 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalApproved = 0;
         let totalPatient = 0;
         let totalInsurance = 0;
+        let hasError = false;
 
         rows.forEach(row => {
             const basePrice = parseFloat(row.getAttribute('data-base-price')) || 0;
-            const moiPrice = parseFloat(row.getAttribute('data-moi-price')) || basePrice;
-            const hiPrice = parseFloat(row.getAttribute('data-hi-price')) || basePrice;
+            const moiPrice = parseFloat(row.getAttribute('data-moi-price')) || 0;
+            const hiPrice = parseFloat(row.getAttribute('data-hi-price')) || 0;
             const isMoiActive = row.getAttribute('data-is-moi-active') === '1';
             const isHiActive = row.getAttribute('data-is-hi-active') === '1';
 
@@ -534,13 +539,17 @@ document.addEventListener('DOMContentLoaded', function() {
             let rowCovered = false;
 
             if (insType === 'moi') {
-                if (isMoiActive) {
-                    rowApproved = moiPrice > 0 ? moiPrice : basePrice;
+                if (!isMoiActive || moiPrice <= 0) {
+                    hasError = true;
+                } else {
+                    rowApproved = moiPrice;
                     rowCovered = true;
                 }
             } else if (insType === 'hi') {
-                if (isHiActive) {
-                    rowApproved = hiPrice > 0 ? hiPrice : basePrice;
+                if (!isHiActive || hiPrice <= 0) {
+                    hasError = true;
+                } else {
+                    rowApproved = hiPrice;
                     rowCovered = true;
                 }
             }
@@ -565,6 +574,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tdPatient) tdPatient.textContent = formatNumber(rowPatient);
             if (tdInsurance) tdInsurance.textContent = formatNumber(rowInsurance);
         });
+
+        const alertBox = document.getElementById('insuranceErrorAlert');
+        const submitBtn = document.getElementById('submitPaymentBtn');
+
+        if (hasError) {
+            if (alertBox) alertBox.classList.remove('d-none');
+            if (submitBtn) submitBtn.disabled = true;
+            totalApproved = 0;
+            totalPatient = 0;
+            totalInsurance = 0;
+        } else {
+            if (alertBox) alertBox.classList.add('d-none');
+            if (submitBtn) submitBtn.disabled = false;
+        }
 
         if (displayApproved) displayApproved.textContent = formatNumber(totalApproved);
         if (displayPatientShare) displayPatientShare.textContent = formatNumber(totalPatient);

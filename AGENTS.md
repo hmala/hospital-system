@@ -181,6 +181,516 @@ Consult these files before making changes or proposing fixes:
   * تحديث شجرة العلاقات البرمجية المعرفية (Graphify Knowledge Graph): 3,337 عقدة و 5,161 علاقة عبر 832 ملفاً.
 
 
+## Session log (2026-10-13 — المرحلة 40: منع استبدال دفعة كشفية الطبيب بدفعات الفحوصات وحل مشكلة الاسترجاع الخاطئ Fix Request Payment Hijacking and Appointment Refund)
+
+### Done
+- **تشخيص وحل مشكلة استرجاع مبلغ الإيكو/الأشعة وخصمه من حساب كشفية الطبيب عند إلغاء الحجز/الزيارة**:
+  * **السبب الجذري**: في `CashierController::processRequestPayment`، عند تسديد المريض لرسوم فحص طبي (مثل الإيكو أو السونار أو التحاليل) المرتبط بزيارة عيادة استشارية، كان النظام يقوم بتحديث الموعد المرتبط بالزيارة (`Appointment::where('id', $request->visit->appointment_id)->update(['payment_id' => $payment->id])`)، مما يؤدي إلى استبدال `payment_id` الخاص بكشفية الطبيب بدفعة الفحص الطبي، وكذلك تغيير حالة الزيارة إلى `scheduled`. وعند قيام الطبيب بإلغاء الحجز أو الزيارة من محطة الطبيب، كانت دالة `Appointment::cancel()` تبحث عن `$this->payment` وتقوم باسترجاع مبلغ الفحص الطبي (6,250 د.ع) بدلاً من استرجاع كشفية الطبيب الفعلية (2,500 د.ع) وخصم كامل المبلغ من حصة الطبيب في الحركات المالية.
+  * **الحل الجذري**:
+    1. في `app/Http/Controllers/CashierController.php` (`processRequestPayment`): حظر استبدال `payment_id` الخاص بالموعد لأي كشفية طبيب، وحصر هذا التحديث فقط بحجوزات السونار المباشرة الخالية من كشفية طبيب مستقلة والتي لم يتم تسديدها بعد. ومنع تغيير حالة الزيارة إذا كانت قيد الكشف `in_progress`.
+    2. في `app/Models/Appointment.php` (`cancel`): تخصيص استرجاع المبلغ ليقتصر حصراً على دفعة الكشفية الأصلية للموعد (`Payment::where('appointment_id', $this->id)->where('payment_type', 'appointment')->where('amount', '>', 0)`). ومنع إلغاء الطلبات الطبية المسددة لتبقى سارية أو تُسترجع رسمياً عبر الكاشير.
+    3. في `app/Http/Controllers/DoctorVisitController.php` و `resources/views/doctors/visits/show.blade.php`: توضيح رسالة التأكيد للمستخدم/الطبيب بأن إلغاء الحجز يسترجع كشفية الطبيب فقط، وإشعار الطبيب في حال وجود فحوصات مسددة بأنها تبقى سارية ولا تُسترجع إلا عبر الكاشير.
+    4. تصحيح القيدين التاريخيين المتأثرين بالخلل (المريض محمد سهم على د. قمر سعد، والمريض حسام على د. رولا) وإعادة ضبط مبالغ الاسترجاع إلى كشفية التحمل الصحيحة (2,500 د.ع) وموازنة حصص الأطباء بالكامل.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار شامل [DoctorVisitCancellationRefundTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorVisitCancellationRefundTest.php): 2 passed (6 assertions).
+  * اجتياز كامل للاختبارات الحيوية: 20 passed (216 assertions).
+
+## Session log (2026-10-12 — المرحلة 39: حل مشكلة الخطأ 404 واستدعاء طابور طبيب السونار والأشعة Fix Ultrasound & Radiology Call Next Route 404)
+
+### Done
+- **تشخيص وحل مشكلة الخطأ `The route radiology-staff/call-next could not be found` عند استدعاء طبيب السونار**:
+  * **السبب الجذري**: في واجهة محطة الأشعة والسونار (`resources/views/radiology-staff/index.blade.php`)، كانت دوال الـ JavaScript (`radiologyCallNext`, `radiologyRecall`, `syncRadiologyQueue`, `radiologySkip`, روابط المعاينة وكتابة التقرير) تستخدم مسارات نسبية مباشرة ذات شرطة مائلة في البداية (`/radiology-staff/...`). عند تشغيل النظام على استضافة في مسار فرعي مثل هوستنجر (`/hearmz`) أو سيرفرات التطوير المحلية (`/hospital-system`)، كان المتصفح يتجاهل المسار الأساسي ويطلب الرابط من جذر الدومين مما يتسبب في خطأ 404 Not Found وإظهار رسالة "The route radiology-staff/call-next could not be found".
+  * **الحل الجذري**:
+    1. تعريف `radiologyBaseUrl` ديناميكياً باستخدام `{{ url('/') }}` في الواجهة، وربط كافة اتصالات الـ AJAX وطلبات الـ fetch برابط التطبيق المعتمد.
+    2. دعم كلا البروتوكولين `['GET', 'POST']` للمسارات الحيوية (`call-next`, `recall`, `skip`, `call`) في `routes/web.php` لمنع رفض الطلبات إذا تغيّر نوع الطلب أو حدثت إعادة توجيه.
+    3. إضافة مسارات بديلة (Aliases) تحت بادئة `Route::prefix('radiology')` لضمان عمل الاستدعاء سواء تم الدخول من مسار `radiology` الموحد أو مسار `radiology-staff`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار شامل [RadiologyStaffCallNextTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RadiologyStaffCallNextTest.php): 4 passed (11 assertions) شمل اختبار استدعاء المريض الحقيقي في قسم السونار، اختبار استجابة المسار لـ GET و POST، واختبار المسار البديل.
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 38: نقل شريط التحكم بالمخططات ومؤقت التحديث لأعلى الصفحة وإلغاء أزرار السندات Move Charts & Refresh Toolbar to Header & Remove Voucher Buttons)
+
+### Done
+- **نقل شريط التحكم بالمخططات البيانية والتحديث التلقائي لأعلى ترويسة الصفحة (`resources/views/treasury/index.blade.php`)**:
+  * نقل أزرار التحكم بالمخططات الأربعة (`#masterChartButtonGroup`: `📊 أعمدة`, `📶 أفقي`, `📈 منحنى`, `🍩 دائري`) إلى ترويسة الصفحة الرئيسية بجانب أزرار الطباعة والتصدير.
+  * نقل أداة التحديث التلقائي والتوقيت الذكية (العد التنازلي المباشر، زر الإيقاف والتشغيل، قائمة الفترات الزمنية 15ث/30ث/60ث/120ث، وزر التحديث الفوري) لأعلى الصفحة.
+  * حذف أزرار السندات (`+ سند صرف مصروفات` و `+ سند قبض إيراد`) من الترويسة العلوية تلبية لطلب المستخدم.
+  * إزالة بطاقة التحكم المكررة من داخل التبويب الأول (`#analytics-tab-pane`)، مما جعل المخططات البيانية تبدأ فوراً في أعلى مساحة العرض دون حجز مساحات إضافية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات لوحة الخزينة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (20 assertions).
+
+## Session log (2026-10-12 — المرحلة 37: توحيد أزرار التحكم بالمخططات، التبديل الفوري لكامل الصفحة، ونظام التحديث التلقائي الذكي Unified Master Charts & Smart Auto-Refresh Engine)
+
+### Done
+- **توحيد أزرار التحكم بالمخططات البيانية وإزالة الأزرار المتكررة من كل بطاقة (`resources/views/treasury/index.blade.php`)**:
+  * حذف مجموعات الأزرار المستقلة داخل ترويسة كل بطاقة (`#deptChartButtonGroup` و `#trendChartButtonGroup`) التي كانت تشتت المستخدم وتسبب تكراراً غير مبرر.
+  * اعتماد **شريط تحكم موحد ورئيسي واحد** (`#masterChartButtonGroup`) أعلى تبويب التحليل المالي يتحكم في كافة رسوم الصفحة بشكل متزامن.
+  * إضافة شارة أنيقة في ترويسة كل بطاقة (`deptChartModeBadge` و `trendChartModeBadge`) توضح النمط النشط حالياً بوضوح.
+- **التبديل الفوري والمتزامن لكافة مخططات الصفحة (Instant Synchronous Multi-Chart Switcher)**:
+  * حل مشكلة عدم تغير نوع المخطط في Chart.js v4 من خلال إعادة بناء وتدمير النسخ السابقة برمجياً (`chart.destroy()` ثم إعادة الإنشاء فورا)، مما يضمن استجابة لحظية 100% دون أي تأخير أو أخطاء.
+  * دعم الأنماط الأربعة لكلا المخططين معاً:
+    1. `📊 أعمدة رأسية`: أعمدة عمودية لكلا المخططين مع كتابة الأرقام أعلى كل عمود.
+    2. `📶 أعمدة أفقية`: تحويل كلا المخططين لأعمدة أفقية مع كتابة المبالغ على يمين الأعمدة.
+    3. `📈 منحنيات مساحية`: تحويل كلا المخططين إلى منحنيات خطية ومساحية انسيابية شفافة.
+    4. `🍩 دائري ونسب`: تحويل كلا المخططين إلى مخططات دائرية (مخطط دائري لحصص الأقسام ومخطط دائري لمقارنة إجمالي الوارد والمنصرف مع الصافي في المركز).
+- **نظام التحديث التلقائي الذكي للصفحة (Intelligent Auto-Refresh Engine)**:
+  * إضافة أداة تحكم بالتحديث التلقائي في شريط التحكم الرئيسي وفي ترويسة الصفحة العامة:
+    - عد تنازلي مباشر وثوانٍ حية (`30ث` افتراضياً).
+    - نبض لوني أخضر للدلالة على فاعلية التحديث اللحظي.
+    - زر إيقاف مؤقت واستئناف `[ ⏸️ نشط / ▶️ تشغيل ]`.
+    - قائمة منسدلة لاختيار التردد الزمني: `[ ⚡ 15ث | ⏱️ 30ث (افتراضي) | 🕐 60ث (دقيقة) | ⏳ دقيقتين | 🛑 إيقاف ]`.
+    - زر «تحديث الآن» لتنشيط البيانات يدوياً وفوراً مع أيقونة دوران.
+  * حماية العمليات النشطة: التحديث التلقائي يتوقف ويؤجل نفسه تلقائياً إذا كانت هناك نافذة منبثقة مفتوحة (Modal) لعدم إضاعة إدخال البيانات على المستخدم.
+  * الحفاظ على التبويب النشط: يتم حفظ الـ Hash (`#analytics`, `#departments`, `#ledger`, `#doctors`) قبل التحديث لضمان بقاء المستخدم في نفس الصفحة دون تغيير.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات لوحة الخزينة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (20 assertions).
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 36: إضافة شريط التحكم الشامل بأنماط المخططات البيانية Master Chart Controller & Dynamic Multi-Chart Engine)
+
+### Done
+- **إضافة شريط التحكم الشامل للمخططات البيانية (Master Chart Controller) في تبويب التحليل المالي (`resources/views/treasury/index.blade.php`)**:
+  * **شريط تحكم رئيسي وموحد أعلى التبويب (`#masterChartButtonGroup`)**:
+    - يوفر 4 أنماط بيانية متقدمة يمكن التبديل بينها بضغطة زر واحدة لتتحكم في كامل الصفحة بشكل متزامن:
+      1. `📊 أعمدة رأسية (Vertical Bar / Clustered)`: أعمدة قائمة مع كتابة الأرقام والمبالغ فوق كل عمود مباشرة.
+      2. `📶 أعمدة أفقية (Horizontal Bar)`: تحويل الأعمدة إلى مسارات أفقية مع كتابة المبالغ بجانب كل مسار (مناسب للمقارنة السريعة للأقسام).
+      3. `📈 منحنيات مساحية (Area / Line Curve)`: تحويل المخططات إلى منحنيات انسيابية ملونة ذات شفافية مساحية لمراقبة الذروات والسيولة.
+      4. `🍩 دائري وحصص (Donut / Pie)`: عرض التوزيع النسبي والدائري مع إجمالي الوارد في المركز ودليل الألوان.
+  * **التحكم الفردي في كل بطاقة (Per-Card Independent Switchers)**:
+    - بطاقة إيرادات الأقسام: أزرار تحكم مستقلة `[ 📊 أعمدة | 📶 أفقي | 📈 منحنى | 🍩 دائري ]`.
+    - بطاقة حركة النقدية اليومية: أزرار تحكم مستقلة `[ 📊 أعمدة | 📶 أفقي | 📈 منحنى ]`.
+  * **استجابة البيانات والأرقام والتسميات (Smart Data Labels)**:
+    - تم تكييف بلجن الأرقام المباشرة (`barLabelsPlugin` و `deptBarDataLabels`) ليتعامل بذكاء مع الاتجاهين: يكتب الأرقام أعلى الأعمدة في الوضع الرأسي، ويكتبها على يمين الأعمدة في الوضع الأفقي.
+  * **حفظ التفضيل التلقائي في المتصفح (Persistent Memory)**:
+    - حفظ النمط المختار في `localStorage` (`treasury_chart_mode`) واستعادته تلقائياً عند إعادة تحميل الصفحة أو العودة إليها لاحقاً.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات لوحة الخزينة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (20 assertions).
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 35: إظهار الأرقام والمبالغ مباشرة على المخططات البيانية في الخزينة Display Direct Data Labels on Treasury Charts)
+
+### Done
+- **إظهار الأرقام والمبالغ بشكل مباشر ودائم في تبويب المخططات البيانية (`resources/views/treasury/index.blade.php`)**:
+  * **مخطط الأعمدة البيانية التفصيلي للأقسام (Department Revenues Bar Chart - مطابق لطلب وصورة المستخدم)**:
+    - تحويل عرض إيرادات الأقسام افتراضياً إلى مخطط أعمدة رأسية (Clustered/Vertical Bar Chart) مماثل لنموذج الصورة المرسلة.
+    - إضافة بلجن (`deptBarDataLabels`) يرسم الأرقام والمبالغ الدقيقة بالدينار العراقي مباشرة وبخط عريض داكن فوق قمة كل عمود (مثال: `422,500 د.ع` للاستشارية و `185,000 د.ع` للمختبر).
+    - كتابة اسم القسم بوضوح أسفل كل عمود على المحور الأفقي مع تلوين العمود باللون المخصص للقسم.
+    - إضافة أزرار تبديل تفاعلية في ترويسة البطاقة `[ 📊 أعمدة | 🍩 دائري ]` تتيح للمستخدم التبديل الفوري بين مخطط الأعمدة والمخطط الدائري بسلاسة، مع تصحيح ربط الدالة `switchDeptChart` وإزالة التكرار في تعريف الثوابت واستدعاء `resize()` للمخطط عند التبديل.
+  * **المخطط الدائري البديل (Donut Chart)**:
+    - الحفاظ على المخطط الدائري كخيار بديل مع دليل الألوان الكامل (Legend) والأرقام في قلب الدائرة.
+    - بطاقات تفصيلية للأقسام أسفل المخطط تعرض: لون القسم، الأيقونة، الاسم، عدد العمليات والوصولات، والمبلغ بالدينار العراقي، وشارة النسبة المئوية.
+  * **مخطط حركة النقدية اليومية (Daily Cash Flow Bar Chart)**:
+    - إضافة بلجن ملصقات البيانات المباشرة (`barLabelsPlugin`) عبر خطاف `afterDatasetsDraw` يرسم المبالغ الرقمية مباشرة فوق كل عمود (باللون الأخضر للوارد (+) وباللون الأحمر للمنصرف (-)) مع تنسيق ذكي ومختصر للمبالغ الكبيرة (K للألوف و M للملايين).
+    - إضافة حاشية علوية للمخطط (`layout.padding.top: 24`) لمنع قص الأرقام عند قمة الرسم.
+    - إظهار إجمالي الوارد والمنصرف مباشرة في شارة ترويسة بطاقة المنحنى.
+  * **توضيح أسباب عدم ظهور الأرقام سابقاً**:
+    1. السلوك الافتراضي لمكتبة Chart.js يقتصر على إظهار الأرقام عند تمرير الفأرة فقط (Tooltip on Hover) ما لم يتم تفعيل Data Labels مخصصة.
+    2. عامل الفلتر الزمني: معظم الحركات الحالية في قاعدة البيانات مسجلة بتاريخ أمس (2026-10-11)، فإذا كان الفلتر محدداً على "اليوم" (2026-10-12) ولم تكن هناك عمليات مسجلة لليوم بعد، تظهر المخططات فارغة أو بأعمدة صفرية حتى يتم اختيار فترة أوسع كـ "أمس" أو "هذا الأسبوع" أو "كل الوقت".
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات لوحة الخزينة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (20 assertions).
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 34: إضافة تبويب ذكاء الأعمال لأطباء الاستشارية ومصفوفة الإحالات والتحويلات Doctor BI & Referrals Matrix)
+
+### Done
+- **إضافة التبويب الرابع المالي والتحليلي في شاشة الخزينة المركزية (`resources/views/treasury/index.blade.php`, `app/Http/Controllers/HospitalTreasuryController.php`)**:
+  * **التبويب 4 (تحليل أطباء الاستشارية والتحويلات - Doctor BI & Referrals Matrix)**:
+    - بطاقات مؤشرات الأداء السريعة (KPI Cards):
+      1. إجمالي الكشوفات المسجلة مفصلة حسب: **نقد / كاش** مقابل **ضمان صحي (HI/MOI)**.
+      2. إجمالي الدخل المحصل، حصص الأطباء المصروفة أو المستحقة، وصافي عائد المستشفى بعد خصم الأجور.
+      3. إجمالي الإحالات والخدمات الصادرة مع تفصيل فحوصات المختبر 🧪، فحوصات الأشعة والسونار والإيكو 🩻، والعمليات الجراحية 🏥.
+    - جدول تحليلي ومصفوفة تفصيلية على مستوى كل طبيب:
+      - اسم الطبيب والعيادة التخصصية.
+      - عدد كشوفات الكاش 💵.
+      - عدد كشوفات الضمان 💳.
+      - إجمالي الكشوفات.
+      - **مقبوض كاش 💵**: المبالغ المحصلة نقداً في الدرج من كشوفات الكاش الكاملة.
+      - **تحمل المريض (المواطن) 💳**: المبالغ المحصلة نقداً في الدرج كنسبة تحمل (10%) من مرضى الضمان.
+      - **نقد الدرج 💰**: مجموع النقد الفعلي المحصل في الصندوق (مقبوض كاش + تحمل المريض).
+      - **مطالبة الضمان 📑**: المبالغ المستحقة كذمم مدينة ومطالبات على هيئة/شركة الضمان الصحي.
+      - **إجمالي القيمة (Gross)**: مجموع النشاط والقيمة التعاقدية الكاملة للخدمات.
+      - مستحقات وحصص الطبيب.
+      - صافي عائد المستشفى (Net).
+      - تحويلات المختبر ومصرف الدم الصادرة من زيارات الطبيب (`requests.type in ('lab', 'blood_bank')`).
+      - تحويلات الأشعة والسونار والإيكو الصادرة من زيارات الطبيب (`requests.type = 'radiology'`).
+      - إحالات العمليات الجراحية المجدولة للطبيب (`surgeries.doctor_id`).
+      - المجموع الكلي للتحويلات الصادرة مع شارة إجمالية بارزة.
+    - سطر المجموع العام النهائي لكافة أطباء المستشفى.
+  * **الربط التفاعلي والتنقل المباشر من جدول الأقسام (Tab 2)**:
+    - في سطر العيادات الاستشارية بجدول الأقسام: إضافة زر «🩺 تحليل الأطباء» ينقل المحاسب أو المدير فوراً إلى تبويب تفاصيل الأطباء والتحويلات بضغطة زر واحدة.
+    - دعم كامل للذاكرة اللحظية للرابط (`#doctors` Hash) والتوافق التام مع الطباعة والفرز.
+  * **مطابقة القيود المحاسبية بنسبة 100% وتفصيل النقد الفعلي (Financial Consistency)**:
+    - توحيد مصدر احتساب كشوفات الكاش والضمان ليكون مباشرة من سجل الإيرادات المقبوضة `consultation_revenues` بدلاً من جدول المواعيد غير المسددة، مما يضمن تطابقاً تاماً مع جدول الحركات المالية ومبالغ المقبوض الفعلي واستبعاد الحجوزات المعلقة أو غير المدفوعة (`pending payment`).
+    - التمييز الدقيق بين **نقد الدرج المحصل فعلياً من المواطنين** (كاش كامل + نسبة تحمل 10%) وبين **مطالبات وذمم هيئة الضمان الصحي** التي تُطلب لاحقاً.
+- **الاختبارات الآلية (Automated Tests)**:
+  * تحديث واجتياز اختبار الميزة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 3 passed (19 assertions).
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 33: تطوير واجهة الخزينة العامة الموحدة بالتبويبات الثلاثة وإيرادات الأقسام والرسوم البيانية Modernize Hospital Treasury with 3 Tabs, Department Breakdown & Charts)
+
+### Done
+- **إعادة هيكلة وتطوير شاشة الخزينة المركزية بالكامل بنظام التبويبات الثلاثة (`resources/views/treasury/index.blade.php`, `app/Http/Controllers/HospitalTreasuryController.php`)**:
+  * **التبويب 1 (الرسوم البيانية والتحليل المالي)**:
+    - مخطط دائري تفاعلي (Donut Chart via Chart.js) يوضح نسبة مساهمة كل قسم في إجمالي دخل المستشفى مع أسطورة تفاعلية بالألوان.
+    - مخطط بياني مساحي/أعمدة (Daily Cash Flow Bar Chart) يقارن حركة الوارد (+) مقابل المنصرف (-) يومياً لتحديد اتجاهات السيولة وأيام الذروة.
+    - بطاقة توزيع طرق التحصيل المالي (النقد في الدرج Cash مقابل الدفع الإلكتروني والبطاقات Card/ZainCash).
+    - بطاقة تحليل المصروفات (صرفيات الأطباء، فواتير المشتريات، والمصاريف التشغيلية).
+  * **التبويب 2 (جدول إيرادات ومصروفات الأقسام التفصيلي)**:
+    - جدول تحليلي ومصفوفة معيارية (`$departmentsConfig`) تغطي كافة الأقسام (الاستشارية، الأشعة والإيكو، المختبر، العمليات والرقود، الطوارئ، الصيدلية، الإيرادات العامة).
+    - عرض عدد الحالات، إجمالي المقبوض (Gross)، التكاليف وحصص الأطباء، صافي عائد المستشفى (Net)، وشريط تقدم ملون (Progress Bar) يوضح النسبة المئوية من الدخل العام.
+    - سطر المجموع العام النهائي للمستشفى.
+    - أزرار تصفية فورية لنقل المستخدم مباشرة إلى قيود هذا القسم في تبويب الوصولات.
+  * **التبويب 3 (سجل القيود والوصولات التفصيلية)**:
+    - الجدول المحاسبي للقيود وسندات الصرف والقبض مع أرقام السندات والبيان وحالة القفل للإيصالات الرسمية، والترقيم والتصفح.
+  * **شريط الفلاتر السريعة الموحد**:
+    - أزرار فترات زمنية سريعة بضغطة زر: `[ اليوم | أمس | هذا الأسبوع | هذا الشهر | كل الوقت ]` مع حفظ التبويب النشط في الـ URL Hash.
+  * **بنية معيارية قابلة للتوسع الفوري (Modular Extensible Architecture)**:
+    - صُممت مصفوفة الأقسام بحيث يمكن إضافة أي قسم أو مركز ربحي جديد مستقبلاً في سطر برمجي واحد دون الحاجة لإعادة كتابة كود الواجهة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): 2 passed (9 assertions).
+  * اجتياز كامل لاختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 32: حل مشكلة الخطأ 403 عند فتح صور ومرفقات الأشعة والإيكو أونلاين Fix Storage File Access 403 Forbidden)
+
+### Done
+- **اكتشاف وتشخيص السبب الجذري للخطأ 403 أونلاين**:
+  * في لارافيل 12، تم تفعيل خاصية `'serve' => true` افتراضياً للقرص الخاص `local` داخل `config/filesystems.php`.
+  * بسبب غياب حقل `url` للقرص `local` ووجود النظام في مسار فرعي على هوستنجر (`/hearmz`)، قام لارافيل بحجز المسار العام `/storage/{path}` للقرص الخاص المشفر، مما جعل النظام يطلب توقيعاً رقمياً خاصاً (`hasValidSignature`) ويرفض فتح أي رابط عادي لصور ومرفقات الأشعة والمختبر برمز `403 Forbidden`.
+  * غياب ارتباط Symlink أو قيود `FollowSymLinks` في استضافات أباتشي المشتركة زاد من تعذر القراءة المباشرة من نظام الملفات.
+- **الحل الجذري والآمن**:
+  * ضبط قرص التخزين الخاص في `config/filesystems.php` ليصبح `'serve' => false` لمنع احتكار مسار `/storage/`.
+  * إضافة مسار برميجي مخصص وعالي الكفاءة في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php): `Route::get('/storage/{path}')` يقوم بقراءة ملفات التخزين العام (`storage/app/public/`) وإعادتها كاستجابة ملف نظامية (`BinaryFileResponse`) مع نوع المحتوى المباشر وتأمين كامل ضد ثغرات التخطي (`Directory Traversal Guard: str_contains($path, '..')`).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [StorageFileAccessTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/StorageFileAccessTest.php): 3 passed (5 assertions).
+  * اجتياز كامل لكافة اختبارات الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-12 — المرحلة 31: استعادة ورفع أحدث قاعدة بيانات من eva.sql بالكامل إلى هوستنجر Restore Latest Eva Database to Hostinger)
+
+### Done
+- **استيراد ودمج أحدث نسخة احتياطية (`eva.sql`) محلياً**:
+  * استيراد ملف `eva.sql` (بحجم 15.1 MB وتاريخ اليوم 9:27 ص) بنجاح بعد تجاوز قيود المفاتيح الأجنبية.
+  * تضمين كافة السجلات الحديثة التي تم إدخالها اليوم صباحاً.
+- **بناء محرك الرفع والاستعادة العكسي ودفع القاعدة بالكامل إلى هوستنجر (`db:push-hostinger`)**:
+  * إضافة دالة `DatabaseSyncService::pushToRemote` وأمر Artisan `php artisan db:push-hostinger {--force}`.
+  * رفع ودفع كافة الجداول (106 جدول) و **85,938 سجلاً** بنجاح إلى سيرفر هوستنجر الحي.
+- **التحقق والتأكيد المباشر على سيرفر هوستنجر الحي (Verification)**:
+  * مطابقة العدادات الحية على هوستنجر:
+    - **المرضى**: **240 مريضاً** (تضم مرضى اليوم بالكامل).
+    - **المستخدمين**: **417 مستخدماً**.
+    - **المواعيد**: **47 موعداً**.
+    - **الوصولات المالية**: **40 وصلاً**.
+  * رفع التعديلات مباشرة على فرع `main`.
+
+## Session log (2026-10-12 — المرحلة 30: ضبط طباعة وصولات الكاشير الحرارية وتفعيل الطباعة التلقائية Fix Cashier POS Thermal Receipt Print)
+
+### Done
+- **ضبط قالب إيصال الكاشير الحراري (`resources/views/cashier/receipt-print.blade.php`)**:
+  * تفعيل أمر الطباعة التلقائية `window.print()` عند فتح الصفحة بدلاً من تعطيله.
+  * ضبط قواعد الطباعة وهوامش الصفحة `@page { size: 80mm auto; margin: 0; }` لمنع تحويل المقاس إلى A4 أو تعليق درايفر طابعة الكاشير.
+  * إزالة الإطار الخارجي الأسود في وضع الطباعة لمنع قص الهوامش (`76mm - 78mm` عرض قياسي متوافق مع طابعات 80mm).
+  * استبدال مسار اللوغو بصيغة `hospital-logo.svg` الثابتة لحمايته من أخطاء أسماء الملفات في السيرفر، وإضافة معالج خطأ فوري لصورة الـ QR لمنع تجميد مربع الطباعة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز اختبارات الكاشير والصلاحيات [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php) و [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 4 passed (33 assertions).
+  * رفع التعديلات مباشرة على فرع `main`.
+
+## Session log (2026-10-12 — المرحلة 29: إصلاح تفاعل بطاقات جهة الضمان في واجهتي إضافة وتعديل المرضى Fix Patient Insurance Selection Tiles)
+
+### Done
+- **إصلاح أخطاء الجافاسكريبت وبطاقات الضمان (`resources/views/patients/create.blade.php`, `resources/views/patients/edit.blade.php`)**:
+  * معالجة خطأ `ReferenceError` الحاصل بسبب متغيرات DOM غير المعرفة محلياً.
+  * ربط دالة `window.setInsuranceType` عالمياً وتأمين التبديل عبر `onclick` وسمات `data-insurance` ومزامنة أزرار الراديو.
+  * إظهار وإخفاء صندوق تفاصيل بطاقة الضمان وقائمة فئات الضمان الوطني وتفعيل خاصية الإلزامية `required` تلقائياً بحسب نوع الضمان المختار (`none`, `moi`, `hi`).
+  * في التعديل: استرجاع دقيق لنوع الضمان للمرضى المسجلين مسبقاً حتى في حال خلو حقل `insurance_type` بالاعتماد على الفئة وحالة الشمول.
+- **تحديث التحقق بالكونترولر (`app/Http/Controllers/PatientController.php`)**:
+  * إضافة قاعدة تحقق `'health_insurance_category_id' => 'nullable|exists:health_insurance_categories,id'` في دالة `update`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات [PatientInsuranceRegistrationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientInsuranceRegistrationTest.php): 4 passed (26 assertions).
+  * رفع التعديلات مباشرة على فرع `main`.
+
+## Session log (2026-10-11 — المرحلة 28: تنظيف جدول الحركات المالية وإلغاء زر التعديل اليدوي لحماية القيود المحاسبية Clean Financial Movements Table)
+
+### Done
+- **إلغاء زر وعمود التعديل اليدوي من جدول الحركات المالية (`resources/views/consultant-availability/financial-movements.blade.php`)**:
+  * حذف عمود «إجراءات» وزر «✏️ تعديل» من جدول الحركات المالية للعيادات الاستشارية.
+  * حذف مودال التعديل `#editRevenueModal` وكافة معالجات الـ JavaScript المرتبطة به.
+  * تحويل جدول الحركات المالية إلى سجل تدقيق وقراءة وطباعة محاسبي نقي (`Read-Only & Auditing Ledger`) لا يسمح بالتعديل العشوائي من داخل جدول الحركات.
+  * حصر كافة تسويات وتعديلات الحصص في شاشة **«إعدادات عمولات الأطباء»** عبر محرك إعادة الاحتساب الذكي `🔄`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 4 passed (14 assertions).
+  * اجتياز كامل لاختبارات [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+
+## Session log (2026-10-11 — المرحلة 27: ميزة إعادة الاحتساب المالي الذكي والجماعي لكشفيات اليوم Batch Financial Recalculation)
+
+### Done
+- **محرك إعادة الاحتساب المالي الذكي والجماعي (`DoctorCommissionSettingController::recalculateToday`, `routes/web.php`)**:
+  * إضافة مسار `POST /admin/doctor-commission-settings/recalculate-today` مخصص لإعادة احتساب وتطبيق الحصص المالية وفق أحدث إعدادات العمولات المسجلة.
+  * **مرونة النطاق (Doctor & Date Scope)**: إمكانية إعادة الاحتساب لطبيب معين أو لكافة أطباء المستشفى دفعة واحدة لتاريخ اليوم.
+  * **معايير الأمان المالي والمحاسبي الصارمة**:
+    - حماية المبالغ المصروفة نقداً: فحص حالة مستحقات الطبيب (`doctor_dues`) وتجاوز أي كشفية صُرفت للطبيب بالفعل (`status = paid`) لحماية الأرصدة المصروفة.
+    - التمييز الدقيق بين كشفيات الكاش وكشفيات الضمان الصحي (`HI`).
+    - تطبيق قاعدة صمام الأمان الرياضي لمنع تجاوز حصة الطبيب لإجمالي المبلغ المقبوض.
+    - تحديث ثلاثي مترابط ومتزامن داخل `DB::transaction`:
+      1. تحديث جدول إيرادات الاستشارية `consultation_revenues` (`doctor_share`, `hospital_share`, `doctor_percentage`).
+      2. تحديث جدول مستحقات الطبيب `doctor_dues` (`amount`).
+      3. إعادة احتساب ومزامنة الحساب المالي التراكمي للطبيب `doctor_financial_accounts` (`total_earned`, `balance`).
+  * توثيق العملية الحساسة تلقائياً في سجل الأنشطة والرقابة `UserActivityLogger` مع أعداد الكشفيات والأطباء المتأثرين.
+- **واجهة المستخدم التفاعلية (`resources/views/admin/doctor_commission_settings/index.blade.php`)**:
+  * إضافة زر عام بارز في الشريط العلوي: **«🔄 إعادة احتساب كشفيات اليوم للكل»** لإعادة تسوية حسابات اليوم بضغطة واحدة.
+  * إضافة زر فرعي بجانب زر الحفظ في سطر كل طبيب: **«🔄»** لإعادة احتساب كشفيات هذا الطبيب تحديداً.
+  * مربعات حوار وتأكيد تفاعلية عبر `SweetAlert2` مع شارات تحميل وتنبيهات فورية بالنتيجة وأعداد الكشفيات المحدّثة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إضافة واجتياز اختبار الميزة الجديد في [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 4 passed (14 assertions).
+  * اجتياز كامل لاختبارات [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز كامل لاختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
+## Session log (2026-10-11 — المرحلة 26: إصلاح حفظ جميع العمولات وإزالة الكسور العشرية من المبالغ Fix Save All Commissions & Remove Decimal Zeros)
+
+### Done
+- **إصلاح زر «حفظ جميع التعديلات» (`app/Http/Controllers/Admin/DoctorCommissionSettingController.php`)**:
+  * **اكتشاف السبب الجذري**: في دالة الحفظ `save()`، كانت قاعدة التحقق لحقل `doctor_row` مكتوبة بصيغة: `'doctor_row' => 'required_if:save_mode,row|exists:doctors,id'`. عند اختيار وضع حفظ الكل (`save_mode = all`)، يكون حقل `doctor_row` فارغاً (`null`)، وبسبب غياب قيد `nullable`، كان محرك التحقق في لارافيل يفحص وجود القيمة `null` في جدول الأطباء فيفشل التحقق دائماً بخطأ (HTTP 422: The selected doctor row is invalid).
+  * **الحل**: إضافة `nullable` لقاعدة التحقق لتصبح: `'doctor_row' => 'required_if:save_mode,row|nullable|exists:doctors,id'`. الآن يعمل حفظ الكل بنجاح تام وسرعة فائقة لكافة أطباء الصفحة دفعة واحدة.
+- **إزالة الأصفار العشرية (.00) من حقول المبالغ والعمولات (`resources/views/admin/doctor_commission_settings/index.blade.php`)**:
+  * تحويل قيم حقول الكشفيات والعمولات (`consultation_fee`, `hi_price`, `fixed_amount`, `hi_fixed_amount`) في الواجهة إلى أرقام صحيحة `(int)` بدلاً من طباعة سلاسل أرقام `DECIMAL` القادمة من قاعدة البيانات، فتظهر الآن نظيفة ومقروءة (مثلاً: `25000` و `15000` بدلاً من `25000.00` و `15000.00`).
+- **تحسين استجابة الـ AJAX والإشعارات التفاعلية**:
+  * تحسين دالتي `saveAllRows` و `saveSingleRow` لفحص حالة استجابة السيرفر `res.ok` والبيانات `data.success` قبل إظهار شارات النجاح، مع عرض رسالة الخطأ الفعلية وتنبيهات `SweetAlert2` عند وجود أي مشكلة في الاتصال أو التحقق.
+- **الاختبارات الآلية والمخطط المعرفي (Automated Tests & Graphify)**:
+  * إضافة واجتياز اختبار ميزة حفظ جميع العمولات دفعة واحدة في [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 3 passed (9 assertions).
+  * تحديث شجرة المعرفة عبر `python -m graphify update .` (4521 عقدة و 5693 حافة).
+
+## Session log (2026-10-11 — المرحلة 25: حماية وتقسيم كشفيات الضمان الصحي ومنع الحصص السالبة وتنبيه الكاشير Insurance Consultation Shares & Zero/Negative Balance Guard)
+
+### Done
+- **حماية وضبط كشفيات الضمان الصحي وإلغاء التراجع للحصة العادية (`app/Observers/PaymentObserver.php`)**:
+  * إلغاء الاعتماد التلقائي الكارثي على الحصة العادية (`fallback to normalFixed`) في كشفيات الضمان الصحي عند فراغ حقل `hi_fixed_amount`، حيث كان ذلك يخصم 30,000 أو 25,000 د.ع من كشفية قيمتها 25,000 د.ع فقط فيتسبب برصيد سالب للمستشفى (-5,000) أو صفر (0.00).
+  * اعتماد القاعدة الثابتة والموحدة لكشفيات الضمان الصحي: كشفية 25,000 د.ع تتوزع **15,000 د.ع للطبيب** و **10,000 د.ع للمستشفى** (بنسبة 60% للطبيب و 40% للمستشفى).
+  * إضافة صمام أمان رياضي وبرمجي صارم: `$doctorShare = min($absAmount, abs($doctorShare))` يمنع تجاوز حصة الطبيب لإجمالي المبلغ المقبوض للكشفية تحت أي ظرف، مما يجعل حصة المستشفى دائماً $\ge 0$ وموجبة.
+  * حساب نسبة الطبيب الدقيقة بالاعتماد على إجمالي المبلغ الفعلي المقبوض وليس الأجور الافتراضية.
+- **تنبيه شاشة الكاشير وتعطيل زر التسديد عند عدم تحديد حصة الضمان (`resources/views/cashier/payment-form.blade.php`, `app/Http/Controllers/CashierController.php`)**:
+  * إضافة فحص لحظي في واجهة الكاشير (`payment-form.blade.php`): إذا كان الموعد تابعاً لعيادة استشارية والمريض مشمولاً بالضمان الصحي (`HI`)، ولم تقم الإدارة بإدخال حصة الطبيب للضمان في جدول العمولات (`hi_fixed_amount <= 0`)، يتعطل زر التسديد تلقائياً (`submitPaymentBtn.disabled = true`) ويظهر شريط تحذيري أحمر:
+    > ⛔ «لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.»
+  * تأمين المعالجة البرمجية الصارمة في الباك إند (`CashierController::processPayment`) قبل بدء المعاملة المالية لمنع أي تجاوز للواجهة.
+- **تحديث وضبط إعدادات الأطباء وتصحيح القيود السابقة في قاعدة البيانات**:
+  * تحديث كافة إعدادات الأطباء في جدول `doctor_commission_settings` لضبط حصة الضمان الصحي الافتراضية الثابتة `hi_fixed_amount = 15000.00`.
+  * تصحيح كامل القيود الـ 25 المتأثرة اليوم في `consultation_revenues` لتصبح حصة الطبيب 15,000 د.ع وحصة المستشفى 10,000 د.ع.
+  * تصحيح مستحقات الأطباء في `doctor_dues`، وسندات الخزينة في `financial_transactions`، وإعادة مزامنة أرصدة الأطباء في `doctor_financial_accounts`.
+- **المخطط المعرفي والاختبارات الآلية (Knowledge Graph & Automated Tests)**:
+  * تحديث شجرة المعرفة عبر `python -m graphify update .` (4518 عقدة، 5686 حافة عبر 1165 مجتمع).
+  * إنشاء واجتياز اختبار الميزة الجديد [InsuranceDoctorShareTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InsuranceDoctorShareTest.php): 2 passed (5 assertions).
+  * اجتياز اختبارات التعديل اليدوي [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
+## Session log (2026-10-11 — المرحلة 24: تسريع وتبسيط استمارة إدخال المرضى وحذف الحقول غير الضرورية Streamline Patient Registration Form)
+
+### Done
+- **تبسيط واجهة إدخال المرضى (`resources/views/patients/create.blade.php`, `resources/views/patients/edit.blade.php`)**:
+  * **إزالة الحقول غير الضرورية التي كانت تعطل الاستقبال وتُبطئ الطابور**:
+    - حذف حقول العنوان التفصيلي (البلد، المحافظة، القضاء، الناحية).
+    - حذف حقل البريد الإلكتروني (النظام يقوم تلقائياً بإنشاء إيميل داخلي افتراضي بصيغة `patient.PHONE.TIMESTAMP@hospital.local`).
+    - حذف حقل فصيلة الدم (تُفحص مخبرياً عند أي تداخل طبي ولا يُعتمد على كلام المريض).
+    - حذف حقل رقم الطوارئ من استمارة الاستقبال الأولية.
+  * **جعل اسم الأم اختيارياً بالكامل**:
+    - تحويل حقل `mother_name` في واجهتي الإضافة والتعديل إلى حقل اختياري `(اختياري)` وإزالة قيد `required` وعلامة `*`.
+  * **تحديث البطاقة الجانبية للإرشادات**: تحديث إرشادات موظف الاستقبال لتوضيح الحقول المطلوبة الأساسية وسرعة الإدخال.
+- **تحديث التحقق البرمجي (`app/Http/Controllers/PatientController.php`)**:
+  * تعديل قواعد التحقق (Validation) في دالتي `store` و `update` ليصبح `mother_name` يقبل `nullable|string|max:255`.
+  * تحديث فحص عدم تكرار الاسم واسم الأم بحيث يعمل فقط عند إدخال اسم الأم `if ($request->filled('mother_name'))`. الاعتماد الأساسي لمنع التكرار هو رقم البطاقة الموحدة `national_id` الإجباري والفريد.
+- **تحديث المخطط المعرفي (`graphify update .`)**:
+  * إعادة بناء وتحديث شجرة العلاقات (4173 عقدة و 5636 حافة عبر 866 مجتمع).
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لكافة اختبارات المرضى: [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php), [EmergencyWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php), [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (31 assertions).
+
+## Session log (2026-10-11 — المرحلة 23: إصلاح وتطوير مودال التعديل اليدوي للحصص المالية Fix Financial Movements Edit Modal)
+
+### Done
+- **إصلاح مشاكل مودال تعديل الحصص المالية (`resources/views/consultant-availability/financial-movements.blade.php`)**:
+  * **معالجة عزل الخلفية والطبقات (Backdrop Stacking Context)**: نقل المودال `#editRevenueModal` إلى ستاك `@push('modals')` في نهاية المستند لمنع احتجازه داخل `.main-content` وتأثره بـ `backdrop-filter: blur(16px)`، مما كان يسبب ظهور طبقة التعتيم الرمادية فوق المودال وتعطيل النقر.
+  * **منع لودر الصفحة الإجباري (`no-loader`)**: إضافة كلاس `no-loader` لنموذج المودال `#editRevenueForm` لمنع معالج الـ Submit العام في `layouts.app` من تشغيل شاشة التحميل الكاملة وتعليق الواجهة أثناء طلب الـ AJAX.
+  * **تأمين تمرير البيانات وتفويض الأحداث (Safe Data Attributes & Event Delegation)**: استبدال استدعاء الـ `onclick` المباشر المتأثر بأخطاء الهروب النصي (`addslashes`) بسمات `data-*` وتفويض الحدث `document.addEventListener('click', ...)` لفتح المودال بأمان تام مع أسماء المرضى والأطباء العربية.
+  * **توسيع التحقق من صلاحيات الآدمن**: دعم كافة أدوار الإدارة `['admin', 'admin-hsop', 'hospital_admin']` في الواجهة بما يتوافق تماماً مع الكونترولر.
+  * **تحديث فوري لزر التعديل والإشعارات**: تحديث قيمة `data-doctor-share` للزر بعد الحفظ لضمان فتح المودال بالقيمة الجديدة عند إعادة النقر دون تحديث الصفحة، ودعم إشعارات `toastr` المدمجة.
+- **تحديث المخطط المعرفي (`graphify update .`)**:
+  * إعادة استخراج وتحديث شجرة العلاقات والمخطط المعرفي للمشروع (4127 عقدة و 5630 حافة عبر 802 مجتمع).
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لاختبارات [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز كامل لاختبارات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
+## Session log (2026-10-11 — المرحلة 22: ميزة التعديل اليدوي للآدمن للحصص المالية وإلغاء نسبة الـ 70% التخمينية Manual Revenue Shares Adjustment & Fixed Commissions)
+
+### Done
+- **إلغاء النسبة الافتراضية 70% نهائياً (`PaymentObserver.php`)**:
+  * إلغاء معادلة الضرب بـ `0.7` عند عدم وجود إعداد عمولة محدد للطبيب؛ تصبح حصة الطبيب تلقائياً `0.00` وحصة المستشفى 100% لحين قيام الإدارة بتحديد مبلغه الثابت.
+  * اعتماد مبدأ أن عمولات الأطباء دائماً مبالغ نقدية ثابتة وليست نسباً مئوية، والتطبيق على الكشفيات الجديدة فقط من الآن فصاعداً.
+- **ميزة التعديل اليدوي للحصص المالية في واجهة الحركات المالية (`ConsultantAvailabilityController`, `financial-movements.blade.php`, `web.php`)**:
+  * إضافة عمود وزر «✏️ تعديل» حصري للآدمن ومن يملك صلاحية `manage doctor commissions` في جدول الحركات المالية للعيادات الاستشارية.
+  * مودال تفاعلي سريع `#editRevenueModal`:
+    - عرض تفاصيل القيد (المريض، الطبيب، القسم، والمبلغ الإجمالي).
+    - حقل إدخال لحصة الطبيب (د.ع) مع احتساب فوري لحظي لحصة المستشفى ونسبتها المئوية بالـ JavaScript.
+    - حقل سبب التعديل الإداري (لأغراض الرقابة وتاريخ الحركة).
+  * محرك المعالجة المحاسبية (`updateRevenueShares`):
+    - تحديث سجل الكشفية في `consultation_revenues` (`doctor_share`, `hospital_share`, `doctor_percentage`).
+    - تحديث سجل مستحقات الطبيب المعلقة في `doctor_dues` (`amount`).
+    - إعادة مزامنة رصيد الطبيب المالي في `doctor_financial_accounts` (`balance`, `total_earned`).
+    - تسجيل حركة التعديل تلقائياً في سجل الأنشطة والرقابة الإدارية `UserActivityLogger` كحركة حساسة (Sensitive Action).
+    - تحديث خلايا الجدول فورياً عبر الـ AJAX دون الحاجة لإعادة تحميل الصفحة.
+- **تصحيح قيد الدكتور علي حسين (`REC-20261011-0004`)**:
+  * تصحيح القيد المالي في قاعدة البيانات المحلية وعلى سيرفر هوستنجر الأونلاين (`remote_hostinger`): حصة الطبيب 25,000 د.ع وحصة المستشفى 10,000 د.ع.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات التعديل اليدوي [ConsultantRevenueManualAdjustmentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantRevenueManualAdjustmentTest.php): 3 passed (15 assertions).
+  * اجتياز كامل اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+
+## Session log (2026-10-11 — المرحلة 21: مركز سحب ومزامنة قاعدة البيانات من سيرفر هوستنجر بنقرة زر واحدة One-Click Hostinger Cloud Database Sync)
+
+### Done
+- **مركز سحب ومزامنة قاعدة البيانات من سيرفر هوستنجر بنقرة زر واحدة (`DatabaseSyncService`, `DatabaseSyncController`, `resources/views/system/database-sync.blade.php`, `PullHostingerDatabaseCommand`)**:
+  * ربط قاعدة هوستنجر عن بُعد (`remote_hostinger`) على السيرفر `srv1687.hstgr.io:3306` بقاعدة البيانات `u175868711_her2020`، والتأكد من إمكانية الوصول إلى الـ 106 جدول.
+  * تأسيس محرك النسخ الاحتياطي التلقائي للوكل (`backupLocalDatabase`) لتأمين النسخة الحالية في `storage/app/backups` قبل تنفيذ أي سحب.
+  * تأسيس محرك السحب الذكي (`pullFromRemote`): يسحب الجداول والبيانات بنظام الدفعات (Chunks) مع تعطيل قيود المفاتيح وإعادة تفعيلها وتنظيف كاش الصلاحيات.
+  * تصميم واجهة مركز المزامنة مع فحص الاتصال وسرعة الاستجابة وزر بدء السحب وشريط تقدم وتنبيهات نجاح وتاريخ النسخ الاحتياطية.
+  * إضافة أمر تيرمينال مباشر: `php artisan db:pull-hostinger`.
+  * إضافة رابط في القائمة الجانبية تحت «الإدارة والإعدادات».
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات المزامنة [DatabaseSyncTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DatabaseSyncTest.php): 3 passed (10 assertions).
+  * اجتياز كامل اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+  * اجتياز كامل اختبارات فلاتر المرضى [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php): 4 passed (16 assertions).
+
+## Session log (2026-10-11 — المرحلة 20: احتساب إدخالات الكادر الفعلية واستبعاد الدخول والخروج من الإنتاجية Real Staff Entries & Productivity)
+
+### Done
+- **احتساب إدخالات الكادر الفعلية واستبعاد تسجيل الدخول والخروج (`UserActivityController`, `Patient`, `resources/views/activity-logs/index.blade.php`)**:
+  * استبعاد فئة `auth` (تسجيل الدخول وتسجيل الخروج) كلياً من جدول إنتاجية الكادر اليومي بحيث يقتصر إجمالي الإنجاز على الإدخالات والعمليات التشغيلية الفعلية.
+  * إضافة تتبع إدخال المرضى الجدد برمجياً عبر `Patient::created` وإسنادها تلقائياً لفئة الاستقبال `reception`.
+  * تحديث مسمى التبويب إلى «إدخالات وإنتاجية الكادر اليوم» ورأس العمود إلى «إجمالي الإدخالات اليوم».
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 9 passed (25 assertions).
+  * اجتياز كامل اختبارات فلاتر المرضى [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php): 4 passed (16 assertions).
+
+## Session log (2026-10-11 — المرحلة 19: فلاتر جدول المرضى الذكية والسريعة Smart Patient Filters)
+
+### Done
+- **فلاتر جدول المرضى الذكية (`PatientController`, `resources/views/patients/index.blade.php`)**:
+  * إضافة شريط فلاتر متقدم فوق جدول المرضى بتصميم متناسق وسريع:
+    - 👤 **فلتر الموظف المُدخِل (`created_by`)**: تصفية فورية بحسب موظف الاستقبال أو الإدخال أو اختيار «النظام (بدون موظف)».
+    - 🛡️ **فلتر الضمان الصحي (`insurance_type`)**: تصفية بحسب نوع الضمان (ضمان صحي HI، قوى الأمن MOI، مشمول بأي ضمان، كاش غير مشمول).
+    - ⚧️ **فلتر الجنس (`gender`)**: تصفية (الكل، ذكر، أنثى).
+    - 📅 **فلتر التاريخ (`date_filter` و Range)**: خيارات سريعة (اليوم، أمس، هذا الأسبوع، هذا الشهر) مع حقول مرنة لتحديد فترة (من تاريخ - إلى تاريخ).
+    - 🔄 **زر إعادة تعيين الفلاتر**: تصفية بضغطة زر واحدة.
+  * تحديث فوري بالـ AJAX بدون إعادة تحميل كامل الصفحة (No Page Reload) مع الحفاظ على الفلاتر أثناء الترقيم (Pagination).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات الفلاتر [PatientFilterTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientFilterTest.php): 4 passed (16 assertions).
+  * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-11 — المرحلة 17: نظام سجل حركات ونشاط الموظفين والرقابة الإدارية Staff Activity Logs & Pulse)
+
+### Done
+- **نظام سجل حركات ونشاط الموظفين والرقابة الإدارية (`UserActivity`, `UserActivityLogger`, `UserActivityController`, `resources/views/activity-logs/index.blade.php`)**:
+  * تأسيس محرك التتبع اللحظي لحركات الموظفين بالمستشفى (Realtime Audit Trail & Operational Pulse).
+  * بطاقات إحصائيات ونبض حي (KPI Cards):
+    - 🟢 **المتواجدون الآن بالسيستم (Active Now)**: نبض حي للموظفين المتصلين والمتفاعلين خلال الـ 5 دقائق الماضية.
+    - 👥 **كادر تفاعل وسجل دخولاً اليوم**: عدد الموظفين الفريدين الذين سجلوا دخولاً أو أجروا عمليات اليوم.
+    - ⚡ **إجمالي الحركات اليوم**: عداد فوري لكافة العمليات المنفذة اليوم (كشفيات، وصولات، تحاليل، أشعة، خزينة).
+    - 🚨 **حركات حساسة / رادار الرقابة**: رصد فوري للعمليات الحساسة (حذف، استرجاع مبالغ، إلغاء حجوزات).
+  * 3 تبويبات رئيسية تفاعلية:
+    1. ⚡ **التايم لاين المباشر للحركات (Live Feed)**: شريط زمني بتصميم حديث وبطاقات ملونة وأيقونات الأقسام وأوقات دقيقة مع عناوين الـ IP.
+    2. 🟢 **المتواجدون الآن وسجل الدخول**: شبكة بطاقات توضح حالة اتصال كل موظف (متصل الآن، متصل قبل X دقيقة، غير متصل)، وقت أول تسجيل دخول اليوم، وقت آخر نشاط، وعنوان الـ IP.
+    3. 📊 **إنتاجية الكادر والموظفين اليوم**: جدول إحصائي يوضح حجم إنجاز كل موظف حسب الأقسام (استقبال، كاشير، عيادات، مختبر، أشعة، خزينة).
+  * التتبع التلقائي للعمليات (Auto-tracking Observers & Middleware):
+    - أحداث المصادقة: تسجيل تلقائي لـ `login` و `logout` في `LoginController` وتثبيت `last_logout_at` عبر ميغريشن مخصص بحيث يبقى الموظف معروضاً بالبطاقات اليومية بشارة «🚪 سجّل خروج (11:15 AM)» مع إسقاطه التلقائي من عداد «المتواجدين الآن».
+    - `AppointmentObserver`: تسجيل تلقائي لحجوزات الاستقبال، وإلغاء الحجوزات كحركات حساسة.
+    - `VisitObserver`: تسجيل تلقائي لكشفيات الأطباء وإكمال التشخيص.
+    - `PaymentObserver`: تسجيل تحصيل المبالغ المالية واسترجاع الأموال (Refunds) كحركات حساسة.
+    - `HospitalTreasuryController`: تسجيل سندات الصرف والقبض وحذف السندات.
+    - `LabStaffController` & `RadiologyStaffController`: تسجيل اعتماد نتائج الفحوصات وتقارير الأجهزة.
+  * فلاتر متقدمة + تصدير كشف CSV مع دعم اللغة العربية UTF-8 BOM + مودال تنظيف وأرشفة السجلات الأقدم من 90 يوماً.
+  * الصلاحيات: إضافة صلاحية `view activity logs` و `delete activity logs` وإسنادها للأدوار الإدارية.
+  * 🔄 **محرك البث الحي والتحديث التلقائي الفائق (Fast 5s Pulse & Delta Update)**:
+    - خيارات مرنة للتحديث التلقائي: (فائق السرعة كل 5 ثوانٍ ⚡، 10 ثوانٍ، 15 ثانية، 30 ثانية، أو إيقاف المؤقت ⏸️).
+    - عداد تنازلي تفاعلي مع نبض أخضر 🟢 وحفظ التفضيل في المتصفح `localStorage`.
+    - تحديث صامت بالـ AJAX للـ Live Feed والـ KPI وقوائم المتواجدين والإنتاجية والمخططات البيانية دون Reload كامل ودون فقدان مكان التمرير أو الفلاتر.
+    - حماية التفاعل: إيقاف التحديث التلقائي مؤقتاً أثناء كتابة المستخدم في خانات البحث أو عند فتح المودالات.
+  * 📊 **المخططات البيانية التفاعلية لحركات اليوم (Interactive Operational Charts)**:
+    - **مخطط Donut**: توزيع الحركات حسب الأقسام (أطباء، كاشير، مختبر، أشعة، خزينة، استقبال، طوارئ، مصادقة).
+    - **منحنى النبض الساعي (Hourly Pulse Area Chart)**: كثافة الحركات والعمليات على مدار ساعات العمل اليوم بتوقيت بغداد.
+    - تحديث مباشر وفوري لقيم المخططات البيانية عند كل نبضة AJAX دون وميض أو إعادة رسم قسري.
+  * 👥 **تحويل شاشة المتواجدين إلى جدول احترافي عالي الكثافة (Online Users Table)**:
+    - استبدال شبكة البطاقات بجدول تنفيذي مدمج يحتوي: الاسم، الدور، الحالة اللحظية (🟢 متصل الآن، 🟡 خامل، 🚪 سجّل خروج، غير متصل)، وقت أول دخول اليوم، آخر نشاط، وقت الخروج، عنوان الـ IP، وزر تصفية حركات الموظف.
+    - شريط تصفية فوري بضغطة زر (الكل، متصل الآن، سجّل خروج) مع خانة بحث فوري لحظي بالاسم والدور.
+  * 🕒 **ضبط التوقيت المعتمد للنظام**:
+    - اعتماد توقيت بغداد رسمياً (`Asia/Baghdad` / UTC+3) في `config/app.php` و `.env`.
+    - دعم الاستعلام الساعي البرمجي المتوافق مع MySQL و SQLite عبر `cast(strftime('%H', created_at) as integer)`.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات سجل الحركات [UserActivityLogTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserActivityLogTest.php): 7 passed (19 assertions).
+  * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (179 assertions).
+
+## Session log (2026-10-11 — المرحلة 18: ترقية واجهة قائمة المرضى وتفاصيل الضمان ومن أدخل السجل Patient Insurance & Creator Tracking)
+
+### Done
+- **ترقية واجهة وقائمة المرضى (`PatientController`, `Patient`, `resources/views/patients/index.blade.php`)**:
+  * إضافة حقل `created_by` لجدول المرضى (`patients`) عبر ميغريشن آمن `2026_10_11_140000_add_created_by_to_patients_table.php` مع ربط علاقة `creator` في موديل `Patient`.
+  * تفعيل الإسناد التلقائي للمستخدم المنشئ (`booted -> creating`) لضمان تسجيل موظف الاستقبال/الإدخال لأي مريض يتم تسجيله من أي واجهة (المرضى، الاستقبال، الطوارئ، المواعيد).
+  * **عرض حالة الضمان الصحي ورقم الضمان**:
+    - شارة بارزة وملونة:
+      - 🛡️ **ضمان صحي (HI)** مع اسم الفئة ونسبة التحمل (مثلاً: الفئة الأولى 15%).
+      - 👮 **قوى الأمن / الداخلية (MOI)**.
+      - 🛡️ **مشمول بالضمان** (إذا كان مفعلاً).
+      - ❌ **غير مشمول (كاش)**.
+    - عرض **رقم الضمان / رقم البطاقة أو الدفتر** بخط أحادي (Monospace) واضح، أو `-` في حال عدم توفره.
+  * **عرض تاريخ الإدخال ومن أدخله والترتيب التنازلي**:
+    - تاريخ ووقت إضافة المريض بالنظام بدقة (`created_at`).
+    - اسم الموظف الذي أدخل السجل مع شارة وأيقونة محددة `{{ $patient->creator?->name ?? 'النظام' }}`.
+    - تثبيت الترتيب التنازلي التلقائي الصارم في الاستعلام `orderBy('created_at', 'desc')->orderBy('id', 'desc')` لظهور المريض المضاف حديثاً بأعلى القائمة فوراً.
+  * **تقييد رقم البطاقة الموحدة (الأرقام فقط)**:
+    - التحقق البرمجي (Backend Validation) برمجياً عبر `regex:/^[0-9]+$/` لمنع أي أحرف أو رموز.
+    - التنظيف اللحظي (Client-side & Backend Sanitization): تحويل فوري وتلقائي للأرقام العربية المشرقية (٠-٩) إلى أرقام إنجليزية (0-9) مع إزالة الفراغات والرموز `oninput`.
+  * **دمج وتنظيم بيانات المريض والاتصال**:
+    - دمج العمر وفصيلة الدم والجنس والرقم الوطني في بطاقة المريض لمنع تكدس الأعمدة.
+    - عرض الهاتف ورقم الطوارئ والبريد بشكل متناسق ومريح للعين.
+  * تحديث محرك البحث اللحظي التلقائي (Live AJAX Search) لدعم إظهار شارات الضمان ورقم البطاقة واسم المنشئ وتاريخ التسجيل فورياً أثناء البحث.
+
+## Session log (2026-10-10 — المرحلة 16: نظام وخزينة المستشفى المركزية وحركة النقدية والمصروفات Hospital Treasury & General Cash Flow)
+
+### Done
+- **نظام وخزينة المستشفى المركزية وحركة النقدية والمصروفات (`HospitalTreasuryController`, `FinancialTransaction`, `resources/views/treasury/index.blade.php`)**:
+  * تأسيس نظام الخزينة العام (General Cash Flow Ledger) لربط كافة المقبوضات النقدية الواردة (Inflows) بمصروفات المستشفى الصادرة (Outflows).
+  * بطاقات إحصائيات مالية لحظية متقدمة (KPI Cards):
+    - 🏦 **الرصيد الفعلي بالخزينة (Net Available Treasury Balance)** = إجمالي الوارد التراكمي - إجمالي المنصرف.
+    - 📥 **إجمالي الوارد للفترة المحددة** (مقبوضات الكاشير، الكشفية، التحاليل، الأشعة، الطوارئ، العمليات، تحصيلات الضمان).
+    - 📤 **إجمالي المنصرف للفترة المحددة** (مستحقات الأطباء + فواتير المشتريات والموردين + المصروفات التشغيلية).
+    - 📊 شريط توزيع المنصرفات بحسب الفئات (أطباء، مشتريات، نثريات وتشغيلية).
+  * إضافة ميغريشن آمن `2026_10_10_200000_add_treasury_fields_to_financial_transactions_table.php` يضيف حقول: `category`, `voucher_type`, `voucher_number`, `payment_method`, `notes`، مع التوافق التام بين MySQL و SQLite.
+  * تحديث `PaymentObserver` لتسجيل كافة مقبوضات المرضى والكاشير تلقائياً كـ وارد (Inflow) مع فئاتها التفصيلية.
+  * مودال تفاعلي ذكي لإصدار **سند صرف مصروفات** (`#expenseModal`):
+    - يدعم صرف مستحقات الأطباء مع خصمها التلقائي الفوري من رصيد حساب الطبيب (`DoctorFinancialAccount`) ومعالجة القيود المعلقة.
+    - يدعم صرف فواتير المشتريات والموردين.
+    - يدعم رواتب الموظفين، الصيانة، الكهرباء والوقود والمولدات، المستلزمات الطبية، والنثريات التشغيلية.
+  * مودال تفاعلي ذكي لإصدار **سند قبض إيراد عام** (`#incomeModal`) لتوريد النقدية ومطالبات الضمان والإيرادات المتنوعة.
+  * تصدير كشف حركة الخزينة إلى Excel (`HospitalTreasuryExport`).
+  * ربط قسم الخزينة في القائمة الجانبية تحت «الحسابات العامة والمالية» مع الحماية بصلاحية `view account statements` والأدوار الإدارية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات الخزينة والمصروفات [HospitalTreasuryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryTest.php): 5 passed (17 assertions).
+  * اجتياز كامل اختبارات مصفوفة الصلاحيات [RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php): 11 passed (177 assertions).
+- **الرفع إلى GitHub**:
+  * الرفع المباشر على فرع `main`.
+
+## Session log (2026-10-08 — المرحلة 15: التعديل الجماعي والمفاتيح الفورية لخدمات الطوارئ وتسعير الضمان الصحي)
+
+### Done
+- **نظام التعديل الجماعي والمفاتيح الفورية لخدمات الطوارئ (`EmergencyServiceController.php`, `resources/views/emergency-services/index.blade.php`)**:
+  * إضافة شريط التحكم السريع الشامل بالأصناف (Category & Global Quick Switch) لتفعيل أو إطفاء الضمان الصحي (HI) أو ضمان الداخلية أو حالة التفعيل لكافة خدمات صنف معين بنقرة واحدة (أو لكافة الأصناف بالمستشفى).
+  * إضافة شريط الإجراءات الجماعية (Bulk Actions Bar) مع زر «تحديد كل الصفحة» لتنفيذ الإجراءات بضغطة زر واحدة:
+    - 🛡️ **تفعيل في الضمان الصحي (HI)** لكافة الخدمات المحددة.
+    - 🚫 **استبعاد من الضمان الصحي** (لتصبح كاش عادي للمستشفى).
+    - 👮 **تفعيل / استبعاد ضمان الداخلية (MOI)**.
+    - ✅ **تفعيل / ⏸️ تعطيل الخدمات جماعياً**.
+    - 🗑️ **حذف جماعي للخدمات غير المرتبطة بسجلات**.
+  * إضافة مفاتيح تبديل فورية مباشرة (AJAX Inline Switches) داخل الجدول لكل خدمة لتعديل حالة الضمان الصحي أو ضمان الداخلية أو حالة التفعيل بضغطة زر واحدة دون فتح أي مودال.
+  * إضافة فلتر سريع لتغطية الضمان (`insurance_filter`) لتصفية الخدمات المشمولة أو غير المشمولة بالضمان بمرونة عالية.
+  * بطاقات إحصائيات حية (KPI Cards) توضح عدد الخدمات المشمولة بالضمان والخارجة عن الضمان.
+  * احتساب مالي دقيق وفردي لكل خدمة في الطوارئ والكاشير عبر سمة `HasInsurancePricing` بحيث تُحسب الخدمات غير المشمولة كاش عادي والمشمولة على ذمة الضمان.
+  * احتساب نسب استقطاع الضمان (Lab & Radiology Insurance Copay) لكافة الفحوصات المخبرية والإشعاعية المطلوبة من الطوارئ وتغطيتها فورياً إذا كانت 100% على ذمة الضمان دون تحميل المريض أي كاش.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات النظام ومصفوفة الصلاحيات: 93 passed (543 assertions).
+- **الرفع إلى GitHub**:
+  * الرفع المباشر على فرع `main`.
 
 ## Session log (2026-10-08 — المرحلة 14: نظام المراجعة المجانية وجدولة الاستشارة من محطة الطبيب والتكامل مع الاستقبال والطباعة)
 

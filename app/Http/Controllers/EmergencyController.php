@@ -186,7 +186,7 @@ class EmergencyController extends Controller
         }
 
         if ($selectedPatientId) {
-            $selectedPatient = Patient::with('user')->find($selectedPatientId);
+            $selectedPatient = Patient::with(['user', 'healthInsuranceCategory'])->find($selectedPatientId);
         }
 
         $daysMap = [
@@ -263,7 +263,7 @@ class EmergencyController extends Controller
             return response()->json([]);
         }
 
-        $patients = Patient::with('user')
+        $patients = Patient::with(['user', 'healthInsuranceCategory'])
             ->where(function($pQuery) use ($query) {
                 $pQuery->where('national_id', 'LIKE', "%{$query}%")
                        ->orWhere('id', $query)
@@ -285,6 +285,8 @@ class EmergencyController extends Controller
                         $age = null;
                     }
                 }
+                $isInsurance = ($patient->insurance_type && $patient->insurance_type !== 'none') || (bool)$patient->health_insurance_category_id;
+                $insuranceName = $patient->healthInsuranceCategory?->name ?? ($isInsurance ? 'ضمان صحي' : null);
                 return [
                     'id' => $patient->id,
                     'name' => $u->name ?? 'مريض بدون اسم',
@@ -292,6 +294,9 @@ class EmergencyController extends Controller
                     'national_id' => $patient->national_id ?? '',
                     'gender' => ($u->gender ?? null) === 'male' ? 'ذكر' : (($u->gender ?? null) === 'female' ? 'أنثى' : 'غير محدد'),
                     'age' => $age ? $age : '',
+                    'is_insurance' => $isInsurance,
+                    'insurance_name' => $insuranceName,
+                    'insurance_card_no' => $patient->insurance_card_no ?? '',
                 ];
             });
 
@@ -369,8 +374,16 @@ class EmergencyController extends Controller
             $doctorId = $assignedDoc?->id;
         }
 
+        $patient = $patientId ? Patient::find($patientId) : null;
+        $isPatientInsured = $patient && (($patient->insurance_type && $patient->insurance_type !== 'none') || $patient->health_insurance_category_id);
+        $applyInsurance = $request->input('apply_insurance', '1') == '1';
+        $isInsured = $isPatientInsured && $applyInsurance;
+        $insuranceType = $isInsured ? ($patient->insurance_type ?: 'hi') : 'none';
+
         $emergency = Emergency::create([
             'patient_id' => $patientId,
+            'is_insured' => $isInsured,
+            'insurance_type' => $insuranceType,
             'emergency_patient_id' => $emergencyPatientId,
             'doctor_id' => $doctorId,
             'nurse_id' => $request->nurse_id,
@@ -391,7 +404,7 @@ class EmergencyController extends Controller
             $this->upsertUnifiedEmergencyPayment($emergency);
         }
 
-        // إذا كانت الحالة من إحالة عيادة استشارية، تحديث حالة الإحالة إلى مكتملة
+        // إذا كانت الحالة من إحالة عيادة استشارية، تحديث حالة الإحالة وترحيل الخدمات المطلوبة
         $referralId = $request->input('referral_request_id', $request->input('from_referral_id'));
         if ($referralId) {
             $ref = \App\Models\Request::find($referralId);
@@ -400,12 +413,46 @@ class EmergencyController extends Controller
                     'status' => 'completed',
                     'notes' => 'تم قبول الإحالة واستقبال الحالة في الطوارئ برقم #' . $emergency->id
                 ]);
+
+                // ترحيل وربط الخدمات التمريضية المطلوبة من الطبيب الاستشاري تلقائياً بسجل الطوارئ
+                $refDetails = is_string($ref->details) ? json_decode($ref->details, true) : ($ref->details ?? []);
+                $nursingServiceIds = $refDetails['nursing_services'] ?? [];
+                
+                if (!empty($nursingServiceIds)) {
+                    $emergency->services()->syncWithoutDetaching($nursingServiceIds);
+                }
+
+                if (empty($emergency->symptoms) && !empty($ref->description)) {
+                    $emergency->update(['symptoms' => $ref->description]);
+                }
+
+                $this->upsertUnifiedEmergencyPayment($emergency);
             }
         }
 
-        // return to list instead of details so user sees the emergency table
-        return redirect()->route('emergency.index')
-            ->with('success', 'تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة');
+        $returnTo = $request->input('return_to');
+        $user = Auth::user();
+
+        // 1. إذا كان موظف طوارئ أو يملك صلاحية عرض الطوارئ
+        if ($user->hasRole(['emergency_staff', 'doctor', 'nurse']) || $user->can('view emergencies') || $returnTo === 'emergency') {
+            return redirect()->route('emergency.index')
+                ->with('success', '✅ تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة (رقم الحالة #' . $emergency->id . ')');
+        }
+
+        // 2. إذا كان موظف استعلامات عامة
+        if ($user->can('view inquiries')) {
+            return redirect()->route('inquiry.index')
+                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+        }
+
+        // 3. إذا كان موظف استعلامات استشارية
+        if ($user->can('view consultant availability') || $user->hasRole('consultation_receptionist')) {
+            return redirect()->route('consultant-availability.index')
+                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+        }
+
+        return redirect()->route('home')
+            ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
     }
 
     /**
@@ -427,7 +474,9 @@ class EmergencyController extends Controller
             'services',
             'payment',
             'labRequests.labTests',
+            'labRequests.requestTests.labTest',
             'radiologyRequests.radiologyTypes',
+            'radiologyRequests.requestTypes.radiologyType',
             'treatments.creator',
             'vitalSignReadings' => function($query) {
                 $query->latest()->with('recordedBy');
@@ -1277,23 +1326,68 @@ class EmergencyController extends Controller
             ->whereNull('payment_id')
             ->pluck('emergency_service_id');
         
-        $servicesAmount = $emergency->services
-            ->whereIn('id', $unpaidServiceIds)
-            ->sum('price');
+        $isInsurance = false;
+        if (isset($emergency->is_insured)) {
+            $isInsurance = (bool) $emergency->is_insured;
+        } elseif (isset($emergency->insurance_type) && $emergency->insurance_type !== 'none') {
+            $isInsurance = true;
+        } elseif ($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory)) {
+            $isInsurance = true;
+        }
 
-        // حساب التحاليل غير المدفوعة فقط
-        $labAmount = $emergency->labRequests
-            ->whereNull('payment_id')
-            ->sum(function ($request) {
-                return $request->labTests->sum('price');
-            });
+        $insuranceType = $isInsurance ? ($emergency->insurance_type ?: 'hi') : 'none';
+        if ($insuranceType === 'none') {
+            $isInsurance = false;
+        }
 
-        // حساب الأشعة غير المدفوعة فقط
-        $radiologyAmount = $emergency->radiologyRequests
-            ->whereNull('payment_id')
-            ->sum(function ($request) {
-                return $request->radiologyTypes->sum('price');
-            });
+        $emergencyCopay = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('emergency') ?? 0.0) : 100.0;
+        $labCopay       = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
+        $radCopay       = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
+
+        $unpaidServices = $emergency->services->whereIn('id', $unpaidServiceIds);
+        $totalServicesAmount = 0.0;
+        $servicesPatientShare = 0.0;
+        $servicesInsuranceShare = 0.0;
+        $fullyCoveredServiceIds = [];
+
+        foreach ($unpaidServices as $service) {
+            $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+            $totalServicesAmount += (float)$pricing['total_amount'];
+            $servicesPatientShare += (float)$pricing['patient_share'];
+            $servicesInsuranceShare += (float)$pricing['insurance_share'];
+
+            if ($pricing['is_covered'] && $pricing['patient_share'] <= 0) {
+                $fullyCoveredServiceIds[] = $service->id;
+            }
+        }
+
+        // حساب التحاليل غير المدفوعة بنسب تسعير وتغطية الضمان
+        $totalLabAmount = 0.0;
+        $labPatientShare = 0.0;
+        $labInsuranceShare = 0.0;
+        $unpaidLabRequests = $emergency->labRequests->whereNull('payment_id');
+        foreach ($unpaidLabRequests as $request) {
+            foreach ($request->labTests as $test) {
+                $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
+                $totalLabAmount += (float)$pricing['total_amount'];
+                $labPatientShare += (float)$pricing['patient_share'];
+                $labInsuranceShare += (float)$pricing['insurance_share'];
+            }
+        }
+
+        // حساب الأشعة غير المدفوعة بنسب تسعير وتغطية الضمان
+        $totalRadiologyAmount = 0.0;
+        $radiologyPatientShare = 0.0;
+        $radiologyInsuranceShare = 0.0;
+        $unpaidRadiologyRequests = $emergency->radiologyRequests->whereNull('payment_id');
+        foreach ($unpaidRadiologyRequests as $request) {
+            foreach ($request->radiologyTypes as $rad) {
+                $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
+                $totalRadiologyAmount += (float)$pricing['total_amount'];
+                $radiologyPatientShare += (float)$pricing['patient_share'];
+                $radiologyInsuranceShare += (float)$pricing['insurance_share'];
+            }
+        }
 
         $consultationAmount = $emergency->appointments
             ->where('payment_status', 'pending')
@@ -1304,8 +1398,12 @@ class EmergencyController extends Controller
         $followUpFee = ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) 
             ? $emergency->doctor_follow_up_fee 
             : 0;
+        $followUpPatientShare = $isInsurance ? round($followUpFee * ($emergencyCopay / 100.0), 2) : $followUpFee;
+        $followUpInsuranceShare = round($followUpFee - $followUpPatientShare, 2);
             
-        $totalAmount = $servicesAmount + $labAmount + $radiologyAmount + $consultationAmount + $followUpFee;
+        $totalAmount = $totalServicesAmount + $totalLabAmount + $totalRadiologyAmount + $consultationAmount + $followUpFee;
+        $patientShare = $servicesPatientShare + $labPatientShare + $radiologyPatientShare + $consultationAmount + $followUpPatientShare;
+        $insuranceShare = $servicesInsuranceShare + $labInsuranceShare + $radiologyInsuranceShare + $followUpInsuranceShare;
 
         $hasPendingAmount = $totalAmount > 0;
         $existingPayment = Payment::where('emergency_id', $emergency->id)
@@ -1382,31 +1480,88 @@ class EmergencyController extends Controller
             ? implode(' | ', $descriptionParts)
             : 'رسوم طوارئ';
 
-        if ($existingPayment) {
-            $existingPayment->update([
+        // إذا كان كامل المبلغ المطلوب من المريض 0 ومغطى بالضمان
+        $isFullyCoveredByInsurance = $isInsurance && $patientShare <= 0 && $totalAmount > 0;
+
+        if ($isFullyCoveredByInsurance) {
+            $paymentData = [
+                'emergency_id' => $emergency->id,
                 'patient_id' => $emergency->patient_id,
-                'amount' => $totalAmount,
-                'description' => $description,
+                'amount' => 0.00,
+                'total_amount' => $totalAmount,
+                'patient_share' => 0.00,
+                'insurance_share' => $insuranceShare,
+                'insurance_type' => 'hi',
+                'copay_percentage' => $emergencyCopay,
+                'insurance_card_no' => $emergency->patient->insurance_card_no ?? null,
+                'payment_type' => 'emergency',
+                'payment_method' => 'insurance',
+                'claim_status' => 'claimed',
+                'description' => $description . ' (مغطاة بالكامل بالضمان الصحي)',
+                'paid_at' => now(),
+            ];
+
+            if ($existingPayment) {
+                $existingPayment->update($paymentData);
+                $payment = $existingPayment;
+            } else {
+                $paymentData['receipt_number'] = Payment::generateReceiptNumber();
+                $payment = Payment::create($paymentData);
+            }
+
+            // ربط معرف الدفع بالخدمات حتى تعتبر مسددة ومسجلة في حساب الضمان
+            \DB::table('emergency_emergency_service')
+                ->where('emergency_id', $emergency->id)
+                ->whereNull('payment_id')
+                ->update(['payment_id' => $payment->id]);
+
+            // ربط طلبات المختبر والأشعة المغطاة بالكامل بهيئة الضمان
+            foreach ($unpaidLabRequests as $req) {
+                $req->update(['payment_id' => $payment->id]);
+            }
+            foreach ($unpaidRadiologyRequests as $req) {
+                $req->update(['payment_id' => $payment->id]);
+            }
+
+            if ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) {
+                $emergency->update(['follow_up_payment_id' => $payment->id]);
+            }
+
+            $emergency->update([
+                'payment_status' => 'paid',
+                'payment_id' => $payment->id,
             ]);
 
+            return $payment;
+        }
+
+        $paymentData = [
+            'patient_id' => $emergency->patient_id,
+            'amount' => $patientShare,
+            'total_amount' => $totalAmount,
+            'patient_share' => $patientShare,
+            'insurance_share' => $insuranceShare,
+            'insurance_type' => $isInsurance ? 'hi' : 'none',
+            'copay_percentage' => $emergencyCopay,
+            'insurance_card_no' => $emergency->patient?->insurance_card_no,
+            'payment_type' => 'emergency',
+            'payment_method' => 'pending',
+            'description' => $description,
+            'paid_at' => null,
+        ];
+
+        if ($existingPayment) {
+            $existingPayment->update($paymentData);
             $emergency->update([
                 'payment_status' => 'pending',
                 'payment_id' => $existingPayment->id,
             ]);
-
             return $existingPayment;
         }
 
-        $payment = Payment::create([
-            'emergency_id' => $emergency->id,
-            'patient_id' => $emergency->patient_id,
-            'amount' => $totalAmount,
-            'payment_type' => 'emergency',
-            'payment_method' => 'pending',
-            'description' => $description,
-            'receipt_number' => Payment::generateReceiptNumber(),
-            'paid_at' => null,
-        ]);
+        $paymentData['emergency_id'] = $emergency->id;
+        $paymentData['receipt_number'] = Payment::generateReceiptNumber();
+        $payment = Payment::create($paymentData);
 
         $emergency->update([
             'payment_status' => 'pending',

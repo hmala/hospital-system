@@ -16,6 +16,7 @@ class DoctorCommissionSetting extends Model
         'commission_type',
         'commission_value',
         'fixed_amount',
+        'hi_fixed_amount',
         'is_active',
         'valid_from',
         'valid_until',

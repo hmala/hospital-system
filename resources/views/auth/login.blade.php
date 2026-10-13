@@ -534,7 +534,13 @@
         <!-- قسم الترحيب -->
         <div class="welcome-section">
             <div class="text-center mb-4">
-                <img src="{{ asset('images/logo.jpeg') }}" alt="مستشفى الكفاءات الأهلي" class="img-fluid" style="max-height: 140px; width: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                @php
+                    $loginLogoFile = public_path('images/logo.jpeg');
+                    $loginLogoSrc = file_exists($loginLogoFile) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($loginLogoFile)) : asset('images/logo.jpeg');
+                @endphp
+                <div style="background: #ffffff; border-radius: 16px; padding: 12px 20px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8);">
+                    <img src="{{ $loginLogoSrc }}" alt="HERAMZ RP" class="img-fluid" style="max-height: 90px; width: auto;">
+                </div>
             </div>
            
 

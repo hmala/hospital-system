@@ -122,6 +122,8 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -315,6 +317,7 @@ class RoleManagementController extends Controller
             'inquiry.create.lab' => ['label' => 'حجز تحاليل مختبرية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.pharmacy' => ['label' => 'طلب صيدلية من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.blood_bank' => ['label' => 'حجز طلب مصرف الدم', 'action' => 'حجز', 'badge' => 'primary'],
+            'create emergencies' => ['label' => 'حجز واستقبال حالة طوارئ جديدة / طوارئ الضمان', 'action' => 'حجز', 'badge' => 'danger'],
             'view bed reservations' => ['label' => 'عرض سجل وقائمة حجوزات الأسرّة والرقود', 'action' => 'عرض', 'badge' => 'info'],
             'create bed reservations' => ['label' => 'حجز وتسكين سرير أو رقود مبدئي لمريض', 'action' => 'حجز', 'badge' => 'success'],
             'view incubator reservations' => ['label' => 'عرض سجل وقائمة حجوزات حاضنات الخُدّج', 'action' => 'عرض', 'badge' => 'info'],
@@ -353,6 +356,7 @@ class RoleManagementController extends Controller
             // 💳 3. الصندوق والكاشير
             'view cashier' => ['label' => 'عرض لوحة الكاشير المركزية العامة', 'action' => 'عرض', 'badge' => 'info'],
             'process consultation payments' => ['label' => 'قبض وتسديد كشفية الاستشارية وحجز السونار', 'action' => 'معالجة', 'badge' => 'success'],
+            'process ultrasound payments' => ['label' => 'قبض وتسديد طلبات السونار الخارجي المباشر فقط', 'action' => 'معالجة', 'badge' => 'primary'],
             'process medical requests payments' => ['label' => 'قبض وتسديد رسوم الفحوصات (مختبر وأشعة)', 'action' => 'معالجة', 'badge' => 'success'],
             'process emergency payments' => ['label' => 'قبض وتسديد فواتير وإجراءات الطوارئ', 'action' => 'معالجة', 'badge' => 'success'],
             'view cashier surgeries' => ['label' => 'عرض كاشير قسم العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
@@ -363,6 +367,8 @@ class RoleManagementController extends Controller
             'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار وتكاليف العمليات (محاسب)', 'action' => 'مراجعة', 'badge' => 'warning'],
             'manage health insurance' => ['label' => 'إدارة نسب وفئات استقطاع الضمان الصحي الوطني', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage doctor commissions' => ['label' => 'إعدادات وتخصيص عمولات ونسب الأطباء', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view treasury' => ['label' => 'عرض خزينة المستشفى المركزية وحركة الصناديق', 'action' => 'عرض', 'badge' => 'info'],
+            'manage treasury' => ['label' => 'تسجيل إيرادات ومصروفات وسندات الخزينة', 'action' => 'إدارة', 'badge' => 'primary'],
             'view cashier reports' => ['label' => 'عرض سجل وتقارير الفواتير والإيرادات', 'action' => 'عرض', 'badge' => 'info'],
             'view consultant financial movements' => ['label' => 'عرض الحركات والقيود المالية للاستشارية', 'action' => 'عرض', 'badge' => 'info'],
             'view account statements' => ['label' => 'عرض كشوفات الحسابات العامة وتصديرها', 'action' => 'عرض', 'badge' => 'info'],
@@ -445,6 +451,9 @@ class RoleManagementController extends Controller
             'manage users' => ['label' => 'إدارة حسابات المستخدمين والموظفين', 'action' => 'إدارة', 'badge' => 'danger'],
             'manage roles' => ['label' => 'إدارة الأدوار والمسميات الوظيفية', 'action' => 'إدارة', 'badge' => 'danger'],
             'manage permissions' => ['label' => 'إدارة وتخصيص صلاحيات النظام', 'action' => 'إدارة', 'badge' => 'danger'],
+            'view activity logs' => ['label' => 'عرض سجل حركات ونشاط الموظفين والرقابة الإدارية', 'action' => 'عرض', 'badge' => 'info'],
+            'delete activity logs' => ['label' => 'تنظيف وأرشفة سجل الحركات القديم', 'action' => 'حذف', 'badge' => 'danger'],
+            'manage database sync' => ['label' => 'مزامنة وسحب ورفع قواعد البيانات السحابية', 'action' => 'إدارة', 'badge' => 'danger'],
         ];
     }
 
@@ -455,6 +464,7 @@ class RoleManagementController extends Controller
             'view inquiries', 'create inquiries', 'manage inquiries', 
             'view patient history', 'view occupancy', 
             'view patients', 'create patients', 'edit patients', 'delete patients',
+            'create emergencies',
             'view bed reservations', 'create bed reservations',
             'view incubator reservations', 'create incubator reservations', 'manage incubator reservations',
         ])) {
@@ -466,6 +476,8 @@ class RoleManagementController extends Controller
             'review surgery prices', 
             'manage health insurance',
             'manage doctor commissions',
+            'view treasury',
+            'manage treasury',
             'view cashier reports', 
             'view consultant financial movements',
             'view account statements',
@@ -476,7 +488,7 @@ class RoleManagementController extends Controller
             'view emergency doctor accounts',
             'view diagnostic analytics',
             'view doctor profits',
-        ]) || str_contains($permissionName, 'insurance')) {
+        ]) || str_contains($permissionName, 'insurance') || str_contains($permissionName, 'treasury')) {
             return 'accounting';
         }
 
@@ -522,7 +534,7 @@ class RoleManagementController extends Controller
         }
 
         // 9. System Admin & Settings
-        if (str_contains($permissionName, 'user') || str_contains($permissionName, 'role') || str_contains($permissionName, 'permission')) {
+        if (str_contains($permissionName, 'user') || str_contains($permissionName, 'role') || str_contains($permissionName, 'permission') || str_contains($permissionName, 'activity log')) {
             return 'system_admin';
         }
 

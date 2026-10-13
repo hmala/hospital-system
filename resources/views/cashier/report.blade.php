@@ -129,6 +129,19 @@
                         </select>
                     </div>
 
+                    @if(auth()->user()->hasRole(['admin', 'accountant', 'super_admin']) && isset($cashiers) && $cashiers->count() > 0)
+                    <!-- الكاشير (للإدارة والمحاسبين) -->
+                    <div class="col-lg-2 col-md-3 col-sm-6">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user-tie me-1"></i>الكاشير</label>
+                        <select name="cashier_id" class="form-select form-select-sm">
+                            <option value="">جميع الكاشيرات</option>
+                            @foreach($cashiers as $c)
+                                <option value="{{ $c->id }}" {{ ($cashierId ?? '') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
                     <!-- البحث النصي -->
                     <div class="col-lg-2 col-md-6 col-sm-6">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1"></i>رقم الوصل أو المريض</label>

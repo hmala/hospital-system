@@ -408,7 +408,7 @@ datalist option:hover {
                         <form action="{{ route('doctor.visits.cancel', $visit) }}" method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟ سيتم إعلام موظف الاستعلامات والكاشير.')">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من إلغاء كشفية هذا المريض؟ سيتم استرجاع مبلغ الكشفية فقط وإعلام موظف الاستعلامات والكاشير.')">
                                 <i class="fas fa-times me-1"></i>
                                 إلغاء الحجز
                             </button>
@@ -1065,8 +1065,8 @@ datalist option:hover {
                             </div>
 
                             @if(isset($radiologyTypes) && $radiologyTypes->count() > 0)
-                                <!-- 1. حقل البحث الذكي بنمط Tag Autocomplete -->
-                                <div class="mb-3 position-relative">
+                                <!-- 1. حقل البحث الذكي بنمط الفلترة الفورية المباشرة للجدول -->
+                                <div class="mb-3">
                                     <div class="input-group shadow-sm">
                                         <span class="input-group-text bg-info text-white">
                                             <i class="fas fa-search"></i>
@@ -1074,13 +1074,12 @@ datalist option:hover {
                                         <input type="text" 
                                                id="docRadSearchInput" 
                                                class="form-control form-control-lg fs-6" 
-                                               placeholder="اكتب اسم فحص الأشعة (مثل: Chest X-Ray, Brain MRI, Abdomen US, CT Scan...) واضغط Enter..."
+                                               placeholder="ابحث عن فحص الأشعة أو السونار لتصفية القائمة فوراً..."
                                                autocomplete="off">
-                                        <button type="button" class="btn btn-outline-secondary" id="docRadClearSearchBtn" title="مسح البحث">
+                                        <button type="button" class="btn btn-outline-secondary d-none" id="docRadClearSearchBtn" title="مسح البحث">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
-                                    <div id="docRadAutocompleteMenu" class="dropdown-menu w-100 shadow-lg p-1 border-0" style="max-height: 280px; overflow-y: auto; display: none; position: absolute; z-index: 1050;"></div>
                                 </div>
 
                                 <!-- 2. صينية الفحوصات المختارة حالياً (Selected Chips Tray) -->
@@ -1111,12 +1110,12 @@ datalist option:hover {
                                         'ct scan' => '🌀 مفراس حلزوني (CT Scan)',
                                         'ct_scan' => '🌀 مفراس حلزوني (CT Scan)',
                                         'مفراس' => '🌀 مفراس حلزوني (CT Scan)',
-                                        'ultrasound' => '🔊 سونار (Ultrasound)',
-                                        'u/s' => '🔊 سونار (Ultrasound)',
-                                        'us' => '🔊 سونار (Ultrasound)',
-                                        'سونار' => '🔊 سونار (Ultrasound)',
-                                        'doppler' => '🩺 دوبلر ملون (Doppler)',
-                                        'دوبلر' => '🩺 دوبلر ملون (Doppler)',
+                                        'ultrasound' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'u/s' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'us' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'سونار' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'doppler' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'دوبلر' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
                                         'echo' => '❤️ إيكو قلب (Echo)',
                                         'إيكو' => '❤️ إيكو قلب (Echo)',
                                         'ايكو' => '❤️ إيكو قلب (Echo)',
@@ -1126,8 +1125,31 @@ datalist option:hover {
                                     ];
 
                                     $radGrouped = $radiologyTypes->groupBy(function($r) use ($radCatMap) {
-                                        $rawCat = strtolower(trim($r->main_category ?? ''));
-                                        return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: 'فحوصات أشعة عامة'));
+                                        $rawCat = mb_strtolower(trim($r->main_category ?? ''));
+                                        $rawSub = mb_strtolower(trim($r->subcategory ?? ''));
+                                        $rawName = mb_strtolower(trim($r->name ?? ''));
+
+                                        if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
+                                            str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
+                                            str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
+                                            str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
+                                            str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
+                                            return '🔊 السونار والدوبلر (Ultrasound & Doppler)';
+                                        }
+
+                                        if (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
+                                            return '🧲 رنين مغناطيسي (MRI)';
+                                        }
+
+                                        if (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
+                                            return '🌀 مفراس حلزوني (CT Scan)';
+                                        }
+
+                                        if (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
+                                            return '❤️ إيكو قلب (Echo)';
+                                        }
+
+                                        return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
                                     });
                                 @endphp
                                 <div class="d-flex align-items-center gap-1 overflow-x-auto pb-2 mb-3 border-bottom" id="docRadCategoryPills" style="white-space: nowrap;">
@@ -1146,8 +1168,25 @@ datalist option:hover {
                                     <div class="row g-2" id="docRadItemsGrid">
                                         @foreach($radiologyTypes as $type)
                                             @php
-                                                $rawCat = strtolower(trim($type->main_category ?? ''));
-                                                $radCat = $radCatMap[$rawCat] ?? ($type->main_category ?: ($type->subcategory ?: 'فحوصات أشعة عامة'));
+                                                $rawCat = mb_strtolower(trim($type->main_category ?? ''));
+                                                $rawSub = mb_strtolower(trim($type->subcategory ?? ''));
+                                                $rawName = mb_strtolower(trim($type->name ?? ''));
+
+                                                if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
+                                                    str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
+                                                    str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
+                                                    str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
+                                                    str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
+                                                    $radCat = '🔊 السونار والدوبلر (Ultrasound & Doppler)';
+                                                } elseif (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
+                                                    $radCat = '🧲 رنين مغناطيسي (MRI)';
+                                                } elseif (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
+                                                    $radCat = '🌀 مفراس حلزوني (CT Scan)';
+                                                } elseif (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
+                                                    $radCat = '❤️ إيكو قلب (Echo)';
+                                                } else {
+                                                    $radCat = $radCatMap[$rawCat] ?? ($type->main_category ?: ($type->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
+                                                }
                                             @endphp
                                             <div class="col-md-6 col-12 doc-rad-col" 
                                                  data-type-name="{{ strtolower($type->name) }}"
@@ -1232,71 +1271,61 @@ datalist option:hover {
                             <div class="card border shadow-xs rounded-3 mb-3 bg-white">
                                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0 fw-bold text-dark small">
-                                        <i class="fas fa-stethoscope text-danger me-1"></i> تحديد الإجراءات والخدمات التمريضية المطلوبة
+                                        <i class="fas fa-ambulance text-danger me-1"></i> إحالة طبية إلى قسم الطوارئ والتمريض
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
                                         <label class="small fw-bold text-secondary mb-0">درجة الأولوية:</label>
-                                        <select name="priority" class="form-select form-select-sm py-0" style="width: 120px; font-size: 0.8rem;">
-                                            <option value="urgent" selected>⚡ عاجل</option>
-                                            <option value="emergency">🚨 طارئ جداً</option>
-                                            <option value="normal">عادي</option>
+                                        <select name="priority" class="form-select form-select-sm py-0" style="width: 125px; font-size: 0.8rem;">
+                                            <option value="urgent" selected>⚡ عاجل (Urgent)</option>
+                                            <option value="emergency">🚨 طارئ جداً (STAT)</option>
+                                            <option value="normal">عادي (Routine)</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="card-body p-3">
-                                    <!-- حقل الملاحظات والتوجيهات -->
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold small text-dark"><i class="fas fa-comment-medical text-primary me-1"></i> توجيهات وملاحظات الطبيب لطاقم الطوارئ والتمريض:</label>
-                                        <textarea name="description" class="form-control form-control-sm rounded-2" rows="2" placeholder="اكتب التوجيهات الطبية (مثل: إعطاء مغذي رينجر مع مسكن وريدي، قياس الضغط كل 15 دقيقة، عمل تبخيرة فنتولين...)"></textarea>
-                                    </div>
-
-                                    <!-- حقل البحث عن خدمة -->
+                                    <!-- حقل التوجيهات الطبية مع مقترحات سريعة -->
                                     <div class="mb-2">
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
-                                            <input type="text" id="nursingSearchInput" class="form-control" placeholder="بحث سريع عن خدمة تمريضية (حقن، تبخيرة، تضميد، سوائل وريدية...)...">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small text-dark mb-0">
+                                                <i class="fas fa-comment-medical text-primary me-1"></i> توجيهات وملاحظات الطبيب لطاقم الطوارئ:
+                                            </label>
+                                            <span class="text-muted" style="font-size: 0.72rem;">* يتولى كادر الطوارئ تقديم وتقييم الخدمات المناسبة</span>
                                         </div>
+                                        <textarea name="description" id="referralDirectionsText" class="form-control form-control-sm rounded-2" rows="3" placeholder="اكتب التوجيهات الطبية المباشرة لطاقم الطوارئ (مثلاً: إعطاء محلول ملحي وريدي + مسكن، عمل تبخيرة فنتولين، متابعة العلامات الحيوية كل 15 دقيقة...)"></textarea>
                                     </div>
 
-                                    <!-- قائمة الخدمات التمريضية -->
-                                    <div id="nursingServicesContainer" style="max-height: 280px; overflow-y: auto;" class="border rounded-2 p-2 bg-light">
-                                        @forelse($emergencyServices as $category => $services)
-                                            <div class="mb-2">
-                                                <div class="d-flex justify-content-between align-items-center mb-1 px-2 py-1 bg-white border rounded">
-                                                    <strong class="text-dark small"><i class="fas fa-tag text-secondary me-1"></i>{{ $category ?: 'خدمات أخرى' }}</strong>
-                                                    <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ count($services) }}</span>
-                                                </div>
-                                                <div class="row g-1">
-                                                    @foreach($services as $service)
-                                                        <div class="col-md-6 col-12 nursing-service-item" data-service-name="{{ strtolower($service->name) }}">
-                                                            <label class="list-group-item d-flex align-items-center p-2 rounded border bg-white shadow-2xs h-100" style="cursor: pointer;">
-                                                                <input class="form-check-input me-2 flex-shrink-0" type="checkbox" name="nursing_services[]" value="{{ $service->id }}" id="nursing_service_{{ $service->id }}" style="width: 16px; height: 16px; cursor: pointer;">
-                                                                <div class="flex-grow-1 text-truncate">
-                                                                    <span class="fw-semibold text-dark d-block text-truncate" style="font-size: 0.82rem;">{{ $service->name }}</span>
-                                                                    <small class="text-muted" style="font-size: 0.7rem;">{{ number_format($service->price, 0) }} د.ع</small>
-                                                                </div>
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @empty
-                                            <div class="alert alert-warning py-2 mb-0 small">
-                                                <i class="fas fa-info-circle me-1"></i> لا توجد خدمات تمريضية معرفة حالياً
-                                            </div>
-                                        @endforelse
+                                    <!-- أزرار سريعة للتوجيهات الشائعة -->
+                                    <div class="d-flex flex-wrap gap-1 align-items-center mt-2 pt-2 border-top">
+                                        <span class="small text-muted me-1" style="font-size: 0.72rem;"><i class="fas fa-magic text-warning me-1"></i>إضافة سريعة:</span>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('إعطاء محلول وريدي (Normal Saline 500ml) STAT')">+ محلول وريدي STAT</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('جلسة تبخيرة فنتولين (Ventolin Nebulizer)')">+ تبخيرة فنتولين</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('إبرة مسكن عضلي / وريدي')">+ مسكن ألم</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('مراقبة العلامات الحيوية والضغط والنبض')">+ مراقبة العلامات الحيوية</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('فحص سكر الدم العشوائي (RBS)')">+ قياس سكر الدم</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('تضميد وعناية بجرح')">+ تضميد جرح</button>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center">
-                                    <div class="small text-muted" id="selectedNursingCount" style="display: none;">
-                                        <i class="fas fa-check-circle text-success me-1"></i> تم اختيار <strong id="nursingCountNumber" class="text-success">0</strong> خدمة
-                                    </div>
-                                    <button type="submit" class="btn btn-danger btn-sm px-3 shadow-sm fw-bold rounded-pill ms-auto">
-                                        <i class="fas fa-paper-plane me-1"></i> إرسال إحالة الطوارئ والتمريض 🚀
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> سيتم توجيه المريض فوراً للاستعلامات لتأكيد دخوله الطوارئ.</small>
+                                    <button type="submit" class="btn btn-danger btn-sm px-4 shadow-sm fw-bold rounded-pill">
+                                        <i class="fas fa-paper-plane me-1"></i> إرسال الإحالة إلى الطوارئ 🚀
                                     </button>
                                 </div>
                             </div>
                         </form>
+
+                        <script>
+                            function appendReferralText(text) {
+                                const ta = document.getElementById('referralDirectionsText');
+                                if (!ta) return;
+                                if (ta.value.trim() === '') {
+                                    ta.value = text;
+                                } else {
+                                    ta.value += ' + ' + text;
+                                }
+                                ta.focus();
+                            }
+                        </script>
 
                         <!-- سجل الإحالات السابقة الصادرة من هذه الزيارة -->
                         @if($sentNursingRequests->count() > 0)
@@ -1965,7 +1994,7 @@ datalist option:hover {
                                                             @foreach($testAttachments as $tName => $tAtt)
                                                                 @php
                                                                     $tPath = $tAtt['path'] ?? '';
-                                                                    $tUrl = $tPath ? asset('storage/' . $tPath) : '';
+                                                                    $tUrl = $tPath ? route('lab.attachment', ['request' => $medRequest, 'test' => $tName]) : '';
                                                                     $tMime = $tAtt['mime'] ?? '';
                                                                     $tIsImage = str_starts_with($tMime, 'image/');
                                                                 @endphp
@@ -2003,6 +2032,9 @@ datalist option:hover {
 
                                                     <!-- المرفق العام إن وجد -->
                                                     @if($hasAttachment)
+                                                        @php
+                                                            $generalAttachmentUrl = route('lab.attachment', $medRequest);
+                                                        @endphp
                                                         <div class="alert alert-success border border-success p-2 rounded-3 mb-2">
                                                             <div class="d-flex justify-content-between align-items-center">
                                                                 <div class="d-flex align-items-center gap-2">
@@ -2012,18 +2044,18 @@ datalist option:hover {
                                                                     </div>
                                                                 </div>
                                                                 <div class="d-flex gap-1">
-                                                                    <a href="{{ $attachmentUrl }}" target="_blank" class="btn btn-xs btn-success fw-bold px-2 py-1" style="font-size: 0.75rem;">
+                                                                    <a href="{{ $generalAttachmentUrl }}" target="_blank" class="btn btn-xs btn-success fw-bold px-2 py-1" style="font-size: 0.75rem;">
                                                                         <i class="fas fa-eye me-1"></i> فتح
                                                                     </a>
-                                                                    <a href="{{ $attachmentUrl }}" download class="btn btn-xs btn-outline-secondary px-2 py-1" style="font-size: 0.75rem;">
+                                                                    <a href="{{ $generalAttachmentUrl }}" download class="btn btn-xs btn-outline-secondary px-2 py-1" style="font-size: 0.75rem;">
                                                                         <i class="fas fa-download"></i>
                                                                     </a>
                                                                 </div>
                                                             </div>
                                                             @if($isImageAttachment)
                                                                 <div class="mt-2 text-center">
-                                                                    <a href="{{ $attachmentUrl }}" target="_blank">
-                                                                        <img src="{{ $attachmentUrl }}" alt="تقرير ممسوح" style="max-height: 140px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
+                                                                    <a href="{{ $generalAttachmentUrl }}" target="_blank">
+                                                                        <img src="{{ $generalAttachmentUrl }}" alt="تقرير ممسوح" style="max-height: 140px; max-width: 100%; object-fit: contain;" class="rounded border shadow-sm">
                                                                     </a>
                                                                 </div>
                                                             @endif
@@ -2074,19 +2106,94 @@ datalist option:hover {
 
                                                     @if($medRequest->type == 'radiology')
                                                         @php
+                                                            $radResult = is_string($medRequest->result) ? json_decode($medRequest->result, true) : ($medRequest->result ?? []);
+                                                            if (!is_array($radResult) && !empty($medRequest->result)) {
+                                                                $radResult = ['findings' => (string)$medRequest->result];
+                                                            }
+                                                            $radFindings = $radResult['findings'] ?? $radResult['result_text'] ?? null;
+                                                            $radImpression = $radResult['impression'] ?? null;
+                                                            $radRecommendations = $radResult['recommendations'] ?? null;
+                                                            $radImages = $radResult['images'] ?? [];
+                                                            $radiologist = $radResult['radiologist'] ?? null;
+                                                            $radReportedAt = $radResult['reported_at'] ?? null;
+
                                                             $radiologyRequests = \App\Models\RadiologyRequest::where('visit_id', $medRequest->visit_id)->with('result', 'radiologyType')->get();
                                                         @endphp
-                                                        @foreach($radiologyRequests as $radReq)
-                                                            @if($radReq->result)
-                                                                <div class="alert alert-info p-2 rounded-3 mt-2 mb-0 small">
-                                                                    <strong>{{ $radReq->radiologyType->name ?? 'الأشعة' }}:</strong>
-                                                                    <p class="mb-1 text-dark">{{ $radReq->result->result ?? 'تم الفحص' }}</p>
-                                                                    @if(!empty($radReq->result->doctor_notes))
-                                                                        <small class="text-muted d-block">ملاحظات الطبيب: {{ $radReq->result->doctor_notes }}</small>
+
+                                                        @if(!empty($radFindings) || !empty($radImpression) || count($radImages) > 0)
+                                                            <div class="card border border-info-subtle bg-info-subtle bg-opacity-10 rounded-3 mt-2 mb-0 shadow-sm">
+                                                                <div class="card-header bg-white py-1.5 px-2.5 border-bottom d-flex justify-content-between align-items-center">
+                                                                    <div class="d-flex align-items-center gap-1.5 text-info-emphasis">
+                                                                        <i class="fas fa-file-medical-alt fs-6"></i>
+                                                                        <strong class="small">تقرير نتائج الأشعة والتصوير</strong>
+                                                                    </div>
+                                                                    @if($radiologist)
+                                                                        <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">
+                                                                            <i class="fas fa-user-md me-1 text-primary"></i> كُتب بواسطة: {{ $radiologist }}
+                                                                        </span>
                                                                     @endif
                                                                 </div>
-                                                            @endif
-                                                        @endforeach
+                                                                <div class="card-body p-2.5 small">
+                                                                    @if(!empty($radFindings))
+                                                                        <div class="mb-2">
+                                                                            <span class="fw-bold text-dark d-block mb-1"><i class="fas fa-microscope text-info me-1"></i> المشاهدات والنتائج (Findings):</span>
+                                                                            <div class="p-2 bg-white rounded border text-dark" style="white-space: pre-line; line-height: 1.6;">{{ $radFindings }}</div>
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(!empty($radImpression))
+                                                                        <div class="mb-2">
+                                                                            <span class="fw-bold text-primary d-block mb-1"><i class="fas fa-clipboard-check me-1"></i> الانطباع التشخيصي (Impression):</span>
+                                                                            <div class="p-2 bg-primary-subtle text-primary-emphasis rounded border border-primary-subtle fw-semibold" style="white-space: pre-line;">{{ $radImpression }}</div>
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(!empty($radRecommendations))
+                                                                        <div class="mb-2">
+                                                                            <span class="fw-bold text-secondary d-block mb-1"><i class="fas fa-comment-medical me-1"></i> التوصيات والملاحظات:</span>
+                                                                            <div class="p-2 bg-white rounded border text-muted" style="white-space: pre-line;">{{ $radRecommendations }}</div>
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if(is_array($radImages) && count($radImages) > 0)
+                                                                        <div class="mt-2 pt-2 border-top">
+                                                                            <span class="fw-bold text-dark d-block mb-1.5"><i class="fas fa-images text-info me-1"></i> الصور والمرفقات الإشعاعية ({{ count($radImages) }}):</span>
+                                                                            <div class="d-flex flex-wrap gap-2">
+                                                                                @foreach($radImages as $imgIndex => $imgPath)
+                                                                                    @php
+                                                                                        $imgUrl = asset('storage/' . $imgPath);
+                                                                                        $isPdf = str_ends_with(strtolower($imgPath), '.pdf');
+                                                                                    @endphp
+                                                                                    @if($isPdf)
+                                                                                        <a href="{{ $imgUrl }}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1">
+                                                                                            <i class="fas fa-file-pdf text-danger"></i>
+                                                                                            <span>ملف PDF #{{ $imgIndex + 1 }} ↗</span>
+                                                                                        </a>
+                                                                                    @else
+                                                                                        <a href="{{ $imgUrl }}" target="_blank" class="position-relative d-inline-block border rounded overflow-hidden shadow-sm" style="width: 70px; height: 70px;">
+                                                                                            <img src="{{ $imgUrl }}" alt="Radiology Image" style="width: 100%; height: 100%; object-fit: cover;">
+                                                                                            <span class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white text-center py-0.5" style="font-size: 0.6rem;">عرض ↗</span>
+                                                                                        </a>
+                                                                                    @endif
+                                                                                @endforeach
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            @foreach($radiologyRequests as $radReq)
+                                                                @if($radReq->result)
+                                                                    <div class="alert alert-info p-2 rounded-3 mt-2 mb-0 small">
+                                                                        <strong>{{ $radReq->radiologyType->name ?? 'الأشعة' }}:</strong>
+                                                                        <p class="mb-1 text-dark">{{ $radReq->result->result ?? 'تم الفحص' }}</p>
+                                                                        @if(!empty($radReq->result->doctor_notes))
+                                                                            <small class="text-muted d-block">ملاحظات الطبيب: {{ $radReq->result->doctor_notes }}</small>
+                                                                        @endif
+                                                                    </div>
+                                                                @endif
+                                                            @endforeach
+                                                        @endif
                                                     @endif
                                                 @elseif($medRequest->status == 'pending')
                                                     <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
@@ -3921,125 +4028,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // ====== نظام البحث والفلترة المحسّن ======
-    // دوال مساعدة
+    // ====== دالة توحيد وتنظيف النصوص للبحث والفلترة السريعة ======
     function normalizeText(text) {
-        return (text || '').toLowerCase().trim();
-    }
-
-    // ====== البحث في التحاليل ======
-    function setupLabSearch() {
-        const searchInput = document.getElementById('labSearchInput');
-        const searchBtn = document.getElementById('labSearchBtn');
-        
-        if (!searchInput) {
-            console.warn('Lab search input not found');
-            return;
-        }
-
-        function doLabSearch() {
-            const searchTerm = normalizeText(searchInput.value);
-            
-            const categories = document.querySelectorAll('.lab-category');
-            let totalVisible = 0;
-            
-            categories.forEach(category => {
-                const items = category.querySelectorAll('.lab-test-item');
-                let categoryHasVisible = false;
-                
-                items.forEach(item => {
-                    const testName = normalizeText(item.getAttribute('data-test-name') || '');
-                    const matches = searchTerm === '' || testName.includes(searchTerm);
-                    
-                    // استخدام d-none بدلاً من style.display لتجاوز Bootstrap's flex !important
-                    item.classList.toggle('d-none', !matches);
-                    if (matches) {
-                        categoryHasVisible = true;
-                        totalVisible++;
-                    }
-                });
-                
-                category.classList.toggle('d-none', !categoryHasVisible);
-            });
-        }
-
-        // ربط الأحداث
-        searchInput.addEventListener('input', doLabSearch);
-        searchInput.addEventListener('keyup', doLabSearch);
-        if (searchBtn) {
-            searchBtn.addEventListener('click', doLabSearch);
-        }
-        
-        // تشغيل البحث في البداية
-        doLabSearch();
-    }
-
-    // ====== البحث في الأشعة ======
-    function setupRadiologySearch() {
-        const searchInput = document.getElementById('radiologySearchInput');
-        const searchBtn = document.getElementById('radiologySearchBtn');
-        const modalityCheckboxes = document.querySelectorAll('.radiology-modality-checkbox');
-        
-        if (!searchInput) {
-            console.warn('Radiology search input not found');
-            return;
-        }
-
-        function getCategoryModality(categoryName) {
-            const name = normalizeText(categoryName);
-            if (name.includes('رنين') || name.includes('mri') || name.includes('magnetic')) {
-                return 'mri';
-            }
-            if (name.includes('سونار') || name.includes('ultrasound') || name.includes('echo')) {
-                return 'ultrasound';
-            }
-            return 'xray';
-        }
-
-        function getSelectedModalities() {
-            return Array.from(modalityCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-        }
-
-        function doRadiologySearch() {
-            const searchTerm = normalizeText(searchInput.value);
-            const selectedModalities = getSelectedModalities();
-            const categories = document.querySelectorAll('.radiology-category');
-            
-            categories.forEach(category => {
-                const categoryName = category.getAttribute('data-category') || '';
-                const modality = getCategoryModality(categoryName);
-                const modalityMatches = selectedModalities.length === 0 || selectedModalities.includes(modality);
-                const items = category.querySelectorAll('.radiology-type-item');
-                let categoryHasVisible = false;
-                
-                items.forEach(item => {
-                    const typeName = normalizeText(item.getAttribute('data-type-name') || '');
-                    const matches = (searchTerm === '' || typeName.includes(searchTerm)) && modalityMatches;
-                    item.classList.toggle('d-none', !matches);
-                    if (matches) {
-                        categoryHasVisible = true;
-                    }
-                });
-
-                category.classList.toggle('d-none', !categoryHasVisible);
-            });
-        }
-
-        modalityCheckboxes.forEach(cb => {
-            cb.addEventListener('change', doRadiologySearch);
-        });
-
-        // ربط الأحداث
-        searchInput.addEventListener('input', doRadiologySearch);
-        searchInput.addEventListener('keyup', doRadiologySearch);
-        if (searchBtn) {
-            searchBtn.addEventListener('click', doRadiologySearch);
-        }
-        
-        // تشغيل البحث في البداية
-        doRadiologySearch();
+        if (!text) return '';
+        return String(text).toLowerCase().trim()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي');
     }
 
     // ====== البحث في خدمات التمريض ======
@@ -4047,56 +4042,41 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('nursingSearchInput');
         const searchBtn = document.getElementById('nursingSearchBtn');
         
-        if (!searchInput) {
-            console.warn('Nursing search input not found');
-            return;
-        }
+        if (!searchInput) return;
 
         function doNursingSearch() {
             const searchTerm = normalizeText(searchInput.value);
-            
             const items = document.querySelectorAll('.nursing-service-item');
             
             items.forEach(item => {
                 const serviceName = normalizeText(item.getAttribute('data-service-name') || '');
                 const matches = searchTerm === '' || serviceName.includes(searchTerm);
-                
-                // استخدام d-none بدلاً من style.display لتجاوز Bootstrap's flex !important
                 item.classList.toggle('d-none', !matches);
             });
         }
 
-        // ربط الأحداث
         searchInput.addEventListener('input', doNursingSearch);
         searchInput.addEventListener('keyup', doNursingSearch);
         if (searchBtn) {
             searchBtn.addEventListener('click', doNursingSearch);
         }
         
-        // تشغيل البحث في البداية
         doNursingSearch();
     }
 
-    // تشغيل جميع أنظمة البحث
-    setupLabSearch();
-    setupRadiologySearch();
-    setupNursingSearch();
-    
-    console.log('Search system initialized');
-    
     // ====== نظام اختيار الفحوصات المخبرية السريع والذكي للطبيب ======
     function setupFastDoctorLabSelection() {
-        const searchInput = document.getElementById('docLabFastSearch');
-        const clearSearchBtn = document.getElementById('docLabClearSearch');
-        const searchDropdown = document.getElementById('docLabSearchDropdown');
+        const searchInput = document.getElementById('docLabSearchInput');
+        const clearSearchBtn = document.getElementById('docLabClearSearchBtn');
+        const searchDropdown = document.getElementById('docLabAutocompleteMenu');
         const categoryPills = document.querySelectorAll('.doc-cat-pill');
         const labCols = Array.from(document.querySelectorAll('.doc-lab-col'));
         const labCheckboxes = Array.from(document.querySelectorAll('.doc-lab-chk'));
         const selectedTray = document.getElementById('docLabSelectedTray');
-        const selectedChipsContainer = document.getElementById('docLabSelectedChips');
+        const selectedChipsContainer = document.getElementById('docLabChipsContainer');
         const countBadges = document.querySelectorAll('.doc-lab-selected-count');
-        const clearAllBtn = document.getElementById('docLabClearAllSelected');
-        const groupBtns = document.querySelectorAll('.doc-quick-group-btn');
+        const clearAllBtn = document.getElementById('docLabClearAllBtn');
+        const pkgBtns = document.querySelectorAll('.doc-lab-quick-pkg-btn');
         const labForm = document.getElementById('doctorLabRequestForm');
 
         if (!searchInput || !labForm) return;
@@ -4127,12 +4107,12 @@ document.addEventListener('DOMContentLoaded', function() {
             countBadges.forEach(b => b.textContent = count);
 
             if (count === 0) {
-                if (selectedTray) selectedTray.style.display = 'none';
+                if (selectedTray) selectedTray.classList.add('d-none');
                 if (selectedChipsContainer) selectedChipsContainer.innerHTML = '';
                 return;
             }
 
-            if (selectedTray) selectedTray.style.display = 'block';
+            if (selectedTray) selectedTray.classList.remove('d-none');
             if (selectedChipsContainer) {
                 selectedChipsContainer.innerHTML = '';
                 checkedBoxes.forEach(chk => {
@@ -4247,7 +4227,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchDropdown.classList.remove('d-none');
         }
 
-        // أحدث البحث
+        // أحداث البحث
         searchInput.addEventListener('input', function() {
             const val = this.value.trim();
             if (clearSearchBtn) {
@@ -4328,10 +4308,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // 7. باقات المفضلات السريعة (Quick Groups)
-        groupBtns.forEach(btn => {
+        pkgBtns.forEach(btn => {
             btn.addEventListener('click', function() {
-                const namesStr = this.getAttribute('data-test-names') || '';
-                const targetNames = namesStr.split('|||').map(s => normalizeText(s)).filter(Boolean);
+                let testsArr = [];
+                try {
+                    testsArr = JSON.parse(this.getAttribute('data-tests') || '[]');
+                } catch(e) {
+                    testsArr = [];
+                }
+                const targetNames = testsArr.map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || ''))).filter(Boolean);
 
                 let allAlreadyChecked = true;
                 targetNames.forEach(tName => {
@@ -4368,7 +4353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     chk.checked = false;
                     updateCardVisual(chk);
                 });
-                groupBtns.forEach(b => {
+                pkgBtns.forEach(b => {
                     b.classList.remove('btn-primary');
                     b.classList.add('btn-outline-primary');
                 });
@@ -4376,7 +4361,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // 9. الإرسال الفوري للطلب (Instant AJAX Submit)
+        // 9. التحقق عند الإرسال
         labForm.addEventListener('submit', function(e) {
             const checkedBoxes = labCheckboxes.filter(cb => cb.checked);
             if (checkedBoxes.length === 0) {
@@ -4399,8 +4384,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderSelectedChips();
     }
 
-    setupFastDoctorLabSelection();
-    
     // ====== نظام الفرز والبحث السريع للأشعة والتصوير ======
     function setupFastDoctorRadiologySelection() {
         const radForm = document.getElementById('doctorRadiologyRequestForm');
@@ -4408,7 +4391,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const searchInput = document.getElementById('docRadSearchInput');
         const clearSearchBtn = document.getElementById('docRadClearSearchBtn');
-        const searchDropdown = document.getElementById('docRadAutocompleteMenu');
         const selectedTray = document.getElementById('docRadSelectedTray');
         const selectedChipsContainer = document.getElementById('docRadChipsContainer');
         const clearAllBtn = document.getElementById('docRadClearAllBtn');
@@ -4418,14 +4400,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const radCheckboxes = Array.from(document.querySelectorAll('.doc-rad-chk'));
 
         let activeCategory = 'ALL';
-
-        function normalizeText(str) {
-            if (!str) return '';
-            return str.toLowerCase().trim()
-                .replace(/[أإآ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/ى/g, 'ي');
-        }
 
         // 1. تحديث حالة البطاقة والشارة
         function updateCardVisual(chk) {
@@ -4509,83 +4483,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // 5. اقتراحات البحث الذكية السريعة (Autocomplete Dropdown)
-        function renderSearchDropdown(q) {
-            if (!searchDropdown) return;
-            if (!q || q.length < 1) {
-                searchDropdown.classList.add('d-none');
-                searchDropdown.style.display = 'none';
-                searchDropdown.innerHTML = '';
-                return;
-            }
-
-            const matches = radCheckboxes.filter(chk => {
-                const name = normalizeText(chk.getAttribute('data-type-name') || '');
-                const code = normalizeText(chk.getAttribute('data-type-code') || '');
-                return name.includes(q) || code.includes(q);
-            }).slice(0, 8);
-
-            if (matches.length === 0) {
-                searchDropdown.innerHTML = `<div class="list-group-item text-muted small p-2 text-center">لا توجد فحوصات أشعة مطابقة</div>`;
-                searchDropdown.classList.remove('d-none');
-                searchDropdown.style.display = 'block';
-                return;
-            }
-
-            searchDropdown.innerHTML = '';
-            matches.forEach(chk => {
-                const isChecked = chk.checked;
-                const name = chk.getAttribute('data-type-name') || chk.value;
-                const code = chk.getAttribute('data-type-code') || '';
-                const cat = chk.getAttribute('data-type-category') || '';
-
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2 px-3 ${isChecked ? 'bg-light text-muted' : ''}`;
-                item.innerHTML = `
-                    <div>
-                        <span class="fw-bold text-dark">${name}</span>
-                        ${code ? `<span class="badge bg-light text-muted border ms-1 font-monospace">${code}</span>` : ''}
-                        <small class="text-muted d-block" style="font-size: 0.72rem;">${cat}</small>
-                    </div>
-                    <span>
-                        ${isChecked 
-                            ? `<span class="badge bg-success-subtle text-success"><i class="fas fa-check me-1"></i>محدد</span>` 
-                            : `<span class="badge bg-info-subtle text-info">+ إضافة</span>`}
-                    </span>
-                `;
-
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    chk.checked = !chk.checked;
-                    updateCardVisual(chk);
-                    renderSelectedChips();
-                    searchInput.value = '';
-                    if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
-                    searchDropdown.classList.add('d-none');
-                    searchDropdown.style.display = 'none';
-                    filterGrid();
-                    searchInput.focus();
-                });
-
-                searchDropdown.appendChild(item);
-            });
-
-            searchDropdown.classList.remove('d-none');
-            searchDropdown.style.display = 'block';
-        }
-
         if (searchInput) {
             searchInput.addEventListener('input', function() {
                 const val = this.value.trim();
                 if (clearSearchBtn) {
                     clearSearchBtn.classList.toggle('d-none', val.length === 0);
                 }
-                renderSearchDropdown(normalizeText(val));
                 filterGrid();
             });
 
-            // الضغط على Enter في حقل البحث لاختيار أول نتيجة فوراً
+            // الضغط على Enter في حقل البحث لاختيار أول نتيجة مطابقة فوراً ومسح البحث
             searchInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -4604,17 +4511,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         renderSelectedChips();
                         this.value = '';
                         if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
-                        if (searchDropdown) {
-                            searchDropdown.classList.add('d-none');
-                            searchDropdown.style.display = 'none';
-                        }
                         filterGrid();
                     }
                 } else if (e.key === 'Escape') {
-                    if (searchDropdown) {
-                        searchDropdown.classList.add('d-none');
-                        searchDropdown.style.display = 'none';
-                    }
+                    this.value = '';
+                    if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                    filterGrid();
                 }
             });
         }
@@ -4623,21 +4525,10 @@ document.addEventListener('DOMContentLoaded', function() {
             clearSearchBtn.addEventListener('click', function() {
                 searchInput.value = '';
                 clearSearchBtn.classList.add('d-none');
-                if (searchDropdown) {
-                    searchDropdown.classList.add('d-none');
-                    searchDropdown.style.display = 'none';
-                }
                 filterGrid();
                 searchInput.focus();
             });
         }
-
-        document.addEventListener('click', function(e) {
-            if (searchDropdown && !searchDropdown.contains(e.target) && e.target !== searchInput) {
-                searchDropdown.classList.add('d-none');
-                searchDropdown.style.display = 'none';
-            }
-        });
 
         // 6. أزرار تصفية الأقسام (Category Pills)
         categoryPills.forEach(pill => {
@@ -4699,6 +4590,9 @@ document.addEventListener('DOMContentLoaded', function() {
         renderSelectedChips();
     }
 
+    // تشغيل أنظمة البحث
+    setupNursingSearch();
+    setupFastDoctorLabSelection();
     setupFastDoctorRadiologySelection();
 }); // End of DOMContentLoaded
 

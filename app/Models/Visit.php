@@ -60,6 +60,11 @@ class Visit extends Model
         return $this->belongsTo(Appointment::class);
     }
 
+    public function recheckAppointments()
+    {
+        return $this->hasMany(Appointment::class, 'recheck_parent_visit_id');
+    }
+
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);

@@ -27,3 +27,5 @@ Thumbs.db
 !.antigravity-local/
 __pycache__/
 *.pyc
+*.sql
+
