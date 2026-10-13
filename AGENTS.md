@@ -58,6 +58,15 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-10-13 — تشغيل الهجرات المعلقة وإصلاح حقل last_activity_at ومحرك جداول الخدج InnoDB)
+
+### Done
+- **تنفيذ الهجرات المعلقة (Database Migrations)**:
+  * تشغيل كافة الهجرات المعلقة وإضافة حقول `last_activity_at` و `last_login_ip` و `last_logout_at` لجدول `users`.
+  * حل خطأ `SQLSTATE[HY000]: General error: 1824 Failed to open the referenced table 'nicu_services'` عبر تثبيت محرك قاعدة البيانات الافتراضي على `InnoDB` في `config/database.php` وإسناد `engine = InnoDB` لجداول الخدج.
+  * تفريغ كاش الإعدادات وتحديث كاش الصلاحيات.
+  * اجتياز جميع اختبارات `UserActivityLogTest` و `NicuWorkflowTest` بنجاح 100%.
+
 ## Session log (2026-10-13 — منظومة الخدج والحاضنات NICU المتكاملة)
 
 ### Done

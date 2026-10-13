@@ -14,6 +14,7 @@ return new class extends Migration
         // 1. جدول خدمات وباقات الخدج
         if (!Schema::hasTable('nicu_services')) {
             Schema::create('nicu_services', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
                 $table->id();
                 $table->string('name')->comment('اسم الخدمة');
                 $table->string('code')->unique()->comment('رمز الخدمة');
@@ -69,6 +70,7 @@ return new class extends Migration
         // 4. جدول سجل تتبع الخدمات اليومية للطفل
         if (!Schema::hasTable('nicu_service_logs')) {
             Schema::create('nicu_service_logs', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
                 $table->id();
                 $table->foreignId('reservation_id')->constrained('incubator_reservations')->cascadeOnDelete();
                 $table->foreignId('nicu_service_id')->constrained('nicu_services')->cascadeOnDelete();
@@ -89,6 +91,7 @@ return new class extends Migration
         // 5. جدول العلامات الحيوية والوزن والرضاعة
         if (!Schema::hasTable('nicu_vitals')) {
             Schema::create('nicu_vitals', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
                 $table->id();
                 $table->foreignId('reservation_id')->constrained('incubator_reservations')->cascadeOnDelete();
                 $table->decimal('temperature', 4, 1)->nullable()->comment('حرارة الطفل س');
@@ -112,6 +115,7 @@ return new class extends Migration
         // 6. جدول استشارات الأطباء التخصصية (داخلية / خارجية)
         if (!Schema::hasTable('nicu_consultations')) {
             Schema::create('nicu_consultations', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
                 $table->id();
                 $table->foreignId('reservation_id')->constrained('incubator_reservations')->cascadeOnDelete();
                 $table->enum('consultation_type', ['internal', 'external'])->default('internal')->comment('داخلي أو خارجي');
@@ -132,6 +136,7 @@ return new class extends Migration
         // 7. جدول طلبات الفحوصات والأدوية السريرية للخدج
         if (!Schema::hasTable('nicu_medical_orders')) {
             Schema::create('nicu_medical_orders', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
                 $table->id();
                 $table->foreignId('reservation_id')->constrained('incubator_reservations')->cascadeOnDelete();
                 $table->enum('order_type', ['lab', 'radiology', 'medication'])->comment('نوع الطلب: مختبر، أشعة، علاج');
