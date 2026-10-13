@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use App\Models\Payment;
+use App\Models\DoctorDue;
+use App\Models\DoctorFinancialAccount;
 use Carbon\Carbon;
 
 class Appointment extends Model
@@ -258,6 +260,23 @@ class Appointment extends Model
                 });
             } else {
                 $this->update(['payment_status' => 'refunded']);
+            }
+
+            // إلغاء أي مستحقات معلقة للطبيب مرتبطة بدفعة هذا الموعد وتحديث رصيد الحساب
+            if ($consultationPayment) {
+                DoctorDue::where('payment_id', $consultationPayment->id)
+                    ->where('status', 'pending')
+                    ->delete();
+
+                if ($this->doctor_id) {
+                    $totalEarned = (float) DoctorDue::where('doctor_id', $this->doctor_id)->sum('amount');
+                    $account = DoctorFinancialAccount::where('doctor_id', $this->doctor_id)->first();
+                    if ($account) {
+                        $account->total_earned = $totalEarned;
+                        $account->balance = round($totalEarned - (float)($account->total_paid ?? 0), 2);
+                        $account->save();
+                    }
+                }
             }
         }
 
