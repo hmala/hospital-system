@@ -25,3 +25,5 @@ Thumbs.db
 /graphify-out/
 # Antigravity Chat & Agent Sync
 !.antigravity-local/
+__pycache__/
+*.pyc

@@ -81,6 +81,7 @@ class IncubatorReservationController extends Controller
             Incubator::TYPE_NORMAL => 'حاضنة عادية',
             Incubator::TYPE_OXYGEN => 'حاضنة + أكسجين',
             Incubator::TYPE_PHOTOTHERAPY => 'حاضنة + علاج ضوئي',
+            Incubator::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
         ];
 
         // إذا تم تمرير حاضنة مسبقاً، نستخدم نوعها كتحديد افتراضي
@@ -99,6 +100,7 @@ class IncubatorReservationController extends Controller
         $incubators = $incubatorsQuery->orderBy('incubator_number')->get();
         $doctors = Doctor::with('user')->get();
         $departments = Department::where('is_active', true)->get();
+        $nicuServices = \App\Models\NicuService::active()->get();
 
         return view('incubator_reservations.create', compact(
             'patient',
@@ -108,7 +110,8 @@ class IncubatorReservationController extends Controller
             'departments',
             'selectedType',
             'incubatorTypes',
-            'existingReservation'
+            'existingReservation',
+            'nicuServices'
         ));
     }
 
@@ -127,22 +130,23 @@ class IncubatorReservationController extends Controller
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'incubator_id' => 'required|exists:incubators,id',
-            'incubator_type' => 'nullable|in:normal,oxygen,phototherapy',
+            'incubator_type' => 'nullable|in:normal,oxygen,phototherapy,capsule',
+            'nicu_service_id' => 'nullable|exists:nicu_services,id',
+            'doctor_id' => 'nullable|exists:doctors,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'birth_weight' => 'nullable|integer',
+            'gestational_age' => 'nullable|string|max:50',
+            'admission_source' => 'nullable|string|max:50',
             'admission_date' => 'required|date',
             'admission_time' => 'required|date_format:H:i',
+            'medical_notes' => 'nullable|string',
+            'admission_notes' => 'nullable|string',
         ]);
 
         // سحب اسم الطفل تلقائياً من بيانات المريض
         $patientUser = Patient::with('user')->findOrFail($validated['patient_id']);
         $validated['baby_name'] = optional($patientUser->user)->name ?? 'غير معروف';
-
-        // إضافة القيم الافتراضية للحقول الاختيارية
-        $validated['doctor_id'] = null;
-        $validated['department_id'] = null;
-        $validated['birth_weight'] = null;
-        $validated['gestational_age'] = null;
-        $validated['medical_notes'] = null;
-        $validated['admission_notes'] = null;
+        $validated['current_weight'] = $validated['birth_weight'] ?? null;
 
         // التحقق من عمر المريض
         if ($patientUser->age >= 1) {
@@ -181,16 +185,42 @@ class IncubatorReservationController extends Controller
                            ->with('error', 'الحاضنة رقم ' . $incubator->incubator_number . ' محجوزة بالفعل للطفل ' . $existingIncubatorReservation->baby_name . '. يرجى اختيار حاضنة أخرى.');
         }
 
+        // توليد رمز كاميرا المشاهدة المباشرة للأب
+        $validated['camera_token'] = \Illuminate\Support\Str::random(32);
+        $validated['camera_active'] = true;
+        $validated['status'] = IncubatorReservation::STATUS_ADMITTED;
+
         // إنشاء الحجز
         $reservation = IncubatorReservation::create($validated);
+
+        // تحديث حالة الحاضنة إلى مشغولة فور الدخول
+        $incubator->update(['status' => Incubator::STATUS_OCCUPIED]);
+
+        // إنشاء سجل الخدمة الأولي
+        if ($reservation->nicu_service_id) {
+            $service = \App\Models\NicuService::find($reservation->nicu_service_id);
+            if ($service) {
+                \App\Models\NicuServiceLog::create([
+                    'reservation_id' => $reservation->id,
+                    'nicu_service_id' => $service->id,
+                    'daily_fee' => $service->daily_fee,
+                    'start_time' => \Carbon\Carbon::parse($reservation->admission_date->format('Y-m-d') . ' ' . $reservation->admission_time->format('H:i')),
+                    'end_time' => null,
+                    'days_count' => 1,
+                    'total_cost' => $service->daily_fee,
+                    'reason_for_switch' => 'تسجيل دخول واستقبال أولي',
+                    'switched_by' => $user->id,
+                ]);
+            }
+        }
 
         // حساب التكلفة المتوقعة
         $reservation->update([
             'total_cost' => $reservation->calculateExpectedCost()
         ]);
 
-        return redirect()->route('incubator-reservations.index')
-                        ->with('success', 'تم حجز الحاضنة بنجاح');
+        return redirect()->route('nicu.show', $reservation)
+                        ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.');
     }
 
     /**

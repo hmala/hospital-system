@@ -1154,6 +1154,47 @@
                         </div>
                         @endcanany
 
+                        <!-- قسم الخدج والحاضنات (NICU) -->
+                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations'])
+                        @php
+                            $isNicuActive = request()->routeIs('nicu.*') || request()->routeIs('incubators.*') || request()->routeIs('incubator-reservations.*');
+                            $occupiedNicuCount = 0;
+                            if (\Illuminate\Support\Facades\Schema::hasTable('incubators')) {
+                                $occupiedNicuCount = \App\Models\Incubator::where('status', 'occupied')->count();
+                            }
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isNicuActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#nicuSection" aria-expanded="{{ $isNicuActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-baby text-info"></i> الخدج والحاضنات</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isNicuActive ? 'show' : '' }}" id="nicuSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.index') ? 'active' : '' }}" href="{{ route('nicu.index') }}">
+                                    <i class="fas fa-th-large text-primary"></i><span> لوحة الحاضنات اللحظية</span>
+                                    @if($occupiedNicuCount > 0)
+                                        <span class="badge bg-danger ms-auto">{{ $occupiedNicuCount }} مشغولة</span>
+                                    @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('incubator-reservations.create') ? 'active' : '' }}" href="{{ route('incubator-reservations.create') }}">
+                                    <i class="fas fa-plus-circle text-success"></i><span> حجز ودخول خديج جديد</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('incubator-reservations.index') ? 'active' : '' }}" href="{{ route('incubator-reservations.index') }}">
+                                    <i class="fas fa-clipboard-list text-info"></i><span> سجل وإضبارات الخدج</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('incubators.index') ? 'active' : '' }}" href="{{ route('incubators.index') }}">
+                                    <i class="fas fa-cogs text-warning"></i><span> إدارة الحاضنات والكبسولات</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcanany
+
                         <!-- قسم مركز وجراحة العيون (Eye Center) -->
                         @canany(['view eye center', 'manage eye appointments', 'manage eye examinations', 'manage eye cashier', 'manage eye store', 'manage eye surgeries', 'manage eye investigations'])
                         @php

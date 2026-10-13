@@ -17,6 +17,7 @@ class Incubator extends Model
         'status',
         'room_id',
         'daily_fee',
+        'camera_stream_url',
         'description',
         'notes',
         'is_active',
@@ -28,11 +29,12 @@ class Incubator extends Model
     ];
 
     /**
-     * أنواع الحاضنات
+     * أنواع الحاضنات والكبسولات
      */
     const TYPE_NORMAL = 'normal';
     const TYPE_OXYGEN = 'oxygen';
     const TYPE_PHOTOTHERAPY = 'phototherapy';
+    const TYPE_CAPSULE = 'capsule';
 
     /**
      * حالات الحاضنة
@@ -40,6 +42,7 @@ class Incubator extends Model
     const STATUS_AVAILABLE = 'available';
     const STATUS_OCCUPIED = 'occupied';
     const STATUS_MAINTENANCE = 'maintenance';
+    const STATUS_STERILIZING = 'sterilizing';
 
     /**
      * العلاقة مع الغرفة
@@ -75,6 +78,7 @@ class Incubator extends Model
         return match($this->incubator_type) {
             self::TYPE_OXYGEN => 'حاضنة + أكسجين',
             self::TYPE_PHOTOTHERAPY => 'حاضنة + علاج ضوئي',
+            self::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
             default => 'حاضنة عادية',
         };
     }
@@ -88,6 +92,7 @@ class Incubator extends Model
             self::STATUS_AVAILABLE => 'متاحة',
             self::STATUS_OCCUPIED => 'محجوزة',
             self::STATUS_MAINTENANCE => 'صيانة',
+            self::STATUS_STERILIZING => 'قيد التعقيم والتطهير',
             default => 'غير معروف',
         };
     }
@@ -101,6 +106,7 @@ class Incubator extends Model
             self::STATUS_AVAILABLE => 'success',
             self::STATUS_OCCUPIED => 'danger',
             self::STATUS_MAINTENANCE => 'warning',
+            self::STATUS_STERILIZING => 'info',
             default => 'secondary',
         };
     }
@@ -113,6 +119,7 @@ class Incubator extends Model
         return match($this->incubator_type) {
             self::TYPE_OXYGEN => 'info',
             self::TYPE_PHOTOTHERAPY => 'purple',
+            self::TYPE_CAPSULE => 'dark',
             default => 'primary',
         };
     }
@@ -125,6 +132,7 @@ class Incubator extends Model
         return match($this->incubator_type) {
             self::TYPE_OXYGEN => 'fa-lungs',
             self::TYPE_PHOTOTHERAPY => 'fa-sun',
+            self::TYPE_CAPSULE => 'fa-capsules',
             default => 'fa-baby',
         };
     }

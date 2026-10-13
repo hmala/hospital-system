@@ -78,9 +78,10 @@ class IncubatorController extends Controller
 
         $validated = $request->validate([
             'incubator_number' => 'required|string|unique:incubators,incubator_number',
-            'incubator_type' => 'required|in:normal,oxygen,phototherapy',
+            'incubator_type' => 'required|in:normal,oxygen,phototherapy,capsule',
             'room_id' => 'nullable|exists:rooms,id',
             'daily_fee' => 'required|numeric|min:0',
+            'camera_stream_url' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
@@ -136,10 +137,11 @@ class IncubatorController extends Controller
 
         $validated = $request->validate([
             'incubator_number' => 'required|string|unique:incubators,incubator_number,' . $incubator->id,
-            'incubator_type' => 'required|in:normal,oxygen,phototherapy',
-            'status' => 'required|in:available,occupied,maintenance',
+            'incubator_type' => 'required|in:normal,oxygen,phototherapy,capsule',
+            'status' => 'required|in:available,occupied,maintenance,sterilizing',
             'room_id' => 'nullable|exists:rooms,id',
             'daily_fee' => 'required|numeric|min:0',
+            'camera_stream_url' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',

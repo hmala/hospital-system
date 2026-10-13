@@ -53,6 +53,10 @@ require __DIR__.'/auth.php';
 Route::get('/departments', [DepartmentController::class, 'publicIndex'])
     ->name('departments.public');
 
+// شاشة بث كاميرا الحاضنة للأب والأم (متاحة بالتوكن المؤقت)
+Route::get('/baby-cam/{token}', [\App\Http\Controllers\NicuController::class, 'babyCamView'])
+    ->name('nicu.baby-cam');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
@@ -615,6 +619,24 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{incubatorReservation}/discharge', [\App\Http\Controllers\IncubatorReservationController::class, 'discharge'])->name('discharge');
         Route::patch('/{incubatorReservation}/cancel', [\App\Http\Controllers\IncubatorReservationController::class, 'cancel'])->name('cancel');
         Route::post('/{incubatorReservation}/transfer', [\App\Http\Controllers\IncubatorReservationController::class, 'transfer'])->name('transfer');
+    });
+
+    // قسم الخدج والحاضنات المتقدم (NICU Module)
+    Route::prefix('nicu')->name('nicu.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NicuController::class, 'index'])->name('index');
+        Route::get('/reservations/{reservation}', [\App\Http\Controllers\NicuController::class, 'show'])->name('show');
+        Route::post('/reservations/{reservation}/switch-service', [\App\Http\Controllers\NicuController::class, 'switchService'])->name('switch-service');
+        Route::post('/reservations/{reservation}/vitals', [\App\Http\Controllers\NicuController::class, 'storeVitals'])->name('vitals.store');
+        Route::post('/reservations/{reservation}/consultations', [\App\Http\Controllers\NicuController::class, 'storeConsultation'])->name('consultations.store');
+        Route::patch('/consultations/{consultation}/complete', [\App\Http\Controllers\NicuController::class, 'completeConsultation'])->name('consultations.complete');
+        Route::post('/reservations/{reservation}/orders', [\App\Http\Controllers\NicuController::class, 'storeMedicalOrder'])->name('orders.store');
+        Route::patch('/orders/{order}/complete', [\App\Http\Controllers\NicuController::class, 'completeMedicalOrder'])->name('orders.complete');
+        Route::post('/reservations/{reservation}/discharge', [\App\Http\Controllers\NicuController::class, 'discharge'])->name('discharge');
+        Route::post('/incubators/{incubator}/sterilized', [\App\Http\Controllers\NicuController::class, 'markSterilized'])->name('incubators.sterilized');
+        Route::post('/reservations/{reservation}/cam-token', [\App\Http\Controllers\NicuController::class, 'generateBabyCamToken'])->name('cam-token');
+        Route::get('/reservations/{reservation}/statement', [\App\Http\Controllers\NicuController::class, 'statement'])->name('statement');
+        Route::get('/reservations/{reservation}/print-wristband', [\App\Http\Controllers\NicuController::class, 'wristbandPrint'])->name('print.wristband');
+        Route::get('/reservations/{reservation}/print-crib-card', [\App\Http\Controllers\NicuController::class, 'cribCardPrint'])->name('print.crib-card');
     });
 
     // إدارة أجور العمليات الجراحية

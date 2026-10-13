@@ -15,6 +15,7 @@ class IncubatorReservation extends Model
         'patient_id',
         'baby_name',
         'incubator_id',
+        'nicu_service_id',
         'doctor_id',
         'department_id',
         'admission_date',
@@ -28,7 +29,13 @@ class IncubatorReservation extends Model
         'admission_notes',
         'discharge_notes',
         'birth_weight',
+        'current_weight',
         'gestational_age',
+        'twin_group_id',
+        'admission_source',
+        'discharge_type',
+        'camera_token',
+        'camera_active',
     ];
 
     protected $casts = [
@@ -38,6 +45,8 @@ class IncubatorReservation extends Model
         'discharge_time' => 'datetime:H:i',
         'total_cost' => 'decimal:2',
         'expected_duration' => 'integer',
+        'current_weight' => 'integer',
+        'camera_active' => 'boolean',
     ];
 
     /**
@@ -63,6 +72,46 @@ class IncubatorReservation extends Model
     public function incubator(): BelongsTo
     {
         return $this->belongsTo(Incubator::class);
+    }
+
+    /**
+     * العلاقة مع باقة خدمة الخدج
+     */
+    public function nicuService(): BelongsTo
+    {
+        return $this->belongsTo(NicuService::class, 'nicu_service_id');
+    }
+
+    /**
+     * سجلات تتبع الخدمات اليومية
+     */
+    public function serviceLogs()
+    {
+        return $this->hasMany(NicuServiceLog::class, 'reservation_id')->orderBy('start_time', 'asc');
+    }
+
+    /**
+     * سجل العلامات الحيوية والوزن والرضاعة
+     */
+    public function vitals()
+    {
+        return $this->hasMany(NicuVital::class, 'reservation_id')->orderBy('recorded_at', 'desc');
+    }
+
+    /**
+     * استشارات الأطباء التخصصية
+     */
+    public function consultations()
+    {
+        return $this->hasMany(NicuConsultation::class, 'reservation_id')->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * طلبات الفحوصات والأشعة والأدوية السريرية
+     */
+    public function medicalOrders()
+    {
+        return $this->hasMany(NicuMedicalOrder::class, 'reservation_id')->orderBy('ordered_at', 'desc');
     }
 
     /**
@@ -170,18 +219,71 @@ class IncubatorReservation extends Model
     {
         static::created(function ($reservation) {
             if (in_array($reservation->status, [self::STATUS_PENDING, self::STATUS_ADMITTED])) {
-                $reservation->incubator->update(['status' => Incubator::STATUS_OCCUPIED]);
+                $reservation->incubator?->update(['status' => Incubator::STATUS_OCCUPIED]);
             }
         });
 
         static::updated(function ($reservation) {
-            if (in_array($reservation->status, [self::STATUS_DISCHARGED, self::STATUS_CANCELLED])) {
-                // تحرير الحاضنة
-                $reservation->incubator->update(['status' => Incubator::STATUS_AVAILABLE]);
+            if ($reservation->status === self::STATUS_DISCHARGED) {
+                // نقل الحاضنة لمرحلة التعقيم والتطهير
+                $reservation->incubator?->update(['status' => Incubator::STATUS_STERILIZING]);
+            } elseif ($reservation->status === self::STATUS_CANCELLED) {
+                $reservation->incubator?->update(['status' => Incubator::STATUS_AVAILABLE]);
             } elseif (in_array($reservation->status, [self::STATUS_PENDING, self::STATUS_ADMITTED])) {
-                $reservation->incubator->update(['status' => Incubator::STATUS_OCCUPIED]);
+                $reservation->incubator?->update(['status' => Incubator::STATUS_OCCUPIED]);
             }
         });
+    }
+
+    /**
+     * عدد الساعات الفعلية منذ الدخول
+     */
+    public function getDurationHoursAttribute(): int
+    {
+        $admissionDateTime = Carbon::parse($this->admission_date->format('Y-m-d') . ' ' . ($this->admission_time ? $this->admission_time->format('H:i') : '00:00'));
+        $endDateTime = $this->discharge_date 
+            ? Carbon::parse($this->discharge_date->format('Y-m-d') . ' ' . ($this->discharge_time ? $this->discharge_time->format('H:i') : '23:59'))
+            : now();
+
+        return max(0, $admissionDateTime->diffInHours($endDateTime));
+    }
+
+    /**
+     * فارق الوزن بالجرام
+     */
+    public function getWeightDifferenceAttribute(): ?int
+    {
+        if ($this->birth_weight && $this->current_weight) {
+            return (int)$this->current_weight - (int)$this->birth_weight;
+        }
+        return null;
+    }
+
+    /**
+     * مسمى نوع الخروج بالعربية
+     */
+    public function getDischargeTypeNameAttribute(): string
+    {
+        return match($this->discharge_type) {
+            'improved' => 'خروج تحسن واستقرار (عادي)',
+            'step_down' => 'تحويل إلى ردهة الأطفال العادية',
+            'transferred_out' => 'تحويل إلى مستشفى خارجي تخصصي',
+            'dama' => 'خروج على مسؤولية الأهل (DAMA)',
+            'expired' => 'وفاة المولود',
+            default => 'غير محدد',
+        };
+    }
+
+    /**
+     * مسمى مصدر الدخول بالعربية
+     */
+    public function getAdmissionSourceNameAttribute(): string
+    {
+        return match($this->admission_source) {
+            'c_section' => 'صالة ولادة / عمليات قيصرية داخلية',
+            'external' => 'محال من خارج المستشفى (OUT)',
+            default => 'دخول داخلي (IN)',
+        };
     }
 
     /**

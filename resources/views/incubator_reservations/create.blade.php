@@ -291,6 +291,64 @@ label.incubator-card {
                             </div>
                         </div>
 
+                        <!-- باقة وخدمة الخدج السريرية -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-stethoscope me-2 text-primary"></i>
+                                    باقة وخدمة الخدج السريرية (التسعيرة اليومية)
+                                </h6>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="nicu_service_id" class="form-label fw-bold">
+                                    اختر باقة الخدمة السريرية <span class="text-danger">*</span>
+                                </label>
+                                <select name="nicu_service_id" id="nicu_service_id" class="form-select @error('nicu_service_id') is-invalid @enderror" required>
+                                    <option value="">-- اختر الباقة السريرية --</option>
+                                    @foreach($nicuServices as $service)
+                                        <option value="{{ $service->id }}" {{ old('nicu_service_id') == $service->id ? 'selected' : '' }}>
+                                            {{ $service->name }} — {{ number_format($service->daily_fee) }} د.ع/يوم
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('nicu_service_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="doctor_id" class="form-label fw-bold">الطبيب الأخصائي المشرف</label>
+                                <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror">
+                                    <option value="">-- اختر الطبيب المشرف --</option>
+                                    @foreach($doctors as $d)
+                                        <option value="{{ $d->id }}" {{ old('doctor_id') == $d->id ? 'selected' : '' }}>
+                                            {{ optional($d->user)->name }} ({{ $d->specialization ?? 'أخصائي' }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="birth_weight" class="form-label fw-bold">وزن الدخول (بالجرام)</label>
+                                <input type="number" name="birth_weight" id="birth_weight" class="form-control" placeholder="مثال: 1500" value="{{ old('birth_weight') }}">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="gestational_age" class="form-label fw-bold">عمر الحمل (أسابيع)</label>
+                                <input type="text" name="gestational_age" id="gestational_age" class="form-control" placeholder="مثال: 32 أسبوع" value="{{ old('gestational_age') }}">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="admission_source" class="form-label fw-bold">مصدر الحالة</label>
+                                <select name="admission_source" id="admission_source" class="form-select">
+                                    <option value="internal" {{ old('admission_source') == 'internal' ? 'selected' : '' }}>ولادة طبيعية / داخلية (IN)</option>
+                                    <option value="c_section" {{ old('admission_source') == 'c_section' ? 'selected' : '' }}>صالة عمليات قيصرية</option>
+                                    <option value="external" {{ old('admission_source') == 'external' ? 'selected' : '' }}>محال من خارج المستشفى (OUT)</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <!-- بيانات الدخول -->
                         <div class="row mb-4">
                             <div class="col-12">
