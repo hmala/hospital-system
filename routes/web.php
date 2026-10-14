@@ -719,6 +719,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // إدارة خدمات الطوارئ
+    Route::get('emergency-services/export', [\App\Http\Controllers\EmergencyServiceController::class, 'export'])->name('emergency-services.export');
+    Route::post('emergency-services/import', [\App\Http\Controllers\EmergencyServiceController::class, 'import'])->name('emergency-services.import');
     Route::post('emergency-services/global-toggle', [\App\Http\Controllers\EmergencyServiceController::class, 'globalToggle'])->name('emergency-services.global-toggle');
     Route::post('emergency-services/bulk-action', [\App\Http\Controllers\EmergencyServiceController::class, 'bulkAction'])->name('emergency-services.bulk-action');
     Route::post('emergency-services/{emergencyService}/quick-toggle', [\App\Http\Controllers\EmergencyServiceController::class, 'quickToggle'])->name('emergency-services.quick-toggle');

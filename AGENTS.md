@@ -57,6 +57,30 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-14 — المرحلة 50: تصدير واستيراد وتحديث أسعار خدمات الطوارئ من الإكسل Bulk Excel Export & Import for Emergency Services)
+
+### Done
+- **إضافة نظام التصدير والاستيراد والتحديث الجماعي لخدمات الطوارئ**:
+  * **الأهداف والمتطلبات**: تلبية طلب الإدارة بتوفير نفس ميزة التصدير والاستيراد لخدمات وأسعار قسم الطوارئ وضمان الصحة (`emergency-services`).
+  * **التطوير البرمجي**:
+    1. إنشاء صنف التصدير [app/Exports/EmergencyServicesExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/EmergencyServicesExport.php):
+       - تصدير كامل البيانات: المعرف (# ID)، اسم الخدمة، القسم/التصنيف، سعر الكاش (د.ع)، سعر الضمان الصحي (د.ع)، حالة الضمان، حالة التفعيل، وتاريخ التحديث.
+       - دعم اتجاه اليمين لليسار (RTL) وترويسة حمراء مميزة للطوارئ (Crimson/Red theme: `#DC2626`).
+    2. إنشاء صنف الاستيراد [app/Imports/EmergencyServicesImport.php](file:///c:/wamp64/www/hospital-system/app/Imports/EmergencyServicesImport.php):
+       - كشف ديناميكي للأعمدة، مطابقة الخدمات بالمعرف أو الاسم.
+       - تحديث سعر الكاش، سعر الضمان الصحي، شمول الضمان، التصنيف، وحالة التفعيل (نشط/معطل).
+       - تصفير ضمان الداخلية تلقائياً (`moi_price = 0` و `is_moi_active = false`) وحفظ آمن داخل Transaction.
+    3. تسجيل المسارات وتحديث وحدة التحكم [EmergencyServiceController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyServiceController.php):
+       - مسار `emergency-services.export`
+       - مسار `emergency-services.import`
+       - التحقق من نوع وحجم الملف (10MB) وتوثيق رسائل فلاش تفصيلية.
+    4. تحديث واجهة المستخدم [resources/views/emergency-services/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency-services/index.blade.php):
+       - إضافة زر **"تصدير إكسل"** بالأخضر الفاتح مع الحفاظ على الفلاتر.
+       - إضافة زر **"استيراد إكسل"** مع نافذة منبثقة (Modal) إرشادية أنيقة ومحمية بالصلاحيات.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/EmergencyServicesExportImportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyServicesExportImportTest.php): `4 passed (13 assertions)`.
+  * اجتياز كامل للاختبارات الحيوية: [LabAndRadiologyImportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabAndRadiologyImportTest.php): `5 passed (18 assertions)`.
+
 ## Session log (2026-10-14 — المرحلة 49: استيراد وتحديث أسعار تحاليل المختبر وخدمات الأشعة جماعياً من الإكسل Bulk Excel Import for Lab Tests & Radiology Services)
 
 ### Done
