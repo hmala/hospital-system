@@ -238,7 +238,7 @@ class Appointment extends Model
                 $consultationPayment = $this->payment;
             }
 
-            $refundAmount = $consultationPayment ? -abs($consultationPayment->amount) : -abs($this->consultation_fee);
+            $refundAmount = $consultationPayment ? -abs($consultationPayment->amount) : 0;
             $paymentMethod = $consultationPayment ? $consultationPayment->payment_method : ($this->payment ? $this->payment->payment_method : 'cash');
 
             if ($refundAmount < 0) {
