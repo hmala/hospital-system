@@ -81,6 +81,9 @@
                             <p class="mb-0 opacity-75">إدارة فحوصات الأشعة والسونار والمفراس والرنين مع التحكم الفوري بشمولية الضمان الصحي والداخلية والتعديل الجماعي السريع</p>
                         </div>
                         <div class="d-flex gap-2">
+                            <a href="{{ route('radiology.types.export', request()->query()) }}" class="btn btn-light text-success fw-bold px-4 py-2 rounded-pill shadow-sm">
+                                <i class="fas fa-file-excel me-2"></i>تصدير إكسل
+                            </a>
                             @can('manage radiology types')
                             <button type="button" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createRadiologyTypeModal">
                                 <i class="fas fa-plus me-2"></i>إضافة فحص جديد

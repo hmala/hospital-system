@@ -10,6 +10,10 @@
                     إدارة الفحوصات المختبرية
                 </h2>
                 <div class="d-flex gap-2">
+                    <a href="{{ route('lab-tests.export', request()->query()) }}" class="btn btn-outline-success">
+                        <i class="fas fa-file-excel me-1"></i>
+                        تصدير إكسل
+                    </a>
                     <a href="{{ route('lab-tests.pricing-settings.index') }}" class="btn btn-outline-primary">
                         <i class="fas fa-tags me-1"></i>
                         إعدادات الأسعار والتصنيفات

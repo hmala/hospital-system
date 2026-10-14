@@ -3,11 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\LabTest;
+use App\Exports\LabTestsExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class LabTestController extends Controller
 {
+    public function export(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->isAdmin() && !$user->can('view lab tests') && !$user->hasRole(['lab_staff', 'doctor', 'receptionist', 'radiology_staff', 'pharmacy_staff', 'surgery_staff'])) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $fileName = 'قائمة_تحاليل_المختبر_' . date('Y_m_d') . '.xlsx';
+        return Excel::download(new LabTestsExport($request), $fileName);
+    }
     public function index()
     {
         $user = Auth::user();

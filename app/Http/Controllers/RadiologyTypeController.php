@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\RadiologyType;
+use App\Exports\RadiologyTypesExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -20,6 +22,15 @@ class RadiologyTypeController extends Controller
             }
             return $next($request);
         });
+    }
+
+    /**
+     * Export radiology types to Excel.
+     */
+    public function export(Request $request)
+    {
+        $fileName = 'قائمة_فحوصات_الأشعة_والتصوير_الطبي_' . date('Y_m_d') . '.xlsx';
+        return Excel::download(new RadiologyTypesExport($request), $fileName);
     }
 
     /**

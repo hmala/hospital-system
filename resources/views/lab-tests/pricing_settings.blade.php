@@ -11,6 +11,9 @@
             <p class="text-muted small mb-0">تحكم سريع وشامل في أسعار الفحوصات (النقدي، الضمان، الداخلية) وتصنيفاتها بنقرة واحدة</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('lab-tests.export', request()->query()) }}" class="btn btn-outline-success">
+                <i class="fas fa-file-excel me-1"></i> تصدير إكسل
+            </a>
             <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#quickAddCategoryModal">
                 <i class="fas fa-plus me-1"></i> إضافة تصنيف جديد
             </button>

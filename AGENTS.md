@@ -57,6 +57,30 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-14 — المرحلة 48: تصدير جداول تحاليل المختبر وخدمات الأشعة إلى ملفات إكسل Excel Export for Lab Tests & Radiology Services)
+
+### Done
+- **إضافة تصدير إكسل لقائمة تحاليل المختبر (631 تحليلاً) وقائمة خدمات الأشعة (224 فحصاً)**:
+  * **الأهداف والمتطلبات**: تلبية طلب الإدارة بتوفير زر لتصدير جدول الفحوصات المخبرية وجدول أنواع الأشعة إلى ملفات Excel منسقة باحترافية وتدعم الفلترة الحالية والبحث.
+  * **التطوير البرمجي**:
+    1. إنشاء صنف التصدير [app/Exports/LabTestsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/LabTestsExport.php):
+       - تصدير كامل البيانات الطبية والمالية: المعرف، الاسم الإنجليزي/العربي، الرمز، القسم الرئيسي، التصنيف الفرعي، سعر الكاش، سعر الضمان الصحي، شمول الضمان، عدد الفحوصات الفرعية، وحالة التفعيل.
+       - دعم اتجاه اليمين إلى اليسار (RTL)، ترويسة كحلية أنيقة، وحدود وتنسيق عملة عراقي دينار.
+    2. إنشاء صنف التصدير [app/Exports/RadiologyTypesExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/RadiologyTypesExport.php):
+       - تصدير كامل البيانات: المعرف، الاسم، القسم/الجهاز (مفراس، رنين، سونار، إيكو، أشعة سينية، الخ)، الكود، سعر الكاش، سعر فئة الضمان ب، شمول الضمان، هل يتطلب مادة ملونة، وحالة التفعيل.
+       - دعم اتجاه RTL وترويسة زمردية أنيقة (Emerald theme).
+    3. تسجيل المسارات وتحديث وحدات التحكم:
+       - مسار `lab-tests.export` في [LabTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestController.php)
+       - مسار `radiology.types.export` في [RadiologyTypeController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyTypeController.php)
+       - إتاحة الصلاحيات للأدوار المخولة (المسؤول، المحاسب، فني الأشعة، مسؤول المختبر).
+    4. تحديث واجهات المستخدم بإضافة أزرار التصدير:
+       - واجهة إدارة التحاليل: [resources/views/lab-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/index.blade.php)
+       - واجهة تسعيرة وإعدادات التحاليل: [resources/views/lab-tests/pricing_settings.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/pricing_settings.blade.php)
+       - واجهة أنواع الأشعة: [resources/views/radiology/types/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/types/index.blade.php)
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/LabTestsExportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabTestsExportTest.php): `4 passed (8 assertions)`.
+  * اجتياز كامل للاختبارات الحيوية: [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): `4 passed (24 assertions)`.
+
 ## Session log (2026-10-14 — المرحلة 47: توحيد وتحديد التصنيفات الفرعية لكافة تحاليل المختبر الـ 631 Subcategories Assignment & Categorization Alignment)
 
 ### Done
