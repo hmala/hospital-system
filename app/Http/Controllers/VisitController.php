@@ -9,11 +9,28 @@ use App\Models\Doctor;
 use App\Models\Department;
 use App\Models\Appointment;
 use App\Models\Surgery;
+use App\Exports\VisitsExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
 class VisitController extends Controller
 {
-    public function index()
+    /**
+     * Export visits list to Excel.
+     */
+    public function export(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view visits'))) {
+            abort(403, 'غير مصرح لك بتصدير الزيارات');
+        }
+
+        $fileName = 'سجل_زيارات_المرضى_' . date('Y_m_d') . '.xlsx';
+        return Excel::download(new VisitsExport($request), $fileName);
+    }
+
+    public function index(Request $request)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
@@ -21,19 +38,85 @@ class VisitController extends Controller
             abort(403, 'غير مصرح لك بعرض الزيارات');
         }
 
-        $visits = Visit::with(['patient', 'doctor.user', 'department', 'appointment'])
+        $query = Visit::with(['patient.user', 'doctor.user', 'department', 'appointment', 'latestPrescription', 'surgery'])
             ->latest('visit_date')
-            ->orderBy('visit_time', 'desc')
-            ->paginate(20);
+            ->orderBy('visit_time', 'desc');
 
-        // الزيارات التي تحتاج حجز عملية
+        // البحث السريع
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('patient', function ($pq) use ($search) {
+                    $pq->where('file_number', 'like', "%{$search}%")
+                       ->orWhere('national_id', 'like', "%{$search}%")
+                       ->orWhereHas('user', function ($uq) use ($search) {
+                           $uq->where('name', 'like', "%{$search}%")
+                              ->orWhere('phone', 'like', "%{$search}%");
+                       });
+                })
+                ->orWhere('chief_complaint', 'like', "%{$search}%");
+            });
+        }
+
+        // فلترة الطبيب
+        if ($request->filled('doctor_id')) {
+            $query->where('doctor_id', $request->doctor_id);
+        }
+
+        // فلترة القسم / العيادة
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        // فلترة حالة الزيارة
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // فلترة نوع الزيارة
+        if ($request->filled('visit_type')) {
+            $query->where('visit_type', $request->visit_type);
+        }
+
+        // فلترة الحاجة لعملية جراحية
+        if ($request->filled('needs_surgery')) {
+            if ($request->needs_surgery === '1') {
+                $query->where('needs_surgery', true);
+            } elseif ($request->needs_surgery === '0') {
+                $query->where('needs_surgery', false);
+            }
+        }
+
+        // فلترة التاريخ
+        if ($request->filled('date_from')) {
+            $query->whereDate('visit_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('visit_date', '<=', $request->date_to);
+        }
+
+        $visits = $query->paginate(20)->withQueryString();
+
+        // الزيارات التي تحتاج حجز عملية ولم تُحجز بعد
         $needsSurgeryVisits = Visit::with(['patient.user', 'doctor.user', 'department'])
             ->where('needs_surgery', true)
             ->whereDoesntHave('surgery')
             ->latest('updated_at')
             ->get();
 
-        return view('visits.index', compact('visits', 'needsSurgeryVisits'));
+        // إحصائيات سريعة للوحة
+        $stats = [
+            'total' => Visit::count(),
+            'today' => Visit::whereDate('visit_date', today())->count(),
+            'completed' => Visit::where('status', 'completed')->count(),
+            'in_progress' => Visit::where('status', 'in_progress')->count(),
+            'needs_surgery' => $needsSurgeryVisits->count(),
+        ];
+
+        $doctors = Doctor::with('user')->where('is_active', true)->get();
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
+
+        return view('visits.index', compact('visits', 'needsSurgeryVisits', 'stats', 'doctors', 'departments'));
     }
 
     public function create($patientId = null, $appointmentId = null)

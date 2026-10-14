@@ -350,6 +350,7 @@ Route::middleware(['auth'])->group(function () {
     });
     
     // مسارات الزيارات
+    Route::get('/visits/export', [VisitController::class, 'export'])->name('visits.export');
     Route::resource('visits', VisitController::class);
     Route::get('/visits/create/{patient_id}/{appointment_id}', [VisitController::class, 'create'])
          ->name('visits.create.from_appointment');
