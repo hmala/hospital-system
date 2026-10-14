@@ -57,15 +57,20 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
-## Session log (2026-10-14 — المرحلة 43: تشخيص وتحليل قيود د. زياد طارق في موعد الضمان الملغى Dr. Ziad Tariq Ibrahim Refund Diagnosis)
+## Session log (2026-10-14 — المرحلة 43: تشخيص وتصفية قيود د. زياد طارق في موعد الضمان الملغى Dr. Ziad Tariq Ibrahim Refund Sanitization)
 
 ### Done
-- **تشخيص أصل أرقام د. زياد طارق ابراهيم اسماعيل (معرف: 193) في تقارير الخزينة**:
+- **تشخيص وتصفية أرقام د. زياد طارق ابراهيم اسماعيل (معرف: 193) في تقارير الخزينة ومصفوفة الأطباء**:
   * اكتشاف أن الأرقام المسجلة له في تقرير الخزينة ومصفوفة الأطباء (`إجمالي 22,500 د.ع | حصة الطبيب 12,500 د.ع | حصة المستشفى 10,000 د.ع | رصيد معلق 15,000 د.ع`) ناتجة عن الموعد رقم #80 الملغى بتاريخ `2026-10-13`.
   * الموعد كان كشفية ضمان صحي بقيمة `25,000 د.ع` (دفعة #82، إيراد #62)، وعند إلغائه من قبل الطبيب في ذلك اليوم بالوصل #86 نزل استرجاع جزئي `-2,500 د.ع` فقط (إيراد #66) ولم تُلغَ قيود الإيراد والمستحقات المعلقة نظراً لأن العملية تمت قبل تطبيق التحسينات الصارمة في `Appointment::cancel` و `PaymentObserver`.
-  * حصر كافة السجلات المعلقة (الإيرادين #62 و #66، والمستحق #58) محلياً وعلى قاعدة بيانات هوستنجر تمهيداً للتصفية التامة.
-- **تحديث الذاكرة وسجل المشروع**:
-  * تحديث [hospital-memory.md](file:///c:/wamp64/www/hospital-system/hospital-memory.md) وسياق العمليات.
+  * **إنشاء وتشغيل مايجريشن آلي رسمي [2026_10_14_150000_sanitize_dr_ziad_cancelled_appointment_revenues.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_14_150000_sanitize_dr_ziad_cancelled_appointment_revenues.php)**:
+    1. حذف قيود الإيرادات المعلقة (#62 و #66) من جدول `consultation_revenues`.
+    2. حذف مستحقات الطبيب المعلقة (#58) من جدول `doctor_dues`.
+    3. حذف حركات الصندوق للموعد الملغى (#88 و #92) من جدول `financial_transactions`.
+    4. تصفير وإعادة مزامنة رصيد الحساب المالي لد. زياد في `doctor_financial_accounts` ليصبح `0.00 د.ع` تماماً.
+  * تطبيق المايجريشن والتنظيف بنجاح 100% على السيرفرين (قاعدة البيانات المحلية `mysql` وقاعدة بيانات هوستنجر السحابية `remote_hostinger`).
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل للاختبارات الحيوية: [DoctorVisitCancellationRefundTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorVisitCancellationRefundTest.php) و [HospitalTreasuryDashboardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HospitalTreasuryDashboardTest.php): `5 passed (26 assertions)`.
 
 ## Session log (2026-10-14 — المرحلة 42: القائمة الحلقية لسكربت النشر، مايجريشن تصحيح قيود المواعيد، وتصفية قيود د. قمر Saad Deploy Loop & Refund Sanitization)
 
