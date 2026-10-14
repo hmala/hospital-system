@@ -26,3 +26,4 @@ Thumbs.db
 # Antigravity Chat & Agent Sync
 !.antigravity-local/
 *.sql
+/scratch/

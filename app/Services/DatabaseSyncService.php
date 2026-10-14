@@ -125,6 +125,17 @@ class DatabaseSyncService
      */
     public function pullFromRemote(callable $progressCallback = null): array
     {
+        // حظر أمني حاسم: منع تشغيل السحب نهائياً خارج البيئة المحلية
+        if (!app()->environment(['local', 'testing'])) {
+            throw new Exception('عملية السحب محظورة تماماً على سيرفر الإنتاج (Online) لحماية البيانات الحية من المسح.');
+        }
+
+        $localDbName = config('database.connections.mysql.database');
+        $remoteDbName = config('database.connections.remote_hostinger.database');
+        if (!empty($localDbName) && !empty($remoteDbName) && strtolower($localDbName) === strtolower($remoteDbName)) {
+            throw new Exception("حظر أمني خطير: اسم قاعدة البيانات المحلية ({$localDbName}) يطابق قاعدة البيانات السحابية! تم إلغاء العملية فوراً لمنع تدمير البيانات.");
+        }
+
         set_time_limit(600); // 10 دقائق كحد أقصى للعمليات الكبيرة
         ini_set('memory_limit', '1024M');
 

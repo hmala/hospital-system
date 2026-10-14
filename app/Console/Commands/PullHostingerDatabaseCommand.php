@@ -12,6 +12,11 @@ class PullHostingerDatabaseCommand extends Command
 
     public function handle(DatabaseSyncService $syncService): int
     {
+        if (!app()->environment(['local', 'testing'])) {
+            $this->error("❌ أمر السحب محظور تماماً على سيرفر الإنتاج (Online) لحماية البيانات الحية.");
+            return Command::FAILURE;
+        }
+
         $this->info("🔄 جارٍ فحص الاتصال بسيرفر هوستنجر (srv1687.hstgr.io)...");
 
         $test = $syncService->testRemoteConnection();
