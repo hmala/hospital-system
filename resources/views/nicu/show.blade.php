@@ -145,16 +145,27 @@
                                     </div>
                                 </div>
 
-                                <!-- فورم تبديل الخدمة السريرية -->
+                                <!-- فورم تبديل وتعديل الخدمة السريرية -->
                                 @if($reservation->status === 'admitted')
+                                    @php
+                                        $activeLog = $reservation->serviceLogs->whereNull('end_time')->first();
+                                    @endphp
                                     <div class="p-3 bg-white rounded shadow-sm border">
-                                        <h6 class="fw-bold text-dark mb-2">
-                                            <i class="fas fa-sync-alt text-warning me-1"></i>
-                                            تبديل الباقة والخدمة السريرية
-                                        </h6>
-                                        <p class="small text-muted mb-3">
-                                            يمكن للمقيم أو الأخصائي تعديل الخدمة (مثلاً: التحويل من Ventilator إلى CPAP أو أكسجين). يحسب اليوم التالي على السعر الجديد.
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="fw-bold text-dark mb-0">
+                                                <i class="fas fa-sync-alt text-warning me-1"></i>
+                                                تبديل / تعديل الباقة السريرية
+                                            </h6>
+                                            @if($activeLog)
+                                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editServiceLogModal{{ $activeLog->id }}">
+                                                    <i class="fas fa-edit me-1"></i> تعديل الباقة الحالية
+                                                </button>
+                                            @endif
+                                        </div>
+                                        <p class="small text-muted mb-2">
+                                            يمكن تعديل الباقة السريرية (مثلاً: التحويل من فنتليتر إلى CPAP أو أكسجين). التبديل في نفس اليوم الفندقي يُعدّل الباقة الحالية مباشرة دون مضاعفة اليوم الفندقي.
                                         </p>
+
                                         <form action="{{ route('nicu.switch-service', $reservation) }}" method="POST">
                                             @csrf
                                             <div class="mb-3">
@@ -168,11 +179,11 @@
                                                 </select>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label small fw-bold">سبب التحويل الطبي:</label>
-                                                <input type="text" name="reason" class="form-control" placeholder="مثال: تحسن التنفس وفصل الأنبوب الرغامي" required>
+                                                <label class="form-label small fw-bold">سبب التحويل / الملاحظات الطبية:</label>
+                                                <input type="text" name="reason" class="form-control" placeholder="مثال: تحسن التنفس وفصل الأنبوب الرغامي أو تصحيح الباقة" required>
                                             </div>
                                             <button type="submit" class="btn btn-warning w-100 fw-bold shadow-sm">
-                                                <i class="fas fa-check me-1"></i> حفظ وتفعيل الباقة الجديدة
+                                                <i class="fas fa-check me-1"></i> حفظ وتفعيل الباقة
                                             </button>
                                         </form>
                                     </div>
@@ -187,36 +198,117 @@
                                 السجل الزمني للخدمات والباقات (Timeline)
                             </h5>
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle border">
-                                    <thead class="table-light">
+                                <table class="table table-hover align-middle border text-center">
+                                    <thead class="table-light small">
                                         <tr>
-                                            <th>الخدمة السريرية</th>
-                                            <th>السعر اليومي</th>
-                                            <th>تاريخ البدء</th>
-                                            <th>تاريخ الانتهاء</th>
+                                            <th class="text-start">الخدمة السريرية</th>
+                                            <th>الأجرة اليومية</th>
+                                            <th>الأيام</th>
+                                            <th>المجموع</th>
+                                            <th>الفترة</th>
                                             <th>السبب</th>
                                             <th>المغير</th>
+                                            <th>إجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @forelse($reservation->serviceLogs as $log)
+                                            @php
+                                                $isActive = is_null($log->end_time);
+                                                $days = (int)$log->days_count;
+                                                $cost = (float)($log->total_cost ?? ($days * $log->daily_fee));
+                                            @endphp
                                             <tr>
-                                                <td class="fw-bold text-primary">{{ $log->nicuService?->name }}</td>
-                                                <td class="text-success fw-bold">{{ number_format($log->daily_fee) }} د.ع</td>
-                                                <td>{{ $log->start_time?->format('Y-m-d H:i') }}</td>
-                                                <td>
-                                                    @if($log->end_time)
-                                                        {{ $log->end_time->format('Y-m-d H:i') }}
-                                                    @else
-                                                        <span class="badge bg-success">نشطة حالياً</span>
+                                                <td class="text-start fw-bold text-primary">
+                                                    {{ $log->nicuService?->name }}
+                                                    @if($isActive)
+                                                        <span class="badge bg-success ms-1" style="font-size: 10px;">نشطة حالياً</span>
                                                     @endif
                                                 </td>
-                                                <td class="small">{{ $log->reason_for_switch ?? 'دخول أولي' }}</td>
+                                                <td class="text-dark fw-bold">{{ number_format($log->daily_fee) }} د.ع</td>
+                                                <td>
+                                                    @if($days > 0)
+                                                        <span class="badge bg-info text-white">{{ $days }} يوم</span>
+                                                    @else
+                                                        <span class="badge bg-secondary" title="دُمج مع باقة نفس اليوم">0 (مدمج)</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-success fw-bold">
+                                                    {{ number_format($cost) }} د.ع
+                                                </td>
+                                                <td class="small text-muted">
+                                                    <div>من: {{ $log->start_time?->format('Y-m-d H:i') }}</div>
+                                                    <div>إلى: {{ $log->end_time ? $log->end_time->format('Y-m-d H:i') : 'مستمر' }}</div>
+                                                </td>
+                                                <td class="small text-start">{{ $log->reason_for_switch ?? 'دخول أولي' }}</td>
                                                 <td class="small text-muted">{{ optional($log->switchedByUser)->name ?? 'النظام' }}</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        @if($isActive)
+                                                            <!-- زر تعديل الباقة النشطة -->
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" title="تعديل الباقة الحالية" data-bs-toggle="modal" data-bs-target="#editServiceLogModal{{ $log->id }}">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                        @endif
+
+                                                        @if($reservation->serviceLogs->count() > 1 && $isActive)
+                                                            <!-- زر تراجع وحذف التبديل -->
+                                                            <form action="{{ route('nicu.service-logs.destroy', [$reservation, $log]) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا التبديل والتراجع عنه للباقة السابقة؟');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف وتراجع عن التبديل">
+                                                                    <i class="fas fa-trash-alt"></i>
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- Modal تعديل السجل المفتوح -->
+                                                    @if($isActive)
+                                                        <div class="modal fade text-start" id="editServiceLogModal{{ $log->id }}" tabindex="-1" aria-hidden="true">
+                                                            <div class="modal-dialog modal-dialog-centered">
+                                                                <div class="modal-content border-0 shadow">
+                                                                    <div class="modal-header bg-primary text-white">
+                                                                        <h5 class="modal-title fw-bold">
+                                                                            <i class="fas fa-edit me-2"></i> تعديل باقة الخدمة السريرية
+                                                                        </h5>
+                                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                                    </div>
+                                                                    <form action="{{ route('nicu.service-logs.update', [$reservation, $log]) }}" method="POST">
+                                                                        @csrf
+                                                                        @method('PUT')
+                                                                        <div class="modal-body p-4">
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label small fw-bold">اختر باقة الخدمة:</label>
+                                                                                <select name="nicu_service_id" class="form-select" required>
+                                                                                    @foreach($nicuServices as $service)
+                                                                                        <option value="{{ $service->id }}" {{ $log->nicu_service_id == $service->id ? 'selected' : '' }}>
+                                                                                            {{ $service->name }} ({{ number_format($service->daily_fee) }} د.ع)
+                                                                                        </option>
+                                                                                    @endforeach
+                                                                                </select>
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label small fw-bold">سبب التعديل / الملاحظات:</label>
+                                                                                <input type="text" name="reason" class="form-control" value="{{ $log->reason_for_switch }}" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="modal-footer bg-light">
+                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                                            <button type="submit" class="btn btn-primary fw-bold">
+                                                                                <i class="fas fa-save me-1"></i> حفظ التعديل
+                                                                            </button>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="6" class="text-center py-4 text-muted">
+                                                <td colspan="8" class="text-center py-4 text-muted">
                                                     لا توجد سجلات تبديل بعد، الخدمة الحالية هي الخدمة الأساسية منذ الدخول.
                                                 </td>
                                             </tr>

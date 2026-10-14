@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Incubator;
 use App\Models\IncubatorReservation;
 use App\Models\NicuService;
+use App\Models\NicuServiceLog;
 use App\Models\NicuVital;
 use App\Models\NicuConsultation;
 use App\Models\NicuMedicalOrder;
@@ -210,6 +211,67 @@ class NicuController extends Controller
         $this->billingService->switchService($reservation, $newService, $request->reason, Auth::id());
 
         return redirect()->back()->with('success', 'تم تبديل الخدمة السريرية إلى: ' . $newService->name . ' بنجاح.');
+    }
+
+    /**
+     * تعديل سجل خدمة مفتوح
+     */
+    public function updateServiceLog(Request $request, IncubatorReservation $reservation, NicuServiceLog $serviceLog)
+    {
+        if ($serviceLog->reservation_id !== $reservation->id) {
+            abort(403, 'السجل لا ينتمي لهذا الحجز');
+        }
+
+        $request->validate([
+            'nicu_service_id' => 'required|exists:nicu_services,id',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $newService = NicuService::findOrFail($request->nicu_service_id);
+
+        $serviceLog->update([
+            'nicu_service_id' => $newService->id,
+            'daily_fee' => $newService->daily_fee,
+            'total_cost' => ($serviceLog->days_count ?: 1) * (float)$newService->daily_fee,
+            'reason_for_switch' => $request->reason ?: $serviceLog->reason_for_switch,
+            'switched_by' => Auth::id(),
+            'notes' => 'تم تعديل السجل يدوياً من محطة الرعاية.',
+        ]);
+
+        if (is_null($serviceLog->end_time)) {
+            $reservation->update(['nicu_service_id' => $newService->id]);
+        }
+
+        return redirect()->back()->with('success', 'تم تعديل باقة الخدمة السريرية بنجاح.');
+    }
+
+    /**
+     * حذف سجل تبديل والتراجع عنه
+     */
+    public function destroyServiceLog(IncubatorReservation $reservation, NicuServiceLog $serviceLog)
+    {
+        if ($serviceLog->reservation_id !== $reservation->id) {
+            abort(403, 'السجل لا ينتمي لهذا الحجز');
+        }
+
+        // إذا كان هناك سجل سابق، نعيد فتحه ونستعيد الخدمة
+        $previousLog = $reservation->serviceLogs()
+            ->where('id', '<', $serviceLog->id)
+            ->latest('id')
+            ->first();
+
+        $serviceLog->delete();
+
+        if ($previousLog) {
+            $previousLog->update([
+                'end_time' => null,
+            ]);
+            $reservation->update([
+                'nicu_service_id' => $previousLog->nicu_service_id,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'تم التراجع عن التبديل وحذف السجل بنجاح.');
     }
 
     /**

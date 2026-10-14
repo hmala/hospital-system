@@ -219,33 +219,21 @@ class NicuBillingService
 
             if ($lastCycle === $currentCycle) {
                 // التبديل حدث ضمن نفس اليوم الفندقي (12:00 ظهراً إلى 12:00 ظهراً التالية)
-                // نعتمد الباقة الأعلى سعراً لليوم الفندقي المشترك ولا نضاعف اليوم إطلاقاً
+                // يتم تعديل السجل المفتوح مباشرة (تعديل السجل الحالي) بدلاً من إنشاء سطر مكرر
                 $higherFee = max((float)$lastLog->daily_fee, (float)$newService->daily_fee);
 
-                // إغلاق السجل السابق كيوم مدمج
                 $lastLog->update([
-                    'end_time' => $now,
-                    'days_count' => 0, // مندمج في نفس اليوم الفندقي
-                    'total_cost' => 0,
-                    'notes' => 'تم التحويل في نفس اليوم الفندقي، ودُمج الحساب مع باقة (' . $newService->name . ') بقيمة الباقة الأعلى.',
+                    'nicu_service_id' => $newService->id,
+                    'daily_fee' => $higherFee,
+                    'total_cost' => ($lastLog->days_count ?: 1) * $higherFee,
+                    'reason_for_switch' => $reason ?: $lastLog->reason_for_switch,
+                    'switched_by' => $userId,
+                    'notes' => 'تم تعديل الباقة في نفس اليوم الفندقي إلى (' . $newService->name . ') واعتماد التسعيرة الأعلى (' . number_format($higherFee) . ' د.ع).',
                 ]);
 
                 $reservation->update(['nicu_service_id' => $newService->id]);
 
-                return NicuServiceLog::create([
-                    'reservation_id' => $reservation->id,
-                    'nicu_service_id' => $newService->id,
-                    'daily_fee' => $higherFee,
-                    'start_time' => $now,
-                    'end_time' => null,
-                    'days_count' => 1,
-                    'total_cost' => $higherFee,
-                    'reason_for_switch' => $reason,
-                    'switched_by' => $userId,
-                    'notes' => ($higherFee > (float)$newService->daily_fee)
-                        ? 'اعتمدت تسعيرة الباقة السابقة الأعلى (' . number_format($higherFee) . ' د.ع) لليوم الفندقي المشترك.'
-                        : 'ترقية الباقة في نفس اليوم الفندقي (' . number_format($higherFee) . ' د.ع).',
-                ]);
+                return $lastLog;
             } else {
                 // السجل السابق قضى يوماً أو أكثر في دورات فندقية سابقة
                 $completedDays = max(1, Carbon::parse($lastCycle)->diffInDays(Carbon::parse($currentCycle)));

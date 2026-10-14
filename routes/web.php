@@ -674,6 +674,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reservations', [\App\Http\Controllers\NicuController::class, 'reservationsIndex'])->name('reservations.index');
         Route::get('/reservations/{reservation}', [\App\Http\Controllers\NicuController::class, 'show'])->name('show');
         Route::post('/reservations/{reservation}/switch-service', [\App\Http\Controllers\NicuController::class, 'switchService'])->name('switch-service');
+        Route::put('/reservations/{reservation}/service-logs/{serviceLog}', [\App\Http\Controllers\NicuController::class, 'updateServiceLog'])->name('service-logs.update');
+        Route::delete('/reservations/{reservation}/service-logs/{serviceLog}', [\App\Http\Controllers\NicuController::class, 'destroyServiceLog'])->name('service-logs.destroy');
         Route::post('/reservations/{reservation}/vitals', [\App\Http\Controllers\NicuController::class, 'storeVitals'])->name('vitals.store');
         Route::post('/reservations/{reservation}/consultations', [\App\Http\Controllers\NicuController::class, 'storeConsultation'])->name('consultations.store');
         Route::patch('/consultations/{consultation}/complete', [\App\Http\Controllers\NicuController::class, 'completeConsultation'])->name('consultations.complete');

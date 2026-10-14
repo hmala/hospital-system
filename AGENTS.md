@@ -58,7 +58,19 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
-## Session log (2026-10-14 — حل مشكلة التبديل السريع للباقات وبناء واجهة سجل وإضبارات الخدج NICU Reservations Registry)
+## Session log (2026-10-14 — تصفير سجلات تبديل الحجز 2 وتوفير ميزة تعديل والتراجع عن التبديل السريري)
+
+### Done
+- **تصفير سجلات تبديل الحجز رقم 2 (`احمد علي كاظم`)**:
+  * حذف السجلات التجريبية وتعيين سجل أولي نظيف بنوع باقة واحدة (`حاضنة فقط + O2`) لتمكين المستخدم من اختبار عملية التبديل بحرية من البداية.
+- **تعديل السجل في نفس اليوم الفندقي مباشرة (In-Place Edit/Update)**:
+  * تعديل منطق `NicuBillingService::switchService` لكي يقوم بتحديث السجل المفتوح مباشرة بدلاً من إغلاقه وفتح سطر جديد مكرر لنفس اليوم، مما يمنع تراكم الأسطر المربكة في الجدول.
+- **إضافة أزرار وإجراءات التعديل والتراجع (Edit & Undo Actions)**:
+  * إضافة المسارات والكونترولر: `nicu.service-logs.update` لتعديل الباقة أو السبب مباشرة، و `nicu.service-logs.destroy` للتراجع عن التبديل وحذفه واستعادة الباقة السابقة.
+  * تصميم Modal لتعديل الباقة الحالية مباشرة، وتحديث جدول السجل الزمني (Timeline) في `nicu/show.blade.php` ليعرض أعمدة الأيام المحتسبة والتكلفة مع أزرار الإجراءات (تعديل ✏️ / تراجع 🗑️).
+- **الاختبارات وضمان الجودة**:
+  * إضافة اختبار `test_admin_can_update_and_undo_service_log` في `NicuWorkflowTest.php` واجتياز 17 اختباراً بنجاح 100% (79 assertions).
+  * تحديث الشجرة المعرفية Graphify: 4,707 عقدة و 7,543 علاقة.
 
 ### Done
 - **معالجة مشاكل التبديل المتكرر للباقات وتفادي مضاعفة اليوم الفندقي (`NicuBillingService.php`)**:

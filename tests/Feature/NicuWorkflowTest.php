@@ -487,5 +487,59 @@ class NicuWorkflowTest extends TestCase
         $filterResponse->assertStatus(200);
         $filterResponse->assertSee('رضيع السجل السريري');
     }
+
+    public function test_admin_can_update_and_undo_service_log(): void
+    {
+        $ventService = NicuService::where('code', 'incubator_ventilator')->first();
+        $o2Service = NicuService::where('code', 'incubator_o2')->first();
+
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل اختبار التعديل',
+            'incubator_id' => $this->incubator->id,
+            'nicu_service_id' => $ventService->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $log1 = NicuServiceLog::create([
+            'reservation_id' => $reservation->id,
+            'nicu_service_id' => $ventService->id,
+            'daily_fee' => $ventService->daily_fee,
+            'start_time' => now()->subDay(),
+            'end_time' => now(),
+            'days_count' => 1,
+            'total_cost' => $ventService->daily_fee,
+        ]);
+
+        $log2 = NicuServiceLog::create([
+            'reservation_id' => $reservation->id,
+            'nicu_service_id' => $o2Service->id,
+            'daily_fee' => $o2Service->daily_fee,
+            'start_time' => now(),
+            'end_time' => null,
+            'days_count' => 1,
+            'total_cost' => $o2Service->daily_fee,
+        ]);
+
+        // Test updating log2
+        $cpapService = NicuService::where('code', 'incubator_cpap')->first();
+        $response = $this->actingAs($this->admin)->put(route('nicu.service-logs.update', [$reservation, $log2]), [
+            'nicu_service_id' => $cpapService->id,
+            'reason' => 'تصحيح إلى CPAP',
+        ]);
+        $response->assertRedirect();
+        $this->assertEquals($cpapService->id, $log2->fresh()->nicu_service_id);
+        $this->assertEquals($cpapService->id, $reservation->fresh()->nicu_service_id);
+
+        // Test destroying/undoing log2
+        $destroyResponse = $this->actingAs($this->admin)->delete(route('nicu.service-logs.destroy', [$reservation, $log2]));
+        $destroyResponse->assertRedirect();
+        $this->assertDatabaseMissing('nicu_service_logs', ['id' => $log2->id]);
+        // Previous log reopened and restored as current service
+        $this->assertNull($log1->fresh()->end_time);
+        $this->assertEquals($ventService->id, $reservation->fresh()->nicu_service_id);
+    }
 }
 
