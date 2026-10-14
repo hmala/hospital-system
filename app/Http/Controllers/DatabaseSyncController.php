@@ -10,7 +10,7 @@ class DatabaseSyncController extends Controller
 {
     protected function authorizeAccess(): void
     {
-        if (!app()->environment(['local', 'testing'])) {
+        if (!DatabaseSyncService::isSafeLocalEnvironment() && !app()->environment('testing')) {
             abort(404, 'مركز المزامنة غير متاح خارج البيئة المحلية.');
         }
 

@@ -1354,7 +1354,7 @@
                         </li>
                         @endcanany
 
-                        @if(app()->environment(['local', 'testing']) && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
+                        @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('system.database-sync.*') ? 'active' : '' }}" href="{{ route('system.database-sync.index') }}">
                                 <i class="fas fa-cloud-download-alt text-primary"></i><span> سحب الداتا بيس من هوستنجر</span>

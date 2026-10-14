@@ -102,9 +102,23 @@
                 بنقرة واحدة سيتم استيراد كافة الجداول (106 جدول) بكافة بيانات المرضى، الأطباء، الوصولات، الفحوصات والتشخيصات لتطابق السيرفر الحي تماماً.
             </p>
 
-            <button type="button" class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg fw-bold" id="btnStartPull">
-                <i class="fas fa-download me-2"></i> بدء السحب وتحديث اللوكل هوست الآن
-            </button>
+            @if(!\App\Services\DatabaseSyncService::isSafeLocalEnvironment())
+                <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mx-auto text-start" style="max-width: 650px;">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="fas fa-lock fs-1 text-danger"></i>
+                        <div>
+                            <h5 class="fw-bold text-danger mb-1">ميزة السحب معطلة ومحظورة تماماً</h5>
+                            <div class="small text-dark">
+                                أنت تعمل الآن على السيرفر الحي أو بيئة غير محلية. تم قفل أزرار السحب بالكامل لحماية قاعدة بيانات الإنتاج من الحذف أو المسح العرضي. السحب متاح حصراً من جهاز التطوير المحلي (WAMP / Localhost).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @else
+                <button type="button" class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg fw-bold" id="btnStartPull">
+                    <i class="fas fa-download me-2"></i> بدء السحب وتحديث اللوكل هوست الآن
+                </button>
+            @endif
 
             <!-- شريط التحميل والتقدم -->
             <div id="pullProgressSection" class="d-none mt-4 mx-auto" style="max-width: 500px;">
