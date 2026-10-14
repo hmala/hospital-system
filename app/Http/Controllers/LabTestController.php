@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LabTest;
 use App\Exports\LabTestsExport;
+use App\Imports\LabTestsImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,35 @@ class LabTestController extends Controller
 
         $fileName = 'قائمة_تحاليل_المختبر_' . date('Y_m_d') . '.xlsx';
         return Excel::download(new LabTestsExport($request), $fileName);
+    }
+
+    public function import(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole('lab_staff')) {
+            abort(403, 'غير مصرح لك بتحديث أسعار الفحوصات المختبرية');
+        }
+
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ], [
+            'excel_file.required' => 'يرجى اختيار ملف الإكسل المراد استيراده',
+            'excel_file.mimes' => 'يجب أن يكون الملف بصيغة Excel (.xlsx, .xls) أو CSV',
+            'excel_file.max' => 'حجم الملف يجب ألا يتجاوز 10 ميغابايت',
+        ]);
+
+        try {
+            $import = new LabTestsImport();
+            Excel::import($import, $request->file('excel_file'));
+
+            return redirect()->back()->with(
+                'success',
+                "تم استيراد وتحديث {$import->updatedCount} فحصاً مخبرياً بنجاح من ملف الإكسل (تم تخطي {$import->skippedCount} غير مطابق أو لم يطرأ عليه تغيير)."
+            );
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة ملف الإكسل: ' . $e->getMessage());
+        }
     }
     public function index()
     {

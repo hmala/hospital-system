@@ -488,6 +488,7 @@ Route::middleware(['auth'])->group(function () {
         // إدارة أنواع الإشعة (للإداريين فقط)
         Route::prefix('types')->name('types.')->group(function () {
             Route::get('/export', [RadiologyTypeController::class, 'export'])->name('export');
+            Route::post('/import', [RadiologyTypeController::class, 'import'])->name('import');
             Route::get('/', [RadiologyTypeController::class, 'index'])->name('index');
             Route::get('/create', [RadiologyTypeController::class, 'create'])->name('create');
             Route::post('/', [RadiologyTypeController::class, 'store'])->name('store');
@@ -508,6 +509,7 @@ Route::middleware(['auth'])->group(function () {
     // إدارة أنواع التحاليل المختبرية (للإداريين وموظفي المختبر)
     Route::prefix('lab-tests')->name('lab-tests.')->group(function () {
         Route::get('/export', [\App\Http\Controllers\LabTestController::class, 'export'])->name('export');
+        Route::post('/import', [\App\Http\Controllers\LabTestController::class, 'import'])->name('import');
         Route::get('/', [\App\Http\Controllers\LabTestController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\LabTestController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\LabTestController::class, 'store'])->name('store');

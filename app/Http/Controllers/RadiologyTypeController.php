@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RadiologyType;
 use App\Exports\RadiologyTypesExport;
+use App\Imports\RadiologyTypesImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +32,32 @@ class RadiologyTypeController extends Controller
     {
         $fileName = 'قائمة_فحوصات_الأشعة_والتصوير_الطبي_' . date('Y_m_d') . '.xlsx';
         return Excel::download(new RadiologyTypesExport($request), $fileName);
+    }
+
+    /**
+     * Import and bulk update radiology types from Excel.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ], [
+            'excel_file.required' => 'يرجى اختيار ملف الإكسل المراد استيراده',
+            'excel_file.mimes' => 'يجب أن يكون الملف بصيغة Excel (.xlsx, .xls) أو CSV',
+            'excel_file.max' => 'حجم الملف يجب ألا يتجاوز 10 ميغابايت',
+        ]);
+
+        try {
+            $import = new RadiologyTypesImport();
+            Excel::import($import, $request->file('excel_file'));
+
+            return redirect()->back()->with(
+                'success',
+                "تم استيراد وتحديث {$import->updatedCount} خدمة أشعة وتصوير طبي بنجاح من ملف الإكسل (تم تخطي {$import->skippedCount} غير مطابق أو لم يطرأ عليه تغيير)."
+            );
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة ملف الإكسل: ' . $e->getMessage());
+        }
     }
 
     /**

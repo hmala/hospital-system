@@ -57,6 +57,33 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-14 — المرحلة 49: استيراد وتحديث أسعار تحاليل المختبر وخدمات الأشعة جماعياً من الإكسل Bulk Excel Import for Lab Tests & Radiology Services)
+
+### Done
+- **إضافة نظام الاستيراد والتحديث الجماعي الذكي من ملفات Excel و CSV**:
+  * **الأهداف والمتطلبات**: تمكين الإدارة من تعديل الأسعار أو شمول الضمان أو حالة التفعيل في ملف الإكسل وإعادة رفعه بضغطة زر واحدة لتحديث قاعدة البيانات تلقائياً.
+  * **التطوير البرمجي**:
+    1. إنشاء صنف الاستيراد [app/Imports/LabTestsImport.php](file:///c:/wamp64/www/hospital-system/app/Imports/LabTestsImport.php):
+       - كشف ديناميكي لعناوين الأعمدة (Dynamic Column Detection) يدعم العربية والإنجليزية أو الفهرس الافتراضي.
+       - مطابقة التحاليل حسب المعرف (`ID`) أو الرمز الطبي (`code`) أو الاسم.
+       - تنظيف ذكي للأرقام والعملات (إزالة الفواصل ورموز د.ع والمسافات).
+       - تحديث سعر الكاش، سعر الضمان، تفعيل الضمان، التصنيف الفرعي، وحالة التفعيل (نشط/معطل).
+       - حماية معايير المستشفى بتصفير ضمان الداخلية التام وحفظ البيانات داخل Transaction آمنة.
+    2. إنشاء صنف الاستيراد [app/Imports/RadiologyTypesImport.php](file:///c:/wamp64/www/hospital-system/app/Imports/RadiologyTypesImport.php):
+       - مطابقة خدمات الأشعة حسب المعرف أو الرمز أو الاسم.
+       - تحديث سعر الكاش (`base_price`)، سعر الضمان (`hi_price`)، شمول الضمان، الحاجة لصبغة، وحالة التفعيل.
+    3. تسجيل المسارات وتحديث وحدات التحكم:
+       - مسار `lab-tests.import` في [LabTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestController.php)
+       - مسار `radiology.types.import` في [RadiologyTypeController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyTypeController.php)
+       - التحقق من نوع الملف وحجمه (أقصى حد 10MB) وتوثيق رسائل نجاح تفصيلية بعدد السجلات المحدثة والمتخطاة.
+    4. تحديث واجهات المستخدم بنوافذ منبثقة (Modals) أنيقة ومحمية بالصلاحيات:
+       - [resources/views/lab-tests/pricing_settings.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/pricing_settings.blade.php)
+       - [resources/views/lab-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/index.blade.php)
+       - [resources/views/radiology/types/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/types/index.blade.php)
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/LabAndRadiologyImportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabAndRadiologyImportTest.php): `5 passed (18 assertions)`.
+  * اجتياز كامل للاختبارات الحيوية: [LabTestsExportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabTestsExportTest.php): `4 passed (8 assertions)`.
+
 ## Session log (2026-10-14 — المرحلة 48: تصدير جداول تحاليل المختبر وخدمات الأشعة إلى ملفات إكسل Excel Export for Lab Tests & Radiology Services)
 
 ### Done
