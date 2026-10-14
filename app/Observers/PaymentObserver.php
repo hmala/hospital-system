@@ -71,6 +71,10 @@ class PaymentObserver
 
         $appointment = $payment->appointment->load(['doctor', 'department', 'patient']);
 
+        if ($payment->amount < 0 || $appointment->status === 'cancelled') {
+            return;
+        }
+
         if (!$appointment->doctor) {
             return;
         }

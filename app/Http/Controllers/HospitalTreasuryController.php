@@ -251,7 +251,11 @@ class HospitalTreasuryController extends Controller
         // استعلام كشوفات وإيرادات الاستشارية المحصلة (كاش مقابل ضمان) مفصلة بين نقد الدرج ومطالبات الضمان
         $revQuery = DB::table('consultation_revenues')
             ->leftJoin('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id')
-            ->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
+            ->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id')
+            ->where(function ($q) {
+                $q->whereNull('appointments.id')
+                  ->orWhere('appointments.status', '!=', 'cancelled');
+            });
         if ($request->filled('from_date')) {
             $revQuery->whereDate('consultation_revenues.revenue_date', '>=', $request->from_date);
         }

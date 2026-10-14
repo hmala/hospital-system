@@ -242,13 +242,17 @@ class Appointment extends Model
             $paymentMethod = $consultationPayment ? $consultationPayment->payment_method : ($this->payment ? $this->payment->payment_method : 'cash');
 
             if ($refundAmount < 0) {
-                DB::transaction(function () use ($refundAmount, $paymentMethod) {
+                DB::transaction(function () use ($refundAmount, $paymentMethod, $consultationPayment) {
                     Payment::create([
                         'appointment_id' => $this->id,
                         'patient_id' => $this->patient_id,
                         'cashier_id' => auth()->id(),
                         'receipt_number' => Payment::generateReceiptNumber(),
                         'amount' => $refundAmount,
+                        'total_amount' => $consultationPayment ? -abs($consultationPayment->total_amount > 0 ? $consultationPayment->total_amount : $consultationPayment->amount) : $refundAmount,
+                        'patient_share' => $consultationPayment ? -abs($consultationPayment->patient_share) : $refundAmount,
+                        'insurance_share' => 0,
+                        'insurance_type' => $consultationPayment ? $consultationPayment->insurance_type : null,
                         'payment_method' => $paymentMethod,
                         'payment_type' => 'appointment',
                         'description' => 'استرجاع دفعة كشفية موعد #' . $this->id,
@@ -262,10 +266,14 @@ class Appointment extends Model
                 $this->update(['payment_status' => 'refunded']);
             }
 
+            // تصفير وحذف أي قيود إيراد استشارية ومستحقات معلقة للموعد الملغى
+            \App\Models\ConsultationRevenue::where('appointment_id', $this->id)->delete();
+
             // إلغاء أي مستحقات معلقة للطبيب مرتبطة بدفعة هذا الموعد وتحديث رصيد الحساب
             if ($consultationPayment) {
                 DoctorDue::where('payment_id', $consultationPayment->id)
-                    ->where('status', 'pending')
+                    ->delete();
+                DoctorDue::where('notes', 'like', '%دفعة رقم ' . $consultationPayment->receipt_number . '%')
                     ->delete();
 
                 if ($this->doctor_id) {
