@@ -191,4 +191,90 @@ class HospitalTreasuryDashboardTest extends TestCase
         $response = $this->actingAs($user)->get(route('treasury.index'));
         $response->assertStatus(403);
     }
+
+    public function test_cancelled_requests_and_visits_are_excluded_from_doctor_referrals()
+    {
+        $admin = User::factory()->create(['email' => 'admin_cancel_test@hospital.com']);
+        $admin->assignRole('admin');
+
+        $hosp = \App\Models\Hospital::first();
+        $dept = \App\Models\Department::create([
+            'hospital_id' => $hosp->id,
+            'name' => 'العيادة الجراحية',
+            'type' => 'internal',
+            'room_number' => '201',
+            'consultation_fee' => 25000,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '16:00',
+            'is_active' => true,
+        ]);
+
+        $docUser = User::factory()->create(['name' => 'د. فراس التميمي']);
+        $doc = \App\Models\Doctor::create([
+            'user_id' => $docUser->id,
+            'department_id' => $dept->id,
+            'specialization' => 'جراحة عامة',
+            'qualification' => 'بورد عربي',
+            'license_number' => 'DOC-TEST-' . uniqid(),
+            'consultation_fee' => 30000,
+            'type' => 'consultant',
+            'is_active' => true,
+        ]);
+
+        $patientUser = User::factory()->create(['name' => 'مريض ملغى']);
+        $patient = \App\Models\Patient::create([
+            'user_id' => $patientUser->id,
+            'name' => 'مريض ملغى',
+            'phone' => '07700000000',
+        ]);
+
+        // 1. زيارة ملغاة مع طلب أشعة ملغى
+        $cancelledVisit = \App\Models\Visit::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doc->id,
+            'department_id' => $dept->id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => '10:00:00',
+            'visit_type' => 'checkup',
+            'chief_complaint' => 'فحص روتيني ملغى',
+            'status' => 'cancelled',
+        ]);
+
+        \App\Models\Request::create([
+            'visit_id' => $cancelledVisit->id,
+            'type' => 'radiology',
+            'description' => 'أشعة ملغاة',
+            'status' => 'cancelled',
+        ]);
+
+        // 2. زيارة نشطة مع طلب مختبر نشط
+        $activeVisit = \App\Models\Visit::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doc->id,
+            'department_id' => $dept->id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => '10:30:00',
+            'visit_type' => 'checkup',
+            'chief_complaint' => 'فحص روتيني نشط',
+            'status' => 'completed',
+        ]);
+
+        \App\Models\Request::create([
+            'visit_id' => $activeVisit->id,
+            'type' => 'lab',
+            'description' => 'تحليل دم نشط',
+            'status' => 'completed',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('treasury.index'));
+        $response->assertStatus(200);
+
+        // Verify that in doctor analytics, lab referral is 1 and radiology referral is 0!
+        $doctorAnalytics = $response->viewData('doctorAnalytics');
+        $docData = collect($doctorAnalytics)->firstWhere('name', 'د. فراس التميمي');
+
+        $this->assertNotNull($docData);
+        $this->assertEquals(1, $docData['lab_refs']);
+        $this->assertEquals(0, $docData['rad_refs']);
+    }
 }

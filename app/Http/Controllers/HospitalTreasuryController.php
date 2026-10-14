@@ -278,7 +278,14 @@ class HospitalTreasuryController extends Controller
         // ج) استعلام تحويلات الفحوصات التشخيصية (مختبر وأشعة) الناتجة عن زيارات أطباء الاستشارية
         $referralReqQuery = DB::table('requests')
             ->join('visits', 'requests.visit_id', '=', 'visits.id')
-            ->whereNotNull('visits.doctor_id');
+            ->leftJoin('appointments', 'visits.appointment_id', '=', 'appointments.id')
+            ->whereNotNull('visits.doctor_id')
+            ->where('requests.status', '!=', 'cancelled')
+            ->where('visits.status', '!=', 'cancelled')
+            ->where(function ($q) {
+                $q->whereNull('appointments.id')
+                  ->orWhere('appointments.status', '!=', 'cancelled');
+            });
         if ($request->filled('from_date')) {
             $referralReqQuery->whereDate('requests.created_at', '>=', $request->from_date);
         }
@@ -302,7 +309,8 @@ class HospitalTreasuryController extends Controller
         }
 
         // د) استعلام تحويلات العمليات الجراحية
-        $surgQuery = DB::table('surgeries');
+        $surgQuery = DB::table('surgeries')
+            ->where('status', '!=', 'cancelled');
         if ($request->filled('from_date')) {
             $surgQuery->whereDate('created_at', '>=', $request->from_date);
         }
