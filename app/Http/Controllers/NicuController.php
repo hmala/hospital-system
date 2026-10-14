@@ -81,6 +81,97 @@ class NicuController extends Controller
     }
 
     /**
+     * سجل وإضبارات حجوزات الخدج (NICU Reservations Registry)
+     */
+    public function reservationsIndex(Request $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك بالوصول لسجل وإضبارات الخدج');
+        }
+
+        $query = IncubatorReservation::with([
+            'patient.user',
+            'incubator.room',
+            'nicuService',
+            'doctor.user',
+            'department',
+            'vitals' => function ($q) {
+                $q->latest('recorded_at')->limit(1);
+            }
+        ]);
+
+        // البحث (Search)
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('baby_name', 'like', "%{$search}%")
+                  ->orWhere('id', $search)
+                  ->orWhereHas('patient.user', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('incubator', function ($iq) use ($search) {
+                      $iq->where('incubator_number', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('doctor.user', function ($dq) use ($search) {
+                      $dq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // فلترة الحالة (Status Filter)
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // فلترة باقة الخدمة (Service Filter)
+        if ($request->filled('nicu_service_id') && $request->nicu_service_id !== 'all') {
+            $query->where('nicu_service_id', $request->nicu_service_id);
+        }
+
+        // فلترة نوع الحاضنة (Incubator Type)
+        if ($request->filled('incubator_type') && $request->incubator_type !== 'all') {
+            $query->whereHas('incubator', function ($iq) use ($request) {
+                $iq->where('incubator_type', $request->incubator_type);
+            });
+        }
+
+        // فلترة التواريخ (Date Filter)
+        if ($request->filled('date_from')) {
+            $query->whereDate('admission_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('admission_date', '<=', $request->date_to);
+        }
+
+        // الترتيب: النشطون أولاً ثم الانتظار ثم المخرجين ثم الملغي، ثم الأحدث
+        $reservations = $query->orderByRaw("CASE status WHEN 'admitted' THEN 1 WHEN 'pending' THEN 2 WHEN 'transferred' THEN 3 WHEN 'discharged' THEN 4 ELSE 5 END")
+                              ->latest('admission_date')
+                              ->latest('id')
+                              ->paginate(15)
+                              ->withQueryString();
+
+        // إحصائيات سريعة للرأس
+        $kpis = [
+            'total' => IncubatorReservation::count(),
+            'admitted' => IncubatorReservation::where('status', IncubatorReservation::STATUS_ADMITTED)->count(),
+            'discharged' => IncubatorReservation::where('status', IncubatorReservation::STATUS_DISCHARGED)->count(),
+            'discharged_month' => IncubatorReservation::where('status', IncubatorReservation::STATUS_DISCHARGED)
+                ->whereMonth('discharge_date', now()->month)
+                ->whereYear('discharge_date', now()->year)
+                ->count(),
+            'pending' => IncubatorReservation::where('status', IncubatorReservation::STATUS_PENDING)->count(),
+        ];
+
+        $services = NicuService::active()->orderBy('name')->get();
+
+        return view('nicu.reservations.index', compact('reservations', 'kpis', 'services'));
+    }
+
+    /**
      * ملف الطفل والمركز السريري للحاضنة
      */
     public function show(IncubatorReservation $reservation)

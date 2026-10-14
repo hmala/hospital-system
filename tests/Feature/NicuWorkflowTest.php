@@ -414,5 +414,78 @@ class NicuWorkflowTest extends TestCase
         $response->assertJson(['success' => true, 'is_active' => false]);
         $this->assertFalse((bool)$service->fresh()->is_active);
     }
+
+    public function test_rapid_service_switching_within_15_mins_updates_existing_log(): void
+    {
+        $ventService = NicuService::where('code', 'incubator_ventilator')->first();
+        $o2Service = NicuService::where('code', 'incubator_o2')->first();
+        $cpapService = NicuService::where('code', 'incubator_cpap')->first();
+
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل التبديل السريع',
+            'incubator_id' => $this->incubator->id,
+            'nicu_service_id' => $ventService->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        NicuServiceLog::create([
+            'reservation_id' => $reservation->id,
+            'nicu_service_id' => $ventService->id,
+            'start_time' => now(),
+            'daily_fee' => $ventService->daily_fee,
+        ]);
+
+        // First switch to O2
+        $this->actingAs($this->admin)->post(route('nicu.switch-service', $reservation), [
+            'nicu_service_id' => $o2Service->id,
+            'reason' => 'تحويل أولي',
+        ]);
+
+        // Second switch 2 minutes later to CPAP (simulating user changing mind or rapid switch)
+        $this->actingAs($this->admin)->post(route('nicu.switch-service', $reservation), [
+            'nicu_service_id' => $cpapService->id,
+            'reason' => 'تعديل فوري للخدمة',
+        ]);
+
+        $this->assertEquals($cpapService->id, $reservation->fresh()->nicu_service_id);
+
+        // Should not have created 3 active billings; it updates the open log in-place
+        $logs = NicuServiceLog::where('reservation_id', $reservation->id)->whereNull('end_time')->get();
+        $this->assertCount(1, $logs);
+        $this->assertEquals($cpapService->id, $logs->first()->nicu_service_id);
+    }
+
+    public function test_admin_can_view_nicu_reservations_registry(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'رضيع السجل السريري',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '09:00',
+            'status' => 'admitted',
+            'birth_weight' => 1600,
+            'current_weight' => 1650,
+        ]);
+
+        // Visit index
+        $response = $this->actingAs($this->admin)->get(route('nicu.reservations.index'));
+        $response->assertStatus(200);
+        $response->assertSee('سجل وإضبارات الخدج وحجوزات الحاضنات');
+        $response->assertSee('رضيع السجل السريري');
+
+        // Test search
+        $searchResponse = $this->actingAs($this->admin)->get(route('nicu.reservations.index', ['search' => 'رضيع السجل']));
+        $searchResponse->assertStatus(200);
+        $searchResponse->assertSee('رضيع السجل السريري');
+
+        // Test status filter
+        $filterResponse = $this->actingAs($this->admin)->get(route('nicu.reservations.index', ['status' => 'admitted']));
+        $filterResponse->assertStatus(200);
+        $filterResponse->assertSee('رضيع السجل السريري');
+    }
 }
 

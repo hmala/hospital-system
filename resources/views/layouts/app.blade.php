@@ -1233,7 +1233,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('incubator-reservations.index') ? 'active' : '' }}" href="{{ route('incubator-reservations.index') }}">
+                                <a class="nav-link {{ request()->routeIs('nicu.reservations.*') || request()->routeIs('incubator-reservations.index') ? 'active' : '' }}" href="{{ route('nicu.reservations.index') }}">
                                     <i class="fas fa-clipboard-list text-info"></i><span> سجل وإضبارات الخدج</span>
                                 </a>
                             </li>

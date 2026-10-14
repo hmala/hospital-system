@@ -19,7 +19,7 @@
                     <a href="{{ route('incubator-reservations.create') }}" class="btn btn-success shadow-sm">
                         <i class="fas fa-plus-circle me-1"></i> حجز ودخول خديج جديد
                     </a>
-                    <a href="{{ route('incubator-reservations.index') }}" class="btn btn-outline-primary shadow-sm">
+                    <a href="{{ route('nicu.reservations.index') }}" class="btn btn-outline-primary shadow-sm">
                         <i class="fas fa-list me-1"></i> سجل وإضبارات الخدج
                     </a>
                     <a href="{{ route('nicu.services.index') }}" class="btn btn-outline-warning shadow-sm">

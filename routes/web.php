@@ -671,6 +671,7 @@ Route::middleware(['auth'])->group(function () {
     // قسم الخدج والحاضنات المتقدم (NICU Module)
     Route::prefix('nicu')->name('nicu.')->group(function () {
         Route::get('/', [\App\Http\Controllers\NicuController::class, 'index'])->name('index');
+        Route::get('/reservations', [\App\Http\Controllers\NicuController::class, 'reservationsIndex'])->name('reservations.index');
         Route::get('/reservations/{reservation}', [\App\Http\Controllers\NicuController::class, 'show'])->name('show');
         Route::post('/reservations/{reservation}/switch-service', [\App\Http\Controllers\NicuController::class, 'switchService'])->name('switch-service');
         Route::post('/reservations/{reservation}/vitals', [\App\Http\Controllers\NicuController::class, 'storeVitals'])->name('vitals.store');

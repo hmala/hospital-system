@@ -49,9 +49,9 @@ class NicuBillingService
 
         if ($serviceLogs->isNotEmpty()) {
             foreach ($serviceLogs as $log) {
-                $days = $log->days_count > 0 ? $log->days_count : 1;
+                $days = (int)$log->days_count;
                 $fee = (float)$log->daily_fee;
-                $cost = $days * $fee;
+                $cost = (float)($log->total_cost ?? ($days * $fee));
                 $totalServiceCost += $cost;
 
                 $serviceBreakdown[] = [
@@ -62,6 +62,7 @@ class NicuBillingService
                     'start_time' => $log->start_time?->format('Y-m-d H:i'),
                     'end_time' => $log->end_time?->format('Y-m-d H:i'),
                     'reason' => $log->reason_for_switch,
+                    'notes' => $log->notes,
                 ];
             }
         } else {
@@ -173,7 +174,17 @@ class NicuBillingService
     }
 
     /**
-     * تبديل الخدمة السريرية للطفل وتوثيق السجل الجديد
+     * الحصول على تاريخ بداية الدورة الفندقية السريرية (الساعة 12:00 ظهراً بتوقيت العراق)
+     */
+    public function getHotelCycleDate(Carbon $dateTime): string
+    {
+        return ($dateTime->hour < self::CUTOFF_HOUR)
+            ? $dateTime->copy()->subDay()->format('Y-m-d')
+            : $dateTime->format('Y-m-d');
+    }
+
+    /**
+     * تبديل الخدمة السريرية للطفل مع حماية منع تكرار وازدواجية الأيام في نفس اليوم الفندقي
      */
     public function switchService(
         IncubatorReservation $reservation,
@@ -183,21 +194,86 @@ class NicuBillingService
     ): NicuServiceLog {
         $now = now();
 
-        // إغلاق آخر سجل خدمة مفتوح
+        // جلب آخر سجل خدمة مفتوح
         $lastLog = $reservation->serviceLogs()->whereNull('end_time')->latest('start_time')->first();
 
-        if ($lastLog) {
+        // 1. فحص نافذة التراجع السريع والخطأ (إذا تم التبديل خلال 15 دقيقة)
+        if ($lastLog && $lastLog->start_time && $lastLog->start_time->diffInMinutes($now) <= 15) {
             $lastLog->update([
-                'end_time' => $now,
+                'nicu_service_id' => $newService->id,
+                'daily_fee' => $newService->daily_fee,
+                'total_cost' => ($lastLog->days_count ?: 1) * (float)$newService->daily_fee,
+                'reason_for_switch' => $reason ?: $lastLog->reason_for_switch,
+                'switched_by' => $userId,
+                'notes' => 'تصحيح فوري للباقة خلال نافذة التراجع دون فتح يوم جديد.',
             ]);
+
+            $reservation->update(['nicu_service_id' => $newService->id]);
+            return $lastLog;
         }
 
-        // تحديث الحجز بالخدمة الجديدة
-        $reservation->update([
-            'nicu_service_id' => $newService->id,
-        ]);
+        if ($lastLog) {
+            $logStart = Carbon::parse($lastLog->start_time);
+            $lastCycle = $this->getHotelCycleDate($logStart);
+            $currentCycle = $this->getHotelCycleDate($now);
 
-        // فتح سجل خدمة جديد
+            if ($lastCycle === $currentCycle) {
+                // التبديل حدث ضمن نفس اليوم الفندقي (12:00 ظهراً إلى 12:00 ظهراً التالية)
+                // نعتمد الباقة الأعلى سعراً لليوم الفندقي المشترك ولا نضاعف اليوم إطلاقاً
+                $higherFee = max((float)$lastLog->daily_fee, (float)$newService->daily_fee);
+
+                // إغلاق السجل السابق كيوم مدمج
+                $lastLog->update([
+                    'end_time' => $now,
+                    'days_count' => 0, // مندمج في نفس اليوم الفندقي
+                    'total_cost' => 0,
+                    'notes' => 'تم التحويل في نفس اليوم الفندقي، ودُمج الحساب مع باقة (' . $newService->name . ') بقيمة الباقة الأعلى.',
+                ]);
+
+                $reservation->update(['nicu_service_id' => $newService->id]);
+
+                return NicuServiceLog::create([
+                    'reservation_id' => $reservation->id,
+                    'nicu_service_id' => $newService->id,
+                    'daily_fee' => $higherFee,
+                    'start_time' => $now,
+                    'end_time' => null,
+                    'days_count' => 1,
+                    'total_cost' => $higherFee,
+                    'reason_for_switch' => $reason,
+                    'switched_by' => $userId,
+                    'notes' => ($higherFee > (float)$newService->daily_fee)
+                        ? 'اعتمدت تسعيرة الباقة السابقة الأعلى (' . number_format($higherFee) . ' د.ع) لليوم الفندقي المشترك.'
+                        : 'ترقية الباقة في نفس اليوم الفندقي (' . number_format($higherFee) . ' د.ع).',
+                ]);
+            } else {
+                // السجل السابق قضى يوماً أو أكثر في دورات فندقية سابقة
+                $completedDays = max(1, Carbon::parse($lastCycle)->diffInDays(Carbon::parse($currentCycle)));
+
+                $lastLog->update([
+                    'end_time' => $now,
+                    'days_count' => $completedDays,
+                    'total_cost' => $completedDays * (float)$lastLog->daily_fee,
+                ]);
+
+                $reservation->update(['nicu_service_id' => $newService->id]);
+
+                return NicuServiceLog::create([
+                    'reservation_id' => $reservation->id,
+                    'nicu_service_id' => $newService->id,
+                    'daily_fee' => $newService->daily_fee,
+                    'start_time' => $now,
+                    'end_time' => null,
+                    'days_count' => 1,
+                    'total_cost' => $newService->daily_fee,
+                    'reason_for_switch' => $reason,
+                    'switched_by' => $userId,
+                ]);
+            }
+        }
+
+        // في حال لم يكن هناك سجل سابق
+        $reservation->update(['nicu_service_id' => $newService->id]);
         return NicuServiceLog::create([
             'reservation_id' => $reservation->id,
             'nicu_service_id' => $newService->id,
