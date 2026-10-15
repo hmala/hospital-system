@@ -407,6 +407,27 @@ class InquiryController extends Controller
                 // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
                 $appointmentDate = $httpRequest->appointment_date ? Carbon::parse($httpRequest->appointment_date) : Carbon::today();
 
+                // فحص تكرار الحجز النشط في نفس اليوم للطبيب
+                if (!$httpRequest->boolean('confirm_duplicate_booking')) {
+                    $existingActiveAppt = Appointment::where('patient_id', $patient->id)
+                        ->where('doctor_id', $doctor->id)
+                        ->whereDate('appointment_date', $appointmentDate)
+                        ->whereNotIn('status', ['completed', 'cancelled'])
+                        ->first();
+
+                    if ($existingActiveAppt) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('duplicate_booking_warning', [
+                                'type' => 'checkup',
+                                'doctor_name' => $doctor->user?->name ?? 'الطبيب',
+                                'queue_number' => $existingActiveAppt->queue_number,
+                                'status' => $existingActiveAppt->status,
+                                'message' => "المريض لديه حجز نشط اليوم بالفعل مع د. " . ($doctor->user?->name ?? '') . " برقم تسلسل #{$existingActiveAppt->queue_number}. يرجى تأكيد الرغبة بحجز موعد إضافي ثانٍ لنفس اليوم."
+                            ]);
+                    }
+                }
+
                 // فحص ما إذا كان للمريض موعد مراجعة مجانية مجدول مسبقاً أو زيارة سابقة حدد فيها الطبيب صراحة موعد مراجعة وما زالت صالحة
                 $validityDays = $doctor->recheck_validity_days ?: 7;
 
@@ -445,6 +466,10 @@ class InquiryController extends Controller
                 $noteText = $isFreeRecheck 
                     ? ("مراجعة مجانية صالحة حتى " . Carbon::parse($parentVisit?->visit_date ?? now())->addDays($validityDays)->format('Y-m-d') . ($parentVisit ? " (مرتبطة بالزيارة #{$parentVisit->id})" : ""))
                     : 'تم الحجز من الاستعلامات - بانتظار الدفع';
+
+                if ($httpRequest->boolean('confirm_duplicate_booking')) {
+                    $noteText = ($noteText ? $noteText . ' | ' : '') . 'حجز إضافي مؤكد من الاستعلامات';
+                }
 
                 // إنشاء أو تحديث الموعد
                 if ($scheduledRecheckAppt) {
@@ -742,6 +767,40 @@ class InquiryController extends Controller
         
         $visitStatus = $hasServices ? 'pending_payment' : 'pending_service_selection';
         
+        // فحص تكرار الحجز النشط للسونار في نفس اليوم
+        if ($requestType === 'radiology' && ($radiologyCategory === 'ultrasound' || $httpRequest->radiology_category === 'ultrasound')) {
+            if (!$httpRequest->boolean('confirm_duplicate_booking')) {
+                $existingActiveSonarReq = \App\Models\Request::where('type', 'radiology')
+                    ->where('subtype', 'ultrasound')
+                    ->whereDate('created_at', Carbon::today())
+                    ->whereNotIn('status', ['completed', 'cancelled'])
+                    ->whereHas('visit', function($q) use ($patient) {
+                        $q->where('patient_id', $patient->id);
+                    })
+                    ->first();
+
+                if (!$existingActiveSonarReq) {
+                    $existingActiveSonarReq = Appointment::where('patient_id', $patient->id)
+                        ->whereDate('appointment_date', Carbon::today())
+                        ->whereNotIn('status', ['completed', 'cancelled'])
+                        ->where(function($q) {
+                            $q->where('reason', 'LIKE', '%سونار%')
+                              ->orWhere('notes', 'LIKE', '%سونار%');
+                        })
+                        ->first();
+                }
+
+                if ($existingActiveSonarReq) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('duplicate_booking_warning', [
+                            'type' => 'ultrasound',
+                            'message' => 'المريض لديه حجز فحص سونار نشط اليوم لم يكتمل بعد. يرجى تأكيد الرغبة بإنشاء حجز فحص سونار إضافي جديد لنفس اليوم.'
+                        ]);
+                }
+            }
+        }
+
         $visit = Visit::create([
             'patient_id' => $patient->id,
             'department_id' => $inquiryDept->id,
@@ -884,7 +943,7 @@ class InquiryController extends Controller
                 'appointment_date' => Carbon::today(),
                 'queue_number' => $maxQueue + 1,
                 'reason' => 'حجز سونار - ' . $sonarTypeName,
-                'notes' => 'حجز سونار من الاستعلامات' . ($sonarTypeObj ? ' (كود: ' . $sonarTypeObj->code . ')' : ''),
+                'notes' => 'حجز سونار من الاستعلامات' . ($sonarTypeObj ? ' (كود: ' . $sonarTypeObj->code . ')' : '') . ($httpRequest->boolean('confirm_duplicate_booking') ? ' | حجز إضافي مؤكد من الاستعلامات' : ''),
                 'consultation_fee' => 0, // الرسوم مسجلة ومسعرة بالكامل على الطلب الطبي للفحص
                 'duration' => 20,
                 'status' => 'scheduled',
@@ -1625,4 +1684,133 @@ class InquiryController extends Controller
             'Content-Disposition' => 'inline; filename="' . ($document->file_name ?? basename($fullPath)) . '"',
         ]);
     }
+
+    /**
+     * التحقق اللحظي من وجود حجز نشط (غير مكتمل) للمريض اليوم (كشفية أو سونار)
+     */
+    public function checkActiveBooking(HttpRequest $request)
+    {
+        $patientId = $request->input('patient_id');
+        $type = $request->input('type'); // 'checkup', 'radiology', etc.
+        $doctorId = $request->input('doctor_id');
+        $radiologyCategory = $request->input('radiology_category');
+
+        if (!$patientId) {
+            return response()->json(['has_active' => false]);
+        }
+
+        // 1. فحص كشفية الطبيب الاستشاري (Checkup)
+        if ($type === 'checkup' || $doctorId) {
+            if (!$doctorId) {
+                return response()->json(['has_active' => false]);
+            }
+
+            $activeAppt = Appointment::where('patient_id', $patientId)
+                ->where('doctor_id', $doctorId)
+                ->whereDate('appointment_date', Carbon::today())
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->with(['doctor.user', 'department'])
+                ->latest()
+                ->first();
+
+            if ($activeAppt) {
+                $statusMap = [
+                    'scheduled' => 'مجدول (بانتظار الدخول)',
+                    'confirmed' => 'مؤكد في الطابور',
+                    'waiting' => 'في غرفة الانتظار',
+                    'in_progress' => 'جاري الكشف حالياً',
+                ];
+                $payMap = [
+                    'paid' => 'مسدد نقداً (كاش)',
+                    'pending' => 'بانتظار التسديد في الكاشير',
+                    'refunded' => 'مسترجع',
+                    'not_applicable' => 'غير مطلوب',
+                ];
+
+                $docName = $activeAppt->doctor?->user?->name ?? 'الطبيب';
+                $statusLabel = $statusMap[$activeAppt->status] ?? $activeAppt->status;
+                $payLabel = $payMap[$activeAppt->payment_status] ?? $activeAppt->payment_status;
+
+                return response()->json([
+                    'has_active' => true,
+                    'type' => 'checkup',
+                    'doctor_name' => $docName,
+                    'queue_number' => $activeAppt->queue_number,
+                    'status' => $activeAppt->status,
+                    'status_label' => $statusLabel,
+                    'payment_status' => $activeAppt->payment_status,
+                    'payment_label' => $payLabel,
+                    'message' => "المريض لديه حجز كشفية نشط اليوم مع د. {$docName} برقم تسلسل #{$activeAppt->queue_number} (الحالة: {$statusLabel} - الدفع: {$payLabel})."
+                ]);
+            }
+        }
+
+        // 2. فحص السونار المباشر (Ultrasound)
+        if ($type === 'radiology' && $radiologyCategory === 'ultrasound') {
+            $activeSonarReq = \App\Models\Request::where('type', 'radiology')
+                ->where('subtype', 'ultrasound')
+                ->whereDate('created_at', Carbon::today())
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->whereHas('visit', function($q) use ($patientId) {
+                    $q->where('patient_id', $patientId);
+                })
+                ->with(['visit.doctor.user', 'visit.appointment'])
+                ->latest()
+                ->first();
+
+            $activeSonarAppt = null;
+            if ($activeSonarReq && $activeSonarReq->visit?->appointment) {
+                $activeSonarAppt = $activeSonarReq->visit->appointment;
+            } else {
+                $activeSonarAppt = Appointment::where('patient_id', $patientId)
+                    ->whereDate('appointment_date', Carbon::today())
+                    ->whereNotIn('status', ['completed', 'cancelled'])
+                    ->where(function($q) {
+                        $q->where('reason', 'LIKE', '%سونار%')
+                          ->orWhere('notes', 'LIKE', '%سونار%');
+                    })
+                    ->with('doctor.user')
+                    ->latest()
+                    ->first();
+            }
+
+            if ($activeSonarReq || $activeSonarAppt) {
+                $statusMap = [
+                    'pending' => 'بانتظار الفحص / التسديد',
+                    'pending_payment' => 'بانتظار دفع الأجور في الكاشير',
+                    'scheduled' => 'مجدول في طابور السونار',
+                    'confirmed' => 'مؤكد في الطابور',
+                    'in_progress' => 'جاري الفحص الآن في غرفة السونار',
+                ];
+                $payMap = [
+                    'paid' => 'تم الدفع في الكاشير',
+                    'pending' => 'بانتظار الدفع في الكاشير',
+                    'refunded' => 'مسترجع',
+                ];
+
+                $currentStatus = $activeSonarReq?->status ?? $activeSonarAppt?->status ?? 'pending';
+                $currentPayment = $activeSonarReq?->payment_status ?? $activeSonarAppt?->payment_status ?? 'pending';
+                $queueNo = $activeSonarAppt?->queue_number ?? '-';
+                $docName = $activeSonarAppt?->doctor?->user?->name ?? 'طبيب السونار';
+
+                $statusLabel = $statusMap[$currentStatus] ?? $currentStatus;
+                $payLabel = $payMap[$currentPayment] ?? $currentPayment;
+
+                return response()->json([
+                    'has_active' => true,
+                    'type' => 'ultrasound',
+                    'doctor_name' => $docName,
+                    'queue_number' => $queueNo,
+                    'status' => $currentStatus,
+                    'status_label' => $statusLabel,
+                    'payment_status' => $currentPayment,
+                    'payment_label' => $payLabel,
+                    'message' => "المريض لديه حجز فحص سونار نشط اليوم لم يكتمل بعد (التسلسل: #{$queueNo} - الحالة: {$statusLabel} - الدفع: {$payLabel})."
+                ]);
+            }
+        }
+
+        return response()->json(['has_active' => false]);
+    }
 }
+

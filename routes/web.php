@@ -232,7 +232,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/inquiry/patients/{patient}/documents', [InquiryController::class, 'uploadPatientDocument'])->name('inquiry.patients.documents.upload');
     Route::get('/inquiry/documents/{document}/file', [InquiryController::class, 'serveDocumentFile'])->name('inquiry.documents.file');
     Route::delete('/inquiry/documents/{document}', [InquiryController::class, 'deletePatientDocument'])->name('inquiry.documents.delete');
-    Route::get('/inquiry/patients/{patient}/dossier/print', [InquiryController::class, 'printPatientDossier'])->name('inquiry.patients.dossier.print');
+    Route::get('/inquiry/check-active-booking', [InquiryController::class, 'checkActiveBooking'])->name('inquiry.check-active-booking');
     Route::resource('inquiry', InquiryController::class);
     
     // إدارة المشتريات والمستودع

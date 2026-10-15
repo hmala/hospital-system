@@ -57,6 +57,25 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 59: منظومة الحد من تكرار الحجز وتنبيهات الحجوزات النشطة للكشفية والسونار وتأكيد الموظف ومنع النقر المزدوج Duplicate Booking Prevention, Active Alerts, Staff Confirmation & Debounce)
+
+### Done
+- **التحقق اللحظي والفوري من الحجوزات النشطة غير المكتملة عبر AJAX (`/inquiry/check-active-booking`)**:
+  * **الخلفية والدافع**: معالجة مشكلة تكرار الحجز للمريض في نفس اليوم بالخطأ لكشفيات الأطباء الاستشاريين أو السونار الخارجي المباشر، مع مراعاة حق المريض في حجز موعد ثانٍ مقصود لنفس اليوم بعد تنبيه الموظف وتأكيده الصريح.
+  * **تعريف الحجز النشط**:
+    - أي حجز أو موعد لم يكتمل بعد (`status not in ('completed', 'cancelled')`) لتاريخ اليوم، بصرف النظر عما إذا كان قد سدد في الكاشير أو ما زال بانتظار الدفع (فطالما لم ينهِ الطبيب أو أخصائي السونار الفحص، فهو حجز نشط في الطابور).
+    - إذا كان الحجز السابق مكتملاً (`status = 'completed'`) أو ملغياً (`status = 'cancelled'`)، يُسمح بالحجز مباشرة دون أي اعتراض.
+  * **تطوير واجهة الاستعلامات التفاعلية [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php)**:
+    - **صناديق تنبيه فورية (`duplicateDoctorWarningBox` و `duplicateUltrasoundWarningBox`)**: تظهر أسفل اختيار الطبيب أو نوع السونار فورياً مع تفاصيل رقم التسلسل وحالة الطابور والدفع.
+    - **نافذة تأكيد مودال حديثة (`#confirmDuplicateModal`)**: تعترض الإرسال في حال وجود حجز نشط غير مؤكد، وتطلب من موظف الاستعلامات تأكيد رغبته في إصدار حجز إضافي مكرر.
+    - **قيد التدقيق الرقابي**: إضافة وسام ونص صريح في الملاحظات `حجز إضافي مؤكد من الاستعلامات` عند التأكيد.
+    - **حماية النقر المزدوج (Submit Debounce)**: تعطيل زر الحفظ فوراً وإظهار مؤشر التحميل الدوار لمنع الإرسال المكرر السريع.
+  * **التحقق والتحصين في الخادم [app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php)**:
+    - فحص وجود حجز نشط في دالة `storeRequest` للكشفية والسونار؛ فإذا وُجد ولم يُرسل حقل التأكيد `confirm_duplicate_booking = 1`، يتم الرد بتنبيه التكرار `duplicate_booking_warning` مع الاحتفاظ بكافة بيانات الإدخال.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات [tests/Feature/InquiryDuplicateBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryDuplicateBookingTest.php): `5 passed (14 assertions)`.
+  * اجتياز كامل اختبارات الحركات المالية للاستشارية: `8 passed (42 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 58: حجب وصولات القبض للمواعيد الملغاة والمسترجعة والتقرير المالي الرسمي بفورمة المستشفى Hide Cancelled Receipts & Official Hospital Form Financial Report)
 
 ### Done
