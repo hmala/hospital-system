@@ -19,11 +19,11 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="{{ route('consultant-availability.financial-movements') }}" class="row g-3">
-                        <div class="col-md-3 col-sm-6">
+                        <div class="col-md-2 col-sm-6">
                             <label for="from_date" class="form-label fw-bold small">من تاريخ</label>
                             <input type="date" id="from_date" name="from_date" class="form-control form-control-sm" value="{{ old('from_date', $fromDate) }}">
                         </div>
-                        <div class="col-md-3 col-sm-6">
+                        <div class="col-md-2 col-sm-6">
                             <label for="to_date" class="form-label fw-bold small">إلى تاريخ</label>
                             <input type="date" id="to_date" name="to_date" class="form-control form-control-sm" value="{{ old('to_date', $toDate) }}">
                         </div>
@@ -37,12 +37,20 @@
                                 <option value="appointment_refunded" {{ $filterType === 'appointment_refunded' ? 'selected' : '' }}>المواعيد المدفوعة ثم المسترجعة</option>
                             </select>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <label for="insurance_status" class="form-label fw-bold small">حالة التغطية / الدفع</label>
+                        <div class="col-md-2 col-sm-6">
+                            <label for="insurance_status" class="form-label fw-bold small">حالة التغطية</label>
                             <select id="insurance_status" name="insurance_status" class="form-select form-select-sm">
                                 <option value="">الكل (كاش وضمان)</option>
                                 <option value="cash" {{ $insuranceStatus === 'cash' ? 'selected' : '' }}>نقداً فقط (كاش)</option>
-                                <option value="insurance" {{ $insuranceStatus === 'insurance' ? 'selected' : '' }}>مشمول بالضمان (HI / MOI)</option>
+                                <option value="insurance" {{ $insuranceStatus === 'insurance' ? 'selected' : '' }}>مشمول بالضمان</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <label for="shift" class="form-label fw-bold small">فترة الدوام</label>
+                            <select id="shift" name="shift" class="form-select form-select-sm">
+                                <option value="">كامل اليوم (صباحي ومسائي)</option>
+                                <option value="morning" {{ ($shift ?? '') === 'morning' ? 'selected' : '' }}>☀️ الدوام الصباحي (8 ص - 3 م)</option>
+                                <option value="evening" {{ ($shift ?? '') === 'evening' ? 'selected' : '' }}>🌙 الدوام المسائي (3 م فما بعد)</option>
                             </select>
                         </div>
 
@@ -138,6 +146,9 @@
                             @if($insuranceStatus)
                                 <span class="ms-3">التغطية: {{ $insuranceStatus === 'cash' ? 'نقداً (كاش)' : 'مشمول بالضمان' }}</span>
                             @endif
+                            @if(!empty($shift))
+                                <span class="ms-3">الدوام: {{ $shift === 'morning' ? 'الصباحي (8 ص - 3 م)' : 'المسائي (3 م فما بعد)' }}</span>
+                            @endif
                         </div>
                         <hr>
                     </div>
@@ -147,7 +158,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>#</th>
-                                        <th>التاريخ</th>
+                                        <th>التاريخ والتوقيت</th>
                                         <th>المريض</th>
                                         <th>الطبيب</th>
                                         <th>القسم</th>
@@ -170,10 +181,23 @@
                                             $isInsurance = $payment->is_insurance;
                                             $insuranceShare = $payment->insurance_share_amount;
                                             $totalTariff = abs($payment->total_amount);
+                                            $isMorning = $payment->paid_at && $payment->paid_at->format('H:i:s') < '15:00:00';
                                         @endphp
                                         <tr>
                                             <td>{{ $payments->firstItem() + $loop->index }}</td>
-                                            <td>{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '-' }}</td>
+                                            <td>
+                                                <div class="fw-semibold text-dark">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d') : '-' }}</div>
+                                                @if($payment->paid_at)
+                                                    <div class="small d-flex align-items-center gap-1 mt-1">
+                                                        <span class="text-muted" dir="ltr" style="font-size: 0.75rem;">{{ $payment->paid_at->format('h:i A') }}</span>
+                                                        @if($isMorning)
+                                                            <span class="badge rounded-pill bg-warning text-dark px-2 py-0" style="font-size: 0.65rem;" title="دوام صباحي (قبل 3 عصراً)">☀️ صباحي</span>
+                                                        @else
+                                                            <span class="badge rounded-pill text-white px-2 py-0" style="font-size: 0.65rem; background-color: #6f42c1;" title="دوام مسائي (3 عصراً فما بعد)">🌙 مسائي</span>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <strong class="text-dark">{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-' }}</strong>
                                             </td>

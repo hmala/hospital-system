@@ -467,6 +467,7 @@ class ConsultantAvailabilityController extends Controller
         $search = $request->query('search');
         $paymentMethod = $request->query('payment_method');
         $insuranceStatus = $request->query('insurance_status');
+        $shift = $request->query('shift');
 
         if ($fromDate) {
             $query->whereDate('consultation_revenues.paid_at', '>=', $fromDate);
@@ -474,6 +475,12 @@ class ConsultantAvailabilityController extends Controller
 
         if ($toDate) {
             $query->whereDate('consultation_revenues.paid_at', '<=', $toDate);
+        }
+
+        if ($shift === 'morning') {
+            $query->whereTime('consultation_revenues.paid_at', '<', '15:00:00');
+        } elseif ($shift === 'evening') {
+            $query->whereTime('consultation_revenues.paid_at', '>=', '15:00:00');
         }
 
         if ($filterType === 'payment') {
@@ -577,7 +584,8 @@ class ConsultantAvailabilityController extends Controller
             'filterType',
             'search',
             'paymentMethod',
-            'insuranceStatus'
+            'insuranceStatus',
+            'shift'
         ));
     }
 
@@ -595,9 +603,10 @@ class ConsultantAvailabilityController extends Controller
         $search = $request->query('search');
         $paymentMethod = $request->query('payment_method');
         $insuranceStatus = $request->query('insurance_status');
+        $shift = $request->query('shift');
 
         return Excel::download(
-            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus),
+            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus, $shift),
             'financial_movements_' . now()->format('Ymd_His') . '.xlsx'
         );
     }

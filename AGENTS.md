@@ -57,7 +57,7 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
-## Session log (2026-10-15 — المرحلة 56: تصحيح الحركات المالية للاستشارية وفلتر الضمان وعرض النقد الفعلي وتصدير الإكسل Consultant Financial Movements, Actual Paid Copay & Insurance Filter)
+## Session log (2026-10-15 — المرحلة 56: تصحيح الحركات المالية للاستشارية وفلتر الضمان والدوام الصباحي/المسائي وعرض النقد الفعلي وتصدير الإكسل Consultant Financial Movements, Actual Paid Copay, Insurance & Shift Filters)
 
 ### Done
 - **تصحيح عمود المبلغ والبطاقات الإحصائية لواجهة الحركات المالية للاستشارية (`/consultant-availability/financial-movements`)**:
@@ -65,13 +65,17 @@ Consult these files before making changes or proposing fixes:
   * إضافة دالة ومحددات `patient_paid_amount` و `is_insurance` و `insurance_share_amount` و `insurance_type_label` بنموذج [app/Models/ConsultationRevenue.php](file:///c:/wamp64/www/hospital-system/app/Models/ConsultationRevenue.php).
   * تحديث استعلامات البطاقات الإحصائية العليا (`المستلم نقداً بالصندوق (الدرج)`، `المسترجع نقداً`، `الصافي النقدي الفعلي`) لاحتساب النقد الفعلي المدفوع باستخدام `COALESCE(payments.amount, consultation_revenues.total_amount)`.
   * إبراز المبلغ النقدي الفعلي بخط كبير وواضح مع وسام تفصيلي شفاف تحته يوضح تفاصيل الكشفية وحصة الضمان لمرضى الضمان الصحي وقوى الأمن.
-- **إضافة الفلاتر والبحث السريع وتحديث تصدير Excel**:
+- **إضافة الفلاتر والبحث السريع وفترة الدوام (صباحي ومسائي) وتحديث تصدير Excel**:
   * إضافة فلتر فئة المريض (`الكل` / `نقداً فقط (كاش)` / `مشمول بالضمان`).
+  * إضافة فلتر **فترة الدوام** (`shift`):
+    - **☀️ الدوام الصباحي (8 ص - 3 م)**: الحركات المسجلة قبل 15:00:00.
+    - **🌙 الدوام المسائي (3 م فما بعد)**: الحركات المسجلة من 15:00:00 فما بعد.
+  * إضافة وسام ملون وأنيق (Pill Badge) في عمود التاريخ والتوقيت يوضح فترة كل حركة مباشرة.
   * إضافة حقل البحث السريع بالاسم، رقم الهاتف، أو رقم الوصل/الحركة.
-  * تحديث [app/Exports/ConsultantFinancialMovementsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) لتضمين أعمدة (المدفوع نقداً، إجمالي الكشفية، تغطية الضمان، ونوع التأمين).
+  * تحديث [app/Exports/ConsultantFinancialMovementsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) لتضمين أعمدة (فترة الدوام، المدفوع نقداً، إجمالي الكشفية، تغطية الضمان، ونوع التأمين).
   * حل وتفادي خطأ تعارض أسماء الحقول في الـ SQL (`Column 'paid_at' in where clause is ambiguous`) عند الربط مع جدول `payments` عبر تحديد بادئة الجدول `consultation_revenues.` صراحة.
 - **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبار الميزة [tests/Feature/ConsultantFinancialMovementsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantFinancialMovementsTest.php): `3 passed (10 assertions)`.
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/ConsultantFinancialMovementsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantFinancialMovementsTest.php): `4 passed (16 assertions)`.
 
 ## Session log (2026-10-15 — المرحلة 55: استيراد 7,930 مريض ضمان صحي، التصنيف الذكي للجنس، صف التحرير السريع المدمج وعمود حالة السجل والمزامنة السحابية Insurance Patients Import, Gender AI Classifier, Inline Drawer Quick Edit & Hostinger Sync)
 

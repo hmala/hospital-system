@@ -16,8 +16,9 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
     protected $search;
     protected $paymentMethod;
     protected $insuranceStatus;
+    protected $shift;
 
-    public function __construct($fromDate = null, $toDate = null, $filterType = null, $search = null, $paymentMethod = null, $insuranceStatus = null)
+    public function __construct($fromDate = null, $toDate = null, $filterType = null, $search = null, $paymentMethod = null, $insuranceStatus = null, $shift = null)
     {
         $this->fromDate = $fromDate;
         $this->toDate = $toDate;
@@ -25,6 +26,7 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
         $this->search = $search;
         $this->paymentMethod = $paymentMethod;
         $this->insuranceStatus = $insuranceStatus;
+        $this->shift = $shift;
     }
 
     public function query()
@@ -35,6 +37,8 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             })
             ->when($this->fromDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '>=', $this->fromDate))
             ->when($this->toDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '<=', $this->toDate))
+            ->when($this->shift === 'morning', fn($query) => $query->whereTime('consultation_revenues.paid_at', '<', '15:00:00'))
+            ->when($this->shift === 'evening', fn($query) => $query->whereTime('consultation_revenues.paid_at', '>=', '15:00:00'))
             ->when($this->filterType === 'payment', fn($query) => $query->where('consultation_revenues.movement_type', 'payment'))
             ->when($this->filterType === 'refund', fn($query) => $query->where('consultation_revenues.movement_type', 'refund'))
             ->when($this->filterType === 'appointment_paid', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'paid')))
@@ -95,6 +99,7 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
         $headings = [
             'رقم الحركة',
             'تاريخ الحركة',
+            'فترة الدوام',
             'المريض',
             'الطبيب',
             'القسم',
@@ -127,10 +132,12 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
         $actualPaid = $row->patient_paid_amount;
         $totalTariff = (float)$row->total_amount;
         $insuranceShare = (float)$row->insurance_share_amount;
+        $shiftLabel = $row->paid_at ? ($row->paid_at->format('H:i:s') < '15:00:00' ? 'صباحي' : 'مسائي') : '—';
 
         $data = [
             $row->id,
             optional($row->paid_at)->format('Y-m-d H:i:s'),
+            $shiftLabel,
             optional($row->appointment?->patient?->user)->name,
             optional($row->appointment?->doctor?->user)->name,
             optional($row->department)->name,

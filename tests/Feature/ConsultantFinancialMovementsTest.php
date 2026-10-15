@@ -192,12 +192,117 @@ class ConsultantFinancialMovementsTest extends TestCase
         $responseCash->assertDontSee('REC-INS-2001');
     }
 
+    public function test_financial_movements_filters_by_morning_and_evening_shift()
+    {
+        $patientUser = User::factory()->create(['name' => 'مريض الشيفتات']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'name' => 'مريض الشيفتات',
+            'gender' => 'male',
+            'birth_date' => '1992-02-02',
+            'phone' => '07733333333',
+        ]);
+
+        $appointmentMorning = Appointment::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'appointment_date' => now()->toDateString(),
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'consultation_fee' => 25000,
+        ]);
+
+        $morningTime = now()->setTime(10, 30, 0); // 10:30 AM
+        $paymentMorning = Payment::create([
+            'appointment_id' => $appointmentMorning->id,
+            'patient_id' => $patient->id,
+            'amount' => 25000,
+            'total_amount' => 25000,
+            'insurance_share' => 0,
+            'status' => 'completed',
+            'payment_method' => 'cash',
+            'paid_at' => $morningTime,
+            'receipt_number' => 'REC-MORNING-10',
+        ]);
+
+        ConsultationRevenue::create([
+            'appointment_id' => $appointmentMorning->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'payment_id' => $paymentMorning->id,
+            'total_amount' => 25000,
+            'doctor_share' => 20000,
+            'hospital_share' => 5000,
+            'doctor_percentage' => 80,
+            'payment_method' => 'cash',
+            'movement_type' => 'payment',
+            'paid_at' => $morningTime,
+            'receipt_number' => 'REC-MORNING-10',
+        ]);
+
+        $appointmentEvening = Appointment::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'appointment_date' => now()->toDateString(),
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'consultation_fee' => 25000,
+        ]);
+
+        $eveningTime = now()->setTime(17, 45, 0); // 05:45 PM
+        $paymentEvening = Payment::create([
+            'appointment_id' => $appointmentEvening->id,
+            'patient_id' => $patient->id,
+            'amount' => 25000,
+            'total_amount' => 25000,
+            'insurance_share' => 0,
+            'status' => 'completed',
+            'payment_method' => 'cash',
+            'paid_at' => $eveningTime,
+            'receipt_number' => 'REC-EVENING-17',
+        ]);
+
+        ConsultationRevenue::create([
+            'appointment_id' => $appointmentEvening->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'payment_id' => $paymentEvening->id,
+            'total_amount' => 25000,
+            'doctor_share' => 20000,
+            'hospital_share' => 5000,
+            'doctor_percentage' => 80,
+            'payment_method' => 'cash',
+            'movement_type' => 'payment',
+            'paid_at' => $eveningTime,
+            'receipt_number' => 'REC-EVENING-17',
+        ]);
+
+        // Filter morning: should see REC-MORNING-10 and not REC-EVENING-17
+        $responseMorning = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements', [
+            'shift' => 'morning',
+        ]));
+        $responseMorning->assertStatus(200);
+        $responseMorning->assertSee('REC-MORNING-10');
+        $responseMorning->assertDontSee('REC-EVENING-17');
+
+        // Filter evening: should see REC-EVENING-17 and not REC-MORNING-10
+        $responseEvening = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements', [
+            'shift' => 'evening',
+        ]));
+        $responseEvening->assertStatus(200);
+        $responseEvening->assertSee('REC-EVENING-17');
+        $responseEvening->assertDontSee('REC-MORNING-10');
+    }
+
     public function test_export_financial_movements_works_with_filters()
     {
         $response = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements.export', [
             'from_date' => now()->subDays(7)->toDateString(),
             'to_date' => now()->toDateString(),
             'insurance_status' => 'all',
+            'shift' => 'morning',
         ]));
 
         $response->assertStatus(200);
