@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تقرير الحركات المالية للعيادات الاستشارية والسونار - مستشفى الأهلي التخصصي</title>
+    <title>تقرير الحركات المالية للعيادات الاستشارية والسونار - مستشفى الكفاءات الأهلي</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -503,19 +503,19 @@
             <!-- Header -->
             <div class="report-header">
                 <div class="header-hospital-ar">
-                    <h2>جمهورية العراق - وزارة الصحة</h2>
-                    <h4>مستشفى الأهلي التخصصي للجراحة العامة</h4>
-                    <p>قسم الإدارة المالية والتدقيق الحسابي</p>
+                    <h2>مستشفى الكفاءات الأهلي</h2>
+                    <h4>قسم الإدارة المالية والتدقيق الحسابي</h4>
+                    <p>العيادات الاستشارية والتخصصية وفحوصات السونار</p>
                 </div>
 
                 <div class="header-logo">
-                    <img src="{{ asset('images/1.jpg') }}" alt="شعار المستشفى">
+                    <img src="{{ asset('images/1.jpg') }}" alt="شعار مستشفى الكفاءات الأهلي">
                 </div>
 
                 <div class="header-hospital-en">
-                    <h2>Republic of Iraq - Ministry of Health</h2>
-                    <h4>Al-Ahli Specialized Hospital</h4>
-                    <p>Financial Audit & Revenue Department</p>
+                    <h2>Al-Kafaat Private Hospital</h2>
+                    <h4>Financial Management & Audit Dept.</h4>
+                    <p>Consultant Clinics & Diagnostic Ultrasound</p>
                 </div>
             </div>
 
@@ -738,9 +738,9 @@
             <!-- Official Hospital Stamp -->
             <div class="stamp-section">
                 <div class="stamp-circle">
-                    <span>مستشفى الأهلي</span>
-                    <span>قسم الحسابات</span>
-                    <span style="font-size: 8.5px; margin: 1px 0;">والتدقيق المالي</span>
+                    <span>مستشفى الكفاءات</span>
+                    <span style="font-weight: 900; margin: 1px 0;">الأهلي</span>
+                    <span style="font-size: 8px;">قسم التدقيق المالي</span>
                     <span style="font-size: 7.5px; color: #0d9488;">★ معتمد رسمياً ★</span>
                 </div>
             </div>
@@ -754,7 +754,7 @@
                 </div>
                 <div class="sig-block">
                     <div class="sig-title">المدير المالي / الإدارة</div>
-                    <div class="sig-sub">مستشفى الأهلي التخصصي</div>
+                    <div class="sig-sub">مستشفى الكفاءات الأهلي</div>
                     <div class="sig-line">الختم والمصادقة</div>
                 </div>
             </div>
@@ -764,7 +764,7 @@
     <!-- Script to Generate QR Code -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var qrText = "مستشفى الأهلي التخصصي - تقرير الحركات المالية للاستشارية\n" +
+            var qrText = "مستشفى الكفاءات الأهلي - تقرير الحركات المالية للاستشارية\n" +
                          "المرجع: REF-FIN-{{ now()->format('Ymd-His') }}\n" +
                          "الفترة: {{ $fromDate ?? 'البداية' }} إلى {{ $toDate ?? 'الآن' }}\n" +
                          "الصافي: {{ number_format($netTotal, 2) }} IQD\n" +

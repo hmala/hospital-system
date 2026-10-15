@@ -498,7 +498,7 @@ class ConsultantFinancialMovementsTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        $response->assertSee('مستشفى الأهلي التخصصي للجراحة العامة');
+        $response->assertSee('مستشفى الكفاءات الأهلي');
         $response->assertSee('تقرير الحركات المالية للعيادات الاستشارية والسونار');
         $response->assertSee('رمز التحقق الإلكتروني المعتمد');
         $response->assertSee('المستلم نقداً بالصندوق');

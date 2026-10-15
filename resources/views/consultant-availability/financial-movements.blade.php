@@ -143,7 +143,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body" id="print-area">
                     <div class="d-none d-print-block mb-4 text-center">
-                        <h2>مستشفى الأهلي</h2>
+                        <h2>مستشفى الكفاءات الأهلي</h2>
                         <h4>تقرير الحركات المالية للعيادات الاستشارية</h4>
                         <div class="mt-2">
                             <span>تاريخ الطباعة: {{ now()->format('Y-m-d H:i') }}</span>
