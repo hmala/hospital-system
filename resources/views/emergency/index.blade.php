@@ -162,23 +162,22 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="table-responsive" style="overflow: visible">
-                        <table class="table table-hover text-center">
+                        <table class="table table-hover text-center align-middle">
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th>المريض</th>
-                                    <th>نتائج التحاليل</th>
-                                    <th>نتائج الأشعة</th>
+                                    <th class="text-start">المريض</th>
+                                    <th>الحالة</th>
                                     <th>الطبيب المسؤول</th>
                                     <th>وقت الدخول</th>
-                                    <th>الإجراءات</th>
+                                    <th>الإجراء</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($emergencies as $emergency)
-                                <tr class="{{ $emergency->status === 'discharged' ? ($emergency->discharge_type === 'against_medical_advice' ? 'table-secondary opacity-75' : 'table-light') : ($emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : '')))) }}">
+                                <tr class="{{ $emergency->status === 'discharged' ? ($emergency->discharge_type === 'against_medical_advice' ? 'table-secondary opacity-75' : ($emergency->discharge_type === 'transferred_to_consultation' ? 'table-info table-opacity-25' : 'table-light')) : ($emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : '')))) }}">
                                     <td>{{ $loop->iteration }}</td>
-                                    <td>
+                                    <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center">
                                                 <span class="text-white fw-bold">
@@ -209,82 +208,10 @@
                                                 @endif
                                                 <br>
                                                 <small class="text-muted">
-                                                    رقم الطوارئ: {{ $emergency->id }}
+                                                    رقم الطوارئ: #{{ $emergency->id }}
                                                 </small>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td>
-                                        @php
-                                            $latestCompletedLab = $emergency->labRequests
-                                                ->where('status', 'completed')
-                                                ->sortByDesc('completed_at')
-                                                ->first();
-                                        @endphp
-                                        @if($latestCompletedLab)
-                                            <span class="badge bg-success mb-2 d-inline-block">مكتمل</span>
-                                            @php
-                                                $labResults = $latestCompletedLab->labTests
-                                                    ->filter(function($test){ return !empty(trim((string)($test->pivot->result ?? ''))); })
-                                                    ->values();
-                                            @endphp
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-success d-block"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#labResultsModal-{{ $emergency->id }}"
-                                                    title="عرض نتائج التحاليل">
-                                                <i class="fas fa-vial me-1"></i>
-                                                عرض النتائج
-                                            </button>
-                                            @if($labResults->count())
-                                                <small class="text-muted d-block mt-1">{{ $labResults->count() }} نتيجة</small>
-                                            @endif
-                                        @elseif($emergency->labRequests->whereIn('status', ['pending', 'in_progress'])->count() > 0)
-                                            <span class="badge bg-warning text-dark">قيد التنفيذ</span>
-                                        @else
-                                            <small class="text-muted">لا يوجد طلب</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @php
-                                            $latestCompletedRadiology = $emergency->radiologyRequests
-                                                ->where('status', 'completed')
-                                                ->sortByDesc('completed_at')
-                                                ->first();
-                                        @endphp
-                                        @if($latestCompletedRadiology)
-                                            <span class="badge bg-success mb-2 d-inline-block">مكتمل</span>
-                                            @php
-                                                $radiologyResults = $latestCompletedRadiology->radiologyTypes
-                                                    ->filter(function($type){ return !empty(trim((string)($type->pivot->result ?? ''))); })
-                                                    ->values();
-                                            @endphp
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-info d-block"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#radiologyResultsModal-{{ $emergency->id }}"
-                                                    title="عرض نتائج الأشعة">
-                                                <i class="fas fa-x-ray me-1"></i>
-                                                عرض النتائج
-                                            </button>
-                                            @if($radiologyResults->count())
-                                                <small class="text-muted d-block mt-1">{{ $radiologyResults->count() }} نتيجة</small>
-                                            @endif
-                                        @elseif($emergency->radiologyRequests->whereIn('status', ['pending', 'in_progress'])->count() > 0)
-                                            <span class="badge bg-warning text-dark">قيد التنفيذ</span>
-                                        @else
-                                            <small class="text-muted">لا يوجد طلب</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($emergency->doctor)
-                                            <small>{{ $emergency->doctor->user->name ?? 'غير محدد' }}</small>
-                                        @else
-                                            <span class="text-muted">غير محدد</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <small>{{ $emergency->created_at->format('d/m/Y H:i') }}</small>
                                     </td>
                                     <td>
                                         @php
@@ -295,36 +222,24 @@
                                         @if($emergency->requires_surgery && $surgeryBooking)
                                             <div class="d-flex flex-column align-items-center">
                                                 <span class="badge bg-danger text-white px-2 py-1 shadow-sm" title="تم حجز العملية بنجاح">
-                                                    <i class="fas fa-procedures me-1"></i> تم حجز العملية #{{ $surgeryBooking->id }}
+                                                    <i class="fas fa-procedures me-1"></i> محول لعمليات #{{ $surgeryBooking->id }}
                                                 </span>
-                                                <div class="d-flex gap-1 align-items-center mt-1">
-                                                    @if($surgeryBooking->room)
-                                                        <span class="badge bg-primary px-1" style="font-size: 0.72rem;">
-                                                            <i class="fas fa-bed me-1"></i> غ {{ $surgeryBooking->room->room_number }}
-                                                        </span>
-                                                    @endif
-                                                    <small class="text-muted" style="font-size: 0.75rem;">
-                                                        <i class="fas fa-calendar-check text-success me-1"></i>
-                                                        {{ $surgeryBooking->scheduled_date ? $surgeryBooking->scheduled_date->format('Y-m-d') : '' }}
+                                                @if($surgeryBooking->room)
+                                                    <small class="text-muted mt-1" style="font-size: 0.75rem;">
+                                                        غ {{ $surgeryBooking->room->room_number }}
                                                     </small>
-                                                </div>
+                                                @endif
                                             </div>
                                         @elseif($emergency->requires_admission && $bedBooking)
                                             <div class="d-flex flex-column align-items-center">
-                                                <span class="badge bg-warning text-dark px-2 py-1 shadow-sm fw-bold" title="تم حجز الرقود والسرير بنجاح">
-                                                    <i class="fas fa-bed me-1"></i> تم حجز الرقود
+                                                <span class="badge bg-primary text-white px-2 py-1 shadow-sm fw-bold" title="تم حجز الرقود والسرير بنجاح">
+                                                    <i class="fas fa-bed me-1"></i> محول لرقود
                                                 </span>
-                                                <div class="d-flex gap-1 align-items-center mt-1">
-                                                    @if($bedBooking->room)
-                                                        <span class="badge bg-primary px-1" style="font-size: 0.72rem;">
-                                                            <i class="fas fa-door-open me-1"></i> غ {{ $bedBooking->room->room_number }}
-                                                        </span>
-                                                    @endif
-                                                    <small class="text-muted" style="font-size: 0.75rem;">
-                                                        <i class="fas fa-calendar-check text-success me-1"></i>
-                                                        {{ $bedBooking->scheduled_date ? \Carbon\Carbon::parse($bedBooking->scheduled_date)->format('Y-m-d') : '' }}
+                                                @if($bedBooking->room)
+                                                    <small class="text-muted mt-1" style="font-size: 0.75rem;">
+                                                        غ {{ $bedBooking->room->room_number }}
                                                     </small>
-                                                </div>
+                                                @endif
                                             </div>
                                         @elseif($emergency->status === 'discharged')
                                             <div class="d-flex flex-column align-items-center">
@@ -347,103 +262,43 @@
                                                 @endif
                                                 <small class="text-muted mt-1" style="font-size: 0.75rem;">
                                                     <i class="fas fa-clock text-secondary me-1"></i>
-                                                    {{ $emergency->discharge_time ? $emergency->discharge_time->format('H:i') : '' }}
+                                                    خروج: {{ $emergency->discharge_time ? $emergency->discharge_time->format('H:i') : '' }}
                                                 </small>
-                                                <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-outline-secondary py-0 px-2 mt-1 text-nowrap" style="font-size: 0.72rem;" title="عرض إضبارة وسجل الحالة">
-                                                    <i class="fas fa-file-medical me-1"></i> عرض الملف
-                                                </a>
                                             </div>
                                         @else
-                                            <div class="d-flex align-items-center justify-content-center">
-                                                @php
-                                                    $pendingSubCount = $emergency->prescriptions
-                                                        ->flatMap(fn($p) => $p->items)
-                                                        ->where('substitution_status', 'pending_approval')
-                                                        ->count();
-                                                @endphp
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm {{ $pendingSubCount > 0 ? 'btn-danger' : ($emergency->status === 'transferred' ? 'btn-info text-dark' : 'btn-outline-secondary') }} dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="{{ $pendingSubCount > 0 ? 'يوجد طلب بديل دوائي بانتظار الموافقة' : 'إجراءات أخرى' }}">
-                                                        <i class="fas fa-ellipsis-v"></i>
-                                                        @if($emergency->status === 'transferred')
-                                                            <span class="small fw-bold ms-1">{{ $emergency->requires_surgery ? 'محول لعمليات' : 'محول لرقود' }}</span>
-                                                        @endif
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 200px;">
-                                                        <li>
-                                                            <a class="dropdown-item d-flex align-items-center text-start text-success fw-bold" href="{{ route('emergency.show', $emergency) }}">
-                                                                <i class="fas fa-file-medical text-success me-2"></i>
-                                                                <span>فتح ملف الكشف</span>
-                                                            </a>
-                                                        </li>
-                                                        @if($emergency->status === 'transferred')
-                                                            <li><hr class="dropdown-divider"></li>
-                                                            <li class="px-3 py-1 text-center bg-light border-bottom mb-1">
-                                                                <small class="text-primary fw-bold">
-                                                                    <i class="fas fa-clock me-1"></i> بانتظار حجز الاستعلامات...
-                                                                </small>
-                                                            </li>
-                                                        @endif
-                                                        @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
-                                                                @csrf
-                                                                <button type="submit" class="dropdown-item d-flex align-items-center text-start text-danger">
-                                                                    <i class="fas fa-procedures me-2 text-danger"></i>
-                                                                    <span>تحويل إلى العمليات</span>
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        <li>
-                                                            <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
-                                                                @csrf
-                                                                <button type="submit" class="dropdown-item d-flex align-items-center text-start text-primary">
-                                                                    <i class="fas fa-bed me-2 text-primary"></i>
-                                                                    <span>تحويل رقود</span>
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        <li>
-                                                            <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تحويل المريض إلى العيادات الاستشارية وتوثيق خروجه من الطوارئ؟')">
-                                                                @csrf
-                                                                <input type="hidden" name="discharge_type" value="transferred_to_consultation">
-                                                                <button type="submit" class="dropdown-item d-flex align-items-center text-start text-info">
-                                                                    <i class="fas fa-clinic-medical me-2 text-info"></i>
-                                                                    <span class="fw-bold">تحويل للاستشارية</span>
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض بحالة (خرج متعافي)؟')">
-                                                                @csrf
-                                                                <input type="hidden" name="discharge_type" value="recovered">
-                                                                <button type="submit" class="dropdown-item d-flex align-items-center text-start text-success">
-                                                                    <i class="fas fa-user-check me-2 text-success"></i>
-                                                                    <span>خرج متعافي</span>
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        <li>
-                                                            <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
-                                                                @csrf
-                                                                <input type="hidden" name="discharge_type" value="against_medical_advice">
-                                                                <button type="submit" class="dropdown-item d-flex align-items-center text-start text-warning">
-                                                                    <i class="fas fa-user-shield me-2 text-warning"></i>
-                                                                    <span>خرج على مسؤوليته</span>
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        @endif
-                                                    </ul>
-                                                </div>
-                                            </div>
+                                            <span class="badge bg-info text-dark px-2 py-1 shadow-sm">
+                                                <i class="fas fa-spinner fa-spin me-1"></i> قيد المتابعة
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($emergency->doctor)
+                                            <span class="fw-bold text-dark"><i class="fas fa-user-md text-primary me-1"></i>{{ $emergency->doctor->user->name ?? $emergency->doctor->name ?? 'غير محدد' }}</span>
+                                        @else
+                                            <span class="text-muted">غير محدد</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ $emergency->created_at->format('H:i') }}</div>
+                                        <small class="text-muted">{{ $emergency->created_at->format('Y-m-d') }}</small>
+                                    </td>
+                                    <td>
+                                        @if($emergency->status === 'discharged')
+                                            <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-outline-secondary fw-bold shadow-sm d-inline-flex align-items-center" title="عرض ملف الحالة وسجل الفحص">
+                                                <i class="fas fa-file-medical me-1"></i>
+                                                <span>فتح ملف الكشف</span>
+                                            </a>
+                                        @else
+                                            <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-success fw-bold shadow-sm d-inline-flex align-items-center" title="فتح محطة كشف الطوارئ">
+                                                <i class="fas fa-stethoscope me-1"></i>
+                                                <span>فتح ملف الكشف</span>
+                                            </a>
                                         @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4">
+                                    <td colspan="6" class="text-center py-4">
                                         <i class="fas fa-ambulance fa-3x text-muted mb-3"></i>
                                         <p class="text-muted">لا توجد حالات طوارئ حالياً</p>
                                     </td>
