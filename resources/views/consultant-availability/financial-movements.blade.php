@@ -31,10 +31,10 @@
                             <label for="filter_type" class="form-label fw-bold small">نوع الحركة</label>
                             <select id="filter_type" name="filter_type" class="form-select form-select-sm">
                                 <option value="">كل الحركات</option>
-                                <option value="payment" {{ $filterType === 'payment' ? 'selected' : '' }}>حركات قبض</option>
+                                <option value="payment" {{ $filterType === 'payment' ? 'selected' : '' }}>حركات قبض (النشطة فقط)</option>
                                 <option value="refund" {{ $filterType === 'refund' ? 'selected' : '' }}>حركات استرجاع</option>
                                 <option value="appointment_paid" {{ $filterType === 'appointment_paid' ? 'selected' : '' }}>المواعيد المدفوعة بالكامل</option>
-                                <option value="appointment_refunded" {{ $filterType === 'appointment_refunded' ? 'selected' : '' }}>المواعيد المدفوعة ثم المسترجعة</option>
+                                <option value="appointment_refunded" {{ $filterType === 'appointment_refunded' ? 'selected' : '' }}>المواعيد المسترجعة والملغاة</option>
                             </select>
                         </div>
                         <div class="col-md-2 col-sm-6">
@@ -82,9 +82,9 @@
                             <a href="{{ route('consultant-availability.financial-movements.export', request()->all()) }}" class="btn btn-success btn-sm fw-bold">
                                 <i class="fas fa-file-excel me-1"></i>تصدير إكسل
                             </a>
-                            <button type="button" onclick="window.print()" class="btn btn-info btn-sm text-white fw-bold">
-                                <i class="fas fa-print me-1"></i>طباعة
-                            </button>
+                            <a href="{{ route('consultant-availability.financial-movements.print', request()->query()) }}" target="_blank" class="btn btn-info btn-sm text-white fw-bold">
+                                <i class="fas fa-print me-1"></i>طباعة التقرير الرسمي
+                            </a>
                         </div>
                     </form>
                 </div>
@@ -188,13 +188,14 @@
                                         @php
                                             $actualPaid = $payment->patient_paid_amount;
                                             $isRefund = $payment->movement_type === 'refund' || $actualPaid < 0;
+                                            $isCancelledOrRefunded = $payment->is_refunded_or_cancelled;
                                             $isInsurance = $payment->is_insurance;
                                             $insuranceShare = $payment->insurance_share_amount;
                                             $totalTariff = abs($payment->total_amount);
                                             $isMorning = $payment->paid_at && $payment->paid_at->format('H:i:s') < '15:00:00';
                                             $isUltrasound = $payment->payment_type === 'ultrasound';
                                         @endphp
-                                        <tr>
+                                        <tr class="{{ $isCancelledOrRefunded && !$isRefund ? 'table-light opacity-75' : '' }}">
                                             <td>{{ $payments->firstItem() + $loop->index }}</td>
                                             <td>
                                                 <div class="fw-semibold text-dark">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d') : '-' }}</div>
@@ -227,9 +228,18 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex flex-column">
-                                                    <span class="fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}" style="font-size: 1rem;">
-                                                        {{ number_format(abs($actualPaid), 2) }} IQD
-                                                    </span>
+                                                    @if($isCancelledOrRefunded && !$isRefund)
+                                                        <span class="fw-bold text-muted text-decoration-line-through" style="font-size: 0.95rem;" title="تم إلغاء الحجز واسترجاع المبلغ">
+                                                            {{ number_format(abs($actualPaid), 2) }} IQD
+                                                        </span>
+                                                        <span class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary border-opacity-50 mt-1" style="font-size: 0.65rem;">
+                                                            <i class="fas fa-undo-alt me-1"></i>ملغى ومسترجع
+                                                        </span>
+                                                    @else
+                                                        <span class="fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}" style="font-size: 1rem;">
+                                                            {{ number_format(abs($actualPaid), 2) }} IQD
+                                                        </span>
+                                                    @endif
                                                     @if($isInsurance)
                                                         <div class="mt-1">
                                                             <span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-75" style="font-size: 0.68rem;">
@@ -254,9 +264,13 @@
                                             @endif
                                             <td>
                                                 @if($isRefund)
-                                                    <span class="badge bg-danger">استرجاع</span>
+                                                    <span class="badge bg-danger"><i class="fas fa-undo-alt me-1"></i>استرجاع</span>
+                                                @elseif($isCancelledOrRefunded)
+                                                    <span class="badge bg-secondary text-white" title="تم إلغاء الحجز واسترجاع المبلغ">
+                                                        <i class="fas fa-ban me-1"></i>قبض (ملغى ومسترجع)
+                                                    </span>
                                                 @else
-                                                    <span class="badge bg-success">قبض</span>
+                                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>قبض</span>
                                                 @endif
                                             </td>
                                             <td>

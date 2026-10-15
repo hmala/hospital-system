@@ -405,4 +405,103 @@ class ConsultantFinancialMovementsTest extends TestCase
         $response->assertSee('المسترجع نقداً للمرضى');
         $response->assertSee('الصافي النقدي الفعلي');
     }
+
+    public function test_refunded_or_cancelled_appointment_payment_is_hidden_from_payment_filter_and_displayed_with_refunded_badge()
+    {
+        $patientUser = User::factory()->create(['name' => 'فراس رزاق']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'name' => 'فراس رزاق',
+            'gender' => 'male',
+            'birth_date' => '1988-02-02',
+            'phone' => '07733333333',
+        ]);
+
+        $appointment = Appointment::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'appointment_date' => now()->toDateString(),
+            'status' => 'cancelled',
+            'payment_status' => 'refunded',
+            'consultation_fee' => 35000,
+        ]);
+
+        $payment = Payment::create([
+            'appointment_id' => $appointment->id,
+            'patient_id' => $patient->id,
+            'amount' => 35000,
+            'total_amount' => 35000,
+            'insurance_share' => 0,
+            'status' => 'completed',
+            'payment_method' => 'cash',
+            'paid_at' => now(),
+            'receipt_number' => 'REC-PAY-CANCELLED',
+        ]);
+
+        ConsultationRevenue::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'payment_id' => $payment->id,
+            'total_amount' => 35000,
+            'doctor_share' => 28000,
+            'hospital_share' => 7000,
+            'payment_method' => 'cash',
+            'movement_type' => 'payment',
+            'paid_at' => now(),
+            'receipt_number' => 'REC-PAY-CANCELLED',
+        ]);
+
+        ConsultationRevenue::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'payment_id' => null,
+            'total_amount' => -35000,
+            'doctor_share' => -28000,
+            'hospital_share' => -7000,
+            'payment_method' => 'cash',
+            'movement_type' => 'refund',
+            'paid_at' => now(),
+            'receipt_number' => 'REC-REFUND-001',
+        ]);
+
+        // 1. When filtering by 'payment' (حركات قبض النشطة), the cancelled payment should be hidden
+        $responsePayment = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements', [
+            'filter_type' => 'payment',
+        ]));
+        $responsePayment->assertStatus(200);
+        $responsePayment->assertDontSee('REC-PAY-CANCELLED');
+
+        // 2. When viewing all movements, it appears with 'قبض (ملغى ومسترجع)'
+        $responseAll = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements'));
+        $responseAll->assertStatus(200);
+        $responseAll->assertSee('REC-PAY-CANCELLED');
+        $responseAll->assertSee('قبض (ملغى ومسترجع)');
+        $responseAll->assertSee('REC-REFUND-001');
+        $responseAll->assertSee('استرجاع');
+
+        // 3. When filtering by 'appointment_refunded', it appears
+        $responseRefunded = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements', [
+            'filter_type' => 'appointment_refunded',
+        ]));
+        $responseRefunded->assertStatus(200);
+        $responseRefunded->assertSee('REC-PAY-CANCELLED');
+    }
+
+    public function test_print_financial_movements_renders_hospital_form_report()
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements.print', [
+            'from_date' => now()->toDateString(),
+            'to_date' => now()->toDateString(),
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('مستشفى الأهلي التخصصي للجراحة العامة');
+        $response->assertSee('تقرير الحركات المالية للعيادات الاستشارية والسونار');
+        $response->assertSee('رمز التحقق الإلكتروني المعتمد');
+        $response->assertSee('المستلم نقداً بالصندوق');
+        $response->assertSee('الصافي النقدي الفعلي');
+    }
 }

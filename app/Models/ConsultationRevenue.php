@@ -131,4 +131,16 @@ class ConsultationRevenue extends Model
         }
         return 'نقداً (كاش)';
     }
+
+    /**
+     * هل تم إلغاء الحجز أو استرجاع مبلغه
+     */
+    public function getIsRefundedOrCancelledAttribute(): bool
+    {
+        if ($this->appointment) {
+            return in_array($this->appointment->payment_status, ['refunded', 'cancelled'])
+                || $this->appointment->status === 'cancelled';
+        }
+        return false;
+    }
 }

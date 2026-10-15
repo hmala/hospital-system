@@ -498,16 +498,24 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($filterType === 'payment') {
-            $query->where('consultation_revenues.movement_type', 'payment');
+            $query->where('consultation_revenues.movement_type', 'payment')
+                  ->where(function ($q) {
+                      $q->whereDoesntHave('appointment', function ($aq) {
+                          $aq->whereIn('payment_status', ['refunded', 'cancelled'])
+                             ->orWhere('status', 'cancelled');
+                      });
+                  });
         } elseif ($filterType === 'refund') {
             $query->where('consultation_revenues.movement_type', 'refund');
         } elseif ($filterType === 'appointment_paid') {
             $query->whereHas('appointment', function ($q) {
-                $q->where('payment_status', 'paid');
+                $q->where('payment_status', 'paid')
+                  ->where('status', '!=', 'cancelled');
             });
         } elseif ($filterType === 'appointment_refunded') {
             $query->whereHas('appointment', function ($q) {
-                $q->where('payment_status', 'refunded');
+                $q->where('payment_status', 'refunded')
+                  ->orWhere('status', 'cancelled');
             });
         }
 
@@ -592,6 +600,180 @@ class ConsultantAvailabilityController extends Controller
         $payments = $query->select('consultation_revenues.*')->orderBy('consultation_revenues.paid_at', 'desc')->paginate(25)->appends($request->query());
 
         return view('consultant-availability.financial-movements', compact(
+            'payments',
+            'totalReceived',
+            'totalRefunded',
+            'netTotal',
+            'totalCount',
+            'fromDate',
+            'toDate',
+            'filterType',
+            'search',
+            'paymentMethod',
+            'insuranceStatus',
+            'shift',
+            'serviceCategory'
+        ));
+    }
+
+    /**
+     * طباعة التقرير المالي الرسمي للعيادات الاستشارية والسونار بفورمة المستشفى
+     */
+    public function printFinancialMovements(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('view consultant financial movements'))) {
+            abort(403, 'غير مصرح لك بطباعة تقرير الحركات المالية للاستشارية');
+        }
+
+        $query = ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment', 'doctor.user', 'patient.user'])
+            ->where(function ($q) {
+                $q->whereHas('appointment.doctor', function ($dq) {
+                    $dq->where('type', 'consultant')
+                       ->orWhere('type', 'sonar')
+                       ->orWhere('specialization', 'LIKE', '%سونار%');
+                })->orWhere('consultation_revenues.payment_type', 'ultrasound');
+            });
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+        $filterType = $request->query('filter_type');
+        $search = $request->query('search');
+        $paymentMethod = $request->query('payment_method');
+        $insuranceStatus = $request->query('insurance_status');
+        $shift = $request->query('shift');
+        $serviceCategory = $request->query('service_category');
+
+        if ($fromDate) {
+            $query->whereDate('consultation_revenues.paid_at', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('consultation_revenues.paid_at', '<=', $toDate);
+        }
+
+        if ($serviceCategory === 'consultation') {
+            $query->where(function($q) {
+                $q->whereNull('consultation_revenues.payment_type')
+                  ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
+            });
+        } elseif ($serviceCategory === 'ultrasound') {
+            $query->where('consultation_revenues.payment_type', 'ultrasound');
+        }
+
+        if ($shift === 'morning') {
+            $query->whereTime('consultation_revenues.paid_at', '<', '15:00:00');
+        } elseif ($shift === 'evening') {
+            $query->whereTime('consultation_revenues.paid_at', '>=', '15:00:00');
+        }
+
+        if ($filterType === 'payment') {
+            $query->where('consultation_revenues.movement_type', 'payment')
+                  ->where(function ($q) {
+                      $q->whereDoesntHave('appointment', function ($aq) {
+                          $aq->whereIn('payment_status', ['refunded', 'cancelled'])
+                             ->orWhere('status', 'cancelled');
+                      });
+                  });
+        } elseif ($filterType === 'refund') {
+            $query->where('consultation_revenues.movement_type', 'refund');
+        } elseif ($filterType === 'appointment_paid') {
+            $query->whereHas('appointment', function ($q) {
+                $q->where('payment_status', 'paid')
+                  ->where('status', '!=', 'cancelled');
+            });
+        } elseif ($filterType === 'appointment_refunded') {
+            $query->whereHas('appointment', function ($q) {
+                $q->where('payment_status', 'refunded')
+                  ->orWhere('status', 'cancelled');
+            });
+        }
+
+        if ($paymentMethod) {
+            $query->where('consultation_revenues.payment_method', $paymentMethod);
+        }
+
+        if ($insuranceStatus) {
+            if ($insuranceStatus === 'insurance') {
+                $query->where(function($sub) {
+                    $sub->whereHas('appointment', function ($q) {
+                        $q->whereIn('insurance_type', ['hi', 'moi'])
+                          ->orWhere(function($sq) {
+                              $sq->whereNotNull('insurance_type')
+                                 ->whereNotIn('insurance_type', ['none', '']);
+                          });
+                    })->orWhereHas('payment', function ($pq) {
+                        $pq->whereIn('insurance_type', ['hi', 'moi'])
+                           ->orWhere('insurance_share', '>', 0);
+                    });
+                });
+            } elseif ($insuranceStatus === 'cash') {
+                $query->where(function($sub) {
+                    $sub->where(function($sq) {
+                        $sq->whereHas('appointment', function ($q) {
+                            $q->whereNull('insurance_type')
+                              ->orWhere('insurance_type', 'none')
+                              ->orWhere('insurance_type', '');
+                        })->orWhereDoesntHave('appointment');
+                    })->where(function($pq) {
+                        $pq->whereHas('payment', function ($p) {
+                            $p->where(function($pp) {
+                                $pp->whereNull('insurance_type')
+                                   ->orWhere('insurance_type', 'none')
+                                   ->orWhere('insurance_type', '');
+                            })->where(function($pp) {
+                                $pp->whereNull('insurance_share')
+                                   ->orWhere('insurance_share', '<=', 0);
+                            });
+                        })->orWhereDoesntHave('payment');
+                    });
+                });
+            }
+        }
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('consultation_revenues.receipt_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
+                      $uq->where('name', 'like', '%' . $search . '%')
+                         ->orWhere('phone', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('patient.user', function($puq) use ($search) {
+                      $puq->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('phone', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
+        $totalsQuery = (clone $query)->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
+
+        $totalReceived = (float) (clone $totalsQuery)
+            ->where(function($q) {
+                $q->where('consultation_revenues.movement_type', 'payment')
+                  ->orWhere(function($sq) {
+                      $sq->whereNull('consultation_revenues.movement_type')->where('consultation_revenues.total_amount', '>=', 0);
+                  });
+            })
+            ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)'));
+
+        $totalRefunded = abs((float) (clone $totalsQuery)
+            ->where(function($q) {
+                $q->where('consultation_revenues.movement_type', 'refund')
+                  ->orWhere('consultation_revenues.total_amount', '<', 0);
+            })
+            ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)')));
+
+        $netTotal = $totalReceived - $totalRefunded;
+        $totalCount = (clone $query)->count();
+
+        // جلب السجلات للتقرير الرسمي بحد أقصى 500 سجل لضمان طباعة كافة السجلات
+        $payments = $query->select('consultation_revenues.*')
+            ->orderBy('consultation_revenues.paid_at', 'desc')
+            ->take(500)
+            ->get();
+
+        return view('consultant-availability.financial-movements-report', compact(
             'payments',
             'totalReceived',
             'totalRefunded',

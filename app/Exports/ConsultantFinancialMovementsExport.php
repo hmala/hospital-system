@@ -52,10 +52,18 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             ->when($this->toDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '<=', $this->toDate))
             ->when($this->shift === 'morning', fn($query) => $query->whereTime('consultation_revenues.paid_at', '<', '15:00:00'))
             ->when($this->shift === 'evening', fn($query) => $query->whereTime('consultation_revenues.paid_at', '>=', '15:00:00'))
-            ->when($this->filterType === 'payment', fn($query) => $query->where('consultation_revenues.movement_type', 'payment'))
+            ->when($this->filterType === 'payment', function($query) {
+                $query->where('consultation_revenues.movement_type', 'payment')
+                      ->where(function ($q) {
+                          $q->whereDoesntHave('appointment', function ($aq) {
+                              $aq->whereIn('payment_status', ['refunded', 'cancelled'])
+                                 ->orWhere('status', 'cancelled');
+                          });
+                      });
+            })
             ->when($this->filterType === 'refund', fn($query) => $query->where('consultation_revenues.movement_type', 'refund'))
-            ->when($this->filterType === 'appointment_paid', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'paid')))
-            ->when($this->filterType === 'appointment_refunded', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'refunded')))
+            ->when($this->filterType === 'appointment_paid', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'paid')->where('status', '!=', 'cancelled')))
+            ->when($this->filterType === 'appointment_refunded', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'refunded')->orWhere('status', 'cancelled')))
             ->when($this->paymentMethod, fn($query) => $query->where('consultation_revenues.payment_method', $this->paymentMethod))
             ->when($this->insuranceStatus === 'insurance', function($query) {
                 $query->where(function($sub) {
@@ -170,8 +178,12 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             $data[] = $row->hospital_share;
         }
 
+        $movementTypeLabel = $row->movement_type === 'refund'
+            ? 'استرجاع'
+            : ($row->is_refunded_or_cancelled ? 'قبض (ملغى ومسترجع)' : 'قبض');
+
         $data = array_merge($data, [
-            $row->movement_type === 'payment' ? 'قبض' : 'استرجاع',
+            $movementTypeLabel,
             $row->payment_method ?? 'cash',
             $row->receipt_number,
             $row->insurance_type_label,

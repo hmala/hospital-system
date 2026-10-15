@@ -57,6 +57,37 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 58: حجب وصولات القبض للمواعيد الملغاة والمسترجعة والتقرير المالي الرسمي بفورمة المستشفى Hide Cancelled Receipts & Official Hospital Form Financial Report)
+
+### Done
+- **حجب وصولات القبض للمواعيد الملغاة والمسترجعة من فلتر وصولات القبض (`filter_type=payment`)**:
+  * **الخلفية والدافع**: عند إلغاء حجز واسترجاع مبلغه (مثل حجز المريض فراس رزاق مع د. زياد طارق)، يبقى وصل القبض `REC-0012` ووصل الاسترجاع `REC-0013` محفوظين في قاعدة البيانات للتدقيق المالي وصندوق الكاشير، لكن وصل القبض كان يظهر عند تصفية «حركات قبض» كقيد قبض نشط اعتيادي.
+  * **تعديل الاستعلامات البرمجية (`ConsultantAvailabilityController` و `ConsultantFinancialMovementsExport`)**:
+    - تعديل استعلام فلتر «حركات قبض (النشطة فقط)» لاستثناء أي قيد مرتبط بموعد ملغى أو مسترجع (`payment_status in ('refunded', 'cancelled')` أو `status = 'cancelled'`).
+    - تحسين فلتر «المواعيد المسترجعة والملغاة» لإبرازها بدقة.
+  * **الواجهة وتصدير الإكسل**:
+    - إضافة محدد `is_refunded_or_cancelled` في نموذج [app/Models/ConsultationRevenue.php](file:///c:/wamp64/www/hospital-system/app/Models/ConsultationRevenue.php).
+    - في واجهة الحركات المالية [resources/views/consultant-availability/financial-movements.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/financial-movements.blade.php):
+      * إبراز القيود الملغاة والمسترجعة بوسام مميز رمادي `[ 🚫 قبض (ملغى ومسترجع) ]` مع شطب المبلغ وتوضيح `ملغى ومسترجع`.
+      * تعديل تسمية الخيار في القائمة المنسدلة إلى «حركات قبض (النشطة فقط)».
+    - تحديث تصدير الإكسل [app/Exports/ConsultantFinancialMovementsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) ليعكس الحالة بدقة `قبض (ملغى ومسترجع)`.
+- **التقرير المالي الرسمي بفورمة المستشفى (Official Hospital Form Financial Movements Report)**:
+  * بناء استمارة تقرير رسمي فاخرة [resources/views/consultant-availability/financial-movements-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/financial-movements-report.blade.php) مطابقة لفورمة تقرير الطوارئ (A4 Landscape):
+    - إطار مزدوج ملكي أخضر زمردي (`#0f766e` و `#99f6e4`) وعلامة مائية رسمية لشعار المستشفى (`images/1.jpg`).
+    - ترويسة رسمية ثنائية اللغة: جمهورية العراق - وزارة الصحة - مستشفى الأهلي التخصصي للجراحة العامة - قسم الإدارة المالية والتدقيق الحسابي.
+    - شريط عنوان أنيق مع رقم مرجعي مشفر `REF-FIN-{{ now() }}` وشارة نسخة الإدارة والتدقيق.
+    - بطاقة محددات التقرير (الفترة الزمنية، فترة الدوام، نوع الخدمة، نوع الحركة، التغطية، والمحاسب المنظم).
+    - بطاقات إحصائية مالية ملونة للمجاميع: المستلم نقداً (الدرج)، المسترجع نقداً للمرضى، الصافي النقدي الفعلي، وإجمالي القيود.
+    - جدول الحركات المالية الرسمي بتنسيق عالي الدقة يوضح تفاصيل كل قيد، شطب وملاحظات القيود الملغاة، وحصص الأطباء والمستشفى للمخولين.
+    - تذييل رسمي ثلاثي الأعمدة:
+      * رمز استجابة سريعة QR Code مولد برمجياً عبر مكتبة `qrcode.min.js` المحلية للتحقق من بيانات التقرير ومطابقته.
+      * الختم الدائري الرسمي لقسم الحسابات والتدقيق المالي بمستشفى الأهلي التخصصي.
+      * تواقيع المحاسب المنظم والمدير المالي / الإدارة للمصادقة والاعتماد.
+  * تسجيل مسار التقرير `consultant-availability.financial-movements.print` في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) والدالة `printFinancialMovements` في [app/Http/Controllers/ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php).
+  * ربط زر **[ 🖨️ طباعة التقرير الرسمي ]** في واجهة الحركات المالية ليفتح التقرير في نافذة جديدة مع شريط علوي للطباعة الفورية.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إضافة واجتياز اختبارات [tests/Feature/ConsultantFinancialMovementsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantFinancialMovementsTest.php): `8 passed (42 assertions)`.
+
 ## Session log (2026-10-15 — المرحلة 57: شمول السونار الخارجي المباشر ضمن الحركات المالية للاستشارية وفلتر نوع الخدمة وحصص الأطباء Direct External Ultrasound Integration into Consultant Financial Movements & Service Category Filter)
 
 ### Done
