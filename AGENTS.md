@@ -72,7 +72,7 @@ Consult these files before making changes or proposing fixes:
       * تعديل تسمية الخيار في القائمة المنسدلة إلى «حركات قبض (النشطة فقط)».
     - تحديث تصدير الإكسل [app/Exports/ConsultantFinancialMovementsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) ليعكس الحالة بدقة `قبض (ملغى ومسترجع)`.
 - **التقرير المالي الرسمي بفورمة المستشفى (Official Hospital Form Financial Movements Report)**:
-  * بناء استمارة تقرير رسمي فاخرة [resources/views/consultant-availability/financial-movements-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/financial-movements-report.blade.php) مطابقة لفورمة تقرير الطوارئ (A4 Landscape):
+  * بناء استمارة تقرير رسمي فاخرة [resources/views/consultant-availability/financial-movements-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/financial-movements-report.blade.php) مطابقة لفورمة تقرير الطوارئ (A4 Portrait - عمودي):
     - إطار مزدوج ملكي أخضر زمردي (`#0f766e` و `#99f6e4`) وعلامة مائية رسمية لشعار المستشفى (`images/1.jpg`).
     - ترويسة رسمية ثنائية اللغة: مستشفى الكفاءات الأهلي (Al-Kafaat Private Hospital) - قسم الإدارة المالية والتدقيق الحسابي - العيادات الاستشارية والتخصصية وفحوصات السونار.
     - شريط عنوان أنيق مع رقم مرجعي مشفر `REF-FIN-{{ now() }}` وشارة نسخة الإدارة والتدقيق.
