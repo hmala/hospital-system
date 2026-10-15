@@ -1707,15 +1707,20 @@
             loader.classList.add('active');
         }
 
-        function hideLoader() {
+        function hideLoader(immediate = false) {
             completeProgress();
+            const delay = immediate ? 0 : 2500;
             setTimeout(function() {
                 loader.classList.remove('active');
                 setTimeout(function() {
                     if (topBar) topBar.style.width = '0%';
-                }, 400);
-            }, 2500); // زيادة مدة الظهور بوضوح كافي جداً (2.5 ثانية)
+                }, 200);
+            }, delay);
         }
+
+        // إتاحة التحكم باللودر لكافة الواجهات والنوافذ المنبثقة
+        window.hidePageLoader = hideLoader;
+        window.showPageLoader = showLoader;
 
         // إظهار اللودر فور مغادرة الصفحة current page beforeunload
         window.addEventListener('beforeunload', function() {
@@ -1723,8 +1728,8 @@
         });
 
         // إخفاء عند اكتمال التحميل
-        window.addEventListener('load', hideLoader);
-        document.addEventListener('DOMContentLoaded', hideLoader);
+        window.addEventListener('load', function() { hideLoader(); });
+        document.addEventListener('DOMContentLoaded', function() { hideLoader(); });
 
         // إظهار عند الضغط على أي رابط خارجي/داخلي ناتجة عن تغيير الصفحة
         document.addEventListener('click', function(e) {
@@ -1756,8 +1761,12 @@
 
         // إظهار عند تقديم النماذج (Forms submit)
         document.addEventListener('submit', function(e) {
+            // عدم إظهار اللودر إذا تم إلغاء الإرسال بواسطة كود التحقق أو تم استدعاء preventDefault
+            if (e.defaultPrevented) {
+                return;
+            }
             const form = e.target;
-            if (form.getAttribute('target') === '_blank' || form.classList.contains('no-loader')) {
+            if (!form || form.getAttribute('target') === '_blank' || form.classList.contains('no-loader')) {
                 return;
             }
             showLoader();
@@ -1765,7 +1774,7 @@
 
         // حماية ضد التعليق: إخفاء تلقائي بعد 7 ثوانٍ كحد أقصى
         window.addEventListener('pageshow', function(event) {
-            hideLoader();
+            hideLoader(true);
         });
     })();
     </script>
