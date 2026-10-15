@@ -17,8 +17,9 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
     protected $paymentMethod;
     protected $insuranceStatus;
     protected $shift;
+    protected $serviceCategory;
 
-    public function __construct($fromDate = null, $toDate = null, $filterType = null, $search = null, $paymentMethod = null, $insuranceStatus = null, $shift = null)
+    public function __construct($fromDate = null, $toDate = null, $filterType = null, $search = null, $paymentMethod = null, $insuranceStatus = null, $shift = null, $serviceCategory = null)
     {
         $this->fromDate = $fromDate;
         $this->toDate = $toDate;
@@ -27,14 +28,26 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
         $this->paymentMethod = $paymentMethod;
         $this->insuranceStatus = $insuranceStatus;
         $this->shift = $shift;
+        $this->serviceCategory = $serviceCategory;
     }
 
     public function query()
     {
-        return ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment'])
-            ->whereHas('appointment.doctor', function ($q) {
-                $q->where('type', 'consultant');
+        return ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment', 'doctor.user', 'patient.user'])
+            ->where(function ($q) {
+                $q->whereHas('appointment.doctor', function ($dq) {
+                    $dq->where('type', 'consultant')
+                       ->orWhere('type', 'sonar')
+                       ->orWhere('specialization', 'LIKE', '%سونار%');
+                })->orWhere('consultation_revenues.payment_type', 'ultrasound');
             })
+            ->when($this->serviceCategory === 'consultation', function($query) {
+                $query->where(function($q) {
+                    $q->whereNull('consultation_revenues.payment_type')
+                      ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
+                });
+            })
+            ->when($this->serviceCategory === 'ultrasound', fn($query) => $query->where('consultation_revenues.payment_type', 'ultrasound'))
             ->when($this->fromDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '>=', $this->fromDate))
             ->when($this->toDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '<=', $this->toDate))
             ->when($this->shift === 'morning', fn($query) => $query->whereTime('consultation_revenues.paid_at', '<', '15:00:00'))
@@ -100,11 +113,12 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             'رقم الحركة',
             'تاريخ الحركة',
             'فترة الدوام',
+            'نوع الخدمة',
             'المريض',
             'الطبيب',
             'القسم',
             'المدفوع نقداً (المريض)',
-            'إجمالي الكشفية',
+            'إجمالي الكشفية/الفحص',
             'تغطية الضمان',
         ];
 
@@ -133,14 +147,19 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
         $totalTariff = (float)$row->total_amount;
         $insuranceShare = (float)$row->insurance_share_amount;
         $shiftLabel = $row->paid_at ? ($row->paid_at->format('H:i:s') < '15:00:00' ? 'صباحي' : 'مسائي') : '—';
+        $serviceTypeLabel = $row->payment_type === 'ultrasound' ? 'سونار خارجي مباشر' : 'كشفية عيادة استشارية';
+        $patientName = optional(optional($row->appointment)->patient)->user->name ?? optional($row->patient)->user->name ?? optional($row->patient)->name ?? '—';
+        $doctorName = optional(optional($row->appointment)->doctor)->user->name ?? optional($row->doctor)->user->name ?? '—';
+        $departmentName = optional($row->department)->name ?? ($row->payment_type === 'ultrasound' ? 'السونار الخارجي' : 'الاستشارية');
 
         $data = [
             $row->id,
             optional($row->paid_at)->format('Y-m-d H:i:s'),
             $shiftLabel,
-            optional($row->appointment?->patient?->user)->name,
-            optional($row->appointment?->doctor?->user)->name,
-            optional($row->department)->name,
+            $serviceTypeLabel,
+            $patientName,
+            $doctorName,
+            $departmentName,
             $actualPaid,
             $totalTariff,
             $insuranceShare,

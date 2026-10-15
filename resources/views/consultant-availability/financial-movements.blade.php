@@ -54,8 +54,17 @@
                             </select>
                         </div>
 
-                        <!-- الصف الثاني: البحث السريع وأزرار الإجراءات -->
-                        <div class="col-md-6 col-sm-12">
+                        <!-- الصف الثاني: نوع الخدمة والبحث السريع وأزرار الإجراءات -->
+                        <div class="col-md-3 col-sm-6">
+                            <label for="service_category" class="form-label fw-bold small">نوع الخدمة / الإيراد</label>
+                            <select id="service_category" name="service_category" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="">الكل (كشفيات عيادات + سونار)</option>
+                                <option value="consultation" {{ ($serviceCategory ?? '') === 'consultation' ? 'selected' : '' }}>🩺 كشفيات العيادات فقط</option>
+                                <option value="ultrasound" {{ ($serviceCategory ?? '') === 'ultrasound' ? 'selected' : '' }}>📡 السونار الخارجي المباشر فقط</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4 col-sm-6">
                             <label for="search" class="form-label fw-bold small">بحث سريع</label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
@@ -63,7 +72,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-6 col-sm-12 d-flex align-items-end gap-2 flex-wrap">
+                        <div class="col-md-5 col-sm-12 d-flex align-items-end gap-2 flex-wrap">
                             <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">
                                 <i class="fas fa-filter me-1"></i>تصفية
                             </button>
@@ -149,6 +158,9 @@
                             @if(!empty($shift))
                                 <span class="ms-3">الدوام: {{ $shift === 'morning' ? 'الصباحي (8 ص - 3 م)' : 'المسائي (3 م فما بعد)' }}</span>
                             @endif
+                            @if(!empty($serviceCategory))
+                                <span class="ms-3">الخدمة: {{ $serviceCategory === 'ultrasound' ? 'السونار الخارجي المباشر' : 'كشفيات العيادات الاستشارية' }}</span>
+                            @endif
                         </div>
                         <hr>
                     </div>
@@ -161,7 +173,7 @@
                                         <th>التاريخ والتوقيت</th>
                                         <th>المريض</th>
                                         <th>الطبيب</th>
-                                        <th>القسم</th>
+                                        <th>نوع الخدمة / القسم</th>
                                         <th style="min-width: 140px;">المبلغ المدفوع (نقداً)</th>
                                         @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
                                         <th>حصة الطبيب</th>
@@ -182,6 +194,7 @@
                                             $insuranceShare = $payment->insurance_share_amount;
                                             $totalTariff = abs($payment->total_amount);
                                             $isMorning = $payment->paid_at && $payment->paid_at->format('H:i:s') < '15:00:00';
+                                            $isUltrasound = $payment->payment_type === 'ultrasound';
                                         @endphp
                                         <tr>
                                             <td>{{ $payments->firstItem() + $loop->index }}</td>
@@ -199,10 +212,21 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <strong class="text-dark">{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-' }}</strong>
+                                                <strong class="text-dark">{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? optional($payment->patient)->name ?? '-' }}</strong>
                                             </td>
-                                            <td>{{ optional(optional(optional($payment->appointment)->doctor)->user)->name ?? '-' }}</td>
-                                            <td>{{ optional(optional($payment->appointment)->department)->name ?? '-' }}</td>
+                                            <td>{{ optional(optional(optional($payment->appointment)->doctor)->user)->name ?? optional(optional($payment->doctor)->user)->name ?? '-' }}</td>
+                                            <td>
+                                                @if($isUltrasound)
+                                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-50 px-2 py-1">
+                                                        <i class="fas fa-wave-square me-1"></i>سونار خارجي
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-50 px-2 py-1">
+                                                        <i class="fas fa-stethoscope me-1"></i>كشفية عيادة
+                                                    </span>
+                                                    <div class="small text-muted mt-0.5" style="font-size: 0.70rem;">{{ optional(optional($payment->appointment)->department)->name ?? 'الاستشارية' }}</div>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <div class="d-flex flex-column">
                                                     <span class="fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}" style="font-size: 1rem;">

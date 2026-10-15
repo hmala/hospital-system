@@ -456,9 +456,13 @@ class ConsultantAvailabilityController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للاستشارية');
         }
 
-        $query = ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment'])
-            ->whereHas('appointment.doctor', function ($q) {
-                $q->where('type', 'consultant');
+        $query = ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment', 'doctor.user', 'patient.user'])
+            ->where(function ($q) {
+                $q->whereHas('appointment.doctor', function ($dq) {
+                    $dq->where('type', 'consultant')
+                       ->orWhere('type', 'sonar')
+                       ->orWhere('specialization', 'LIKE', '%سونار%');
+                })->orWhere('consultation_revenues.payment_type', 'ultrasound');
             });
 
         $fromDate = $request->query('from_date');
@@ -468,6 +472,7 @@ class ConsultantAvailabilityController extends Controller
         $paymentMethod = $request->query('payment_method');
         $insuranceStatus = $request->query('insurance_status');
         $shift = $request->query('shift');
+        $serviceCategory = $request->query('service_category');
 
         if ($fromDate) {
             $query->whereDate('consultation_revenues.paid_at', '>=', $fromDate);
@@ -475,6 +480,15 @@ class ConsultantAvailabilityController extends Controller
 
         if ($toDate) {
             $query->whereDate('consultation_revenues.paid_at', '<=', $toDate);
+        }
+
+        if ($serviceCategory === 'consultation') {
+            $query->where(function($q) {
+                $q->whereNull('consultation_revenues.payment_type')
+                  ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
+            });
+        } elseif ($serviceCategory === 'ultrasound') {
+            $query->where('consultation_revenues.payment_type', 'ultrasound');
         }
 
         if ($shift === 'morning') {
@@ -545,6 +559,10 @@ class ConsultantAvailabilityController extends Controller
                   ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
                       $uq->where('name', 'like', '%' . $search . '%')
                          ->orWhere('phone', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('patient.user', function($puq) use ($search) {
+                      $puq->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('phone', 'like', '%' . $search . '%');
                   });
             });
         }
@@ -585,7 +603,8 @@ class ConsultantAvailabilityController extends Controller
             'search',
             'paymentMethod',
             'insuranceStatus',
-            'shift'
+            'shift',
+            'serviceCategory'
         ));
     }
 
@@ -604,9 +623,10 @@ class ConsultantAvailabilityController extends Controller
         $paymentMethod = $request->query('payment_method');
         $insuranceStatus = $request->query('insurance_status');
         $shift = $request->query('shift');
+        $serviceCategory = $request->query('service_category');
 
         return Excel::download(
-            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus, $shift),
+            new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus, $shift, $serviceCategory),
             'financial_movements_' . now()->format('Ymd_His') . '.xlsx'
         );
     }

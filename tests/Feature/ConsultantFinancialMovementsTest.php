@@ -296,6 +296,91 @@ class ConsultantFinancialMovementsTest extends TestCase
         $responseEvening->assertDontSee('REC-MORNING-10');
     }
 
+    public function test_financial_movements_includes_direct_ultrasound_and_filters_by_service_category()
+    {
+        $patientUser = User::factory()->create(['name' => 'مريض السونار الخارجي']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'name' => 'مريض السونار الخارجي',
+            'gender' => 'female',
+            'birth_date' => '1995-04-10',
+            'phone' => '07744444444',
+        ]);
+
+        $sonarDocUser = User::factory()->create(['name' => 'د. سونار استشاري']);
+        $sonarDoc = Doctor::create([
+            'user_id' => $sonarDocUser->id,
+            'department_id' => $this->department->id,
+            'specialization' => 'سونار',
+            'qualification' => 'بورد سونار',
+            'license_number' => 'DOC-SONAR-' . uniqid(),
+            'consultation_fee' => 0,
+            'type' => 'consultant',
+            'is_active' => true,
+        ]);
+
+        $sonarAppointment = Appointment::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $sonarDoc->id,
+            'department_id' => $this->department->id,
+            'appointment_date' => now()->toDateString(),
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+            'consultation_fee' => 0,
+        ]);
+
+        $sonarPayment = Payment::create([
+            'appointment_id' => $sonarAppointment->id,
+            'patient_id' => $patient->id,
+            'amount' => 35000,
+            'total_amount' => 35000,
+            'insurance_share' => 0,
+            'status' => 'completed',
+            'payment_method' => 'cash',
+            'paid_at' => now(),
+            'receipt_number' => 'REC-SONAR-99',
+        ]);
+
+        ConsultationRevenue::updateOrCreate(
+            ['payment_id' => $sonarPayment->id],
+            [
+                'appointment_id' => $sonarAppointment->id,
+                'doctor_id' => $sonarDoc->id,
+                'department_id' => $this->department->id,
+                'total_amount' => 35000,
+                'doctor_share' => 25000,
+                'hospital_share' => 10000,
+                'doctor_percentage' => 71.43,
+                'payment_method' => 'cash',
+                'payment_type' => 'ultrasound',
+                'movement_type' => 'payment',
+                'paid_at' => now(),
+                'receipt_number' => 'REC-SONAR-99',
+                'notes' => 'حجز سونار خارجي مباشر',
+            ]
+        );
+
+        // When viewing all: should see sonar
+        $responseAll = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements'));
+        $responseAll->assertStatus(200);
+        $responseAll->assertSee('REC-SONAR-99');
+        $responseAll->assertSee('سونار خارجي');
+
+        // When filtering by ultrasound only: should see sonar
+        $responseUltrasound = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements', [
+            'service_category' => 'ultrasound',
+        ]));
+        $responseUltrasound->assertStatus(200);
+        $responseUltrasound->assertSee('REC-SONAR-99');
+
+        // When filtering by consultation only: should not see sonar
+        $responseConsultation = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements', [
+            'service_category' => 'consultation',
+        ]));
+        $responseConsultation->assertStatus(200);
+        $responseConsultation->assertDontSee('REC-SONAR-99');
+    }
+
     public function test_export_financial_movements_works_with_filters()
     {
         $response = $this->actingAs($this->adminUser)->get(route('consultant-availability.financial-movements.export', [
@@ -303,6 +388,7 @@ class ConsultantFinancialMovementsTest extends TestCase
             'to_date' => now()->toDateString(),
             'insurance_status' => 'all',
             'shift' => 'morning',
+            'service_category' => 'ultrasound',
         ]));
 
         $response->assertStatus(200);

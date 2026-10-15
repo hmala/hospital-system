@@ -642,13 +642,60 @@ class CashierController extends Controller
 
                 // تحديث الموعد المرتبط إن وجد (حصراً لحجوزات السونار المباشرة الخالية من كشفية طبيب مستقلة ولم تدفع بعد)
                 if ($request->visit->appointment_id) {
-                    $linkedAppt = \App\Models\Appointment::find($request->visit->appointment_id);
+                    $linkedAppt = \App\Models\Appointment::with(['doctor.currentCommissionSetting', 'patient'])->find($request->visit->appointment_id);
                     if ($linkedAppt && empty($linkedAppt->payment_id) && (float)$linkedAppt->consultation_fee == 0) {
                         $linkedAppt->update([
                             'payment_status' => 'paid',
                             'status' => 'confirmed',
                             'payment_id' => $payment->id
                         ]);
+
+                        if (empty($payment->appointment_id)) {
+                            $payment->update(['appointment_id' => $linkedAppt->id]);
+                        }
+
+                        // إنشاء أو تحديث قيد إيرادات الاستشارية لحجز السونار الخارجي المباشر
+                        $doctor = $linkedAppt->doctor;
+                        $setting = $doctor?->currentCommissionSetting;
+                        $amount = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
+                        $docShare = 0;
+                        if ($setting && $amount > 0) {
+                            if ($setting->commission_type === 'fixed') {
+                                $isInsurance = in_array($payment->insurance_type, ['hi', 'moi']) || ($payment->insurance_share > 0);
+                                $fixed = $isInsurance && $setting->hi_fixed_amount > 0 
+                                    ? (float)$setting->hi_fixed_amount 
+                                    : (float)$setting->fixed_amount;
+                                $docShare = min($amount, $fixed);
+                            } elseif ($setting->commission_type === 'percentage') {
+                                $docShare = round($amount * ($setting->commission_value / 100), 2);
+                            }
+                        }
+                        $hospShare = max(0, round($amount - $docShare, 2));
+                        $percentage = $amount > 0 ? round(($docShare / $amount) * 100, 2) : 0;
+
+                        \App\Models\ConsultationRevenue::updateOrCreate(
+                            ['payment_id' => $payment->id],
+                            [
+                                'receipt_number' => $payment->receipt_number,
+                                'payment_method' => $payment->payment_method ?? 'cash',
+                                'payment_type' => 'ultrasound',
+                                'cashier_id' => $payment->cashier_id,
+                                'appointment_id' => $linkedAppt->id,
+                                'patient_id' => $linkedAppt->patient_id ?? $payment->patient_id,
+                                'doctor_id' => $doctor?->id,
+                                'department_id' => $linkedAppt->department_id,
+                                'service_type_id' => null,
+                                'examination_count' => 1,
+                                'total_amount' => $amount,
+                                'doctor_share' => $docShare,
+                                'hospital_share' => $hospShare,
+                                'doctor_percentage' => $percentage,
+                                'movement_type' => 'payment',
+                                'revenue_date' => $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString(),
+                                'paid_at' => $payment->paid_at ?? now(),
+                                'notes' => 'حجز سونار خارجي مباشر من الاستعلامات (طلب #' . $request->id . ')',
+                            ]
+                        );
                     }
                 }
                 \Log::info('Visit and linked appointment status handled after request payment');
