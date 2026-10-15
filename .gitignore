@@ -27,3 +27,5 @@ Thumbs.db
 !.antigravity-local/
 *.sql
 /scratch/
+service_records.csv
+

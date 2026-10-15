@@ -176,6 +176,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/consultant-availability/bulk-update', [ConsultantAvailabilityController::class, 'bulkUpdate'])->name('consultant-availability.bulk-update');
     
     // إدارة المرضى
+    Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');
     Route::resource('patients', PatientController::class);
     Route::get('/patients/search', [PatientController::class, 'search'])->name('patients.search');
     

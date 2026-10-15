@@ -25,6 +25,7 @@ class PatientController extends Controller
         $dateFilter = $request->get('date_filter', '');
         $dateFrom = $request->get('date_from', '');
         $dateTo = $request->get('date_to', '');
+        $completionStatus = $request->get('completion_status', '');
 
         $query = Patient::with(['user', 'creator', 'healthInsuranceCategory'])
             ->withCount(['appointments as total_appointments']);
@@ -47,6 +48,41 @@ class PatientController extends Controller
                 $query->whereNull('created_by');
             } else {
                 $query->where('created_by', $createdBy);
+            }
+        }
+
+        // فلتر حالة اكتمال الملف
+        if ($completionStatus !== '') {
+            if ($completionStatus === 'incomplete') {
+                $query->where(function ($q) {
+                    $q->whereHas('user', function ($uq) {
+                        $uq->whereNull('phone')->orWhere('phone', '')->orWhereNull('gender');
+                    })->orWhereNull('national_id')->orWhere('national_id', '')
+                      ->orWhere(function ($iq) {
+                          $iq->where('insurance_type', 'hi')
+                             ->where(function ($inq) {
+                                 $inq->where(function ($sub) {
+                                     $sub->whereNull('insurance_card_no')->orWhere('insurance_card_no', '');
+                                 })->where(function ($sub) {
+                                     $sub->whereNull('insurance_number')->orWhere('insurance_number', '');
+                                 })->where(function ($sub) {
+                                     $sub->whereNull('insurance_booklet_number')->orWhere('insurance_booklet_number', '');
+                                 });
+                             });
+                      });
+                });
+            } elseif ($completionStatus === 'complete') {
+                $query->whereHas('user', function ($uq) {
+                    $uq->whereNotNull('phone')->where('phone', '!=', '')->whereNotNull('gender');
+                })->whereNotNull('national_id')->where('national_id', '!=', '')
+                  ->where(function ($iq) {
+                      $iq->where('insurance_type', '!=', 'hi')
+                         ->orWhere(function ($inq) {
+                             $inq->whereNotNull('insurance_card_no')->where('insurance_card_no', '!=', '')
+                                ->orWhereNotNull('insurance_number')->where('insurance_number', '!=', '')
+                                ->orWhereNotNull('insurance_booklet_number')->where('insurance_booklet_number', '!=', '');
+                         });
+                  });
             }
         }
 
@@ -107,36 +143,77 @@ class PatientController extends Controller
         // AJAX → أرجع JSON
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'patients' => $patients->getCollection()->map(fn($p) => [
-                    'id'                   => $p->id,
-                    'user'                 => $p->user ? [
-                        'name'   => $p->user->name,
-                        'phone'  => $p->user->phone,
-                        'email'  => $p->user->email,
-                        'gender' => $p->user->gender,
-                    ] : null,
-                    'age'                  => $p->age,
-                    'blood_type'           => $p->blood_type,
-                    'emergency_contact'    => $p->emergency_contact,
-                    'national_id'          => $p->national_id,
-                    'insurance_type'       => $p->insurance_type,
-                    'covered_by_insurance' => (bool)($p->insurance_type !== 'none' || $p->covered_by_insurance),
-                    'insurance_number'     => $p->insurance_card_no ?: ($p->insurance_number ?: $p->insurance_booklet_number),
-                    'insurance_category'   => $p->healthInsuranceCategory ? $p->healthInsuranceCategory->name : null,
-                    'copay_percentage'     => $p->copay_percentage,
-                    'creator_name'         => $p->creator ? $p->creator->name : null,
-                    'created_at_formatted' => $p->created_at ? $p->created_at->format('Y-m-d h:i A') : null,
-                    'created_at_diff'      => $p->created_at ? $p->created_at->diffForHumans() : null,
-                    'total_appointments'   => $p->total_appointments,
-                    'last_visit_date'      => $p->getLastVisitDate()
-                        ? $p->getLastVisitDate()->format('Y-m-d') : null,
-                ])->values(),
+                'patients' => $patients->getCollection()->map(function($p) {
+                    $insNum = $p->insurance_card_no ?: ($p->insurance_number ?: $p->insurance_booklet_number);
+                    $missingFields = [];
+                    if (empty($p->user?->phone)) $missingFields[] = 'phone';
+                    if (empty($p->national_id)) $missingFields[] = 'national_id';
+                    if (empty($p->user?->gender)) $missingFields[] = 'gender';
+                    if ($p->insurance_type === 'hi' && empty($insNum)) $missingFields[] = 'insurance_number';
+                    $isIncomplete = count($missingFields) > 0;
+
+                    return [
+                        'id'                   => $p->id,
+                        'user'                 => $p->user ? [
+                            'name'   => $p->user->name,
+                            'phone'  => $p->user->phone,
+                            'email'  => $p->user->email,
+                            'gender' => $p->user->gender,
+                        ] : null,
+                        'age'                  => $p->age,
+                        'blood_type'           => $p->blood_type,
+                        'emergency_contact'    => $p->emergency_contact,
+                        'national_id'          => $p->national_id,
+                        'insurance_type'       => $p->insurance_type,
+                        'covered_by_insurance' => (bool)($p->insurance_type !== 'none' || $p->covered_by_insurance),
+                        'insurance_number'     => $insNum,
+                        'insurance_category'   => $p->healthInsuranceCategory ? $p->healthInsuranceCategory->name : null,
+                        'copay_percentage'     => $p->copay_percentage,
+                        'creator_name'         => $p->creator ? $p->creator->name : null,
+                        'created_at_formatted' => $p->created_at ? $p->created_at->format('Y-m-d h:i A') : null,
+                        'created_at_diff'      => $p->created_at ? $p->created_at->diffForHumans() : null,
+                        'total_appointments'   => $p->total_appointments,
+                        'last_visit_date'      => $p->getLastVisitDate()
+                            ? $p->getLastVisitDate()->format('Y-m-d') : null,
+                        'is_incomplete'        => $isIncomplete,
+                        'missing_fields'       => $missingFields,
+                    ];
+                })->values(),
                 'pagination'   => $patients->links('vendor.pagination.bootstrap-5')->toHtml(),
                 'current_page' => $patients->currentPage(),
                 'last_page'    => $patients->lastPage(),
                 'total'        => $patients->total(),
             ]);
         }
+
+        // احتساب مؤشرات الأداء السريعة (KPIs)
+        $totalCount = Patient::count();
+        $hiCount = Patient::where('insurance_type', 'hi')->count();
+        $incompleteCount = Patient::where(function ($q) {
+            $q->whereHas('user', function ($uq) {
+                $uq->whereNull('phone')->orWhere('phone', '')->orWhereNull('gender');
+            })->orWhereNull('national_id')->orWhere('national_id', '')
+              ->orWhere(function ($iq) {
+                  $iq->where('insurance_type', 'hi')
+                     ->where(function ($inq) {
+                         $inq->where(function ($sub) {
+                             $sub->whereNull('insurance_card_no')->orWhere('insurance_card_no', '');
+                         })->where(function ($sub) {
+                             $sub->whereNull('insurance_number')->orWhere('insurance_number', '');
+                         })->where(function ($sub) {
+                             $sub->whereNull('insurance_booklet_number')->orWhere('insurance_booklet_number', '');
+                         });
+                     });
+              });
+        })->count();
+        $completeCount = max(0, $totalCount - $incompleteCount);
+
+        $kpis = [
+            'total' => $totalCount,
+            'hi' => $hiCount,
+            'incomplete' => $incompleteCount,
+            'complete' => $completeCount,
+        ];
 
         // جلب قائمة الموظفين الذين أدخلوا مرضى مع موظفي الاستقبال والإدارة لفلترة العرض
         $creatorIds = Patient::whereNotNull('created_by')->distinct()->pluck('created_by')->filter()->toArray();
@@ -147,7 +224,7 @@ class PatientController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return view('patients.index', compact('patients', 'creators'));
+        return view('patients.index', compact('patients', 'creators', 'kpis'));
     }
 
     public function create()
@@ -417,6 +494,81 @@ class PatientController extends Controller
 
         return redirect()->route('patients.show', $patient)
             ->with('success', 'تم تحديث بيانات المريض بنجاح');
+    }
+
+    /**
+     * تحديث سريع وخفيف لإكمال بيانات المريض (الهاتف، رقم الضمان، الجنس، الرقم الوطني) عبر AJAX
+     */
+    public function quickUpdate(Request $request, Patient $patient)
+    {
+        $user = auth()->user();
+        if (!$user || (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('edit patients'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل بيانات المريض'], 403);
+        }
+
+        // تنظيف رقم البطاقة الموحدة
+        if ($request->filled('national_id')) {
+            $nid = $request->input('national_id');
+            $arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            $englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            $nid = str_replace($arabicNumbers, $englishNumbers, $nid);
+            $request->merge(['national_id' => trim($nid)]);
+        }
+
+        $request->validate([
+            'phone' => 'required|string|max:20',
+            'gender' => 'required|in:male,female',
+            'national_id' => ['nullable', 'regex:/^[0-9]+$/', 'unique:patients,national_id,' . $patient->id],
+            'insurance_number' => 'nullable|string|max:100',
+            'date_of_birth' => 'nullable|date',
+        ], [
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'gender.required' => 'تحديد الجنس مطلوب',
+            'national_id.unique' => 'رقم البطاقة الموحدة مستخدم من قبل لمريض آخر',
+            'national_id.regex' => 'رقم البطاقة الموحدة يجب أن يحتوي على أرقام فقط',
+        ]);
+
+        // تحديث جدول users
+        $userData = [
+            'phone' => trim($request->input('phone')),
+            'gender' => $request->input('gender'),
+        ];
+        if ($request->filled('date_of_birth')) {
+            $userData['date_of_birth'] = $request->input('date_of_birth');
+        }
+        if ($patient->user) {
+            $patient->user->update($userData);
+        }
+
+        // تحديث جدول patients
+        $patientData = [];
+        if ($request->filled('national_id')) {
+            $patientData['national_id'] = $request->input('national_id');
+        }
+        if ($request->filled('insurance_number')) {
+            $ins = trim($request->input('insurance_number'));
+            $patientData['insurance_card_no'] = $ins;
+            $patientData['insurance_number'] = $ins;
+            $patientData['insurance_booklet_number'] = $ins;
+        }
+        if (!empty($patientData)) {
+            $patient->update($patientData);
+        }
+
+        $patient->load(['user', 'healthInsuranceCategory']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حفظ وإكمال بيانات المريض بنجاح!',
+            'patient' => [
+                'id' => $patient->id,
+                'name' => $patient->user?->name,
+                'phone' => $patient->user?->phone,
+                'gender' => $patient->user?->gender,
+                'national_id' => $patient->national_id,
+                'insurance_number' => $patient->insurance_card_no ?: ($patient->insurance_number ?: $patient->insurance_booklet_number),
+            ]
+        ]);
     }
 
     public function destroy(Patient $patient)
