@@ -114,6 +114,47 @@
             }
         }
 
+        // 3. خدمات واستشارات الطوارئ
+        if ($payment->emergency) {
+            $paidServices = \DB::table('emergency_emergency_service')
+                ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
+                ->where('emergency_emergency_service.payment_id', $payment->id)
+                ->select('emergency_services.name', 'emergency_services.price')
+                ->get();
+            foreach ($paidServices as $svc) {
+                $base = (float)($svc->price ?? 0);
+                $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                $lineItems[] = [
+                    'name' => 'خدمة طوارئ: ' . $svc->name,
+                    'category' => 'طوارئ',
+                    'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'كادر الطوارئ',
+                    'approved' => $base,
+                    'patient' => $pat,
+                    'insurance' => max(0, $base - $pat),
+                ];
+            }
+
+            // استشارات الطوارئ للأطباء الاستشاريين
+            $emergencyAppointments = $payment->emergency->appointments()
+                ->where('status', '!=', 'cancelled')
+                ->with('doctor.user')
+                ->get();
+
+            foreach ($emergencyAppointments as $apt) {
+                $docName = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
+                $fee = (float)($apt->consultation_fee > 0 ? $apt->consultation_fee : 50000);
+                $pat = $isInsured ? round($fee * ($copayPct / 100)) : $fee;
+                $lineItems[] = [
+                    'name' => 'استشارة طبية طوارئ: ' . $docName,
+                    'category' => 'استشارة طوارئ',
+                    'doctor' => $docName,
+                    'approved' => $fee,
+                    'patient' => $pat,
+                    'insurance' => max(0, $fee - $pat),
+                ];
+            }
+        }
+
         // إذا لم توجد تفاصيل متعددة نستخدم السجل المباشر
         if (empty($lineItems)) {
             $approvedPrice = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);

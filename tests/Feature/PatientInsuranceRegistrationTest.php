@@ -152,4 +152,43 @@ class PatientInsuranceRegistrationTest extends TestCase
         $this->assertEquals(0, $patient->covered_by_insurance);
         $this->assertNull($patient->health_insurance_category_id);
     }
+
+    public function test_patient_store_with_save_and_book_redirects_to_inquiry_create_with_patient_id()
+    {
+        $response = $this->actingAs($this->admin)->post(route('patients.store'), [
+            'name' => 'مريض حجز استعلامات',
+            'phone' => '07700000007',
+            'date_of_birth' => '1993-04-12',
+            'gender' => 'female',
+            'marital_status' => 'أعزب',
+            'national_id' => '199300000007',
+            'insurance_type' => 'none',
+            'action' => 'save_and_book',
+        ]);
+
+        $patient = Patient::where('national_id', '199300000007')->first();
+        $this->assertNotNull($patient);
+        $response->assertRedirect(route('inquiry.create', ['patient_id' => $patient->id]));
+        $response->assertSessionHas('success');
+    }
+
+    public function test_patient_store_with_save_only_redirects_to_patients_index()
+    {
+        $response = $this->actingAs($this->admin)->post(route('patients.store'), [
+            'name' => 'مريض حفظ فقط',
+            'phone' => '07700000008',
+            'date_of_birth' => '1989-08-25',
+            'gender' => 'male',
+            'marital_status' => 'متزوج',
+            'national_id' => '198900000008',
+            'insurance_type' => 'none',
+            'action' => 'save_only',
+        ]);
+
+        $patient = Patient::where('national_id', '198900000008')->first();
+        $this->assertNotNull($patient);
+        $response->assertRedirect(route('patients.index'));
+        $response->assertSessionHas('success');
+    }
 }
+

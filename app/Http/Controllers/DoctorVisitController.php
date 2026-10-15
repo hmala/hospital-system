@@ -142,6 +142,63 @@ class DoctorVisitController extends Controller
 
         return redirect()->route('visits.index', $visit)->with('success', 'تم تحويل الموعد إلى زيارة بنجاح');
     }
+
+    /**
+     * تسجيل رأي الاستشاري وملاحظاته لحالة الطوارئ
+     */
+    public function respondToEmergencyConsultation(HttpRequest $request, Appointment $appointment)
+    {
+        $user = Auth::user();
+        $doctor = $user->doctor;
+
+        if (!$user->hasRole('admin') && !$doctor) {
+            abort(403, 'غير مصرح لك بتسجيل رأي الاستشارة');
+        }
+
+        if ($doctor && $appointment->doctor_id !== $doctor->id && !$user->hasRole('admin')) {
+            abort(403, 'هذا الموعد الاستشاري مخصص لطبيب آخر');
+        }
+
+        $request->validate([
+            'consultant_notes' => 'required|string|min:3|max:3000',
+            'consultant_recommendation' => 'nullable|string|max:100',
+        ]);
+
+        $emergency = $appointment->emergency;
+        if (!$emergency) {
+            return redirect()->back()->with('error', 'هذا الموعد غير مرتبط بحالة طوارئ');
+        }
+
+        $formattedDoctorName = $doctor?->user?->name ?? $user->name;
+        $timestamp = now()->format('Y-m-d H:i');
+        $newNoteEntry = "--- [رأي الاستشاري: د. {$formattedDoctorName} بتاريخ {$timestamp}] ---\n" . $request->consultant_notes;
+
+        $existingNotes = $emergency->consultant_notes;
+        $combinedNotes = $existingNotes ? $existingNotes . "\n\n" . $newNoteEntry : $newNoteEntry;
+
+        $updateData = [
+            'consultant_notes' => $combinedNotes,
+            'consultant_recommendation' => $request->consultant_recommendation ?: $emergency->consultant_recommendation,
+            'consultation_responded_at' => now(),
+            'consultant_doctor_id' => $doctor?->id ?? $emergency->consultant_doctor_id,
+        ];
+
+        $emergency->update($updateData);
+
+        // تحديث حالة الموعد
+        $appointment->update([
+            'status' => 'completed',
+            'notes' => ($appointment->notes ? $appointment->notes . "\n" : '') . "تم إبداء رأي الاستشارة: " . $request->consultant_notes,
+        ]);
+
+        // إذا كان هناك زيارة تم فتحها للموعد، إكمالها أيضاً
+        if ($appointment->visit) {
+            $appointment->visit->update(['status' => 'completed']);
+        }
+
+        return redirect()->back()->with('success', 'تم توثيق رأي وتوصيات الاستشارة بنجاح وحفظها في إضبارة الطوارئ للمريض');
+    }
+
     public function show(Visit $visit)
     {
         $user = Auth::user();

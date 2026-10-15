@@ -142,6 +142,9 @@ class EmergencyWorkflowTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('emergency.show', $this->emergency));
 
         $response->assertStatus(200);
+        $response->assertSee('طلب استشارة');
+        $response->assertSee('#consultationModal');
+        $response->assertSee(route('emergency.create-consultation', $this->emergency));
         $response->assertSee('العلامات الحيوية');
         $response->assertSee('التشخيص والخدمات');
         $response->assertSee('المختبر والأشعة');

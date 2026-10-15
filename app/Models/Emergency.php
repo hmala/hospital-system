@@ -24,6 +24,10 @@ class Emergency extends Model
         'initial_assessment',
         'treatment_given',
         'notes',
+        'consultant_notes',
+        'consultant_recommendation',
+        'consultation_responded_at',
+        'consultant_doctor_id',
         'vital_signs',
         'admission_time',
         'discharge_time',
@@ -47,6 +51,7 @@ class Emergency extends Model
         'vital_signs' => 'array',
         'admission_time' => 'datetime',
         'discharge_time' => 'datetime',
+        'consultation_responded_at' => 'datetime',
         'requires_surgery' => 'boolean',
         'requires_admission' => 'boolean',
         'is_insured' => 'boolean',
@@ -55,6 +60,11 @@ class Emergency extends Model
         'patient_migrated' => 'boolean',
         'emergency_patient_id' => 'integer',
     ];
+
+    public function consultantDoctor(): BelongsTo
+    {
+        return $this->belongsTo(Doctor::class, 'consultant_doctor_id');
+    }
 
     // العلاقات
     public function patient(): BelongsTo

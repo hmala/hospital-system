@@ -303,6 +303,19 @@
                 $doctorName = $payment->appointment->doctor->user->name;
             } elseif ($payment->request && $payment->request->visit && $payment->request->visit->doctor && $payment->request->visit->doctor->user) {
                 $doctorName = $payment->request->visit->doctor->user->name;
+            } elseif ($payment->emergency) {
+                $emergencyApt = $payment->emergency->appointments()
+                    ->where('status', '!=', 'cancelled')
+                    ->with('doctor.user')
+                    ->latest('id')
+                    ->first();
+                if ($emergencyApt && $emergencyApt->doctor && $emergencyApt->doctor->user) {
+                    $doctorName = $emergencyApt->doctor->user->name;
+                } elseif ($payment->emergency->consultantDoctor && $payment->emergency->consultantDoctor->user) {
+                    $doctorName = $payment->emergency->consultantDoctor->user->name;
+                } elseif ($payment->emergency->doctor && $payment->emergency->doctor->user) {
+                    $doctorName = $payment->emergency->doctor->user->name;
+                }
             }
 
             $dateFormatted = ($payment->paid_at ?? now())->format('Y/m/d');
@@ -453,6 +466,41 @@
                     ->get();
                 foreach ($paidServices as $svc) {
                     $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => 1, 'price' => $svc->price ?? 0];
+                }
+
+                // استشارات الطوارئ للأطباء الاستشاريين
+                $emergencyAppointments = $payment->emergency->appointments()
+                    ->where('status', '!=', 'cancelled')
+                    ->with('doctor.user')
+                    ->get();
+
+                foreach ($emergencyAppointments as $apt) {
+                    $docTitle = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
+                    $fee = (float)($apt->consultation_fee > 0 ? $apt->consultation_fee : 50000);
+                    $lineItems[] = [
+                        'name' => 'استشارة طبية طوارئ: ' . $docTitle,
+                        'qty' => 1,
+                        'price' => $fee,
+                    ];
+                }
+
+                // طلبات الفحوصات للمختبر والأشعة المسددة بهذا الإيصال
+                $paidLabs = $payment->emergency->labRequests()->where('payment_id', $payment->id)->with('labTests')->get();
+                foreach ($paidLabs as $labReq) {
+                    foreach ($labReq->labTests as $lt) {
+                        $lineItems[] = ['name' => 'تحليل طوارئ: ' . $lt->name, 'qty' => 1, 'price' => $lt->price ?? 0];
+                    }
+                }
+
+                $paidRads = $payment->emergency->radiologyRequests()->where('payment_id', $payment->id)->with('radiologyTypes')->get();
+                foreach ($paidRads as $radReq) {
+                    foreach ($radReq->radiologyTypes as $rt) {
+                        $lineItems[] = ['name' => 'أشعة طوارئ: ' . $rt->name, 'qty' => 1, 'price' => $rt->base_price ?? 0];
+                    }
+                }
+
+                if ($payment->emergency->follow_up_payment_id === $payment->id && $payment->emergency->doctor_follow_up_fee > 0) {
+                    $lineItems[] = ['name' => 'رسوم متابعة طبيب الطوارئ', 'qty' => 1, 'price' => $payment->emergency->doctor_follow_up_fee];
                 }
             }
 

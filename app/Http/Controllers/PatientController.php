@@ -247,7 +247,7 @@ class PatientController extends Controller
         $hiCategoryId = ($insuranceType === 'hi') ? $request->input('health_insurance_category_id') : null;
 
         // إنشاء سجل المريض
-        Patient::create([
+        $patient = Patient::create([
             'user_id' => $user->id,
             'created_by' => auth()->id(),
             'emergency_contact' => $request->emergency_contact,
@@ -273,6 +273,11 @@ class PatientController extends Controller
             'covered_by_insurance' => $isCovered,
             'insurance_booklet_number' => $request->insurance_booklet_number ?: $request->insurance_card_no,
         ]);
+
+        if ($request->input('action') === 'save_and_book') {
+            return redirect()->route('inquiry.create', ['patient_id' => $patient->id])
+                ->with('success', 'تم فتح إضبارة المريض بنجاح، يمكنك الآن اختيار الخدمة المطلوبة (كشفية، مختبر، أشعة، صيدلية).');
+        }
 
         return redirect()->route('patients.index')
             ->with('success', 'تم إضافة المريض بنجاح');

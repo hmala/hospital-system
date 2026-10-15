@@ -57,6 +57,46 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-15 — المرحلة 52: تطوير وتكامل استشارات الطوارئ، السجل الطبي التراكمي، والحماية المالية للخدمات المسددة Emergency Consultation Financial Split, Medical History & Paid Services Protection)
+
+### Done
+- **تكامل استشارات الطوارئ المالية واحتساب حصص الطبيب والمستشفى (80% / 20%)**:
+  * **الأهداف والمتطلبات**: معالجة وصولات كاشير الطوارئ عند طلب استشارة طبية (50,000 د.ع) بحيث يظهر اسم الطبيب الاستشاري المحول إليه في الوصل والتقرير المالي، مع توزيع الرسوم: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى.
+  * **التطوير البرمجي**:
+    1. تحديث [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php):
+       - تطوير دالة `processEmergencyPayment` لاحتساب وتوزيع أتعاب الاستشارة الطارئة تلقائياً: إنشاء سجل `ConsultationRevenue` بحصة 40,000 د.ع للطبيب و10,000 د.ع للمستشفى (80% / 20%)، إنشاء استحقاق `DoctorDue`، وتحديث الرصيد التراكمي في `DoctorFinancialAccount`.
+       - إظهار اسم الطبيب الاستشاري واختصاصه وقسمه في نموذج دفع الطوارئ [emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php).
+    2. تحديث قوالب وصولات الكاشير:
+       - [receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php): طباعة بند «استشارة طبية طوارئ: د. [اسم الاستشاري]» مع التاريخ والمبلغ، وتحديد اسم الطبيب في ترويسة الوصل.
+       - [receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php): إظهار بنود الاستشارة مع اسم الطبيب في تفاصيل الفاتورة.
+- **الحماية المالية للخدمات المسددة في الطوارئ (Paid Services Integrity & Safeguarding)**:
+  * **الضوابط المحاسبية والرقابية**: منع حذف أي خدمة تم تسديدها في الكاشير وصدر بها وصل مالي رسمي (`payment_id IS NOT NULL`) مباشرة من واجهة التمريض/الطوارئ دون تسوية واسترجاع مالي في الكاشير.
+  * **التطوير البرمجي**:
+    1. في [app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php):
+       - في `updateMedical`: فحص الخدمات المسددة مسبقاً في `emergency_emergency_service` والحفاظ عليها إجبارياً أثناء مزامنة `sync` حتى لو أرسل المتصفح قائمة بدونها.
+       - في `show`: جلب خريطة الخدمات المسددة وأرقام وصولاتها لتمريرها للواجهة.
+    2. في [resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php):
+       - قفل مربع الاختيار (Disabled) للخدمة المسددة مع وسم أخضر مميز ورقم الوصل `[مسددة - إيصال #...]`.
+       - إتاحة إضافة أو إزالة الخدمات غير المسددة بحرية تامة وتحديث فاتورة الكاشير التلقائية.
+       - إضافة تنبيه إرشادي بالضوابط المالية وإجراءات الاسترجاع المالي (Refund) عبر الكاشير.
+- **إضافة السجل الطبي التراكمي ونتائج الفحوصات لمحطة عمل الطوارئ (Emergency Patient History & Test Results)**:
+  * **الهدف والأهمية الطبية**: تزويد طاقم الطوارئ بنفس إمكانيات محطة عمل طبيب الاستشارية للاطلاع الفوري على تاريخ المريض والتحاليل والأشعة السابقة لإنقاذ الحالات الحرجة.
+  * **التطوير البرمجي**:
+    1. في [EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php): تحميل `$pastVisits`، `$pastSurgeries`، `$pastEmergencies`، `$patientAppointments`، `$pastLabRequests`، و `$pastRadiologyRequests`.
+    2. في [emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php):
+       - إضافة التبويب الخامس: **«السجل الطبي ونتائج الفحوصات»** مع عداد رقمي إجمالي.
+       - زر وصول مباشر لـ **«السجل الزمني التفاعلي الكامل للمريض»** (`route('doctor.patient.history')`).
+       - 5 تبويبات فرعية شاملة:
+         1. **نتائج التحاليل السابقة**: الجداول الرقمية، القيم المرجعية، مؤشرات الطبيعي وغير الطبيعي، وروابط تقارير أجهزة الفحص المرفقة.
+         2. **تقارير الأشعة والتصوير**: المشاهدات والنتائج (Findings)، الانطباع التشخيصي (Impression)، التوصيات، والصور ومرفقات الـ PDF.
+         3. **الزيارات الاستشارية السابقة**: تواريخ الزيارات، الأطباء، الأقسام، الشكوى، التشخيصات، والوصفات الطبية.
+         4. **العمليات الجراحية**: اسم العملية، الجراح، النتيجة، والملاحظات.
+         5. **حالات الطوارئ السابقة**: تواريخ الدخول، الأعراض، والعلاجات المقدمة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * [tests/Feature/EmergencyConsultationPaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyConsultationPaymentTest.php): `1 passed (19 assertions)`.
+  * [tests/Feature/EmergencyMedicalHistoryAndPaidServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyMedicalHistoryAndPaidServicesTest.php): `2 passed (13 assertions)`.
+  * تشغيل كافة اختبارات الطوارئ: `15 passed (80 assertions)`.
+
 ## Session log (2026-10-14 — المرحلة 51: تطوير وترقية سجل زيارات العيادات والاستشارية وتصدير الإكسل والفلاتر المتقدمة Visits Registry Upgrade & Export)
 
 ### Done

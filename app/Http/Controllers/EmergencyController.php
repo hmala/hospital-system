@@ -478,6 +478,8 @@ class EmergencyController extends Controller
             'radiologyRequests.radiologyTypes',
             'radiologyRequests.requestTypes.radiologyType',
             'treatments.creator',
+            'appointments.doctor.user',
+            'appointments.department',
             'vitalSignReadings' => function($query) {
                 $query->latest()->with('recordedBy');
             }
@@ -499,7 +501,107 @@ class EmergencyController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('emergency.show', compact('emergency', 'availableMedicines', 'emergencyServices', 'labTests', 'radiologyTypes'));
+        $daysMap = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الإثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+        $currentDayArabic = $daysMap[date('l')] ?? 'السبت';
+
+        $consultantDoctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->where('is_available_today', true)
+            ->where(function($q) {
+                $q->where('type', 'consultant')
+                  ->orWhere('type', 'sonar')
+                  ->orWhere('specialization', 'LIKE', '%سونار%');
+            })
+            ->get()
+            ->filter(function($doc) use ($currentDayArabic) {
+                return $doc->isWorkingOnDay($currentDayArabic);
+            })
+            ->values();
+
+        $patientId = $emergency->patient_id;
+
+        $pastVisits = $patientId
+            ? \App\Models\Visit::where('patient_id', $patientId)
+                ->with(['doctor.user', 'department', 'requests', 'prescribedMedications', 'prescriptions.items.medicine'])
+                ->orderBy('visit_date', 'desc')
+                ->limit(15)
+                ->get()
+            : collect();
+
+        $pastSurgeries = $patientId
+            ? \App\Models\Surgery::where('patient_id', $patientId)
+                ->with('doctor.user')
+                ->latest()
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $pastEmergencies = $patientId
+            ? Emergency::where('patient_id', $patientId)
+                ->where('id', '!=', $emergency->id)
+                ->with(['doctor.user', 'nurse'])
+                ->latest('admission_time')
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $patientAppointments = $patientId
+            ? \App\Models\Appointment::where('patient_id', $patientId)
+                ->with(['doctor.user', 'department'])
+                ->orderBy('appointment_date', 'desc')
+                ->limit(15)
+                ->get()
+            : collect();
+
+        // جلب جميع التحاليل السابقة للمريض
+        $pastLabRequests = $patientId
+            ? \App\Models\Request::whereHas('visit', fn($q) => $q->where('patient_id', $patientId))
+                ->where('type', 'lab')
+                ->with(['visit.doctor.user'])
+                ->latest()
+                ->limit(20)
+                ->get()
+            : collect();
+
+        // جلب جميع فحوصات الأشعة السابقة للمريض
+        $pastRadiologyRequests = $patientId
+            ? \App\Models\Request::whereHas('visit', fn($q) => $q->where('patient_id', $patientId))
+                ->where('type', 'radiology')
+                ->with(['visit.doctor.user'])
+                ->latest()
+                ->limit(20)
+                ->get()
+            : collect();
+
+        $paidServiceMap = \DB::table('emergency_emergency_service')
+            ->where('emergency_id', $emergency->id)
+            ->whereNotNull('payment_id')
+            ->pluck('payment_id', 'emergency_service_id')
+            ->toArray();
+
+        return view('emergency.show', compact(
+            'emergency', 
+            'availableMedicines', 
+            'emergencyServices', 
+            'labTests', 
+            'radiologyTypes', 
+            'consultantDoctors',
+            'pastVisits',
+            'pastSurgeries',
+            'pastEmergencies',
+            'patientAppointments',
+            'pastLabRequests',
+            'pastRadiologyRequests',
+            'paidServiceMap'
+        ));
     }
 
     /**
@@ -654,7 +756,32 @@ class EmergencyController extends Controller
             'vital_signs' => $vitals,
             'diagnosis' => $request->diagnosis,
         ]);
-        $emergency->services()->sync($request->input('service_ids', []));
+
+        // جلب الخدمات المسددة الحالية مع بيانات pivot لمنع حذفها دون تسوية مالية في الكاشير
+        $existingPaidServices = \DB::table('emergency_emergency_service')
+            ->where('emergency_id', $emergency->id)
+            ->whereNotNull('payment_id')
+            ->get();
+
+        $paidServiceIds = $existingPaidServices->pluck('emergency_service_id')->map(fn($id) => (int)$id)->toArray();
+        $submittedServiceIds = array_map('intval', $request->input('service_ids', []));
+
+        // التأكد من الحفاظ الصارم على كافة الخدمات المسددة مسبقاً
+        $allServiceIds = array_unique(array_merge($submittedServiceIds, $paidServiceIds));
+
+        $syncData = [];
+        foreach ($allServiceIds as $srvId) {
+            $paidRecord = $existingPaidServices->firstWhere('emergency_service_id', $srvId);
+            if ($paidRecord) {
+                $syncData[$srvId] = [
+                    'payment_id' => $paidRecord->payment_id,
+                ];
+            } else {
+                $syncData[$srvId] = [];
+            }
+        }
+
+        $emergency->services()->sync($syncData);
 
         // تحديث/إنشاء فاتورة طوارئ موحدة (خدمات + تحاليل + أشعة)
         $this->upsertUnifiedEmergencyPayment($emergency);
@@ -1053,7 +1180,7 @@ class EmergencyController extends Controller
             'appointment_time' => 'required|date_format:H:i',
             'doctor_ids' => 'required|array|min:1',
             'doctor_ids.*' => 'required|exists:doctors,id',
-            'reason' => 'required|string',
+            'reason' => 'nullable|string',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -1067,7 +1194,7 @@ class EmergencyController extends Controller
                 return redirect()->back()->with('error', 'تم اختيار طبيب غير موجود');
             }
 
-            if ($doctor->type !== 'consultant') {
+            if (!in_array($doctor->type, ['consultant', 'sonar']) && !str_contains($doctor->specialization ?? '', 'سونار')) {
                 return redirect()->back()->with('error', 'يجب اختيار أطباء استشاريين فقط');
             }
 
@@ -1115,12 +1242,6 @@ class EmergencyController extends Controller
 
             // mark emergency patient inactive
             $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
-
-            // notify receptionists / consultation staff to complete profile
-            $receptionists = User::role('receptionist')->where('is_active', true)->get();
-            foreach ($receptionists as $rec) {
-                $rec->notify(new \App\Notifications\EmergencyPatientMigratedNotification($emergency));
-            }
         }
 
         // أجرة استشارة الطوارئ الثابتة (مقطوعة)
@@ -1139,7 +1260,7 @@ class EmergencyController extends Controller
                 'department_id' => $doctor->department_id,
                 'emergency_id' => $emergency->id,
                 'appointment_date' => $appointmentDateTime,
-                'reason' => $request->reason,
+                'reason' => $request->reason ?: ($request->notes ? Str::limit($request->notes, 100) : 'استشارة طوارئ'),
                 'notes' => $request->notes,
                 'consultation_fee' => $emergencyConsultationFee,
                 'duration' => 30,
@@ -1163,10 +1284,7 @@ class EmergencyController extends Controller
             'payment_status' => 'pending',
         ]);
 
-        // تحديث حالة الطوارئ إلى محولة
-        $emergency->update(['status' => 'transferred']);
-
-        return redirect()->back()->with('success', 'تم إنشاء المواعيد الاستشارية بنجاح وإضافتها إلى فاتورة الطوارئ الموحدة');
+        return redirect()->back()->with('success', 'تم إنشاء طلب الاستشارة بنجاح وإضافته إلى حساب الحالة ويبقى المريض في الطوارئ');
     }
 
     /**

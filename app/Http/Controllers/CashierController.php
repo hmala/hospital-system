@@ -1738,6 +1738,8 @@ class CashierController extends Controller
             'emergency.services',
             'emergency.labRequests.labTests',
             'emergency.radiologyRequests.radiologyTypes',
+            'emergency.appointments.doctor.user',
+            'emergency.appointments.department',
             'appointment.doctor.user'
         ]);
 
@@ -1849,13 +1851,79 @@ class CashierController extends Controller
                 'payment_status' => $paymentStatus,
             ]);
 
-            // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة
-            $payment->emergency->appointments()
+            // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة واحتساب حصص الأطباء الاستشاريين
+            $emergencyAppointments = $payment->emergency->appointments()
                 ->where('payment_status', 'pending')
-                ->update([
+                ->where('status', '!=', 'cancelled')
+                ->get();
+
+            foreach ($emergencyAppointments as $appointment) {
+                $appointment->update([
                     'payment_status' => 'paid',
                     'payment_id' => $payment->id,
                 ]);
+
+                if ($appointment->doctor_id) {
+                    $fee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 50000);
+                    // حصة استشارة الطوارئ: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى (نسبة 80% / 20%)
+                    $doctorShare = ($fee == 50000.0) ? 40000.0 : round($fee * 0.80, 2);
+                    $hospitalShare = round($fee - $doctorShare, 2);
+                    $percentage = round(($doctorShare / $fee) * 100, 2);
+
+                    // قيد إيراد استشارية في ConsultationRevenue
+                    \App\Models\ConsultationRevenue::updateOrCreate(
+                        [
+                            'appointment_id' => $appointment->id,
+                        ],
+                        [
+                            'payment_id' => $payment->id,
+                            'receipt_number' => $payment->receipt_number,
+                            'payment_method' => $payment->payment_method ?? 'cash',
+                            'payment_type' => 'emergency_consultation',
+                            'cashier_id' => $user->id,
+                            'patient_id' => $appointment->patient_id,
+                            'doctor_id' => $appointment->doctor_id,
+                            'department_id' => $appointment->department_id,
+                            'service_type_id' => null,
+                            'examination_count' => 1,
+                            'total_amount' => $fee,
+                            'doctor_share' => $doctorShare,
+                            'hospital_share' => $hospitalShare,
+                            'doctor_percentage' => $percentage,
+                            'movement_type' => 'payment',
+                            'revenue_date' => ($payment->paid_at ?? now())->toDateString(),
+                            'paid_at' => $payment->paid_at ?? now(),
+                            'notes' => 'استشارة طوارئ لحالة #' . $payment->emergency_id . ($appointment->reason ? ' (' . $appointment->reason . ')' : ''),
+                            'transaction_reference' => $payment->receipt_number,
+                        ]
+                    );
+
+                    // قيد مستحقات الطبيب في DoctorDue
+                    \App\Models\DoctorDue::updateOrCreate(
+                        [
+                            'doctor_id' => $appointment->doctor_id,
+                            'payment_id' => $payment->id,
+                        ],
+                        [
+                            'amount' => $doctorShare,
+                            'status' => 'pending',
+                            'notes' => 'مستحقات استشارة طوارئ لحالة #' . $payment->emergency_id . ' (إيصال ' . $payment->receipt_number . ')',
+                        ]
+                    );
+
+                    // مزامنة وتحديث رصيد حساب الطبيب
+                    $doctorAccount = \App\Models\DoctorFinancialAccount::firstOrCreate(
+                        ['doctor_id' => $appointment->doctor_id],
+                        ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+                    );
+                    $totalEarned = (float) \App\Models\DoctorDue::where('doctor_id', $appointment->doctor_id)->sum('amount');
+                    $totalPaid = (float) ($doctorAccount->total_paid ?? 0);
+                    $doctorAccount->total_earned = $totalEarned;
+                    $doctorAccount->balance = round($totalEarned - $totalPaid, 2);
+                    $doctorAccount->last_paid_at = $payment->paid_at ?? now();
+                    $doctorAccount->save();
+                }
+            }
 
             DB::commit();
 
