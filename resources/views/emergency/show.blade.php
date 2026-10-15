@@ -103,6 +103,9 @@
                             <i class="fas fa-calendar-check text-primary me-1"></i> تم طلب استشارة ({{ $emergency->appointments->count() }})
                         </span>
                     @endif
+                    <a href="{{ route('emergency.medical-report', $emergency) }}" target="_blank" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" title="فتح وطباعة التقرير الطبي الرسمي للحالة بتوقيع الطبيب ورمز QR">
+                        <i class="fas fa-file-medical-alt me-1"></i>التقرير الطبي للطوارئ
+                    </a>
                     @if($emergency->payment && $emergency->payment->paid_at)
                         <button onclick="window.print()" class="btn btn-sm btn-primary shadow-sm">
                             <i class="fas fa-print me-1"></i>طباعة

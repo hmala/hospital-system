@@ -25,7 +25,7 @@ class EmergencyController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth');
+        $this->middleware('auth')->except(['verifyReport']);
     }
 
     /**
@@ -1904,5 +1904,74 @@ class EmergencyController extends Controller
         ];
         $typeLabel = $typeLabels[$request->discharge_type] ?? 'تخريج المريض';
         return redirect()->back()->with('success', "تم تسجيل خروج المريض بنجاح ({$typeLabel}).");
+    }
+
+    /**
+     * طباعة وعرض التقرير الطبي لحالة الطوارئ
+     */
+    public function medicalReport(Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
+            abort(403, 'غير مصرح لك باستعراض التقرير الطبي للحالة');
+        }
+
+        $emergency->load([
+            'patient.user',
+            'emergencyPatient',
+            'doctor.user',
+            'nurse',
+            'services',
+            'labRequests.labTests',
+            'radiologyRequests.radiologyTypes',
+            'treatments.doctor.user',
+            'treatments.nurse',
+            'prescriptions.items',
+            'vitalSignReadings' => function($q) {
+                $q->latest()->with('recordedBy');
+            },
+            'appointments.doctor.user',
+        ]);
+
+        // الطبيب المسؤول عن التقرير والتوقيع
+        $doctor = $emergency->doctor;
+        if (!$doctor || empty($doctor->signature)) {
+            $emergencyDoc = Doctor::with('user')->find(244);
+            if ($emergencyDoc) {
+                if (!$doctor) {
+                    $doctor = $emergencyDoc;
+                } elseif (empty($doctor->signature)) {
+                    $doctor->signature = $emergencyDoc->signature;
+                }
+            }
+        }
+
+        return view('emergency.medical-report', compact('emergency', 'doctor'));
+    }
+
+    /**
+     * صفحة التحقق العام من صحة التقرير الطبي عبر رمز الاستجابة السريعة (QR Code)
+     */
+    public function verifyReport(Emergency $emergency)
+    {
+        $emergency->load([
+            'patient.user',
+            'emergencyPatient',
+            'doctor.user',
+        ]);
+
+        $doctor = $emergency->doctor;
+        if (!$doctor || empty($doctor->signature)) {
+            $emergencyDoc = Doctor::with('user')->find(244);
+            if ($emergencyDoc) {
+                if (!$doctor) {
+                    $doctor = $emergencyDoc;
+                } elseif (empty($doctor->signature)) {
+                    $doctor->signature = $emergencyDoc->signature;
+                }
+            }
+        }
+
+        return view('emergency.verify-report', compact('emergency', 'doctor'));
     }
 }

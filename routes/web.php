@@ -55,6 +55,10 @@ require __DIR__.'/auth.php';
 Route::get('/departments', [DepartmentController::class, 'publicIndex'])
     ->name('departments.public');
 
+// التحقق العام من صحة التقرير الطبي لحالات الطوارئ عبر الـ QR Code
+Route::get('/emergency/{emergency}/verify-report', [\App\Http\Controllers\EmergencyController::class, 'verifyReport'])
+    ->name('emergency.verify-report');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
@@ -709,6 +713,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/transfer-to-surgery', [\App\Http\Controllers\EmergencyController::class, 'transferToSurgery'])->name('transfer-to-surgery');
         Route::post('/{emergency}/transfer-to-admission', [\App\Http\Controllers\EmergencyController::class, 'transferToAdmission'])->name('transfer-to-admission');
         Route::post('/{emergency}/discharge', [\App\Http\Controllers\EmergencyController::class, 'discharge'])->name('discharge');
+        Route::get('/{emergency}/medical-report', [\App\Http\Controllers\EmergencyController::class, 'medicalReport'])->name('medical-report');
         
         // تحديث حالة طلبات الخدمات التمريضية
         Route::put('/nursing-request/{request}', [\App\Http\Controllers\EmergencyController::class, 'updateNursingRequest'])->name('nursing-request.update');

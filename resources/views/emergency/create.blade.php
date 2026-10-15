@@ -212,17 +212,37 @@
                                 @enderror
                             </div>
 
-                            <!-- الطبيب المسؤول (نفس المستخدم المسجل حالياً) -->
-                            <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id ?? '' }}">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">الطبيب المسؤول</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
-                                    <input type="text" class="form-control bg-light text-primary fw-bold" 
-                                           value="{{ auth()->user()->name ?? 'المستخدم الحالي' }}" 
-                                           readonly>
+                            <!-- الطبيب المسؤول -->
+                            @if(isset($assignedDoctor) && $assignedDoctor)
+                                <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id }}">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">الطبيب المسؤول</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
+                                        <input type="text" class="form-control bg-light text-primary fw-bold" 
+                                               value="{{ $assignedDoctor->user->name ?? auth()->user()->name }}" 
+                                               readonly>
+                                    </div>
                                 </div>
-                            </div>
+                            @else
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">الطبيب المسؤول <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
+                                        <select class="form-select @error('doctor_id') is-invalid @enderror" name="doctor_id" id="doctor_id" required>
+                                            <option value="">اختر طبيب الطوارئ المسؤول...</option>
+                                            @foreach($doctors as $doc)
+                                                <option value="{{ $doc->id }}" {{ (old('doctor_id') == $doc->id || $doc->id == 244) ? 'selected' : '' }}>
+                                                    د. {{ $doc->user->name ?? $doc->name }} ({{ $doc->specialization }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @error('doctor_id')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            @endif
 
                             <div class="col-md-6 mb-3 d-flex align-items-center">
                                 <div class="form-check form-switch mt-2">

@@ -283,17 +283,22 @@
                                         <small class="text-muted">{{ $emergency->created_at->format('Y-m-d') }}</small>
                                     </td>
                                     <td>
-                                        @if($emergency->status === 'discharged')
-                                            <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-outline-secondary fw-bold shadow-sm d-inline-flex align-items-center" title="عرض ملف الحالة وسجل الفحص">
-                                                <i class="fas fa-file-medical me-1"></i>
-                                                <span>فتح ملف الكشف</span>
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            @if($emergency->status === 'discharged')
+                                                <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-outline-secondary fw-bold shadow-sm d-inline-flex align-items-center" title="عرض ملف الحالة وسجل الفحص">
+                                                    <i class="fas fa-file-medical me-1"></i>
+                                                    <span>فتح ملف الكشف</span>
+                                                </a>
+                                            @else
+                                                <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-success fw-bold shadow-sm d-inline-flex align-items-center" title="فتح محطة كشف الطوارئ">
+                                                    <i class="fas fa-stethoscope me-1"></i>
+                                                    <span>فتح ملف الكشف</span>
+                                                </a>
+                                            @endif
+                                            <a href="{{ route('emergency.medical-report', $emergency) }}" target="_blank" class="btn btn-sm btn-outline-danger shadow-sm" title="التقرير الطبي للحالة (طباعة / PDF / QR)">
+                                                <i class="fas fa-print"></i>
                                             </a>
-                                        @else
-                                            <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-sm btn-success fw-bold shadow-sm d-inline-flex align-items-center" title="فتح محطة كشف الطوارئ">
-                                                <i class="fas fa-stethoscope me-1"></i>
-                                                <span>فتح ملف الكشف</span>
-                                            </a>
-                                        @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @empty
