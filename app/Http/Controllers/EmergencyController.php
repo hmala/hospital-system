@@ -1875,7 +1875,7 @@ class EmergencyController extends Controller
         }
 
         $request->validate([
-            'discharge_type' => 'required|in:recovered,against_medical_advice',
+            'discharge_type' => 'required|in:recovered,against_medical_advice,transferred_to_consultation',
             'discharge_notes' => 'nullable|string|max:1000',
         ]);
 
@@ -1897,7 +1897,12 @@ class EmergencyController extends Controller
 
         $emergency->update($updateData);
 
-        $typeLabel = $request->discharge_type === 'recovered' ? 'خرج متعافي' : 'خرج على مسؤوليته';
+        $typeLabels = [
+            'recovered' => 'خرج متعافي',
+            'against_medical_advice' => 'خرج على مسؤوليته',
+            'transferred_to_consultation' => 'تحويل للاستشارية',
+        ];
+        $typeLabel = $typeLabels[$request->discharge_type] ?? 'تخريج المريض';
         return redirect()->back()->with('success', "تم تسجيل خروج المريض بنجاح ({$typeLabel}).");
     }
 }

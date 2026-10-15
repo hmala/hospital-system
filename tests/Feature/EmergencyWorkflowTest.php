@@ -190,6 +190,20 @@ class EmergencyWorkflowTest extends TestCase
         $this->assertEquals('recovered', $this->emergency->discharge_type);
     }
 
+    public function test_emergency_discharge_transferred_to_consultation_workflow()
+    {
+        $response = $this->actingAs($this->admin)->post(route('emergency.discharge', $this->emergency), [
+            'discharge_type' => 'transferred_to_consultation',
+            'discharge_notes' => 'تحويل إلى العيادة الاستشارية الباطنية للمتابعة',
+        ]);
+
+        $response->assertRedirect();
+        $this->emergency->refresh();
+        $this->assertEquals('discharged', $this->emergency->status);
+        $this->assertEquals('transferred_to_consultation', $this->emergency->discharge_type);
+        $this->assertEquals('تحويل إلى العيادة الاستشارية الباطنية للمتابعة', $this->emergency->discharge_notes);
+    }
+
     public function test_nursing_request_status_update()
     {
         $visit = \App\Models\Visit::create([

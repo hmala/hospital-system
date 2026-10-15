@@ -16,40 +16,85 @@
                         <button type="button" class="btn btn-sm btn-info text-white fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#consultationModal">
                             <i class="fas fa-calendar-plus me-1"></i>طلب استشارة
                         </button>
-                        <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-danger shadow-sm">
-                                <i class="fas fa-procedures me-1"></i>تحويل للعمليات
+                        <div class="dropdown d-inline">
+                            <button class="btn btn-sm btn-dark dropdown-toggle shadow-sm fw-bold d-inline-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-sliders-h me-1 text-warning"></i>
+                                <span>إجراءات وتحويل وتخريج الحالة</span>
                             </button>
-                        </form>
-                        <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm">
-                                <i class="fas fa-bed me-1"></i>تحويل رقود
-                            </button>
-                        </form>
-                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
-                            @csrf
-                            <input type="hidden" name="discharge_type" value="recovered">
-                            <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm">
-                                <i class="fas fa-user-check me-1"></i>خرج متعافي
-                            </button>
-                        </form>
-                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
-                            @csrf
-                            <input type="hidden" name="discharge_type" value="against_medical_advice">
-                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark fw-bold">
-                                <i class="fas fa-user-shield me-1"></i>على مسؤوليته
-                            </button>
-                        </form>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-start" style="min-width: 230px;">
+                                <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
+                                    <i class="fas fa-exchange-alt me-1 text-primary"></i> تحويل الحالة
+                                </li>
+                                <li>
+                                    <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item d-flex align-items-center text-danger py-2">
+                                            <i class="fas fa-procedures me-2 text-danger"></i>
+                                            <span>تحويل للعمليات</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item d-flex align-items-center text-primary py-2">
+                                            <i class="fas fa-bed me-2 text-primary"></i>
+                                            <span>تحويل رقود</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تحويل المريض إلى العيادات الاستشارية وتوثيق خروجه من الطوارئ؟')">
+                                        @csrf
+                                        <input type="hidden" name="discharge_type" value="transferred_to_consultation">
+                                        <button type="submit" class="dropdown-item d-flex align-items-center text-info py-2">
+                                            <i class="fas fa-clinic-medical me-2 text-info"></i>
+                                            <span class="fw-bold">تحويل للاستشارية</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
+                                    <i class="fas fa-sign-out-alt me-1 text-success"></i> تسجيل الخروج
+                                </li>
+                                <li>
+                                    <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
+                                        @csrf
+                                        <input type="hidden" name="discharge_type" value="recovered">
+                                        <button type="submit" class="dropdown-item d-flex align-items-center text-success py-2">
+                                            <i class="fas fa-user-check me-2 text-success"></i>
+                                            <span>خرج متعافي</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
+                                        @csrf
+                                        <input type="hidden" name="discharge_type" value="against_medical_advice">
+                                        <button type="submit" class="dropdown-item d-flex align-items-center text-secondary py-2">
+                                            <i class="fas fa-user-shield me-2 text-warning"></i>
+                                            <span>خرج على مسؤوليته</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     @elseif($emergency->status === 'discharged')
                         @if($emergency->discharge_type === 'recovered')
-                            <span class="badge bg-success fs-6 py-1 px-2">
+                            <span class="badge bg-success fs-6 py-1 px-2 shadow-sm">
                                 <i class="fas fa-check-circle me-1"></i> خرج متعافي ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
                             </span>
                         @elseif($emergency->discharge_type === 'against_medical_advice')
-                            <span class="badge bg-warning text-dark fs-6 py-1 px-2">
+                            <span class="badge bg-warning text-dark fs-6 py-1 px-2 shadow-sm">
                                 <i class="fas fa-exclamation-triangle me-1"></i> خرج على مسؤوليته ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @elseif($emergency->discharge_type === 'transferred_to_consultation')
+                            <span class="badge bg-info text-dark fs-6 py-1 px-2 shadow-sm fw-bold">
+                                <i class="fas fa-clinic-medical me-1"></i> تحويل للاستشارية ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @else
+                            <span class="badge bg-secondary fs-6 py-1 px-2 shadow-sm">
+                                <i class="fas fa-sign-out-alt me-1"></i> تم الخروج ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
                             </span>
                         @endif
                     @endif

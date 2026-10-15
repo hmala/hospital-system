@@ -336,6 +336,10 @@
                                                     <span class="badge bg-warning text-dark px-2 py-1 shadow-sm fw-bold" title="خرج على مسؤوليته">
                                                         <i class="fas fa-exclamation-triangle me-1"></i> خرج على مسؤوليته
                                                     </span>
+                                                @elseif($emergency->discharge_type === 'transferred_to_consultation')
+                                                    <span class="badge bg-info text-dark px-2 py-1 shadow-sm fw-bold" title="تحويل للاستشارية">
+                                                        <i class="fas fa-clinic-medical me-1"></i> تحويل للاستشارية
+                                                    </span>
                                                 @else
                                                     <span class="badge bg-secondary text-white px-2 py-1 shadow-sm">
                                                         <i class="fas fa-sign-out-alt me-1"></i> تم الخروج
@@ -396,6 +400,16 @@
                                                                 <button type="submit" class="dropdown-item d-flex align-items-center text-start text-primary">
                                                                     <i class="fas fa-bed me-2 text-primary"></i>
                                                                     <span>تحويل رقود</span>
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        <li>
+                                                            <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تحويل المريض إلى العيادات الاستشارية وتوثيق خروجه من الطوارئ؟')">
+                                                                @csrf
+                                                                <input type="hidden" name="discharge_type" value="transferred_to_consultation">
+                                                                <button type="submit" class="dropdown-item d-flex align-items-center text-start text-info">
+                                                                    <i class="fas fa-clinic-medical me-2 text-info"></i>
+                                                                    <span class="fw-bold">تحويل للاستشارية</span>
                                                                 </button>
                                                             </form>
                                                         </li>
