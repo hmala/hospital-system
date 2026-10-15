@@ -77,4 +77,58 @@ class ConsultationRevenue extends Model
     {
         return $this->belongsTo(ServiceType::class);
     }
+
+    /**
+     * المبلغ الفعلي المدفوع أو المسترجع نقداً من المريض في صندوق الكاشير
+     */
+    public function getPatientPaidAmountAttribute(): float
+    {
+        if ($this->payment) {
+            return (float) $this->payment->amount;
+        }
+        return (float) $this->total_amount;
+    }
+
+    /**
+     * هل الحركة لمريض مشمول بالضمان الصحي أو قوى الأمن
+     */
+    public function getIsInsuranceAttribute(): bool
+    {
+        if ($this->payment) {
+            if (in_array($this->payment->insurance_type, ['hi', 'moi']) || (float)$this->payment->insurance_share > 0) {
+                return true;
+            }
+        }
+        if ($this->appointment && in_array($this->appointment->insurance_type, ['hi', 'moi'])) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * مبلغ تغطية ومساهمة هيئة الضمان
+     */
+    public function getInsuranceShareAmountAttribute(): float
+    {
+        if ($this->payment && (float)$this->payment->insurance_share > 0) {
+            return (float) $this->payment->insurance_share;
+        }
+        return 0.0;
+    }
+
+    /**
+     * نوع الضمان (HI / MOI / كاش)
+     */
+    public function getInsuranceTypeLabelAttribute(): string
+    {
+        $type = $this->payment?->insurance_type ?: $this->appointment?->insurance_type;
+        if ($type === 'hi') {
+            return 'ضمان صحي (HI)';
+        } elseif ($type === 'moi') {
+            return 'قوى الأمن (MOI)';
+        } elseif ($this->is_insurance) {
+            return 'مشمول بالضمان';
+        }
+        return 'نقداً (كاش)';
+    }
 }

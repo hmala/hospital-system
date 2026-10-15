@@ -29,17 +29,17 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
 
     public function query()
     {
-        return ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier'])
+        return ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment'])
             ->whereHas('appointment.doctor', function ($q) {
                 $q->where('type', 'consultant');
             })
-            ->when($this->fromDate, fn($query) => $query->whereDate('paid_at', '>=', $this->fromDate))
-            ->when($this->toDate, fn($query) => $query->whereDate('paid_at', '<=', $this->toDate))
-            ->when($this->filterType === 'payment', fn($query) => $query->where('movement_type', 'payment'))
-            ->when($this->filterType === 'refund', fn($query) => $query->where('movement_type', 'refund'))
+            ->when($this->fromDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '>=', $this->fromDate))
+            ->when($this->toDate, fn($query) => $query->whereDate('consultation_revenues.paid_at', '<=', $this->toDate))
+            ->when($this->filterType === 'payment', fn($query) => $query->where('consultation_revenues.movement_type', 'payment'))
+            ->when($this->filterType === 'refund', fn($query) => $query->where('consultation_revenues.movement_type', 'refund'))
             ->when($this->filterType === 'appointment_paid', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'paid')))
             ->when($this->filterType === 'appointment_refunded', fn($query) => $query->whereHas('appointment', fn($query) => $query->where('payment_status', 'refunded')))
-            ->when($this->paymentMethod, fn($query) => $query->where('payment_method', $this->paymentMethod))
+            ->when($this->paymentMethod, fn($query) => $query->where('consultation_revenues.payment_method', $this->paymentMethod))
             ->when($this->insuranceStatus === 'insurance', function($query) {
                 $query->where(function($sub) {
                     $sub->whereHas('appointment', function ($q) {
@@ -79,7 +79,7 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             ->when($this->search, function($query) {
                 $s = $this->search;
                 $query->where(function($q) use ($s) {
-                    $q->where('receipt_number', 'like', "%{$s}%")
+                    $q->where('consultation_revenues.receipt_number', 'like', "%{$s}%")
                       ->orWhereHas('appointment.patient.user', function($uq) use ($s) {
                           $uq->where('name', 'like', "%{$s}%")
                              ->orWhere('phone', 'like', "%{$s}%");
@@ -98,7 +98,9 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             'المريض',
             'الطبيب',
             'القسم',
-            'مبلغ الدفعة',
+            'المدفوع نقداً (المريض)',
+            'إجمالي الكشفية',
+            'تغطية الضمان',
         ];
 
         if ($canViewShares) {
@@ -110,7 +112,7 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             'نوع الحركة',
             'طريقة الدفع',
             'رقم الايصال',
-            'الضمان الصحي',
+            'حالة الضمان',
             'الكاشير',
             'تاريخ الإيراد',
         ]);
@@ -122,13 +124,19 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
     {
         $canViewShares = auth()->user() && (auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole('admin'));
 
+        $actualPaid = $row->patient_paid_amount;
+        $totalTariff = (float)$row->total_amount;
+        $insuranceShare = (float)$row->insurance_share_amount;
+
         $data = [
             $row->id,
             optional($row->paid_at)->format('Y-m-d H:i:s'),
             optional($row->appointment?->patient?->user)->name,
             optional($row->appointment?->doctor?->user)->name,
             optional($row->department)->name,
-            $row->total_amount,
+            $actualPaid,
+            $totalTariff,
+            $insuranceShare,
         ];
 
         if ($canViewShares) {
@@ -136,13 +144,11 @@ class ConsultantFinancialMovementsExport implements FromQuery, WithHeadings, Wit
             $data[] = $row->hospital_share;
         }
 
-        $insuranceLabel = $row->appointment?->insurance_type ? 'مشمول: ' . $row->appointment?->insurance_type : 'كاش نقدي';
-
         $data = array_merge($data, [
             $row->movement_type === 'payment' ? 'قبض' : 'استرجاع',
             $row->payment_method ?? 'cash',
             $row->receipt_number,
-            $insuranceLabel,
+            $row->insurance_type_label,
             optional($row->cashier)->name,
             optional($row->revenue_date)->format('Y-m-d'),
         ]);

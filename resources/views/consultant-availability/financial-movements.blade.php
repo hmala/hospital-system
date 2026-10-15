@@ -18,18 +18,18 @@
         <div class="col-lg-8 no-print">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <form method="GET" action="{{ route('consultant-availability.financial-movements') }}" class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label for="from_date" class="form-label">من تاريخ</label>
-                            <input type="date" id="from_date" name="from_date" class="form-control" value="{{ old('from_date', $fromDate) }}">
+                    <form method="GET" action="{{ route('consultant-availability.financial-movements') }}" class="row g-3">
+                        <div class="col-md-3 col-sm-6">
+                            <label for="from_date" class="form-label fw-bold small">من تاريخ</label>
+                            <input type="date" id="from_date" name="from_date" class="form-control form-control-sm" value="{{ old('from_date', $fromDate) }}">
                         </div>
-                        <div class="col-md-3">
-                            <label for="to_date" class="form-label">إلى تاريخ</label>
-                            <input type="date" id="to_date" name="to_date" class="form-control" value="{{ old('to_date', $toDate) }}">
+                        <div class="col-md-3 col-sm-6">
+                            <label for="to_date" class="form-label fw-bold small">إلى تاريخ</label>
+                            <input type="date" id="to_date" name="to_date" class="form-control form-control-sm" value="{{ old('to_date', $toDate) }}">
                         </div>
-                        <div class="col-md-3">
-                            <label for="filter_type" class="form-label">نوع الحركة</label>
-                            <select id="filter_type" name="filter_type" class="form-select">
+                        <div class="col-md-3 col-sm-6">
+                            <label for="filter_type" class="form-label fw-bold small">نوع الحركة</label>
+                            <select id="filter_type" name="filter_type" class="form-select form-select-sm">
                                 <option value="">كل الحركات</option>
                                 <option value="payment" {{ $filterType === 'payment' ? 'selected' : '' }}>حركات قبض</option>
                                 <option value="refund" {{ $filterType === 'refund' ? 'selected' : '' }}>حركات استرجاع</option>
@@ -37,23 +37,37 @@
                                 <option value="appointment_refunded" {{ $filterType === 'appointment_refunded' ? 'selected' : '' }}>المواعيد المدفوعة ثم المسترجعة</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex flex-column gap-2 no-print">
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-filter me-2"></i>تصفية
-                                </button>
-                                <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-outline-secondary w-100">
-                                    <i class="fas fa-redo me-2"></i>مسح
-                                </a>
+                        <div class="col-md-3 col-sm-6">
+                            <label for="insurance_status" class="form-label fw-bold small">حالة التغطية / الدفع</label>
+                            <select id="insurance_status" name="insurance_status" class="form-select form-select-sm">
+                                <option value="">الكل (كاش وضمان)</option>
+                                <option value="cash" {{ $insuranceStatus === 'cash' ? 'selected' : '' }}>نقداً فقط (كاش)</option>
+                                <option value="insurance" {{ $insuranceStatus === 'insurance' ? 'selected' : '' }}>مشمول بالضمان (HI / MOI)</option>
+                            </select>
+                        </div>
+
+                        <!-- الصف الثاني: البحث السريع وأزرار الإجراءات -->
+                        <div class="col-md-6 col-sm-12">
+                            <label for="search" class="form-label fw-bold small">بحث سريع</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="search" name="search" class="form-control" placeholder="اسم المريض، الهاتف، رقم الوصل..." value="{{ old('search', $search) }}">
                             </div>
-                            <div class="d-flex gap-2">
-                                <a href="{{ route('consultant-availability.financial-movements.export', request()->only(['from_date', 'to_date', 'filter_type'])) }}" class="btn btn-success w-100">
-                                    <i class="fas fa-file-excel me-2"></i>إكسل
-                                </a>
-                                <button type="button" onclick="window.print()" class="btn btn-info text-white w-100">
-                                    <i class="fas fa-print me-2"></i>طباعة
-                                </button>
-                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-sm-12 d-flex align-items-end gap-2 flex-wrap">
+                            <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">
+                                <i class="fas fa-filter me-1"></i>تصفية
+                            </button>
+                            <a href="{{ route('consultant-availability.financial-movements') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-redo me-1"></i>مسح
+                            </a>
+                            <a href="{{ route('consultant-availability.financial-movements.export', request()->all()) }}" class="btn btn-success btn-sm fw-bold">
+                                <i class="fas fa-file-excel me-1"></i>تصدير إكسل
+                            </a>
+                            <button type="button" onclick="window.print()" class="btn btn-info btn-sm text-white fw-bold">
+                                <i class="fas fa-print me-1"></i>طباعة
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -64,39 +78,42 @@
             <div class="row g-3">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm text-white bg-success">
-                        <div class="card-body">
+                        <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1">المستلم</h6>
-                                    <p class="fs-5 mb-0">{{ number_format($totalReceived, 2) }} IQD</p>
+                                    <h6 class="mb-1 small fw-bold text-white-50">المستلم نقداً بالصندوق (الدرج)</h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ number_format($totalReceived, 2) }} IQD</p>
+                                    <small class="text-white-50" style="font-size: 0.70rem;">ما دفعه المرضى فعلياً في الكاشير</small>
                                 </div>
-                                <i class="fas fa-hand-holding-dollar fa-2x"></i>
+                                <i class="fas fa-hand-holding-dollar fa-2x opacity-75"></i>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12">
                     <div class="card border-0 shadow-sm text-white bg-danger">
-                        <div class="card-body">
+                        <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1">المسترجع</h6>
-                                    <p class="fs-5 mb-0">{{ number_format($totalRefunded, 2) }} IQD</p>
+                                    <h6 class="mb-1 small fw-bold text-white-50">المسترجع نقداً للمرضى</h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ number_format($totalRefunded, 2) }} IQD</p>
+                                    <small class="text-white-50" style="font-size: 0.70rem;">مبالغ الاسترجاع النقدية المنفذة</small>
                                 </div>
-                                <i class="fas fa-undo-alt fa-2x"></i>
+                                <i class="fas fa-undo-alt fa-2x opacity-75"></i>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12">
                     <div class="card border-0 shadow-sm text-white bg-info">
-                        <div class="card-body">
+                        <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1">الصافي</h6>
-                                    <p class="fs-5 mb-0">{{ number_format($netTotal, 2) }} IQD</p>
+                                    <h6 class="mb-1 small fw-bold text-white-50">الصافي النقدي الفعلي</h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ number_format($netTotal, 2) }} IQD</p>
+                                    <small class="text-white-50" style="font-size: 0.70rem;">صافي السيولة النقدية من الكشفيات</small>
                                 </div>
-                                <i class="fas fa-calculator fa-2x"></i>
+                                <i class="fas fa-calculator fa-2x opacity-75"></i>
                             </div>
                         </div>
                     </div>
@@ -118,61 +135,100 @@
                             @if($fromDate || $toDate)
                                 <span class="ms-3">الفترة: من {{ $fromDate ?? 'البداية' }} إلى {{ $toDate ?? 'النهاية' }}</span>
                             @endif
+                            @if($insuranceStatus)
+                                <span class="ms-3">التغطية: {{ $insuranceStatus === 'cash' ? 'نقداً (كاش)' : 'مشمول بالضمان' }}</span>
+                            @endif
                         </div>
                         <hr>
                     </div>
                     @if($payments->count() > 0)
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
                                         <th>#</th>
                                         <th>التاريخ</th>
                                         <th>المريض</th>
                                         <th>الطبيب</th>
                                         <th>القسم</th>
-                                        <th>المبلغ</th>
+                                        <th style="min-width: 140px;">المبلغ المدفوع (نقداً)</th>
                                         @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
                                         <th>حصة الطبيب</th>
                                         <th>حصة المستشفى</th>
                                         @endif
                                         <th>نوع الحركة</th>
-                                        <th>طريقة الدفع</th>
+                                        <th>طريقة الدفع والتغطية</th>
                                         <th>رقم الإيصال</th>
                                         <th>الجهة / الكاشير</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($payments as $payment)
+                                        @php
+                                            $actualPaid = $payment->patient_paid_amount;
+                                            $isRefund = $payment->movement_type === 'refund' || $actualPaid < 0;
+                                            $isInsurance = $payment->is_insurance;
+                                            $insuranceShare = $payment->insurance_share_amount;
+                                            $totalTariff = abs($payment->total_amount);
+                                        @endphp
                                         <tr>
                                             <td>{{ $payments->firstItem() + $loop->index }}</td>
                                             <td>{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '-' }}</td>
-                                            <td>{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-' }}</td>
+                                            <td>
+                                                <strong class="text-dark">{{ optional(optional(optional($payment->appointment)->patient)->user)->name ?? optional(optional($payment->patient)->user)->name ?? '-' }}</strong>
+                                            </td>
                                             <td>{{ optional(optional(optional($payment->appointment)->doctor)->user)->name ?? '-' }}</td>
                                             <td>{{ optional(optional($payment->appointment)->department)->name ?? '-' }}</td>
-                                            <td class="fw-bold {{ $payment->total_amount < 0 ? 'text-danger' : 'text-success' }}">
-                                                {{ number_format(abs($payment->total_amount), 2) }} IQD
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}" style="font-size: 1rem;">
+                                                        {{ number_format(abs($actualPaid), 2) }} IQD
+                                                    </span>
+                                                    @if($isInsurance)
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-75" style="font-size: 0.68rem;">
+                                                                <i class="fas fa-shield-alt text-warning me-1"></i>تحمّل المريض
+                                                            </span>
+                                                            <small class="d-block text-muted mt-0.5" style="font-size: 0.70rem;">
+                                                                كشفية: {{ number_format($totalTariff, 0) }} | ضمان: {{ number_format($insuranceShare, 0) }}
+                                                            </small>
+                                                        </div>
+                                                    @else
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-light text-secondary border" style="font-size: 0.68rem;">
+                                                                <i class="fas fa-money-bill-wave text-success me-1"></i>كاش نقدي
+                                                            </span>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </td>
                                             @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
                                             <td class="text-success fw-semibold">{{ number_format($payment->doctor_share, 2) }} IQD</td>
                                             <td class="text-info fw-semibold">{{ number_format($payment->hospital_share, 2) }} IQD</td>
                                             @endif
                                             <td>
-                                                @if($payment->movement_type === 'refund' || $payment->total_amount < 0)
+                                                @if($isRefund)
                                                     <span class="badge bg-danger">استرجاع</span>
                                                 @else
                                                     <span class="badge bg-success">قبض</span>
                                                 @endif
                                             </td>
-                                            <td>{{ $payment->payment_method ?? '-' }}</td>
+                                            <td>
+                                                <span class="badge {{ $isInsurance ? 'bg-success bg-opacity-15 text-success border border-success border-opacity-50' : 'bg-light text-dark border' }}">
+                                                    {{ $payment->insurance_type_label }}
+                                                </span>
+                                                <small class="d-block text-muted mt-1" style="font-size: 0.72rem;">
+                                                    <i class="fas fa-wallet me-1 text-secondary"></i>{{ $payment->payment_method ?? 'نقد' }}
+                                                </small>
+                                            </td>
                                             <td>
                                                 @if($payment->receipt_number && $payment->payment_id)
-                                                    <a href="{{ route('cashier.receipt.print', $payment->payment_id) }}" class="btn btn-sm btn-link p-0 no-print" target="_blank" title="طباعة الإيصال">
+                                                    <a href="{{ route('cashier.receipt.print', $payment->payment_id) }}" class="btn btn-sm btn-link p-0 no-print fw-bold font-monospace" target="_blank" title="طباعة الإيصال">
                                                         <i class="fas fa-print me-1 text-primary"></i>{{ $payment->receipt_number }}
                                                     </a>
-                                                    <span class="d-none d-print-inline">{{ $payment->receipt_number }}</span>
+                                                    <span class="d-none d-print-inline font-monospace">{{ $payment->receipt_number }}</span>
                                                 @else
-                                                    {{ $payment->receipt_number ?? '-' }}
+                                                    <span class="font-monospace">{{ $payment->receipt_number ?? '-' }}</span>
                                                 @endif
                                             </td>
                                             <td>{{ optional($payment->cashier)->name ?? '-' }}</td>

@@ -456,7 +456,7 @@ class ConsultantAvailabilityController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للاستشارية');
         }
 
-        $query = ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier'])
+        $query = ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment'])
             ->whereHas('appointment.doctor', function ($q) {
                 $q->where('type', 'consultant');
             });
@@ -469,17 +469,17 @@ class ConsultantAvailabilityController extends Controller
         $insuranceStatus = $request->query('insurance_status');
 
         if ($fromDate) {
-            $query->whereDate('paid_at', '>=', $fromDate);
+            $query->whereDate('consultation_revenues.paid_at', '>=', $fromDate);
         }
 
         if ($toDate) {
-            $query->whereDate('paid_at', '<=', $toDate);
+            $query->whereDate('consultation_revenues.paid_at', '<=', $toDate);
         }
 
         if ($filterType === 'payment') {
-            $query->where('movement_type', 'payment');
+            $query->where('consultation_revenues.movement_type', 'payment');
         } elseif ($filterType === 'refund') {
-            $query->where('movement_type', 'refund');
+            $query->where('consultation_revenues.movement_type', 'refund');
         } elseif ($filterType === 'appointment_paid') {
             $query->whereHas('appointment', function ($q) {
                 $q->where('payment_status', 'paid');
@@ -491,7 +491,7 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($paymentMethod) {
-            $query->where('payment_method', $paymentMethod);
+            $query->where('consultation_revenues.payment_method', $paymentMethod);
         }
 
         if ($insuranceStatus) {
@@ -534,7 +534,7 @@ class ConsultantAvailabilityController extends Controller
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('receipt_number', 'like', '%' . $search . '%')
+                $q->where('consultation_revenues.receipt_number', 'like', '%' . $search . '%')
                   ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
                       $uq->where('name', 'like', '%' . $search . '%')
                          ->orWhere('phone', 'like', '%' . $search . '%');
@@ -542,14 +542,29 @@ class ConsultantAvailabilityController extends Controller
             });
         }
 
-        $totalsQuery = clone $query;
+        // احتساب مجاميع النقد الفعلي المستلم والمسترجع في صندوق الكاشير (ما دفعه المريض فعلياً)
+        $totalsQuery = (clone $query)->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
 
-        $totalReceived = (clone $totalsQuery)->where('total_amount', '>=', 0)->sum('total_amount');
-        $totalRefunded = abs((clone $totalsQuery)->where('total_amount', '<', 0)->sum('total_amount'));
-        $netTotal = (clone $totalsQuery)->sum('total_amount');
-        $totalCount = (clone $totalsQuery)->count();
+        $totalReceived = (float) (clone $totalsQuery)
+            ->where(function($q) {
+                $q->where('consultation_revenues.movement_type', 'payment')
+                  ->orWhere(function($sq) {
+                      $sq->whereNull('consultation_revenues.movement_type')->where('consultation_revenues.total_amount', '>=', 0);
+                  });
+            })
+            ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)'));
 
-        $payments = $query->orderBy('paid_at', 'desc')->paginate(25)->appends($request->query());
+        $totalRefunded = abs((float) (clone $totalsQuery)
+            ->where(function($q) {
+                $q->where('consultation_revenues.movement_type', 'refund')
+                  ->orWhere('consultation_revenues.total_amount', '<', 0);
+            })
+            ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)')));
+
+        $netTotal = $totalReceived - $totalRefunded;
+        $totalCount = (clone $query)->count();
+
+        $payments = $query->select('consultation_revenues.*')->orderBy('consultation_revenues.paid_at', 'desc')->paginate(25)->appends($request->query());
 
         return view('consultant-availability.financial-movements', compact(
             'payments',
