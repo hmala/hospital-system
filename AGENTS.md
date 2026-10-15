@@ -74,14 +74,14 @@ Consult these files before making changes or proposing fixes:
 - **التقرير المالي الرسمي بفورمة المستشفى (Official Hospital Form Financial Movements Report)**:
   * بناء استمارة تقرير رسمي فاخرة [resources/views/consultant-availability/financial-movements-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/financial-movements-report.blade.php) مطابقة لفورمة تقرير الطوارئ (A4 Landscape):
     - إطار مزدوج ملكي أخضر زمردي (`#0f766e` و `#99f6e4`) وعلامة مائية رسمية لشعار المستشفى (`images/1.jpg`).
-    - ترويسة رسمية ثنائية اللغة: جمهورية العراق - وزارة الصحة - مستشفى الأهلي التخصصي للجراحة العامة - قسم الإدارة المالية والتدقيق الحسابي.
+    - ترويسة رسمية ثنائية اللغة: مستشفى الكفاءات الأهلي (Al-Kafaat Private Hospital) - قسم الإدارة المالية والتدقيق الحسابي - العيادات الاستشارية والتخصصية وفحوصات السونار.
     - شريط عنوان أنيق مع رقم مرجعي مشفر `REF-FIN-{{ now() }}` وشارة نسخة الإدارة والتدقيق.
     - بطاقة محددات التقرير (الفترة الزمنية، فترة الدوام، نوع الخدمة، نوع الحركة، التغطية، والمحاسب المنظم).
     - بطاقات إحصائية مالية ملونة للمجاميع: المستلم نقداً (الدرج)، المسترجع نقداً للمرضى، الصافي النقدي الفعلي، وإجمالي القيود.
     - جدول الحركات المالية الرسمي بتنسيق عالي الدقة يوضح تفاصيل كل قيد، شطب وملاحظات القيود الملغاة، وحصص الأطباء والمستشفى للمخولين.
     - تذييل رسمي ثلاثي الأعمدة:
       * رمز استجابة سريعة QR Code مولد برمجياً عبر مكتبة `qrcode.min.js` المحلية للتحقق من بيانات التقرير ومطابقته.
-      * الختم الدائري الرسمي لقسم الحسابات والتدقيق المالي بمستشفى الأهلي التخصصي.
+      * الختم الدائري الرسمي لقسم التدقيق المالي بمستشفى الكفاءات الأهلي.
       * تواقيع المحاسب المنظم والمدير المالي / الإدارة للمصادقة والاعتماد.
   * تسجيل مسار التقرير `consultant-availability.financial-movements.print` في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) والدالة `printFinancialMovements` في [app/Http/Controllers/ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php).
   * ربط زر **[ 🖨️ طباعة التقرير الرسمي ]** في واجهة الحركات المالية ليفتح التقرير في نافذة جديدة مع شريط علوي للطباعة الفورية.
