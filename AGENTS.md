@@ -57,6 +57,37 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-15 — المرحلة 54: التقرير الطبي لحالة الطوارئ وتوقيع الطبيب المعتمد والتحقق الرقمي عبر QR Code والطباعة بنسختين Emergency Medical Report, Dr. Mohanad Ismail Signature & Dual-Copy QR Verification)
+
+### Done
+- **نظام التقرير الطبي الرسمي لحالات الطوارئ (Emergency Medical Report)**:
+  * **الأهداف والمتطلبات**: بناء نموذج تقرير طبي رسمي عالي الدقة (A4 Portrait) لكل حالة طوارئ يطبع مباشرة، متضمناً اسم وتوقيع طبيب الطوارئ المعتمد (د. مهند إسماعيل)، رمز استجابة سريعة (QR Code) للتحقق الإلكتروني، وخيار الطباعة المزدوجة (نسخة المريض + نسخة الإدارة والأرشيف).
+  * **التطوير المعماري والبرمجي**:
+    1. **التوقيع اليدوي الحقيقي لطبيب الطوارئ (د. مهند إسماعيل)**:
+       - استخلاص ومعالجة الصورة المرفوعة لتوقيع د. مهند إسماعيل (`media_1792064825819.jpg`)، عزل الحبر الأزرق مع شفافية قناة ألفا (Alpha Channel) وتوليد الصورة النقية في [public/images/signatures/doctor_244.png](file:///c:/wamp64/www/hospital-system/public/images/signatures/doctor_244.png).
+       - إضافة حقل `signature` إلى جدول `doctors` عبر مايجريشن [database/migrations/2026_10_15_160000_add_signature_to_doctors_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_15_160000_add_signature_to_doctors_table.php) وتحديث نموذج [app/Models/Doctor.php](file:///c:/wamp64/www/hospital-system/app/Models/Doctor.php).
+       - ربط التوقيع بحساب د. مهند إسماعيل (`Doctor #244` / `User #627`).
+    2. **قالب التقرير الطبي المتطور والطباعة المزدوجة**:
+       - إنشاء استمارة [resources/views/emergency/medical-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/medical-report.blade.php):
+         * مقاس A4 قياسي مع علامة مائية لشعار المستشفى وإطار مزدوج.
+         * تفاصيل المريض (الاسم، العمر، الجنس، رقم الملف/الإضبارة، الهاتف، وقت الدخول والخروج، درجة الفرز الخطورة).
+         * العلامات الحيوية عند الاستقبال (الضغط، النبض، الحرارة، التنفس، SpO2، السكر).
+         * الشكوى الرئيسية والأعراض والتشخيص السريري المعتمد.
+         * جدول التدخلات الطبية والعلاجات والمحاليل الوريدية والخدمات التمريضية.
+         * جدول الفحوصات التشخيصية (مختبر الطوارئ والأشعة والتصوير).
+         * قرار وتوصيات الخروج ومسار الحالة ومدة الإقامة.
+         * خيارات الطباعة المزدوجة: شريط علوي للتبديل اللحظي بين (نسخة المريض فقط / نسخة الإدارة والأرشيف فقط / طباعة النسختين معاً بفاصل صفحات تلقائي).
+         * تذييل رسمي: ختم قسم الطوارئ، وتوقيع د. مهند إسماعيل المعتمد، ورمز QR المشفر برابط التحقق المباشر.
+    3. **بوابة التحقق الرقمي العام من التقرير (Public Verification Page)**:
+       - إنشاء واجهة متوافقة مع الهواتف الذكية [resources/views/emergency/verify-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/verify-report.blade.php) تتيح لأي شخص أو جهة مسح رمز الـ QR والتحقق من صحة ومطابقة التقرير السريري مع سجلات المستشفى دون الحاجة لتسجيل الدخول.
+       - تسجيل المسار العام `emergency.verify-report` في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) واستثناؤه من ميدلوير المصادقة في `EmergencyController::__construct()`.
+    4. **أزرار سريعة للوصول للتقرير**:
+       - إضافة زر **[ 📄 التقرير الطبي للطوارئ ]** في ترويسة محطة الفحص [resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php).
+       - إضافة أيقونة طباعة سريعة للتقرير في جدول الطوارئ العام [resources/views/emergency/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/index.blade.php).
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/EmergencyMedicalReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (18 assertions)`.
+  * اجتياز كامل اختبارات قسم الطوارئ: `19 passed (102 assertions)`.
+
 ## Session log (2026-10-15 — المرحلة 53: تنظيم وتوحيد أزرار الطوارئ وإضافة مسار توثيق تحويل للاستشارية Emergency Actions Consolidation & Referral to Outpatient Discharge)
 
 ### Done
