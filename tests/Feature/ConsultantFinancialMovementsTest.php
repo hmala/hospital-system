@@ -393,4 +393,16 @@ class ConsultantFinancialMovementsTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_receptionist_can_view_financial_movements_and_see_summary_statistics_cards()
+    {
+        $receptionist = User::factory()->create();
+        $receptionist->givePermissionTo('view consultant financial movements');
+
+        $response = $this->actingAs($receptionist)->get(route('consultant-availability.financial-movements'));
+        $response->assertStatus(200);
+        $response->assertSee('المستلم نقداً بالصندوق (الدرج)');
+        $response->assertSee('المسترجع نقداً للمرضى');
+        $response->assertSee('الصافي النقدي الفعلي');
+    }
 }

@@ -90,7 +90,6 @@
                 </div>
             </div>
         </div>
-        @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole('admin'))
         <div class="col-lg-4 no-print">
             <div class="row g-3">
                 <div class="col-12">
@@ -137,7 +136,6 @@
                 </div>
             </div>
         </div>
-        @endif
     </div>
 
     <div class="row">
