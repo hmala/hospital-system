@@ -13,18 +13,37 @@ class PaymentObserver
 {
     public function created(Payment $payment): void
     {
-        $this->handlePaymentRevenue($payment);
-        $this->syncNonAppointmentPayment($payment);
+        if ((float)$payment->amount < 0) {
+            $this->handleRefundFinancialTransaction($payment);
+        } else {
+            $this->handlePaymentRevenue($payment);
+            $this->syncNonAppointmentPayment($payment);
+        }
         $this->logPaymentActivity($payment);
     }
 
     public function updated(Payment $payment): void
     {
         if ($payment->wasChanged('paid_at') && $payment->paid_at !== null) {
-            $this->handlePaymentRevenue($payment);
-            $this->syncNonAppointmentPayment($payment);
+            if ((float)$payment->amount < 0) {
+                $this->handleRefundFinancialTransaction($payment);
+            } else {
+                $this->handlePaymentRevenue($payment);
+                $this->syncNonAppointmentPayment($payment);
+            }
             $this->logPaymentActivity($payment);
         }
+    }
+
+    public function deleted(Payment $payment): void
+    {
+        // حذف أي سندات خزينة أو إيرادات تابعة للدفعة المحذوفة لمنع أي عدم تطابق مستقبلاً
+        FinancialTransaction::where('related_type', Payment::class)
+            ->where('related_id', $payment->id)
+            ->delete();
+
+        ConsultationRevenue::where('payment_id', $payment->id)->delete();
+        DoctorDue::where('payment_id', $payment->id)->delete();
     }
 
     protected function logPaymentActivity(Payment $payment): void
@@ -310,6 +329,40 @@ class PaymentObserver
                 'description' => 'مقبوضات ' . (Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات') . ' إيصال رقم ' . $payment->receipt_number,
                 'notes' => $payment->description,
                 'performed_by_id' => $payment->cashier_id,
+                'performed_at' => $payment->paid_at,
+            ]
+        );
+    }
+
+    protected function handleRefundFinancialTransaction(Payment $payment): void
+    {
+        if (!$payment->paid_at) {
+            return;
+        }
+
+        $category = 'general_income';
+        if ($payment->appointment_id || $payment->payment_type === 'appointment') {
+            $category = 'consultation';
+        } elseif ($payment->payment_type && in_array($payment->payment_type, ['lab', 'radiology', 'pharmacy', 'emergency', 'surgery'])) {
+            $category = $payment->payment_type;
+        }
+
+        FinancialTransaction::updateOrCreate(
+            [
+                'related_type' => Payment::class,
+                'related_id' => $payment->id,
+            ],
+            [
+                'voucher_type' => 'outflow',
+                'transaction_type' => 'expense',
+                'category' => $category,
+                'voucher_number' => $payment->receipt_number,
+                'amount' => abs((float)$payment->amount),
+                'currency' => 'IQD',
+                'payment_method' => $payment->payment_method ?: 'cash',
+                'description' => 'استرجاع مقبوضات إيصال رقم ' . $payment->receipt_number,
+                'notes' => $payment->description ?: 'سند صرف استرجاع نقدي',
+                'performed_by_id' => $payment->cashier_id ?: auth()->id(),
                 'performed_at' => $payment->paid_at,
             ]
         );
