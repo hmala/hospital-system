@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- QRCode JS Library -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- Local QRCode JS Library -->
+    <script src="{{ asset('js/qrcode.min.js') }}"></script>
 
     <style>
         * {
@@ -430,16 +430,17 @@
             font-weight: 600;
         }
         .sig-container {
-            height: 60px;
+            height: 65px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 2px 0;
         }
         .sig-container img {
-            max-height: 56px;
-            max-width: 170px;
+            max-height: 60px;
+            max-width: 180px;
             object-fit: contain;
+            mix-blend-mode: multiply;
         }
         .sig-date {
             font-size: 9.5px;
@@ -889,7 +890,9 @@
         <div class="report-footer">
             <!-- QR Code Verification -->
             <div class="qr-section">
-                <canvas class="qr-canvas qr-canvas-{{ $copyKey }}" data-url="{{ $verifyUrl }}" width="80" height="80"></canvas>
+                <div class="qr-box" id="qrcode-{{ $copyKey }}" data-url="{{ $verifyUrl }}" style="width: 80px; height: 80px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" width="80" height="80" style="display: block; width: 80px; height: 80px; object-fit: contain;" />
+                </div>
                 <div class="qr-label">امسح للتحقق الرقمي المعتمد</div>
                 <div style="font-size: 8px; color: #94a3b8; font-weight: 700;">{{ $emergencyId }}</div>
             </div>
@@ -933,20 +936,19 @@
 @endforeach
 
 <script>
-    // Generate QR Codes on canvas
+    // Generate QR Codes via local library
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof QRCode !== 'undefined') {
-            document.querySelectorAll('.qr-canvas').forEach(function(canvas) {
-                var url = canvas.getAttribute('data-url');
-                QRCode.toCanvas(canvas, url, {
+            document.querySelectorAll('.qr-box').forEach(function(box) {
+                var url = box.getAttribute('data-url');
+                box.innerHTML = ''; // replace fallback image with local sharp vector QR code
+                new QRCode(box, {
+                    text: url,
                     width: 80,
-                    margin: 1,
-                    color: {
-                        dark: '#0f766e',
-                        light: '#ffffff'
-                    }
-                }, function (error) {
-                    if (error) console.error(error);
+                    height: 80,
+                    colorDark: '#0f766e',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
                 });
             });
         }

@@ -166,11 +166,12 @@
             margin-bottom: 8px;
         }
         .sig-img {
-            max-height: 55px;
+            max-height: 60px;
             max-width: 180px;
             object-fit: contain;
             margin: 0 auto;
             display: block;
+            mix-blend-mode: multiply;
         }
 
         .verify-footer {
