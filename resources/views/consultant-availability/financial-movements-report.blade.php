@@ -27,36 +27,36 @@
             text-align: right;
             background-color: #f1f5f9;
             padding: 20px 10px;
-            font-size: 12px;
-            line-height: 1.45;
+            font-size: 11.5px;
+            line-height: 1.4;
         }
 
         /* Top Action Bar (Screen Only) */
         .no-print {
-            max-width: 297mm;
+            max-width: 210mm;
             margin: 0 auto 16px auto;
             background: #ffffff;
-            padding: 12px 20px;
+            padding: 12px 18px;
             border-radius: 10px;
             box-shadow: 0 4px 14px rgba(0,0,0,0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
         }
 
         .action-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 8px 18px;
+            padding: 8px 16px;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             border: 1px solid transparent;
@@ -79,13 +79,13 @@
         }
         .btn-back:hover { background-color: #475569; }
 
-        /* Report Page Container (A4 Landscape Form) */
+        /* Report Page Container (A4 Portrait - 210mm x 296mm - مطابق لتقرير الطوارئ) */
         .report-page {
-            width: 297mm;
-            min-height: 210mm;
+            width: 210mm;
+            min-height: 296mm;
             margin: 0 auto 25px auto;
             background: #ffffff;
-            padding: 14mm 16mm 14mm 16mm;
+            padding: 12mm 14mm 10mm 14mm;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             position: relative;
             box-sizing: border-box;
@@ -102,8 +102,8 @@
             background-image: url('{{ asset('images/1.jpg') }}');
             background-repeat: no-repeat;
             background-position: center center;
-            background-size: 28% auto;
-            opacity: 0.04;
+            background-size: 38% auto;
+            opacity: 0.045;
             pointer-events: none;
             z-index: 0;
         }
@@ -113,7 +113,7 @@
             z-index: 1;
         }
 
-        /* Outer Border Frame */
+        /* Outer Border Frame (Emerald double border) */
         .page-frame {
             position: absolute;
             top: 5mm;
@@ -142,7 +142,7 @@
             align-items: center;
             border-bottom: 2px solid #0f766e;
             padding-bottom: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .header-hospital-ar {
@@ -150,29 +150,29 @@
             flex: 1;
         }
         .header-hospital-ar h2 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 900;
             color: #0f766e;
             margin-bottom: 1px;
         }
         .header-hospital-ar h4 {
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 700;
             color: #1e293b;
         }
         .header-hospital-ar p {
-            font-size: 11px;
+            font-size: 10px;
             color: #64748b;
             font-weight: 600;
         }
 
         .header-logo {
             text-align: center;
-            flex: 0 0 110px;
+            flex: 0 0 90px;
         }
         .header-logo img {
-            max-width: 80px;
-            max-height: 70px;
+            max-width: 70px;
+            max-height: 60px;
             object-fit: contain;
         }
 
@@ -182,18 +182,18 @@
             flex: 1;
         }
         .header-hospital-en h2 {
-            font-size: 15px;
+            font-size: 13.5px;
             font-weight: 800;
             color: #0f766e;
             margin-bottom: 1px;
         }
         .header-hospital-en h4 {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             color: #1e293b;
         }
         .header-hospital-en p {
-            font-size: 10px;
+            font-size: 9.5px;
             color: #64748b;
             font-weight: 600;
         }
@@ -202,38 +202,38 @@
         .title-strip {
             background: linear-gradient(90deg, #0f766e, #115e59);
             color: #ffffff;
-            padding: 6px 14px;
-            border-radius: 6px;
+            padding: 5px 12px;
+            border-radius: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .title-strip h3 {
-            font-size: 15px;
+            font-size: 13.5px;
             font-weight: 900;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             color: #ffffff;
         }
         .copy-type-badge {
             background-color: #ffffff;
             color: #0f766e;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
         }
         .report-ref-badge {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             color: #ccfbf1;
             direction: ltr;
         }
 
-        /* Scope & Filter Info Grid */
+        /* Scope & Filter Metadata Box */
         .section-box {
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
+            border-radius: 5px;
             margin-bottom: 8px;
             overflow: hidden;
             background: rgba(255, 255, 255, 0.98);
@@ -242,8 +242,8 @@
             background: #f1f5f9;
             color: #0f766e;
             font-weight: 800;
-            font-size: 11.5px;
-            padding: 4px 10px;
+            font-size: 11px;
+            padding: 3px 8px;
             border-bottom: 1px solid #cbd5e1;
             display: flex;
             justify-content: space-between;
@@ -252,23 +252,23 @@
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px 14px;
-            padding: 6px 12px;
-            font-size: 11px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px 10px;
+            padding: 5px 10px;
+            font-size: 10.5px;
         }
         .grid-item {
             display: flex;
             flex-direction: column;
         }
         .grid-label {
-            font-size: 9.5px;
+            font-size: 9px;
             color: #64748b;
             font-weight: 700;
             margin-bottom: 1px;
         }
         .grid-value {
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: #0f172a;
             font-weight: 700;
         }
@@ -277,41 +277,41 @@
         .stats-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-bottom: 10px;
+            gap: 6px;
+            margin-bottom: 8px;
         }
         .stat-card {
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 6px 10px;
+            border-radius: 5px;
+            padding: 5px 8px;
             background: #ffffff;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .stat-card.received {
-            border-right: 4px solid #16a34a;
+            border-right: 3.5px solid #16a34a;
             background: #f0fdf4;
         }
         .stat-card.refunded {
-            border-right: 4px solid #dc2626;
+            border-right: 3.5px solid #dc2626;
             background: #fef2f2;
         }
         .stat-card.net {
-            border-right: 4px solid #0284c7;
+            border-right: 3.5px solid #0284c7;
             background: #f0f9ff;
         }
         .stat-card.count {
-            border-right: 4px solid #6366f1;
+            border-right: 3.5px solid #6366f1;
             background: #faf5ff;
         }
         .stat-title {
-            font-size: 10px;
+            font-size: 9px;
             color: #475569;
             font-weight: 700;
         }
         .stat-amount {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 900;
             color: #0f172a;
             margin-top: 1px;
@@ -320,17 +320,16 @@
         /* Table Styling */
         .table-container {
             width: 100%;
-            overflow-x: auto;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .report-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10.5px;
+            font-size: 9.5px;
         }
         .report-table th, .report-table td {
             border: 1px solid #cbd5e1;
-            padding: 4px 6px;
+            padding: 3.5px 5px;
             text-align: right;
             vertical-align: middle;
         }
@@ -338,7 +337,7 @@
             background-color: #f1f5f9;
             color: #0f766e;
             font-weight: 800;
-            font-size: 10.5px;
+            font-size: 9.5px;
             white-space: nowrap;
         }
         .report-table tr:nth-child(even) td {
@@ -352,9 +351,9 @@
         /* Badges */
         .badge {
             display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 9.5px;
+            padding: 1.5px 5px;
+            border-radius: 3px;
+            font-size: 8.5px;
             font-weight: 800;
             white-space: nowrap;
         }
@@ -371,16 +370,16 @@
             padding-top: 8px;
             border-top: 1.5px dashed #cbd5e1;
             display: grid;
-            grid-template-columns: 130px 1fr 220px;
-            gap: 14px;
+            grid-template-columns: 100px 1fr 180px;
+            gap: 12px;
             align-items: center;
         }
 
         .qr-section {
             text-align: center;
             border: 1px solid #e2e8f0;
-            padding: 5px;
-            border-radius: 6px;
+            padding: 4px;
+            border-radius: 5px;
             background: #ffffff;
         }
         .qr-canvas {
@@ -388,7 +387,7 @@
             margin: 0 auto;
         }
         .qr-label {
-            font-size: 8.5px;
+            font-size: 8px;
             font-weight: 700;
             color: #64748b;
             margin-top: 2px;
@@ -398,10 +397,10 @@
             text-align: center;
         }
         .stamp-circle {
-            width: 90px;
-            height: 90px;
+            width: 80px;
+            height: 80px;
             margin: 0 auto;
-            border: 2px dashed #0f766e;
+            border: 1.5px dashed #0f766e;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -409,8 +408,8 @@
             align-items: center;
             color: #0f766e;
             font-weight: 800;
-            font-size: 9.5px;
-            line-height: 1.25;
+            font-size: 8.5px;
+            line-height: 1.2;
             opacity: 0.85;
             background: rgba(204, 251, 241, 0.15);
         }
@@ -418,35 +417,37 @@
         .signatures-section {
             display: flex;
             justify-content: space-around;
-            gap: 15px;
+            gap: 10px;
             text-align: center;
         }
         .sig-block {
             flex: 1;
         }
         .sig-title {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             color: #0f172a;
         }
         .sig-sub {
-            font-size: 9.5px;
+            font-size: 8.5px;
             color: #64748b;
-            margin-bottom: 25px;
+            margin-bottom: 22px;
         }
         .sig-line {
             border-top: 1px solid #94a3b8;
-            font-size: 9px;
+            font-size: 8.5px;
             color: #64748b;
             padding-top: 2px;
         }
 
-        /* Print Media Styles */
+        /* Print Media Styles (A4 Portrait - 210mm x 296mm) */
         @media print {
             body {
-                background: #ffffff !important;
+                background: none !important;
                 padding: 0 !important;
                 margin: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .no-print {
                 display: none !important;
@@ -454,18 +455,33 @@
             .report-page {
                 box-shadow: none !important;
                 margin: 0 !important;
-                width: 100% !important;
-                min-height: auto !important;
-                padding: 6mm 8mm !important;
+                width: 210mm !important;
+                min-height: 296mm !important;
+                padding: 10mm 12mm 10mm 12mm !important;
                 page-break-after: always;
             }
+            .report-page:last-child {
+                page-break-after: auto;
+            }
             @page {
-                size: A4 landscape;
-                margin: 6mm 6mm;
+                size: A4 portrait;
+                margin: 0;
+            }
+            .page-frame {
+                top: 5mm;
+                right: 5mm;
+                bottom: 5mm;
+                left: 5mm;
+            }
+            .page-frame-inner {
+                top: 6.5mm;
+                right: 6.5mm;
+                bottom: 6.5mm;
+                left: 6.5mm;
             }
             .report-table th, .report-table td {
-                padding: 3px 5px !important;
-                font-size: 9.5px !important;
+                padding: 3px 4px !important;
+                font-size: 9px !important;
             }
         }
     </style>
@@ -481,13 +497,13 @@
             <a href="{{ route('consultant-availability.financial-movements', request()->query()) }}" class="btn btn-back">
                 <i class="fas fa-arrow-right"></i> الرجوع للحركات المالية
             </a>
-            <span style="font-size: 11px; color: #64748b; font-weight: 600; margin-right: 10px;">
-                <i class="fas fa-file-invoice-dollar text-primary me-1"></i> إجمالي الحركات المعروضة: {{ $payments->count() }} قيد
+            <span style="font-size: 11px; color: #64748b; font-weight: 600; margin-right: 8px;">
+                <i class="fas fa-file-invoice-dollar text-primary me-1"></i> إجمالي الحركات: {{ $payments->count() }} قيد
             </span>
         </div>
         <div class="action-group">
             <span style="font-size: 11px; color: #0f766e; font-weight: 700;">
-                <i class="fas fa-check-circle me-1"></i> جاهز للطباعة بحجم A4 عريض (Landscape)
+                <i class="fas fa-check-circle me-1"></i> قياس A4 رسمي عمودي (Portrait)
             </span>
         </div>
     </div>
@@ -515,16 +531,16 @@
                 <div class="header-hospital-en">
                     <h2>Al-Kafaat Private Hospital</h2>
                     <h4>Financial Management & Audit Dept.</h4>
-                    <p>Consultant Clinics & Diagnostic Ultrasound</p>
+                    <p>Consultant Clinics & Diagnostic Care</p>
                 </div>
             </div>
 
             <!-- Title Strip -->
             <div class="title-strip">
                 <div>
-                    <h3><i class="fas fa-chart-pie me-2"></i> تقرير الحركات المالية للعيادات الاستشارية والسونار</h3>
+                    <h3><i class="fas fa-chart-pie me-1"></i> تقرير الحركات المالية للعيادات الاستشارية والسونار</h3>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
                     <span class="report-ref-badge">REF-FIN-{{ now()->format('Ymd-His') }}</span>
                     <span class="copy-type-badge">نسخة الإدارة والتدقيق</span>
                 </div>
@@ -534,7 +550,7 @@
             <div class="section-box">
                 <div class="section-title">
                     <span><i class="fas fa-filter me-1"></i> محددات ومعايير التقرير المالي</span>
-                    <span style="font-size: 10px; color: #64748b;">تاريخ التوليد: {{ now()->format('Y-m-d h:i A') }}</span>
+                    <span style="font-size: 9.5px; color: #64748b;">تاريخ التوليد: {{ now()->format('Y-m-d h:i A') }}</span>
                 </div>
                 <div class="info-grid">
                     <div class="grid-item">
@@ -544,8 +560,8 @@
                     <div class="grid-item">
                         <span class="grid-label">فترة الدوام:</span>
                         <span class="grid-value">
-                            @if(($shift ?? '') === 'morning') ☀️ الدوام الصباحي (8 ص - 3 م)
-                            @elseif(($shift ?? '') === 'evening') 🌙 الدوام المسائي (3 م فما بعد)
+                            @if(($shift ?? '') === 'morning') ☀️ الصباحي (8 ص - 3 م)
+                            @elseif(($shift ?? '') === 'evening') 🌙 المسائي (3 م فما بعد)
                             @else كامل اليوم (صباحي ومسائي) @endif
                         </span>
                     </div>
@@ -554,7 +570,7 @@
                         <span class="grid-value">
                             @if(($serviceCategory ?? '') === 'ultrasound') 📡 السونار الخارجي المباشر
                             @elseif(($serviceCategory ?? '') === 'consultation') 🩺 كشفيات العيادات فقط
-                            @else الكل (عيادات استشارية + سونار) @endif
+                            @else الكل (عيادات + سونار) @endif
                         </span>
                     </div>
                     <div class="grid-item">
@@ -562,8 +578,8 @@
                         <span class="grid-value">
                             @if($filterType === 'payment') حركات قبض (النشطة فقط)
                             @elseif($filterType === 'refund') حركات استرجاع فقط
-                            @elseif($filterType === 'appointment_refunded') المواعيد المسترجعة والملغاة
-                            @elseif($filterType === 'appointment_paid') المواعيد المدفوعة بالكامل
+                            @elseif($filterType === 'appointment_refunded') المسترجعة والملغاة
+                            @elseif($filterType === 'appointment_paid') المدفوعة بالكامل
                             @else كل الحركات المالية @endif
                         </span>
                     </div>
@@ -572,16 +588,8 @@
                         <span class="grid-value">{{ $insuranceStatus === 'cash' ? 'نقداً فقط (كاش)' : ($insuranceStatus === 'insurance' ? 'مشمول بالضمان' : 'الكل (كاش وضمان)') }}</span>
                     </div>
                     <div class="grid-item">
-                        <span class="grid-label">طريقة الدفع:</span>
-                        <span class="grid-value">{{ $paymentMethod ? strtoupper($paymentMethod) : 'الكل' }}</span>
-                    </div>
-                    <div class="grid-item">
-                        <span class="grid-label">المستخدم / المحاسب:</span>
+                        <span class="grid-label">المحاسب المنظم:</span>
                         <span class="grid-value">{{ auth()->user()->name }}</span>
-                    </div>
-                    <div class="grid-item">
-                        <span class="grid-label">إجمالي القيود المشمولة:</span>
-                        <span class="grid-value" style="color: #0f766e;">{{ $payments->count() }} قيد مالي</span>
                     </div>
                 </div>
             </div>
@@ -593,28 +601,28 @@
                         <div class="stat-title">المستلم نقداً بالصندوق (الدرج)</div>
                         <div class="stat-amount" style="color: #16a34a;">{{ number_format($totalReceived, 2) }} IQD</div>
                     </div>
-                    <i class="fas fa-hand-holding-dollar fa-2x" style="color: #16a34a; opacity: 0.7;"></i>
+                    <i class="fas fa-hand-holding-dollar fa-lg" style="color: #16a34a; opacity: 0.7;"></i>
                 </div>
                 <div class="stat-card refunded">
                     <div>
-                        <div class="stat-title">المسترجع نقداً للمرضى</div>
+                        <div class="stat-title">المسترجع للمرضى</div>
                         <div class="stat-amount" style="color: #dc2626;">{{ number_format($totalRefunded, 2) }} IQD</div>
                     </div>
-                    <i class="fas fa-undo-alt fa-2x" style="color: #dc2626; opacity: 0.7;"></i>
+                    <i class="fas fa-undo-alt fa-lg" style="color: #dc2626; opacity: 0.7;"></i>
                 </div>
                 <div class="stat-card net">
                     <div>
                         <div class="stat-title">الصافي النقدي الفعلي</div>
                         <div class="stat-amount" style="color: #0284c7;">{{ number_format($netTotal, 2) }} IQD</div>
                     </div>
-                    <i class="fas fa-calculator fa-2x" style="color: #0284c7; opacity: 0.7;"></i>
+                    <i class="fas fa-calculator fa-lg" style="color: #0284c7; opacity: 0.7;"></i>
                 </div>
                 <div class="stat-card count">
                     <div>
-                        <div class="stat-title">إجمالي عدد الحركات المشمولة</div>
+                        <div class="stat-title">إجمالي عدد الحركات</div>
                         <div class="stat-amount" style="color: #4f46e5;">{{ $totalCount }} حركة</div>
                     </div>
-                    <i class="fas fa-receipt fa-2x" style="color: #4f46e5; opacity: 0.7;"></i>
+                    <i class="fas fa-receipt fa-lg" style="color: #4f46e5; opacity: 0.7;"></i>
                 </div>
             </div>
 
@@ -623,20 +631,20 @@
                 <table class="report-table">
                     <thead>
                         <tr>
-                            <th style="width: 25px; text-align: center;">#</th>
-                            <th style="width: 110px;">التاريخ والتوقيت</th>
+                            <th style="width: 22px; text-align: center;">#</th>
+                            <th style="width: 85px;">التاريخ والدوام</th>
                             <th>المريض</th>
                             <th>الطبيب</th>
-                            <th>نوع الخدمة / القسم</th>
-                            <th style="width: 110px;">المبلغ الفعلي (نقداً)</th>
+                            <th>الخدمة / القسم</th>
+                            <th style="width: 95px;">المبلغ الفعلي</th>
                             @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
-                            <th style="width: 85px;">حصة الطبيب</th>
-                            <th style="width: 85px;">حصة المستشفى</th>
+                            <th style="width: 65px;">الطبيب</th>
+                            <th style="width: 65px;">المستشفى</th>
                             @endif
-                            <th style="width: 85px; text-align: center;">نوع الحركة</th>
-                            <th style="width: 110px;">طريقة الدفع والتغطية</th>
-                            <th style="width: 95px; text-align: center;">رقم الإيصال</th>
-                            <th style="width: 90px;">الكاشير</th>
+                            <th style="width: 75px; text-align: center;">نوع الحركة</th>
+                            <th style="width: 85px;">التغطية والدفع</th>
+                            <th style="width: 85px; text-align: center;">رقم الإيصال</th>
+                            <th style="width: 70px;">الكاشير</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -656,10 +664,10 @@
                                 <td>
                                     <div style="font-weight: 700;">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d') : '-' }}</div>
                                     @if($payment->paid_at)
-                                        <div style="font-size: 8.5px; color: #64748b; margin-top: 1px;">
+                                        <div style="font-size: 8px; color: #64748b;">
                                             {{ $payment->paid_at->format('h:i A') }}
                                             <span style="font-weight: 700; color: {{ $isMorning ? '#b45309' : '#6f42c1' }};">
-                                                {{ $isMorning ? '(صباحي)' : '(مسائي)' }}
+                                                {{ $isMorning ? '☀️' : '🌙' }}
                                             </span>
                                         </div>
                                     @endif
@@ -673,29 +681,29 @@
                                         <span class="badge badge-info">سونار خارجي</span>
                                     @else
                                         <span class="badge badge-primary">كشفية عيادة</span>
-                                        <div style="font-size: 8.5px; color: #64748b;">{{ optional(optional($payment->appointment)->department)->name ?? 'الاستشارية' }}</div>
+                                        <div style="font-size: 8px; color: #64748b;">{{ optional(optional($payment->appointment)->department)->name ?? 'الاستشارية' }}</div>
                                     @endif
                                 </td>
                                 <td>
                                     @if($isCancelledOrRefunded && !$isRefund)
-                                        <div style="font-weight: 700; text-decoration: line-through; color: #94a3b8;">
-                                            {{ number_format(abs($actualPaid), 2) }} IQD
+                                        <div style="font-weight: 700; text-decoration: line-through; color: #94a3b8; font-size: 9px;">
+                                            {{ number_format(abs($actualPaid), 0) }} IQD
                                         </div>
-                                        <span class="badge badge-secondary" style="font-size: 8px;">ملغى ومسترجع</span>
+                                        <span class="badge badge-secondary" style="font-size: 7.5px;">ملغى ومسترجع</span>
                                     @else
-                                        <div style="font-weight: 800; color: {{ $isRefund ? '#dc2626' : '#15803d' }};">
-                                            {{ number_format(abs($actualPaid), 2) }} IQD
+                                        <div style="font-weight: 800; color: {{ $isRefund ? '#dc2626' : '#15803d' }}; font-size: 10px;">
+                                            {{ number_format(abs($actualPaid), 0) }} IQD
                                         </div>
                                     @endif
                                     @if($isInsurance)
-                                        <div style="font-size: 8px; color: #b45309;">
-                                            تحمل: {{ number_format(abs($actualPaid), 0) }} | ضمان: {{ number_format($insuranceShare, 0) }}
+                                        <div style="font-size: 7.5px; color: #b45309;">
+                                            تحمل: {{ number_format(abs($actualPaid), 0) }}
                                         </div>
                                     @endif
                                 </td>
                                 @if(auth()->user()->can('manage doctor commissions') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']))
-                                <td style="color: #15803d; font-weight: 700;">{{ number_format($payment->doctor_share, 2) }}</td>
-                                <td style="color: #0369a1; font-weight: 700;">{{ number_format($payment->hospital_share, 2) }}</td>
+                                <td style="color: #15803d; font-weight: 700; font-size: 8.5px;">{{ number_format($payment->doctor_share, 0) }}</td>
+                                <td style="color: #0369a1; font-weight: 700; font-size: 8.5px;">{{ number_format($payment->hospital_share, 0) }}</td>
                                 @endif
                                 <td style="text-align: center;">
                                     @if($isRefund)
@@ -710,10 +718,10 @@
                                     <span class="badge {{ $isInsurance ? 'badge-success' : 'badge-secondary' }}">
                                         {{ $payment->insurance_type_label }}
                                     </span>
-                                    <div style="font-size: 8.5px; color: #64748b; margin-top: 1px;">{{ $payment->payment_method ?? 'نقد' }}</div>
+                                    <div style="font-size: 8px; color: #64748b; margin-top: 1px;">{{ $payment->payment_method ?? 'نقد' }}</div>
                                 </td>
-                                <td style="text-align: center; font-family: monospace; font-weight: 700;">{{ $payment->receipt_number ?? '-' }}</td>
-                                <td>{{ optional($payment->cashier)->name ?? '-' }}</td>
+                                <td style="text-align: center; font-family: monospace; font-weight: 700; font-size: 8.5px;">{{ $payment->receipt_number ?? '-' }}</td>
+                                <td style="font-size: 8.5px;">{{ optional($payment->cashier)->name ?? '-' }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -740,8 +748,8 @@
                 <div class="stamp-circle">
                     <span>مستشفى الكفاءات</span>
                     <span style="font-weight: 900; margin: 1px 0;">الأهلي</span>
-                    <span style="font-size: 8px;">قسم التدقيق المالي</span>
-                    <span style="font-size: 7.5px; color: #0d9488;">★ معتمد رسمياً ★</span>
+                    <span style="font-size: 7.5px;">قسم التدقيق المالي</span>
+                    <span style="font-size: 7px; color: #0d9488;">★ معتمد رسمياً ★</span>
                 </div>
             </div>
 
@@ -776,8 +784,8 @@
             if (qrElement && typeof QRCode !== 'undefined') {
                 new QRCode(qrElement, {
                     text: qrText,
-                    width: 78,
-                    height: 78,
+                    width: 65,
+                    height: 65,
                     colorDark : "#0f766e",
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.M
