@@ -12,8 +12,15 @@ class RadiologyTypesImport implements ToCollection
 {
     public int $updatedCount = 0;
     public int $createdCount = 0;
+    public int $deletedCount = 0;
     public int $skippedCount = 0;
     public array $errors = [];
+    public bool $replaceExisting = true;
+
+    public function __construct(bool $replaceExisting = true)
+    {
+        $this->replaceExisting = $replaceExisting;
+    }
 
     /**
      * @param Collection $rows
@@ -32,6 +39,56 @@ class RadiologyTypesImport implements ToCollection
 
         DB::beginTransaction();
         try {
+            $processedIds = [];
+
+            // If replaceExisting is true, clean up items not in Excel before importing to avoid unique code collisions
+            if ($this->replaceExisting) {
+                $incomingIds = [];
+                for ($j = $startIndex; $j < $rows->count(); $j++) {
+                    $rId = isset($colMap['id']) && isset($rows[$j][$colMap['id']]) ? trim((string)$rows[$j][$colMap['id']]) : null;
+                    if (!empty($rId) && is_numeric($rId)) {
+                        $incomingIds[] = (int)$rId;
+                    }
+                }
+
+                if (!empty($incomingIds)) {
+                    $staleItems = RadiologyType::whereNotIn('id', $incomingIds)->get();
+                    foreach ($staleItems as $stale) {
+                        $hasRequests = $stale->requests()->count() > 0 
+                            || DB::table('requests')->where('type', 'radiology')->where('details', 'like', '%"radiology_type_id":' . $stale->id . '%')->exists();
+
+                        if (!$hasRequests) {
+                            $stale->delete();
+                            $this->deletedCount++;
+                        } else {
+                            $stale->is_active = false;
+                            $stale->save();
+                        }
+                    }
+
+                    // Temporarily prefix codes on incoming records so that swapped codes between rows don't cause unique constraint violations
+                    $concatExpr = DB::connection()->getDriverName() === 'sqlite' 
+                        ? "'TMP-' || id || '-' || code" 
+                        : "CONCAT('TMP-', id, '-', code)";
+                    DB::table('radiology_types')->whereIn('id', $incomingIds)->update(['code' => DB::raw($concatExpr)]);
+                }
+            } else {
+                // Gather incoming IDs to clear codes temporarily
+                $incomingIds = [];
+                for ($j = $startIndex; $j < $rows->count(); $j++) {
+                    $rId = isset($colMap['id']) && isset($rows[$j][$colMap['id']]) ? trim((string)$rows[$j][$colMap['id']]) : null;
+                    if (!empty($rId) && is_numeric($rId)) {
+                        $incomingIds[] = (int)$rId;
+                    }
+                }
+                if (!empty($incomingIds)) {
+                    $concatExpr = DB::connection()->getDriverName() === 'sqlite' 
+                        ? "'TMP-' || id || '-' || code" 
+                        : "CONCAT('TMP-', id, '-', code)";
+                    DB::table('radiology_types')->whereIn('id', $incomingIds)->update(['code' => DB::raw($concatExpr)]);
+                }
+            }
+
             for ($i = $startIndex; $i < $rows->count(); $i++) {
                 $row = $rows[$i];
 
@@ -40,107 +97,96 @@ class RadiologyTypesImport implements ToCollection
                 $code = isset($colMap['code']) && isset($row[$colMap['code']]) ? trim((string)$row[$colMap['code']]) : null;
                 $mainCat = isset($colMap['main_category']) && isset($row[$colMap['main_category']]) ? trim((string)$row[$colMap['main_category']]) : null;
 
-                // Find existing radiology service (Match by ID first, then Code, then Name)
+                if (empty($name)) {
+                    $this->skippedCount++;
+                    continue;
+                }
+
+                // Map Category and Subcategory properly
+                $catMapping = $this->normalizeCategory($mainCat);
+                $subcategory = $catMapping['subcategory'];
+                $mainCategory = $catMapping['main_category'];
+
+                // Prices
+                $rawPrice = isset($colMap['base_price']) && isset($row[$colMap['base_price']]) ? $this->cleanNumber($row[$colMap['base_price']]) : 0;
+                $rawHiPrice = isset($colMap['hi_price']) && isset($row[$colMap['hi_price']]) ? $this->cleanNumber($row[$colMap['hi_price']]) : 0;
+
+                // HI Active Status
+                $isHiActive = ((float)$rawHiPrice > 0);
+                if (isset($colMap['is_hi_active']) && isset($row[$colMap['is_hi_active']])) {
+                    $rawHiStatus = trim((string)$row[$colMap['is_hi_active']]);
+                    if (in_array(mb_strtolower($rawHiStatus), ['مشمول', 'مشمول بالضمان', 'نعم', '1', 'yes', 'true'])) {
+                        $isHiActive = true;
+                    } elseif (in_array(mb_strtolower($rawHiStatus), ['غير مشمول', 'كاش فقط', 'لا', '0', 'no', 'false'])) {
+                        $isHiActive = false;
+                    }
+                }
+
+                // Requires Contrast
+                $requiresContrast = false;
+                if (isset($colMap['requires_contrast']) && isset($row[$colMap['requires_contrast']])) {
+                    $rawContrast = trim((string)$row[$colMap['requires_contrast']]);
+                    if (in_array(mb_strtolower($rawContrast), ['نعم', '1', 'yes', 'true'])) {
+                        $requiresContrast = true;
+                    }
+                }
+
+                // Is Active
+                $isActive = true;
+                if (isset($colMap['is_active']) && isset($row[$colMap['is_active']])) {
+                    $rawActive = trim((string)$row[$colMap['is_active']]);
+                    if (in_array(mb_strtolower($rawActive), ['معطل', 'ملغي', 'غير نشط', 'لا', '0', 'no', 'false', 'inactive'])) {
+                        $isActive = false;
+                    }
+                }
+
+                // Find existing by ID or Code
                 $radiologyType = null;
                 if (!empty($id) && is_numeric($id)) {
-                    $radiologyType = RadiologyType::find((int) $id);
+                    $radiologyType = RadiologyType::find((int)$id);
                 }
                 if (!$radiologyType && !empty($code) && $code !== '-') {
                     $radiologyType = RadiologyType::where('code', $code)->first();
                 }
-                if (!$radiologyType && !empty($name)) {
-                    $radiologyType = RadiologyType::where('name', $name)->first();
-                }
 
-                // إذا كان الفحص غير موجود، نقوم بإنشائه كخدمة جديدة
-                if (!$radiologyType) {
-                    if (!empty($name)) {
-                        $rawPrice = isset($colMap['base_price']) && isset($row[$colMap['base_price']]) ? $this->cleanNumber($row[$colMap['base_price']]) : 0;
-                        $rawHiPrice = isset($colMap['hi_price']) && isset($row[$colMap['hi_price']]) ? $this->cleanNumber($row[$colMap['hi_price']]) : 0;
+                $cleanCode = (!empty($code) && $code !== '-') ? $code : null;
 
-                        RadiologyType::create([
-                            'name' => $name,
-                            'code' => (!empty($code) && $code !== '-') ? $code : null,
-                            'main_category' => $mainCat ?: 'أشعة',
-                            'base_price' => (float) ($rawPrice ?: 0),
-                            'price' => (float) ($rawPrice ?: 0),
-                            'hi_price' => (float) ($rawHiPrice ?: 0),
-                            'is_hi_active' => ((float) $rawHiPrice > 0),
-                            'is_active' => true,
-                        ]);
-                        $this->createdCount++;
-                    } else {
-                        $this->skippedCount++;
+                if ($radiologyType) {
+                    $radiologyType->name = $name;
+                    if ($cleanCode) {
+                        $radiologyType->code = $cleanCode;
                     }
-                    continue;
-                }
+                    $radiologyType->subcategory = $subcategory;
+                    $radiologyType->main_category = $mainCategory;
+                    $radiologyType->base_price = (float)($rawPrice ?: 0);
+                    $radiologyType->hi_price = (float)($rawHiPrice ?: 0);
+                    $radiologyType->is_hi_active = $isHiActive;
+                    $radiologyType->requires_contrast = $requiresContrast;
+                    $radiologyType->is_active = $isActive;
+                    $radiologyType->estimated_duration = $radiologyType->estimated_duration ?: 15;
+                    $radiologyType->save();
 
-                $updates = [];
-
-                // 0. Name & Category (تحديث الاسم والقسم إذا تم تعديلهما في الإكسل)
-                if (!empty($name) && $radiologyType->name !== $name) {
-                    $updates['name'] = $name;
-                }
-                if (!empty($mainCat) && $radiologyType->main_category !== $mainCat) {
-                    $updates['main_category'] = $mainCat;
-                }
-
-                // 1. Base Price (سعر الكاش)
-                if (isset($colMap['base_price']) && isset($row[$colMap['base_price']])) {
-                    $rawPrice = $this->cleanNumber($row[$colMap['base_price']]);
-                    if ($rawPrice !== null && is_numeric($rawPrice) && $rawPrice >= 0) {
-                        $updates['base_price'] = (float) $rawPrice;
-                        $updates['price'] = (float) $rawPrice;
-                    }
-                }
-
-                // 2. HI Price (سعر الضمان الصحي)
-                if (isset($colMap['hi_price']) && isset($row[$colMap['hi_price']])) {
-                    $rawHiPrice = $this->cleanNumber($row[$colMap['hi_price']]);
-                    if ($rawHiPrice !== null && is_numeric($rawHiPrice) && $rawHiPrice >= 0) {
-                        $updates['hi_price'] = (float) $rawHiPrice;
-                    }
-                }
-
-                // 3. HI Active status (حالة الضمان)
-                if (isset($colMap['is_hi_active']) && isset($row[$colMap['is_hi_active']])) {
-                    $rawHiStatus = trim((string) $row[$colMap['is_hi_active']]);
-                    if (in_array(mb_strtolower($rawHiStatus), ['مشمول', 'مشمول بالضمان', 'نعم', '1', 'yes', 'true'])) {
-                        $updates['is_hi_active'] = true;
-                    } elseif (in_array(mb_strtolower($rawHiStatus), ['غير مشمول', 'كاش فقط', 'لا', '0', 'no', 'false'])) {
-                        $updates['is_hi_active'] = false;
-                    }
-                } elseif (isset($updates['hi_price'])) {
-                    if ($updates['hi_price'] > 0) {
-                        $updates['is_hi_active'] = true;
-                    }
-                }
-
-                // 4. Requires Contrast (يتطلب صبغة؟)
-                if (isset($colMap['requires_contrast']) && isset($row[$colMap['requires_contrast']])) {
-                    $rawContrast = trim((string) $row[$colMap['requires_contrast']]);
-                    if (in_array(mb_strtolower($rawContrast), ['نعم', '1', 'yes', 'true'])) {
-                        $updates['requires_contrast'] = true;
-                    } elseif (in_array(mb_strtolower($rawContrast), ['لا', '0', 'no', 'false'])) {
-                        $updates['requires_contrast'] = false;
-                    }
-                }
-
-                // 5. Active Status (حالة التفعيل)
-                if (isset($colMap['is_active']) && isset($row[$colMap['is_active']])) {
-                    $rawActive = trim((string) $row[$colMap['is_active']]);
-                    if (in_array(mb_strtolower($rawActive), ['نشط', 'مفعل', 'نعم', '1', 'yes', 'true', 'active'])) {
-                        $updates['is_active'] = true;
-                    } elseif (in_array(mb_strtolower($rawActive), ['معطل', 'ملغي', 'غير نشط', 'لا', '0', 'no', 'false', 'inactive'])) {
-                        $updates['is_active'] = false;
-                    }
-                }
-
-                if (!empty($updates)) {
-                    $radiologyType->update($updates);
+                    $processedIds[] = $radiologyType->id;
                     $this->updatedCount++;
                 } else {
-                    $this->skippedCount++;
+                    $newType = new RadiologyType();
+                    if (!empty($id) && is_numeric($id)) {
+                        $newType->id = (int)$id;
+                    }
+                    $newType->name = $name;
+                    $newType->code = $cleanCode;
+                    $newType->subcategory = $subcategory;
+                    $newType->main_category = $mainCategory;
+                    $newType->base_price = (float)($rawPrice ?: 0);
+                    $newType->hi_price = (float)($rawHiPrice ?: 0);
+                    $newType->is_hi_active = $isHiActive;
+                    $newType->requires_contrast = $requiresContrast;
+                    $newType->is_active = $isActive;
+                    $newType->estimated_duration = 15;
+                    $newType->save();
+
+                    $processedIds[] = $newType->id;
+                    $this->createdCount++;
                 }
             }
 
@@ -150,6 +196,18 @@ class RadiologyTypesImport implements ToCollection
             Log::error("RadiologyTypesImport failed: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             throw $e;
         }
+    }
+
+    protected function normalizeCategory(?string $rawCat): array
+    {
+        $cat = trim((string)$rawCat);
+        return match ($cat) {
+            'رنين', 'الرنين' => ['subcategory' => 'الرنين', 'main_category' => 'الرنين'],
+            'إيكو', 'إيكو القلب' => ['subcategory' => 'إيكو', 'main_category' => 'إيكو'],
+            'مفراس' => ['subcategory' => 'مفراس', 'main_category' => 'مفراس'],
+            'سونار' => ['subcategory' => 'سونار', 'main_category' => 'سونار'],
+            default => ['subcategory' => 'أشعة', 'main_category' => 'أشعة'],
+        };
     }
 
     protected function detectColumns($headerRow): array

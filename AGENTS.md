@@ -57,6 +57,26 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 65: استبدال وتطهير جدول الأشعة بالكامل بملف الإكسل وحذف الخدمات القديمة مع حماية السجلات السابقة Radiology Catalog Complete Wipe & Replace with Excel Import)
+
+### Done
+- **أخذ نسخة احتياطية فورية وتلقائية لقاعدة البيانات ([storage/app/backups/radiology_types_before_excel_replace_2026_10_16_194814.sql](file:///c:/wamp64/www/hospital-system/storage/app/backups/radiology_types_before_excel_replace_2026_10_16_194814.sql))**:
+  * حفظ نسخة SQL كاملة وتفصيلية لجدول `radiology_types` قبل التعديل لضمان الأمان والرجوع.
+- **تطوير محرك الاستيراد والتنظيف الذاتي ([app/Imports/RadiologyTypesImport.php](file:///c:/wamp64/www/hospital-system/app/Imports/RadiologyTypesImport.php))**:
+  * دعم خيار `$replaceExisting`: يقوم تلقائياً بحذف أي خدمة غير موجودة في ملف الإكسل وغير مستخدمة في أي طلبات سابقة للمرضى (`deletedCount`).
+  * تحصين السجلات الطبية السابقة: في حال كانت الخدمة مرتبطة بطلب فحص سابق، يتم تعطيلها (`is_active = false`) لحماية تكامل البيانات.
+  * عزل وتفادي تعارض الأكواد الفريدة (Unique Code Swapping Guard): إضافة معالجة ذكية توافقية تمنع خطأ `1062 Duplicate entry` عند تبادل الأكواد بين الصفوف عبر بادئة مؤقتة تعمل بدقة على محركات `MySQL` و `SQLite`.
+  * المعايرة الدقيقة للتصنيفات (`normalizeCategory`): ربط الأقسام بمسمياتها القياسية في النظام (`أشعة`، `سونار`، `مفراس`، `الرنين`، `إيكو`).
+- **تحديث واجهة ونافذة استيراد الإكسل ومتحكم الأشعة ([resources/views/radiology/types/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/types/index.blade.php) و [app/Http/Controllers/RadiologyTypeController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyTypeController.php))**:
+  * إضافة مفتاح تبديل بارز `[ ✓ ] استبدال محتويات الجدول بالكامل بمحتويات ملف الإكسل (حذف الخدمات غير الموجودة في الإكسل)` مفعل افتراضياً.
+  * إظهار تفاصيل عدد الخدمات المحدثة والجديدة والمحذوفة في رسالة النجاح للمستخدم.
+- **تنفيذ الاستبدال الفعلي لملف `الاخير والمعتمد اشعة.xlsx`**:
+  * إزالة 80 خدمة قديمة بأسماء عربية كانت تزحم الصفحات الأولى.
+  * تحديث وتثبيت 224 فحصاً باللغة الإنكليزية مطابقة تماماً للملف المعتمد بأسعار الكاش والضمان الصحي.
+- **الاختبارات الآلية (Automated Tests)**:
+  * تحديث [tests/Feature/LabAndRadiologyImportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabAndRadiologyImportTest.php) وإضافة اختبار `test_radiology_types_import_with_replace_all_deletes_stale_records`: اجتياز كامل لـ `6 passed (26 assertions)`.
+  * اجتياز كامل اختبارات قسم الأشعة: `20 passed (89 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 64: إدراج حقول توجيهات وملاحظات الطبيب للمختبر والأشعة في محطة الطبيب وربطها الكامل بمحطات المختبر والأشعة Doctor Clinical Notes Input in Consultation Station & Full Lab/Radiology Workstation Integration)
 
 ### Done

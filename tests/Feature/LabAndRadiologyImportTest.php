@@ -167,6 +167,44 @@ class LabAndRadiologyImportTest extends TestCase
         $this->assertEquals(8000, (float) $rad->hi_price);
     }
 
+    public function test_radiology_types_import_with_replace_all_deletes_stale_records()
+    {
+        $admin = User::factory()->create(['email' => 'admin_rad_replace@hospital.com']);
+        $admin->assignRole('admin');
+
+        $keep = RadiologyType::create([
+            'name' => 'Brain MRI',
+            'code' => 'RAD-MRI-01',
+            'main_category' => 'الرنين',
+            'subcategory' => 'الرنين',
+            'base_price' => 200000,
+            'is_active' => true,
+        ]);
+
+        $stale = RadiologyType::create([
+            'name' => 'Old Unused Arabic Exam',
+            'code' => 'RAD-OLD-99',
+            'main_category' => 'أشعة',
+            'subcategory' => 'أشعة',
+            'base_price' => 10000,
+            'is_active' => true,
+        ]);
+
+        $csvContent = "ID,Name,Category,Code,BasePrice,HIPrice,HIStatus,Contrast,Active\n";
+        $csvContent .= "{$keep->id},Brain MRI,رنين,RAD-MRI-01,220000,100000,مشمول,لا,نشط\n";
+
+        $file = UploadedFile::fake()->createWithContent('radiology_replace.csv', $csvContent);
+
+        $response = $this->actingAs($admin)->post(route('radiology.types.import'), [
+            'excel_file' => $file,
+            'replace_all' => '1',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('radiology_types', ['id' => $keep->id, 'base_price' => 220000]);
+        $this->assertDatabaseMissing('radiology_types', ['id' => $stale->id]);
+    }
+
     public function test_unauthenticated_user_cannot_import()
     {
         $file = UploadedFile::fake()->create('tests.xlsx', 100);

@@ -934,9 +934,19 @@
 
                     <div class="mb-3">
                         <label for="excel_file_rad" class="form-label small fw-bold text-dark">
-                            <i class="fas fa-cloud-arrow-up me-1 text-success"></i> اختر ملف الإكسل المحدث:
+                            <i class="fas fa-cloud-arrow-up me-1 text-success"></i> اختر ملف الإكسل المراد استيراده:
                         </label>
                         <input type="file" name="excel_file" id="excel_file_rad" class="form-control rounded-3" accept=".xlsx,.xls,.csv" required>
+                    </div>
+
+                    <div class="form-check form-switch p-3 bg-danger bg-opacity-10 border border-danger-subtle rounded-3 mb-2">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="replace_all" value="1" id="replace_all_rad" checked>
+                        <label class="form-check-label fw-bold small text-danger" for="replace_all_rad">
+                            <i class="fas fa-trash-alt me-1"></i> استبدال محتويات الجدول بالكامل بمحتويات ملف الإكسل (حذف الخدمات غير الموجودة في الإكسل)
+                        </label>
+                        <div class="text-muted" style="font-size: 0.72rem; margin-right: 2.2rem;">
+                            عند تفعيل هذا الخيار سيتم تنظيف الجدول وحذف أي خدمات قديمة لا تظهر في ملف الإكسل، وتثبيت خدمات الإكسل فقط.
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 rounded-bottom-4">

@@ -41,6 +41,7 @@ class RadiologyTypeController extends Controller
     {
         $request->validate([
             'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'replace_all' => 'nullable|boolean',
         ], [
             'excel_file.required' => 'يرجى اختيار ملف الإكسل المراد استيراده',
             'excel_file.mimes' => 'يجب أن يكون الملف بصيغة Excel (.xlsx, .xls) أو CSV',
@@ -48,14 +49,20 @@ class RadiologyTypeController extends Controller
         ]);
 
         try {
-            $import = new RadiologyTypesImport();
+            $replaceAll = $request->has('replace_all') ? filter_var($request->input('replace_all'), FILTER_VALIDATE_BOOLEAN) : true;
+            $import = new RadiologyTypesImport($replaceAll);
             Excel::import($import, $request->file('excel_file'));
 
-            $msg = "تم استيراد ملف الإكسل بنجاح: تم تحديث {$import->updatedCount} خدمة";
+            $msg = "تم استيراد واستبدال جدول الأشعة بنجاح بملف الإكسل: تم تحديث {$import->updatedCount} خدمة";
             if ($import->createdCount > 0) {
                 $msg .= "، وإضافة {$import->createdCount} خدمة جديدة";
             }
-            $msg .= " (تم تخطي {$import->skippedCount} لعدم وجود بيانات).";
+            if ($import->deletedCount > 0) {
+                $msg .= "، وحذف وإزالة {$import->deletedCount} خدمة قديمة غير مستخدمة";
+            }
+            if ($import->skippedCount > 0) {
+                $msg .= " (تم تخطي {$import->skippedCount} لعدم اكتمال بياناتها).";
+            }
 
             return redirect()->back()->with('success', $msg);
         } catch (\Throwable $e) {
