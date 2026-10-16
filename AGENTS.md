@@ -57,6 +57,31 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 61: استدعاء المريض الاستثنائي للطبيب وثبات تسلسل الطابور ودعم طلبات الضمان المختلطة بالكاشير Out-of-Turn Calling, Queue Order Stability, Hostinger Old Catalogs & Mixed Insurance Requests)
+
+### Done
+- **استعادة القوائم القديمة للمختبر والأشعة بتاريخ 2026-10-11 على سيرفر هوستنجر (`remote_hostinger`)**:
+  * أخذ نسخة احتياطية لسيرفر هوستنجر قبل التعديل: `storage/app/backups/hostinger_catalogs_backup_before_old_restore_2026_10_16_114446.sql` (415 KB).
+  * استرجاع 150 فحص مختبر (`lab_tests`) و 305 خدمة أشعة وسونار (`radiology_types`) بدقة ومطابقتها.
+  * الحفاظ الكامل على بيانات المرضى الـ 8,380 والمستخدمين والزيارات والفواتير دون أي مساس.
+- **استدعاء المريض الاستثنائي/الحرج من جدول زيارات الطبيب (`/doctor/visits`) وثبات تسلسل الطابور**:
+  * **الخلفية والدافع**: رغبة الطبيب في تقديم واستدعاء مريض معين من الطابور (مثل مريض تسلسله #5 أو #10 بحالة طارئة أو حرجة) دون أن يتغير أو يتلخبط ترتيب باقي المرضى المنتظرين في الطابور (مثل 1، 2، 3، 4 يبقون في طابورهم وبنفس أرقام دورهم).
+  * **التعديل البرمجي في المتحكم والمراقب**:
+    - إضافة دالة `callSpecific(Request $request, $appointmentId)` في [app/Http/Controllers/DoctorQueueController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorQueueController.php) ومسار `POST /queue/appointment/{appointment}/call-specific`.
+    - تثبيت ترقيم الأدوار الثابت غير القابل للتلاشي أو اللخبطة: ربط توليد `queue_number` برمجياً في `AppointmentObserver::creating` و `InquiryController::storeRequest` بحساب أقصى رقم تسلسل لليوم الحالي `max(queue_number) + 1` فور الإنشاء.
+    - تعديل استعلام طابور الانتظار لترتيب المرضى دائماً حسب `queue_number asc` ورفع الحد إلى 50 مريضاً.
+  * **تطوير واجهة الطبيب [resources/views/doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php)**:
+    - إظهار زر `[ 📢 استدعاء ]` للمريض الأول في الطابور، وزر `[ 📢 تقديم واستدعاء ]` متبوعاً بوسام `[ دور #X ]` لبقية المرضى المنتظرين في الجدول، مع ربطهما بوظيفة `doctorCallSpecific(appointmentId)` عبر الـ JavaScript والتحديث الفوري.
+- **دعم تسديد الطلبات المختلطة (المشمولة وغير المشمولة بالضمان) في الكاشير دون حظر (`request-payment-form`)**:
+  * **الخلفية والدافع**: عند طلب الطبيب فحوصات متعددة لمريض ضمان، ويكون بعضها غير مسعر للضمان أو غير مشمول (مثل أشعة الصدر `Chest Ap`)، كان النظام يمنع التسديد تماماً برسالة خطأ ويعطل زر الدفع.
+  * **المرونة والاحتساب المالي التلقائي**:
+    - تعديل منطق الحسابات في [app/Traits/HasInsurancePricing.php](file:///c:/wamp64/www/hospital-system/app/Traits/HasInsurancePricing.php) بحيث يعتبر الفحص مشمولاً فقط إذا كان الضمان مفعلاً وسعره أكبر من الصفر؛ وفي حال كان السعر غير مدخل أو غير مشمول، يتم اعتباره خدمة كاش عادية (100% على المريض و0 على الضمان) دون المساس بسعر الخدمة الأصلي.
+    - تحديث واجهة كاشير الطلبات [resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php) لتمييز كل بند بوسام ملون: `[ مشمول بالضمان ]` بالأخضر أو `[ غير مشمول (كاش 100%) ]` بالكهرماني.
+    - تفعيل زر التسديد دائماً وعرض تنبيه توضيحي للكاشير بحساب الفحوصات غير المشمولة كاش 100% وإشراك بقية الفحوصات في الضمان.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز اختبارات استدعاء المريض الاستثنائي [tests/Feature/DoctorQueueCallSpecificTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorQueueCallSpecificTest.php): `1 passed (16 assertions)`.
+  * اجتياز اختبارات تسعير الضمان [tests/Unit/InsurancePricingTest.php](file:///c:/wamp64/www/hospital-system/tests/Unit/InsurancePricingTest.php): `4 passed (37 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 60: فصل المبالغ المسترجعة للمرضى في كارت خزينة مستقل ومطابقة السيرفر السحابي Treasury Refunds Dedicated KPI Card, Hostinger Sync & Cascaded Deletion Guard)
 
 ### Done
