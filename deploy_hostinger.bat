@@ -14,27 +14,42 @@ echo Working directory: %CD%
 echo.
 echo Select Deployment Mode:
 echo --------------------------------------------------------
-echo  [1] Normal Deploy (Pull Code + Migrations + Cache Clear)
-echo  [2] Deploy + CLEAN 48 Operational Tables on Server
-echo  [3] Clean Operational Tables ONLY on Server
-echo  [4] Exit
+echo  [1] Quick Code Deploy (Pull Code + Cache Clear ONLY - NO DB Touch)
+echo  [2] Normal Deploy (Pull Code + Migrations + Cache Clear)
+echo  [3] Deploy + CLEAN 48 Operational Tables on Server
+echo  [4] Clean Operational Tables ONLY on Server
+echo  [5] Exit
 echo --------------------------------------------------------
 echo.
 
 set "userchoice="
-set /p userchoice="Enter choice [1, 2, 3, 4] (Default is 1, Q to quit): "
+set /p userchoice="Enter choice [1, 2, 3, 4, 5] (Default is 1, Q to quit): "
 
 if "%userchoice%"=="" set userchoice=1
-if /i "%userchoice%"=="4" goto exit_script
+if /i "%userchoice%"=="5" goto exit_script
 if /i "%userchoice%"=="q" goto exit_script
-if "%userchoice%"=="3" goto clean_only
-if "%userchoice%"=="2" goto deploy_with_clean
-if "%userchoice%"=="1" goto normal_deploy
+if "%userchoice%"=="4" goto clean_only
+if "%userchoice%"=="3" goto deploy_with_clean
+if "%userchoice%"=="2" goto normal_deploy
+if "%userchoice%"=="1" goto code_only_deploy
 
 echo.
 echo [!] Invalid choice, returning to menu...
 timeout /t 2 >nul
 goto menu
+
+:code_only_deploy
+echo.
+echo [1/2] Staging and pushing local changes to GitHub main...
+git add .
+git diff-index --quiet HEAD || git commit -m "chore(deploy): auto-commit before hostinger code-only deploy"
+git push origin main
+echo.
+echo [2/2] Connecting to Hostinger via SSH (Code Only - NO DB TOUCH)...
+echo Please enter your SSH password if prompted:
+echo --------------------------------------------------------
+ssh -p 65002 -t u175868711@92.113.18.46 "cd domains/hinpa.icu/public_html/hearmz && echo '=== [1/3] Resetting to GitHub Main ===' && git stash --include-untracked && git fetch origin main && git reset --hard origin/main && echo '=== [2/3] Resetting Permissions Cache ===' && php artisan permission:cache-reset && echo '=== [3/3] Clearing App Cache ===' && php artisan optimize:clear && echo '=============================================' && echo 'Code-Only Deployment completed successfully! (DB UNTOUCHED)' && echo '============================================='"
+goto finish_task
 
 :normal_deploy
 echo.
@@ -85,4 +100,3 @@ echo.
 echo Goodbye!
 timeout /t 1 >nul
 exit /b 0
-
