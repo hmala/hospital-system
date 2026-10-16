@@ -204,6 +204,15 @@ class Request extends Model
         return [];
     }
 
+    public function getDoctorNotesAttribute()
+    {
+        $details = $this->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?: [];
+        }
+        return $details['doctor_notes'] ?? $details['notes'] ?? (!empty($details['description']) && !str_starts_with($details['description'], 'طلب ') ? $details['description'] : null);
+    }
+
     /**
      * Ensure visit status updates when all related requests complete (only for direct/standalone requests without a doctor consultation).
      */

@@ -237,6 +237,24 @@
         </div>
     </div>
 
+    @if(!empty($request->doctor_notes))
+        <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 rounded-3 mb-4 p-3 shadow-xs">
+            <div class="d-flex align-items-center gap-2">
+                <div class="badge bg-warning text-dark p-2 rounded-circle fs-6">
+                    <i class="fas fa-sticky-note"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark mb-1">
+                        <i class="fas fa-user-md text-warning me-1"></i> ملاحظات وتوجيهات الطبيب المحول:
+                    </h6>
+                    <div class="text-dark fw-semibold fs-6">
+                        {{ $request->doctor_notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- 3. Form & Clinical Editor Layout -->
     <form action="{{ route('radiology-staff.update', $request) }}" method="POST" enctype="multipart/form-data">
         @csrf

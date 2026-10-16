@@ -269,6 +269,7 @@ class RadiologyStaffController extends Controller
                     'subtype' => $r->subtype,
                     'doctor_name' => $r->visit?->doctor?->user?->name ?? 'الاستشارية',
                     'department_name' => $r->visit?->department?->name ?? 'العيادات',
+                    'doctor_notes' => $r->doctor_notes,
                     'created_time' => $r->created_at ? $r->created_at->format('H:i') : '—',
                     'is_paid' => $r->payment_status === 'paid',
                     'status' => $r->status,

@@ -5178,4 +5178,4 @@ function confirmSurgeryReferral() {
     </div>
 </div>
 
-@endsection 
+@endsection

@@ -57,6 +57,16 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 63: عرض ملاحظات وتوجيهات الطبيب المحول لموظف الأشعة في شاشة الفحص وطابور العمل Doctor Clinical Notes Display in Radiology Staff Workstation & Queue)
+
+### Done
+- **إضافة معرّف ملاحظات الطبيب بموديل الطلبات الطبيـة ([app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php))**:
+  * إضافة Accessor رسمي `doctor_notes` بموديل `Request` لاستخراج وقراءة ملاحظات وتوجيهات الطبيب المحول تلقائياً من حقل `details['doctor_notes']` أو `details['notes']` أو `details['description']`.
+- **ربط الملاحظات ببيانات الطابور لموظف الأشعة ([app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * تضمين `doctor_notes` في استجابة الـ JSON لطابور موظف الأشعة `queueStatus`.
+- **عرض صندوق الملاحظات والتوجيهات في شاشة فحص الأشعة ([resources/views/radiology-staff/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/show.blade.php))**:
+  * إضافة بطاقة تنبيهية كهرمانية أنيقة `[ 📝 ملاحظات وتوجيهات الطبيب المحول ]` أعلى محرر الفحص والتقرير يبرز نص الملاحظات بدقة أمام موظف وفني الأشعة.
+
 ## Session log (2026-10-16 — المرحلة 62: منظومة رفع وتفريغ التواقيع اليدوية للأطباء تلقائياً والمعاينة الحية للشفافية وربط التواقيع بتقارير الطوارئ Doctor Signature Upload, Auto White Background Removal, Live Canvas Preview & Multi-Doctor Emergency Integration)
 
 ### Done

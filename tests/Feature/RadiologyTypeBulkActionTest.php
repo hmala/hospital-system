@@ -47,7 +47,7 @@ class RadiologyTypeBulkActionTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->admin)->get(route('radiology.types.index'));
+        $response = $this->actingAs($this->admin)->get(route('radiology.types.index', ['search' => 'فحص سونار بطن وحوض']));
         $response->assertStatus(200);
         $response->assertSee('فحص سونار بطن وحوض');
         $response->assertSee('35,000');
