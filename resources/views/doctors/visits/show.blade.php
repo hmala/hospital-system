@@ -1159,7 +1159,44 @@ datalist option:hover {
                                         'u/s' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
                                         'us' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
                                         'سونار' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'doppler' => '🔊 السونار والدوبلر (Ultr                                @php
+                                        'doppler' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'دوبلر' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                        'echo' => '❤️ إيكو قلب (Echo)',
+                                        'إيكو' => '❤️ إيكو قلب (Echo)',
+                                        'ايكو' => '❤️ إيكو قلب (Echo)',
+                                        'mammogram' => '🎀 ماموجرام (Mammogram)',
+                                        'ماموجرام' => '🎀 ماموجرام (Mammogram)',
+                                        'fluoroscopy' => '💡 تنظير فلوري (Fluoroscopy)',
+                                    ];
+
+                                    $radGrouped = $radiologyTypes->groupBy(function($r) use ($radCatMap) {
+                                        $rawCat = mb_strtolower(trim($r->main_category ?? ''));
+                                        $rawSub = mb_strtolower(trim($r->subcategory ?? ''));
+                                        $rawName = mb_strtolower(trim($r->name ?? ''));
+
+                                        if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
+                                            str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
+                                            str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
+                                            str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
+                                            str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
+                                            return '🔊 السونار والدوبلر (Ultrasound & Doppler)';
+                                        }
+
+                                        if (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
+                                            return '🧲 رنين مغناطيسي (MRI)';
+                                        }
+
+                                        if (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
+                                            return '🌀 مفراس حلزوني (CT Scan)';
+                                        }
+
+                                        if (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
+                                            return '❤️ إيكو قلب (Echo)';
+                                        }
+
+                                        return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
+                                    });
+
                                     $coveredRadCount = $radiologyTypes->filter(function($r) use ($patientInsuranceType) {
                                         if ($patientInsuranceType === 'hi') {
                                             return ($r->is_hi_active ?? true) && ($r->hi_price > 0);
