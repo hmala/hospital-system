@@ -231,6 +231,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inquiry/search/patients', [InquiryController::class, 'searchPatients'])->name('inquiry.search.patients');
     Route::get('/inquiry/occupancy', [InquiryController::class, 'occupancy'])->name('inquiry.occupancy');
     Route::get('/inquiry/patients/history/{patient?}', [InquiryController::class, 'patientHistory'])->name('inquiry.patients.history');
+    Route::get('/inquiry/patients/{patient}/dossier/print', [InquiryController::class, 'printPatientDossier'])->name('inquiry.patients.dossier.print');
     Route::post('/inquiry/patients/{patient}/documents', [InquiryController::class, 'uploadPatientDocument'])->name('inquiry.patients.documents.upload');
     Route::get('/inquiry/documents/{document}/file', [InquiryController::class, 'serveDocumentFile'])->name('inquiry.documents.file');
     Route::delete('/inquiry/documents/{document}', [InquiryController::class, 'deletePatientDocument'])->name('inquiry.documents.delete');
