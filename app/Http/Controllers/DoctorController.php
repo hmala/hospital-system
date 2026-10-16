@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DoctorController extends Controller
 {
@@ -97,35 +99,44 @@ class DoctorController extends Controller
             'signature_threshold' => 'nullable|integer|min:50|max:255',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make('password'), // كلمة مرور افتراضية
-            'role' => 'doctor',
-        ]);
-        
-        // إضافة صلاحية الطبيب باستخدام Spatie Permission
-        $user->assignRole('doctor');
+        $doctor = DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make('password'), // كلمة مرور افتراضية
+                'role' => 'doctor',
+            ]);
+            
+            // إضافة صلاحية الطبيب باستخدام Spatie Permission
+            $user->assignRole('doctor');
 
-        // إنشاء سجل الطبيب
-        $doctor = Doctor::create([
-            'user_id' => $user->id,
-            'department_id' => $request->department_id,
-            'type' => $request->type,
-            'phone' => $request->phone,
-            'specialization' => $request->specialization,
-            'qualification' => $request->qualification ?? 'بكالوريوس طب وجراحة عامة',
-            'license_number' => $request->license_number ?? ('DOC-' . rand(1000, 9999)),
-            'consultation_fee' => $request->consultation_fee,
-            'moi_price' => $request->moi_price,
-            'is_moi_active' => $request->has('is_moi_active'),
-            'hi_price' => $request->hi_price,
-            'is_hi_active' => $request->has('is_hi_active'),
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'working_days' => $request->working_days,
-            'is_active' => true,
-        ]);
+            // إنشاء سجل الطبيب
+            $doctorData = [
+                'user_id' => $user->id,
+                'department_id' => $request->department_id,
+                'type' => $request->type,
+                'phone' => $request->phone,
+                'specialization' => $request->specialization,
+                'consultation_fee' => $request->consultation_fee,
+                'moi_price' => $request->moi_price,
+                'is_moi_active' => $request->has('is_moi_active'),
+                'hi_price' => $request->hi_price,
+                'is_hi_active' => $request->has('is_hi_active'),
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+                'working_days' => $request->working_days,
+                'is_active' => true,
+            ];
+
+            if (Schema::hasColumn('doctors', 'qualification')) {
+                $doctorData['qualification'] = $request->qualification ?? 'بكالوريوس طب وجراحة عامة';
+            }
+            if (Schema::hasColumn('doctors', 'license_number')) {
+                $doctorData['license_number'] = $request->license_number ?? ('DOC-' . rand(1000, 9999));
+            }
+
+            return Doctor::create($doctorData);
+        });
 
         // معالجة وحفظ التوقيع اليدوي للطبيب إن وجد
         $threshold = (int) $request->input('signature_threshold', 200);
@@ -411,20 +422,33 @@ class DoctorController extends Controller
             );
 
             // إنشاء سجل الطبيب مع علامة "خارجي"
-            $doctor = Doctor::create([
+            $refDocData = [
                 'user_id' => $user->id,
                 'department_id' => $externalDept->id, // قسم الأطباء الخارجيين
                 'type' => 'surgeon', // ليظهر ضمن قائمة الأطباء الجراحين
                 'phone' => $request->phone ?? '',
                 'specialization' => $request->specialization,
-                'qualification' => 'طبيب خارجي - ' . $request->specialization, // جعلها أكثر تفصيلاً
-                'license_number' => 'EXT-' . time() . '-' . rand(100, 999), // رقم ترخيص مؤقت فريد
-                'experience_years' => 5, // قيمة افتراضية معقولة
                 'consultation_fee' => 0, // لا يتقاضى رسوم استشارة
-                'max_patients_per_day' => 0, // لا يستقبل مرضى مباشرة
-                'bio' => 'طبيب خارجي - ' . ($request->notes ?? 'لا توجد ملاحظات إضافية'),
                 'is_active' => true, // نشط ليتمكن من استخدام النظام كطبيب
-            ]);
+            ];
+
+            if (Schema::hasColumn('doctors', 'qualification')) {
+                $refDocData['qualification'] = 'طبيب خارجي - ' . $request->specialization;
+            }
+            if (Schema::hasColumn('doctors', 'license_number')) {
+                $refDocData['license_number'] = 'EXT-' . time() . '-' . rand(100, 999);
+            }
+            if (Schema::hasColumn('doctors', 'experience_years')) {
+                $refDocData['experience_years'] = 5;
+            }
+            if (Schema::hasColumn('doctors', 'max_patients_per_day')) {
+                $refDocData['max_patients_per_day'] = 0;
+            }
+            if (Schema::hasColumn('doctors', 'bio')) {
+                $refDocData['bio'] = 'طبيب خارجي - ' . ($request->notes ?? 'لا توجد ملاحظات إضافية');
+            }
+
+            $doctor = Doctor::create($refDocData);
 
             return response()->json([
                 'success' => true,
