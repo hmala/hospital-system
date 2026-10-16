@@ -717,9 +717,15 @@
                     {{-- ===== نهاية جرس الإشعارات ===== --}}
 
                     <div class="sidebar-item mt-1">
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                            <i class="fas fa-home me-2"></i>الرئيسية
-                        </a>
+                        @if(auth()->check() && auth()->user()->hasRole('doctor'))
+                            <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
+                                <i class="fas fa-stethoscope me-2"></i>عيادتي وزيارات المرضى
+                            </a>
+                        @else
+                            <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                                <i class="fas fa-home me-2"></i>الرئيسية
+                            </a>
+                        @endif
                     </div>
 
                     <!-- روابط ثابتة حسب الصلاحيات -->
