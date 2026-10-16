@@ -483,6 +483,7 @@ class InquiryController extends Controller
                         'payment_status' => 'paid',
                         'insurance_type' => $bookingInsuranceType
                     ]);
+                } else {
                     $maxQueue = Appointment::where('doctor_id', $doctor->id)
                         ->whereDate('appointment_date', $appointmentDate)
                         ->max('queue_number') ?? 0;
