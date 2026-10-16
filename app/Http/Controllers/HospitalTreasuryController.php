@@ -95,6 +95,19 @@ class HospitalTreasuryController extends Controller
 
         $periodInflow = (float) (clone $basePeriodQuery)->inflow()->sum('amount');
         $periodOutflow = (float) (clone $basePeriodQuery)->outflow()->sum('amount');
+
+        // فصل المبالغ المسترجعة للمرضى عن باقي المصروفات التشغيلية ومستحقات الأطباء
+        $refundQuery = (clone $basePeriodQuery)->outflow()->where(function ($q) {
+            $q->where('category', 'refund')
+              ->orWhere('description', 'like', '%استرجاع%')
+              ->orWhere('notes', 'like', '%استرجاع%');
+        });
+        $periodRefunds = (float) $refundQuery->sum('amount');
+        $periodRefundsCount = (int) $refundQuery->count();
+
+        // المصروفات الفعلية (تشغيلي، مشتريات، أطباء) باستثناء مسترجعات المرضى
+        $periodExpenses = max(0.0, $periodOutflow - $periodRefunds);
+
         $periodDoctorPayouts = (float) (clone $basePeriodQuery)->where('category', 'doctor_payout')->sum('amount');
         $periodPurchases = (float) (clone $basePeriodQuery)->where('category', 'purchase')->sum('amount');
         $periodOperational = (float) (clone $basePeriodQuery)->whereIn('category', [
@@ -440,6 +453,9 @@ class HospitalTreasuryController extends Controller
             'totalAllTimeOutflow',
             'periodInflow',
             'periodOutflow',
+            'periodRefunds',
+            'periodRefundsCount',
+            'periodExpenses',
             'periodDoctorPayouts',
             'periodPurchases',
             'periodOperational',

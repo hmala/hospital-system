@@ -39,7 +39,8 @@ class FinancialTransaction extends Model
         'surgery' => 'إيراد العمليات الجراحية',
         'general_income' => 'إيرادات وتحصيلات عامة',
 
-        // المصروفات (Outflows)
+        // المصروفات والمسترجعات (Outflows)
+        'refund' => 'استرجاع مالي للمرضى',
         'doctor_payout' => 'صرف مستحقات أطباء',
         'purchase' => 'فواتير مشتريات ومورّدين',
         'salary' => 'رواتب ومكافآت موظفين',
