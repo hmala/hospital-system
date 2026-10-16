@@ -338,6 +338,13 @@
                                                                 <i class="fas fa-x-ray text-info me-2"></i>
                                                             @endif
                                                             <span class="fw-semibold">{{ $item['name'] }}</span>
+                                                            <span class="row-coverage-badge badge {{ $rowCov ? 'bg-success-subtle text-success border border-success-subtle' : ($defaultInsurance !== 'none' ? 'bg-warning-subtle text-dark border border-warning' : '') }} small ms-1" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
+                                                                @if($rowCov)
+                                                                    <i class="fas fa-check-circle me-1"></i>مشمول بالضمان
+                                                                @elseif($defaultInsurance !== 'none')
+                                                                    <i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)
+                                                                @endif
+                                                            </span>
                                                         </td>
                                                         <td><code>{{ $item['code'] }}</code></td>
                                                         <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
@@ -527,6 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalPatient = 0;
         let totalInsurance = 0;
         let hasError = false;
+        let hasUncovered = false;
 
         rows.forEach(row => {
             const basePrice = parseFloat(row.getAttribute('data-base-price')) || 0;
@@ -539,18 +547,18 @@ document.addEventListener('DOMContentLoaded', function() {
             let rowCovered = false;
 
             if (insType === 'moi') {
-                if (!isMoiActive || moiPrice <= 0) {
-                    hasError = true;
-                } else {
+                if (isMoiActive && moiPrice > 0) {
                     rowApproved = moiPrice;
                     rowCovered = true;
+                } else {
+                    hasUncovered = true;
                 }
             } else if (insType === 'hi') {
-                if (!isHiActive || hiPrice <= 0) {
-                    hasError = true;
-                } else {
+                if (isHiActive && hiPrice > 0) {
                     rowApproved = hiPrice;
                     rowCovered = true;
+                } else {
+                    hasUncovered = true;
                 }
             }
 
@@ -569,25 +577,41 @@ document.addEventListener('DOMContentLoaded', function() {
             const tdApproved = row.querySelector('.row-approved-price');
             const tdPatient = row.querySelector('.row-patient-share');
             const tdInsurance = row.querySelector('.row-insurance-share');
+            const covBadge = row.querySelector('.row-coverage-badge');
 
             if (tdApproved) tdApproved.textContent = formatNumber(rowApproved);
             if (tdPatient) tdPatient.textContent = formatNumber(rowPatient);
             if (tdInsurance) tdInsurance.textContent = formatNumber(rowInsurance);
+
+            if (covBadge) {
+                if (insType === 'none') {
+                    covBadge.style.display = 'none';
+                } else if (rowCovered) {
+                    covBadge.style.display = 'inline-block';
+                    covBadge.className = 'row-coverage-badge badge bg-success-subtle text-success border border-success-subtle small ms-1';
+                    covBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>مشمول بالضمان';
+                } else {
+                    covBadge.style.display = 'inline-block';
+                    covBadge.className = 'row-coverage-badge badge bg-warning text-dark border border-warning small ms-1';
+                    covBadge.innerHTML = '<i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)';
+                }
+            }
         });
 
         const alertBox = document.getElementById('insuranceErrorAlert');
         const submitBtn = document.getElementById('submitPaymentBtn');
 
-        if (hasError) {
-            if (alertBox) alertBox.classList.remove('d-none');
-            if (submitBtn) submitBtn.disabled = true;
-            totalApproved = 0;
-            totalPatient = 0;
-            totalInsurance = 0;
+        if (hasUncovered && insType !== 'none') {
+            if (alertBox) {
+                alertBox.className = 'alert alert-warning fw-semibold small mb-3 text-center';
+                alertBox.innerHTML = '<i class="fas fa-info-circle me-1 text-warning"></i> تنبيه للكاشير: يحتوي الطلب على فحوصات غير مشمولة بالضمان، تم احتسابها نقداً 100% على المريض تلقائياً.';
+                alertBox.classList.remove('d-none');
+            }
         } else {
             if (alertBox) alertBox.classList.add('d-none');
-            if (submitBtn) submitBtn.disabled = false;
         }
+
+        if (submitBtn) submitBtn.disabled = false;
 
         if (displayApproved) displayApproved.textContent = formatNumber(totalApproved);
         if (displayPatientShare) displayPatientShare.textContent = formatNumber(totalPatient);
