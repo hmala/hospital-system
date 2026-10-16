@@ -296,10 +296,16 @@ class Appointment extends Model
                 ->where('status', '!=', 'completed')
                 ->where('payment_status', '!=', 'paid')
                 ->update(['status' => 'cancelled']);
-            \App\Models\RadiologyRequest::where('visit_id', $this->visit->id)
-                ->where('status', '!=', 'completed')
-                ->where('payment_status', '!=', 'paid')
-                ->update(['status' => 'cancelled']);
+            $paidRadRequestExists = \App\Models\Request::where('visit_id', $this->visit->id)
+                ->where('type', 'radiology')
+                ->where('payment_status', 'paid')
+                ->exists();
+
+            if (!$paidRadRequestExists) {
+                \App\Models\RadiologyRequest::where('visit_id', $this->visit->id)
+                    ->where('status', '!=', 'completed')
+                    ->update(['status' => 'cancelled']);
+            }
         }
 
         $this->update([
