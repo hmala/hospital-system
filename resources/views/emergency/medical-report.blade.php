@@ -913,9 +913,9 @@
                 <div class="doctor-spec">{{ $doctorSpec }}</div>
                 <div class="sig-container">
                     @if($signaturePath && file_exists(public_path($signaturePath)))
-                        <img src="{{ asset($signaturePath) }}" alt="توقيع د. مهند إسماعيل">
+                        <img src="{{ asset($signaturePath) }}" alt="توقيع {{ $doctorName }}">
                     @elseif(file_exists(public_path('images/signatures/doctor_244.png')))
-                        <img src="{{ asset('images/signatures/doctor_244.png') }}" alt="توقيع د. مهند إسماعيل">
+                        <img src="{{ asset('images/signatures/doctor_244.png') }}" alt="توقيع {{ $doctorName }}">
                     @else
                         <div style="font-size: 11px; font-weight: 800; color: #0f766e; border-bottom: 1.5px solid #0f766e; padding-bottom: 2px;">
                             {{ $doctorName }}

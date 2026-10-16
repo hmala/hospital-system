@@ -180,6 +180,10 @@ class DoctorController extends Controller
             'working_days' => 'required|array|min:1',
             'working_days.*' => 'string',
             'password' => 'nullable|string|min:8|confirmed',
+            'signature_file' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:10240',
+            'signature_data' => 'nullable|string',
+            'remove_signature' => 'nullable|boolean',
+            'signature_threshold' => 'nullable|integer|min:50|max:255',
         ]);
 
         // تحديث بيانات المستخدم
@@ -212,8 +216,70 @@ class DoctorController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
+        // معالجة وحفظ التوقيع اليدوي للطبيب
+        $threshold = (int) $request->input('signature_threshold', 200);
+
+        if ($request->boolean('remove_signature')) {
+            if ($doctor->signature && file_exists(public_path($doctor->signature))) {
+                @unlink(public_path($doctor->signature));
+            }
+            $doctor->update(['signature' => null]);
+        } elseif ($request->filled('signature_data')) {
+            $savedPath = \App\Services\SignatureProcessingService::processAndSave($request->signature_data, $doctor->id, $threshold);
+            if ($savedPath) {
+                $doctor->update(['signature' => $savedPath]);
+            }
+        } elseif ($request->hasFile('signature_file')) {
+            $savedPath = \App\Services\SignatureProcessingService::processAndSave($request->file('signature_file'), $doctor->id, $threshold);
+            if ($savedPath) {
+                $doctor->update(['signature' => $savedPath]);
+            }
+        }
+
         return redirect()->route('doctors.index')
-            ->with('success', 'تم تحديث بيانات الطبيب بنجاح');
+            ->with('success', 'تم تحديث بيانات الطبيب وتوقيعه بنجاح');
+    }
+
+    /**
+     * رفع ومعالجة توقيع الطبيب عبر AJAX
+     */
+    public function uploadSignature(Request $request, Doctor $doctor)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isDoctorHimself = $user && $doctor->user_id === $user->id;
+
+        if (!$isAdmin && !$isDoctorHimself && (!$user || !$user->can('edit doctors'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل توقيع هذا الطبيب'], 403);
+        }
+
+        $request->validate([
+            'signature_file' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:10240',
+            'signature_data' => 'nullable|string',
+            'signature_threshold' => 'nullable|integer|min:50|max:255',
+        ]);
+
+        $threshold = (int) $request->input('signature_threshold', 200);
+        $input = $request->input('signature_data') ?: $request->file('signature_file');
+
+        if (!$input) {
+            return response()->json(['success' => false, 'message' => 'لم يتم إرسال ملف توقيع صالح'], 422);
+        }
+
+        $savedPath = \App\Services\SignatureProcessingService::processAndSave($input, $doctor->id, $threshold);
+
+        if (!$savedPath) {
+            return response()->json(['success' => false, 'message' => 'فشلت معالجة صورة التوقيع، يرجى التأكد من وضوح الصورة'], 500);
+        }
+
+        $doctor->update(['signature' => $savedPath]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم عزل الخلفية وحفظ التوقيع الشفاف بنجاح',
+            'signature_url' => asset($savedPath) . '?v=' . time(),
+            'signature_path' => $savedPath
+        ]);
     }
 
     public function updateAvailability(Request $request, Doctor $doctor)
