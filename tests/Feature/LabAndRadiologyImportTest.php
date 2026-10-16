@@ -82,18 +82,27 @@ class LabAndRadiologyImportTest extends TestCase
         $rows = collect([
             // Header row
             ['المعرف (# ID)', 'اسم الفحص', 'القسم', 'الرمز الطبي', 'سعر الكاش', 'سعر الضمان', 'حالة الضمان', 'صبغة', 'حالة التفعيل'],
-            // Data row
-            [$rad->id, 'MRI Brain', 'رنين', 'MRI_BRAIN', '160,000', '70,000', 'مشمول بالضمان', 'نعم', 'نشط'],
+            // Data row with updated name
+            [$rad->id, 'MRI Brain with Spectroscopy', 'رنين', 'MRI_BRAIN', '160,000', '70,000', 'مشمول بالضمان', 'نعم', 'نشط'],
+            // New data row not in DB
+            ['9999', 'CT Abdomen New', 'مفراس', 'CT_ABD_NEW', '85,000', '35,000', 'مشمول بالضمان', 'لا', 'نشط'],
         ]);
 
         $import->collection($rows);
 
         $this->assertEquals(1, $import->updatedCount);
+        $this->assertEquals(1, $import->createdCount);
 
         $rad->refresh();
+        $this->assertEquals('MRI Brain with Spectroscopy', $rad->name);
         $this->assertEquals(160000, (float) $rad->base_price);
         $this->assertEquals(70000, (float) $rad->hi_price);
         $this->assertTrue((bool) $rad->requires_contrast);
+
+        $created = RadiologyType::where('name', 'CT Abdomen New')->first();
+        $this->assertNotNull($created);
+        $this->assertEquals(85000, (float) $created->base_price);
+        $this->assertEquals(35000, (float) $created->hi_price);
     }
 
     public function test_admin_can_upload_lab_tests_csv_import()

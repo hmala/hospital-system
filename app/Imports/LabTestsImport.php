@@ -58,6 +58,11 @@ class LabTestsImport implements ToCollection
 
                 $updates = [];
 
+                // 0. Name (تحديث الاسم إذا تم تعديله في الإكسل)
+                if (!empty($name) && $labTest->name !== $name) {
+                    $updates['name'] = $name;
+                }
+
                 // 1. Price (سعر الكاش)
                 if (isset($colMap['price']) && isset($row[$colMap['price']])) {
                     $rawPrice = $this->cleanNumber($row[$colMap['price']]);

@@ -51,10 +51,13 @@ class RadiologyTypeController extends Controller
             $import = new RadiologyTypesImport();
             Excel::import($import, $request->file('excel_file'));
 
-            return redirect()->back()->with(
-                'success',
-                "تم استيراد وتحديث {$import->updatedCount} خدمة أشعة وتصوير طبي بنجاح من ملف الإكسل (تم تخطي {$import->skippedCount} غير مطابق أو لم يطرأ عليه تغيير)."
-            );
+            $msg = "تم استيراد ملف الإكسل بنجاح: تم تحديث {$import->updatedCount} خدمة";
+            if ($import->createdCount > 0) {
+                $msg .= "، وإضافة {$import->createdCount} خدمة جديدة";
+            }
+            $msg .= " (تم تخطي {$import->skippedCount} لعدم وجود بيانات).";
+
+            return redirect()->back()->with('success', $msg);
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة ملف الإكسل: ' . $e->getMessage());
         }

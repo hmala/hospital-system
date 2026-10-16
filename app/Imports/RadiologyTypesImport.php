@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 class RadiologyTypesImport implements ToCollection
 {
     public int $updatedCount = 0;
+    public int $createdCount = 0;
     public int $skippedCount = 0;
     public array $errors = [];
 
@@ -34,11 +35,12 @@ class RadiologyTypesImport implements ToCollection
             for ($i = $startIndex; $i < $rows->count(); $i++) {
                 $row = $rows[$i];
 
-                $id = isset($colMap['id']) && isset($row[$colMap['id']]) ? trim($row[$colMap['id']]) : null;
-                $name = isset($colMap['name']) && isset($row[$colMap['name']]) ? trim($row[$colMap['name']]) : null;
-                $code = isset($colMap['code']) && isset($row[$colMap['code']]) ? trim($row[$colMap['code']]) : null;
+                $id = isset($colMap['id']) && isset($row[$colMap['id']]) ? trim((string)$row[$colMap['id']]) : null;
+                $name = isset($colMap['name']) && isset($row[$colMap['name']]) ? trim((string)$row[$colMap['name']]) : null;
+                $code = isset($colMap['code']) && isset($row[$colMap['code']]) ? trim((string)$row[$colMap['code']]) : null;
+                $mainCat = isset($colMap['main_category']) && isset($row[$colMap['main_category']]) ? trim((string)$row[$colMap['main_category']]) : null;
 
-                // Find existing radiology service
+                // Find existing radiology service (Match by ID first, then Code, then Name)
                 $radiologyType = null;
                 if (!empty($id) && is_numeric($id)) {
                     $radiologyType = RadiologyType::find((int) $id);
@@ -50,18 +52,45 @@ class RadiologyTypesImport implements ToCollection
                     $radiologyType = RadiologyType::where('name', $name)->first();
                 }
 
+                // إذا كان الفحص غير موجود، نقوم بإنشائه كخدمة جديدة
                 if (!$radiologyType) {
-                    $this->skippedCount++;
+                    if (!empty($name)) {
+                        $rawPrice = isset($colMap['base_price']) && isset($row[$colMap['base_price']]) ? $this->cleanNumber($row[$colMap['base_price']]) : 0;
+                        $rawHiPrice = isset($colMap['hi_price']) && isset($row[$colMap['hi_price']]) ? $this->cleanNumber($row[$colMap['hi_price']]) : 0;
+
+                        RadiologyType::create([
+                            'name' => $name,
+                            'code' => (!empty($code) && $code !== '-') ? $code : null,
+                            'main_category' => $mainCat ?: 'أشعة',
+                            'base_price' => (float) ($rawPrice ?: 0),
+                            'price' => (float) ($rawPrice ?: 0),
+                            'hi_price' => (float) ($rawHiPrice ?: 0),
+                            'is_hi_active' => ((float) $rawHiPrice > 0),
+                            'is_active' => true,
+                        ]);
+                        $this->createdCount++;
+                    } else {
+                        $this->skippedCount++;
+                    }
                     continue;
                 }
 
                 $updates = [];
+
+                // 0. Name & Category (تحديث الاسم والقسم إذا تم تعديلهما في الإكسل)
+                if (!empty($name) && $radiologyType->name !== $name) {
+                    $updates['name'] = $name;
+                }
+                if (!empty($mainCat) && $radiologyType->main_category !== $mainCat) {
+                    $updates['main_category'] = $mainCat;
+                }
 
                 // 1. Base Price (سعر الكاش)
                 if (isset($colMap['base_price']) && isset($row[$colMap['base_price']])) {
                     $rawPrice = $this->cleanNumber($row[$colMap['base_price']]);
                     if ($rawPrice !== null && is_numeric($rawPrice) && $rawPrice >= 0) {
                         $updates['base_price'] = (float) $rawPrice;
+                        $updates['price'] = (float) $rawPrice;
                     }
                 }
 
