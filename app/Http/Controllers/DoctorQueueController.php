@@ -731,6 +731,8 @@ class DoctorQueueController extends Controller
         $doctorId = $appointment->doctor_id;
         $today = today();
 
+        $this->ensureQueueNumbersAssigned($doctorId);
+
         // Move previous admitted/consultation appointments with visits to completed
         Appointment::where('doctor_id', $doctorId)
             ->whereDate('appointment_date', $today)
@@ -978,9 +980,6 @@ class DoctorQueueController extends Controller
         $today = today();
         $appointments = Appointment::where('doctor_id', $doctorId)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
-                $q->where('payment_status', 'paid')->orWhereNotNull('emergency_id');
-            })
             ->whereNull('queue_number')
             ->orderBy('id', 'asc')
             ->get();
