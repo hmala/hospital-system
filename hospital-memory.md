@@ -63,6 +63,12 @@
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
 ### ✅ Completed (المكتمل والمُختبر):
+- **المرحلة 64 (إدراج حقول توجيهات وملاحظات الطبيب للمختبر والأشعة في محطة الطبيب وربطها الكامل بمحطات المختبر والأشعة Doctor Clinical Notes Input & Lab/Radiology Stations Full Integration):**
+  * إضافة حقلين نصيين أنيقين في محطة فحص الطبيب `doctors/visits/show`: أحدهما في تبويب طلبات المختبر `[ 📝 ملاحظات وتوجيهات الطبيب للمختبر ]`، والآخر في تبويب الأشعة والتصوير `[ 📝 ملاحظات وتوجيهات الطبيب لقسم الأشعة ]`.
+  * استقبال وتخزين الملاحظات في تفاصيل الطلب `$details['doctor_notes']` عبر `DoctorVisitController::storeRequest`.
+  * إبراز بطاقة كهرمانية تنبيهية في شاشة فحص وتحرير نتائج المختبر `lab/show`، ووسام تنبيهي في جدول طابور المختبر `lab/index`.
+  * إبراز وسام تنبيهي لملاحظات الطبيب في جدول طابور الأشعة `radiology-staff/index` لربطها بشاشة فحص الأشعة `radiology-staff/show`.
+  * اختبارات آلية شاملة (`DoctorRequestClinicalNotesTest`: 2 passed, 18 assertions).
 - **المرحلة 63 (عرض ملاحظات وتوجيهات الطبيب المحول لموظف وفني الأشعة Doctor Notes in Radiology Workstation):**
   * إضافة Accessor رسمي `doctor_notes` بموديل `Request` لاستخراج وقراءة الملاحظات المخزنة في `details['doctor_notes']` أو `details['notes']` أو `details['description']`.
   * إدراج الملاحظات في الـ JSON لطابور الأشعة `RadiologyStaffController::queueStatus`.

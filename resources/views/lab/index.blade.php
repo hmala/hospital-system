@@ -405,6 +405,13 @@
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">
                                                     عيادة استشارية
                                                 </span>
+                                                @if(!empty($req->doctor_notes))
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
+                                                            <i class="fas fa-sticky-note text-warning me-1"></i> {{ $req->doctor_notes }}
+                                                        </span>
+                                                    </div>
+                                                @endif
                                             @else
                                                 <div class="d-flex align-items-center gap-1">
                                                     <i class="fas fa-vial text-info small me-1"></i>

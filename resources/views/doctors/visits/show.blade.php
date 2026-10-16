@@ -961,6 +961,22 @@ datalist option:hover {
                                 <div class="d-flex flex-wrap gap-2" id="docLabChipsContainer"></div>
                             </div>
 
+                            <!-- 3.5 حقل ملاحظات وتوجيهات الطبيب للمختبر -->
+                            <div class="mb-3 p-2 bg-light bg-opacity-75 rounded-3 border">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label for="docLabDoctorNotes" class="form-label small fw-bold text-dark mb-0">
+                                        <i class="fas fa-comment-medical text-primary me-1"></i> ملاحظات وتوجيهات الطبيب للمختبر (اختياري):
+                                    </label>
+                                    <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>تظهر مباشرة لفني التحاليل في شاشة الفحص وقائمة العمل</span>
+                                </div>
+                                <textarea class="form-control form-control-sm bg-white" 
+                                          id="docLabDoctorNotes" 
+                                          name="doctor_notes" 
+                                          rows="2" 
+                                          placeholder="اكتب أي ملاحظة سريرية أو توجيه لفني التحاليل (مثل: المريض صائم 12 ساعة، فحص عاجل، عينة أطفال، إلخ)..." 
+                                          style="resize: vertical;"></textarea>
+                            </div>
+
                             <!-- 4. تبويبات تصفية الأقسام حسب المجموعات الطبية والضمان -->
                             @php
                                 $isPatientInsurance = in_array($patientInsuranceType, ['hi', 'moi']);
@@ -1138,6 +1154,22 @@ datalist option:hover {
                                         </button>
                                     </div>
                                     <div class="d-flex flex-wrap gap-2" id="docRadChipsContainer"></div>
+                                </div>
+
+                                <!-- 2.5 حقل ملاحظات وتوجيهات الطبيب لقسم الأشعة والتصوير -->
+                                <div class="mb-3 p-2 bg-light bg-opacity-75 rounded-3 border">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <label for="docRadDoctorNotes" class="form-label small fw-bold text-dark mb-0">
+                                            <i class="fas fa-comment-medical text-info me-1"></i> ملاحظات وتوجيهات الطبيب لقسم الأشعة (اختياري):
+                                        </label>
+                                        <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>تظهر مباشرة لفني الأشعة في شاشة الفحص وطابور العمل</span>
+                                    </div>
+                                    <textarea class="form-control form-control-sm bg-white" 
+                                              id="docRadDoctorNotes" 
+                                              name="doctor_notes" 
+                                              rows="2" 
+                                              placeholder="اكتب أي توجيه أو ملاحظة سريرية (مثل: الشك السريري بكسر في الساق اليمنى، تركيز السونار على الكلية اليمنى، المريض لا يستطيع الوقوف، إلخ)..." 
+                                              style="resize: vertical;"></textarea>
                                 </div>
 
                                 <!-- 3. تبويبات تصفية الأقسام والتصوير -->

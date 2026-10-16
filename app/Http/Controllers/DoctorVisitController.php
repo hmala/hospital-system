@@ -962,6 +962,7 @@ class DoctorVisitController extends Controller
             'visit_id' => 'required|exists:visits,id',
             'type' => 'required|in:lab,radiology,pharmacy,nursing',
             'description' => 'nullable|string|max:1000',
+            'doctor_notes' => 'nullable|string|max:1000',
             'priority' => 'nullable|in:normal,urgent,emergency',
             'tests' => 'nullable|array',
             'tests.*' => 'string',
@@ -982,6 +983,10 @@ class DoctorVisitController extends Controller
             'description' => $request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : ($request->type === 'nursing' ? 'خدمات تمريضية' : 'صيدلية'))),
             'priority' => $request->priority ?: 'normal'
         ];
+
+        if ($request->filled('doctor_notes')) {
+            $details['doctor_notes'] = trim($request->doctor_notes);
+        }
 
         if ($request->type === 'lab' && $request->tests) {
             $details['tests'] = $request->tests;

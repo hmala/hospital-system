@@ -423,6 +423,13 @@
                                 <td>
                                     <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
                                     <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    @if(!empty($req->doctor_notes))
+                                        <div class="mt-1">
+                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
+                                                <i class="fas fa-sticky-note text-warning me-1"></i> {{ $req->doctor_notes }}
+                                            </span>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
                                 <td class="text-center">

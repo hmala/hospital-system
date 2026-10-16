@@ -57,6 +57,23 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 64: إدراج حقول توجيهات وملاحظات الطبيب للمختبر والأشعة في محطة الطبيب وربطها الكامل بمحطات المختبر والأشعة Doctor Clinical Notes Input in Consultation Station & Full Lab/Radiology Workstation Integration)
+
+### Done
+- **إضافة حقول الملاحظات والتوجيهات السريرية في محطة عمل الطبيب ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * **تبويب طلبات المختبر (`#labCollapse`)**: إضافة حقل نصي أنيق `[ 📝 ملاحظات وتوجيهات الطبيب للمختبر (اختياري) ]` يسمح للطبيب بكتابة شروط العينة (صيام 12 ساعة، فحص عاجل، متابعة بعد علاج، إلخ).
+  * **تبويب طلبات الأشعة والتصوير (`#radiologyCollapse`)**: إضافة حقل نصي أنيق `[ 📝 ملاحظات وتوجيهات الطبيب لقسم الأشعة (اختياري) ]` يتيح كتابة الشك السريري (مثل: شك بكسر في الساق اليمنى، تركيز السونار على الكلية اليمنى، مريض لا يقوى على الوقوف).
+- **استقبال وتخزين الملاحظات في تفاصيل الطلب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * إضافة التحقق من صحة الحقل `doctor_notes` (نص اختياري بحد أقصى 1000 حرف) في دالة `storeRequest`.
+  * حفظ الملاحظات تلقائياً في مصفوفة تفاصيل الطلب `$details['doctor_notes']` لترتبط فورياً بالـ Accessor `doctor_notes` بموديل `Request`.
+- **عرض التوجيهات السريرية لموظف وفني المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) و [resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
+  * إضافة بطاقة كهرمانية تنبيهية بارزة `[ 📝 ملاحظات وتوجيهات الطبيب المحول ]` أسفل بطاقة المريض في شاشة فحص وتحرير نتائج المختبر.
+  * إظهار وسام تنبيهي أنيق `[ 📝 توجيهات الطبيب ]` في جدول طابور المختبر العام تحت اسم الطبيب المحول.
+- **إظهار الوسام التنبيهي في جدول طابور الأشعة العام ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php))**:
+  * إبراز وسام الملاحظات تحت اسم الطبيب المحول في جدول طابور الأشعة ليراه الفني فوراً قبل فتح الفحص.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات المنظومة كاملة [tests/Feature/DoctorRequestClinicalNotesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorRequestClinicalNotesTest.php): `2 passed (18 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 63: عرض ملاحظات وتوجيهات الطبيب المحول لموظف الأشعة في شاشة الفحص وطابور العمل Doctor Clinical Notes Display in Radiology Staff Workstation & Queue)
 
 ### Done
