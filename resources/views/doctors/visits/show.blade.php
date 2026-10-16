@@ -1316,6 +1316,7 @@ datalist option:hover {
                                                 </label>
                                             </div>
                                         @endforeach
+                                    </div>
                                 </div>
                             @else
                                 <div class="alert alert-warning">
