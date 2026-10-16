@@ -362,7 +362,7 @@
                             <th><i class="fas fa-user-injured me-2"></i>المريض</th>
                             <th><i class="fas fa-tag me-2"></i>نوع الحجز</th>
                             <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                            <th class="text-end" style="width: 140px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
+                            <th class="text-end" style="width: 210px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
                         </tr>
                     </thead>
                     <tbody id="doctor-station-waiting-list">
@@ -834,13 +834,18 @@
                                         <span class="status-badge status-pending"><i class="fas fa-clock"></i> ${item.status_text || 'في الانتظار'}</span>
                                     </td>
                                     <td class="text-end">
-                                        ${idx === 0 ? `
-                                            <button type="button" class="action-btn btn-success" onclick="doctorCallNext()">
-                                                <i class="fas fa-bullhorn"></i> استدعاء
-                                            </button>
-                                        ` : `
-                                            <span class="badge bg-light text-secondary border px-2 py-1">دور #${idx + 1}</span>
-                                        `}
+                                        <div class="d-flex align-items-center justify-content-end gap-1">
+                                            ${idx === 0 ? `
+                                                <button type="button" class="action-btn btn-success fw-bold shadow-sm" onclick="doctorCallSpecific(${item.id})" title="استدعاء صاحب الدور الحالي">
+                                                    <i class="fas fa-bullhorn"></i> استدعاء
+                                                </button>
+                                            ` : `
+                                                <button type="button" class="action-btn btn-outline-success fw-bold shadow-sm" onclick="doctorCallSpecific(${item.id})" title="تقديم دور هذا المريض واستدعاؤه للعيادة الآن">
+                                                    <i class="fas fa-bullhorn"></i> تقديم واستدعاء
+                                                </button>
+                                                <span class="badge bg-light text-secondary border px-2 py-1 small">دور #${idx + 1}</span>
+                                            `}
+                                        </div>
                                     </td>
                                 </tr>
                             `;
@@ -1032,6 +1037,27 @@
                 syncDoctorQueue();
             } else {
                 alert(data.message || 'لا يوجد مرضى في الانتظار');
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    async function doctorCallSpecific(appointmentId) {
+        try {
+            const res = await fetch(`${baseUrl}/queue/appointment/${appointmentId}/call-specific`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                syncDoctorQueue();
+            } else {
+                alert(data.message || 'حدث خطأ أثناء استدعاء المريض');
             }
         } catch (e) {
             alert('حدث خطأ في الاتصال');

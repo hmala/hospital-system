@@ -76,6 +76,7 @@ Route::prefix('queue')->name('queue.')->group(function () {
     // إجراءات التحكم بالطابور (للأطباء وموظفي الاستقبال)
     Route::middleware(['auth'])->group(function () {
         Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('call-next');
+        Route::post('/appointment/{appointment}/call-specific', [\App\Http\Controllers\DoctorQueueController::class, 'callSpecific'])->name('call-specific');
         Route::post('/appointment/{appointment}/recall', [\App\Http\Controllers\DoctorQueueController::class, 'recall'])->name('recall');
         Route::post('/appointment/{appointment}/start-consultation', [\App\Http\Controllers\DoctorQueueController::class, 'startConsultation'])->name('start-consultation');
         Route::post('/appointment/{appointment}/skip', [\App\Http\Controllers\DoctorQueueController::class, 'skip'])->name('skip');
@@ -807,6 +808,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('queue')->name('queue.')->group(function () {
         Route::post('/assign-room', [\App\Http\Controllers\DoctorQueueController::class, 'assignDoctorRoom'])->name('assign-room');
         Route::post('/doctor/{doctor}/call-next', [\App\Http\Controllers\DoctorQueueController::class, 'callNext'])->name('doctor.call-next');
+        Route::post('/appointment/{appointment}/call-specific', [\App\Http\Controllers\DoctorQueueController::class, 'callSpecific'])->name('appointment.call-specific');
         Route::post('/appointment/{appointment}/recall', [\App\Http\Controllers\DoctorQueueController::class, 'recall'])->name('appointment.recall');
         Route::post('/appointment/{appointment}/start-consultation', [\App\Http\Controllers\DoctorQueueController::class, 'startConsultation'])->name('appointment.start-consultation');
         Route::post('/appointment/{appointment}/skip', [\App\Http\Controllers\DoctorQueueController::class, 'skip'])->name('appointment.skip');
