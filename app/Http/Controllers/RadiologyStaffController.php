@@ -545,7 +545,7 @@ class RadiologyStaffController extends Controller
         if ($user->hasRole('radiology_ct')) {
             return 'ct';
         }
-        if ($user->hasAnyRole(['radiology_general', 'radiology_staff'])) {
+        if ($user->hasRole('radiology_general')) {
             return 'radiology';
         }
         if ($user->hasRole('doctor') && $user->doctor) {

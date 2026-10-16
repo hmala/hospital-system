@@ -224,7 +224,7 @@
         </div>
 
         <!-- Quick Category Switcher (Admins & General Roles) -->
-        @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist']) || empty($userCategory))
+        @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'radiology_staff']) || empty($userCategory))
             <div class="d-flex flex-wrap gap-1 bg-white p-1 rounded-pill shadow-xs border">
                 <a href="{{ route('radiology-staff.index', ['category' => 'all', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'all' ? 'btn-primary shadow-xs' : 'btn-light text-dark' }}">
