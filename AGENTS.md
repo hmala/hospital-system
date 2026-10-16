@@ -57,6 +57,31 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 60: فصل المبالغ المسترجعة للمرضى في كارت خزينة مستقل ومطابقة السيرفر السحابي Treasury Refunds Dedicated KPI Card, Hostinger Sync & Cascaded Deletion Guard)
+
+### Done
+- **فصل المبالغ المسترجعة للمرضى عن المصروفات التشغيلية في الخزينة المركزية (`/treasury`)**:
+  * **الخلفية والدافع**: عند استرجاع كشفية ملغاة لمريض (مثل وصل REC-0013 بقيمة 35,000 د.ع)، كانت تُدمج في كارت «إجمالي المنصرف» الذي يحمل عنواناً فرعياً «مستحقات أطباء ومشتريات ونثريات»، مما يسبب التباساً رقابياً لدى الإدارة.
+  * **توسيع نموذج الحركات المالية ومراقب الدفع**:
+    - إضافة تصنيف `refund` (استرجاع مالي للمرضى) في [app/Models/FinancialTransaction.php](file:///c:/wamp64/www/hospital-system/app/Models/FinancialTransaction.php).
+    - تحديث [app/Observers/PaymentObserver.php](file:///c:/wamp64/www/hospital-system/app/Observers/PaymentObserver.php) ليتم تعيين تصنيف `category = 'refund'` تلقائياً لسندات الصرف الناتجة عن مبالغ الدفع السالبة.
+    - إضافة معالج الحذف التتابعي `deleted(Payment $payment)` لحذف قيود الخزينة وأرباح الأطباء وإيراد الاستشارية فورياً عند حذف أي دفعة.
+  * **المتحكم [app/Http/Controllers/HospitalTreasuryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HospitalTreasuryController.php)**:
+    - حساب `$periodRefunds` (مجموع المبالغ المسترجعة للمرضى) و `$periodRefundsCount` (عدد حركات الاسترجاع).
+    - حساب `$periodExpenses` (المصروفات ومستحقات الأطباء الفعلية فقط بدون المسترجعات).
+    - تمرير المتغيرات للواجهة واستخراج نسبة كل بند في شريط التوزيع.
+  * **هيكلية الـ 5 كروت في الواجهة [resources/views/treasury/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/treasury/index.blade.php)**:
+    1. **الرصيد الفعلي بالخزينة**: الرصيد اللحظي التراكمي في الصندوق.
+    2. **إجمالي الوارد (الفترة)**: كافة مقبوضات الأقسام والكاشير.
+    3. **المبالغ المسترجعة للمرضى (كارت جديد مخصص ومستقل)**: يوضح مسترجعات الكشفية والسونار باللون الكهرماني مع عداد حركات الاسترجاع.
+    4. **المصروفات ومستحقات الأطباء**: يوضح الصرفيات التشغيلية والمشتريات فقط باللون الأحمر.
+    5. **الصافي الفعلي للفترة**: الوارد مطروحاً منه (المسترجع + المصروف).
+    - إضافة شريط استرجاعات مبالغ المرضى في بطاقة تفكيك وتوزيع المصروفات.
+- **تحديث ومطابقة الخزينة السحابية على هوستنجر**:
+  * تحديث تصنيف حركة الاسترجاع رقم 134 إلى `category = 'refund'` على قاعدة بيانات هوستنجر ومطابقة الرصيد الصافي ليوم 15-10 عند **552,500 د.ع**.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل اختبارات الخزينة: `9 passed (41 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 59: منظومة الحد من تكرار الحجز وتنبيهات الحجوزات النشطة للكشفية والسونار وتأكيد الموظف ومنع النقر المزدوج Duplicate Booking Prevention, Active Alerts, Staff Confirmation & Debounce)
 
 ### Done
