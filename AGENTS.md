@@ -57,6 +57,23 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 66: حذف وتطهير كافة السجلات التشغيلية والمالية للدكتورة رولا محمد اسماعيل على سيرفر هوستنجر مع الحفاظ التام على حسابها وملفها الطبي Dr. Rola Mohammed Ismail Hostinger Operational & Financial Purge with Profile Preserved)
+
+### Done
+- **أخذ نسخة احتياطية فورية وشاملة ([storage/app/backups/hostinger_dr_rola_backup_before_delete_2026_10_16_201919.sql](file:///c:/wamp64/www/hospital-system/storage/app/backups/hostinger_dr_rola_backup_before_delete_2026_10_16_201919.sql))**:
+  * حفظ ملف SQL متكامل يحتوي على أوامر `INSERT` دقيقة لكل صف تم تحديده قبل الحذف لضمان أمان البيانات وإمكانية الاسترجاع عند الطلب.
+- **الحذف التتابعي والآمن لكافة السجلات التشغيلية والمالية ضمن Transaction متماسكة**:
+  * **المواعيد والحجوزات (`appointments`)**: حذف 12 موعداً مرتبطاً بالطبيبة.
+  * **الزيارات الطبية (`visits`)**: حذف 7 زيارات طبية مسجلة للعيادة.
+  * **طلبات الفحوصات والتحاليل (`requests`)**: حذف 18 طلباً محولاً للمختبر والأشعة.
+  * **سجلات الفحوصات التابعة (`lab_results` و `radiology_requests`)**: حذف 10 سجلات تابعة لتلك الزيارات.
+  * **الوصفات الصيدلانية (`prescriptions` و `prescribed_medications`)**: حذف 6 سجلات أدوية ووصفات.
+  * **المستحقات والإيرادات المالية (`consultation_revenues` و `doctor_dues`)**: حذف 9 سجلات إيرادات كشفية و 6 سجلات مستحقات طبيب (`doctor_dues`).
+  * **المدفوعات وقيود الخزينة (`payments` و `financial_transactions`)**: حذف 9 دفعات مسجلة بكاشير الاستشارية و 9 قيود مالية مقترنة بالوصولات في سجل الخزينة.
+  * **تصفير رصيد الحساب المالي للطبيب (`doctor_financial_accounts`)**: تصفير الرصيد (`balance = 0.00`) وإجمالي الأرباح (`total_earned = 0.00`) مع إبقاء سجل الحساب لعدم كسر النظام.
+- **الحفاظ التام على حساب وملف الطبيب**:
+  * بقاء سجل الطبيب في جدول `doctors` (المعرّف: 242) وسجل المستخدم في جدول `users` (المعرّف: 510، الاسم: «رولا محمد اسماعيل»، البريد: `rola@hospital.com`) وإعدادات النسبة سليمة ومحمية 100%.
+
 ## Session log (2026-10-16 — المرحلة 65: استبدال وتطهير جدول الأشعة بالكامل بملف الإكسل وحذف الخدمات القديمة مع حماية السجلات السابقة Radiology Catalog Complete Wipe & Replace with Excel Import)
 
 ### Done
