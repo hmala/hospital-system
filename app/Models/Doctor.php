@@ -50,6 +50,33 @@ class Doctor extends Model
         'hi_price' => 'decimal:2',
     ];
 
+    /**
+     * الحصول على التوقيع بصيغة Data URI (Base64) لضمان العرض الفوري دون أخطاء 404 أو مسارات فرعية
+     */
+    public function getSignatureDataUriAttribute(): ?string
+    {
+        if (!$this->signature) {
+            return null;
+        }
+
+        $fullPath = public_path($this->signature);
+        if (file_exists($fullPath)) {
+            $mime = @mime_content_type($fullPath) ?: 'image/png';
+            $data = base64_encode(file_get_contents($fullPath));
+            return "data:{$mime};base64,{$data}";
+        }
+
+        return null;
+    }
+
+    /**
+     * رابط التوقيع (يعتمد Data URI أولاً ثم مسار الراوت الديناميكي)
+     */
+    public function getSignatureUrlAttribute(): ?string
+    {
+        return $this->signature_data_uri ?: ($this->signature ? route('doctors.signature', $this) : null);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

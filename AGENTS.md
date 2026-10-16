@@ -57,6 +57,29 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 68: حل مشكلة عرض صورة التوقيع على هوستنجر بالتحويل التلقائي إلى Base64 Data URI وبث المسار المباشر وحصانة إنشاء الطبيب Doctor Signature Base64 Data URI, Stream Route & Safe Doctor Creation Guard)
+
+### Done
+- **تشخيص السبب الجذري على سيرفر هوستنجر**:
+  * نظام المستشفى يعمل داخل مسار فرعي على هوستنجر (`https://hinpa.icu/hearmz/`).
+  * عند استخدام دالة `asset($doctor->signature)` كان الرابط يطلب مسار الصورة الثابت من Apache، والذي يرجع خطأ `404 Not Found` نظراً لعدم توجيه طلبات الملفات الساكنة بالمسار الفرعي إلى مجلد `public/`، مما أدى لظهور أيقونة الصورة المكسورة مع النص البديل (`توقيع الطبيب`).
+- **المعالجة الجذرية والذكية عبر Base64 Data URI وبث الراوت المباشر**:
+  * **إضافة Accessor بموديل الطبيب ([app/Models/Doctor.php](file:///c:/wamp64/www/hospital-system/app/Models/Doctor.php))**:
+    - `signature_data_uri`: قراءة ملف التوقيع مباشرة من القرص الصلب وتضمينه كـ `data:image/png;base64,...` مدمج ومباشر في كود HTML دون الحاجة لأي طلب شبكي خارجي (مثل شعار النظام المعتمد).
+    - `signature_url`: يرجع Data URI تلقائياً مع خيار العودة لمسار الراوت الديناميكي.
+  * **إضافة راوت وبث مباشر للتواقيع ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) و [app/Http/Controllers/DoctorController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorController.php))**:
+    - مسار `GET /doctors/{doctor}/signature` ودالة `signature()` لخدمة التوقيع عبر PHP مباشرة بحماية وتجاوز أي قيود في إعدادات السيرفر.
+    - تحديث استجابة الـ AJAX في `uploadSignature()` لترجع الـ `signature_data_uri` فورياً للعرض اللحظي بعد الحفظ.
+  * **تحديث واجهات العرض والتقارير الطبية**:
+    - [resources/views/doctors/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/edit.blade.php) و [resources/views/doctors/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/show.blade.php): اعتماد التوقيع المفرغ الفوري.
+    - [resources/views/emergency/medical-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/medical-report.blade.php) و [resources/views/emergency/verify-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/verify-report.blade.php): تضمين التوقيع كـ Base64 مباشر للطباعة الرسمية الثابتة.
+  * **تحصين إنشاء الطبيب وحماية الأعمدة**:
+    - عزل الأعمدة الملغاة (`qualification`, `license_number`) في `DoctorController::store` و `storeReferringDoctor` بفحص `Schema::hasColumn`.
+    - تطبيق `DB::transaction` لحماية إنشاء المستخدمين والأطباء من الحسابات اليتيمة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * اجتياز كامل لـ [tests/Feature/DoctorSignatureTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorSignatureTest.php): `4 passed (21 assertions)`.
+  * اجتياز كامل لـ [tests/Feature/EmergencyMedicalReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (19 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 67: حذف وتطهير طلبات وحالات المختبر والأشعة والطوارئ وتصفير مبالغها في الخزينة على سيرفر هوستنجر مع حماية الكتالوجات والمرضى Hostinger Lab, Radiology & Emergency Operational & Financial Purge with Catalogs & Patients Preserved)
 
 ### Done

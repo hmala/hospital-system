@@ -280,8 +280,11 @@
                                     <div class="col-md-5 mb-3 text-center">
                                         <label class="form-label fw-bold d-block text-secondary small">التوقيع المعتمد حالياً</label>
                                         <div class="signature-display-box mx-auto position-relative" style="min-height: 120px; max-width: 280px; border: 2px dashed #0f766e; border-radius: 8px; background: repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; padding: 10px;">
-                                            @if($doctor->signature && file_exists(public_path($doctor->signature)))
-                                                <img id="currentSignatureImg" src="{{ asset($doctor->signature) }}?v={{ time() }}" alt="توقيع الطبيب" style="max-height: 100px; max-width: 100%; object-fit: contain;">
+                                            @php
+                                                $currentSigSrc = $doctor->signature_data_uri ?: ($doctor->signature && file_exists(public_path($doctor->signature)) ? route('doctors.signature', $doctor) : null);
+                                            @endphp
+                                            @if($currentSigSrc)
+                                                <img id="currentSignatureImg" src="{{ $currentSigSrc }}" alt="توقيع الطبيب" style="max-height: 100px; max-width: 100%; object-fit: contain;">
                                             @else
                                                 <div id="noSignaturePlaceholder" class="text-muted small">
                                                     <i class="fas fa-file-signature fa-2x mb-1 d-block opacity-50"></i>
@@ -289,7 +292,7 @@
                                                 </div>
                                             @endif
                                         </div>
-                                        @if($doctor->signature && file_exists(public_path($doctor->signature)))
+                                        @if($currentSigSrc)
                                             <div class="form-check mt-2 d-inline-block text-danger small">
                                                 <input class="form-check-input" type="checkbox" name="remove_signature" id="remove_signature" value="1">
                                                 <label class="form-check-label" for="remove_signature">

@@ -142,6 +142,14 @@
 - **المرحلة 50:** تصدير واستيراد وتحديث أسعار خدمات الطوارئ من الإكسل وإلغاء شمول تأمين الداخلية في استيرادات الأسعار (`EmergencyServicesImportTest`).
 - **المرحلة 49:** تصدير واستيراد وتحديث أسعار الفحوصات والتحاليل المخبرية من ملفات Excel لـ 631 تحليلاً (`LabTestsImportTest`).
 - **المرحلة 48:** تصدير واستيراد وتحديث أسعار خدمات الأشعة والسونار من ملفات Excel لـ 224 خدمة وإلغاء شمول تأمين الداخلية في استيرادات الأسعار (`RadiologyServicesImportTest`).
+- **المرحلة 68:** حل مشكلة عرض صورة التوقيع على هوستنجر بالتحويل التلقائي إلى Base64 Data URI وبث المسار المباشر وحصانة إنشاء الطبيب (`Doctor Signature Base64 Data URI, Stream Route & Safe Doctor Creation Guard`):
+  * **السبب الجذري للمشكلة على هوستنجر**: وجود النظام في مسار فرعي (`/hearmz`) جعل محرك Apache يرجع خطأ `404 Not Found` عند طلب الرابط الثابت `asset($doctor->signature)` لأن قواعد التوجيه تبحث في مجلد المشروع وليس `public/`، مما أدى لظهور أيقونة الصورة المكسورة مع النص البديل (`توقيع الطبيب`).
+  * **المعالجة الجذرية والشاملة**:
+    - **دعم Base64 Data URI في موديل الطبيب (`App\Models\Doctor`)**: إضافة الـ Accessor `signature_data_uri` و `signature_url` لقراءة ملف التوقيع مباشرة من القرص الصلب وتحويله إلى صيغة `data:image/png;base64,...` مدمجة بالكامل في كود الـ HTML مثل شعار النظام.
+    - **راوت وبث مباشر للتواقيع (`GET /doctors/{doctor}/signature`)**: إضافة مسار لارافيل رسمي ودالة `signature()` في `DoctorController` لخدمة ملف الصورة المفرغ عبر PHP مباشرة وتفادي أي خطأ مسار فرعي.
+    - **تحديث واجهات الأطباء والتقارير**: تحديث `doctors/edit.blade.php`، `doctors/show.blade.php`، وتقرير الطوارئ `medical-report.blade.php` وبوابة التحقق `verify-report.blade.php` لعرض التوقيع المفرغ الشفاف بنسبة 100%.
+    - **تحصين إنشاء الطبيب (`DoctorController::store`)**: عزل أعمدة `qualification` و `license_number` المحذوفة سابقاً بفحص `Schema::hasColumn` وتطبيق `DB::transaction` لمنع أي أخطاء `1054 Unknown column` أو مستخدمين أيتام.
+  * **الاختبارات الآلية**: اجتياز كامل لـ `DoctorSignatureTest` (4 passed, 21 assertions) و `EmergencyMedicalReportTest` (3 passed, 19 assertions).
 - **المرحلة 67:** حذف وتطهير طلبات وحالات المختبر والأشعة والطوارئ وتصفير مبالغها في الخزينة على سيرفر هوستنجر مع حماية الكتالوجات والمرضى (`Hostinger Lab, Radiology & Emergency Operational & Financial Purge with Catalogs & Patients Preserved`):
   * **أخذ نسخة احتياطية فورية وشاملة (`storage/app/backups/hostinger_lab_rad_emerg_before_purge_2026_10_16_202735.sql`)**: حفظ ملف SQL متكامل بحجم 87 كيلوبايت يحتوي على أوامر INSERT لكافة سجلات الطلبات والدفعات وقيود الخزينة وحالات الطوارئ قبل مسحها.
   * **الحذف والتصفير المتزامن ضمن Transaction موحدة على هوستنجر**:

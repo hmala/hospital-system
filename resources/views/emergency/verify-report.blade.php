@@ -274,10 +274,16 @@
         <div class="doctor-box">
             <h4>الطبيب المعالج المعتمد: {{ $doctorName }}</h4>
             <p>{{ $doctorSpec }}</p>
-            @if($signaturePath && file_exists(public_path($signaturePath)))
-                <img src="{{ asset($signaturePath) }}" class="sig-img" alt="توقيع الطبيب">
-            @elseif(file_exists(public_path('images/signatures/doctor_244.png')))
-                <img src="{{ asset('images/signatures/doctor_244.png') }}" class="sig-img" alt="توقيع الطبيب">
+            @php
+                $verifySigSrc = null;
+                if ($signaturePath && file_exists(public_path($signaturePath))) {
+                    $verifySigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path($signaturePath)));
+                } elseif (file_exists(public_path('images/signatures/doctor_244.png'))) {
+                    $verifySigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/signatures/doctor_244.png')));
+                }
+            @endphp
+            @if($verifySigSrc)
+                <img src="{{ $verifySigSrc }}" class="sig-img" alt="توقيع الطبيب">
             @endif
         </div>
     </div>

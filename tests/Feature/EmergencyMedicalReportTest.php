@@ -101,7 +101,8 @@ class EmergencyMedicalReportTest extends TestCase
         $response->assertSee('نزلة معوية حادة Acute Gastroenteritis');
         $response->assertSee('نسخة المريض (Patient Copy)');
         $response->assertSee('نسخة الإدارة والأرشيف (Administrative & Archive Copy)');
-        $response->assertSee('images/signatures/doctor_244.png');
+        $response->assertSee('data:image/png;base64');
+        $response->assertSee('توقيع د. مهند إسماعيل');
         $response->assertSee('emergency/' . $this->emergency->id . '/verify-report');
     }
 

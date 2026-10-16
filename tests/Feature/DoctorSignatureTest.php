@@ -180,7 +180,8 @@ class DoctorSignatureTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('emergency.medical-report', $emergency));
         $response->assertStatus(200);
         $response->assertSee('د. حسام عادل');
-        $response->assertSee('images/signatures/doctor_' . $this->doctor->id . '.png');
+        $response->assertSee('data:image/png;base64');
+        $response->assertSee('توقيع د. حسام عادل');
     }
 
     public function test_can_upload_and_auto_extract_signature_when_creating_new_doctor(): void

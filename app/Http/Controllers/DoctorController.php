@@ -307,8 +307,28 @@ class DoctorController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم عزل الخلفية وحفظ التوقيع الشفاف بنجاح',
-            'signature_url' => asset($savedPath) . '?v=' . time(),
+            'signature_url' => $doctor->signature_data_uri ?: (asset($savedPath) . '?v=' . time()),
             'signature_path' => $savedPath
+        ]);
+    }
+
+    /**
+     * عرض أو تحميل صورة التوقيع مباشرة من PHP لضمان تجاوز مشاكل المسارات الفرعية
+     */
+    public function signature(Doctor $doctor)
+    {
+        if (!$doctor->signature) {
+            abort(404);
+        }
+
+        $fullPath = public_path($doctor->signature);
+        if (!file_exists($fullPath)) {
+            abort(404);
+        }
+
+        return response()->file($fullPath, [
+            'Content-Type' => @mime_content_type($fullPath) ?: 'image/png',
+            'Cache-Control' => 'no-cache, private',
         ]);
     }
 

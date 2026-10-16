@@ -102,6 +102,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('doctors', DoctorController::class);
     Route::patch('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability'])->name('doctors.update-availability');
     Route::post('/doctors/{doctor}/upload-signature', [DoctorController::class, 'uploadSignature'])->name('doctors.upload-signature');
+    Route::get('/doctors/{doctor}/signature', [DoctorController::class, 'signature'])->name('doctors.signature');
     
     // إدارة توفر الأطباء الاستشاريين (لموظف الاستقبال)
     Route::get('/consultant-availability', [ConsultantAvailabilityController::class, 'index'])
