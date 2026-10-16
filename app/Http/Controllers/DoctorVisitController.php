@@ -528,6 +528,14 @@ class DoctorVisitController extends Controller
                 ->get()
             : collect();
 
+        // تحديد نوع تأمين المريض الحالي بدقة (hi أو moi أو none)
+        $patientInsuranceType = $visit->appointment?->insurance_type 
+            ?: ($visit->patient?->insurance_type ?: 'none');
+
+        if (!in_array($patientInsuranceType, ['hi', 'moi']) && !empty($visit->patient?->covered_by_insurance)) {
+            $patientInsuranceType = 'hi';
+        }
+
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
@@ -548,7 +556,8 @@ class DoctorVisitController extends Controller
             'pastVisits',
             'pastSurgeries',
             'pastEmergencies',
-            'patientAppointments'
+            'patientAppointments',
+            'patientInsuranceType'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -997,12 +1006,21 @@ class DoctorVisitController extends Controller
             $details['radiology_types'] = $request->radiology_types;
             $details['radiology_type_ids'] = $request->radiology_types;
             
-            // إنشاء وصف يتضمن أسماء الأشعة وتحديد الفئة الفرعية (سونار / رنين / إيكو)
+            // استقبال وتخزين الأعضاء/المناطق المستهدفة لكل فحص (مثل: الصدر، الركبة)
+            $radiologyTargets = (array) $request->input('radiology_targets', []);
+            $details['radiology_targets'] = $radiologyTargets;
+
+            // إنشاء وصف يتضمن أسماء الأشعة والعضو المطلوب وتحديد الفئة الفرعية
             $radiologyTypeNames = [];
             foreach ($request->radiology_types as $typeId) {
                 $radiologyType = \App\Models\RadiologyType::find($typeId);
                 if ($radiologyType) {
-                    $radiologyTypeNames[] = $radiologyType->name;
+                    $targetPart = isset($radiologyTargets[$typeId]) ? trim($radiologyTargets[$typeId]) : null;
+                    $displayName = $radiologyType->name;
+                    if (!empty($targetPart)) {
+                        $displayName .= " [العضو: {$targetPart}]";
+                    }
+                    $radiologyTypeNames[] = $displayName;
                     $details['radiology_type_id'] = $typeId; // حفظ أول نوع لاستخدامه لاحقاً
 
                     if (!$detectedSubtype) {

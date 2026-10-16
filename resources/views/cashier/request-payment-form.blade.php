@@ -80,13 +80,15 @@
                             if (!is_array($typeIds)) {
                                 $typeIds = [$typeIds];
                             }
+                            $radTargets = $details['radiology_targets'] ?? [];
                             if (!empty($typeIds)) {
                                 foreach ($typeIds as $rId) {
                                     $rad = \App\Models\RadiologyType::find($rId);
                                     if ($rad) {
+                                        $targetPart = isset($radTargets[$rId]) && !empty($radTargets[$rId]) ? trim($radTargets[$rId]) : null;
                                         $items[] = [
                                             'id' => $rad->id,
-                                            'name' => $rad->name,
+                                            'name' => $rad->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
                                             'code' => $rad->code,
                                             'type' => 'radiology',
                                             'base_price' => (float)$rad->getRegularPrice(),

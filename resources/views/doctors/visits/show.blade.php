@@ -961,8 +961,18 @@ datalist option:hover {
                                 <div class="d-flex flex-wrap gap-2" id="docLabChipsContainer"></div>
                             </div>
 
-                            <!-- 4. تبويبات تصفية الأقسام حسب المجموعات الطبية -->
+                            <!-- 4. تبويبات تصفية الأقسام حسب المجموعات الطبية والضمان -->
                             @php
+                                $isPatientInsurance = in_array($patientInsuranceType, ['hi', 'moi']);
+                                $coveredLabCount = $labTests->filter(function($t) use ($patientInsuranceType) {
+                                    if ($patientInsuranceType === 'hi') {
+                                        return ($t->is_hi_active ?? true) && ($t->hi_price > 0);
+                                    } elseif ($patientInsuranceType === 'moi') {
+                                        return ($t->is_moi_active ?? true) && ($t->moi_price > 0);
+                                    }
+                                    return false;
+                                })->count();
+
                                 $catMap = [
                                     'biochemistry' => '🧪 كيمياء حيوية',
                                     'hormone' => '🧬 هرمونات',
@@ -981,15 +991,29 @@ datalist option:hover {
                                     return $catMap[$sub] ?? ($t->subcategory ?: ($t->main_category ?: 'تحاليل عامة'));
                                 });
                             @endphp
-                            <div class="d-flex align-items-center gap-1 overflow-x-auto pb-2 mb-3 border-bottom" id="docLabCategoryPills" style="white-space: nowrap;">
-                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 doc-cat-pill active" data-category="ALL">
-                                    الكل <span class="badge bg-white text-primary ms-1">{{ $labTests->count() }}</span>
-                                </button>
-                                @foreach($grouped as $category => $tests)
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-cat-pill" data-category="{{ $category }}">
-                                        {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $tests->count() }}</span>
+
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-3 border-bottom">
+                                <div class="d-flex align-items-center gap-1 overflow-x-auto" id="docLabCategoryPills" style="white-space: nowrap;">
+                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 doc-cat-pill active" data-category="ALL">
+                                        الكل <span class="badge bg-white text-primary ms-1">{{ $labTests->count() }}</span>
                                     </button>
-                                @endforeach
+                                    @foreach($grouped as $category => $tests)
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-cat-pill" data-category="{{ $category }}">
+                                            {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $tests->count() }}</span>
+                                        </button>
+                                    @endforeach
+                                </div>
+
+                                @if($isPatientInsurance)
+                                    <div class="d-flex align-items-center gap-1 bg-success bg-opacity-10 p-1 rounded-pill border border-success-subtle shadow-xs">
+                                        <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-1 doc-lab-insurance-toggle active fw-bold" data-filter="insurance" id="docLabFilterInsuranceBtn">
+                                            <i class="fas fa-shield-alt me-1"></i> المشمولة بالضمان فقط ({{ $coveredLabCount }})
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary border-0 rounded-pill px-3 py-1 doc-lab-insurance-toggle text-dark" data-filter="all" id="docLabFilterAllBtn">
+                                            <i class="fas fa-globe me-1"></i> عرض كافة التحاليل ({{ $labTests->count() }})
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
 
                             <!-- 5. شبكة بطاقات التحاليل (Compact Grid) -->
@@ -998,11 +1022,18 @@ datalist option:hover {
                                     @foreach($labTests as $test)
                                         @php
                                             $testCat = $catMap[strtolower(trim($test->subcategory ?? ''))] ?? ($test->subcategory ?: ($test->main_category ?: 'تحاليل عامة'));
+                                            $isCovered = false;
+                                            if ($patientInsuranceType === 'hi') {
+                                                $isCovered = ($test->is_hi_active ?? true) && ($test->hi_price > 0);
+                                            } elseif ($patientInsuranceType === 'moi') {
+                                                $isCovered = ($test->is_moi_active ?? true) && ($test->moi_price > 0);
+                                            }
                                         @endphp
                                         <div class="col-md-6 col-12 doc-lab-col" 
                                              data-test-name="{{ strtolower($test->name) }}"
                                              data-test-code="{{ strtolower($test->code ?? '') }}"
                                              data-category="{{ $testCat }}"
+                                             data-is-insurance="{{ $isCovered ? '1' : '0' }}"
                                              data-id="{{ $test->id }}">
                                             <label for="inline_test_{{ $test->id }}" 
                                                    class="doc-lab-card p-2 rounded-3 border bg-white d-flex align-items-center justify-content-between h-100 mb-0 w-100 user-select-none" 
@@ -1017,9 +1048,23 @@ datalist option:hover {
                                                            data-test-name="{{ $test->name }}"
                                                            data-test-code="{{ $test->code ?? '' }}"
                                                            data-test-category="{{ $testCat }}"
+                                                           data-is-insurance="{{ $isCovered ? '1' : '0' }}"
                                                            style="cursor: pointer; width: 1.1em; height: 1.1em;">
                                                     <div class="text-truncate">
-                                                        <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $test->name }}">{{ $test->name }}</span>
+                                                        <div class="d-flex align-items-center gap-1">
+                                                            <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $test->name }}">{{ $test->name }}</span>
+                                                            @if($isPatientInsurance)
+                                                                @if($isCovered)
+                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 flex-shrink-0" style="font-size: 0.65rem;">
+                                                                        <i class="fas fa-shield-alt"></i> ضمان
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1 py-0 flex-shrink-0" style="font-size: 0.65rem;">
+                                                                        كاش
+                                                                    </span>
+                                                                @endif
+                                                            @endif
+                                                        </div>
                                                         <div class="d-flex align-items-center gap-1">
                                                             @if($test->code)
                                                                 <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.68rem;">{{ $test->code }}</span>
@@ -1114,53 +1159,39 @@ datalist option:hover {
                                         'u/s' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
                                         'us' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
                                         'سونار' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'doppler' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'دوبلر' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
-                                        'echo' => '❤️ إيكو قلب (Echo)',
-                                        'إيكو' => '❤️ إيكو قلب (Echo)',
-                                        'ايكو' => '❤️ إيكو قلب (Echo)',
-                                        'mammogram' => '🎀 ماموجرام (Mammogram)',
-                                        'ماموجرام' => '🎀 ماموجرام (Mammogram)',
-                                        'fluoroscopy' => '💡 تنظير فلوري (Fluoroscopy)',
-                                    ];
-
-                                    $radGrouped = $radiologyTypes->groupBy(function($r) use ($radCatMap) {
-                                        $rawCat = mb_strtolower(trim($r->main_category ?? ''));
-                                        $rawSub = mb_strtolower(trim($r->subcategory ?? ''));
-                                        $rawName = mb_strtolower(trim($r->name ?? ''));
-
-                                        if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
-                                            str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
-                                            str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
-                                            str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
-                                            str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
-                                            return '🔊 السونار والدوبلر (Ultrasound & Doppler)';
+                                        'doppler' => '🔊 السونار والدوبلر (Ultr                                @php
+                                    $coveredRadCount = $radiologyTypes->filter(function($r) use ($patientInsuranceType) {
+                                        if ($patientInsuranceType === 'hi') {
+                                            return ($r->is_hi_active ?? true) && ($r->hi_price > 0);
+                                        } elseif ($patientInsuranceType === 'moi') {
+                                            return ($r->is_moi_active ?? true) && ($r->moi_price > 0);
                                         }
-
-                                        if (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
-                                            return '🧲 رنين مغناطيسي (MRI)';
-                                        }
-
-                                        if (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
-                                            return '🌀 مفراس حلزوني (CT Scan)';
-                                        }
-
-                                        if (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
-                                            return '❤️ إيكو قلب (Echo)';
-                                        }
-
-                                        return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
-                                    });
+                                        return false;
+                                    })->count();
                                 @endphp
-                                <div class="d-flex align-items-center gap-1 overflow-x-auto pb-2 mb-3 border-bottom" id="docRadCategoryPills" style="white-space: nowrap;">
-                                    <button type="button" class="btn btn-sm btn-info text-white rounded-pill px-3 py-1 doc-rad-cat-pill active" data-category="ALL">
-                                        الكل <span class="badge bg-white text-info ms-1">{{ $radiologyTypes->count() }}</span>
-                                    </button>
-                                    @foreach($radGrouped as $category => $types)
-                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-rad-cat-pill" data-category="{{ $category }}">
-                                            {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $types->count() }}</span>
+
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-3 border-bottom">
+                                    <div class="d-flex align-items-center gap-1 overflow-x-auto" id="docRadCategoryPills" style="white-space: nowrap;">
+                                        <button type="button" class="btn btn-sm btn-info text-white rounded-pill px-3 py-1 doc-rad-cat-pill active" data-category="ALL">
+                                            الكل <span class="badge bg-white text-info ms-1">{{ $radiologyTypes->count() }}</span>
                                         </button>
-                                    @endforeach
+                                        @foreach($radGrouped as $category => $types)
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-rad-cat-pill" data-category="{{ $category }}">
+                                                {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $types->count() }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+
+                                    @if($isPatientInsurance)
+                                        <div class="d-flex align-items-center gap-1 bg-success bg-opacity-10 p-1 rounded-pill border border-success-subtle shadow-xs">
+                                            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-1 doc-rad-insurance-toggle active fw-bold" data-filter="insurance" id="docRadFilterInsuranceBtn">
+                                                <i class="fas fa-shield-alt me-1"></i> المشمولة بالضمان فقط ({{ $coveredRadCount }})
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary border-0 rounded-pill px-3 py-1 doc-rad-insurance-toggle text-dark" data-filter="all" id="docRadFilterAllBtn">
+                                                <i class="fas fa-globe me-1"></i> عرض كافة فحوصات الأشعة ({{ $radiologyTypes->count() }})
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <!-- 4. شبكة بطاقات فحوصات الأشعة (Compact Grid) -->
@@ -1175,7 +1206,7 @@ datalist option:hover {
                                                 if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
                                                     str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
                                                     str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
-                                                    str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') ||
+                                                    str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') || 
                                                     str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
                                                     $radCat = '🔊 السونار والدوبلر (Ultrasound & Doppler)';
                                                 } elseif (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
@@ -1187,11 +1218,19 @@ datalist option:hover {
                                                 } else {
                                                     $radCat = $radCatMap[$rawCat] ?? ($type->main_category ?: ($type->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
                                                 }
+
+                                                $isCoveredRad = false;
+                                                if ($patientInsuranceType === 'hi') {
+                                                    $isCoveredRad = ($type->is_hi_active ?? true) && ($type->hi_price > 0);
+                                                } elseif ($patientInsuranceType === 'moi') {
+                                                    $isCoveredRad = ($type->is_moi_active ?? true) && ($type->moi_price > 0);
+                                                }
                                             @endphp
                                             <div class="col-md-6 col-12 doc-rad-col" 
                                                  data-type-name="{{ strtolower($type->name) }}"
                                                  data-type-code="{{ strtolower($type->code ?? '') }}"
                                                  data-category="{{ $radCat }}"
+                                                 data-is-insurance="{{ $isCoveredRad ? '1' : '0' }}"
                                                  data-id="{{ $type->id }}">
                                                 <label for="inline_rad_{{ $type->id }}" 
                                                        class="doc-rad-card p-2 rounded-3 border bg-white d-flex align-items-center justify-content-between h-100 mb-0 w-100 user-select-none" 
@@ -1206,9 +1245,23 @@ datalist option:hover {
                                                                data-type-name="{{ $type->name }}"
                                                                data-type-code="{{ $type->code ?? '' }}"
                                                                data-type-category="{{ $radCat }}"
+                                                               data-is-insurance="{{ $isCoveredRad ? '1' : '0' }}"
                                                                style="cursor: pointer; width: 1.1em; height: 1.1em;">
                                                         <div class="text-truncate">
-                                                            <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $type->name }}">{{ $type->name }}</span>
+                                                            <div class="d-flex align-items-center gap-1">
+                                                                <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $type->name }}">{{ $type->name }}</span>
+                                                                @if($isPatientInsurance)
+                                                                    @if($isCoveredRad)
+                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 flex-shrink-0" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-shield-alt"></i> ضمان
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1 py-0 flex-shrink-0" style="font-size: 0.65rem;">
+                                                                            كاش
+                                                                        </span>
+                                                                    @endif
+                                                                @endif
+                                                            </div>
                                                             <div class="d-flex align-items-center gap-1">
                                                                 @if($type->code)
                                                                     <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.68rem;">{{ $type->code }}</span>
@@ -1226,7 +1279,6 @@ datalist option:hover {
                                                 </label>
                                             </div>
                                         @endforeach
-                                    </div>
                                 </div>
                             @else
                                 <div class="alert alert-warning">
@@ -4082,6 +4134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!searchInput || !labForm) return;
 
         let activeCategory = 'ALL';
+        let activeInsuranceFilter = '{{ $isPatientInsurance ? "insurance" : "all" }}';
 
         // 1. تحديث حالة البطاقة والشارة
         function updateCardVisual(chk) {
@@ -4150,20 +4203,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 4. فلترة بطاقات التحاليل حسب القسم والبحث
+        // 4. فلترة بطاقات التحاليل حسب القسم والبحث والضمان
         function filterGrid() {
             const q = normalizeText(searchInput.value);
             labCols.forEach(col => {
                 const name = normalizeText(col.getAttribute('data-test-name') || '');
                 const code = normalizeText(col.getAttribute('data-test-code') || '');
                 const cat = col.getAttribute('data-category') || '';
+                const isIns = col.getAttribute('data-is-insurance') === '1';
 
                 const matchesCat = (activeCategory === 'ALL' || cat === activeCategory);
                 const matchesSearch = (!q || name.includes(q) || code.includes(q));
+                const matchesInsurance = (activeInsuranceFilter === 'all' || isIns);
 
-                col.style.display = (matchesCat && matchesSearch) ? '' : 'none';
+                col.style.display = (matchesCat && matchesSearch && matchesInsurance) ? '' : 'none';
             });
         }
+
+        // أزرار فلتر الضمان للمختبر
+        const labInsuranceBtns = document.querySelectorAll('.doc-lab-insurance-toggle');
+        labInsuranceBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                labInsuranceBtns.forEach(b => {
+                    b.classList.remove('btn-success', 'active', 'fw-bold');
+                    b.classList.add('btn-outline-secondary', 'border-0', 'text-dark');
+                });
+                this.classList.remove('btn-outline-secondary', 'border-0', 'text-dark');
+                this.classList.add('btn-success', 'active', 'fw-bold');
+
+                activeInsuranceFilter = this.getAttribute('data-filter');
+                filterGrid();
+            });
+        });
 
         // 5. اقتراحات البحث الذكية السريعة (Autocomplete Dropdown)
         function renderSearchDropdown(q) {
@@ -4382,6 +4453,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chk.checked) updateCardVisual(chk);
         });
         renderSelectedChips();
+        filterGrid();
     }
 
     // ====== نظام الفرز والبحث السريع للأشعة والتصوير ======
@@ -4400,6 +4472,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const radCheckboxes = Array.from(document.querySelectorAll('.doc-rad-chk'));
 
         let activeCategory = 'ALL';
+        let activeInsuranceFilter = '{{ $isPatientInsurance ? "insurance" : "all" }}';
 
         // 1. تحديث حالة البطاقة والشارة
         function updateCardVisual(chk) {
@@ -4467,21 +4540,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 4. فلترة بطاقات الأشعة حسب القسم والبحث
+        // 4. فلترة بطاقات الأشعة حسب القسم والبحث والضمان
         function filterGrid() {
-            if (!searchInput) return;
-            const q = normalizeText(searchInput.value);
             radCols.forEach(col => {
+                const q = searchInput ? normalizeText(searchInput.value) : '';
                 const name = normalizeText(col.getAttribute('data-type-name') || '');
                 const code = normalizeText(col.getAttribute('data-type-code') || '');
                 const cat = col.getAttribute('data-category') || '';
+                const isIns = col.getAttribute('data-is-insurance') === '1';
 
                 const matchesCat = (activeCategory === 'ALL' || cat === activeCategory);
                 const matchesSearch = (!q || name.includes(q) || code.includes(q));
+                const matchesInsurance = (activeInsuranceFilter === 'all' || isIns);
 
-                col.style.display = (matchesCat && matchesSearch) ? '' : 'none';
+                col.style.display = (matchesCat && matchesSearch && matchesInsurance) ? '' : 'none';
             });
         }
+
+        // أزرار فلتر الضمان للأشعة
+        const radInsuranceBtns = document.querySelectorAll('.doc-rad-insurance-toggle');
+        radInsuranceBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                radInsuranceBtns.forEach(b => {
+                    b.classList.remove('btn-success', 'active', 'fw-bold');
+                    b.classList.add('btn-outline-secondary', 'border-0', 'text-dark');
+                });
+                this.classList.remove('btn-outline-secondary', 'border-0', 'text-dark');
+                this.classList.add('btn-success', 'active', 'fw-bold');
+
+                activeInsuranceFilter = this.getAttribute('data-filter');
+                filterGrid();
+            });
+        });
 
         if (searchInput) {
             searchInput.addEventListener('input', function() {
@@ -4588,6 +4678,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chk.checked) updateCardVisual(chk);
         });
         renderSelectedChips();
+        filterGrid();
     }
 
     // تشغيل أنظمة البحث
