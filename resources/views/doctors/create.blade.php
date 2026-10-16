@@ -26,7 +26,7 @@
                     <h5 class="mb-0">البيانات الأساسية</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('doctors.store') }}">
+                    <form method="POST" action="{{ route('doctors.store') }}" enctype="multipart/form-data">
                         @csrf
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -192,6 +192,64 @@
                             </div>
                         </div>
 
+                        <!-- قسم التوقيع اليدوي الرسمي للطبيب -->
+                        <div class="card border-success-subtle shadow-sm mb-4">
+                            <div class="card-header bg-success-subtle text-success py-2 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold">
+                                    <i class="fas fa-signature me-2"></i>التوقيع اليدوي الرسمي للطبيب (Official Medical Signature)
+                                </h6>
+                                <span class="badge bg-success">اختياري - يظهر في تقارير الطوارئ والتقارير الطبية</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-light border small text-muted mb-3">
+                                    <i class="fas fa-magic text-success me-1"></i>
+                                    <strong>ميزة التفريغ التلقائي:</strong> يمكنك تصوير توقيع الطبيب المكتوب بقلم حبر على ورقة بيضاء ورفعه مباشرة (JPG أو PNG). سيقوم النظام <strong>تلقائياً بعزل خلفية الورقة والظلال</strong> وتحويلها إلى ختم شفاف نقي بدقة 100%.
+                                </div>
+
+                                <div class="row align-items-start">
+                                    <div class="col-md-12">
+                                        <label for="createSigFileInput" class="form-label fw-bold small text-dark">
+                                            <i class="fas fa-camera text-primary me-1"></i> اختر صورة التوقيع (JPG / PNG من الموبايل أو الجهاز)
+                                        </label>
+                                        <input type="file" class="form-control mb-2" id="createSigFileInput" name="signature_file" accept="image/png,image/jpeg,image/jpg,image/webp">
+                                        <input type="hidden" id="createSigDataInput" name="signature_data">
+
+                                        <!-- حاوية المعاينة اللحظية للتفريغ الشفاف -->
+                                        <div id="createSigPreviewContainer" class="d-none mt-3 p-3 border rounded-3 bg-light">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="small fw-bold text-success">
+                                                    <i class="fas fa-check-circle me-1"></i> معاينة التفريغ الفوري (خلفية شفافة):
+                                                </span>
+                                                <span class="badge bg-primary-subtle text-primary border small" id="createDimBadge"></span>
+                                            </div>
+
+                                            <div class="text-center p-2 rounded mb-2" style="background: repeating-conic-gradient(#e2e8f0 0% 25%, #ffffff 0% 50%) 50% / 14px 14px; border: 1px solid #cbd5e1;">
+                                                <canvas id="createSigCanvas" style="max-height: 120px; max-width: 100%; height: auto; object-fit: contain;"></canvas>
+                                            </div>
+
+                                            <div class="mb-2">
+                                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                                    <span>حساسية عزل بياض الورقة:</span>
+                                                    <span id="createThresholdVal" class="fw-bold text-dark">200</span>
+                                                </div>
+                                                <input type="range" class="form-range" id="createThresholdRange" name="signature_threshold" min="120" max="245" value="200" step="5">
+                                                <div class="d-flex justify-content-between text-muted" style="font-size: 10px;">
+                                                    <span>حبر أغمق / إضاءة ضعيفة</span>
+                                                    <span>ورقة بيضاء نقية</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-2 text-end">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" id="createCancelSigBtn">
+                                                    <i class="fas fa-times me-1"></i> إلغاء الصورة
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ old('is_active', true) ? 'checked' : '' }}>
                             <label class="form-check-label" for="is_active">طبيب نشط</label>
@@ -227,4 +285,146 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('createSigFileInput');
+    const dataInput = document.getElementById('createSigDataInput');
+    const previewBox = document.getElementById('createSigPreviewContainer');
+    const canvas = document.getElementById('createSigCanvas');
+    const thresholdRange = document.getElementById('createThresholdRange');
+    const thresholdVal = document.getElementById('createThresholdVal');
+    const cancelBtn = document.getElementById('createCancelSigBtn');
+    const dimBadge = document.getElementById('createDimBadge');
+
+    let loadedImg = null;
+
+    if (fileInput && canvas) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    loadedImg = img;
+                    if (dimBadge) dimBadge.textContent = img.width + ' × ' + img.height + ' px';
+                    if (previewBox) previewBox.classList.remove('d-none');
+                    renderTransparentSignature();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        if (thresholdRange) {
+            thresholdRange.addEventListener('input', function() {
+                if (thresholdVal) thresholdVal.textContent = this.value;
+                if (loadedImg) {
+                    renderTransparentSignature();
+                }
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                fileInput.value = '';
+                dataInput.value = '';
+                loadedImg = null;
+                if (previewBox) previewBox.classList.add('d-none');
+            });
+        }
+
+        function renderTransparentSignature() {
+            if (!loadedImg) return;
+
+            const threshold = parseInt(thresholdRange ? thresholdRange.value : 200, 10);
+            const off = document.createElement('canvas');
+            const offCtx = off.getContext('2d');
+
+            let w = loadedImg.width;
+            let h = loadedImg.height;
+            const maxDim = 1200;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) {
+                    h = Math.round((h * maxDim) / w);
+                    w = maxDim;
+                } else {
+                    w = Math.round((w * maxDim) / h);
+                    h = maxDim;
+                }
+            }
+
+            off.width = w;
+            off.height = h;
+            offCtx.drawImage(loadedImg, 0, 0, w, h);
+
+            const imgData = offCtx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+
+            let minX = w, maxX = 0, minY = h, maxY = 0;
+            let hasVisible = false;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                if (lum >= threshold) {
+                    data[i + 3] = 0;
+                } else {
+                    const featherStart = Math.max(50, threshold - 45);
+                    if (lum > featherStart) {
+                        const ratio = (lum - featherStart) / (threshold - featherStart);
+                        data[i + 3] = Math.round((1 - ratio) * 255);
+                    } else {
+                        data[i + 3] = 255;
+                    }
+
+                    data[i] = Math.max(0, Math.round(r * 0.85));
+                    data[i + 1] = Math.max(0, Math.round(g * 0.85));
+                    data[i + 2] = Math.max(0, Math.round(b * 0.95));
+
+                    if (data[i + 3] > 40) {
+                        hasVisible = true;
+                        const pixelIdx = i / 4;
+                        const px = pixelIdx % w;
+                        const py = Math.floor(pixelIdx / w);
+                        if (px < minX) minX = px;
+                        if (px > maxX) maxX = px;
+                        if (py < minY) minY = py;
+                        if (py > maxY) maxY = py;
+                    }
+                }
+            }
+
+            offCtx.putImageData(imgData, 0, 0);
+
+            if (hasVisible && maxX > minX && maxY > minY) {
+                const pad = 12;
+                const cropX = Math.max(0, minX - pad);
+                const cropY = Math.max(0, minY - pad);
+                const cropW = Math.min(w - cropX, (maxX - minX) + (pad * 2));
+                const cropH = Math.min(h - cropY, (maxY - minY) + (pad * 2));
+
+                canvas.width = cropW;
+                canvas.height = cropH;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, cropW, cropH);
+                ctx.drawImage(off, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            } else {
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(off, 0, 0);
+            }
+
+            dataInput.value = canvas.toDataURL('image/png');
+        }
+    }
+});
+</script>
 @endsection

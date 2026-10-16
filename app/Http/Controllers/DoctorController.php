@@ -92,6 +92,9 @@ class DoctorController extends Controller
             'end_time' => 'required|date_format:H:i|after:start_time',
             'working_days' => 'required|array|min:1',
             'working_days.*' => 'string',
+            'signature_file' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:10240',
+            'signature_data' => 'nullable|string',
+            'signature_threshold' => 'nullable|integer|min:50|max:255',
         ]);
 
         $user = User::create([
@@ -105,12 +108,14 @@ class DoctorController extends Controller
         $user->assignRole('doctor');
 
         // إنشاء سجل الطبيب
-        Doctor::create([
+        $doctor = Doctor::create([
             'user_id' => $user->id,
             'department_id' => $request->department_id,
             'type' => $request->type,
             'phone' => $request->phone,
             'specialization' => $request->specialization,
+            'qualification' => $request->qualification ?? 'بكالوريوس طب وجراحة عامة',
+            'license_number' => $request->license_number ?? ('DOC-' . rand(1000, 9999)),
             'consultation_fee' => $request->consultation_fee,
             'moi_price' => $request->moi_price,
             'is_moi_active' => $request->has('is_moi_active'),
@@ -122,8 +127,22 @@ class DoctorController extends Controller
             'is_active' => true,
         ]);
 
+        // معالجة وحفظ التوقيع اليدوي للطبيب إن وجد
+        $threshold = (int) $request->input('signature_threshold', 200);
+        $sigInput = $request->input('signature_data') ?: $request->file('signature_file');
+        if ($sigInput) {
+            $savedSignature = \App\Services\SignatureProcessingService::processAndSave(
+                $sigInput,
+                $doctor->id,
+                $threshold
+            );
+            if ($savedSignature) {
+                $doctor->update(['signature' => $savedSignature]);
+            }
+        }
+
         return redirect()->route('doctors.index')
-            ->with('success', 'تم إضافة الطبيب بنجاح');
+            ->with('success', 'تم إضافة الطبيب وتوقيعه المعتمد بنجاح');
     }
 
     public function show(Doctor $doctor)

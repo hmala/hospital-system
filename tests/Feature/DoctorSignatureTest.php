@@ -182,4 +182,42 @@ class DoctorSignatureTest extends TestCase
         $response->assertSee('د. حسام عادل');
         $response->assertSee('images/signatures/doctor_' . $this->doctor->id . '.png');
     }
+
+    public function test_can_upload_and_auto_extract_signature_when_creating_new_doctor(): void
+    {
+        $dummyImage = $this->createDummySignatureImage();
+
+        $response = $this->actingAs($this->admin)->post(route('doctors.store'), [
+            'name' => 'د. سمير كمال',
+            'email' => 'samir.kamal.' . uniqid() . '@example.com',
+            'phone' => '07709876543',
+            'department_id' => $this->doctor->department_id,
+            'type' => 'emergency',
+            'specialization' => 'طب طوارئ وإنعاش',
+            'consultation_fee' => 15000,
+            'start_time' => '08:00',
+            'end_time' => '16:00',
+            'working_days' => ['sunday', 'monday', 'tuesday'],
+            'signature_file' => $dummyImage,
+            'signature_threshold' => 200,
+        ]);
+
+        $response->assertRedirect(route('doctors.index'));
+        $response->assertSessionHas('success');
+
+        $createdDoctor = Doctor::whereHas('user', function($q) {
+            $q->where('name', 'د. سمير كمال');
+        })->first();
+
+        $this->assertNotNull($createdDoctor);
+        $this->assertNotNull($createdDoctor->signature);
+        $this->assertStringContainsString('doctor_' . $createdDoctor->id . '.png', $createdDoctor->signature);
+        $this->assertTrue(file_exists(public_path($createdDoctor->signature)));
+
+        // Clean up created file
+        if (file_exists(public_path($createdDoctor->signature))) {
+            @unlink(public_path($createdDoctor->signature));
+        }
+    }
 }
+

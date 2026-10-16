@@ -57,6 +57,31 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-16 — المرحلة 62: منظومة رفع وتفريغ التواقيع اليدوية للأطباء تلقائياً والمعاينة الحية للشفافية وربط التواقيع بتقارير الطوارئ Doctor Signature Upload, Auto White Background Removal, Live Canvas Preview & Multi-Doctor Emergency Integration)
+
+### Done
+- **محرك معالجة وتفريغ التواقيع التلقائي ([app/Services/SignatureProcessingService.php](file:///c:/wamp64/www/hospital-system/app/Services/SignatureProcessingService.php))**:
+  * **الخلفية والدافع**: توفير حل ذاتي وتلقائي بالكامل لربط تواقيع أطباء المستشفى (كطوارئ، استشاريين، جراحين) دون الحاجة لبرامج تصميم أو فوتوشوب أو طلب ملفات PNG جاهزة، وتمكين الإدارة من رفع صور ملتقطة بكاميرا الهاتف على ورقة بيضاء بأي صيغة (JPG / PNG / WEBP).
+  * **خوارزمية عزل الخلفية والقص التلقائي**:
+    - فحص البكسلات ومقارنة اللمعان (Luminance) عبر مكتبة PHP GD.
+    - تحويل بكسلات الورقة البيضاء والظلال إلى شفافية ألفا كاملة (`100% Alpha Channel`).
+    - تطبيق تنعيم تدريجي للحواف (Anti-Aliasing) لمنع تكسر وتسنن خطوط الحبر.
+    - تعزيز خط الحبر (أزرق أو أسود) ليكون داكناً وحاداً في الطباعة والتقارير.
+    - قص الهوامش الزائدة تلقائياً (Auto-Crop Bounding Box) لتركيز التوقيع بدون فراغات وحفظه بدقة في `public/images/signatures/doctor_{id}.png`.
+- **تطوير واجهة الطبيب ([resources/views/doctors/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/edit.blade.php))**:
+  * إضافة بطاقة متقدمة **«التوقيع اليدوي الرسمي للطبيب»** مع علامة اعتماد التوقيع وإظهار التوقيع الحالي فوق خلفية شطرنج الشفافية (Checkerboard).
+  * محرك تفريغ لحظي في المتصفح عبر JavaScript Canvas: بمجرد اختيار صورة من الجهاز أو الموبايل، يتم إظهار التوقيع مفرغاً وشفافاً فوراً في صندوق المعاينة.
+  * شريط تحكم مرن في الحساسية (Sensitivity / Threshold Range Slider) لضبط عزل بياض وظلال الورقة في الصور المظلمة مع تحديث المعاينة الحية لحظياً.
+  * زر حفظ فوري عبر AJAX `[ ⚡ حفظ التوقيع فوراً الآن ]` ومسار `POST /doctors/{doctor}/upload-signature` لتحديث التوقيع دون الحاجة لإعادة حفظ كامل بيانات الطبيب.
+  * خيار إزالة التوقيع الحالي `[ ❌ حذف التوقيع الحالي ]`.
+- **إبراز التوقيع في بطاقة تفاصيل الطبيب ([resources/views/doctors/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/show.blade.php))**:
+  * إضافة بطاقة **«التوقيع اليدوي المعتمد»** في الشريط الجانبي تعرض التوقيع الشفاف مع وسام اعتماده وظهوره في التقارير الطبية.
+- **تكامل تقرير الطوارئ مع أطباء متعددين وتواقيعهم المعتمدة ([resources/views/emergency/medical-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/medical-report.blade.php))**:
+  * تحديث قالب التقرير ليرتبط باسم وتوقيع الطبيب المعالج للحالة ديناميكياً بدلاً من التسميات الثابتة.
+- **الاختبارات الآلية (Automated Tests)**:
+  * إنشاء واجتياز اختبارات المنظومة كاملة [tests/Feature/DoctorSignatureTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorSignatureTest.php): `3 passed (13 assertions)`.
+  * اجتياز كامل اختبارات تقرير الطوارئ [tests/Feature/EmergencyMedicalReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (18 assertions)`.
+
 ## Session log (2026-10-16 — المرحلة 61: استدعاء المريض الاستثنائي للطبيب وثبات تسلسل الطابور ودعم طلبات الضمان المختلطة بالكاشير Out-of-Turn Calling, Queue Order Stability, Hostinger Old Catalogs & Mixed Insurance Requests)
 
 ### Done
