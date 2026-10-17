@@ -598,7 +598,7 @@ class InquiryController extends Controller
                 'details' => json_encode($details),
                 'requested_by' => $user->id,
                 'payment_status' => ($httpRequest->emergency_priority === 'critical') ? 'paid' : 'pending',
-                'insurance_type' => $bookingInsuranceType
+                'insurance_type' => 'none' // حجز الطوارئ المباشر من الاستعلامات كاش 100% خارج مظلة الضمان
             ]);
 
             // للحالات الحرجة: تسجيل دخول فوري بدون انتظار دفع
@@ -614,6 +614,8 @@ class InquiryController extends Controller
                     'admission_time' => now(),
                     'status' => 'waiting',
                     'is_active' => true,
+                    'is_insured' => false,
+                    'insurance_type' => 'none',
                 ]);
                 
                 $messages[] = "تم تسجيل حالة طوارئ حرجة! رقم الزيارة: #{$visit->id} - سيتم التعامل معها فوراً في قسم الطوارئ.";

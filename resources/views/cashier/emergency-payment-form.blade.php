@@ -27,10 +27,9 @@
                             $isInsurance = (bool) $em->is_insured;
                         } elseif (isset($em->insurance_type) && $em->insurance_type !== 'none') {
                             $isInsurance = true;
-                        } elseif ($patient && ($patient->insurance_type === 'hi' || $patient->healthInsuranceCategory)) {
-                            $isInsurance = true;
                         }
-                        if ($payment->insurance_type === 'none') {
+
+                        if ($payment->insurance_type === 'none' || !$isInsurance) {
                             $isInsurance = false;
                         } elseif ($payment->payment_method === 'insurance' || ($payment->insurance_share > 0)) {
                             $isInsurance = true;

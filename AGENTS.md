@@ -57,6 +57,22 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-17 — المرحلة 73: نظام إدارة نمط إدخال نتائج التحاليل المخبرية للمدير وحصر حالات الطوارئ المباشرة بالسعر النقدي 100% كاش Lab Test Result Entry Mode Management & Emergency Direct Cash Enforcement)
+
+### Done
+- **نظام إدارة نمط إدخال نتائج التحاليل المخبرية للمدير ([app/Http/Controllers/LabTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestController.php) و [app/Models/LabTest.php](file:///c:/wamp64/www/hospital-system/app/Models/LabTest.php) و [resources/views/lab-tests/entry_settings.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/entry_settings.blade.php))**:
+  * إضافة عمود `result_entry_type` من نوع ENUM بقيم `['value', 'components', 'attachment', 'both']` في جدول `lab_tests` عبر مايجريشن `2026_10_17_174000_add_result_entry_type_to_lab_tests_table.php` مع القيمة الافتراضية `'value'`.
+  * إضافة توابع وثوابت نموذج التحليل المخبري: `ENTRY_VALUE`, `ENTRY_COMPONENTS`, `ENTRY_ATTACHMENT`, `ENTRY_BOTH` ودوال الفحص `allowsValue()`, `allowsComponents()`, `allowsAttachment()`.
+  * بناء شاشة إدارية حصرية للمدير `/lab-tests/entry-settings` بأربعة خيارات Checkbox تفاعلية لكل تحليل لحفظ التفضيلات لحظياً عبر AJAX بنقرة واحدة، ودعم التحديث الجماعي.
+  * تكييف واجهة محطة فحص المختبر `resources/views/lab/show.blade.php` ديناميكياً لإظهار حقول القيمة أو القيم الفرعية أو رفع المرفق أو الاثنين معاً بناءً على إعدادات المدير.
+  * بناء وتشغيل الاختبار الآلي: [tests/Feature/LabTestResultEntryTypeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabTestResultEntryTypeTest.php): `6 passed (28 assertions)`.
+- **حصر حالات وخدمات الطوارئ المباشرة بالسعر النقدي 100% وإلغاء توريث الضمان ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php) و [app/Models/Emergency.php](file:///c:/wamp64/www/hospital-system/app/Models/Emergency.php) و [app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php) و [resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * إلغاء التوريث التلقائي والبديل الاحتياطي للضمان من حساب المريض العام (`patient->insurance_type === 'hi'`) في دوال احتساب فواتير الطوارئ ومستحقاتها (`upsertUnifiedEmergencyPayment`, `Emergency::getUnpaidAmount`, و `emergency-payment-form.blade.php`).
+  * حصر تغطية الضمان في الطوارئ فقط على الحالات المحجوزة صراحة عبر بوت الضمان أو المحالة بموافقة مسبقة.
+  * جعل الخيار الافتراضي في استقبال الطوارئ والاستعلامات هو الحجز النقدي (`apply_insurance = 0` / كاش عادي) حتى لو كان للمريض بطاقة ضمان مسجلة.
+  * تصحيح وتثبيت حالة الطوارئ #5 وسند الدفع #21 للمريض (منير سمير يوسف) لتصبح نقداً بنسبة 100% بمبلغ 115,000 د.ع بدون أي خصم للضمان (`insurance_share = 0`).
+  * اجتياز كامل للاختبارات الآلية: [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php): `6 passed (32 assertions)`.
+
 ## Session log (2026-10-17 — المرحلة 72: إبراء الذمة المالية وقفل إجراءات الطوارئ وإلغاء الحالات مع استرجاع الكاشير والخزينة Emergency Financial Clearance Locks, Cancellation & Cashier Refund Integration)
 
 ### Done

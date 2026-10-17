@@ -24,6 +24,12 @@
                         <i class="fas fa-tags me-1"></i>
                         إعدادات الأسعار والتصنيفات
                     </a>
+                    @if(Auth::user()->isAdmin() || Auth::user()->hasRole('admin') || Auth::user()->can('manage lab tests') || Auth::user()->can('edit lab tests'))
+                        <a href="{{ route('lab-tests.entry-settings') }}" class="btn btn-outline-dark">
+                            <i class="fas fa-sliders-h me-1"></i>
+                            أنماط إدخال النتائج
+                        </a>
+                    @endif
                     @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('create lab tests'))
                         <a href="{{ route('lab-tests.create') }}" class="btn btn-success">
                             <i class="fas fa-plus me-1"></i>

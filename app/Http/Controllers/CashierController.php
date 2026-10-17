@@ -852,6 +852,7 @@ class CashierController extends Controller
                     } else {
                         try {
                         // إنشاء سجل طوارئ
+                        $isEmergencyInsured = ($request->insurance_type && $request->insurance_type !== 'none');
                         $emergency = \App\Models\Emergency::create([
                             'patient_id' => $request->visit->patient_id,
                             'doctor_id' => $request->visit->doctor_id,
@@ -862,6 +863,8 @@ class CashierController extends Controller
                             'admission_time' => now(),
                             'status' => 'waiting',
                             'is_active' => true,
+                            'is_insured' => $isEmergencyInsured,
+                            'insurance_type' => $isEmergencyInsured ? $request->insurance_type : 'none',
                         ]);
                         
                         \Log::info('Created emergency record #' . $emergency->id . ' for request #' . $request->id);

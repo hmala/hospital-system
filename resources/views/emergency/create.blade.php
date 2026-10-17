@@ -136,13 +136,13 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-3 bg-white p-2 rounded-3 border shadow-xs">
                                             <div class="form-check mb-0">
-                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance') === '1' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-success cursor-pointer" for="apply_insurance_yes">
                                                     🛡️ حجز تحت مظلة الضمان
                                                 </label>
                                             </div>
                                             <div class="form-check mb-0">
-                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance', '0') == '0' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-secondary cursor-pointer" for="apply_insurance_no">
                                                     💵 حجز كاش عادي (بدون ضمان)
                                                 </label>
@@ -431,7 +431,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insBadge) insBadge.style.display = 'inline-block';
             if (insuranceCatText) insuranceCatText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
             if (insuranceSection) insuranceSection.style.display = 'block';
-            if (applyYes) applyYes.checked = true;
+            // الحجز المباشر في الطوارئ افتراضياً كاش، ويتاح للموظف تفعيل الضمان يدوياً إذا وُجدت موافقة
+            if (applyNo) applyNo.checked = true;
         } else {
             if (insBadge) insBadge.style.display = 'none';
             if (insuranceSection) insuranceSection.style.display = 'none';

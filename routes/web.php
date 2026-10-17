@@ -563,6 +563,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pricing-settings/save', [\App\Http\Controllers\LabTestPricingController::class, 'save'])->name('pricing-settings.save');
         Route::post('/pricing-settings/rename-category', [\App\Http\Controllers\LabTestPricingController::class, 'renameCategory'])->name('pricing-settings.rename-category');
 
+        // إعدادات أنماط إدخال نتائج الفحوصات المختبرية (قيمة مباشرة / قيم فرعية / مرفق جهاز / مرن)
+        Route::get('/entry-settings', [\App\Http\Controllers\LabTestController::class, 'entrySettings'])->name('entry-settings');
+        Route::post('/entry-settings/update', [\App\Http\Controllers\LabTestController::class, 'updateEntryType'])->name('entry-settings.update');
+        Route::post('/entry-settings/bulk-update', [\App\Http\Controllers\LabTestController::class, 'bulkUpdateEntryType'])->name('entry-settings.bulk-update');
+
         Route::get('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'show'])->name('show');
         Route::get('/{labTest}/edit', [\App\Http\Controllers\LabTestController::class, 'edit'])->name('edit');
         Route::put('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'update'])->name('update');

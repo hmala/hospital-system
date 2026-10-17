@@ -307,4 +307,140 @@ class LabTestController extends Controller
             'message' => $isFavorite ? 'تمت الإضافة للمفضلة' : 'تمت الإزالة من المفضلة'
         ]);
     }
+
+    /**
+     * شاشة إعدادات وتخصيص نمط إدخال نتائج الفحوصات المختبرية (للأدمن)
+     */
+    public function entrySettings(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->hasRole('admin') && !$user->can('manage lab tests') && !$user->can('edit lab tests')) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة، هذه الصلاحية خاصة بمدير النظام');
+        }
+
+        $query = LabTest::withCount('subTests');
+
+        // البحث بالاسم أو الكود
+        if ($request->filled('q')) {
+            $search = trim($request->q);
+            $query->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        // فلترة بالتصنيف الفرعي
+        if ($request->filled('category')) {
+            $query->where('subcategory', $request->category);
+        }
+
+        // فلترة بنمط الإدخال
+        if ($request->filled('entry_type')) {
+            $query->where('result_entry_type', $request->entry_type);
+        }
+
+        // فلترة بالفحوصات التي تحتوي قيم فرعية
+        if ($request->filled('sub_tests_only')) {
+            if ($request->sub_tests_only === 'yes') {
+                $query->has('subTests');
+            } elseif ($request->sub_tests_only === 'no') {
+                $query->doesntHave('subTests');
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 50);
+        if (!in_array($perPage, [25, 50, 100, 200, 500])) {
+            $perPage = 50;
+        }
+
+        $labTests = $query->orderBy('subcategory')->orderBy('name')->paginate($perPage)->withQueryString();
+
+        // إحصائيات عامة عن الأنماط
+        $stats = [
+            'total' => LabTest::count(),
+            'single_value' => LabTest::where(function($q) {
+                $q->whereNull('result_entry_type')->orWhere('result_entry_type', LabTest::ENTRY_TYPE_SINGLE);
+            })->count(),
+            'sub_tests' => LabTest::where('result_entry_type', LabTest::ENTRY_TYPE_SUBTESTS)->count(),
+            'attachment_only' => LabTest::where('result_entry_type', LabTest::ENTRY_TYPE_ATTACHMENT)->count(),
+            'flexible' => LabTest::where('result_entry_type', LabTest::ENTRY_TYPE_FLEXIBLE)->count(),
+            'with_subtests_count' => LabTest::has('subTests')->count(),
+        ];
+
+        // التصنيفات الفرعية المتاحة
+        $categories = LabTest::select('subcategory')
+            ->whereNotNull('subcategory')
+            ->where('subcategory', '!=', '')
+            ->distinct()
+            ->orderBy('subcategory')
+            ->pluck('subcategory');
+
+        return view('lab-tests.entry_settings', compact('labTests', 'stats', 'categories'));
+    }
+
+    /**
+     * تحديث فوري لنمط إدخال نتيجة فحص مخبري محدد (AJAX)
+     */
+    public function updateEntryType(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->hasRole('admin') && !$user->can('manage lab tests') && !$user->can('edit lab tests')) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+        }
+
+        $validated = $request->validate([
+            'lab_test_id' => 'required|exists:lab_tests,id',
+            'result_entry_type' => 'required|in:single_value,sub_tests,attachment_only,flexible',
+        ]);
+
+        $labTest = LabTest::findOrFail($validated['lab_test_id']);
+        $labTest->result_entry_type = $validated['result_entry_type'];
+        $labTest->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم تحديث نمط إدخال فحص ({$labTest->name}) إلى: {$labTest->result_entry_type_label}",
+            'test_id' => $labTest->id,
+            'entry_type' => $labTest->result_entry_type,
+            'label' => $labTest->result_entry_type_label,
+        ]);
+    }
+
+    /**
+     * تحديث جماعي لنمط الإدخال لمجموعة من الفحوصات المختبرية
+     */
+    public function bulkUpdateEntryType(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->hasRole('admin') && !$user->can('manage lab tests') && !$user->can('edit lab tests')) {
+            abort(403, 'غير مصرح لك بتنفيذ هذا الإجراء');
+        }
+
+        $validated = $request->validate([
+            'test_ids' => 'required|array|min:1',
+            'test_ids.*' => 'exists:lab_tests,id',
+            'result_entry_type' => 'required|in:single_value,sub_tests,attachment_only,flexible',
+        ]);
+
+        $count = LabTest::whereIn('id', $validated['test_ids'])
+            ->update(['result_entry_type' => $validated['result_entry_type']]);
+
+        $typeLabel = match($validated['result_entry_type']) {
+            LabTest::ENTRY_TYPE_SUBTESTS => 'قيم فرعية مفصلة',
+            LabTest::ENTRY_TYPE_ATTACHMENT => 'مرفق تقرير الجهاز',
+            LabTest::ENTRY_TYPE_FLEXIBLE => 'كلاهما (مرن)',
+            default => 'قيمة مباشرة مفردة',
+        };
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "تم تحديث نمط إدخال ({$count}) فحصاً إلى ({$typeLabel}) بنجاح",
+                'updated_count' => $count,
+                'entry_type' => $validated['result_entry_type'],
+            ]);
+        }
+
+        return redirect()->back()->with('success', "تم تحديث نمط إدخال ({$count}) فحصاً إلى ({$typeLabel}) بنجاح.");
+    }
 }

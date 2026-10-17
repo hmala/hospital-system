@@ -657,22 +657,34 @@ $age = $patient?->age ?? null;
                                                 $labTestObj = $labTestMap[$test] ?? null;
                                                 $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                 $hasSpecificAttachment = !empty($testAttachments[$test]);
+                                                
+                                                // تحديد نمط إدخال النتائج (افتراضياً: فحص رقمي فردي إلا إذا كان له قيم فرعية فيكون مرفق ما لم يحدد خلاف ذلك)
+                                                $entryType = $labTestObj?->result_entry_type;
+                                                if (empty($entryType)) {
+                                                    $entryType = $hasSubTests ? \App\Models\LabTest::ENTRY_TYPE_ATTACHMENT : \App\Models\LabTest::ENTRY_TYPE_SINGLE;
+                                                }
                                             @endphp
 
-                                            @if($hasSubTests)
-                                                {{-- فحص مركب: يعتمد على تقرير الجهاز المرفق --}}
+                                            @if($entryType === \App\Models\LabTest::ENTRY_TYPE_ATTACHMENT || ($entryType === \App\Models\LabTest::ENTRY_TYPE_SUBTESTS && !$hasSubTests))
+                                                {{-- فحص يعتمد حصراً على تقرير الجهاز المرفق --}}
                                                 <tr class="table-info bg-opacity-10">
                                                     <td class="text-center text-muted small fw-bold">{{ $index + 1 }}</td>
                                                     <td>
                                                         <div class="d-flex align-items-center gap-2">
                                                             <i class="{{ $testIcon }}"></i>
                                                             <strong class="text-dark">{{ $test }}</strong>
-                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.72rem;">
-                                                                <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
-                                                            </span>
+                                                            @if($hasSubTests)
+                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.72rem;">
+                                                                    <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle ms-1" style="font-size: 0.72rem;">
+                                                                    <i class="fas fa-file-medical-alt me-1"></i> مرفق تقرير جهاز
+                                                                </span>
+                                                            @endif
                                                         </div>
                                                         <small class="text-muted d-block mt-1">
-                                                            <i class="fas fa-info-circle me-1"></i> تتم قراءة كافة المعاملات والرسومات البيانية من الملف المرفق
+                                                            <i class="fas fa-info-circle me-1"></i> تعتمد قراءة نتائج هذا الفحص على التقرير أو الرسم البياني المرفق
                                                         </small>
                                                     </td>
                                                     <td colspan="4">
@@ -712,6 +724,106 @@ $age = $patient?->age ?? null;
                                                         @endif
                                                     </td>
                                                 </tr>
+                                            @elseif(($entryType === \App\Models\LabTest::ENTRY_TYPE_SUBTESTS || $entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE) && $hasSubTests)
+                                                {{-- فحص يحتوي قيماً فرعية مفصلة (أو نمط مرن: قيم فرعية + إمكانية إرفاق تقرير) --}}
+                                                <tr class="table-secondary bg-opacity-25 border-top border-bottom">
+                                                    <td class="text-center fw-bold">{{ $index + 1 }}</td>
+                                                    <td colspan="5">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="{{ $testIcon }} text-primary"></i>
+                                                            <strong class="text-dark fs-6">{{ $test }}</strong>
+                                                            <span class="badge" style="background-color: #6f42c1; color: white; font-size: 0.72rem;">
+                                                                <i class="fas fa-list-ol me-1"></i> قيم فرعية ({{ $labTestObj->subTests->count() }} باراميتر)
+                                                            </span>
+                                                            @if($entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE)
+                                                                <span class="badge bg-success-subtle text-success border border-success ms-1" style="font-size: 0.7rem;">
+                                                                    <i class="fas fa-random me-1"></i> نمط مرن (إدخال قيم + مرفق تقرير)
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        {{-- في النمط المرن أو مع وجود تقرير مخصص --}}
+                                                        @if($hasSpecificAttachment)
+                                                            <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
+                                                                <a href="{{ route('lab.attachment', ['request' => $request, 'test' => $test]) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span>معاينة التقرير</span>
+                                                                </a>
+                                                                <label class="btn btn-xs btn-outline-danger rounded-circle p-0 mb-0 d-inline-flex align-items-center justify-content-center" style="width: 22px; height: 22px; cursor: pointer;" title="حذف هذا المرفق عند الحفظ">
+                                                                    <input type="checkbox" name="remove_test_attachment[{{ $test }}]" value="1" class="d-none" onchange="this.checked ? (this.closest('label').classList.add('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.add('border-danger', 'bg-danger-subtle')) : (this.closest('label').classList.remove('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.remove('border-danger', 'bg-danger-subtle'))">
+                                                                    <i class="fas fa-times" style="font-size: 0.65rem;"></i>
+                                                                </label>
+                                                            </div>
+                                                        @else
+                                                            <div class="pill-upload-wrapper d-inline-block">
+                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="إرفاق تقرير إضافي اختياري">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span class="pill-text fw-semibold">مرفق (اختياري)</span>
+                                                                    <input type="file" name="test_attachments[{{ $test }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
+                                                                </label>
+                                                                <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-sm" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-check-circle"></i>
+                                                                    <span class="pill-filename text-truncate fw-bold" style="max-width: 110px;"></span>
+                                                                    <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                {{-- صفوف الباراميترات الفرعية --}}
+                                                @foreach($labTestObj->subTests as $subIdx => $subTest)
+                                                    @php
+                                                        $savedSubVal = $dbResults[$subTest->name]->value ?? '';
+                                                        if ($savedSubVal === '' && isset($savedTestResults[$subTest->name])) {
+                                                            $savedSubVal = is_array($savedTestResults[$subTest->name]) ? ($savedTestResults[$subTest->name]['value'] ?? '') : $savedTestResults[$subTest->name];
+                                                        }
+                                                    @endphp
+                                                    <tr class="test-row subtest-item-row" data-test="{{ $subTest->name }}"
+                                                        data-ref-min="{{ $subTest->ref_min }}"
+                                                        data-ref-max="{{ $subTest->ref_max }}"
+                                                        style="background-color: rgba(248, 249, 250, 0.7);">
+                                                        <td class="text-center text-muted small font-monospace" style="font-size: 0.75rem;">
+                                                            {{ $index + 1 }}.{{ $subIdx + 1 }}
+                                                        </td>
+                                                        <td class="ps-4">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="text-muted small"><i class="fas fa-level-down-alt fa-rotate-90 text-primary"></i></span>
+                                                                <span class="fw-semibold text-dark">{{ $subTest->name }}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text"
+                                                                   class="form-control form-control-sm test-value font-monospace fw-bold"
+                                                                   name="test_results[{{ $subTest->name }}][value]"
+                                                                   value="{{ old('test_results.' . $subTest->name . '.value', $savedSubVal) }}"
+                                                                   placeholder="أدخل النتيجة..."
+                                                                   data-test="{{ $subTest->name }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
+                                                        </td>
+                                                        <td class="text-muted small fw-semibold">{{ $subTest->unit ?: '-' }}</td>
+                                                        <td>
+                                                            @if(!empty($subTest->reference_range))
+                                                                <span class="badge bg-white text-dark border font-monospace">{{ $subTest->reference_range }}</span>
+                                                            @else
+                                                                <span class="text-muted small">—</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="result-flag">
+                                                                <i class="fas fa-circle text-muted small"></i>
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center text-muted small" style="font-size: 0.72rem;">
+                                                            —
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
                                             @else
                                                 {{-- فحص رقمي فردي --}}
                                                 @php

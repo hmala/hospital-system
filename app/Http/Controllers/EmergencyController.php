@@ -399,7 +399,7 @@ class EmergencyController extends Controller
 
         $patient = $patientId ? Patient::find($patientId) : null;
         $isPatientInsured = $patient && (($patient->insurance_type && $patient->insurance_type !== 'none') || $patient->health_insurance_category_id);
-        $applyInsurance = $request->input('apply_insurance', '1') == '1';
+        $applyInsurance = $request->input('apply_insurance', '0') == '1';
         $isInsured = $isPatientInsured && $applyInsurance;
         $insuranceType = $isInsured ? ($patient->insurance_type ?: 'hi') : 'none';
 
@@ -1494,8 +1494,6 @@ class EmergencyController extends Controller
         if (isset($emergency->is_insured)) {
             $isInsurance = (bool) $emergency->is_insured;
         } elseif (isset($emergency->insurance_type) && $emergency->insurance_type !== 'none') {
-            $isInsurance = true;
-        } elseif ($emergency->patient && ($emergency->patient->insurance_type === 'hi' || $emergency->patient->healthInsuranceCategory)) {
             $isInsurance = true;
         }
 

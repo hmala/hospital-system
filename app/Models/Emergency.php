@@ -215,11 +215,21 @@ class Emergency extends Model
             return 0.0;
         }
 
-        $isInsurance = (bool)($this->patient && ($this->patient->insurance_type === 'hi' || $this->patient->healthInsuranceCategory));
-        $insuranceType = $isInsurance ? 'hi' : 'none';
-        $emergencyCopay = $isInsurance ? $this->patient->getCopayPercentageFor('emergency') : 100.0;
-        $labCopay       = $isInsurance ? $this->patient->getCopayPercentageFor('lab') : 100.0;
-        $radCopay       = $isInsurance ? $this->patient->getCopayPercentageFor('radiology') : 100.0;
+        $isInsurance = false;
+        if (isset($this->is_insured)) {
+            $isInsurance = (bool) $this->is_insured;
+        } elseif (isset($this->insurance_type) && $this->insurance_type !== 'none') {
+            $isInsurance = true;
+        }
+
+        $insuranceType = $isInsurance ? ($this->insurance_type ?: 'hi') : 'none';
+        if ($insuranceType === 'none') {
+            $isInsurance = false;
+        }
+
+        $emergencyCopay = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('emergency') ?? 0.0) : 100.0;
+        $labCopay       = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
+        $radCopay       = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
 
         $unpaidServiceIds = \DB::table('emergency_emergency_service')
             ->where('emergency_id', $this->id)
