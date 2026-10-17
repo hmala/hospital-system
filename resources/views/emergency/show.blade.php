@@ -2,6 +2,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $unpaidAmount = $unpaidAmount ?? $emergency->getUnpaidAmount();
+    $isPaid = $isPaid ?? ($unpaidAmount <= 0 || in_array($emergency->payment_status, ['paid', 'waived']));
+@endphp
 <div class="container-fluid">
     <div class="row mb-2">
         <div class="col-12">
@@ -12,73 +16,89 @@
                     <span class="text-muted ms-2 fs-6">#{{ $emergency->id }}</span>
                 </h4>
                 <div class="no-print d-flex flex-wrap gap-1 align-items-center">
-                    @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
+                    @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged' && $emergency->status !== 'cancelled')
                         <button type="button" class="btn btn-sm btn-info text-white fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#consultationModal">
                             <i class="fas fa-calendar-plus me-1"></i>طلب استشارة
                         </button>
-                        <div class="dropdown d-inline">
-                            <button class="btn btn-sm btn-dark dropdown-toggle shadow-sm fw-bold d-inline-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-sliders-h me-1 text-warning"></i>
-                                <span>إجراءات وتحويل وتخريج الحالة</span>
+
+                        @if($isPaid)
+                            <div class="dropdown d-inline">
+                                <button class="btn btn-sm btn-dark dropdown-toggle shadow-sm fw-bold d-inline-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-sliders-h me-1 text-warning"></i>
+                                    <span>إجراءات وتحويل وتخريج الحالة</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-start" style="min-width: 230px;">
+                                    <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
+                                        <i class="fas fa-exchange-alt me-1 text-primary"></i> تحويل الحالة
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-danger py-2">
+                                                <i class="fas fa-procedures me-2 text-danger"></i>
+                                                <span>تحويل للعمليات</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-primary py-2">
+                                                <i class="fas fa-bed me-2 text-primary"></i>
+                                                <span>تحويل رقود</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تحويل المريض إلى العيادات الاستشارية وتوثيق خروجه من الطوارئ؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="transferred_to_consultation">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-info py-2">
+                                                <i class="fas fa-clinic-medical me-2 text-info"></i>
+                                                <span class="fw-bold">تحويل للاستشارية</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
+                                        <i class="fas fa-sign-out-alt me-1 text-success"></i> تسجيل الخروج
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="recovered">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-success py-2">
+                                                <i class="fas fa-user-check me-2 text-success"></i>
+                                                <span>خرج متعافي</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="against_medical_advice">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-secondary py-2">
+                                                <i class="fas fa-user-shield me-2 text-warning"></i>
+                                                <span>خرج على مسؤوليته</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        @else
+                            <button class="btn btn-sm btn-secondary shadow-sm fw-bold d-inline-flex align-items-center disabled" type="button" disabled title="معلق: بانتظار تسديد رسوم الطوارئ بالكاشير (المتبقي: {{ number_format($unpaidAmount) }} د.ع)">
+                                <i class="fas fa-lock me-1 text-warning"></i>
+                                <span>إجراءات وتحويل وتخريج (بانتظار التسديد)</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-start" style="min-width: 230px;">
-                                <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
-                                    <i class="fas fa-exchange-alt me-1 text-primary"></i> تحويل الحالة
-                                </li>
-                                <li>
-                                    <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item d-flex align-items-center text-danger py-2">
-                                            <i class="fas fa-procedures me-2 text-danger"></i>
-                                            <span>تحويل للعمليات</span>
-                                        </button>
-                                    </form>
-                                </li>
-                                <li>
-                                    <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item d-flex align-items-center text-primary py-2">
-                                            <i class="fas fa-bed me-2 text-primary"></i>
-                                            <span>تحويل رقود</span>
-                                        </button>
-                                    </form>
-                                </li>
-                                <li>
-                                    <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تحويل المريض إلى العيادات الاستشارية وتوثيق خروجه من الطوارئ؟')">
-                                        @csrf
-                                        <input type="hidden" name="discharge_type" value="transferred_to_consultation">
-                                        <button type="submit" class="dropdown-item d-flex align-items-center text-info py-2">
-                                            <i class="fas fa-clinic-medical me-2 text-info"></i>
-                                            <span class="fw-bold">تحويل للاستشارية</span>
-                                        </button>
-                                    </form>
-                                </li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
-                                    <i class="fas fa-sign-out-alt me-1 text-success"></i> تسجيل الخروج
-                                </li>
-                                <li>
-                                    <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
-                                        @csrf
-                                        <input type="hidden" name="discharge_type" value="recovered">
-                                        <button type="submit" class="dropdown-item d-flex align-items-center text-success py-2">
-                                            <i class="fas fa-user-check me-2 text-success"></i>
-                                            <span>خرج متعافي</span>
-                                        </button>
-                                    </form>
-                                </li>
-                                <li>
-                                    <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
-                                        @csrf
-                                        <input type="hidden" name="discharge_type" value="against_medical_advice">
-                                        <button type="submit" class="dropdown-item d-flex align-items-center text-secondary py-2">
-                                            <i class="fas fa-user-shield me-2 text-warning"></i>
-                                            <span>خرج على مسؤوليته</span>
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
+                        @endif
+
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#cancelEmergencyModal" title="إلغاء حالة الطوارئ">
+                            <i class="fas fa-ban me-1"></i>إلغاء الحالة
+                        </button>
+                    @elseif($emergency->status === 'cancelled')
+                        <span class="badge bg-danger fs-6 py-1 px-2 shadow-sm">
+                            <i class="fas fa-ban me-1"></i> ملغاة
+                        </span>
                     @elseif($emergency->status === 'discharged')
                         @if($emergency->discharge_type === 'recovered')
                             <span class="badge bg-success fs-6 py-1 px-2 shadow-sm">
@@ -103,9 +123,17 @@
                             <i class="fas fa-calendar-check text-primary me-1"></i> تم طلب استشارة ({{ $emergency->appointments->count() }})
                         </span>
                     @endif
-                    <a href="{{ route('emergency.medical-report', $emergency) }}" target="_blank" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" title="فتح وطباعة التقرير الطبي الرسمي للحالة بتوقيع الطبيب ورمز QR">
-                        <i class="fas fa-file-medical-alt me-1"></i>التقرير الطبي للطوارئ
-                    </a>
+
+                    @if($isPaid)
+                        <a href="{{ route('emergency.medical-report', $emergency) }}" target="_blank" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" title="فتح وطباعة التقرير الطبي الرسمي للحالة بتوقيع الطبيب ورمز QR">
+                            <i class="fas fa-file-medical-alt me-1"></i>التقرير الطبي للطوارئ
+                        </a>
+                    @else
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold shadow-sm disabled" disabled title="لا يمكن فتح التقرير الطبي إلا بعد تسديد الرسوم في الكاشير (المتبقي: {{ number_format($unpaidAmount) }} د.ع)">
+                            <i class="fas fa-lock me-1 text-danger"></i>التقرير الطبي (معلق بالكاشير)
+                        </button>
+                    @endif
+
                     @if($emergency->payment && $emergency->payment->paid_at)
                         <button onclick="window.print()" class="btn btn-sm btn-primary shadow-sm">
                             <i class="fas fa-print me-1"></i>طباعة
@@ -130,6 +158,44 @@
         <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show no-print" role="alert">
+            {{ session('warning') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(!$isPaid && $emergency->status !== 'cancelled')
+        <div class="alert alert-warning border-2 border-warning shadow-sm mb-3 p-3 no-print" style="border-radius: 12px; background: #fffbeb;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-lock text-warning fs-4 me-1"></i>
+                    <div>
+                        <strong class="text-dark d-block">⚠️ بانتظار تسديد رسوم الطوارئ بالكاشير (المبلغ المستحق: {{ number_format($unpaidAmount) }} د.ع)</strong>
+                        <small class="text-muted">التقرير الطبي الرسمي وإجراءات التحويل (للعمليات أو الرقود) وتخريج الحالة معلقة لحين إبراء الذمة المالية وتسديد الرسوم في الصندوق.</small>
+                    </div>
+                </div>
+                @if(auth()->user()->can('process emergency payments') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'cashier']))
+                    <a href="{{ route('cashier.index') }}" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm text-dark">
+                        <i class="fas fa-cash-register me-1"></i> التوجه للكاشير للتسديد
+                    </a>
+                @endif
+            </div>
+        </div>
+    @endif
+
+    @if($emergency->status === 'cancelled')
+        <div class="alert alert-danger border-2 border-danger shadow-sm mb-3 p-3 no-print" style="border-radius: 12px; background: #fef2f2;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-ban text-danger fs-4 me-1"></i>
+                <div>
+                    <strong class="text-danger d-block">تم إلغاء حالة الطوارئ هذه</strong>
+                    <small class="text-dark">{{ $emergency->notes }}</small>
+                </div>
+            </div>
         </div>
     @endif
 
@@ -1689,6 +1755,64 @@
                     </button>
                     <button type="submit" class="btn btn-info text-white fw-bold">
                         <i class="fas fa-paper-plane me-1"></i>إرسال طلب الاستشارة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إلغاء حالة الطوارئ -->
+<div class="modal fade" id="cancelEmergencyModal" tabindex="-1" aria-labelledby="cancelEmergencyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-danger text-white p-3">
+                <h5 class="modal-title fw-bold mb-0" id="cancelEmergencyModalLabel">
+                    <i class="fas fa-ban me-2"></i>تأكيد إلغاء حالة الطوارئ #{{ $emergency->id }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('emergency.cancel', $emergency) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4 bg-light text-end">
+                    <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">المريض:</span>
+                            <strong class="text-dark">{{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد' }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">الطبيب المسؤول:</span>
+                            <span class="text-dark">{{ $emergency->doctor?->user?->name ?? 'غير محدد' }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">حالة السداد الحالية:</span>
+                            @if($emergency->payment_status === 'paid')
+                                <span class="badge bg-success">مسدد مسبقاً (سيتم إحالته لاسترجاع الكاشير)</span>
+                            @else
+                                <span class="badge bg-secondary">غير مسدد</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if($emergency->payment_status === 'paid')
+                        <div class="alert alert-warning py-2 px-3 small border-warning">
+                            <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                            <strong>ملاحظة مالية:</strong> هذه الحالة مسددة مسبقاً في الكاشير. عند الإلغاء سيتم تحويل المريض مباشرة إلى <strong>مستحقات الاسترجاع بالكاشير</strong> لصرف واسترداد المبلغ المسدد للمريض.
+                        </div>
+                    @endif
+
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label fw-bold text-dark small">
+                            سبب إلغاء الحالة <span class="text-danger">*</span>:
+                        </label>
+                        <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required
+                                  placeholder="يرجى كتابة سبب الإلغاء بدقة (مثال: عدم الحاجة للعلاج، تحويل خارجي، طلب المريض، إلخ)..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white justify-content-between p-3">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
+                        <i class="fas fa-ban me-1"></i> تأكيد إلغاء الحالة
                     </button>
                 </div>
             </form>

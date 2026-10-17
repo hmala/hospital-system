@@ -323,6 +323,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'processPayment'])->name('payment.process');
         Route::get('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'showRequestPaymentForm'])->name('request.payment.form');
         Route::post('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestPayment'])->name('request.payment.process');
+        Route::post('/request-refund/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestRefund'])->name('request.refund.process');
+        Route::post('/emergency-refund/{emergency}', [\App\Http\Controllers\CashierController::class, 'processEmergencyRefund'])->name('emergency.refund.process');
         Route::get('/emergency-payment/{payment}', [\App\Http\Controllers\CashierController::class, 'showEmergencyPaymentForm'])->name('emergency.payment.form');
         Route::post('/emergency-payment/{payment}', [\App\Http\Controllers\CashierController::class, 'processEmergencyPayment'])->name('emergency.payment.process');
         Route::get('/emergency/payment-status', [\App\Http\Controllers\EmergencyController::class, 'paymentStatus'])->name('emergency.payment.status');
@@ -456,6 +458,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/requests/{request}/show', [\App\Http\Controllers\LabStaffController::class, 'show'])->name('show');
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
+        Route::post('/requests/{request}/cancel', [\App\Http\Controllers\LabStaffController::class, 'cancel'])->name('cancel');
     });
 
     // ======= مسارات قسم الأشعة والتصوير الطبي =======
@@ -470,6 +473,7 @@ Route::middleware(['auth'])->group(function () {
         Route::match(['GET', 'POST'], '/requests/{request}/call', [\App\Http\Controllers\RadiologyStaffController::class, 'call'])->name('call');
         Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
+        Route::post('/requests/{request}/cancel', [\App\Http\Controllers\RadiologyStaffController::class, 'cancel'])->name('cancel');
     });
 
     // إدارة رموز ICD10
@@ -720,6 +724,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/transfer-to-surgery', [\App\Http\Controllers\EmergencyController::class, 'transferToSurgery'])->name('transfer-to-surgery');
         Route::post('/{emergency}/transfer-to-admission', [\App\Http\Controllers\EmergencyController::class, 'transferToAdmission'])->name('transfer-to-admission');
         Route::post('/{emergency}/discharge', [\App\Http\Controllers\EmergencyController::class, 'discharge'])->name('discharge');
+        Route::post('/{emergency}/cancel', [\App\Http\Controllers\EmergencyController::class, 'cancel'])->name('cancel');
         Route::get('/{emergency}/medical-report', [\App\Http\Controllers\EmergencyController::class, 'medicalReport'])->name('medical-report');
         
         // تحديث حالة طلبات الخدمات التمريضية

@@ -168,6 +168,12 @@ $age = $patient?->age ?? null;
                         </a>
                     @endif
 
+                    @if($request->isDirectExternal() && !in_array($request->status, ['completed', 'cancelled']))
+                        <button type="button" class="btn btn-outline-danger fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#cancelExternalLabModal">
+                            <i class="fas fa-ban me-1"></i> إلغاء الطلب الخارجي
+                        </button>
+                    @endif
+
                     <a href="{{ route('lab.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i> القائمة
                     </a>
@@ -343,6 +349,8 @@ $age = $patient?->age ?? null;
         $showAppendSection = request()->query('append') == '1';
         $currentTestIds = array_map('intval', $requestDetails['lab_test_ids'] ?? []);
         $favorites = \App\Models\UserLabTestStat::getFavoritesForUser(auth()->id());
+        $packages = $packages ?? \App\Models\Package::where('is_active', true)->with('labTests')->orderBy('name')->get();
+        $userGroups = $userGroups ?? \App\Models\UserLabTestGroup::where('user_id', auth()->id())->with('labTests')->orderBy('name')->get();
     @endphp
 
     @if(!$isBloodBankRequest && in_array($request->status, ['pending_service_selection', 'pending', 'in_progress', 'completed']) && ($showAppendSection || count($testsList) == 0))
@@ -358,12 +366,79 @@ $age = $patient?->age ?? null;
                     @endif
                 </div>
                 <div class="card-body p-3">
-                    <form action="{{ route('staff.lab-requests.append-tests', $request) }}" method="POST">
+                    <form action="{{ route('staff.lab-requests.append-tests', $request) }}" method="POST" id="appendLabTestsForm">
                         @csrf
+                        <input type="hidden" name="package_id" id="selectedPackageId" value="">
+
                         <div class="alert alert-info py-2 px-3 mb-3 small">
                             <i class="fas fa-info-circle me-1"></i>
-                            {{ count($testsList) == 0 ? 'هذا الطلب بانتظار تحديد الفحوصات. يرجى اختيار التحاليل المطلوبة للمريض من القائمة أدناه أو البحث عنها ثم الضغط على زر الحفظ.' : 'سيتم إدراج التحاليل المختارة إلى الطلب الحالي مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.' }}
+                            {{ count($testsList) == 0 ? 'هذا الطلب بانتظار تحديد الفحوصات. يمكنك اختيار باقة طبية كاملة (بكج) أو اختيار من مجموعات المفضلات أو تحديد الفحوصات يدوياً ثم الضغط على زر الحفظ.' : 'سيتم إدراج التحاليل المختارة أو الباقة الطبية إلى الطلب الحالي مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.' }}
                         </div>
+
+                        {{-- 1. قسم باقات المختبر الطبية (البكجات Packages) --}}
+                        @if(isset($packages) && $packages->count() > 0)
+                        <div class="mb-3 p-3 bg-light rounded border border-primary border-opacity-25 shadow-xs">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold small text-primary d-flex align-items-center gap-1">
+                                    <i class="fas fa-boxes text-primary"></i> باقات المختبر الطبية (البكجات Packages):
+                                </span>
+                                <span class="text-muted small" style="font-size: 0.72rem;">اختر باقة لإضافة تحاليلها وسعرها دفعة واحدة</span>
+                            </div>
+                            <!-- عرض الباقات في صف واحد أفقي أنيق -->
+                            <div class="d-flex flex-nowrap gap-2 overflow-auto py-1 px-1 mb-2" style="scrollbar-width: thin;">
+                                @foreach($packages as $pkg)
+                                    @php
+                                        $pkgTestIds = $pkg->labTests->pluck('id')->toArray();
+                                    @endphp
+                                    <div class="card flex-shrink-0 border package-card p-2 position-relative bg-white shadow-xs"
+                                         data-package-id="{{ $pkg->id }}"
+                                         data-package-name="{{ $pkg->name }}"
+                                         data-test-ids="{{ json_encode($pkgTestIds) }}"
+                                         style="width: 230px; cursor: pointer; transition: all 0.2s ease; border-radius: 8px;">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <strong class="text-dark small text-truncate" title="{{ $pkg->name }}" style="max-width: 140px;">
+                                                <i class="fas fa-box text-primary me-1"></i>{{ $pkg->name }}
+                                            </strong>
+                                            <span class="badge bg-primary text-white" style="font-size: 0.68rem;">{{ count($pkgTestIds) }} تحاليل</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-auto pt-1 border-top">
+                                            <span class="fw-bold text-success small" style="font-size: 0.8rem;">{{ number_format($pkg->price) }} IQD</span>
+                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold select-package-btn" style="font-size: 0.7rem;">
+                                                <i class="fas fa-check me-1"></i> اختيار
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div id="selectedPackageAlert" class="alert alert-success py-1 px-3 mt-1 mb-2 small d-none d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-check-circle me-1"></i> تم اختيار باقة: <strong id="selectedPackageName"></strong> وتم تفعيل تحاليلها في القائمة.</span>
+                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" id="clearSelectedPackage">إلغاء الباقة</button>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- 2. قسم مجموعات المفضلات (User Lab Test Groups) --}}
+                        @if(isset($userGroups) && $userGroups->count() > 0)
+                        <div class="mb-3">
+                            <span class="fw-bold small text-dark d-block mb-1">
+                                <i class="fas fa-layer-group text-warning me-1"></i> مجموعات المفضلات الخاصة بي:
+                            </span>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach($userGroups as $group)
+                                    @php
+                                        $grpTestIds = $group->labTests->pluck('id')->toArray();
+                                    @endphp
+                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark py-1 px-2 group-select-btn" 
+                                            data-test-ids="{{ json_encode($grpTestIds) }}" 
+                                            style="font-size: 0.8rem;" 
+                                            title="تحديد كافة تحاليل هذه المجموعة">
+                                        <i class="fas fa-star text-warning me-1"></i>{{ $group->name }}
+                                        <span class="badge bg-secondary-subtle text-dark ms-1">({{ count($grpTestIds) }})</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
 
                         @php
                             $favoriteIds = $favorites->pluck('lab_test_id')->toArray();
@@ -371,7 +446,7 @@ $age = $patient?->age ?? null;
 
                         @if($favorites->isNotEmpty())
                         <div class="mb-3">
-                            <span class="fw-bold small text-dark d-block mb-1"><i class="fas fa-star text-warning me-1"></i> مفضلاتي:</span>
+                            <span class="fw-bold small text-dark d-block mb-1"><i class="fas fa-star text-warning me-1"></i> مفضلاتي الفردية:</span>
                             <div class="d-flex flex-wrap gap-1">
                                 @foreach($favorites as $stat)
                                     @php
@@ -968,25 +1043,162 @@ function initializeLabResults() {
 document.addEventListener('DOMContentLoaded', function() {
     initializeLabResults();
 
-    // بحث سريع في إضافة التحاليل
+    // بحث سريع متقدم في إضافة التحاليل مع دعم الحروف العربية وإخفاء المجموعات الفارغة
     const appendSearch = document.getElementById('appendTestSearch');
+    const clearAppend = document.getElementById('clearAppendSearch');
+
+    function normalizeArabic(text) {
+        if (!text) return '';
+        return text
+            .toString()
+            .toLowerCase()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .trim();
+    }
+
     if (appendSearch) {
         appendSearch.addEventListener('input', function() {
-            const term = this.value.toLowerCase().trim();
-            document.querySelectorAll('.append-test-item').forEach(item => {
-                const label = item.textContent.toLowerCase();
-                item.style.display = label.includes(term) ? '' : 'none';
+            const term = normalizeArabic(this.value);
+
+            document.querySelectorAll('.append-test-group').forEach(group => {
+                let hasVisible = false;
+                group.querySelectorAll('.append-test-item').forEach(item => {
+                    const label = normalizeArabic(item.textContent);
+                    const match = !term || label.includes(term);
+                    item.style.display = match ? '' : 'none';
+                    if (match) hasVisible = true;
+                });
+                group.style.display = hasVisible ? '' : 'none';
             });
         });
     }
 
-    const clearAppend = document.getElementById('clearAppendSearch');
     if (clearAppend && appendSearch) {
         clearAppend.addEventListener('click', function() {
             appendSearch.value = '';
             appendSearch.dispatchEvent(new Event('input'));
+            appendSearch.focus();
         });
     }
+
+    // تفاعل اختيار الباقات الطبية (Packages)
+    document.querySelectorAll('.package-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const pkgId = this.getAttribute('data-package-id');
+            const pkgName = this.getAttribute('data-package-name');
+            const testIds = JSON.parse(this.getAttribute('data-test-ids') || '[]');
+
+            document.querySelectorAll('.package-card').forEach(c => {
+                c.classList.remove('border-primary', 'bg-primary-subtle', 'shadow');
+                const btn = c.querySelector('.select-package-btn');
+                if (btn) {
+                    btn.classList.remove('btn-primary', 'text-white');
+                    btn.classList.add('btn-outline-primary');
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> اختيار الباقة';
+                }
+            });
+
+            this.classList.add('border-primary', 'bg-primary-subtle', 'shadow');
+            const btn = this.querySelector('.select-package-btn');
+            if (btn) {
+                btn.classList.add('btn-primary', 'text-white');
+                btn.classList.remove('btn-outline-primary');
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> تم اختيارها';
+            }
+
+            document.getElementById('selectedPackageId').value = pkgId;
+            const alertBox = document.getElementById('selectedPackageAlert');
+            if (alertBox) {
+                document.getElementById('selectedPackageName').textContent = pkgName;
+                alertBox.classList.remove('d-none');
+            }
+
+            // تصفير أي تحديد سابق لضمان اقتصار التحديد على تحاليل الباقة المختارة بدقة
+            document.querySelectorAll('input[name="extra_lab_test_ids[]"]').forEach(cb => {
+                if (!cb.disabled) cb.checked = false;
+            });
+
+            // تفعيل وتحديد كافة تحاليل هذه الباقة في القائمة
+            let activatedCount = 0;
+            testIds.forEach(id => {
+                const cb = document.getElementById('append_' + id);
+                if (cb && !cb.disabled) {
+                    cb.checked = true;
+                    activatedCount++;
+                }
+            });
+        });
+    });
+
+    // زر إلغاء اختيار الباقة
+    const clearPkgBtn = document.getElementById('clearSelectedPackage');
+    if (clearPkgBtn) {
+        clearPkgBtn.addEventListener('click', function() {
+            document.getElementById('selectedPackageId').value = '';
+            document.querySelectorAll('.package-card').forEach(c => {
+                c.classList.remove('border-primary', 'bg-primary-subtle', 'shadow');
+                const btn = c.querySelector('.select-package-btn');
+                if (btn) {
+                    btn.classList.remove('btn-primary', 'text-white');
+                    btn.classList.add('btn-outline-primary');
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> اختيار الباقة';
+                }
+            });
+            document.getElementById('selectedPackageAlert').classList.add('d-none');
+        });
+    }
+
+    // تفاعل اختيار مجموعات المفضلات (User Lab Test Groups)
+    document.querySelectorAll('.group-select-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const testIds = JSON.parse(this.getAttribute('data-test-ids') || '[]');
+            testIds.forEach(id => {
+                const cb = document.getElementById('append_' + id);
+                if (cb && !cb.disabled) {
+                    cb.checked = true;
+                }
+            });
+            this.classList.toggle('btn-warning');
+            this.classList.toggle('btn-outline-warning');
+        });
+    });
 });
 </script>
+
+<!-- مودال إلغاء الطلب الخارجي المباشر -->
+<div class="modal fade" id="cancelExternalLabModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء الطلب الخارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('lab.cancel', $request) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4 text-end">
+                    <p class="fs-6 text-dark mb-2">
+                        هل أنت متأكد من رغبتك في إلغاء طلب المختبر الخارجي للمريض <strong class="text-danger">{{ $patientUser?->name ?? 'المريض' }}</strong>؟
+                    </p>
+                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور المختبر. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، عدم توفر المادة، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light justify-content-between">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">
+                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

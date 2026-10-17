@@ -18,6 +18,7 @@ use App\Models\PrescriptionItem;
 use App\Notifications\EmergencyPatientMigratedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -35,9 +36,13 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        // التحقق من الصلاحيات
-        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
-            abort(403, 'غير مصرح لك بالوصول إلى قسم الطوارئ');
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super-admin']) || $user->can('manage emergencies');
+        $doctor = $user->doctor ?? Doctor::where('user_id', $user->id)->first();
+        $isDoctor = $user->hasRole('doctor') || ($doctor !== null);
+
+        // التحقق من الصلاحيات: جدول الطوارئ مخصص حصراً للمدير ولأطباء الطوارئ
+        if (!$isAdmin && !$isDoctor) {
+            abort(403, 'غير مصرح لك بالوصول إلى جدول حالات الطوارئ.');
         }
 
         $query = Emergency::with([
@@ -59,14 +64,24 @@ class EmergencyController extends Controller
             }
         ]);
 
+        // إذا كان المستخدم طبيباً وغير مدير: يرى مرضاه فقط
+        if (!$isAdmin && $isDoctor && $doctor) {
+            $query->where(function($q) use ($doctor) {
+                $q->where('doctor_id', $doctor->id)
+                  ->orWhere('consultant_doctor_id', $doctor->id);
+            });
+        }
+
         $filter = request('filter', 'today');
         $date = request('date');
 
         if ($date) {
-            $query->whereDate('admission_time', $date);
+            $query->whereDate('admission_time', $date)
+                  ->where('status', '!=', 'cancelled');
         } else {
             if ($filter === 'today') {
-                $query->whereDate('admission_time', today());
+                $query->whereDate('admission_time', today())
+                      ->where('status', '!=', 'cancelled');
             } elseif ($filter === 'active') {
                 $query->whereIn('status', ['waiting', 'in_progress']);
             } elseif ($filter === 'discharged') {
@@ -74,7 +89,7 @@ class EmergencyController extends Controller
             } elseif ($filter === 'transferred') {
                 $query->where('status', 'transferred');
             }
-            // if filter == 'all', no status/date restriction applied
+            // if filter == 'all', no status/date restriction applied (تظهر جميع الحالات بما فيها الملغاة)
         }
 
         if ($search = request('search')) {
@@ -103,12 +118,20 @@ class EmergencyController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $statsQuery = Emergency::query();
+        if (!$isAdmin && $isDoctor && $doctor) {
+            $statsQuery->where(function($q) use ($doctor) {
+                $q->where('doctor_id', $doctor->id)
+                  ->orWhere('consultant_doctor_id', $doctor->id);
+            });
+        }
+
         $stats = [
-            'today' => Emergency::where('is_active', true)->whereDate('admission_time', today())->count(),
-            'active' => Emergency::where('is_active', true)->whereIn('status', ['waiting', 'in_progress'])->count(),
-            'discharged' => Emergency::where('is_active', true)->where('status', 'discharged')->count(),
-            'transferred' => Emergency::where('is_active', true)->where('status', 'transferred')->count(),
-            'total' => Emergency::where('is_active', true)->count(),
+            'today' => (clone $statsQuery)->where('status', '!=', 'cancelled')->whereDate('admission_time', today())->count(),
+            'active' => (clone $statsQuery)->whereIn('status', ['waiting', 'in_progress'])->count(),
+            'discharged' => (clone $statsQuery)->where('status', 'discharged')->count(),
+            'transferred' => (clone $statsQuery)->where('status', 'transferred')->count(),
+            'total' => (clone $statsQuery)->count(),
         ];
 
         $emergencyServices = EmergencyService::where('is_active', true)
@@ -462,8 +485,25 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
-            abort(403, 'غير مصرح لك بعرض حالات الطوارئ');
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super-admin']) || $user->can('manage emergencies');
+        $doctor = $user->doctor ?? Doctor::where('user_id', $user->id)->first();
+        $isDoctor = $user->hasRole('doctor') || ($doctor !== null);
+
+        if (!$isAdmin && !$isDoctor) {
+            abort(403, 'غير مصرح لك بعرض حالات الطوارئ.');
+        }
+
+        // إذا كان طبيباً وغير مدير: يرى مرضاه فقط
+        if (!$isAdmin && $isDoctor && $doctor) {
+            if ($emergency->doctor_id !== $doctor->id && $emergency->consultant_doctor_id !== $doctor->id) {
+                abort(403, 'غير مصرح لك باستعراض حالة خاصة بطبيب آخر.');
+            }
+        }
+
+        // الحالات الملغاة غير قابلة للفتح
+        if ($emergency->status === 'cancelled') {
+            return redirect()->route('emergency.index', ['filter' => 'all'])
+                ->with('error', '⚠️ هذه الحالة ملغاة ومغلقة نهائياً ولا يمكن فتحها.');
         }
 
         $emergency->load([
@@ -587,6 +627,10 @@ class EmergencyController extends Controller
             ->pluck('payment_id', 'emergency_service_id')
             ->toArray();
 
+        $this->upsertUnifiedEmergencyPayment($emergency);
+        $unpaidAmount = $emergency->getUnpaidAmount();
+        $isPaid = ($unpaidAmount <= 0 || $emergency->payment_status === 'paid' || $emergency->payment_status === 'waived');
+
         return view('emergency.show', compact(
             'emergency', 
             'availableMedicines', 
@@ -600,7 +644,9 @@ class EmergencyController extends Controller
             'patientAppointments',
             'pastLabRequests',
             'pastRadiologyRequests',
-            'paidServiceMap'
+            'paidServiceMap',
+            'unpaidAmount',
+            'isPaid'
         ));
     }
 
@@ -1874,9 +1920,17 @@ class EmergencyController extends Controller
             abort(403, 'غير مصرح لك بتسجيل خروج المريض');
         }
 
+        // التحقق من وجود مستحقات مالية غير مسددة في الطوارئ (إبراء الذمة المالية)
+        $this->upsertUnifiedEmergencyPayment($emergency);
+        $unpaidAmount = $emergency->getUnpaidAmount();
+        if ($unpaidAmount > 0) {
+            $formattedAmount = number_format($unpaidAmount, 0);
+            return redirect()->back()->with('error', "لا يمكن تخريج المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
+        }
+
         $request->validate([
             'discharge_type' => 'required|in:recovered,against_medical_advice,transferred_to_consultation',
-            'discharge_notes' => 'nullable|string|max:1000',
+            'discharge_notes' => 'nullable|string|max:1000', 
         ]);
 
         $updateData = [
@@ -1914,6 +1968,14 @@ class EmergencyController extends Controller
         $user = Auth::user();
         if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
             abort(403, 'غير مصرح لك باستعراض التقرير الطبي للحالة');
+        }
+
+        // التحقق من إبراء الذمة المالية قبل فتح التقرير الطبي
+        $this->upsertUnifiedEmergencyPayment($emergency);
+        $unpaidAmount = $emergency->getUnpaidAmount();
+        if ($unpaidAmount > 0 && $emergency->payment_status !== 'paid') {
+            return redirect()->route('emergency.show', $emergency->id)
+                ->with('error', 'لا يمكن فتح أو طباعة التقرير الطبي لحالة الطوارئ إلا بعد تسديد الرسوم في الكاشير.');
         }
 
         $emergency->load([
@@ -1973,5 +2035,77 @@ class EmergencyController extends Controller
         }
 
         return view('emergency.verify-report', compact('emergency', 'doctor'));
+    }
+
+    /**
+     * إلغاء حالة طوارئ نشطة مع الحصانة السريرية والمالية وإحالة الاسترجاع للكاشير
+     */
+    public function cancel(Request $request, Emergency $emergency)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('manage emergencies') && !$user->can('delete emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بإلغاء حالة الطوارئ');
+        }
+
+        if ($emergency->status === 'discharged') {
+            return redirect()->back()->with('error', 'لا يمكن إلغاء حالة طوارئ تم تخريجها بالفعل.');
+        }
+
+        if ($emergency->status === 'cancelled') {
+            return redirect()->back()->with('info', 'حالة الطوارئ ملغاة مسبقاً.');
+        }
+
+        $request->validate([
+            'cancel_reason' => 'required|string|max:500',
+        ], [
+            'cancel_reason.required' => 'يرجى إدخال سبب إلغاء حالة الطوارئ',
+        ]);
+
+        $cancelReason = trim($request->input('cancel_reason'));
+        $paidPayments = $emergency->payments()->where('amount', '>', 0)->whereNotNull('paid_at')->get();
+        $paidAmount = (float) $paidPayments->sum('amount');
+        $hasPaid = $paidAmount > 0;
+
+        DB::beginTransaction();
+        try {
+            $logNote = "\n[تم إلغاء الحالة بواسطة: {$user->name} بتأريخ " . now()->format('Y-m-d H:i') . " | السبب: {$cancelReason}" . ($hasPaid ? " | مسدد مسبقاً: " . number_format($paidAmount) . " د.ع (بانتظار استرجاع الكاشير)" : "") . "]";
+
+            $emergency->update([
+                'status' => 'cancelled',
+                'payment_status' => 'cancelled',
+                'is_active' => false,
+                'notes' => trim(($emergency->notes ?? '') . $logNote),
+            ]);
+
+            // إلغاء أي فواتير طوارئ معلقة غير مدفوعة
+            Payment::where('emergency_id', $emergency->id)
+                ->whereNull('paid_at')
+                ->delete();
+
+            // إلغاء مواعيد الاستشارات المرتبطة بالطوارئ إذا لم تكن مكتملة
+            Appointment::where('emergency_id', $emergency->id)
+                ->where('status', 'scheduled')
+                ->update(['status' => 'cancelled']);
+
+            // تسجيل نشاط في سجل التدقيق
+            if (class_exists(\App\Services\UserActivityLogger::class)) {
+                \App\Services\UserActivityLogger::log(
+                    'emergency',
+                    "إلغاء حالة طوارئ #{$emergency->id} للمريض " . ($emergency->patient?->user?->name ?? 'غير محدد') . " (السبب: {$cancelReason})",
+                    $emergency
+                );
+            }
+
+            DB::commit();
+
+            if ($hasPaid) {
+                return redirect()->route('emergency.index', ['filter' => 'all'])->with('warning', '⚠️ تم إلغاء حالة الطوارئ بنجاح. نظراً لأن المريض سدد مسبقاً في الكاشير مبلغ ' . number_format($paidAmount) . ' د.ع، تم تحويله لمستحقات الاسترجاع في الكاشير لصرفه للمريض.');
+            }
+
+            return redirect()->route('emergency.index', ['filter' => 'all'])->with('success', 'تم إلغاء حالة الطوارئ بنجاح.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء إلغاء حالة الطوارئ: ' . $e->getMessage());
+        }
     }
 }

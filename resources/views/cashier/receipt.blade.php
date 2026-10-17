@@ -6,8 +6,13 @@
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h4 class="fw-bold mb-1 text-dark">
-                <i class="fas fa-receipt text-success me-2"></i>
-                إيصال قبض رسمي
+                @if((float)$payment->amount < 0)
+                    <i class="fas fa-undo text-danger me-2"></i>
+                    سند استرجاع مالي رسمي (Refund Voucher)
+                @else
+                    <i class="fas fa-receipt text-success me-2"></i>
+                    إيصال قبض رسمي
+                @endif
             </h4>
             <span class="text-muted small">رقم الإيصال: <strong class="text-dark">{{ $payment->receipt_number }}</strong></span>
         </div>
@@ -79,20 +84,55 @@
             $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
             $doctorName = $payment->request->visit?->doctor?->user?->name ? ('د. ' . $payment->request->visit->doctor->user->name) : 'المختبر / الأشعة';
 
-            if ($payment->request->type === 'lab' && isset($details['lab_test_ids'])) {
-                foreach ($details['lab_test_ids'] as $testId) {
-                    $test = \App\Models\LabTest::find($testId);
-                    if ($test) {
-                        $base = (float)$test->price;
-                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
-                        $lineItems[] = [
-                            'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
-                            'category' => 'تحاليل مختبرية',
-                            'doctor' => $doctorName,
-                            'approved' => $base,
-                            'patient' => $pat,
-                            'insurance' => max(0, $base - $pat),
-                        ];
+            if ($payment->request->type === 'lab') {
+                $packageId = $details['package_id'] ?? null;
+                $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
+
+                if ($pkg) {
+                    $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                    $base = (float)$pkg->price;
+                    $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                    $lineItems[] = [
+                        'name' => '📦 باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)',
+                        'category' => 'باقة مختبرية متكاملة',
+                        'doctor' => $doctorName,
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => max(0, $base - $pat),
+                    ];
+
+                    $allTestIds = $details['lab_test_ids'] ?? [];
+                    $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                    foreach ($extraTestIds as $testId) {
+                        $test = \App\Models\LabTest::find($testId);
+                        if ($test) {
+                            $base = (float)$test->price;
+                            $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                            $lineItems[] = [
+                                'name' => '🔬 تحليل إضافي: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => 'تحاليل مختبرية إضافية',
+                                'doctor' => $doctorName,
+                                'approved' => $base,
+                                'patient' => $pat,
+                                'insurance' => max(0, $base - $pat),
+                            ];
+                        }
+                    }
+                } elseif (isset($details['lab_test_ids'])) {
+                    foreach ($details['lab_test_ids'] as $testId) {
+                        $test = \App\Models\LabTest::find($testId);
+                        if ($test) {
+                            $base = (float)$test->price;
+                            $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                            $lineItems[] = [
+                                'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => 'تحاليل مختبرية',
+                                'doctor' => $doctorName,
+                                'approved' => $base,
+                                'patient' => $pat,
+                                'insurance' => max(0, $base - $pat),
+                            ];
+                        }
                     }
                 }
             } elseif ($payment->request->type === 'radiology' && isset($details['radiology_type_ids'])) {
@@ -175,9 +215,23 @@
             ];
         }
 
-        $totalApprovedSum = (float)($payment->total_amount > 0 ? $payment->total_amount : collect($lineItems)->sum('approved'));
-        $totalPatientSum = (float)($payment->amount);
-        $totalInsuranceSum = (float)($payment->insurance_share ?? max(0, $totalApprovedSum - $totalPatientSum));
+        $isRefund = (float)$payment->amount < 0;
+        if ($isRefund) {
+            $lineItems = [
+                [
+                    'name' => $payment->description ?: 'استرجاع مالي للمريض: إلغاء طلب فحص خارجي',
+                    'category' => 'سند صرف استرجاع نقدي',
+                    'doctor' => optional($payment->cashier)->name ?? 'الكاشير',
+                    'approved' => abs((float)$payment->amount),
+                    'patient' => abs((float)$payment->amount),
+                    'insurance' => 0,
+                ]
+            ];
+        }
+
+        $totalApprovedSum = abs((float)($payment->total_amount != 0 ? $payment->total_amount : collect($lineItems)->sum('approved')));
+        $totalPatientSum = abs((float)($payment->amount));
+        $totalInsuranceSum = abs((float)($payment->insurance_share ?? max(0, $totalApprovedSum - $totalPatientSum)));
     @endphp
 
     <!-- بطاقة الإيصال المصممة بنمط السند الرقمي المتقن -->
@@ -193,9 +247,15 @@
                             <small class="text-muted">قسم الصندوق والحسابات الطبية</small>
                         </div>
                         <div class="text-end">
-                            <span class="badge bg-success px-3 py-2 fs-6 rounded-pill">
-                                <i class="fas fa-check-circle me-1"></i> تم القبض بنجاح
-                            </span>
+                            @if($isRefund)
+                                <span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">
+                                    <i class="fas fa-undo me-1"></i> تم الاسترجاع والصرف للمريض
+                                </span>
+                            @else
+                                <span class="badge bg-success px-3 py-2 fs-6 rounded-pill">
+                                    <i class="fas fa-check-circle me-1"></i> تم القبض بنجاح
+                                </span>
+                            @endif
                         </div>
                     </div>
 
@@ -312,9 +372,9 @@
                                         إجمالي التسعيرة: {{ number_format($totalApprovedSum) }} د.ع | تغطية الضمان: <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
                                     </div>
                                 @endif
-                                <div class="d-inline-block bg-white p-2 px-4 rounded-3 border border-success shadow-sm">
-                                    <span class="text-muted small d-block">المبلغ المقبوض نقداً من المريض:</span>
-                                    <span class="fs-3 fw-bold text-success">{{ number_format($totalPatientSum) }} د.ع</span>
+                                <div class="d-inline-block bg-white p-2 px-4 rounded-3 border {{ $isRefund ? 'border-danger' : 'border-success' }} shadow-sm">
+                                    <span class="text-muted small d-block">{{ $isRefund ? 'المبلغ المسترجع للمريض:' : 'المبلغ المقبوض نقداً من المريض:' }}</span>
+                                    <span class="fs-3 fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}">{{ number_format($totalPatientSum) }} د.ع</span>
                                 </div>
                             </div>
                         </div>

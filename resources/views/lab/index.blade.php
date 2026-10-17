@@ -550,6 +550,14 @@
                                                        title="طباعة طلب التحاليل / أمر العمل">
                                                         <i class="fas fa-print me-1"></i> طباعة الطلب
                                                     </a>
+                                                    @if($req->isDirectExternal() && !$isCompleted && !in_array($req->status, ['completed', 'cancelled']))
+                                                        <button type="button" 
+                                                                class="btn btn-sm btn-outline-danger fw-bold px-2 py-1 shadow-sm" 
+                                                                title="إلغاء الطلب الخارجي"
+                                                                onclick="openCancelModal({{ $req->id }}, '{{ addslashes($patientUser?->name ?? 'المريض') }}')">
+                                                            <i class="fas fa-ban"></i>
+                                                        </button>
+                                                    @endif
                                                 @endif
                                             </div>
                                         </td>
@@ -709,7 +717,54 @@ setInterval(function() {
         })
         .catch(err => console.log('Live refresh skipped:', err));
 }, 10000);
+
+function openCancelModal(requestId, patientName) {
+    const modalEl = document.getElementById('cancelLabRequestModal');
+    const form = document.getElementById('cancelLabRequestForm');
+    const patientNameEl = document.getElementById('cancelModalPatientName');
+    
+    if (patientNameEl) patientNameEl.textContent = patientName;
+    if (form) form.action = `/lab/requests/${requestId}/cancel`;
+    
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
 </script>
+
+<!-- مودال إلغاء الطلب الخارجي المباشر -->
+<div class="modal fade" id="cancelLabRequestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء الطلب الخارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="cancelLabRequestForm" method="POST">
+                @csrf
+                <div class="modal-body p-4 text-end">
+                    <p class="fs-6 text-dark mb-2">
+                        هل أنت متأكد من رغبتك في إلغاء طلب المختبر الخارجي للمريض <strong id="cancelModalPatientName" class="text-danger"></strong>؟
+                    </p>
+                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور المختبر. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، عدم توفر المادة، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light justify-content-between">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">
+                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <style>
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }

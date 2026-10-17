@@ -919,7 +919,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawerTr.innerHTML = `
             <td colspan="8" class="p-3 bg-warning bg-opacity-10 border-top border-bottom border-warning">
                 <div class="quick-edit-card p-3 bg-white border border-warning rounded-3 shadow-sm">
-                    <form class="inline-quick-form" data-patient-id="${patientId}">
+                    <form class="inline-quick-form no-loader" data-patient-id="${patientId}">
                         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="badge bg-warning text-dark px-2 py-1"><i class="fas fa-user-edit me-1"></i>إكمال بيانات سريعة</span>
@@ -1011,6 +1011,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!form) return;
 
         e.preventDefault();
+        e.stopPropagation();
         const patientId = form.getAttribute('data-patient-id');
         if (!patientId) return;
 
@@ -1123,6 +1124,9 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
             spinner.classList.add('d-none');
             saveIcon.classList.remove('d-none');
+            if (window.hidePageLoader) {
+                window.hidePageLoader(true);
+            }
         });
     });
 

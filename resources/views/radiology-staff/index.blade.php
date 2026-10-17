@@ -463,6 +463,14 @@
                                                 <i class="fas fa-play me-1"></i> بدء الفحص
                                             </a>
                                         @endif
+                                        @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
+                                            <button type="button" 
+                                                    class="action-btn btn-outline-danger" 
+                                                    title="إلغاء الطلب الخارجي"
+                                                    onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($pName) }}')">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -698,9 +706,19 @@
                             </td>
                             <td><span class="badge bg-secondary">{{ $req->status }}</span></td>
                             <td class="text-end">
-                                <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary">
-                                    <i class="fas fa-eye"></i> عرض
-                                </a>
+                                <div class="d-flex gap-1 justify-content-end align-items-center">
+                                    <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i> عرض
+                                    </a>
+                                    @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
+                                        <button type="button" 
+                                                class="action-btn btn-outline-danger" 
+                                                title="إلغاء الطلب الخارجي"
+                                                onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($req->visit?->patient?->name ?? 'المريض') }}')">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                         @endforeach
@@ -1140,8 +1158,55 @@ function radiologyStartSpecific(reqId) {
     window.location.href = `${radiologyBaseUrl}/radiology-staff/requests/${reqId}/show`;
 }
 
+function openCancelRadiologyModal(requestId, patientName) {
+    const modalEl = document.getElementById('cancelRadiologyModal');
+    const form = document.getElementById('cancelRadiologyForm');
+    const patientNameEl = document.getElementById('cancelRadModalPatientName');
+    
+    if (patientNameEl) patientNameEl.textContent = patientName;
+    if (form) form.action = `/radiology-staff/requests/${requestId}/cancel`;
+    
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
 // Auto poll every 4s (matching doctor's main station)
 setInterval(syncRadiologyQueue, 4000);
 syncRadiologyQueue();
 </script>
+
+<!-- مودال إلغاء الطلب الخارجي المباشر للأشعة -->
+<div class="modal fade" id="cancelRadiologyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء طلب الأشعة والتصوير الخارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="cancelRadiologyForm" method="POST">
+                @csrf
+                <div class="modal-body p-4 text-end">
+                    <p class="fs-6 text-dark mb-2">
+                        هل أنت متأكد من رغبتك في إلغاء طلب الأشعة والتصوير الخارجي للمريض <strong id="cancelRadModalPatientName" class="text-danger"></strong>؟
+                    </p>
+                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور الفحص والمناداة. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light justify-content-between">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">
+                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

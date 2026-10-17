@@ -107,6 +107,11 @@ class Emergency extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'emergency_id');
+    }
+
     public function followUpPayment(): BelongsTo
     {
         return $this->belongsTo(Payment::class, 'follow_up_payment_id');
@@ -173,6 +178,7 @@ class Emergency extends Model
             'completed' => 'success',
             'transferred' => 'primary',
             'discharged' => 'secondary',
+            'cancelled' => 'danger',
             default => 'secondary'
         };
     }
@@ -185,6 +191,7 @@ class Emergency extends Model
             'completed' => 'مكتملة',
             'transferred' => 'محولة',
             'discharged' => 'مغادرة',
+            'cancelled' => 'ملغاة',
             default => 'غير محدد'
         };
     }

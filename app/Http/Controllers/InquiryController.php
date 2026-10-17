@@ -990,7 +990,8 @@ class InquiryController extends Controller
         // تحديد الحالة: إذا تم تحديد الخدمات -> pending للدفع، وإلا -> pending_service_selection
         $requestStatus = $hasServices ? 'pending' : 'pending_service_selection';
         
-        $requestInsuranceType = ($requestType === 'radiology' && $radiologyCategory === 'ultrasound') ? 'none' : $bookingInsuranceType;
+        // الطلبات الطبية المباشرة من الاستعلامات (المختبر والأشعة والسونار والرنين والمفراس والإيكو) غير مشمولة بالضمان وتحاسب كاش نقدي 100%
+        $requestInsuranceType = 'none';
 
         $medicalRequest = Request::create([
             'visit_id' => $visit->id,

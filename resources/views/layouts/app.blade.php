@@ -1248,10 +1248,11 @@
                         @endcanany
 
                         <!-- قسم المختبر والتحاليل الطبية -->
-                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view packages'])
+                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view packages', 'view lab test groups'])
                         @php
                             $isLabActive = request()->routeIs('lab.*') || 
                                            request()->routeIs('admin.packages.*') || 
+                                           request()->routeIs('lab-tests.groups.*') ||
                                            request()->routeIs('staff.surgery-lab-tests.*') || 
                                            request()->routeIs('lab-tests.*');
                         @endphp
@@ -1282,11 +1283,18 @@
                         @can('view packages')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
-                                <i class="fas fa-boxes"></i><span> الباقات الطبية</span>
+                                <i class="fas fa-boxes"></i><span> باقات المختبر (البكجات)</span>
                             </a>
                         </li>
                         @endcan
 
+                        @can('view lab test groups')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
+                                <i class="fas fa-layer-group text-warning"></i><span> مجموعات المفضلات</span>
+                            </a>
+                        </li>
+                        @endcan
 
                         @can('view lab tests')
                         <li class="nav-item">
@@ -1767,15 +1775,23 @@
 
         // إظهار عند تقديم النماذج (Forms submit)
         document.addEventListener('submit', function(e) {
-            // عدم إظهار اللودر إذا تم إلغاء الإرسال بواسطة كود التحقق أو تم استدعاء preventDefault
-            if (e.defaultPrevented) {
-                return;
-            }
             const form = e.target;
-            if (!form || form.getAttribute('target') === '_blank' || form.classList.contains('no-loader')) {
+            if (!form || 
+                form.getAttribute('target') === '_blank' || 
+                form.classList.contains('no-loader') || 
+                form.classList.contains('ajax-form') || 
+                form.classList.contains('inline-quick-form') ||
+                form.hasAttribute('data-ajax')
+            ) {
                 return;
             }
-            showLoader();
+
+            // تأخير الفحص 20ms للتأكد من عدم قيام أي كود JavaScript محلي باستدعاء e.preventDefault() للإرسال عبر AJAX
+            setTimeout(function() {
+                if (!e.defaultPrevented) {
+                    showLoader();
+                }
+            }, 20);
         });
 
         // حماية ضد التعليق: إخفاء تلقائي بعد 7 ثوانٍ كحد أقصى

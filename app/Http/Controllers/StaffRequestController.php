@@ -233,12 +233,19 @@ class StaffRequestController extends Controller
             if (!is_array($details)) {
                 $details = [];
             }
-            // دعم اختيار باقة: إذا استلمنا package_id نترجمها إلى lab_test_ids
+            // دعم اختيار باقة: إذا استلمنا package_id نترجمها إلى lab_test_ids ونحفظ بيانات الباقة وسعرها
             if ($httpRequest->has('package_id') && $httpRequest->package_id) {
                 $packageId = $httpRequest->package_id;
                 $details['package_id'] = $packageId;
                 try {
-                    $packageTests = \App\Models\Package::find($packageId)->labTests()->pluck('lab_tests.id')->toArray();
+                    $package = \App\Models\Package::find($packageId);
+                    $packageTests = $package ? $package->labTests()->pluck('lab_tests.id')->toArray() : [];
+                    if ($package) {
+                        $details['package_name'] = $package->name;
+                        $details['package_price'] = (float)$package->price;
+                        $details['package_test_ids'] = $packageTests;
+                        $request->total_amount = (float)$package->price;
+                    }
                 } catch (\Exception $e) {
                     $packageTests = [];
                 }
@@ -659,11 +666,25 @@ class StaffRequestController extends Controller
         }
 
         $httpRequest->validate([
-            'extra_lab_test_ids'   => 'required|array|min:1',
+            'extra_lab_test_ids'   => 'nullable|array',
             'extra_lab_test_ids.*' => 'integer|exists:lab_tests,id',
+            'package_id'           => 'nullable|integer|exists:packages,id',
         ]);
 
-        $extraTestIds = array_map('intval', $httpRequest->extra_lab_test_ids);
+        $extraTestIds = array_map('intval', $httpRequest->extra_lab_test_ids ?? []);
+
+        $package = null;
+        if ($httpRequest->filled('package_id')) {
+            $package = \App\Models\Package::find($httpRequest->package_id);
+            if ($package) {
+                $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                $extraTestIds = array_values(array_unique(array_merge($extraTestIds, $pkgTestIds)));
+            }
+        }
+
+        if (empty($extraTestIds)) {
+            return redirect()->back()->with('error', 'يرجى اختيار تحليل واحد على الأقل أو باقة طبية.');
+        }
 
         $details = $request->details;
         if (is_string($details)) {
@@ -671,6 +692,13 @@ class StaffRequestController extends Controller
         }
         if (!is_array($details)) {
             $details = [];
+        }
+
+        if ($package) {
+            $details['package_id'] = $package->id;
+            $details['package_name'] = $package->name;
+            $details['package_price'] = $package->price;
+            $details['service_selection_type'] = 'package';
         }
 
         // إذا الطلب الحالي لم يدفع بعد، أضف التحاليل داخل نفس الطلب
@@ -707,13 +735,18 @@ class StaffRequestController extends Controller
             'description'    => 'تحاليل إضافية - مضافة من طلب #' . $request->id,
             'status'         => 'pending',
             'payment_status' => 'pending',
-            'details'        => [
+            'details'        => array_merge([
                 'lab_test_ids'      => $extraTestIds,
                 'services_selected' => true,
                 'added_from_request'=> $request->id,
                 'added_by'          => $user->id,
                 'added_at'          => now()->toDateTimeString(),
-            ],
+            ], $package ? [
+                'package_id'    => $package->id,
+                'package_name'  => $package->name,
+                'package_price' => $package->price,
+                'service_selection_type' => 'package',
+            ] : []),
         ]);
 
         if ($request->visit) {

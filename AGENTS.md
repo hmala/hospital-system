@@ -57,6 +57,98 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-17 — المرحلة 72: إبراء الذمة المالية وقفل إجراءات الطوارئ وإلغاء الحالات مع استرجاع الكاشير والخزينة Emergency Financial Clearance Locks, Cancellation & Cashier Refund Integration)
+
+### Done
+- **إبراء الذمة المالية وقفل الإجراءات والتقرير الطبي ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php) و [resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php) و [resources/views/emergency/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/index.blade.php))**:
+  * ربط حالة إبراء الذمة المالية `$unpaidAmount` بحساب المتبقي غير المسدد من خدمات وفحوصات الطوارئ.
+  * تعطيل زر التقرير الطبي الرسمي `[ 📄 التقرير الطبي للطوارئ ]` وإظهار أيقونة القفل مع تنبيه يوجه بضرورة تسديد الرسوم في الكاشير أولاً.
+  * تعطيل قائمة الإجراءات والتحويل والتخريج `[ إجراءات وتحويل وتخريج الحالة 🔒 ]` بالكامل (تحويل للعمليات، تحويل للرقود، تحويل للاستشارية، خروج متعافي، خروج على مسؤوليته) حتى يتم السداد بالكامل.
+  * وضع حماية برمجية Backend صارمة في دوال `medicalReport()`, `discharge()`, `transferToSurgery()`, `transferToAdmission()` تمنع أي تجاوز.
+- **إلغاء حالات الطوارئ النشطة مع الحصانة التشغيلية والسريرية ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * بناء دالة `cancel(Request $request, Emergency $emergency)` ومسار `POST /emergency/{emergency}/cancel`.
+  * الحصانة التشغيلية: منع إلغاء الحالات المخرجة مسبقاً (`status = 'discharged'`).
+  * الحالات غير المسددة: تحويل الحالة إلى `cancelled` وحذف وصولات الدفع المعلقة غير المدفوعة وإلغاء مواعيد الاستشارات غير المكتملة.
+  * الحالات المسددة مسبقاً: تحويلها إلى `cancelled` ووسمها للاسترجاع وتوجيه الموظف والمريض إلى الكاشير لاستلام المبلغ.
+- **التكامل التلقائي مع الكاشير والخزينة المركزية ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) و [resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * إضافة مسار `POST /cashier/emergency-refund/{emergency}` باسم `cashier.emergency.refund.process`.
+  * إدراج حالات الطوارئ الملغاة في طابور `مستحقات الاسترجاع (Refund)` في الكاشير بشارة حمراء مميزة.
+  * احتساب صافي المبلغ المسترد بدقة وإنشاء قيد دفعة سالبة في `payments` ينعكس تلقائياً في الخزينة المركزية كحركة منصرفات (`outflow / refund`).
+  * حل مشكلة عدم عمل زر الصرف: التخلص من تضارب علامات التنصيص المزدوجة الناتجة عن `@json` داخل `onclick`، واستبدالها بنظام `data-*` attributes واستماع مفوض `$(document).on('click', '.btn-open-refund')` يعمل بحصانة تامة ضد التحديث الدوري.
+  * إضافة ترحيل قاعدة بيانات `2026_10_17_155500_add_refunded_to_emergencies_payment_status_enum.php` لإضافة `'refunded'` لحقل `payment_status` في جدول `emergencies`.
+  * طباعة سندات الاسترجاع الرسمية والحرارية.
+- **عزل صلاحيات وسجلات الطوارئ وإخفاء الحالات الملغاة ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php) و [resources/views/emergency/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/index.blade.php))**:
+  * قصر صلاحية جدول الطوارئ على المدير وأطباء الطوارئ فقط مع حظر أي أدوار غير مصرح لها (`abort(403)`).
+  * حصر استعراض الحالات للأطباء على مرضاهم فقط (`doctor_id` أو `consultant_doctor_id`) مع احتساب الإحصائيات لمرضاهم ومنع الطبيب من فتح حالات الأطباء الآخرين.
+  * إخفاء الحالات الملغاة تماماً من تبويب "حالات اليوم" ومن تبويب "النشطة حالياً" وحصرها في "السجل الكامل" فقط كحالة ملغاة ومغلقة وغير قابلة للفتح نهائياً.
+- **الاختبارات الآلية (Automated Tests)**:
+  * بناء وتشغيل [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php): `6 passed (32 assertions)`.
+
+## Session log (2026-10-17 — المرحلة 71: دورة استرجاع وصرف مبالغ الفحوصات الملغاة في الكاشير وإصدار السندات Cashier Refund Cycle for Cancelled Medical Requests & Treasury Outflows)
+
+### Done
+- **مسار واستعلامات استرجاع الفحوصات في الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) و [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسار `POST /cashier/request-refund/{request}` باسم `cashier.request.refund.process` محمي بصلاحية `process medical requests payments`.
+  * إضافة استعلام `$pendingRefundRequests` في `CashierController::index()` لجلب كافة الطلبات الطبية الملغاة (`status = 'cancelled'`) التي لديها مدفوعات مسددة سابقة موجبة (`amount > 0`) ولم يتم استرجاعها بعد (`whereDoesntHave payments where amount < 0`).
+  * بناء دالة `processRequestRefund(HttpRequest $httpRequest, MedicalRequest $request)`:
+    - التحقق الصارم من حالة الطلب الملغي ووجود مدفوعات سابقة قابلة للاسترجاع.
+    - احتساب صافي المبلغ المستحق بدقة (`$netRefundable`).
+    - إنشاء سجل دفعة استرجاع سالبة (`Payment::create(['amount' => -$netRefundable, ...])`) برقم إيصال رسمي فريد (`REF-YYYYMMDD-XXXX`).
+    - التكامل التلقائي مع الخزينة عبر `PaymentObserver`: قيد حركة منصرفات (`voucher_type = 'outflow'`, `category = 'refund'`) فورياً في الخزينة المركزية، وتسجيل حركة تدقيق رسمية في `UserActivityLogger`.
+    - تحديث مصفوفة بيانات الطلب `$details` بحالة `refund_status => 'refunded'` وتسجيل المبلغ وتاريخ وموظف الصرف، ثم التوجيه لصفحة السند الرسمي مع زر الطباعة.
+- **واجهة الكاشير وطابور الاسترجاع والمودال ([resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * إضافة شريط تنبيهي بارز في أعلى المعاملات عند وجود مبالغ مستحقة للاسترجاع (`$pendingRefundCount > 0`) ينبه موظف الكاشير بوجود مرضى ألغوا فحوصاتهم ويستحقون الصرف.
+  * إضافة تبويب مخصص في شريط التبويبات باسم `مستحقات الاسترجاع (Refund)` مع شارة عداد حمراء حية.
+  * عرض جدول تفصيلي للمسترجعات: رقم الطلب، القسم (مختبر / باقة / أشعة)، اسم المريض وهاتفه، رقم الوصل الأصلي المسدد، سبب وتاريخ الإلغاء واسم الموظف الملغي، وصافي المبلغ المستحق إرجاعه بالدينار العراقي.
+  * بناء نافذة منبثقة تفاعلية (Modal `#medicalRefundModal`) لتأكيد الصرف، واختيار طريقة الإرجاع (نقداً / بطاقة)، وإدخال أي ملاحظات إدارية.
+- **ترقية سندات القبض الحرارية والرسمية للاسترجاع ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php) و [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * دعم السند الرسمي: التحول التلقائي عند كون الدفعة سالبة إلى عنوان `سند استرجاع مالي رسمي (Refund Voucher)`، وشارة حالة `تم الاسترجاع والصرف للمريض`، وتلوين الإجمالي بالأحمر مع بيان تفاصيل الفحص الملغي والوصل الأصلي.
+  * دعم الوصل الحراري: إظهار شريط تحذيري بارز `⚠️ سند استرجاع مالي (REFUND)`، وتنسيق المبلغ المسترجع بدقة بدون إرباك الإشارات السالبة، مع توقيع المستلم وتوقيع أمين الصندوق.
+- **الاختبارات الآلية الحصينة ([tests/Feature/ExternalRequestCancellationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ExternalRequestCancellationTest.php))**:
+  * إضافة اختبار `test_cashier_can_refund_cancelled_paid_medical_request` لاختبار دورة الاسترجاع المحاسبية بالكامل: `7 passed (44 assertions)`.
+
+## Session log (2026-10-17 — المرحلة 70: نظام إلغاء الطلبات الخارجية المباشرة للمختبر والأشعة مع الحصانة السريرية والمالية Direct External Medical Requests Cancellation with Clinical & Financial Guards)
+
+### Done
+- **تطوير محرك التحقق والتمييز المرجعي ([app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php))**:
+  * إضافة دالة والـ Accessor `isDirectExternal()` بموديل `Request` لتمييز الطلبات الخارجية المباشرة المحجوزة من الاستعلامات أو الصندوق عن طلبات العيادات الاستشارية.
+  * إضافة علاقة المدفوعات `payments()` للربط المباشر مع سجلات الكاشير.
+- **الحصانة السريرية والمالية في المتحكمات ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) و [app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * إضافة دالة `cancel(HttpRequest $httpRequest, MedicalRequest $request)` في كلا المتحكمين.
+  * **الحصانة السريرية**: حظر إلغاء أي طلب صادر عن طبيب استشاري داخل العيادات من قبل موظفي المختبر أو الأشعة (`!$request->isDirectExternal()`)، مع توجيه صريح بأن الإلغاء يتم حصراً من شاشة الطبيب المعالج.
+  * **المرونة التشغيلية والتوافق المالي (Operational Refund Routing)**: تمكين موظفي المختبر والأشعة من إلغاء أي طلب خارجي مباشر تعذر إجراؤه حتى لو كان مسدداً مسبقاً في الكاشير (`paid`)، مع وسم الطلب بـ `cancelled_after_payment = true` و `refund_status = 'pending_refund'` وإشعار الموظف بتوجيه المريض إلى الكاشير لاسترداد المبلغ المسدد، وحفظ تفاصيل الإيصال والمبلغ في `$details`.
+  * **الحصانة التشغيلية**: منع إلغاء الطلبات المكتملة والمعتمدة مسبقاً (`$request->status === 'completed'`).
+  * **المعالجة الشاملة للإلغاء**: تحويل حالة الطلب إلى `cancelled`، توسيع `payment_status` ENUM ليشمل قيمة `cancelled`، تسجيل بيانات الإلغاء وسببه واسم الموظف والوقت في `$details`، وتحديث حالة زيارة الاستعلامات المباشرة إلى `cancelled` لإزالتها تلقائياً وفورياً من طابور الفحص والمناداة وقائمة الطلبات المعلقة في الكاشير، وتسجيل حركة تدقيق رسمية في `UserActivityLogger`.
+- **المسارات وحماية الصلاحيات ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * تسجيل راوت `POST /lab/requests/{request}/cancel` باسم `lab.cancel` بميدلوير `can:view lab tests`.
+  * تسجيل راوت `POST /radiology-staff/requests/{request}/cancel` باسم `radiology-staff.cancel` بميدلوير `can:view radiology`.
+- **الواجهات والتفاعل الحي المودال**:
+  * [resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php): إظهار زر الإلغاء `[ 🚫 ]` ومودال تأكيد الإلغاء مع حقل سبب الإلغاء لكافة طلبات المختبر الخارجية المباشرة النشطة سواء كانت مدفوعة أو غير مدفوعة.
+  * [resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php): إضافة زر ومودال الإلغاء في شريط الإجراءات العلوي لشاشة الفحص.
+  * [resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php): إضافة زر الإلغاء في طابور الانتظار الأولي (سواء تم النداء أم لا، وسواء سدد المريض أم لا) وفي تبويب الأرشيف العام مع مودال التأكيد الشامل لكافة فئات التصوير (أشعة، سونار، رنين، مفراس، إيكو).
+  * [resources/views/radiology-staff/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/show.blade.php): إضافة زر ومودال الإلغاء في شاشة كتابة التقرير وفحص الأشعة.
+- **الاختبارات الآلية الحصينة ([tests/Feature/ExternalRequestCancellationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ExternalRequestCancellationTest.php))**:
+  * بناء 6 اختبارات شاملة تغطي: إلغاء طلبات المختبر والأشعة الخارجية غير المسددة، إلغاء الطلبات المسددة مع وسم استرجاع الكاشير، ومنع إلغاء طلبات الاستشارية: `6 passed (36 assertions)`.
+
+## Session log (2026-10-17 — المرحلة 69: حصر طلبات الاستعلامات المباشرة بالسعر النقدي 100% واعتماد تسعير وعرض باقات المختبر كبند موحد في الكاشير والسندات مع تحسين محطات العمل Direct Inquiry Cash Enforcement, Laboratory Packages Unified Pricing in Cashier & Receipts, and Workstation Search Enhancements)
+
+### Done
+- **حصر طلبات الاستعلامات المباشرة بالسعر النقدي 100% (Direct Inquiry Cash Enforcement)**:
+  * تطبيق السياسة الطبية والمالية: الطلبات الخارجية المباشرة من الاستعلامات (المختبر، الأشعة، السونار، الرنين، المفراس، الإيكو) غير مشمولة بالضمان الصحي وتحاسب نقداً بنسبة 100% كاش إذا لم تكن محالة ومقترنة بحجز طبيب استشاري داخل المستشفى.
+  * تحديث [InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php): تثبيت `insurance_type = 'none'` لكافة الطلبات الطبية المباشرة الصادرة من الاستعلامات.
+  * تحديث طابور الكاشير [resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php): تطبيق الفحص الحصين على تبويب "الكل" والتبويب المخصص لمنع حساب نسبة تحمل الضمان وإظهار السعر النقدي الكامل فوراً.
+  * تحديث نموذج الدفع [resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php) و [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php).
+- **اعتماد تسعير وعرض باقات المختبر كبند موحد (Laboratory Packages Unified Pricing & Display)**:
+  * حل مشكلة تجزئة الباقة ومضاعفة سعرها: عند اختيار باقة طبية (Package) في المختبر، تظهر الباقة في الكاشير وفي السندات كبند أساسي موحد `[ 📦 باقة: اسم الباقة (X تحاليل مشمولة) ]` بسعر الباقة المعتمد فقط.
+  * دعم التحاليل الإضافية الذاتي: في حال اختيار تحاليل خارج الباقة، تُفصل التحاليل الإضافية فقط وتُحسب بسعرها المنفرد مضافة لسعر الباقة.
+  * تحديث معالجة الدفع في `CashierController::processRequestPayment` وتحديث وصف الدفعة في سندات الخزينة.
+  * تحديث واجهات السندات الحرارية والرسمية [resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php) و [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php).
+  * تحسين تفاعل الباقات في [resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php): تصفير أي تحديدات سابقة تلقائياً عند النقر على أي باقة لضمان دقة التحاليل المختارة.
+  * تصحيح حالة طلب المريض علي حسين الفت (طلب #6) بسعر باقة `celiac` المعتمد 50,000 د.ع، وطلب منير سمير يوسف (طلب #7) ليكون كاش 100%.
+- **تطوير محطة عمل الأشعة والمختبر**:
+  * بناء محرك البحث الحي الفوري (Autocomplete Dropdown) مع شارات الفحوصات المختارة وزر الإزالة وحساب الإجمالي المباشر.
+  * تحويل باقات المختبر إلى شريط أفقي مدمج لتوفير المساحة الرأسية وتسهيل العمل المخبري.
+
 ## Session log (2026-10-16 — المرحلة 68: حل مشكلة عرض صورة التوقيع على هوستنجر بالتحويل التلقائي إلى Base64 Data URI وبث المسار المباشر وحصانة إنشاء الطبيب Doctor Signature Base64 Data URI, Stream Route & Safe Doctor Creation Guard)
 
 ### Done
