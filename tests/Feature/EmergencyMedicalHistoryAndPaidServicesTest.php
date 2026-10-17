@@ -201,4 +201,38 @@ class EmergencyMedicalHistoryAndPaidServicesTest extends TestCase
             ->first();
         $this->assertNotNull($newPivot, 'New service should be attached');
     }
+
+    public function test_emergency_show_renders_services_live_search_input_and_counter()
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $patientUser = User::factory()->create(['name' => 'مريض تجريبي']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'medical_number' => 'MED-SRV-' . rand(1000, 9999),
+            'birth_date' => '1995-01-01',
+            'gender' => 'male',
+        ]);
+
+        $emergency = Emergency::create([
+            'patient_id' => $patient->id,
+            'hospital_id' => $this->hospital->id,
+            'department_id' => $this->department->id,
+            'emergency_type' => 'medical',
+            'symptoms' => 'فحص روتيني وحالة طوارئ',
+            'priority' => 'urgent',
+            'status' => 'in_progress',
+            'admission_time' => now(),
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('emergency.show', $emergency));
+        $response->assertStatus(200);
+        $response->assertSee('serviceSearchInput');
+        $response->assertSee('clearServiceSearch');
+        $response->assertSee('serviceSelectedCount');
+        $response->assertSee('noServicesFound');
+        $response->assertSee('ابحث باسم الخدمة الطبية أو التمريضية...');
+    }
 }

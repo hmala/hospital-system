@@ -473,13 +473,21 @@
                                             <div class="card-body p-4">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                     <label class="form-label fw-bold mb-0">اختر الخدمات المقدمة للحالة في الطوارئ:</label>
-                                                    @if(!empty($paidServiceMap) && count($paidServiceMap) > 0)
-                                                        <span class="badge bg-success-subtle text-success border border-success-subtle small">
-                                                            <i class="fas fa-lock me-1"></i> {{ count($paidServiceMap) }} خدمات مسددة في الكاشير
-                                                        </span>
-                                                    @endif
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span id="serviceSelectedCount" class="badge bg-success-subtle text-success border border-success-subtle small d-none">0 محدد</span>
+                                                        @if(!empty($paidServiceMap) && count($paidServiceMap) > 0)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                                                                <i class="fas fa-lock me-1"></i> {{ count($paidServiceMap) }} خدمات مسددة في الكاشير
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                                <div class="row g-2 border rounded p-3 bg-white" style="max-height: 290px; overflow-y: auto;">
+                                                <div class="input-group input-group-sm mb-2">
+                                                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                                    <input type="text" id="serviceSearchInput" class="form-control" placeholder="ابحث باسم الخدمة الطبية أو التمريضية...">
+                                                    <button class="btn btn-outline-secondary d-none" type="button" id="clearServiceSearch"><i class="fas fa-times"></i></button>
+                                                </div>
+                                                <div class="row g-2 border rounded p-3 bg-white" id="servicesContainer" style="max-height: 290px; overflow-y: auto;">
                                                     @php
                                                         $selectedServiceIds = $emergency->services->pluck('id')->toArray();
                                                     @endphp
@@ -488,16 +496,16 @@
                                                             $isPaid = isset($paidServiceMap[$service->id]);
                                                             $isSelected = in_array($service->id, $selectedServiceIds);
                                                         @endphp
-                                                        <div class="col-12">
+                                                        <div class="col-12 service-item">
                                                             <div class="form-check d-flex justify-content-between align-items-center p-2 rounded {{ $isPaid ? 'bg-success-subtle bg-opacity-25 border border-success-subtle' : ($isSelected ? 'bg-light border' : '') }}">
                                                                 <div>
                                                                     @if($isPaid)
                                                                         <input type="hidden" name="service_ids[]" value="{{ $service->id }}">
-                                                                        <input class="form-check-input" type="checkbox" checked disabled id="srv_{{ $service->id }}">
+                                                                        <input class="form-check-input service-checkbox" type="checkbox" checked disabled id="srv_{{ $service->id }}">
                                                                     @else
-                                                                        <input class="form-check-input" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
+                                                                        <input class="form-check-input service-checkbox" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
                                                                     @endif
-                                                                    <label class="form-check-label fw-bold {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
+                                                                    <label class="form-check-label fw-bold service-name {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
                                                                         {{ $service->name }}
                                                                         @if($isPaid)
                                                                             <span class="badge bg-success text-white ms-2" style="font-size: 0.72rem;">
@@ -512,6 +520,9 @@
                                                             </div>
                                                         </div>
                                                     @endforeach
+                                                    <div id="noServicesFound" class="col-12 text-muted small text-center py-3 d-none">
+                                                        <i class="fas fa-info-circle me-1"></i> لا توجد خدمات مطابقة للبحث
+                                                    </div>
                                                 </div>
                                                 <div class="alert alert-light border small text-muted mt-2 py-2 mb-0">
                                                     <i class="fas fa-shield-alt text-success me-1"></i> <strong>الضوابط المالية:</strong> الخدمات المسددة تظهر مقفلة لمنع حذفها المباشر من واجهة الطوارئ لحماية توازن قاصة الكاشير وصحة وصولات المريض. إذا رغب المريض في إلغاء خدمة مسددة واسترجاع قيمتها، يتم ذلك عبر إجراء الاسترجاع المالي (Refund) في الكاشير. أما الخدمات غير المسددة فيمكن إضافتها أو حذفها بحرية تامة.
@@ -2307,6 +2318,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelected();
     }
 
+    initLiveFilter('serviceSearchInput', 'clearServiceSearch', '.service-item', '.service-name', 'noServicesFound', 'serviceSelectedCount', '.service-checkbox');
     initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox');
     initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox');
 })();
