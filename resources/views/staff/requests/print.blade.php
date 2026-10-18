@@ -57,6 +57,28 @@
                 justify-content: center !important;
                 font-size: 12px !important;
             }
+            .header-top-row {
+                flex-direction: column !important;
+                gap: 8px !important;
+                text-align: center !important;
+            }
+            .hospital-logo-side, .hospital-title-side, .clinical-lab-center {
+                min-width: 0 !important;
+                text-align: center !important;
+            }
+            .hospital-logo-img {
+                height: 55px !important;
+            }
+            .hospital-name-ar {
+                font-size: 15px !important;
+            }
+            .clinical-lab-banner {
+                font-size: 20px !important;
+            }
+            .patient-info-grid {
+                grid-template-columns: 1fr !important;
+                gap: 4px !important;
+            }
         }
 
         /* Watermark Background */
@@ -125,6 +147,25 @@
             padding-top: var(--letterhead-top, 45mm) !important;
             padding-bottom: var(--letterhead-bottom, 25mm) !important;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* Ensure Public View always shows the full header, borders, and footer regardless of print mode */
+        body.is-public-report .report-header,
+        body.is-public-report.letterhead-mode .report-header,
+        body.is-public-report .decorative-border,
+        body.is-public-report.letterhead-mode .decorative-border,
+        body.is-public-report .corner-pattern,
+        body.is-public-report.letterhead-mode .corner-pattern,
+        body.is-public-report .hospital-contact-line,
+        body.is-public-report.letterhead-mode .hospital-contact-line,
+        body.is-public-report .report-footer-wrapper,
+        body.is-public-report.letterhead-mode .report-footer-wrapper {
+            display: block !important;
+        }
+
+        body.is-public-report.letterhead-mode .report-page {
+            padding-top: 16mm !important;
+            padding-bottom: 35mm !important;
         }
 
         /* Print Toolbar (Hidden during print) */
@@ -238,12 +279,12 @@
 
         .hospital-logo-side {
             text-align: left;
-            min-width: 180px;
+            min-width: 140px;
         }
 
         .hospital-logo-img {
-            height: 85px;
-            max-width: 180px;
+            height: 75px;
+            max-width: 150px;
             object-fit: contain;
         }
 
@@ -254,13 +295,13 @@
 
         .hospital-title-side {
             text-align: right;
-            min-width: 190px;
+            min-width: 180px;
         }
 
         .hospital-name-ar {
-            font-size: 12px;
-            font-weight: 700;
-            color: #1e3a5f;
+            font-size: 16.5px;
+            font-weight: 800;
+            color: #005a9c;
             font-family: 'Tajawal', 'Cairo', 'Tahoma', sans-serif;
             margin-bottom: 2px;
             direction: rtl;
@@ -268,20 +309,20 @@
         }
 
         .hospital-name-en {
-            font-size: 9.5px;
-            color: #555555;
-            font-weight: 600;
-            letter-spacing: 0.3px;
+            font-size: 11px;
+            color: #475569;
+            font-weight: 700;
+            letter-spacing: 0.4px;
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
             line-height: 1.2;
         }
 
         .clinical-lab-banner {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 30px;
+            font-size: 26px;
             font-weight: bold;
             font-style: italic;
-            color: #1e4b88;
+            color: #005a9c;
             letter-spacing: 0.5px;
         }
 
@@ -673,7 +714,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{{ !empty($isPublicView) ? 'is-public-report' : '' }}">
 
     @if(!empty($isPublicView))
         <!-- Public Patient Toolbar (Hidden during print) -->
@@ -904,7 +945,7 @@
             <div class="header-top-row">
                 <!-- Left: Hospital Logo (in place of Lab Icon badge) -->
                 <div class="hospital-logo-side">
-                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img">
+                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
                 </div>
 
                 <!-- Center: Clinical Laboratory Title -->
@@ -1231,6 +1272,12 @@
 
     <script>
         function setPrintMode(mode) {
+            @if(!empty($isPublicView))
+                // Always keep full header for patient/public report
+                document.body.classList.remove('letterhead-mode');
+                return;
+            @endif
+
             const body = document.body;
             const btnLetterhead = document.getElementById('btnModeLetterhead');
             const btnFull = document.getElementById('btnModeFull');
@@ -1249,7 +1296,7 @@
             }
 
             try {
-                localStorage.setItem('lab_print_mode', mode);
+                localStorage.setItem('lab_print_mode_v2', mode);
             } catch (e) {}
         }
 
@@ -1263,19 +1310,23 @@
 
         // Initialize user preference on load
         (function() {
-            let savedMode = 'letterhead';
-            let savedTop = 45;
-            try {
-                savedMode = localStorage.getItem('lab_print_mode') || 'letterhead';
-                savedTop = parseInt(localStorage.getItem('lab_print_top_margin')) || 45;
-            } catch (e) {}
+            @if(!empty($isPublicView))
+                setPrintMode('full');
+            @else
+                let savedMode = 'full'; // Default is FULL: with complete hospital header & logo
+                let savedTop = 45;
+                try {
+                    savedMode = localStorage.getItem('lab_print_mode_v2') || 'full';
+                    savedTop = parseInt(localStorage.getItem('lab_print_top_margin')) || 45;
+                } catch (e) {}
 
-            const topInput = document.getElementById('topMarginInput');
-            if (topInput) {
-                topInput.value = savedTop;
-            }
-            changeTopMargin(savedTop);
-            setPrintMode(savedMode);
+                const topInput = document.getElementById('topMarginInput');
+                if (topInput) {
+                    topInput.value = savedTop;
+                }
+                changeTopMargin(savedTop);
+                setPrintMode(savedMode);
+            @endif
         })();
     </script>
 </body>

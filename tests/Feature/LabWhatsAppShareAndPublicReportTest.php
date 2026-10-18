@@ -123,7 +123,11 @@ class LabWhatsAppShareAndPublicReportTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('عبدالله أحمد كاظم');
-        $response->assertSee('مستشفى الكفاءات الأهلي');
+        $response->assertSee('مستشفى الكفاءات الاهلي');
+        $response->assertSee('Al-Kafaat Private Hospital');
+        $response->assertSee('Clinical Laboratory');
+        $response->assertSee('images/1.jpg');
+        $response->assertSee('is-public-report');
         $response->assertSee('تحميل / حفظ كـ PDF');
     }
 
