@@ -330,6 +330,9 @@
                         <button type="button" class="btn btn-warning fw-bold px-3 py-2" onclick="doctorRecall()" id="btn-recall" style="display: none;">
                             <i class="fas fa-redo me-1"></i> إعادة المناداة
                         </button>
+                        <button type="button" class="btn btn-info text-white fw-bold px-3 py-2 shadow-sm" id="btn-emergency-consult" style="display: none;" onclick="openEmergencyConsultModal()">
+                            <i class="fas fa-file-medical me-1"></i> تسجيل رأي الاستشارة للطوارئ
+                        </button>
                         <button type="button" class="btn btn-primary fw-bold px-3 py-2" onclick="doctorStartConsultation()" id="btn-start-consult" style="display: none;">
                             <i class="fas fa-sign-in-alt me-1"></i> بدء الكشف
                         </button>
@@ -359,7 +362,7 @@
                             <th><i class="fas fa-user-injured me-2"></i>المريض</th>
                             <th><i class="fas fa-tag me-2"></i>نوع الحجز</th>
                             <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                            <th class="text-end" style="width: 140px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
+                            <th class="text-end" style="width: 210px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
                         </tr>
                     </thead>
                     <tbody id="doctor-station-waiting-list">
@@ -466,6 +469,11 @@
                                         <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-outline-primary">
                                             <i class="fas fa-eye"></i> عرض الملف
                                         </a>
+                                    @elseif($visit->appointment && $visit->appointment->emergency_id)
+                                        <button type="button" class="action-btn btn-danger fw-bold shadow-sm" 
+                                                onclick="openEmergencyConsultModal({{ $visit->appointment->id }}, '{{ addslashes(optional($visit->patient)->user->name ?? 'مريض طوارئ') }}', '{{ addslashes($visit->appointment->emergency->notes ?? $visit->chief_complaint ?? '') }}')">
+                                            <i class="fas fa-file-medical"></i> رأي الاستشارة
+                                        </button>
                                     @else
                                         <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
                                             <i class="fas fa-clipboard-check"></i> متابعة الكشف
@@ -643,6 +651,79 @@
     @endif
 </div>
 
+<!-- Modal تسجيل رأي الاستشارة لحالة الطوارئ -->
+<div class="modal fade" id="emergencyConsultResponseModal" tabindex="-1" aria-labelledby="emergencyConsultResponseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <form id="emergencyConsultResponseForm" method="POST" action="">
+                @csrf
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold" id="emergencyConsultResponseModalLabel">
+                        <i class="fas fa-ambulance me-2"></i>تسجيل رأي الاستشارة الطبية لحالة الطوارئ
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- معلومات الحالة والقادمة من الطوارئ -->
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body p-3">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">اسم المريض:</small>
+                                    <strong class="fs-6 text-dark" id="modal-patient-name">-</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">رقم الحالة / الدور:</small>
+                                    <span class="badge bg-danger" id="modal-queue-num">طوارئ</span>
+                                </div>
+                                <div class="col-12 mt-2" id="modal-emergency-details-box">
+                                    <div class="p-2 bg-white rounded border border-warning">
+                                        <small class="fw-bold text-danger d-block mb-1">
+                                            <i class="fas fa-notes-medical me-1"></i>طلب وملاحظات طبيب الطوارئ:
+                                        </small>
+                                        <div class="text-muted small" id="modal-emergency-notes">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- رأي الاستشاري والتوصيات -->
+                    <div class="mb-3">
+                        <label for="consultant_notes_input" class="form-label fw-bold text-dark">
+                            <i class="fas fa-user-md text-primary me-1"></i>
+                            رأي الاستشاري / الإجراء المتبع والتوصيات الطبية <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="consultant_notes_input" name="consultant_notes" rows="4" 
+                                  placeholder="اكتب التقييم التخصصي، خطة التدخل، الأدوية أو الإجراءات الفورية لحالة المريض..." required></textarea>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="consultant_recommendation_select" class="form-label fw-bold text-dark">
+                            <i class="fas fa-directions text-secondary me-1"></i>
+                            التوصية بالمسار العلاجي (اختياري)
+                        </label>
+                        <select class="form-select" id="consultant_recommendation_select" name="consultant_recommendation">
+                            <option value="emergency_treatment" selected>علاج تحفظي ومتابعة بقسم الطوارئ</option>
+                            <option value="requires_surgery">تحويل عاجل إلى صالة العمليات (Requires Surgery)</option>
+                            <option value="requires_admission">تحويل ودخول للرقود (Requires Admission)</option>
+                            <option value="discharge_safe">مستقر ويمكن تخريجه للمنزل (Safe for Discharge)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
+                        <i class="fas fa-save me-1"></i>حفظ وإرسال التقرير للطوارئ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @if(auth()->user()->isDoctor() && isset($doctor))
 <script>
     const currentDoctorId = {{ $doctor->id }};
@@ -666,7 +747,10 @@
 
                 const btnRecall = document.getElementById('btn-recall');
                 const btnStartConsult = document.getElementById('btn-start-consult');
+                const btnEmergencyConsult = document.getElementById('btn-emergency-consult');
                 const btnSkip = document.getElementById('btn-skip');
+
+                window.currentPatientData = cur;
 
                 if (cur) {
                     currentAppointmentId = cur.id;
@@ -684,8 +768,15 @@
                     }
 
                     btnRecall.style.display = 'inline-block';
-                    btnStartConsult.style.display = 'inline-block';
                     btnSkip.style.display = 'inline-block';
+
+                    if (cur.is_emergency) {
+                        btnEmergencyConsult.style.display = 'inline-block';
+                        btnStartConsult.style.display = 'none';
+                    } else {
+                        btnEmergencyConsult.style.display = 'none';
+                        btnStartConsult.style.display = 'inline-block';
+                    }
                 } else {
                     currentAppointmentId = null;
                     document.getElementById('doctor-station-current-num').textContent = 'الدور: -';
@@ -698,6 +789,7 @@
 
                     btnRecall.style.display = 'none';
                     btnStartConsult.style.display = 'none';
+                    btnEmergencyConsult.style.display = 'none';
                     btnSkip.style.display = 'none';
                 }
 
@@ -742,13 +834,18 @@
                                         <span class="status-badge status-pending"><i class="fas fa-clock"></i> ${item.status_text || 'في الانتظار'}</span>
                                     </td>
                                     <td class="text-end">
-                                        ${idx === 0 ? `
-                                            <button type="button" class="action-btn btn-success" onclick="doctorCallNext()">
-                                                <i class="fas fa-bullhorn"></i> استدعاء
-                                            </button>
-                                        ` : `
-                                            <span class="badge bg-light text-secondary border px-2 py-1">دور #${idx + 1}</span>
-                                        `}
+                                        <div class="d-flex align-items-center justify-content-end gap-1">
+                                            ${idx === 0 ? `
+                                                <button type="button" class="action-btn btn-success fw-bold shadow-sm" onclick="doctorCallSpecific(${item.id})" title="استدعاء صاحب الدور الحالي">
+                                                    <i class="fas fa-bullhorn"></i> استدعاء
+                                                </button>
+                                            ` : `
+                                                <button type="button" class="action-btn btn-outline-success fw-bold shadow-sm" onclick="doctorCallSpecific(${item.id})" title="تقديم دور هذا المريض واستدعاؤه للعيادة الآن">
+                                                    <i class="fas fa-bullhorn"></i> تقديم واستدعاء
+                                                </button>
+                                                <span class="badge bg-light text-secondary border px-2 py-1 small">دور #${idx + 1}</span>
+                                            `}
+                                        </div>
                                     </td>
                                 </tr>
                             `;
@@ -946,6 +1043,27 @@
         }
     }
 
+    async function doctorCallSpecific(appointmentId) {
+        try {
+            const res = await fetch(`${baseUrl}/queue/appointment/${appointmentId}/call-specific`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                syncDoctorQueue();
+            } else {
+                alert(data.message || 'حدث خطأ أثناء استدعاء المريض');
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+
     async function doctorRecall() {
         if (!currentAppointmentId) return;
         try {
@@ -1000,12 +1118,35 @@
                     'Accept': 'application/json'
                 }
             });
-            const data = await res.json();
-            if (data.success) {
-                syncDoctorQueue();
-            }
         } catch (e) {
             alert('حدث خطأ في الاتصال');
+        }
+    }
+
+    function openEmergencyConsultModal(appointmentId, name, notes) {
+        const aptId = appointmentId || currentAppointmentId;
+        if (!aptId) {
+            alert('يرجى استدعاء المريض أولاً');
+            return;
+        }
+
+        const patientData = window.currentPatientData || {};
+        const patientName = name || patientData.name || 'مريض طوارئ';
+        const emNotes = notes || patientData.emergency_notes || patientData.appointment_notes || 'لا توجد ملاحظات إضافية مرفقة';
+
+        document.getElementById('modal-patient-name').textContent = patientName;
+        document.getElementById('modal-queue-num').textContent = patientData.queue_number ? `#${patientData.queue_number}` : 'طوارئ';
+        document.getElementById('modal-emergency-notes').textContent = emNotes;
+
+        const form = document.getElementById('emergencyConsultResponseForm');
+        form.action = `${baseUrl}/doctor/consultation/${aptId}/respond`;
+
+        const modalEl = document.getElementById('emergencyConsultResponseModal');
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        } else if (typeof $ !== 'undefined') {
+            $('#emergencyConsultResponseModal').modal('show');
         }
     }
 

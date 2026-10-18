@@ -142,6 +142,63 @@ class DoctorVisitController extends Controller
 
         return redirect()->route('visits.index', $visit)->with('success', 'تم تحويل الموعد إلى زيارة بنجاح');
     }
+
+    /**
+     * تسجيل رأي الاستشاري وملاحظاته لحالة الطوارئ
+     */
+    public function respondToEmergencyConsultation(HttpRequest $request, Appointment $appointment)
+    {
+        $user = Auth::user();
+        $doctor = $user->doctor;
+
+        if (!$user->hasRole('admin') && !$doctor) {
+            abort(403, 'غير مصرح لك بتسجيل رأي الاستشارة');
+        }
+
+        if ($doctor && $appointment->doctor_id !== $doctor->id && !$user->hasRole('admin')) {
+            abort(403, 'هذا الموعد الاستشاري مخصص لطبيب آخر');
+        }
+
+        $request->validate([
+            'consultant_notes' => 'required|string|min:3|max:3000',
+            'consultant_recommendation' => 'nullable|string|max:100',
+        ]);
+
+        $emergency = $appointment->emergency;
+        if (!$emergency) {
+            return redirect()->back()->with('error', 'هذا الموعد غير مرتبط بحالة طوارئ');
+        }
+
+        $formattedDoctorName = $doctor?->user?->name ?? $user->name;
+        $timestamp = now()->format('Y-m-d H:i');
+        $newNoteEntry = "--- [رأي الاستشاري: د. {$formattedDoctorName} بتاريخ {$timestamp}] ---\n" . $request->consultant_notes;
+
+        $existingNotes = $emergency->consultant_notes;
+        $combinedNotes = $existingNotes ? $existingNotes . "\n\n" . $newNoteEntry : $newNoteEntry;
+
+        $updateData = [
+            'consultant_notes' => $combinedNotes,
+            'consultant_recommendation' => $request->consultant_recommendation ?: $emergency->consultant_recommendation,
+            'consultation_responded_at' => now(),
+            'consultant_doctor_id' => $doctor?->id ?? $emergency->consultant_doctor_id,
+        ];
+
+        $emergency->update($updateData);
+
+        // تحديث حالة الموعد
+        $appointment->update([
+            'status' => 'completed',
+            'notes' => ($appointment->notes ? $appointment->notes . "\n" : '') . "تم إبداء رأي الاستشارة: " . $request->consultant_notes,
+        ]);
+
+        // إذا كان هناك زيارة تم فتحها للموعد، إكمالها أيضاً
+        if ($appointment->visit) {
+            $appointment->visit->update(['status' => 'completed']);
+        }
+
+        return redirect()->back()->with('success', 'تم توثيق رأي وتوصيات الاستشارة بنجاح وحفظها في إضبارة الطوارئ للمريض');
+    }
+
     public function show(Visit $visit)
     {
         $user = Auth::user();
@@ -471,6 +528,14 @@ class DoctorVisitController extends Controller
                 ->get()
             : collect();
 
+        // تحديد نوع تأمين المريض الحالي بدقة (hi أو moi أو none)
+        $patientInsuranceType = $visit->appointment?->insurance_type 
+            ?: ($visit->patient?->insurance_type ?: 'none');
+
+        if (!in_array($patientInsuranceType, ['hi', 'moi']) && !empty($visit->patient?->covered_by_insurance)) {
+            $patientInsuranceType = 'hi';
+        }
+
         return view('doctors.visits.show', compact(
             'visit',
             'labTests',
@@ -491,7 +556,8 @@ class DoctorVisitController extends Controller
             'pastVisits',
             'pastSurgeries',
             'pastEmergencies',
-            'patientAppointments'
+            'patientAppointments',
+            'patientInsuranceType'
         ));
     }
     public function update(HttpRequest $request, Visit $visit)
@@ -896,6 +962,7 @@ class DoctorVisitController extends Controller
             'visit_id' => 'required|exists:visits,id',
             'type' => 'required|in:lab,radiology,pharmacy,nursing',
             'description' => 'nullable|string|max:1000',
+            'doctor_notes' => 'nullable|string|max:1000',
             'priority' => 'nullable|in:normal,urgent,emergency',
             'tests' => 'nullable|array',
             'tests.*' => 'string',
@@ -916,6 +983,10 @@ class DoctorVisitController extends Controller
             'description' => $request->description ?: 'طلب ' . ($request->type === 'lab' ? 'مختبر' : ($request->type === 'radiology' ? 'أشعة' : ($request->type === 'nursing' ? 'خدمات تمريضية' : 'صيدلية'))),
             'priority' => $request->priority ?: 'normal'
         ];
+
+        if ($request->filled('doctor_notes')) {
+            $details['doctor_notes'] = trim($request->doctor_notes);
+        }
 
         if ($request->type === 'lab' && $request->tests) {
             $details['tests'] = $request->tests;
@@ -940,12 +1011,21 @@ class DoctorVisitController extends Controller
             $details['radiology_types'] = $request->radiology_types;
             $details['radiology_type_ids'] = $request->radiology_types;
             
-            // إنشاء وصف يتضمن أسماء الأشعة وتحديد الفئة الفرعية (سونار / رنين / إيكو)
+            // استقبال وتخزين الأعضاء/المناطق المستهدفة لكل فحص (مثل: الصدر، الركبة)
+            $radiologyTargets = (array) $request->input('radiology_targets', []);
+            $details['radiology_targets'] = $radiologyTargets;
+
+            // إنشاء وصف يتضمن أسماء الأشعة والعضو المطلوب وتحديد الفئة الفرعية
             $radiologyTypeNames = [];
             foreach ($request->radiology_types as $typeId) {
                 $radiologyType = \App\Models\RadiologyType::find($typeId);
                 if ($radiologyType) {
-                    $radiologyTypeNames[] = $radiologyType->name;
+                    $targetPart = isset($radiologyTargets[$typeId]) ? trim($radiologyTargets[$typeId]) : null;
+                    $displayName = $radiologyType->name;
+                    if (!empty($targetPart)) {
+                        $displayName .= " [العضو: {$targetPart}]";
+                    }
+                    $radiologyTypeNames[] = $displayName;
                     $details['radiology_type_id'] = $typeId; // حفظ أول نوع لاستخدامه لاحقاً
 
                     if (!$detectedSubtype) {

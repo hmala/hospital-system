@@ -72,6 +72,8 @@ class UserLabTestGroupController extends Controller
             'infectious disease' => 'الأمراض المعدية (Infectious Diseases)',
             'microbiology' => 'الأحياء المجهرية (Microbiology)',
             'virology' => 'الفيروسات (Virology)',
+            'histopathology' => 'علم الأمراض النسيجي والخزعات (Histopathology)',
+            'pcr' => 'الفحوصات الجزيئية (PCR)',
         ];
 
         $labTests = \App\Models\LabTest::where('is_active', true)

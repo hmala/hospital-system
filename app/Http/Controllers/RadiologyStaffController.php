@@ -269,6 +269,7 @@ class RadiologyStaffController extends Controller
                     'subtype' => $r->subtype,
                     'doctor_name' => $r->visit?->doctor?->user?->name ?? 'الاستشارية',
                     'department_name' => $r->visit?->department?->name ?? 'العيادات',
+                    'doctor_notes' => $r->doctor_notes,
                     'created_time' => $r->created_at ? $r->created_at->format('H:i') : '—',
                     'is_paid' => $r->payment_status === 'paid',
                     'status' => $r->status,
@@ -544,7 +545,7 @@ class RadiologyStaffController extends Controller
         if ($user->hasRole('radiology_ct')) {
             return 'ct';
         }
-        if ($user->hasAnyRole(['radiology_general', 'radiology_staff'])) {
+        if ($user->hasRole('radiology_general')) {
             return 'radiology';
         }
         if ($user->hasRole('doctor') && $user->doctor) {
@@ -642,7 +643,37 @@ class RadiologyStaffController extends Controller
                 ->first();
         }
 
-        return view('radiology-staff.show', compact('request', 'resultData', 'radiologyRequest'));
+        // تحديد أنواع الأشعة المتاحة لهذا الموظف بناءً على تخصصه
+        $userCategory = $this->getRadiologyCategoryForUser($user);
+        $typesQuery = \App\Models\RadiologyType::where('is_active', true);
+
+        if (!$isAdmin && $userCategory !== null) {
+            $categoryMap = [
+                'radiology' => 'أشعة',
+                'general' => 'أشعة',
+                'ultrasound' => 'سونار',
+                'mri' => 'الرنين',
+                'ct' => 'مفراس',
+                'echo' => 'إيكو',
+            ];
+            $targetSubcategory = $categoryMap[$userCategory] ?? null;
+            if ($targetSubcategory) {
+                $typesQuery->where('subcategory', $targetSubcategory);
+            }
+        }
+
+        $availableRadiologyTypes = $typesQuery->orderBy('name')->get();
+        $availableRadiologyTypesArray = $availableRadiologyTypes->map(function($t) {
+            return [
+                'id' => $t->id,
+                'name' => $t->name,
+                'code' => $t->code ?? '',
+                'price' => (float)($t->price ?? 0),
+                'category' => $t->subcategory ?? 'أشعة',
+            ];
+        })->values()->toArray();
+
+        return view('radiology-staff.show', compact('request', 'resultData', 'radiologyRequest', 'availableRadiologyTypes', 'availableRadiologyTypesArray', 'userCategory'));
     }
 
     public function update(HttpRequest $httpRequest, MedicalRequest $request)
@@ -656,8 +687,8 @@ class RadiologyStaffController extends Controller
 
         $request->load(['visit']);
 
-        // 1. اختيار أنواع الأشعة (pending_service_selection)
-        if ($request->status === 'pending_service_selection' && $httpRequest->has('radiology_type_ids')) {
+        // 1. اختيار أنواع الأشعة (pending_service_selection أو عند عدم وجود فحوصات محددة بعد)
+        if ($httpRequest->has('radiology_type_ids') && ($request->status === 'pending_service_selection' || empty($request->radiology_names) || $httpRequest->has('update_services'))) {
             $this->authorizeMedicalRequestForUser($request, $user);
             $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
             if (!is_array($details)) $details = [];
@@ -854,5 +885,118 @@ class RadiologyStaffController extends Controller
         }
 
         return view('radiology.print', compact('radiology'));
+    }
+
+    /**
+     * إلغاء الطلب الخارجي المباشر لقسم الأشعة والتصوير
+     */
+    public function cancel(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
+            abort(403, 'غير مصرح لك بإلغاء هذا الطلب');
+        }
+
+        $this->authorizeMedicalRequestForUser($request, $user);
+
+        // 1. فحص هل الطلب صادر من طبيب استشاري داخل العيادات
+        if (!$request->isDirectExternal()) {
+            $msg = 'عذراً، هذا الطلب صادر عن طبيب استشاري داخل العيادات ولا يمكن إلغاؤه من قسم الأشعة. الإلغاء يتم حصراً من شاشة الطبيب المعالج.';
+            if ($httpRequest->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        // 2. فحص هل الفحص مكتمل ومعتمد بالفعل
+        if ($request->status === 'completed') {
+            $msg = 'لا يمكن إلغاء الطلب لأنه مكتمل ومعتمد بتقرير الأشعة بالفعل.';
+            if ($httpRequest->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        if ($request->status === 'cancelled') {
+            $msg = 'الطلب ملغي بالفعل.';
+            if ($httpRequest->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('info', $msg);
+        }
+
+        $wasPaid = ($request->payment_status === 'paid');
+
+        // 3. تنفيذ الإلغاء
+        $cancelReason = trim($httpRequest->input('cancel_reason', 'إلغاء الطلب المباشر من قسم الأشعة والتصوير بطلب من المريض'));
+
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?: []) : ($request->details ?? []);
+        $details['cancelled_at'] = now()->toDateTimeString();
+        $details['cancelled_by'] = $user->id;
+        $details['cancelled_by_name'] = $user->name;
+        $details['cancel_reason'] = $cancelReason;
+        $details['cancelled_after_payment'] = $wasPaid;
+        if ($wasPaid) {
+            $details['refund_status'] = 'pending_refund';
+            $receipt = $request->payments()->latest()->first();
+            if ($receipt) {
+                $details['paid_receipt_id'] = $receipt->id;
+                $details['paid_receipt_number'] = $receipt->receipt_number;
+                $details['paid_amount'] = (float)$receipt->amount;
+            }
+        }
+
+        $request->status = 'cancelled';
+        $request->payment_status = 'cancelled';
+        $request->details = $details;
+        $request->save();
+
+        // تحديث جدول radiology_requests إن وجد
+        if ($request->visit_id) {
+            \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
+                ->where('status', '!=', 'completed')
+                ->update(['status' => 'cancelled']);
+        }
+
+        // تحديث زيارة الاستعلامات المباشرة إذا لم يتبق أي طلبات نشطة أخرى
+        if ($request->visit && $request->isDirectExternal()) {
+            $activeCount = $request->visit->requests()
+                ->where('id', '!=', $request->id)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+            if ($activeCount === 0) {
+                $request->visit->status = 'cancelled';
+                $request->visit->save();
+            }
+        }
+
+        // تسجيل النشاط
+        $patientName = $request->visit?->patient?->name ?? 'مريض';
+        $paidNote = $wasPaid ? ' (مسدد مالياً - مستحق استرجاع في الكاشير)' : '';
+        \App\Services\UserActivityLogger::log(
+            action: 'cancel_external_radiology_request',
+            category: 'radiology',
+            description: "إلغاء طلب الأشعة والتصوير الخارجي للمريض: {$patientName} - طلب #{$request->id}{$paidNote} (السبب: {$cancelReason})",
+            subject: $request,
+            isSensitive: false,
+            properties: [
+                'cancel_reason' => $cancelReason,
+                'was_paid' => $wasPaid,
+            ]
+        );
+
+        if ($wasPaid) {
+            $successMsg = "تم إلغاء الطلب الخارجي #{$request->id} بنجاح. ⚠️ يرجى توجيه المريض إلى الكاشير لاسترداد المبلغ المسدد.";
+        } else {
+            $successMsg = "تم إلغاء الطلب الخارجي #{$request->id} بنجاح وإزالته من طابور الفحص والكاشير.";
+        }
+
+        if ($httpRequest->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $successMsg]);
+        }
+
+        return redirect()->route('radiology-staff.index')->with($wasPaid ? 'warning' : 'success', $successMsg);
     }
 }

@@ -182,6 +182,44 @@ class CashierController extends Controller
             'avg_daily' => $monthlyPayments->count() > 0 ? $monthlyPayments->sum('amount') / Carbon::now()->daysInMonth : 0,
         ];
 
+        // جلب طلبات الفحوصات الطبية الملغاة بعد السداد والمستحقة للاسترجاع (Refunds)
+        $pendingRefundQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user', 'payments'])
+            ->where('status', 'cancelled')
+            ->whereHas('payments', function ($q) {
+                $q->where('amount', '>', 0);
+            })
+            ->whereDoesntHave('payments', function ($q) {
+                $q->where('amount', '<', 0);
+            });
+
+        if ($dateFilter === 'previous') {
+            $pendingRefundQuery->whereDate('updated_at', '<', $today);
+        }
+
+        $pendingRefundRequests = $pendingRefundQuery
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        // جلب حالات الطوارئ الملغاة بعد السداد والمستحقة للاسترجاع (Emergency Refunds)
+        $pendingEmergencyRefundQuery = \App\Models\Emergency::with(['patient.user', 'emergencyPatient', 'doctor.user', 'payments'])
+            ->where('status', 'cancelled')
+            ->whereHas('payments', function ($q) {
+                $q->where('amount', '>', 0);
+            })
+            ->whereDoesntHave('payments', function ($q) {
+                $q->where('amount', '<', 0);
+            });
+
+        if ($dateFilter === 'previous') {
+            $pendingEmergencyRefundQuery->whereDate('updated_at', '<', $today);
+        }
+
+        $pendingEmergencyRefunds = $pendingEmergencyRefundQuery
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count();
+
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
 
@@ -189,10 +227,13 @@ class CashierController extends Controller
             'pendingAppointments', 
             'pendingMedicalRequests', 
             'pendingEmergencyPayments', 
+            'pendingRefundRequests',
+            'pendingEmergencyRefunds',
+            'pendingRefundCount',
             'todayStats', 
             'todayPayments', 
-            'monthlyStats',
-            'dateFilter',
+            'monthlyStats', 
+            'dateFilter', 
             'previousPendingCount'
         ));
     }
@@ -537,9 +578,18 @@ class CashierController extends Controller
         }
             $patient = optional($request->visit)->patient;
             $appointment = optional($request->visit)->appointment;
-            $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
+            $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+            
+            // شرط الحصانة: الطلبات الخارجية والزيارات المباشرة للمختبر والأشعة بدون إحالة استشاري تحاسب كاش نقدي كامل 100%
+            $isDirectVisit = empty($appointment) || in_array($request->visit?->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit']) || !empty($details['created_at_inquiry']));
+            if ($isDirectVisit && empty($appointment?->doctor_id)) {
+                $insuranceType = 'none';
+            } else {
+                $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
+            }
+
             $copayPercentage = (float)$httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
-            $cardNo = $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
+            $cardNo = ($insuranceType !== 'none') ? $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null) : null;
 
             $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
             $computedTotal = 0;
@@ -547,16 +597,20 @@ class CashierController extends Controller
             $computedInsuranceShare = 0;
             $hasCoveredItem = false;
 
+            $package = null;
             if ($request->type === 'lab') {
-                $labTestIds = $details['lab_test_ids'] ?? [];
-                if (empty($labTestIds) && !empty($details['package_id'])) {
-                    $package = \App\Models\Package::find($details['package_id']);
-                    if ($package) {
-                        $labTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
-                    }
-                }
-                if (!empty($labTestIds)) {
-                    foreach ($labTestIds as $testId) {
+                $packageId = $details['package_id'] ?? null;
+                $package = $packageId ? \App\Models\Package::find($packageId) : null;
+
+                if ($package) {
+                    $pkgPrice = (float)$package->price;
+                    $computedTotal += $pkgPrice;
+                    $computedPatientShare += $pkgPrice;
+
+                    $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                    $allTestIds = $details['lab_test_ids'] ?? [];
+                    $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                    foreach ($extraTestIds as $testId) {
                         $test = LabTest::find($testId);
                         if ($test) {
                             $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
@@ -566,15 +620,29 @@ class CashierController extends Controller
                             if ($p['is_covered']) $hasCoveredItem = true;
                         }
                     }
-                } elseif (!empty($details['tests'])) {
-                    foreach ($details['tests'] as $testName) {
-                        $test = LabTest::where('name', $testName)->orWhere('code', $testName)->first();
-                        if ($test) {
-                            $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
-                            $computedTotal += $p['total_amount'];
-                            $computedPatientShare += $p['patient_share'];
-                            $computedInsuranceShare += $p['insurance_share'];
-                            if ($p['is_covered']) $hasCoveredItem = true;
+                } else {
+                    $labTestIds = $details['lab_test_ids'] ?? [];
+                    if (!empty($labTestIds)) {
+                        foreach ($labTestIds as $testId) {
+                            $test = LabTest::find($testId);
+                            if ($test) {
+                                $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $computedTotal += $p['total_amount'];
+                                $computedPatientShare += $p['patient_share'];
+                                $computedInsuranceShare += $p['insurance_share'];
+                                if ($p['is_covered']) $hasCoveredItem = true;
+                            }
+                        }
+                    } elseif (!empty($details['tests'])) {
+                        foreach ($details['tests'] as $testName) {
+                            $test = LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                            if ($test) {
+                                $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $computedTotal += $p['total_amount'];
+                                $computedPatientShare += $p['patient_share'];
+                                $computedInsuranceShare += $p['insurance_share'];
+                                if ($p['is_covered']) $hasCoveredItem = true;
+                            }
                         }
                     }
                 }
@@ -617,7 +685,7 @@ class CashierController extends Controller
                 'claim_status' => $claimStatus,
                 'payment_method' => $httpRequest->payment_method,
                 'payment_type' => 'lab', // استخدام 'lab' بدلاً من 'request' لأن الـ enum لا يحتوي على 'request'
-                'description' => 'دفع رسوم طلب ' . $request->type . ' #' . $request->id,
+                'description' => !empty($package) ? ('دفع رسوم باقة: ' . $package->name . ' - طلب #' . $request->id) : ('دفع رسوم طلب ' . $request->type . ' #' . $request->id),
                 'notes' => $httpRequest->notes,
                 'paid_at' => Carbon::now()
             ]);
@@ -642,13 +710,60 @@ class CashierController extends Controller
 
                 // تحديث الموعد المرتبط إن وجد (حصراً لحجوزات السونار المباشرة الخالية من كشفية طبيب مستقلة ولم تدفع بعد)
                 if ($request->visit->appointment_id) {
-                    $linkedAppt = \App\Models\Appointment::find($request->visit->appointment_id);
+                    $linkedAppt = \App\Models\Appointment::with(['doctor.currentCommissionSetting', 'patient'])->find($request->visit->appointment_id);
                     if ($linkedAppt && empty($linkedAppt->payment_id) && (float)$linkedAppt->consultation_fee == 0) {
                         $linkedAppt->update([
                             'payment_status' => 'paid',
                             'status' => 'confirmed',
                             'payment_id' => $payment->id
                         ]);
+
+                        if (empty($payment->appointment_id)) {
+                            $payment->update(['appointment_id' => $linkedAppt->id]);
+                        }
+
+                        // إنشاء أو تحديث قيد إيرادات الاستشارية لحجز السونار الخارجي المباشر
+                        $doctor = $linkedAppt->doctor;
+                        $setting = $doctor?->currentCommissionSetting;
+                        $amount = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
+                        $docShare = 0;
+                        if ($setting && $amount > 0) {
+                            if ($setting->commission_type === 'fixed') {
+                                $isInsurance = in_array($payment->insurance_type, ['hi', 'moi']) || ($payment->insurance_share > 0);
+                                $fixed = $isInsurance && $setting->hi_fixed_amount > 0 
+                                    ? (float)$setting->hi_fixed_amount 
+                                    : (float)$setting->fixed_amount;
+                                $docShare = min($amount, $fixed);
+                            } elseif ($setting->commission_type === 'percentage') {
+                                $docShare = round($amount * ($setting->commission_value / 100), 2);
+                            }
+                        }
+                        $hospShare = max(0, round($amount - $docShare, 2));
+                        $percentage = $amount > 0 ? round(($docShare / $amount) * 100, 2) : 0;
+
+                        \App\Models\ConsultationRevenue::updateOrCreate(
+                            ['payment_id' => $payment->id],
+                            [
+                                'receipt_number' => $payment->receipt_number,
+                                'payment_method' => $payment->payment_method ?? 'cash',
+                                'payment_type' => 'ultrasound',
+                                'cashier_id' => $payment->cashier_id,
+                                'appointment_id' => $linkedAppt->id,
+                                'patient_id' => $linkedAppt->patient_id ?? $payment->patient_id,
+                                'doctor_id' => $doctor?->id,
+                                'department_id' => $linkedAppt->department_id,
+                                'service_type_id' => null,
+                                'examination_count' => 1,
+                                'total_amount' => $amount,
+                                'doctor_share' => $docShare,
+                                'hospital_share' => $hospShare,
+                                'doctor_percentage' => $percentage,
+                                'movement_type' => 'payment',
+                                'revenue_date' => $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString(),
+                                'paid_at' => $payment->paid_at ?? now(),
+                                'notes' => 'حجز سونار خارجي مباشر من الاستعلامات (طلب #' . $request->id . ')',
+                            ]
+                        );
                     }
                 }
                 \Log::info('Visit and linked appointment status handled after request payment');
@@ -737,6 +852,7 @@ class CashierController extends Controller
                     } else {
                         try {
                         // إنشاء سجل طوارئ
+                        $isEmergencyInsured = ($request->insurance_type && $request->insurance_type !== 'none');
                         $emergency = \App\Models\Emergency::create([
                             'patient_id' => $request->visit->patient_id,
                             'doctor_id' => $request->visit->doctor_id,
@@ -747,6 +863,8 @@ class CashierController extends Controller
                             'admission_time' => now(),
                             'status' => 'waiting',
                             'is_active' => true,
+                            'is_insured' => $isEmergencyInsured,
+                            'insurance_type' => $isEmergencyInsured ? $request->insurance_type : 'none',
                         ]);
                         
                         \Log::info('Created emergency record #' . $emergency->id . ' for request #' . $request->id);
@@ -774,6 +892,179 @@ class CashierController extends Controller
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
                 ->withInput();
+        }
+    }
+
+    /**
+     * معالجة استرجاع مبالغ الفحوصات الطبية الملغاة (مختبر / أشعة / سونار / رنين / مفراس / إيكو)
+     */
+    public function processRequestRefund(Request $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('process medical requests payments') && !$user->can('process refunds') && !$user->can('process payments') && !$user->hasRole('cashier')))) {
+            abort(403, 'غير مصرح لك بمعالجة استرجاع المبالغ الطبية');
+        }
+
+        // 1. التحقق من أن الطلب ملغي
+        if ($request->status !== 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن استرجاع المبلغ لأن الطلب الطبي غير ملغي.');
+        }
+
+        // 2. التحقق من المبالغ المدفوعة والمسترجعة مسبقاً
+        $totalPaid = (float) $request->payments()->where('amount', '>', 0)->sum('amount');
+        $totalAlreadyRefunded = abs((float) $request->payments()->where('amount', '<', 0)->sum('amount'));
+        $netRefundable = max(0, $totalPaid - $totalAlreadyRefunded);
+
+        if ($netRefundable <= 0) {
+            return redirect()->back()->with('error', 'لا يوجد رصيد مالي مسدد مستحق للاسترجاع لهذا الطلب.');
+        }
+
+        $httpRequest->validate([
+            'payment_method' => 'required|in:cash,card',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $originalPayment = $request->payments()->where('amount', '>', 0)->latest()->first();
+            $patientId = $request->visit?->patient_id ?? $originalPayment?->patient_id;
+
+            $typeName = match($request->type) {
+                'lab' => 'تحاليل المختبر',
+                'radiology' => 'الأشعة والتصوير',
+                default => 'الفحوصات الطبية',
+            };
+
+            $description = "استرجاع مالي للمريض: طلب {$typeName} ملغي #{$request->id}" .
+                ($originalPayment ? " (عن الوصل الأصلي #{$originalPayment->receipt_number})" : '');
+
+            // إنشاء سند دفع سالب (Refund)
+            $refundPayment = Payment::create([
+                'patient_id' => $patientId,
+                'cashier_id' => $user->id,
+                'request_id' => $request->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'amount' => -$netRefundable,
+                'total_amount' => -$netRefundable,
+                'patient_share' => -$netRefundable,
+                'insurance_share' => 0,
+                'insurance_type' => 'none',
+                'copay_percentage' => 0,
+                'claim_status' => 'none',
+                'payment_method' => $httpRequest->input('payment_method', 'cash'),
+                'payment_type' => $request->type === 'lab' ? 'lab' : 'radiology',
+                'description' => $description,
+                'notes' => $httpRequest->input('notes', 'استرجاع نقدي لطلب فحص خارجي ملغي'),
+                'paid_at' => now(),
+            ]);
+
+            // تحديث تفاصيل الطلب
+            $details = is_string($request->details) ? (json_decode($request->details, true) ?: []) : ($request->details ?? []);
+            $details['refund_status'] = 'refunded';
+            $details['refunded_at'] = now()->toDateTimeString();
+            $details['refunded_by'] = $user->id;
+            $details['refunded_by_name'] = $user->name;
+            $details['refund_payment_id'] = $refundPayment->id;
+            $details['refund_receipt_number'] = $refundPayment->receipt_number;
+            $details['refunded_amount'] = $netRefundable;
+            
+            $request->details = $details;
+            $request->save();
+
+            DB::commit();
+
+            $successMsg = "تم صرف واسترجاع مبلغ (" . number_format($netRefundable, 0) . " د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
+
+            return redirect()->route('cashier.index')
+                ->with('success', $successMsg)
+                ->with('payment_id', $refundPayment->id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error processing medical request refund: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * معالجة استرجاع مبالغ حالات الطوارئ الملغاة
+     */
+    public function processEmergencyRefund(Request $httpRequest, \App\Models\Emergency $emergency)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('process emergency payments') && !$user->can('process refunds') && !$user->can('process payments') && !$user->hasRole('cashier')))) {
+            abort(403, 'غير مصرح لك بمعالجة استرجاع مبالغ الطوارئ');
+        }
+
+        // 1. التحقق من أن حالة الطوارئ ملغاة
+        if ($emergency->status !== 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن استرجاع المبلغ لأن حالة الطوارئ غير ملغاة.');
+        }
+
+        // 2. التحقق من المبالغ المدفوعة والمسترجعة مسبقاً
+        $totalPaid = (float) $emergency->payments()->where('amount', '>', 0)->sum('amount');
+        $totalAlreadyRefunded = abs((float) $emergency->payments()->where('amount', '<', 0)->sum('amount'));
+        $netRefundable = max(0, $totalPaid - $totalAlreadyRefunded);
+
+        if ($netRefundable <= 0) {
+            return redirect()->back()->with('error', 'لا يوجد رصيد مالي مسدد مستحق للاسترجاع لهذه الحالة.');
+        }
+
+        $httpRequest->validate([
+            'payment_method' => 'required|in:cash,card',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $originalPayment = $emergency->payments()->where('amount', '>', 0)->latest()->first();
+            $patientId = $emergency->patient_id ?? $originalPayment?->patient_id;
+
+            $description = "استرجاع مالي للمريض: حالة طوارئ ملغاة #{$emergency->id}" .
+                ($originalPayment ? " (عن الوصل الأصلي #{$originalPayment->receipt_number})" : '');
+
+            // إنشاء سند دفع سالب (Refund)
+            $refundPayment = Payment::create([
+                'patient_id' => $patientId,
+                'cashier_id' => $user->id,
+                'emergency_id' => $emergency->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'amount' => -$netRefundable,
+                'total_amount' => -$netRefundable,
+                'patient_share' => -$netRefundable,
+                'insurance_share' => 0,
+                'insurance_type' => 'none',
+                'copay_percentage' => 0,
+                'claim_status' => 'none',
+                'payment_method' => $httpRequest->input('payment_method', 'cash'),
+                'payment_type' => 'emergency',
+                'description' => $description,
+                'notes' => $httpRequest->input('notes', 'استرجاع نقدي لحالة طوارئ ملغاة'),
+                'paid_at' => now(),
+            ]);
+
+            // إلغاء أي مطالبات ضمان معلقة على هذه الحالة
+            $emergency->payments()->where('claim_status', 'pending')->update(['claim_status' => 'cancelled']);
+
+            // تحديث حالة دفع الطوارئ
+            $emergency->update([
+                'payment_status' => 'refunded',
+            ]);
+
+            DB::commit();
+
+            $successMsg = "تم صرف واسترجاع مبلغ (" . number_format($netRefundable, 0) . " د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
+
+            return redirect()->route('cashier.receipt', $refundPayment->id)
+                ->with('success', $successMsg)
+                ->with('payment_id', $refundPayment->id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error processing emergency refund: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: ' . $e->getMessage());
         }
     }
 
@@ -1738,6 +2029,8 @@ class CashierController extends Controller
             'emergency.services',
             'emergency.labRequests.labTests',
             'emergency.radiologyRequests.radiologyTypes',
+            'emergency.appointments.doctor.user',
+            'emergency.appointments.department',
             'appointment.doctor.user'
         ]);
 
@@ -1849,13 +2142,79 @@ class CashierController extends Controller
                 'payment_status' => $paymentStatus,
             ]);
 
-            // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة
-            $payment->emergency->appointments()
+            // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة واحتساب حصص الأطباء الاستشاريين
+            $emergencyAppointments = $payment->emergency->appointments()
                 ->where('payment_status', 'pending')
-                ->update([
+                ->where('status', '!=', 'cancelled')
+                ->get();
+
+            foreach ($emergencyAppointments as $appointment) {
+                $appointment->update([
                     'payment_status' => 'paid',
                     'payment_id' => $payment->id,
                 ]);
+
+                if ($appointment->doctor_id) {
+                    $fee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 50000);
+                    // حصة استشارة الطوارئ: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى (نسبة 80% / 20%)
+                    $doctorShare = ($fee == 50000.0) ? 40000.0 : round($fee * 0.80, 2);
+                    $hospitalShare = round($fee - $doctorShare, 2);
+                    $percentage = round(($doctorShare / $fee) * 100, 2);
+
+                    // قيد إيراد استشارية في ConsultationRevenue
+                    \App\Models\ConsultationRevenue::updateOrCreate(
+                        [
+                            'appointment_id' => $appointment->id,
+                        ],
+                        [
+                            'payment_id' => $payment->id,
+                            'receipt_number' => $payment->receipt_number,
+                            'payment_method' => $payment->payment_method ?? 'cash',
+                            'payment_type' => 'emergency_consultation',
+                            'cashier_id' => $user->id,
+                            'patient_id' => $appointment->patient_id,
+                            'doctor_id' => $appointment->doctor_id,
+                            'department_id' => $appointment->department_id,
+                            'service_type_id' => null,
+                            'examination_count' => 1,
+                            'total_amount' => $fee,
+                            'doctor_share' => $doctorShare,
+                            'hospital_share' => $hospitalShare,
+                            'doctor_percentage' => $percentage,
+                            'movement_type' => 'payment',
+                            'revenue_date' => ($payment->paid_at ?? now())->toDateString(),
+                            'paid_at' => $payment->paid_at ?? now(),
+                            'notes' => 'استشارة طوارئ لحالة #' . $payment->emergency_id . ($appointment->reason ? ' (' . $appointment->reason . ')' : ''),
+                            'transaction_reference' => $payment->receipt_number,
+                        ]
+                    );
+
+                    // قيد مستحقات الطبيب في DoctorDue
+                    \App\Models\DoctorDue::updateOrCreate(
+                        [
+                            'doctor_id' => $appointment->doctor_id,
+                            'payment_id' => $payment->id,
+                        ],
+                        [
+                            'amount' => $doctorShare,
+                            'status' => 'pending',
+                            'notes' => 'مستحقات استشارة طوارئ لحالة #' . $payment->emergency_id . ' (إيصال ' . $payment->receipt_number . ')',
+                        ]
+                    );
+
+                    // مزامنة وتحديث رصيد حساب الطبيب
+                    $doctorAccount = \App\Models\DoctorFinancialAccount::firstOrCreate(
+                        ['doctor_id' => $appointment->doctor_id],
+                        ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+                    );
+                    $totalEarned = (float) \App\Models\DoctorDue::where('doctor_id', $appointment->doctor_id)->sum('amount');
+                    $totalPaid = (float) ($doctorAccount->total_paid ?? 0);
+                    $doctorAccount->total_earned = $totalEarned;
+                    $doctorAccount->balance = round($totalEarned - $totalPaid, 2);
+                    $doctorAccount->last_paid_at = $payment->paid_at ?? now();
+                    $doctorAccount->save();
+                }
+            }
 
             DB::commit();
 

@@ -95,6 +95,19 @@ class HospitalTreasuryController extends Controller
 
         $periodInflow = (float) (clone $basePeriodQuery)->inflow()->sum('amount');
         $periodOutflow = (float) (clone $basePeriodQuery)->outflow()->sum('amount');
+
+        // فصل المبالغ المسترجعة للمرضى عن باقي المصروفات التشغيلية ومستحقات الأطباء
+        $refundQuery = (clone $basePeriodQuery)->outflow()->where(function ($q) {
+            $q->where('category', 'refund')
+              ->orWhere('description', 'like', '%استرجاع%')
+              ->orWhere('notes', 'like', '%استرجاع%');
+        });
+        $periodRefunds = (float) $refundQuery->sum('amount');
+        $periodRefundsCount = (int) $refundQuery->count();
+
+        // المصروفات الفعلية (تشغيلي، مشتريات، أطباء) باستثناء مسترجعات المرضى
+        $periodExpenses = max(0.0, $periodOutflow - $periodRefunds);
+
         $periodDoctorPayouts = (float) (clone $basePeriodQuery)->where('category', 'doctor_payout')->sum('amount');
         $periodPurchases = (float) (clone $basePeriodQuery)->where('category', 'purchase')->sum('amount');
         $periodOperational = (float) (clone $basePeriodQuery)->whereIn('category', [
@@ -251,7 +264,11 @@ class HospitalTreasuryController extends Controller
         // استعلام كشوفات وإيرادات الاستشارية المحصلة (كاش مقابل ضمان) مفصلة بين نقد الدرج ومطالبات الضمان
         $revQuery = DB::table('consultation_revenues')
             ->leftJoin('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id')
-            ->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
+            ->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id')
+            ->where(function ($q) {
+                $q->whereNull('appointments.id')
+                  ->orWhere('appointments.status', '!=', 'cancelled');
+            });
         if ($request->filled('from_date')) {
             $revQuery->whereDate('consultation_revenues.revenue_date', '>=', $request->from_date);
         }
@@ -274,7 +291,14 @@ class HospitalTreasuryController extends Controller
         // ج) استعلام تحويلات الفحوصات التشخيصية (مختبر وأشعة) الناتجة عن زيارات أطباء الاستشارية
         $referralReqQuery = DB::table('requests')
             ->join('visits', 'requests.visit_id', '=', 'visits.id')
-            ->whereNotNull('visits.doctor_id');
+            ->leftJoin('appointments', 'visits.appointment_id', '=', 'appointments.id')
+            ->whereNotNull('visits.doctor_id')
+            ->where('requests.status', '!=', 'cancelled')
+            ->where('visits.status', '!=', 'cancelled')
+            ->where(function ($q) {
+                $q->whereNull('appointments.id')
+                  ->orWhere('appointments.status', '!=', 'cancelled');
+            });
         if ($request->filled('from_date')) {
             $referralReqQuery->whereDate('requests.created_at', '>=', $request->from_date);
         }
@@ -298,7 +322,8 @@ class HospitalTreasuryController extends Controller
         }
 
         // د) استعلام تحويلات العمليات الجراحية
-        $surgQuery = DB::table('surgeries');
+        $surgQuery = DB::table('surgeries')
+            ->where('status', '!=', 'cancelled');
         if ($request->filled('from_date')) {
             $surgQuery->whereDate('created_at', '>=', $request->from_date);
         }
@@ -428,6 +453,9 @@ class HospitalTreasuryController extends Controller
             'totalAllTimeOutflow',
             'periodInflow',
             'periodOutflow',
+            'periodRefunds',
+            'periodRefundsCount',
+            'periodExpenses',
             'periodDoctorPayouts',
             'periodPurchases',
             'periodOperational',

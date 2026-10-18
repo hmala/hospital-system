@@ -136,6 +136,34 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- التوقيع اليدوي المعتمد -->
+                            <div class="card border-success mt-3 shadow-sm">
+                                <div class="card-header bg-success text-white text-center py-2">
+                                    <h6 class="mb-0 small fw-bold"><i class="fas fa-signature me-1"></i> التوقيع اليدوي المعتمد</h6>
+                                </div>
+                                <div class="card-body text-center p-3">
+                                    @php
+                                        $showSigSrc = $doctor->signature_data_uri ?: ($doctor->signature && file_exists(public_path($doctor->signature)) ? route('doctors.signature', $doctor) : null);
+                                    @endphp
+                                    @if($showSigSrc)
+                                        <div class="p-2 rounded mb-2" style="background: repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 12px 12px; border: 1px dashed #28a745;">
+                                            <img src="{{ $showSigSrc }}" alt="توقيع الطبيب" style="max-height: 80px; max-width: 100%; object-fit: contain;">
+                                        </div>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                                            <i class="fas fa-check-circle me-1"></i> يظهر في تقارير الطوارئ والتقارير الطبية
+                                        </span>
+                                    @else
+                                        <div class="text-muted small py-2">
+                                            <i class="fas fa-file-signature fa-2x mb-2 d-block opacity-50"></i>
+                                            لم يتم رفع توقيع لهذا الطبيب بعد
+                                        </div>
+                                        <a href="{{ route('doctors.edit', $doctor) }}" class="btn btn-outline-success btn-sm mt-1">
+                                            <i class="fas fa-upload me-1"></i> رفع وتفريغ التوقيع
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -168,6 +168,12 @@ $age = $patient?->age ?? null;
                         </a>
                     @endif
 
+                    @if($request->isDirectExternal() && !in_array($request->status, ['completed', 'cancelled']))
+                        <button type="button" class="btn btn-outline-danger fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#cancelExternalLabModal">
+                            <i class="fas fa-ban me-1"></i> إلغاء الطلب الخارجي
+                        </button>
+                    @endif
+
                     <a href="{{ route('lab.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i> القائمة
                     </a>
@@ -320,11 +326,31 @@ $age = $patient?->age ?? null;
         </div>
     </div>
 
+    @if(!empty($request->doctor_notes))
+        <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 rounded-3 mb-3 p-3 shadow-xs">
+            <div class="d-flex align-items-center gap-2">
+                <div class="badge bg-warning text-dark p-2 rounded-circle fs-6">
+                    <i class="fas fa-sticky-note"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark mb-1">
+                        <i class="fas fa-user-md text-warning me-1"></i> ملاحظات وتوجيهات الطبيب المحول:
+                    </h6>
+                    <div class="text-dark fw-semibold fs-6">
+                        {{ $request->doctor_notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- 3. قسم إضافة تحاليل إضافية (Append Tests Collapsible) -->
     @php
         $showAppendSection = request()->query('append') == '1';
         $currentTestIds = array_map('intval', $requestDetails['lab_test_ids'] ?? []);
         $favorites = \App\Models\UserLabTestStat::getFavoritesForUser(auth()->id());
+        $packages = $packages ?? \App\Models\Package::where('is_active', true)->with('labTests')->orderBy('name')->get();
+        $userGroups = $userGroups ?? \App\Models\UserLabTestGroup::where('user_id', auth()->id())->with('labTests')->orderBy('name')->get();
     @endphp
 
     @if(!$isBloodBankRequest && in_array($request->status, ['pending_service_selection', 'pending', 'in_progress', 'completed']) && ($showAppendSection || count($testsList) == 0))
@@ -340,12 +366,79 @@ $age = $patient?->age ?? null;
                     @endif
                 </div>
                 <div class="card-body p-3">
-                    <form action="{{ route('staff.lab-requests.append-tests', $request) }}" method="POST">
+                    <form action="{{ route('staff.lab-requests.append-tests', $request) }}" method="POST" id="appendLabTestsForm">
                         @csrf
+                        <input type="hidden" name="package_id" id="selectedPackageId" value="">
+
                         <div class="alert alert-info py-2 px-3 mb-3 small">
                             <i class="fas fa-info-circle me-1"></i>
-                            {{ count($testsList) == 0 ? 'هذا الطلب بانتظار تحديد الفحوصات. يرجى اختيار التحاليل المطلوبة للمريض من القائمة أدناه أو البحث عنها ثم الضغط على زر الحفظ.' : 'سيتم إدراج التحاليل المختارة إلى الطلب الحالي مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.' }}
+                            {{ count($testsList) == 0 ? 'هذا الطلب بانتظار تحديد الفحوصات. يمكنك اختيار باقة طبية كاملة (بكج) أو اختيار من مجموعات المفضلات أو تحديد الفحوصات يدوياً ثم الضغط على زر الحفظ.' : 'سيتم إدراج التحاليل المختارة أو الباقة الطبية إلى الطلب الحالي مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.' }}
                         </div>
+
+                        {{-- 1. قسم باقات المختبر الطبية (البكجات Packages) --}}
+                        @if(isset($packages) && $packages->count() > 0)
+                        <div class="mb-3 p-3 bg-light rounded border border-primary border-opacity-25 shadow-xs">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold small text-primary d-flex align-items-center gap-1">
+                                    <i class="fas fa-boxes text-primary"></i> باقات المختبر الطبية (البكجات Packages):
+                                </span>
+                                <span class="text-muted small" style="font-size: 0.72rem;">اختر باقة لإضافة تحاليلها وسعرها دفعة واحدة</span>
+                            </div>
+                            <!-- عرض الباقات في صف واحد أفقي أنيق -->
+                            <div class="d-flex flex-nowrap gap-2 overflow-auto py-1 px-1 mb-2" style="scrollbar-width: thin;">
+                                @foreach($packages as $pkg)
+                                    @php
+                                        $pkgTestIds = $pkg->labTests->pluck('id')->toArray();
+                                    @endphp
+                                    <div class="card flex-shrink-0 border package-card p-2 position-relative bg-white shadow-xs"
+                                         data-package-id="{{ $pkg->id }}"
+                                         data-package-name="{{ $pkg->name }}"
+                                         data-test-ids="{{ json_encode($pkgTestIds) }}"
+                                         style="width: 230px; cursor: pointer; transition: all 0.2s ease; border-radius: 8px;">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <strong class="text-dark small text-truncate" title="{{ $pkg->name }}" style="max-width: 140px;">
+                                                <i class="fas fa-box text-primary me-1"></i>{{ $pkg->name }}
+                                            </strong>
+                                            <span class="badge bg-primary text-white" style="font-size: 0.68rem;">{{ count($pkgTestIds) }} تحاليل</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-auto pt-1 border-top">
+                                            <span class="fw-bold text-success small" style="font-size: 0.8rem;">{{ number_format($pkg->price) }} IQD</span>
+                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold select-package-btn" style="font-size: 0.7rem;">
+                                                <i class="fas fa-check me-1"></i> اختيار
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div id="selectedPackageAlert" class="alert alert-success py-1 px-3 mt-1 mb-2 small d-none d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-check-circle me-1"></i> تم اختيار باقة: <strong id="selectedPackageName"></strong> وتم تفعيل تحاليلها في القائمة.</span>
+                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" id="clearSelectedPackage">إلغاء الباقة</button>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- 2. قسم مجموعات المفضلات (User Lab Test Groups) --}}
+                        @if(isset($userGroups) && $userGroups->count() > 0)
+                        <div class="mb-3">
+                            <span class="fw-bold small text-dark d-block mb-1">
+                                <i class="fas fa-layer-group text-warning me-1"></i> مجموعات المفضلات الخاصة بي:
+                            </span>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach($userGroups as $group)
+                                    @php
+                                        $grpTestIds = $group->labTests->pluck('id')->toArray();
+                                    @endphp
+                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark py-1 px-2 group-select-btn" 
+                                            data-test-ids="{{ json_encode($grpTestIds) }}" 
+                                            style="font-size: 0.8rem;" 
+                                            title="تحديد كافة تحاليل هذه المجموعة">
+                                        <i class="fas fa-star text-warning me-1"></i>{{ $group->name }}
+                                        <span class="badge bg-secondary-subtle text-dark ms-1">({{ count($grpTestIds) }})</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
 
                         @php
                             $favoriteIds = $favorites->pluck('lab_test_id')->toArray();
@@ -353,7 +446,7 @@ $age = $patient?->age ?? null;
 
                         @if($favorites->isNotEmpty())
                         <div class="mb-3">
-                            <span class="fw-bold small text-dark d-block mb-1"><i class="fas fa-star text-warning me-1"></i> مفضلاتي:</span>
+                            <span class="fw-bold small text-dark d-block mb-1"><i class="fas fa-star text-warning me-1"></i> مفضلاتي الفردية:</span>
                             <div class="d-flex flex-wrap gap-1">
                                 @foreach($favorites as $stat)
                                     @php
@@ -564,22 +657,34 @@ $age = $patient?->age ?? null;
                                                 $labTestObj = $labTestMap[$test] ?? null;
                                                 $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                 $hasSpecificAttachment = !empty($testAttachments[$test]);
+                                                
+                                                // تحديد نمط إدخال النتائج (افتراضياً: فحص رقمي فردي إلا إذا كان له قيم فرعية فيكون مرفق ما لم يحدد خلاف ذلك)
+                                                $entryType = $labTestObj?->result_entry_type;
+                                                if (empty($entryType)) {
+                                                    $entryType = $hasSubTests ? \App\Models\LabTest::ENTRY_TYPE_ATTACHMENT : \App\Models\LabTest::ENTRY_TYPE_SINGLE;
+                                                }
                                             @endphp
 
-                                            @if($hasSubTests)
-                                                {{-- فحص مركب: يعتمد على تقرير الجهاز المرفق --}}
+                                            @if($entryType === \App\Models\LabTest::ENTRY_TYPE_ATTACHMENT || ($entryType === \App\Models\LabTest::ENTRY_TYPE_SUBTESTS && !$hasSubTests))
+                                                {{-- فحص يعتمد حصراً على تقرير الجهاز المرفق --}}
                                                 <tr class="table-info bg-opacity-10">
                                                     <td class="text-center text-muted small fw-bold">{{ $index + 1 }}</td>
                                                     <td>
                                                         <div class="d-flex align-items-center gap-2">
                                                             <i class="{{ $testIcon }}"></i>
                                                             <strong class="text-dark">{{ $test }}</strong>
-                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.72rem;">
-                                                                <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
-                                                            </span>
+                                                            @if($hasSubTests)
+                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.72rem;">
+                                                                    <i class="fas fa-layer-group me-1"></i> فحص مركب ({{ $labTestObj->subTests->count() }} فرعي)
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle ms-1" style="font-size: 0.72rem;">
+                                                                    <i class="fas fa-file-medical-alt me-1"></i> مرفق تقرير جهاز
+                                                                </span>
+                                                            @endif
                                                         </div>
                                                         <small class="text-muted d-block mt-1">
-                                                            <i class="fas fa-info-circle me-1"></i> تتم قراءة كافة المعاملات والرسومات البيانية من الملف المرفق
+                                                            <i class="fas fa-info-circle me-1"></i> تعتمد قراءة نتائج هذا الفحص على التقرير أو الرسم البياني المرفق
                                                         </small>
                                                     </td>
                                                     <td colspan="4">
@@ -619,6 +724,106 @@ $age = $patient?->age ?? null;
                                                         @endif
                                                     </td>
                                                 </tr>
+                                            @elseif(($entryType === \App\Models\LabTest::ENTRY_TYPE_SUBTESTS || $entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE) && $hasSubTests)
+                                                {{-- فحص يحتوي قيماً فرعية مفصلة (أو نمط مرن: قيم فرعية + إمكانية إرفاق تقرير) --}}
+                                                <tr class="table-secondary bg-opacity-25 border-top border-bottom">
+                                                    <td class="text-center fw-bold">{{ $index + 1 }}</td>
+                                                    <td colspan="5">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="{{ $testIcon }} text-primary"></i>
+                                                            <strong class="text-dark fs-6">{{ $test }}</strong>
+                                                            <span class="badge" style="background-color: #6f42c1; color: white; font-size: 0.72rem;">
+                                                                <i class="fas fa-list-ol me-1"></i> قيم فرعية ({{ $labTestObj->subTests->count() }} باراميتر)
+                                                            </span>
+                                                            @if($entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE)
+                                                                <span class="badge bg-success-subtle text-success border border-success ms-1" style="font-size: 0.7rem;">
+                                                                    <i class="fas fa-random me-1"></i> نمط مرن (إدخال قيم + مرفق تقرير)
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        {{-- في النمط المرن أو مع وجود تقرير مخصص --}}
+                                                        @if($hasSpecificAttachment)
+                                                            <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
+                                                                <a href="{{ route('lab.attachment', ['request' => $request, 'test' => $test]) }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span>معاينة التقرير</span>
+                                                                </a>
+                                                                <label class="btn btn-xs btn-outline-danger rounded-circle p-0 mb-0 d-inline-flex align-items-center justify-content-center" style="width: 22px; height: 22px; cursor: pointer;" title="حذف هذا المرفق عند الحفظ">
+                                                                    <input type="checkbox" name="remove_test_attachment[{{ $test }}]" value="1" class="d-none" onchange="this.checked ? (this.closest('label').classList.add('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.add('border-danger', 'bg-danger-subtle')) : (this.closest('label').classList.remove('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.remove('border-danger', 'bg-danger-subtle'))">
+                                                                    <i class="fas fa-times" style="font-size: 0.65rem;"></i>
+                                                                </label>
+                                                            </div>
+                                                        @else
+                                                            <div class="pill-upload-wrapper d-inline-block">
+                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="إرفاق تقرير إضافي اختياري">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span class="pill-text fw-semibold">مرفق (اختياري)</span>
+                                                                    <input type="file" name="test_attachments[{{ $test }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
+                                                                </label>
+                                                                <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-sm" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-check-circle"></i>
+                                                                    <span class="pill-filename text-truncate fw-bold" style="max-width: 110px;"></span>
+                                                                    <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                {{-- صفوف الباراميترات الفرعية --}}
+                                                @foreach($labTestObj->subTests as $subIdx => $subTest)
+                                                    @php
+                                                        $savedSubVal = $dbResults[$subTest->name]->value ?? '';
+                                                        if ($savedSubVal === '' && isset($savedTestResults[$subTest->name])) {
+                                                            $savedSubVal = is_array($savedTestResults[$subTest->name]) ? ($savedTestResults[$subTest->name]['value'] ?? '') : $savedTestResults[$subTest->name];
+                                                        }
+                                                    @endphp
+                                                    <tr class="test-row subtest-item-row" data-test="{{ $subTest->name }}"
+                                                        data-ref-min="{{ $subTest->ref_min }}"
+                                                        data-ref-max="{{ $subTest->ref_max }}"
+                                                        style="background-color: rgba(248, 249, 250, 0.7);">
+                                                        <td class="text-center text-muted small font-monospace" style="font-size: 0.75rem;">
+                                                            {{ $index + 1 }}.{{ $subIdx + 1 }}
+                                                        </td>
+                                                        <td class="ps-4">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="text-muted small"><i class="fas fa-level-down-alt fa-rotate-90 text-primary"></i></span>
+                                                                <span class="fw-semibold text-dark">{{ $subTest->name }}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text"
+                                                                   class="form-control form-control-sm test-value font-monospace fw-bold"
+                                                                   name="test_results[{{ $subTest->name }}][value]"
+                                                                   value="{{ old('test_results.' . $subTest->name . '.value', $savedSubVal) }}"
+                                                                   placeholder="أدخل النتيجة..."
+                                                                   data-test="{{ $subTest->name }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
+                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
+                                                        </td>
+                                                        <td class="text-muted small fw-semibold">{{ $subTest->unit ?: '-' }}</td>
+                                                        <td>
+                                                            @if(!empty($subTest->reference_range))
+                                                                <span class="badge bg-white text-dark border font-monospace">{{ $subTest->reference_range }}</span>
+                                                            @else
+                                                                <span class="text-muted small">—</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="result-flag">
+                                                                <i class="fas fa-circle text-muted small"></i>
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center text-muted small" style="font-size: 0.72rem;">
+                                                            —
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
                                             @else
                                                 {{-- فحص رقمي فردي --}}
                                                 @php
@@ -950,25 +1155,162 @@ function initializeLabResults() {
 document.addEventListener('DOMContentLoaded', function() {
     initializeLabResults();
 
-    // بحث سريع في إضافة التحاليل
+    // بحث سريع متقدم في إضافة التحاليل مع دعم الحروف العربية وإخفاء المجموعات الفارغة
     const appendSearch = document.getElementById('appendTestSearch');
+    const clearAppend = document.getElementById('clearAppendSearch');
+
+    function normalizeArabic(text) {
+        if (!text) return '';
+        return text
+            .toString()
+            .toLowerCase()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .trim();
+    }
+
     if (appendSearch) {
         appendSearch.addEventListener('input', function() {
-            const term = this.value.toLowerCase().trim();
-            document.querySelectorAll('.append-test-item').forEach(item => {
-                const label = item.textContent.toLowerCase();
-                item.style.display = label.includes(term) ? '' : 'none';
+            const term = normalizeArabic(this.value);
+
+            document.querySelectorAll('.append-test-group').forEach(group => {
+                let hasVisible = false;
+                group.querySelectorAll('.append-test-item').forEach(item => {
+                    const label = normalizeArabic(item.textContent);
+                    const match = !term || label.includes(term);
+                    item.style.display = match ? '' : 'none';
+                    if (match) hasVisible = true;
+                });
+                group.style.display = hasVisible ? '' : 'none';
             });
         });
     }
 
-    const clearAppend = document.getElementById('clearAppendSearch');
     if (clearAppend && appendSearch) {
         clearAppend.addEventListener('click', function() {
             appendSearch.value = '';
             appendSearch.dispatchEvent(new Event('input'));
+            appendSearch.focus();
         });
     }
+
+    // تفاعل اختيار الباقات الطبية (Packages)
+    document.querySelectorAll('.package-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const pkgId = this.getAttribute('data-package-id');
+            const pkgName = this.getAttribute('data-package-name');
+            const testIds = JSON.parse(this.getAttribute('data-test-ids') || '[]');
+
+            document.querySelectorAll('.package-card').forEach(c => {
+                c.classList.remove('border-primary', 'bg-primary-subtle', 'shadow');
+                const btn = c.querySelector('.select-package-btn');
+                if (btn) {
+                    btn.classList.remove('btn-primary', 'text-white');
+                    btn.classList.add('btn-outline-primary');
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> اختيار الباقة';
+                }
+            });
+
+            this.classList.add('border-primary', 'bg-primary-subtle', 'shadow');
+            const btn = this.querySelector('.select-package-btn');
+            if (btn) {
+                btn.classList.add('btn-primary', 'text-white');
+                btn.classList.remove('btn-outline-primary');
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> تم اختيارها';
+            }
+
+            document.getElementById('selectedPackageId').value = pkgId;
+            const alertBox = document.getElementById('selectedPackageAlert');
+            if (alertBox) {
+                document.getElementById('selectedPackageName').textContent = pkgName;
+                alertBox.classList.remove('d-none');
+            }
+
+            // تصفير أي تحديد سابق لضمان اقتصار التحديد على تحاليل الباقة المختارة بدقة
+            document.querySelectorAll('input[name="extra_lab_test_ids[]"]').forEach(cb => {
+                if (!cb.disabled) cb.checked = false;
+            });
+
+            // تفعيل وتحديد كافة تحاليل هذه الباقة في القائمة
+            let activatedCount = 0;
+            testIds.forEach(id => {
+                const cb = document.getElementById('append_' + id);
+                if (cb && !cb.disabled) {
+                    cb.checked = true;
+                    activatedCount++;
+                }
+            });
+        });
+    });
+
+    // زر إلغاء اختيار الباقة
+    const clearPkgBtn = document.getElementById('clearSelectedPackage');
+    if (clearPkgBtn) {
+        clearPkgBtn.addEventListener('click', function() {
+            document.getElementById('selectedPackageId').value = '';
+            document.querySelectorAll('.package-card').forEach(c => {
+                c.classList.remove('border-primary', 'bg-primary-subtle', 'shadow');
+                const btn = c.querySelector('.select-package-btn');
+                if (btn) {
+                    btn.classList.remove('btn-primary', 'text-white');
+                    btn.classList.add('btn-outline-primary');
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> اختيار الباقة';
+                }
+            });
+            document.getElementById('selectedPackageAlert').classList.add('d-none');
+        });
+    }
+
+    // تفاعل اختيار مجموعات المفضلات (User Lab Test Groups)
+    document.querySelectorAll('.group-select-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const testIds = JSON.parse(this.getAttribute('data-test-ids') || '[]');
+            testIds.forEach(id => {
+                const cb = document.getElementById('append_' + id);
+                if (cb && !cb.disabled) {
+                    cb.checked = true;
+                }
+            });
+            this.classList.toggle('btn-warning');
+            this.classList.toggle('btn-outline-warning');
+        });
+    });
 });
 </script>
+
+<!-- مودال إلغاء الطلب الخارجي المباشر -->
+<div class="modal fade" id="cancelExternalLabModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء الطلب الخارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('lab.cancel', $request) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4 text-end">
+                    <p class="fs-6 text-dark mb-2">
+                        هل أنت متأكد من رغبتك في إلغاء طلب المختبر الخارجي للمريض <strong class="text-danger">{{ $patientUser?->name ?? 'المريض' }}</strong>؟
+                    </p>
+                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور المختبر. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، عدم توفر المادة، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light justify-content-between">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">
+                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

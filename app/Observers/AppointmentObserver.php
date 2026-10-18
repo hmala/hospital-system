@@ -7,6 +7,18 @@ use App\Services\UserActivityLogger;
 
 class AppointmentObserver
 {
+    public function creating(Appointment $appointment): void
+    {
+        if (empty($appointment->queue_number) && !empty($appointment->doctor_id)) {
+            $date = $appointment->appointment_date ? \Carbon\Carbon::parse($appointment->appointment_date) : today();
+            $maxQueue = Appointment::where('doctor_id', $appointment->doctor_id)
+                ->whereDate('appointment_date', $date)
+                ->whereNotNull('queue_number')
+                ->max('queue_number') ?? 0;
+            $appointment->queue_number = $maxQueue + 1;
+        }
+    }
+
     public function created(Appointment $appointment): void
     {
         $patientName = $appointment->patient?->name ?? 'مريض';

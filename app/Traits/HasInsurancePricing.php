@@ -39,13 +39,10 @@ trait HasInsurancePricing
 
         // 1. حالة ضمان وزارة الداخلية (MOI)
         if (in_array($insuranceType, ['moi', 'interior_ministry'])) {
-            $isCovered = (bool) ($this->is_moi_active ?? true);
+            $isCovered = (bool) ($this->is_moi_active ?? true) && (!is_null($this->moi_price) && (float)$this->moi_price > 0);
 
             if ($isCovered) {
-                // إذا كان سعر الداخلية محدد وأكبر من 0 نعتمد عليه، وإلا نعتمد السعر الأساسي
-                $approvedPrice = (!is_null($this->moi_price) && (float)$this->moi_price > 0)
-                    ? (float) $this->moi_price
-                    : $regularPrice;
+                $approvedPrice = (float) $this->moi_price;
 
                 $patientShare   = round($approvedPrice * ($copayPercent / 100.0), 2);
                 $insuranceShare = round($approvedPrice - $patientShare, 2);
@@ -65,12 +62,10 @@ trait HasInsurancePricing
 
         // 2. حالة هيئة الضمان الصحي (Health Insurance - HI)
         if (in_array($insuranceType, ['hi', 'health_insurance'])) {
-            $isCovered = (bool) ($this->is_hi_active ?? true);
+            $isCovered = (bool) ($this->is_hi_active ?? true) && (!is_null($this->hi_price) && (float)$this->hi_price > 0);
 
             if ($isCovered) {
-                $approvedPrice = (!is_null($this->hi_price) && (float)$this->hi_price > 0)
-                    ? (float) $this->hi_price
-                    : $regularPrice;
+                $approvedPrice = (float) $this->hi_price;
 
                 $patientShare   = round($approvedPrice * ($copayPercent / 100.0), 2);
                 $insuranceShare = round($approvedPrice - $patientShare, 2);

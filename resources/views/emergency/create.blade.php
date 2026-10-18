@@ -136,13 +136,13 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-3 bg-white p-2 rounded-3 border shadow-xs">
                                             <div class="form-check mb-0">
-                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance') === '1' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-success cursor-pointer" for="apply_insurance_yes">
                                                     🛡️ حجز تحت مظلة الضمان
                                                 </label>
                                             </div>
                                             <div class="form-check mb-0">
-                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance', '0') == '0' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-secondary cursor-pointer" for="apply_insurance_no">
                                                     💵 حجز كاش عادي (بدون ضمان)
                                                 </label>
@@ -212,17 +212,37 @@
                                 @enderror
                             </div>
 
-                            <!-- الطبيب المسؤول (نفس المستخدم المسجل حالياً) -->
-                            <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id ?? '' }}">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">الطبيب المسؤول</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
-                                    <input type="text" class="form-control bg-light text-primary fw-bold" 
-                                           value="{{ auth()->user()->name ?? 'المستخدم الحالي' }}" 
-                                           readonly>
+                            <!-- الطبيب المسؤول -->
+                            @if(isset($assignedDoctor) && $assignedDoctor)
+                                <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id }}">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">الطبيب المسؤول</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
+                                        <input type="text" class="form-control bg-light text-primary fw-bold" 
+                                               value="{{ $assignedDoctor->user->name ?? auth()->user()->name }}" 
+                                               readonly>
+                                    </div>
                                 </div>
-                            </div>
+                            @else
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">الطبيب المسؤول <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
+                                        <select class="form-select @error('doctor_id') is-invalid @enderror" name="doctor_id" id="doctor_id" required>
+                                            <option value="">اختر طبيب الطوارئ المسؤول...</option>
+                                            @foreach($doctors as $doc)
+                                                <option value="{{ $doc->id }}" {{ (old('doctor_id') == $doc->id || $doc->id == 244) ? 'selected' : '' }}>
+                                                    د. {{ $doc->user->name ?? $doc->name }} ({{ $doc->specialization }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @error('doctor_id')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            @endif
 
                             <div class="col-md-6 mb-3 d-flex align-items-center">
                                 <div class="form-check form-switch mt-2">
@@ -411,7 +431,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insBadge) insBadge.style.display = 'inline-block';
             if (insuranceCatText) insuranceCatText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
             if (insuranceSection) insuranceSection.style.display = 'block';
-            if (applyYes) applyYes.checked = true;
+            // الحجز المباشر في الطوارئ افتراضياً كاش، ويتاح للموظف تفعيل الضمان يدوياً إذا وُجدت موافقة
+            if (applyNo) applyNo.checked = true;
         } else {
             if (insBadge) insBadge.style.display = 'none';
             if (insuranceSection) insuranceSection.style.display = 'none';

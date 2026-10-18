@@ -24,6 +24,10 @@ class Emergency extends Model
         'initial_assessment',
         'treatment_given',
         'notes',
+        'consultant_notes',
+        'consultant_recommendation',
+        'consultation_responded_at',
+        'consultant_doctor_id',
         'vital_signs',
         'admission_time',
         'discharge_time',
@@ -47,6 +51,7 @@ class Emergency extends Model
         'vital_signs' => 'array',
         'admission_time' => 'datetime',
         'discharge_time' => 'datetime',
+        'consultation_responded_at' => 'datetime',
         'requires_surgery' => 'boolean',
         'requires_admission' => 'boolean',
         'is_insured' => 'boolean',
@@ -55,6 +60,11 @@ class Emergency extends Model
         'patient_migrated' => 'boolean',
         'emergency_patient_id' => 'integer',
     ];
+
+    public function consultantDoctor(): BelongsTo
+    {
+        return $this->belongsTo(Doctor::class, 'consultant_doctor_id');
+    }
 
     // العلاقات
     public function patient(): BelongsTo
@@ -95,6 +105,11 @@ class Emergency extends Model
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'emergency_id');
     }
 
     public function followUpPayment(): BelongsTo
@@ -163,6 +178,7 @@ class Emergency extends Model
             'completed' => 'success',
             'transferred' => 'primary',
             'discharged' => 'secondary',
+            'cancelled' => 'danger',
             default => 'secondary'
         };
     }
@@ -175,6 +191,7 @@ class Emergency extends Model
             'completed' => 'مكتملة',
             'transferred' => 'محولة',
             'discharged' => 'مغادرة',
+            'cancelled' => 'ملغاة',
             default => 'غير محدد'
         };
     }
@@ -198,11 +215,21 @@ class Emergency extends Model
             return 0.0;
         }
 
-        $isInsurance = (bool)($this->patient && ($this->patient->insurance_type === 'hi' || $this->patient->healthInsuranceCategory));
-        $insuranceType = $isInsurance ? 'hi' : 'none';
-        $emergencyCopay = $isInsurance ? $this->patient->getCopayPercentageFor('emergency') : 100.0;
-        $labCopay       = $isInsurance ? $this->patient->getCopayPercentageFor('lab') : 100.0;
-        $radCopay       = $isInsurance ? $this->patient->getCopayPercentageFor('radiology') : 100.0;
+        $isInsurance = false;
+        if (isset($this->is_insured)) {
+            $isInsurance = (bool) $this->is_insured;
+        } elseif (isset($this->insurance_type) && $this->insurance_type !== 'none') {
+            $isInsurance = true;
+        }
+
+        $insuranceType = $isInsurance ? ($this->insurance_type ?: 'hi') : 'none';
+        if ($insuranceType === 'none') {
+            $isInsurance = false;
+        }
+
+        $emergencyCopay = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('emergency') ?? 0.0) : 100.0;
+        $labCopay       = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
+        $radCopay       = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
 
         $unpaidServiceIds = \DB::table('emergency_emergency_service')
             ->where('emergency_id', $this->id)

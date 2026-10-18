@@ -9,12 +9,18 @@ class LabTest extends Model
 {
     use HasFactory, \App\Traits\HasInsurancePricing;
 
+    public const ENTRY_TYPE_SINGLE = 'single_value';
+    public const ENTRY_TYPE_SUBTESTS = 'sub_tests';
+    public const ENTRY_TYPE_ATTACHMENT = 'attachment_only';
+    public const ENTRY_TYPE_FLEXIBLE = 'flexible';
+
     protected $fillable = [
         'main_category',
         'subcategory',
         'code',
         'name',
         'unit',
+        'result_entry_type',
         'description',
         'is_active',
         'price',
@@ -23,6 +29,36 @@ class LabTest extends Model
         'hi_price',
         'is_hi_active',
     ];
+
+    public function isSingleValue(): bool
+    {
+        return empty($this->result_entry_type) || $this->result_entry_type === self::ENTRY_TYPE_SINGLE;
+    }
+
+    public function isSubTests(): bool
+    {
+        return $this->result_entry_type === self::ENTRY_TYPE_SUBTESTS;
+    }
+
+    public function isAttachmentOnly(): bool
+    {
+        return $this->result_entry_type === self::ENTRY_TYPE_ATTACHMENT;
+    }
+
+    public function isFlexible(): bool
+    {
+        return $this->result_entry_type === self::ENTRY_TYPE_FLEXIBLE;
+    }
+
+    public function getResultEntryTypeLabelAttribute(): string
+    {
+        return match($this->result_entry_type) {
+            self::ENTRY_TYPE_SUBTESTS => 'قيم فرعية مفصلة',
+            self::ENTRY_TYPE_ATTACHMENT => 'مرفق تقرير الجهاز',
+            self::ENTRY_TYPE_FLEXIBLE => 'كلاهما (مرن)',
+            default => 'قيمة مباشرة مفردة',
+        };
+    }
 
     protected $casts = [
         'is_active' => 'boolean',

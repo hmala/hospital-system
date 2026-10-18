@@ -147,10 +147,27 @@
     <form action="{{ route('inquiry.store') }}" method="POST" id="requestForm">
         @csrf
         <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+        <input type="hidden" name="confirm_duplicate_booking" id="confirm_duplicate_booking" value="{{ old('confirm_duplicate_booking', 0) }}">
         <div id="requestTypesContainer">
             <!-- سيتم إضافة حقول request_type[] هنا عبر JavaScript -->
         </div>
         <input type="hidden" name="radiology_category" id="radiology_category" value="{{ old('radiology_category', 'radiology') }}">
+
+        @if(session('duplicate_booking_warning'))
+            @php $dupWarn = session('duplicate_booking_warning'); @endphp
+            <div class="alert alert-warning border-warning shadow-sm rounded-3 p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                    <div>
+                        <strong class="fs-6 d-block text-dark">⚠️ تنبيه: تم رصد حجز نشط مسبقاً للمريض اليوم!</strong>
+                        <span class="text-muted">{{ $dupWarn['message'] ?? 'المريض لديه حجز نشط اليوم بالفعل.' }}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-warning fw-bold px-3 py-2 text-nowrap" onclick="confirmAndResubmitDuplicate()">
+                    <i class="fas fa-check-circle me-1"></i> تأكيد الحجز الإضافي الآن
+                </button>
+            </div>
+        @endif
 
         <div class="row g-4 mb-4">
             @foreach($requestTypes as $type => $config)
@@ -413,6 +430,25 @@
                                             <span class="badge bg-success rounded-pill px-2 py-1">محدد</span>
                                         </div>
 
+                                        <!-- تنبيه فوري لوجود حجز نشط سابق لنفس الطبيب اليوم -->
+                                        <div id="duplicateDoctorWarningBox" class="mt-2 p-3 rounded-3 bg-warning bg-opacity-10 border border-warning shadow-sm" style="display: none;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <i class="fas fa-exclamation-triangle text-warning fs-4 mt-1"></i>
+                                                <div class="flex-grow-1">
+                                                    <strong class="text-dark d-block mb-1" id="duplicateDoctorTitle">⚠️ تنبيه: حجز نشط مسبقاً اليوم لدى هذا الطبيب</strong>
+                                                    <p class="text-muted small mb-2" id="duplicateDoctorMessage"></p>
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                                                        <span class="badge bg-warning text-dark" id="duplicateDoctorQueueBadge">تسلسل: #0</span>
+                                                        <span class="badge bg-info text-dark" id="duplicateDoctorStatusBadge">الحالة</span>
+                                                        <span class="badge bg-secondary" id="duplicateDoctorPayBadge">الدفع</span>
+                                                    </div>
+                                                    <div class="small text-danger fw-bold">
+                                                        <i class="fas fa-info-circle me-1"></i> سيتطلب النظام تأكيد رغبتك بإنشاء حجز إضافي لنفس اليوم عند الحفظ.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         @error('doctor_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
@@ -542,6 +578,25 @@
                                                                 <strong class="text-primary fs-6 me-2" id="ultrasoundPriceText">0 د.ع</strong>
                                                             </div>
                                                             <span class="badge bg-warning text-dark"><i class="fas fa-receipt me-1"></i>جاهز للدفع في الكاشير فور تأكيد الحجز</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- تنبيه فوري لوجود حجز سونار نشط اليوم لم يكتمل بعد -->
+                                                    <div class="col-12 mb-3" id="duplicateUltrasoundWarningBox" style="display: none;">
+                                                        <div class="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning shadow-sm d-flex align-items-start gap-2">
+                                                            <i class="fas fa-exclamation-triangle text-warning fs-4 mt-1"></i>
+                                                            <div class="flex-grow-1">
+                                                                <strong class="text-dark d-block mb-1">⚠️ تنبيه: يوجد حجز فحص سونار نشط اليوم لم يكتمل بعد</strong>
+                                                                <p class="text-muted small mb-2" id="duplicateUltrasoundMessage"></p>
+                                                                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                                                                    <span class="badge bg-warning text-dark" id="duplicateUltrasoundQueueBadge">تسلسل: -</span>
+                                                                    <span class="badge bg-info text-dark" id="duplicateUltrasoundStatusBadge">الحالة</span>
+                                                                    <span class="badge bg-secondary" id="duplicateUltrasoundPayBadge">الدفع</span>
+                                                                </div>
+                                                                <div class="small text-danger fw-bold">
+                                                                    <i class="fas fa-info-circle me-1"></i> سيتطلب النظام تأكيد رغبتك بإنشاء حجز فحص سونار إضافي جديد لنفس اليوم عند الحفظ.
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -675,9 +730,47 @@
                     </div>
                 </div>
             </div>
-        </div>
     </form>
 </div>
+
+@push('modals')
+    <!-- نافذة تأكيد الحجز الإضافي المكرر (Duplicate Booking Confirmation Modal) -->
+    <div class="modal fade" id="confirmDuplicateModal" tabindex="-1" aria-labelledby="confirmDuplicateModalLabel" aria-hidden="true" style="z-index: 10999;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-warning bg-opacity-25 border-bottom border-warning border-opacity-25 p-3">
+                    <h5 class="modal-title text-dark fw-bold" id="confirmDuplicateModalLabel">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i> تأكيد إنشاء حجز إضافي مكرر
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="p-3 bg-warning bg-opacity-10 rounded-circle text-warning fs-3">
+                            <i class="fas fa-calendar-plus"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark" id="duplicateModalTitle">تنبيه حجز مكرر لنفس اليوم</h6>
+                            <p class="text-muted small mb-0" id="duplicateModalText">المريض لديه حجز نشط مسجل مسبقاً لهذا اليوم.</p>
+                        </div>
+                    </div>
+                    <div class="alert alert-light border rounded-3 p-3 text-secondary small mb-0">
+                        <i class="fas fa-info-circle text-primary me-1"></i>
+                        <strong>ملاحظة للموظف:</strong> عند المتابعة، سيتم إصدار حجز إضافي جديد مع تثبيت قيد تدقيق بأن الحجز إضافي ومؤكد بمعرفة الاستعلامات.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> تراجع وإلغاء
+                    </button>
+                    <button type="button" class="btn btn-warning fw-bold px-4" id="btnConfirmDuplicate">
+                        <i class="fas fa-check-circle me-1"></i> نعم، تأكيد الحجز الإضافي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endpush
 
 <style>
 .request-card {
@@ -754,6 +847,168 @@ let selectedTypes = new Set();
 let defaultRadiologyCategory = @json(old('radiology_category', $defaultRadiologyCategory));
 let selectedRadiologyCategory = defaultRadiologyCategory;
 
+const currentPatientId = @json($patient->id);
+const checkActiveBookingUrl = @json(route('inquiry.check-active-booking'));
+
+let activeBookingState = {
+    checkup: null,
+    ultrasound: null
+};
+
+function disableSubmitButton() {
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        const submitBtnText = document.getElementById('submitBtnText');
+        if (submitBtnText) {
+            submitBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> جاري المعالجة والحفظ...';
+        }
+    }
+}
+
+function enableSubmitButton() {
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        const submitBtnText = document.getElementById('submitBtnText');
+        if (submitBtnText) {
+            submitBtnText.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (submitBtnText.dataset.originalText || 'إنشاء الطلب');
+        }
+    }
+}
+
+function openConfirmDuplicateModal(message) {
+    if (typeof window.hidePageLoader === 'function') {
+        window.hidePageLoader(true);
+    }
+    enableSubmitButton();
+
+    const modalEl = document.getElementById('confirmDuplicateModal');
+    if (!modalEl) {
+        if (confirm('⚠️ تنبيه: ' + (message || 'المريض لديه حجز نشط اليوم بالفعل.') + '\n\nهل أنت متأكد من رغبتك في إنشاء حجز إضافي جديد لنفس اليوم؟')) {
+            confirmAndResubmitDuplicate();
+        }
+        return;
+    }
+
+    if (message) {
+        const modalMsgEl = document.getElementById('duplicateModalText');
+        if (modalMsgEl) modalMsgEl.textContent = message;
+    }
+
+    try {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalInstance.show();
+            return;
+        }
+    } catch (err) {
+        console.warn('Bootstrap modal failed, trying fallback:', err);
+    }
+
+    try {
+        if (typeof $ !== 'undefined' && typeof $(modalEl).modal === 'function') {
+            $(modalEl).modal('show');
+            return;
+        }
+    } catch (err) {
+        console.warn('jQuery modal failed:', err);
+    }
+
+    if (confirm('⚠️ تنبيه: ' + (message || 'المريض لديه حجز نشط اليوم بالفعل.') + '\n\nهل أنت متأكد من رغبتك في إنشاء حجز إضافي جديد لنفس اليوم؟')) {
+        confirmAndResubmitDuplicate();
+    }
+}
+
+function checkDoctorActiveBooking(doctorId) {
+    const warningBox = document.getElementById('duplicateDoctorWarningBox');
+    if (!doctorId) {
+        activeBookingState.checkup = null;
+        if (warningBox) warningBox.style.display = 'none';
+        return;
+    }
+
+    fetch(`${checkActiveBookingUrl}?patient_id=${currentPatientId}&type=checkup&doctor_id=${doctorId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.has_active) {
+                activeBookingState.checkup = data;
+                if (warningBox) {
+                    const msgEl = document.getElementById('duplicateDoctorMessage');
+                    if (msgEl) msgEl.textContent = data.message;
+                    const qEl = document.getElementById('duplicateDoctorQueueBadge');
+                    if (qEl) qEl.textContent = 'تسلسل: #' + data.queue_number;
+                    const stEl = document.getElementById('duplicateDoctorStatusBadge');
+                    if (stEl) stEl.textContent = data.status_label;
+                    const payEl = document.getElementById('duplicateDoctorPayBadge');
+                    if (payEl) payEl.textContent = data.payment_label;
+                    warningBox.style.display = 'block';
+                }
+            } else {
+                activeBookingState.checkup = null;
+                if (warningBox) warningBox.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error('Error checking active doctor booking:', err);
+        });
+}
+
+function checkUltrasoundActiveBooking() {
+    const warningBox = document.getElementById('duplicateUltrasoundWarningBox');
+    fetch(`${checkActiveBookingUrl}?patient_id=${currentPatientId}&type=radiology&radiology_category=ultrasound`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.has_active) {
+                activeBookingState.ultrasound = data;
+                if (warningBox) {
+                    const msgEl = document.getElementById('duplicateUltrasoundMessage');
+                    if (msgEl) msgEl.textContent = data.message;
+                    const qEl = document.getElementById('duplicateUltrasoundQueueBadge');
+                    if (qEl) qEl.textContent = 'تسلسل: #' + data.queue_number;
+                    const stEl = document.getElementById('duplicateUltrasoundStatusBadge');
+                    if (stEl) stEl.textContent = data.status_label;
+                    const payEl = document.getElementById('duplicateUltrasoundPayBadge');
+                    if (payEl) payEl.textContent = data.payment_label;
+                    warningBox.style.display = 'block';
+                }
+            } else {
+                activeBookingState.ultrasound = null;
+                if (warningBox) warningBox.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error('Error checking active ultrasound booking:', err);
+        });
+}
+
+function confirmAndResubmitDuplicate() {
+    const confirmInput = document.getElementById('confirm_duplicate_booking');
+    if (confirmInput) {
+        confirmInput.value = '1';
+    }
+    const modalEl = document.getElementById('confirmDuplicateModal');
+    if (modalEl) {
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+        } catch(e) {}
+        try {
+            if (typeof $ !== 'undefined' && typeof $(modalEl).modal === 'function') {
+                $(modalEl).modal('hide');
+            }
+        } catch(e) {}
+    }
+    disableSubmitButton();
+    if (typeof window.showPageLoader === 'function') {
+        window.showPageLoader();
+    }
+    const form = document.getElementById('requestForm');
+    if (form) form.submit();
+}
+
 function setRadiologyCategory(category) {
     selectedRadiologyCategory = category;
     const radiologyCategoryInput = document.getElementById('radiology_category');
@@ -771,6 +1026,7 @@ function setRadiologyCategory(category) {
             ultrasoundDetailsContainer.style.display = 'block';
             document.getElementById('ultrasound_staff_id').required = true;
             document.getElementById('ultrasound_type_id').required = true;
+            checkUltrasoundActiveBooking();
         } else {
             ultrasoundDetailsContainer.style.display = 'none';
             document.getElementById('ultrasound_staff_id').required = false;
@@ -788,6 +1044,9 @@ function setRadiologyCategory(category) {
             if (clearBtn) clearBtn.style.display = 'none';
             const priceBox = document.getElementById('ultrasoundPriceBox');
             if (priceBox) priceBox.style.display = 'none';
+            const sonarWarnBox = document.getElementById('duplicateUltrasoundWarningBox');
+            if (sonarWarnBox) sonarWarnBox.style.display = 'none';
+            activeBookingState.ultrasound = null;
         }
     }
     
@@ -860,6 +1119,19 @@ function toggleRequestType(type) {
         updateDetailsForm();
     } else {
         details.style.display = 'none';
+    }
+
+    if (selectedTypes.has('checkup')) {
+        const docId = document.getElementById('doctor_id')?.value;
+        if (docId) checkDoctorActiveBooking(docId);
+    } else {
+        activeBookingState.checkup = null;
+    }
+
+    if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound') {
+        checkUltrasoundActiveBooking();
+    } else if (!selectedTypes.has('radiology')) {
+        activeBookingState.ultrasound = null;
     }
 
     updateInsuranceVisibility();
@@ -1095,7 +1367,74 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
             return false;
         }
     }
+
+    // التحقق من الحجز المكرر النشط غير المؤكد
+    const confirmInput = document.getElementById('confirm_duplicate_booking');
+    if (confirmInput && confirmInput.value !== '1') {
+        let duplicateMessage = '';
+        if (selectedTypes.has('checkup') && activeBookingState.checkup && activeBookingState.checkup.has_active) {
+            duplicateMessage = activeBookingState.checkup.message;
+        } else if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound' && activeBookingState.ultrasound && activeBookingState.ultrasound.has_active) {
+            duplicateMessage = activeBookingState.ultrasound.message;
+        }
+
+        // إسناد احتياطي فوري إذا كان صندوق التنبيه معروضاً بالفعل على الشاشة
+        if (!duplicateMessage) {
+            const docWarnBox = document.getElementById('duplicateDoctorWarningBox');
+            if (selectedTypes.has('checkup') && docWarnBox && docWarnBox.style.display !== 'none') {
+                const msgEl = document.getElementById('duplicateDoctorMessage');
+                duplicateMessage = (msgEl && msgEl.textContent.trim()) ? msgEl.textContent.trim() : 'المريض لديه حجز نشط اليوم بالفعل مع هذا الطبيب.';
+            }
+            const sonarWarnBox = document.getElementById('duplicateUltrasoundWarningBox');
+            if (!duplicateMessage && selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound' && sonarWarnBox && sonarWarnBox.style.display !== 'none') {
+                const msgEl = document.getElementById('duplicateUltrasoundMessage');
+                duplicateMessage = (msgEl && msgEl.textContent.trim()) ? msgEl.textContent.trim() : 'المريض لديه حجز سونار نشط اليوم.';
+            }
+        }
+
+        if (duplicateMessage) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+            if (typeof window.hidePageLoader === 'function') window.hidePageLoader(true);
+            openConfirmDuplicateModal(duplicateMessage);
+            return false;
+        }
+    }
+
+    // تعطيل زر الإرسال لتفادي النقر المزدوج عند الحفظ
+    disableSubmitButton();
 });
+
+const btnConfirmDuplicate = document.getElementById('btnConfirmDuplicate');
+if (btnConfirmDuplicate) {
+    btnConfirmDuplicate.addEventListener('click', function() {
+        const confirmInput = document.getElementById('confirm_duplicate_booking');
+        if (confirmInput) {
+            confirmInput.value = '1';
+        }
+        const modalEl = document.getElementById('confirmDuplicateModal');
+        if (modalEl) {
+            try {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            } catch(e) {}
+            try {
+                if (typeof $ !== 'undefined' && typeof $(modalEl).modal === 'function') {
+                    $(modalEl).modal('hide');
+                }
+            } catch(e) {}
+        }
+        disableSubmitButton();
+        if (typeof window.showPageLoader === 'function') {
+            window.showPageLoader();
+        }
+        const form = document.getElementById('requestForm');
+        if (form) form.submit();
+    });
+}
 
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('radiology-category-btn')) {
@@ -1344,6 +1683,8 @@ if (doctorSearchInput && doctorSuggestions) {
             selectedDoctorDeptText.textContent = dept ? `العيادة: ${dept}` : '';
             selectedDoctorBox.style.display = 'flex';
         }
+
+        checkDoctorActiveBooking(id);
     });
 
     // 3. مسح اختيار الطبيب
@@ -1354,6 +1695,7 @@ if (doctorSearchInput && doctorSuggestions) {
         doctorSuggestions.innerHTML = '';
         doctorClearBtn.style.display = 'none';
         if (selectedDoctorBox) selectedDoctorBox.style.display = 'none';
+        checkDoctorActiveBooking(null);
         doctorSearchInput.focus();
     });
 
@@ -1375,6 +1717,7 @@ if (doctorSearchInput && doctorSuggestions) {
                 selectedDoctorDeptText.textContent = oldDoc.department_name ? `العيادة: ${oldDoc.department_name}` : '';
                 selectedDoctorBox.style.display = 'flex';
             }
+            checkDoctorActiveBooking(doctorHiddenId.value);
         }
     }
 }
@@ -1418,28 +1761,34 @@ if (labSearchInput) {
     });
 }
 
-// تشغيل التحقق من حالة خيار الضمان عند تحميل الصفحة
+// تشغيل التحقق من حالة خيار الضمان واستعادة الأنواع السابقة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     updateInsuranceVisibility();
-});
 
-// إذا كان هناك خطأ في الصيغة، عرض النموذج مباشرة
-@if($errors->any())
-    window.addEventListener('DOMContentLoaded', function() {
-        const oldTypes = @json(old('request_type', []));
-        const oldRadiologyCategory = @json(old('radiology_category', 'radiology'));
+    const oldTypes = @json(old('request_type', []));
+    const oldRadiologyCategory = @json(old('radiology_category', $defaultRadiologyCategory));
+    if (oldRadiologyCategory) {
         selectedRadiologyCategory = oldRadiologyCategory;
-        if (oldTypes && oldTypes.length > 0) {
-            oldTypes.forEach(type => {
-                toggleRequestType(type);
-            });
+    }
+    if (oldTypes && oldTypes.length > 0) {
+        oldTypes.forEach(type => {
+            toggleRequestType(type);
+        });
+    }
+    if (oldTypes && oldTypes.includes('radiology')) {
+        setRadiologyCategory(oldRadiologyCategory);
+        updateRadiologyCategoryInfo();
+    }
+
+    @if(session('duplicate_booking_warning'))
+        const warning = @json(session('duplicate_booking_warning'));
+        if (warning && warning.message) {
+            setTimeout(function() {
+                openConfirmDuplicateModal(warning.message);
+            }, 300);
         }
-        if (oldTypes.includes('radiology')) {
-            setRadiologyCategory(oldRadiologyCategory);
-            updateRadiologyCategoryInfo();
-        }
-    });
-@endif
+    @endif
+});
 </script>
 
 <style>

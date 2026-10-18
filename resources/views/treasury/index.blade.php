@@ -93,91 +93,114 @@
         </div>
     @endif
 
-    <!-- بطاقات المؤشرات المالية العامة (KPI Cards) -->
+    <!-- بطاقات المؤشرات المالية العامة (KPI Cards) - هيكلية الـ 5 كروت المتقدمة -->
     <div class="row g-3 mb-4">
-        <!-- رصيد الخزينة الإجمالي الفعلي اللحظي -->
-        <div class="col-12 col-md-6 col-xl-3">
+        <!-- 1. رصيد الخزينة الإجمالي الفعلي اللحظي -->
+        <div class="col-12 col-md-6 col-xl">
             <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff;">
-                <div class="card-body p-3.5 position-relative">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-white-50 small">الرصيد الفعلي المتوفر بالخزينة</span>
-                        <div class="rounded-circle p-2 bg-white bg-opacity-10 text-warning">
-                            <i class="fas fa-vault fa-lg"></i>
+                <div class="card-body p-3 position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-uppercase fw-bold text-white-50 small">الرصيد الفعلي بالخزينة</span>
+                        <div class="rounded-circle p-1.5 bg-white bg-opacity-10 text-warning">
+                            <i class="fas fa-vault"></i>
                         </div>
                     </div>
-                    <h2 class="fw-bold mb-1 {{ $currentTreasuryBalance >= 0 ? 'text-warning' : 'text-danger' }}">
+                    <h3 class="fw-bold mb-1 {{ $currentTreasuryBalance >= 0 ? 'text-warning' : 'text-danger' }}">
                         {{ number_format($currentTreasuryBalance) }} <small class="fs-6 text-white-50">د.ع</small>
-                    </h2>
-                    <div class="small text-white-50 mt-2 d-flex justify-content-between pt-2 border-top border-secondary border-opacity-25">
-                        <span>إجمالي كل الوارد: <strong class="text-success">{{ number_format($totalAllTimeInflow) }}</strong></span>
-                        <span>المنصرف: <strong class="text-danger">{{ number_format($totalAllTimeOutflow) }}</strong></span>
+                    </h3>
+                    <div class="small text-white-50 mt-2 d-flex justify-content-between pt-1 border-top border-secondary border-opacity-25" style="font-size: 0.75rem;">
+                        <span>وارد كلي: <strong class="text-success">{{ number_format($totalAllTimeInflow) }}</strong></span>
+                        <span>صادر كلي: <strong class="text-danger">{{ number_format($totalAllTimeOutflow) }}</strong></span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- إجمالي المقبوضات للفترة -->
-        <div class="col-12 col-md-6 col-xl-3">
+        <!-- 2. إجمالي المقبوضات للفترة -->
+        <div class="col-12 col-md-6 col-xl">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3.5 border-start border-4 border-success">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-muted small">إجمالي الوارد (الفترة المحددة)</span>
-                        <div class="rounded-circle p-2 bg-success bg-opacity-10 text-success">
-                            <i class="fas fa-arrow-down fa-lg"></i>
+                <div class="card-body p-3 border-start border-4 border-success">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-uppercase fw-bold text-muted small">إجمالي الوارد (الفترة)</span>
+                        <div class="rounded-circle p-1.5 bg-success bg-opacity-10 text-success">
+                            <i class="fas fa-arrow-down"></i>
                         </div>
                     </div>
                     <h3 class="fw-bold text-success mb-1">
                         + {{ number_format($periodInflow) }} <small class="fs-6 text-muted">د.ع</small>
                     </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between">
-                        <span>كافة إيرادات الأقسام والكاشير</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
+                        <span>إيرادات الأقسام والكاشير</span>
                         <span class="badge bg-success-subtle text-success">وارد (+)</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- إجمالي المصروفات للفترة -->
-        <div class="col-12 col-md-6 col-xl-3">
+        <!-- 3. كارت مخصص ومستقل: المبالغ المسترجعة للمرضى (Refunds) -->
+        <div class="col-12 col-md-6 col-xl">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3.5 border-start border-4 border-danger">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-muted small">إجمالي المنصرف (الفترة المحددة)</span>
-                        <div class="rounded-circle p-2 bg-danger bg-opacity-10 text-danger">
-                            <i class="fas fa-arrow-up fa-lg"></i>
+                <div class="card-body p-3 border-start border-4 border-warning">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-uppercase fw-bold text-muted small">المبالغ المسترجعة للمرضى</span>
+                        <div class="rounded-circle p-1.5 bg-warning bg-opacity-10 text-warning">
+                            <i class="fas fa-undo-alt"></i>
                         </div>
                     </div>
-                    <h3 class="fw-bold text-danger mb-1">
-                        - {{ number_format($periodOutflow) }} <small class="fs-6 text-muted">د.ع</small>
+                    <h3 class="fw-bold text-warning mb-1">
+                        - {{ number_format($periodRefunds) }} <small class="fs-6 text-muted">د.ع</small>
                     </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between">
-                        <span>مستحقات أطباء ومشتريات ونثريات</span>
-                        <span class="badge bg-danger-subtle text-danger">صادر (-)</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
+                        <span>إلغاء كشفيات وسونار</span>
+                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle">
+                            {{ $periodRefundsCount }} {{ $periodRefundsCount == 1 ? 'حركة استرجاع' : 'حركات استرجاع' }}
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- صافي حركة الفترة (Net Period Balance) -->
+        <!-- 4. المصروفات ومستحقات الأطباء (Expenses) -->
+        <div class="col-12 col-md-6 col-xl">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                <div class="card-body p-3 border-start border-4 border-danger">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-uppercase fw-bold text-muted small">المصروفات ومستحقات الأطباء</span>
+                        <div class="rounded-circle p-1.5 bg-danger bg-opacity-10 text-danger">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold text-danger mb-1">
+                        - {{ number_format($periodExpenses) }} <small class="fs-6 text-muted">د.ع</small>
+                    </h3>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
+                        <span>أطباء ومشتريات وتشغيلي</span>
+                        <span class="badge bg-danger-subtle text-danger">صرف (-)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. صافي حركة الفترة (Net Period Balance) -->
         @php
             $netPeriod = $periodInflow - $periodOutflow;
         @endphp
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3.5 border-start border-4 {{ $netPeriod >= 0 ? 'border-primary' : 'border-warning' }}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-uppercase fw-bold text-muted small">صافي حركة الفترة (الفائض / العجز)</span>
-                        <div class="rounded-circle p-2 {{ $netPeriod >= 0 ? 'bg-primary bg-opacity-10 text-primary' : 'bg-warning bg-opacity-10 text-warning' }}">
-                            <i class="fas fa-scale-balanced fa-lg"></i>
+                <div class="card-body p-3 border-start border-4 {{ $netPeriod >= 0 ? 'border-primary' : 'border-danger' }}">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-uppercase fw-bold text-muted small">الصافي الفعلي للفترة</span>
+                        <div class="rounded-circle p-1.5 {{ $netPeriod >= 0 ? 'bg-primary bg-opacity-10 text-primary' : 'bg-danger bg-opacity-10 text-danger' }}">
+                            <i class="fas fa-scale-balanced"></i>
                         </div>
                     </div>
-                    <h3 class="fw-bold {{ $netPeriod >= 0 ? 'text-primary' : 'text-warning' }} mb-1">
+                    <h3 class="fw-bold {{ $netPeriod >= 0 ? 'text-primary' : 'text-danger' }} mb-1">
                         {{ $netPeriod >= 0 ? '+' : '' }}{{ number_format($netPeriod) }} <small class="fs-6 text-muted">د.ع</small>
                     </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between">
-                        <span>الوارد مطروحاً منه المصروفات</span>
-                        <span class="badge {{ $netPeriod >= 0 ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning' }}">
-                            {{ $netPeriod >= 0 ? 'فائض نقدي' : 'عجز مؤقت' }}
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
+                        <span>الوارد - (المسترجع + المصروف)</span>
+                        <span class="badge {{ $netPeriod >= 0 ? 'bg-primary-subtle text-primary' : 'bg-danger-subtle text-danger' }}">
+                            {{ $netPeriod >= 0 ? 'فائض نقدي' : 'عجز' }}
                         </span>
                     </div>
                 </div>
@@ -390,6 +413,14 @@
                         <div class="card-body p-4">
                             <div class="d-flex flex-column gap-3">
                                 <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-dark small fw-bold"><i class="fas fa-undo-alt text-warning me-2"></i> استرجاعات مبالغ المرضى (Patient Refunds)</span>
+                                    <strong class="font-monospace text-dark">{{ number_format($periodRefunds) }} د.ع</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ $periodOutflow > 0 ? ($periodRefunds / $periodOutflow) * 100 : 0 }}%;"></div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
                                     <span class="text-dark small fw-bold"><i class="fas fa-user-md text-primary me-2"></i> صرفيات مستحقات الأطباء (Consultant & ER Payouts)</span>
                                     <strong class="font-monospace text-dark">{{ number_format($periodDoctorPayouts) }} د.ع</strong>
                                 </div>
@@ -398,11 +429,11 @@
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="text-dark small fw-bold"><i class="fas fa-boxes text-warning me-2"></i> فواتير المشتريات والموردين (Purchases & Supplies)</span>
+                                    <span class="text-dark small fw-bold"><i class="fas fa-boxes text-danger me-2"></i> فواتير المشتريات والموردين (Purchases & Supplies)</span>
                                     <strong class="font-monospace text-dark">{{ number_format($periodPurchases) }} د.ع</strong>
                                 </div>
                                 <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-warning" style="width: {{ $periodOutflow > 0 ? ($periodPurchases / $periodOutflow) * 100 : 0 }}%;"></div>
+                                    <div class="progress-bar bg-danger" style="width: {{ $periodOutflow > 0 ? ($periodPurchases / $periodOutflow) * 100 : 0 }}%;"></div>
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center">

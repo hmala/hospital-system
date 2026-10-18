@@ -717,9 +717,15 @@
                     {{-- ===== نهاية جرس الإشعارات ===== --}}
 
                     <div class="sidebar-item mt-1">
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                            <i class="fas fa-home me-2"></i>الرئيسية
-                        </a>
+                        @if(auth()->check() && auth()->user()->hasRole('doctor'))
+                            <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
+                                <i class="fas fa-stethoscope me-2"></i>عيادتي وزيارات المرضى
+                            </a>
+                        @else
+                            <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                                <i class="fas fa-home me-2"></i>الرئيسية
+                            </a>
+                        @endif
                     </div>
 
                     <!-- روابط ثابتة حسب الصلاحيات -->
@@ -1356,10 +1362,11 @@
                         @endcanany
 
                         <!-- قسم المختبر والتحاليل الطبية -->
-                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view packages'])
+                        @canany(['view lab tests', 'create lab tests', 'manage surgery lab tests', 'view packages', 'view lab test groups'])
                         @php
                             $isLabActive = request()->routeIs('lab.*') || 
                                            request()->routeIs('admin.packages.*') || 
+                                           request()->routeIs('lab-tests.groups.*') ||
                                            request()->routeIs('staff.surgery-lab-tests.*') || 
                                            request()->routeIs('lab-tests.*');
                         @endphp
@@ -1390,11 +1397,18 @@
                         @can('view packages')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
-                                <i class="fas fa-boxes"></i><span> الباقات الطبية</span>
+                                <i class="fas fa-boxes"></i><span> باقات المختبر (البكجات)</span>
                             </a>
                         </li>
                         @endcan
 
+                        @can('view lab test groups')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
+                                <i class="fas fa-layer-group text-warning"></i><span> مجموعات المفضلات</span>
+                            </a>
+                        </li>
+                        @endcan
 
                         @can('view lab tests')
                         <li class="nav-item">
@@ -1468,7 +1482,7 @@
                         </li>
                         @endcanany
 
-                        @if(auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings'))
+                        @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('system.database-sync.*') ? 'active' : '' }}" href="{{ route('system.database-sync.index') }}">
                                 <i class="fas fa-cloud-download-alt text-primary"></i><span> سحب الداتا بيس من هوستنجر</span>
@@ -1853,15 +1867,20 @@
             loader.classList.add('active');
         }
 
-        function hideLoader() {
+        function hideLoader(immediate = false) {
             completeProgress();
+            const delay = immediate ? 0 : 2500;
             setTimeout(function() {
                 loader.classList.remove('active');
                 setTimeout(function() {
                     if (topBar) topBar.style.width = '0%';
-                }, 400);
-            }, 2500); // زيادة مدة الظهور بوضوح كافي جداً (2.5 ثانية)
+                }, 200);
+            }, delay);
         }
+
+        // إتاحة التحكم باللودر لكافة الواجهات والنوافذ المنبثقة
+        window.hidePageLoader = hideLoader;
+        window.showPageLoader = showLoader;
 
         // إظهار اللودر فور مغادرة الصفحة current page beforeunload
         window.addEventListener('beforeunload', function() {
@@ -1869,8 +1888,8 @@
         });
 
         // إخفاء عند اكتمال التحميل
-        window.addEventListener('load', hideLoader);
-        document.addEventListener('DOMContentLoaded', hideLoader);
+        window.addEventListener('load', function() { hideLoader(); });
+        document.addEventListener('DOMContentLoaded', function() { hideLoader(); });
 
         // إظهار عند الضغط على أي رابط خارجي/داخلي ناتجة عن تغيير الصفحة
         document.addEventListener('click', function(e) {
@@ -1903,15 +1922,27 @@
         // إظهار عند تقديم النماذج (Forms submit)
         document.addEventListener('submit', function(e) {
             const form = e.target;
-            if (form.getAttribute('target') === '_blank' || form.classList.contains('no-loader')) {
+            if (!form || 
+                form.getAttribute('target') === '_blank' || 
+                form.classList.contains('no-loader') || 
+                form.classList.contains('ajax-form') || 
+                form.classList.contains('inline-quick-form') ||
+                form.hasAttribute('data-ajax')
+            ) {
                 return;
             }
-            showLoader();
+
+            // تأخير الفحص 20ms للتأكد من عدم قيام أي كود JavaScript محلي باستدعاء e.preventDefault() للإرسال عبر AJAX
+            setTimeout(function() {
+                if (!e.defaultPrevented) {
+                    showLoader();
+                }
+            }, 20);
         });
 
         // حماية ضد التعليق: إخفاء تلقائي بعد 7 ثوانٍ كحد أقصى
         window.addEventListener('pageshow', function(event) {
-            hideLoader();
+            hideLoader(true);
         });
     })();
     </script>

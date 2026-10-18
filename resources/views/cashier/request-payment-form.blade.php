@@ -18,35 +18,52 @@
                 </div>
                 <div class="card-body p-4">
                     @php
+                        $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                         $patient = optional($request->visit)->patient;
                         $appointment = optional($request->visit)->appointment;
-                        $defaultInsurance = $request->insurance_type ?? optional($appointment)->insurance_type ?? optional($patient)->insurance_type ?? 'none';
+                        $isDirectVisit = empty($appointment) || in_array($request->visit?->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit']) || !empty($details['created_at_inquiry']));
+                        // شرط التحصين: إذا كانت الزيارة مباشرة/خارجية وبدون حجز استشاري، لا يطبق الضمان الصحي وتكون نقدي 100%
+                        if ($isDirectVisit && empty($appointment?->doctor_id)) {
+                            $defaultInsurance = 'none';
+                        } else {
+                            $defaultInsurance = $request->insurance_type ?? optional($appointment)->insurance_type ?? optional($patient)->insurance_type ?? 'none';
+                        }
                         $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
                         if ($defaultInsurance === 'hi' && $patient) {
                             $defaultCopay = $patient->getCopayPercentageFor($request->type);
                         } else {
                             $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
                         }
-                        $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
-
-                        $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                        $defaultCardNo = ($defaultInsurance !== 'none') ? ($patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '') : '';
                         $items = [];
 
                         if ($request->type === 'lab') {
-                            $testIds = $details['lab_test_ids'] ?? [];
-                            if (empty($testIds) && !empty($details['package_id'])) {
-                                $pkg = \App\Models\Package::find($details['package_id']);
-                                if ($pkg) {
-                                    $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                                }
-                            }
-                            if (!empty($testIds)) {
-                                foreach ($testIds as $tId) {
+                            $packageId = $details['package_id'] ?? null;
+                            $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
+
+                            if ($pkg) {
+                                $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                $items[] = [
+                                    'id' => 'pkg_' . $pkg->id,
+                                    'name' => '📦 باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)',
+                                    'code' => $pkg->code ?? 'PKG-' . $pkg->id,
+                                    'type' => 'package',
+                                    'base_price' => (float)$pkg->price,
+                                    'moi_price' => (float)$pkg->price,
+                                    'hi_price' => (float)$pkg->price,
+                                    'is_moi_active' => false,
+                                    'is_hi_active' => false,
+                                ];
+
+                                // أي تحاليل إضافية خارج الباقة فقط
+                                $allTestIds = $details['lab_test_ids'] ?? [];
+                                $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                                foreach ($extraTestIds as $tId) {
                                     $test = \App\Models\LabTest::find($tId);
                                     if ($test) {
                                         $items[] = [
                                             'id' => $test->id,
-                                            'name' => $test->name,
+                                            'name' => '🔬 ' . $test->name . ' (تحليل إضافي)',
                                             'code' => $test->code,
                                             'type' => 'lab',
                                             'base_price' => (float)$test->getRegularPrice(),
@@ -57,21 +74,41 @@
                                         ];
                                     }
                                 }
-                            } elseif (!empty($details['tests'])) {
-                                foreach ($details['tests'] as $tName) {
-                                    $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
-                                    if ($test) {
-                                        $items[] = [
-                                            'id' => $test->id,
-                                            'name' => $test->name,
-                                            'code' => $test->code,
-                                            'type' => 'lab',
-                                            'base_price' => (float)$test->getRegularPrice(),
-                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
-                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
-                                            'is_moi_active' => (bool)($test->is_moi_active ?? true),
-                                            'is_hi_active' => (bool)($test->is_hi_active ?? true),
-                                        ];
+                            } else {
+                                $testIds = $details['lab_test_ids'] ?? [];
+                                if (!empty($testIds)) {
+                                    foreach ($testIds as $tId) {
+                                        $test = \App\Models\LabTest::find($tId);
+                                        if ($test) {
+                                            $items[] = [
+                                                'id' => $test->id,
+                                                'name' => $test->name,
+                                                'code' => $test->code,
+                                                'type' => 'lab',
+                                                'base_price' => (float)$test->getRegularPrice(),
+                                                'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                                'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                                'is_hi_active' => (bool)($test->is_hi_active ?? true),
+                                            ];
+                                        }
+                                    }
+                                } elseif (!empty($details['tests'])) {
+                                    foreach ($details['tests'] as $tName) {
+                                        $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                        if ($test) {
+                                            $items[] = [
+                                                'id' => $test->id,
+                                                'name' => $test->name,
+                                                'code' => $test->code,
+                                                'type' => 'lab',
+                                                'base_price' => (float)$test->getRegularPrice(),
+                                                'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                                'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                                'is_hi_active' => (bool)($test->is_hi_active ?? true),
+                                            ];
+                                        }
                                     }
                                 }
                             }
@@ -80,13 +117,15 @@
                             if (!is_array($typeIds)) {
                                 $typeIds = [$typeIds];
                             }
+                            $radTargets = $details['radiology_targets'] ?? [];
                             if (!empty($typeIds)) {
                                 foreach ($typeIds as $rId) {
                                     $rad = \App\Models\RadiologyType::find($rId);
                                     if ($rad) {
+                                        $targetPart = isset($radTargets[$rId]) && !empty($radTargets[$rId]) ? trim($radTargets[$rId]) : null;
                                         $items[] = [
                                             'id' => $rad->id,
-                                            'name' => $rad->name,
+                                            'name' => $rad->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
                                             'code' => $rad->code,
                                             'type' => 'radiology',
                                             'base_price' => (float)$rad->getRegularPrice(),
@@ -219,9 +258,9 @@
                                         </div>
                                     @endif
                                     <select class="form-select {{ $defaultInsurance !== 'none' ? 'd-none' : '' }}" id="insurance_type" name="insurance_type">
-                                        <option value="none" {{ old('insurance_type', $defaultInsurance) == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل 100%)</option>
-                                        <option value="moi" {{ old('insurance_type', $defaultInsurance) == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
-                                        <option value="hi" {{ old('insurance_type', $defaultInsurance) == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
+                                        <option value="none" {{ (old('insurance_type', $defaultInsurance) == 'none') ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل 100%)</option>
+                                        <option value="moi" {{ (old('insurance_type', $defaultInsurance) == 'moi') ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
+                                        <option value="hi" {{ (old('insurance_type', $defaultInsurance) == 'hi') ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
                                     </select>
                                 </div>
 
@@ -332,12 +371,21 @@
                                                         data-is-hi-active="{{ $item['is_hi_active'] ? '1' : '0' }}">
                                                         <td class="text-center text-muted">{{ $idx + 1 }}</td>
                                                         <td>
-                                                            @if($item['type'] === 'lab')
+                                                            @if($item['type'] === 'package')
+                                                                <i class="fas fa-box text-warning me-2"></i>
+                                                            @elseif($item['type'] === 'lab')
                                                                 <i class="fas fa-vial text-primary me-2"></i>
                                                             @else
                                                                 <i class="fas fa-x-ray text-info me-2"></i>
                                                             @endif
                                                             <span class="fw-semibold">{{ $item['name'] }}</span>
+                                                            <span class="row-coverage-badge badge {{ $rowCov ? 'bg-success-subtle text-success border border-success-subtle' : ($defaultInsurance !== 'none' ? 'bg-warning-subtle text-dark border border-warning' : '') }} small ms-1" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
+                                                                @if($rowCov)
+                                                                    <i class="fas fa-check-circle me-1"></i>مشمول بالضمان
+                                                                @elseif($defaultInsurance !== 'none')
+                                                                    <i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)
+                                                                @endif
+                                                            </span>
                                                         </td>
                                                         <td><code>{{ $item['code'] }}</code></td>
                                                         <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
@@ -527,6 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalPatient = 0;
         let totalInsurance = 0;
         let hasError = false;
+        let hasUncovered = false;
 
         rows.forEach(row => {
             const basePrice = parseFloat(row.getAttribute('data-base-price')) || 0;
@@ -539,18 +588,18 @@ document.addEventListener('DOMContentLoaded', function() {
             let rowCovered = false;
 
             if (insType === 'moi') {
-                if (!isMoiActive || moiPrice <= 0) {
-                    hasError = true;
-                } else {
+                if (isMoiActive && moiPrice > 0) {
                     rowApproved = moiPrice;
                     rowCovered = true;
+                } else {
+                    hasUncovered = true;
                 }
             } else if (insType === 'hi') {
-                if (!isHiActive || hiPrice <= 0) {
-                    hasError = true;
-                } else {
+                if (isHiActive && hiPrice > 0) {
                     rowApproved = hiPrice;
                     rowCovered = true;
+                } else {
+                    hasUncovered = true;
                 }
             }
 
@@ -569,25 +618,41 @@ document.addEventListener('DOMContentLoaded', function() {
             const tdApproved = row.querySelector('.row-approved-price');
             const tdPatient = row.querySelector('.row-patient-share');
             const tdInsurance = row.querySelector('.row-insurance-share');
+            const covBadge = row.querySelector('.row-coverage-badge');
 
             if (tdApproved) tdApproved.textContent = formatNumber(rowApproved);
             if (tdPatient) tdPatient.textContent = formatNumber(rowPatient);
             if (tdInsurance) tdInsurance.textContent = formatNumber(rowInsurance);
+
+            if (covBadge) {
+                if (insType === 'none') {
+                    covBadge.style.display = 'none';
+                } else if (rowCovered) {
+                    covBadge.style.display = 'inline-block';
+                    covBadge.className = 'row-coverage-badge badge bg-success-subtle text-success border border-success-subtle small ms-1';
+                    covBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>مشمول بالضمان';
+                } else {
+                    covBadge.style.display = 'inline-block';
+                    covBadge.className = 'row-coverage-badge badge bg-warning text-dark border border-warning small ms-1';
+                    covBadge.innerHTML = '<i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)';
+                }
+            }
         });
 
         const alertBox = document.getElementById('insuranceErrorAlert');
         const submitBtn = document.getElementById('submitPaymentBtn');
 
-        if (hasError) {
-            if (alertBox) alertBox.classList.remove('d-none');
-            if (submitBtn) submitBtn.disabled = true;
-            totalApproved = 0;
-            totalPatient = 0;
-            totalInsurance = 0;
+        if (hasUncovered && insType !== 'none') {
+            if (alertBox) {
+                alertBox.className = 'alert alert-warning fw-semibold small mb-3 text-center';
+                alertBox.innerHTML = '<i class="fas fa-info-circle me-1 text-warning"></i> تنبيه للكاشير: يحتوي الطلب على فحوصات غير مشمولة بالضمان، تم احتسابها نقداً 100% على المريض تلقائياً.';
+                alertBox.classList.remove('d-none');
+            }
         } else {
             if (alertBox) alertBox.classList.add('d-none');
-            if (submitBtn) submitBtn.disabled = false;
         }
+
+        if (submitBtn) submitBtn.disabled = false;
 
         if (displayApproved) displayApproved.textContent = formatNumber(totalApproved);
         if (displayPatientShare) displayPatientShare.textContent = formatNumber(totalPatient);

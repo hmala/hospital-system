@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\RadiologyType;
+use App\Exports\RadiologyTypesExport;
+use App\Imports\RadiologyTypesImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -20,6 +23,51 @@ class RadiologyTypeController extends Controller
             }
             return $next($request);
         });
+    }
+
+    /**
+     * Export radiology types to Excel.
+     */
+    public function export(Request $request)
+    {
+        $fileName = 'قائمة_فحوصات_الأشعة_والتصوير_الطبي_' . date('Y_m_d') . '.xlsx';
+        return Excel::download(new RadiologyTypesExport($request), $fileName);
+    }
+
+    /**
+     * Import and bulk update radiology types from Excel.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'replace_all' => 'nullable|boolean',
+        ], [
+            'excel_file.required' => 'يرجى اختيار ملف الإكسل المراد استيراده',
+            'excel_file.mimes' => 'يجب أن يكون الملف بصيغة Excel (.xlsx, .xls) أو CSV',
+            'excel_file.max' => 'حجم الملف يجب ألا يتجاوز 10 ميغابايت',
+        ]);
+
+        try {
+            $replaceAll = $request->has('replace_all') ? filter_var($request->input('replace_all'), FILTER_VALIDATE_BOOLEAN) : true;
+            $import = new RadiologyTypesImport($replaceAll);
+            Excel::import($import, $request->file('excel_file'));
+
+            $msg = "تم استيراد واستبدال جدول الأشعة بنجاح بملف الإكسل: تم تحديث {$import->updatedCount} خدمة";
+            if ($import->createdCount > 0) {
+                $msg .= "، وإضافة {$import->createdCount} خدمة جديدة";
+            }
+            if ($import->deletedCount > 0) {
+                $msg .= "، وحذف وإزالة {$import->deletedCount} خدمة قديمة غير مستخدمة";
+            }
+            if ($import->skippedCount > 0) {
+                $msg .= " (تم تخطي {$import->skippedCount} لعدم اكتمال بياناتها).";
+            }
+
+            return redirect()->back()->with('success', $msg);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة ملف الإكسل: ' . $e->getMessage());
+        }
     }
 
     /**

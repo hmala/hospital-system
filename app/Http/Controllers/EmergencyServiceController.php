@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmergencyService;
+use App\Exports\EmergencyServicesExport;
+use App\Imports\EmergencyServicesImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
 class EmergencyServiceController extends Controller
@@ -28,6 +31,41 @@ class EmergencyServiceController extends Controller
 
             return $next($request);
         });
+    }
+
+    /**
+     * Export emergency services to Excel.
+     */
+    public function export(Request $request)
+    {
+        $fileName = 'قائمة_خدمات_الطوارئ_' . date('Y_m_d') . '.xlsx';
+        return Excel::download(new EmergencyServicesExport($request), $fileName);
+    }
+
+    /**
+     * Import and bulk update emergency services from Excel.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ], [
+            'excel_file.required' => 'يرجى اختيار ملف الإكسل المراد استيراده',
+            'excel_file.mimes' => 'يجب أن يكون الملف بصيغة Excel (.xlsx, .xls) أو CSV',
+            'excel_file.max' => 'حجم الملف يجب ألا يتجاوز 10 ميغابايت',
+        ]);
+
+        try {
+            $import = new EmergencyServicesImport();
+            Excel::import($import, $request->file('excel_file'));
+
+            return redirect()->back()->with(
+                'success',
+                "تم استيراد وتحديث {$import->updatedCount} خدمة طوارئ بنجاح من ملف الإكسل (تم تخطي {$import->skippedCount} غير مطابق أو لم يطرأ عليه تغيير)."
+            );
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة ملف الإكسل: ' . $e->getMessage());
+        }
     }
 
     public function index(Request $request)

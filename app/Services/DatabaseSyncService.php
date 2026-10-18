@@ -11,6 +11,41 @@ use PDO;
 class DatabaseSyncService
 {
     /**
+     * التحقق الصارم من أن البيئة محلية وآمنة بنسبة 100% للسحب (ليست هوستنجر ولا بيئة إنتاج)
+     */
+    public static function isSafeLocalEnvironment(): bool
+    {
+        // 1. إذا كان اسم قاعدة البيانات يطابق قاعدة بيانات هوستنجر الحية
+        $localDb = (string) config('database.connections.mysql.database');
+        $remoteDb = (string) config('database.connections.remote_hostinger.database');
+        if (!empty($localDb) && !empty($remoteDb) && strtolower($localDb) === strtolower($remoteDb)) {
+            return false;
+        }
+
+        if (strtolower($localDb) === 'u175868711_her2020') {
+            return false;
+        }
+
+        // 2. إذا كان نظام التشغيل لينكس (سيرفر هوستنجر) وليس بيئة WAMP ويندوز المحلية
+        if (DIRECTORY_SEPARATOR === '/') {
+            return false;
+        }
+
+        // 3. إذا كان الدومين أونلاين
+        $host = request()?->getHost() ?? '';
+        if (!empty($host) && !in_array($host, ['localhost', '127.0.0.1', 'hospital-system.test'])) {
+            return false;
+        }
+
+        // 4. إذا كانت البيئة إنتاج
+        if (app()->environment('production')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * اختبار الاتصال بقاعدة بيانات هوستنجر وجلب إحصائيات سريعة
      */
     public function testRemoteConnection(): array
@@ -125,6 +160,17 @@ class DatabaseSyncService
      */
     public function pullFromRemote(callable $progressCallback = null): array
     {
+        // حظر أمني حاسم: منع تشغيل السحب نهائياً خارج البيئة المحلية
+        if (!self::isSafeLocalEnvironment() && !app()->environment('testing')) {
+            throw new Exception('عملية السحب محظورة تماماً على سيرفر الإنتاج (Online) لحماية البيانات الحية من المسح.');
+        }
+
+        $localDbName = config('database.connections.mysql.database');
+        $remoteDbName = config('database.connections.remote_hostinger.database');
+        if (!empty($localDbName) && !empty($remoteDbName) && strtolower($localDbName) === strtolower($remoteDbName)) {
+            throw new Exception("حظر أمني خطير: اسم قاعدة البيانات المحلية ({$localDbName}) يطابق قاعدة البيانات السحابية! تم إلغاء العملية فوراً لمنع تدمير البيانات.");
+        }
+
         set_time_limit(600); // 10 دقائق كحد أقصى للعمليات الكبيرة
         ini_set('memory_limit', '1024M');
 

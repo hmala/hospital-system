@@ -53,4 +53,28 @@ class DatabaseSyncTest extends TestCase
         $this->assertTrue($response->json('success'));
         $this->assertEquals(106, $response->json('tables_count'));
     }
+
+    public function test_access_is_blocked_in_production_environment(): void
+    {
+        // محاكاة بيئة الإنتاج
+        $this->app['env'] = 'production';
+
+        $response = $this->actingAs($this->admin)->get(route('system.database-sync.index'));
+        $response->assertNotFound();
+    }
+
+    public function test_pull_is_blocked_when_local_and_remote_database_names_match(): void
+    {
+        config(['database.connections.mysql.database' => 'u175868711_her2020']);
+        config(['database.connections.remote_hostinger.database' => 'u175868711_her2020']);
+
+        $syncService = app(\App\Services\DatabaseSyncService::class);
+
+        try {
+            $syncService->pullFromRemote();
+            $this->fail('Expected exception was not thrown.');
+        } catch (\Throwable $e) {
+            $this->assertStringContainsString('u175868711_her2020', $e->getMessage());
+        }
+    }
 }

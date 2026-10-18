@@ -294,7 +294,7 @@ class DoctorQueueController extends Controller
             ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END")
             ->orderBy('queue_number', 'asc')
             ->orderBy('id', 'asc')
-            ->limit(10)
+            ->limit(50)
             ->get();
 
         // 3. Patients Waiting for Lab/Radiology Test Results & Pharmacy Dispensing
@@ -497,6 +497,11 @@ class DoctorQueueController extends Controller
                 'status' => $currentPatient->status,
                 'status_text' => $currentPatient->status_text,
                 'is_emergency' => (bool)$currentPatient->emergency_id,
+                'emergency_id' => $currentPatient->emergency_id,
+                'emergency_notes' => $currentPatient->emergency?->notes,
+                'emergency_symptoms' => $currentPatient->emergency?->symptoms,
+                'emergency_diagnosis' => $currentPatient->emergency?->diagnosis,
+                'appointment_notes' => $currentPatient->notes,
                 'is_result_review' => (bool)$hasVisitTests,
                 'called_at' => $currentPatient->called_at ? $currentPatient->called_at->toIso8601String() : null,
                 'called_at_timestamp' => $currentPatient->called_at ? $currentPatient->called_at->timestamp : null,
@@ -513,6 +518,11 @@ class DoctorQueueController extends Controller
                 'queue_number' => $apt->queue_number ?: $apt->id,
                 'name' => $name,
                 'is_emergency' => (bool)$apt->emergency_id,
+                'emergency_id' => $apt->emergency_id,
+                'emergency_notes' => $apt->emergency?->notes,
+                'emergency_symptoms' => $apt->emergency?->symptoms,
+                'emergency_diagnosis' => $apt->emergency?->diagnosis,
+                'appointment_notes' => $apt->notes,
                 'status' => $apt->status,
                 'status_text' => $apt->status_text,
             ];
@@ -702,6 +712,64 @@ class DoctorQueueController extends Controller
             'message' => 'تم استدعاء المريض (' . $pName . ') بنجاح.',
             'appointment_id' => $nextAppointment->id,
             'queue_number' => $nextAppointment->queue_number,
+            'patient_name' => $pName
+        ]);
+    }
+
+    /**
+     * Action: Call Specific Patient from Queue (Doctor selects any waiting patient out of turn)
+     */
+    public function callSpecific(Request $request, $appointmentId)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المرضى من الطابور.'], 403);
+        }
+
+        $appointment = Appointment::with(['patient.user', 'emergency', 'doctor.user'])->findOrFail($appointmentId);
+        $doctorId = $appointment->doctor_id;
+        $today = today();
+
+        $this->ensureQueueNumbersAssigned($doctorId);
+
+        // Move previous admitted/consultation appointments with visits to completed
+        Appointment::where('doctor_id', $doctorId)
+            ->whereDate('appointment_date', $today)
+            ->where(function($q) {
+                $q->where('status', 'in_consultation')
+                  ->orWhereHas('visit');
+            })
+            ->where('id', '!=', $appointment->id)
+            ->update(['status' => 'completed']);
+
+        // Move any currently 'calling' appointment back to confirmed
+        Appointment::where('doctor_id', $doctorId)
+            ->whereDate('appointment_date', $today)
+            ->where('status', 'calling')
+            ->whereDoesntHave('visit')
+            ->where('id', '!=', $appointment->id)
+            ->update(['status' => 'confirmed']);
+
+        // Set target appointment to calling
+        $appointment->status = 'calling';
+        $appointment->called_at = now();
+        $appointment->save();
+
+        // إرسال نداء فوري على تيليجرام للمريض المستدعى
+        try {
+            app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
+        } catch (\Throwable $e) {
+            \Log::warning('Telegram notification failed: ' . $e->getMessage());
+        }
+
+        $pName = $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'المريض';
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم استدعاء المريض (' . $pName . ') بدور #' . ($appointment->queue_number ?? $appointment->id) . ' بنجاح.',
+            'appointment_id' => $appointment->id,
+            'queue_number' => $appointment->queue_number,
             'patient_name' => $pName
         ]);
     }
@@ -912,9 +980,6 @@ class DoctorQueueController extends Controller
         $today = today();
         $appointments = Appointment::where('doctor_id', $doctorId)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
-                $q->where('payment_status', 'paid')->orWhereNotNull('emergency_id');
-            })
             ->whereNull('queue_number')
             ->orderBy('id', 'asc')
             ->get();

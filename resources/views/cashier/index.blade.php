@@ -153,6 +153,23 @@
                                 $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount;
                             @endphp
 
+                            @if(($pendingRefundCount ?? 0) > 0)
+                                <div class="alert alert-danger border-danger d-flex align-items-center justify-content-between p-3 mb-3 rounded-3 shadow-sm bg-danger bg-opacity-10">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-danger text-white rounded-circle p-2 me-3 shadow-xs d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                                            <i class="fas fa-undo-alt fa-lg"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-danger d-block fs-6 mb-0">تنبيه الكاشير: يوجد ({{ $pendingRefundCount }}) طلبات طبية ملغاة بعد السداد بانتظار استرجاع المبالغ للمرضى!</strong>
+                                            <span class="small text-muted">يرجى تسليم المبالغ للمرضى وإصدار سندات الاسترجاع المالية الرسمية.</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm fw-bold px-3 shadow-sm" onclick="document.getElementById('tab-refunds-btn').click();">
+                                        <i class="fas fa-arrow-down me-1"></i> فتح مستحقات الاسترجاع الآن
+                                    </button>
+                                </div>
+                            @endif
+
                             <div class="card border-0 shadow-sm">
                                 <div class="card-header bg-white border-bottom p-3">
                                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -199,6 +216,16 @@
                                                 </button>
                                             </li>
                                             @endif
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill {{ ($pendingRefundCount ?? 0) > 0 ? 'text-danger border border-danger' : '' }}" id="tab-refunds-btn" data-bs-toggle="pill" data-bs-target="#tab-refunds" type="button" role="tab">
+                                                    <i class="fas fa-undo-alt me-1 text-danger"></i> مستحقات الاسترجاع
+                                                    @if(($pendingRefundCount ?? 0) > 0)
+                                                        <span class="badge bg-danger ms-1 rounded-pill">{{ $pendingRefundCount }}</span>
+                                                    @else
+                                                        <span class="badge bg-secondary ms-1 rounded-pill">0</span>
+                                                    @endif
+                                                </button>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
@@ -291,7 +318,15 @@
                                                                     @php
                                                                         $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                                                                         $reqPatient = optional(optional($request->visit)->patient);
-                                                                        $insType = $request->insurance_type ?? optional(optional($request->visit)->appointment)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
+                                                                        $reqAppt = optional(optional($request->visit)->appointment);
+                                                                        $isDirectVisit = empty($reqAppt->doctor_id) && (in_array(optional($request->visit)->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit']) || !empty($details['created_at_inquiry'])));
+                                                                        
+                                                                        if ($isDirectVisit) {
+                                                                            $insType = 'none';
+                                                                        } else {
+                                                                            $insType = $request->insurance_type ?? optional($reqAppt)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
+                                                                        }
+                                                                        
                                                                         $docName = optional(optional(optional($request->visit)->doctor)->user)->name;
                                                                         $isIns = in_array($insType, ['hi', 'moi']);
                                                                         
@@ -301,29 +336,47 @@
                                                                         $copayPct = ($insType === 'hi' && $reqPatient) ? $reqPatient->getCopayPercentageFor($request->type) : (float)($reqPatient->copay_percentage ?? 15);
 
                                                                         if ($request->type === 'lab') {
-                                                                            $testIds = $details['lab_test_ids'] ?? [];
-                                                                            if (empty($testIds) && !empty($details['package_id'])) {
-                                                                                $pkg = \App\Models\Package::find($details['package_id']);
-                                                                                if ($pkg) $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                                                                            }
-                                                                            if (!empty($testIds)) {
-                                                                                foreach ($testIds as $tId) {
+                                                                            $packageId = $details['package_id'] ?? null;
+                                                                            $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
+                                                                            
+                                                                            if ($pkg) {
+                                                                                $hasComputedItems = true;
+                                                                                $pkgPrice = (float)$pkg->price;
+                                                                                $computedApproved += $pkgPrice;
+                                                                                $computedPatient += $pkgPrice;
+                                                                                
+                                                                                $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                                                                $allTestIds = $details['lab_test_ids'] ?? [];
+                                                                                $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                                                                                foreach ($extraTestIds as $tId) {
                                                                                     $t = \App\Models\LabTest::find($tId);
                                                                                     if ($t) {
-                                                                                        $hasComputedItems = true;
                                                                                         $p = $t->calculateInsurancePricing($insType, $copayPct);
                                                                                         $computedApproved += $p['approved_price'];
                                                                                         $computedPatient += $p['patient_share'];
                                                                                     }
                                                                                 }
-                                                                            } elseif (!empty($details['tests'])) {
-                                                                                foreach ($details['tests'] as $tName) {
-                                                                                    $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
-                                                                                    if ($t) {
-                                                                                        $hasComputedItems = true;
-                                                                                        $p = $t->calculateInsurancePricing($insType, $copayPct);
-                                                                                        $computedApproved += $p['approved_price'];
-                                                                                        $computedPatient += $p['patient_share'];
+                                                                            } else {
+                                                                                $testIds = $details['lab_test_ids'] ?? [];
+                                                                                if (!empty($testIds)) {
+                                                                                    foreach ($testIds as $tId) {
+                                                                                        $t = \App\Models\LabTest::find($tId);
+                                                                                        if ($t) {
+                                                                                            $hasComputedItems = true;
+                                                                                            $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                            $computedApproved += $p['approved_price'];
+                                                                                            $computedPatient += $p['patient_share'];
+                                                                                        }
+                                                                                    }
+                                                                                } elseif (!empty($details['tests'])) {
+                                                                                    foreach ($details['tests'] as $tName) {
+                                                                                        $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                                                                        if ($t) {
+                                                                                            $hasComputedItems = true;
+                                                                                            $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                            $computedApproved += $p['approved_price'];
+                                                                                            $computedPatient += $p['patient_share'];
+                                                                                        }
                                                                                     }
                                                                                 }
                                                                             }
@@ -367,11 +420,19 @@
                                                                             <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
                                                                         </td>
                                                                         <td>
-                                                                            @if($request->type === 'lab' && isset($details['lab_test_ids']))
-                                                                                <small class="text-muted">
-                                                                                    <i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل
-                                                                                    @if($docName) <br>طلب: د. {{ $docName }} @endif
-                                                                                </small>
+                                                                            @if($request->type === 'lab')
+                                                                                @if(!empty($details['package_id']))
+                                                                                    @php $pkgName = $details['package_name'] ?? optional(\App\Models\Package::find($details['package_id']))->name ?? 'باقة مختبر'; @endphp
+                                                                                    <div class="fw-semibold text-primary"><i class="fas fa-box text-warning me-1"></i> {{ $pkgName }}</div>
+                                                                                    <small class="text-muted">({{ count($details['lab_test_ids'] ?? []) }} تحاليل مشمولة)</small>
+                                                                                @elseif(isset($details['lab_test_ids']))
+                                                                                    <small class="text-muted">
+                                                                                        <i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل
+                                                                                    </small>
+                                                                                @else
+                                                                                    <small class="text-muted">{{ $request->description }}</small>
+                                                                                @endif
+                                                                                @if($docName) <br><small class="text-muted">طلب: د. {{ $docName }}</small> @endif
                                                                             @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
                                                                                 <small class="text-muted">
                                                                                     <i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} فحص شعاعي
@@ -553,7 +614,15 @@
                                                                 @php
                                                                     $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                                                                     $reqPatient = optional(optional($request->visit)->patient);
-                                                                    $insType = $request->insurance_type ?? optional(optional($request->visit)->appointment)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
+                                                                    $reqAppt = optional(optional($request->visit)->appointment);
+                                                                    $isDirectVisit = empty($reqAppt->doctor_id) && (in_array(optional($request->visit)->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit']) || !empty($details['created_at_inquiry'])));
+                                                                    
+                                                                    if ($isDirectVisit) {
+                                                                        $insType = 'none';
+                                                                    } else {
+                                                                        $insType = $request->insurance_type ?? optional($reqAppt)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
+                                                                    }
+                                                                    
                                                                     $docName = optional(optional(optional($request->visit)->doctor)->user)->name ?? '---';
                                                                     $isIns = in_array($insType, ['hi', 'moi']);
                                                                     
@@ -563,29 +632,47 @@
                                                                     $copayPct = ($insType === 'hi' && $reqPatient) ? $reqPatient->getCopayPercentageFor($request->type) : (float)($reqPatient->copay_percentage ?? 15);
 
                                                                     if ($request->type === 'lab') {
-                                                                        $testIds = $details['lab_test_ids'] ?? [];
-                                                                        if (empty($testIds) && !empty($details['package_id'])) {
-                                                                            $pkg = \App\Models\Package::find($details['package_id']);
-                                                                            if ($pkg) $testIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                                                                        }
-                                                                        if (!empty($testIds)) {
-                                                                            foreach ($testIds as $tId) {
+                                                                        $packageId = $details['package_id'] ?? null;
+                                                                        $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
+
+                                                                        if ($pkg) {
+                                                                            $hasComputedItems = true;
+                                                                            $pkgPrice = (float)$pkg->price;
+                                                                            $computedApproved += $pkgPrice;
+                                                                            $computedPatient += $pkgPrice;
+
+                                                                            $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                                                            $allTestIds = $details['lab_test_ids'] ?? [];
+                                                                            $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                                                                            foreach ($extraTestIds as $tId) {
                                                                                 $t = \App\Models\LabTest::find($tId);
                                                                                 if ($t) {
-                                                                                    $hasComputedItems = true;
                                                                                     $p = $t->calculateInsurancePricing($insType, $copayPct);
                                                                                     $computedApproved += $p['approved_price'];
                                                                                     $computedPatient += $p['patient_share'];
                                                                                 }
                                                                             }
-                                                                        } elseif (!empty($details['tests'])) {
-                                                                            foreach ($details['tests'] as $tName) {
-                                                                                $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
-                                                                                if ($t) {
-                                                                                    $hasComputedItems = true;
-                                                                                    $p = $t->calculateInsurancePricing($insType, $copayPct);
-                                                                                    $computedApproved += $p['approved_price'];
-                                                                                    $computedPatient += $p['patient_share'];
+                                                                        } else {
+                                                                            $testIds = $details['lab_test_ids'] ?? [];
+                                                                            if (!empty($testIds)) {
+                                                                                foreach ($testIds as $tId) {
+                                                                                    $t = \App\Models\LabTest::find($tId);
+                                                                                    if ($t) {
+                                                                                        $hasComputedItems = true;
+                                                                                        $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                        $computedApproved += $p['approved_price'];
+                                                                                        $computedPatient += $p['patient_share'];
+                                                                                    }
+                                                                                }
+                                                                            } elseif (!empty($details['tests'])) {
+                                                                                foreach ($details['tests'] as $tName) {
+                                                                                    $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                                                                    if ($t) {
+                                                                                        $hasComputedItems = true;
+                                                                                        $p = $t->calculateInsurancePricing($insType, $copayPct);
+                                                                                        $computedApproved += $p['approved_price'];
+                                                                                        $computedPatient += $p['patient_share'];
+                                                                                    }
                                                                                 }
                                                                             }
                                                                         }
@@ -629,10 +716,17 @@
                                                                         <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
                                                                     </td>
                                                                     <td>
-                                                                        @if($request->type === 'lab' && isset($details['lab_test_ids']))
-                                                                            <span class="text-dark fw-bold"><i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل</span>
+                                                                        @if($request->type === 'lab')
                                                                             @if(!empty($details['package_id']))
-                                                                                <small class="badge bg-light text-dark border ms-1">باقة #{{ $details['package_id'] }}</small>
+                                                                                @php $pkgName = $details['package_name'] ?? optional(\App\Models\Package::find($details['package_id']))->name ?? 'باقة مختبر'; @endphp
+                                                                                <div>
+                                                                                    <span class="text-primary fw-bold"><i class="fas fa-box text-warning me-1"></i> {{ $pkgName }}</span>
+                                                                                    <small class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-1">{{ count($details['lab_test_ids'] ?? []) }} تحليل مشمول</small>
+                                                                                </div>
+                                                                            @elseif(isset($details['lab_test_ids']))
+                                                                                <span class="text-dark fw-bold"><i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل</span>
+                                                                            @else
+                                                                                <span>{{ $request->description }}</span>
                                                                             @endif
                                                                         @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
                                                                             <span class="text-dark fw-bold"><i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} فحص أشعة</span>
@@ -732,6 +826,153 @@
                                         </div>
                                         @endif
 
+                                        <!-- تبويب مستحقات الاسترجاع (Refunds) -->
+                                        <div class="tab-pane fade" id="tab-refunds" role="tabpanel">
+                                            @php
+                                                $hasAnyRefunds = (isset($pendingRefundRequests) && $pendingRefundRequests->count() > 0) || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0);
+                                            @endphp
+                                            @if($hasAnyRefunds)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>رقم الطلب / الحالة</th>
+                                                                <th>القسم / الخدمة</th>
+                                                                <th>المريض</th>
+                                                                <th>الوصل الأصلي</th>
+                                                                <th>سبب وتاريخ الإلغاء</th>
+                                                                <th class="text-end">المبلغ المستحق إرجاعه</th>
+                                                                <th class="text-center">الإجراء</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {{-- استرجاع طلبات الفحوصات الطبية (مختبر / أشعة) --}}
+                                                            @foreach($pendingRefundRequests ?? [] as $req)
+                                                                @php
+                                                                    $details = is_string($req->details) ? json_decode($req->details, true) : $req->details;
+                                                                    $pName = $req->visit?->patient?->user?->name ?? $req->payments->first()?->patient?->user?->name ?? 'غير محدد';
+                                                                    $pPhone = $req->visit?->patient?->user?->phone ?? $req->payments->first()?->patient?->user?->phone ?? ($req->visit?->patient?->national_id ?? '---');
+                                                                    $paidAmount = (float)($details['paid_amount'] ?? $req->payments()->where('amount', '>', 0)->sum('amount'));
+                                                                    $alreadyRefunded = abs((float)$req->payments()->where('amount', '<', 0)->sum('amount'));
+                                                                    $netRefund = max(0, $paidAmount - $alreadyRefunded);
+                                                                    $receiptNo = $details['paid_receipt_number'] ?? optional($req->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
+                                                                    $cancelledAt = $details['cancelled_at'] ?? $req->updated_at->format('Y-m-d H:i');
+                                                                    $cancelledBy = $details['cancelled_by_name'] ?? 'موظف القسم';
+                                                                    $cancelReason = $details['cancel_reason'] ?? 'بطلب من المريض';
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-danger">طلب #{{ $req->id }}</strong>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 ms-1">ملغي بعد الدفع</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($req->type === 'lab')
+                                                                            <span class="badge bg-primary text-white"><i class="fas fa-flask me-1"></i> مختبر</span>
+                                                                            @if(!empty($details['package_name']))
+                                                                                <div class="small fw-semibold text-dark mt-1">باقة: {{ $details['package_name'] }}</div>
+                                                                            @endif
+                                                                        @else
+                                                                            <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة / تصوير</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $pName }}</div>
+                                                                        <small class="text-muted">{{ $pPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($receiptNo)
+                                                                            <span class="badge bg-secondary font-monospace">#{{ $receiptNo }}</span>
+                                                                        @else
+                                                                            <span class="text-muted small">مسدد مسبقاً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $cancelReason }}</div>
+                                                                        <small class="text-muted">بواسطة: {{ $cancelledBy }} ({{ $cancelledAt }})</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($netRefund, 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" 
+                                                                                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm btn-open-refund"
+                                                                                data-id="{{ $req->id }}"
+                                                                                data-patient="{{ $pName }}"
+                                                                                data-receipt="{{ $receiptNo ?? '---' }}"
+                                                                                data-amount="{{ $netRefund }}"
+                                                                                data-service="{{ $req->type === 'lab' ? 'تحاليل المختبر' : 'الأشعة والتصوير' }}"
+                                                                                data-action="{{ route('cashier.request.refund.process', $req->id) }}">
+                                                                            <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+
+                                                            {{-- استرجاع حالات الطوارئ الملغاة بعد السداد --}}
+                                                            @foreach($pendingEmergencyRefunds ?? [] as $emg)
+                                                                @php
+                                                                    $emgPatientName = $emg->patient?->user?->name ?? $emg->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientPhone = $emg->patient?->user?->phone ?? $emg->emergencyPatient?->phone ?? '---';
+                                                                    $emgPaidAmount = (float)$emg->payments()->where('amount', '>', 0)->sum('amount');
+                                                                    $emgAlreadyRefunded = abs((float)$emg->payments()->where('amount', '<', 0)->sum('amount'));
+                                                                    $emgNetRefund = max(0, $emgPaidAmount - $emgAlreadyRefunded);
+                                                                    $emgReceiptNo = optional($emg->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
+                                                                    $emgCancelledAt = $emg->updated_at->format('Y-m-d H:i');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-danger">طوارئ #{{ $emg->id }}</strong>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 ms-1">ملغي بعد الدفع</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-danger text-white"><i class="fas fa-ambulance me-1"></i> طوارئ وإسعاف</span>
+                                                                        @if($emg->doctor)
+                                                                            <div class="small fw-semibold text-dark mt-1">د. {{ $emg->doctor->user?->name ?? $emg->doctor->name }}</div>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}</div>
+                                                                        <small class="text-muted">{{ $emgPatientPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($emgReceiptNo)
+                                                                            <span class="badge bg-secondary font-monospace">#{{ $emgReceiptNo }}</span>
+                                                                        @else
+                                                                            <span class="text-muted small">مسدد مسبقاً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> حالة طوارئ ملغاة</div>
+                                                                        <small class="text-muted">بتأريخ: {{ $emgCancelledAt }}</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($emgNetRefund, 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" 
+                                                                                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm btn-open-refund"
+                                                                                data-id="{{ $emg->id }}"
+                                                                                data-patient="{{ $emgPatientName }}"
+                                                                                data-receipt="{{ $emgReceiptNo ?? '---' }}"
+                                                                                data-amount="{{ $emgNetRefund }}"
+                                                                                data-service="طوارئ وإسعاف"
+                                                                                data-action="{{ route('cashier.emergency.refund.process', $emg->id) }}">
+                                                                            <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد طلبات أو حالات ملغاة بانتظار استرجاع المبالغ حالياً</p>
+                                                </div>
+                                            @endif
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -742,6 +983,75 @@
         </div> <!-- end col-12 -->
     </div> <!-- end row mb-4 -->
 
+</div> <!-- end container-fluid #cashier-content -->
+
+<!-- مودال معالجة استرجاع المبالغ للمرضى (Medical Request Refund Modal) - يوضع خارج حاوية cashier-content لحمايته من التحديث الدوري -->
+<div class="modal fade" id="medicalRefundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-danger text-white p-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-white text-danger rounded-circle p-2 me-2 shadow-xs d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">صرف استرجاع مالي للمريض (Refund)</h5>
+                        <small class="text-white-50">إشعار دائن وتسليم المبلغ للمريض</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="medicalRefundForm" method="POST" onsubmit="var btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'fas fa-spinner fa-spin me-1\'></i> جاري الصرف...';">
+                @csrf
+                <div class="modal-body p-4 text-end bg-light">
+                    <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">المريض:</span>
+                            <strong id="refundModalPatientName" class="text-dark">---</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">نوع الفحص:</span>
+                            <span id="refundModalServiceType" class="badge bg-secondary-subtle text-secondary">---</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">رقم الوصل الأصلي:</span>
+                            <span id="refundModalReceiptNo" class="font-monospace fw-bold text-primary">---</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark">المبلغ المستحق إرجاعه:</span>
+                            <span id="refundModalAmount" class="fs-5 fw-bold text-danger">0 د.ع</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">طريقة إرجاع المبلغ:</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" id="ref_method_cash" value="cash" checked>
+                                <label class="form-check-label fw-semibold" for="ref_method_cash">💵 نقداً (Cash)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" id="ref_method_card" value="card">
+                                <label class="form-check-label fw-semibold" for="ref_method_card">💳 بطاقة (Card)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-dark small">ملاحظات الاسترجاع (اختياري):</label>
+                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="مثال: تم تسليم المبلغ نقداً للمريض بسبب تعذر الفحص...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-white justify-content-between p-3">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء وتراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
+                        <i class="fas fa-check-circle me-1"></i> تأكيد صرف الاسترجاع وتوليد السند
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @endsection
@@ -750,6 +1060,11 @@
 <script>
 // تحديث تلقائي للصفحة كل 5 ثواني مع الحفاظ على التبويب النشط
 setInterval(function() {
+    // إيقاف التحديث اللحظي إذا كان هناك أي مودال مفتوح لمنع مقاطعة إدخال الكاشير
+    if ($('.modal.show').length > 0 || $('body').hasClass('modal-open') || document.querySelector('.modal.show')) {
+        return;
+    }
+
     $.ajax({
         url: window.location.href,
         type: 'GET',
@@ -784,6 +1099,38 @@ setInterval(function() {
         }
     });
 }, 5000);
+
+function openRefundModal(requestId, patientName, receiptNo, amount, serviceType, customActionUrl) {
+    const modalEl = document.getElementById('medicalRefundModal');
+    const form = document.getElementById('medicalRefundForm');
+    
+    document.getElementById('refundModalPatientName').textContent = patientName || 'غير محدد';
+    document.getElementById('refundModalServiceType').textContent = serviceType || '---';
+    document.getElementById('refundModalReceiptNo').textContent = '#' + (receiptNo || '---');
+    document.getElementById('refundModalAmount').textContent = Number(amount || 0).toLocaleString('en-US') + ' د.ع';
+    
+    form.action = customActionUrl || `{{ url('/cashier/request-refund') }}/${requestId}`;
+    
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    } else {
+        $(modalEl).modal('show');
+    }
+}
+
+$(document).on('click', '.btn-open-refund', function(e) {
+    e.preventDefault();
+    const btn = $(this);
+    openRefundModal(
+        btn.data('id'),
+        btn.data('patient'),
+        btn.data('receipt'),
+        btn.data('amount'),
+        btn.data('service'),
+        btn.data('action')
+    );
+});
 
 $(document).ready(function() {
     const now = new Date();

@@ -347,13 +347,18 @@
                         </div>
 
                         <!-- شريط الأزرار والحفظ -->
-                        <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center pt-3 border-top mt-4">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-3 border-top mt-4">
                             <a href="{{ route('patients.index') }}" class="btn btn-light rounded-pill px-4 text-muted fw-semibold">
-                                إلغاء
+                                <i class="fas fa-times me-1"></i> إلغاء
                             </a>
-                            <button type="submit" class="btn btn-primary btn-save-patient rounded-pill px-5 py-2 fw-bold shadow">
-                                <i class="fas fa-check-circle me-2"></i> حفظ المريض وفتح الإضبارة
-                            </button>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <button type="submit" name="action" value="save_only" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-semibold shadow-sm">
+                                    <i class="fas fa-save me-2"></i> حفظ والعودة لقائمة المرضى
+                                </button>
+                                <button type="submit" name="action" value="save_and_book" class="btn btn-primary btn-save-patient rounded-pill px-4 py-2 fw-bold shadow">
+                                    <i class="fas fa-calendar-plus me-2 text-warning"></i> حفظ والتحويل المباشر للحجز
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

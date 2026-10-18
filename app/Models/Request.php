@@ -135,6 +135,44 @@ class Request extends Model
         return $this->hasOne(\App\Models\BloodBankRequest::class);
     }
 
+    public function payments()
+    {
+        return $this->hasMany(\App\Models\Payment::class, 'request_id');
+    }
+
+    /**
+     * التحقق مما إذا كان الطلب طلباً خارجياً / مباشراً من الاستعلامات أو الصندوق
+     */
+    public function isDirectExternal(): bool
+    {
+        $details = $this->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?: [];
+        }
+
+        // 1. إذا كان معلماً صراحة أنه مباشر أو صادر من الاستعلامات
+        if (!empty($details['created_at_inquiry']) || !empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit'])) {
+            return true;
+        }
+
+        // 2. إذا كانت نوع الزيارة مخصصة للفحوصات المباشرة الخارجية
+        if ($this->visit && in_array($this->visit->visit_type, ['lab', 'radiology', 'external', 'blood_bank'], true)) {
+            return true;
+        }
+
+        // 3. إذا لم تكن هناك زيارة أو لا يوجد طبيب استشاري مرتبط بالزيارة والموعد
+        if (!$this->visit || (empty($this->visit->doctor_id) && empty($this->visit->appointment_id) && empty($this->visit->appointment?->doctor_id))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function getIsDirectExternalAttribute(): bool
+    {
+        return $this->isDirectExternal();
+    }
+
     // Helper methods
     public function isPending()
     {
@@ -202,6 +240,15 @@ class Request extends Model
             return [str_replace('طلب أشعة: ', '', $this->description)];
         }
         return [];
+    }
+
+    public function getDoctorNotesAttribute()
+    {
+        $details = $this->details;
+        if (is_string($details)) {
+            $details = json_decode($details, true) ?: [];
+        }
+        return $details['doctor_notes'] ?? $details['notes'] ?? (!empty($details['description']) && !str_starts_with($details['description'], 'طلب ') ? $details['description'] : null);
     }
 
     /**

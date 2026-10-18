@@ -27,10 +27,9 @@
                             $isInsurance = (bool) $em->is_insured;
                         } elseif (isset($em->insurance_type) && $em->insurance_type !== 'none') {
                             $isInsurance = true;
-                        } elseif ($patient && ($patient->insurance_type === 'hi' || $patient->healthInsuranceCategory)) {
-                            $isInsurance = true;
                         }
-                        if ($payment->insurance_type === 'none') {
+
+                        if ($payment->insurance_type === 'none' || !$isInsurance) {
                             $isInsurance = false;
                         } elseif ($payment->payment_method === 'insurance' || ($payment->insurance_share > 0)) {
                             $isInsurance = true;
@@ -158,15 +157,18 @@
                             }
                         }
 
-                        // 4. استشارة الطبيب
+                        // 4. استشارة الطبيب الاستشاري
                         foreach($em->appointments as $ap) {
                             if($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
-                                $apFee = (float) ($ap->consultation_fee ?? 0);
+                                $apFee = (float) ($ap->consultation_fee > 0 ? $ap->consultation_fee : 50000);
+                                $docName = $ap->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $ap->doctor->user->name)) : 'الاستشاري';
+                                $spec = $ap->doctor?->specialization ? ' (' . $ap->doctor->specialization . ')' : '';
+                                $dept = $ap->department?->name ? ' - ' . $ap->department->name : '';
                                 $invoiceItems[] = [
-                                    'category' => 'استشارة',
-                                    'badge_class' => 'bg-secondary text-white',
+                                    'category' => 'استشارة طبية',
+                                    'badge_class' => 'bg-purple text-white',
                                     'icon' => 'fa-user-md',
-                                    'name' => $ap->reason ?: 'استشارة استشاري',
+                                    'name' => 'استشارة طبية: ' . $docName . $spec . $dept,
                                     'qty' => 1,
                                     'is_covered' => false,
                                     'price' => $apFee,

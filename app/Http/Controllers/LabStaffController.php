@@ -179,7 +179,10 @@ class LabStaffController extends Controller
             }
         }
 
-        return view('lab.show', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest'));
+        $packages = \App\Models\Package::where('is_active', true)->with('labTests')->orderBy('name')->get();
+        $userGroups = \App\Models\UserLabTestGroup::where('user_id', $user->id)->with('labTests')->orderBy('name')->get();
+
+        return view('lab.show', compact('request', 'savedTestResults', 'savedNotes', 'bloodBankRequest', 'packages', 'userGroups'));
     }
 
     public function attachment(HttpRequest $httpRequest, MedicalRequest $request)
@@ -230,7 +233,14 @@ class LabStaffController extends Controller
                 $packageId = $httpRequest->package_id;
                 $details['package_id'] = $packageId;
                 try {
-                    $packageTests = \App\Models\Package::find($packageId)->labTests()->pluck('lab_tests.id')->toArray();
+                    $package = \App\Models\Package::find($packageId);
+                    $packageTests = $package ? $package->labTests()->pluck('lab_tests.id')->toArray() : [];
+                    if ($package) {
+                        $details['package_name'] = $package->name;
+                        $details['package_price'] = (float)$package->price;
+                        $details['package_test_ids'] = $packageTests;
+                        $request->total_amount = (float)$package->price;
+                    }
                 } catch (\Exception $e) {
                     $packageTests = [];
                 }
@@ -513,5 +523,107 @@ class LabStaffController extends Controller
             : null;
 
         return view('staff.requests.print', compact('request', 'isBloodBankRequest', 'bloodBankRequest'));
+    }
+
+    /**
+     * إلغاء الطلب الخارجي المباشر للمختبر
+     */
+    public function cancel(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        if (!$user || !$user->hasAnyRole(['lab_staff', 'admin', 'admin-hsop', 'hospital_admin'])) {
+            abort(403, 'غير مصرح لك بإلغاء هذا الطلب');
+        }
+
+        // 1. فحص هل الطلب صادر من طبيب استشاري داخل العيادات
+        if (!$request->isDirectExternal()) {
+            $msg = 'عذراً، هذا الطلب صادر عن طبيب استشاري داخل العيادات ولا يمكن إلغاؤه من المختبر. الإلغاء يتم حصراً من شاشة الطبيب المعالج.';
+            if ($httpRequest->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        // 2. فحص هل الفحص مكتمل ومعتمد بالفعل
+        if ($request->status === 'completed') {
+            $msg = 'لا يمكن إلغاء الطلب لأنه مكتمل ومعتمد بالنتائج المخبرية بالفعل.';
+            if ($httpRequest->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        if ($request->status === 'cancelled') {
+            $msg = 'الطلب ملغي بالفعل.';
+            if ($httpRequest->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('info', $msg);
+        }
+
+        $wasPaid = ($request->payment_status === 'paid');
+
+        // 3. تنفيذ الإلغاء
+        $cancelReason = trim($httpRequest->input('cancel_reason', 'إلغاء الطلب المباشر من قسم المختبر بطلب من المريض'));
+
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?: []) : ($request->details ?? []);
+        $details['cancelled_at'] = now()->toDateTimeString();
+        $details['cancelled_by'] = $user->id;
+        $details['cancelled_by_name'] = $user->name;
+        $details['cancel_reason'] = $cancelReason;
+        $details['cancelled_after_payment'] = $wasPaid;
+        if ($wasPaid) {
+            $details['refund_status'] = 'pending_refund';
+            $receipt = $request->payments()->latest()->first();
+            if ($receipt) {
+                $details['paid_receipt_id'] = $receipt->id;
+                $details['paid_receipt_number'] = $receipt->receipt_number;
+                $details['paid_amount'] = (float)$receipt->amount;
+            }
+        }
+
+        $request->status = 'cancelled';
+        $request->payment_status = 'cancelled';
+        $request->details = $details;
+        $request->save();
+
+        // تحديث زيارة الاستعلامات المباشرة إذا لم يتبق أي طلبات نشطة أخرى
+        if ($request->visit && $request->isDirectExternal()) {
+            $activeCount = $request->visit->requests()
+                ->where('id', '!=', $request->id)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+            if ($activeCount === 0) {
+                $request->visit->status = 'cancelled';
+                $request->visit->save();
+            }
+        }
+
+        // تسجيل النشاط
+        $patientName = $request->visit?->patient?->name ?? 'مريض';
+        $paidNote = $wasPaid ? ' (مسدد مالياً - مستحق استرجاع في الكاشير)' : '';
+        \App\Services\UserActivityLogger::log(
+            action: 'cancel_external_lab_request',
+            category: 'lab',
+            description: "إلغاء طلب المختبر الخارجي للمريض: {$patientName} - طلب #{$request->id}{$paidNote} (السبب: {$cancelReason})",
+            subject: $request,
+            isSensitive: false,
+            properties: [
+                'cancel_reason' => $cancelReason,
+                'was_paid' => $wasPaid,
+            ]
+        );
+
+        if ($wasPaid) {
+            $successMsg = "تم إلغاء الطلب الخارجي #{$request->id} بنجاح. ⚠️ يرجى توجيه المريض إلى الكاشير لاسترداد المبلغ المسدد.";
+        } else {
+            $successMsg = "تم إلغاء الطلب الخارجي #{$request->id} بنجاح وإزالته من طابور الفحص والكاشير.";
+        }
+
+        if ($httpRequest->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $successMsg]);
+        }
+
+        return redirect()->route('lab.index')->with($wasPaid ? 'warning' : 'success', $successMsg);
     }
 }

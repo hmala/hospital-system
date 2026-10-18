@@ -11,6 +11,12 @@
             <p class="text-muted small mb-0">تحكم سريع وشامل في أسعار الفحوصات (النقدي، الضمان، الداخلية) وتصنيفاتها بنقرة واحدة</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('lab-tests.export', request()->query()) }}" class="btn btn-outline-success">
+                <i class="fas fa-file-excel me-1"></i> تصدير إكسل
+            </a>
+            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#importLabTestsModal">
+                <i class="fas fa-file-import me-1"></i> استيراد وتحديث إكسل
+            </button>
             <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#quickAddCategoryModal">
                 <i class="fas fa-plus me-1"></i> إضافة تصنيف جديد
             </button>
@@ -288,6 +294,47 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- نافذة استيراد وتحديث الأسعار من ملف إكسل -->
+<div class="modal fade" id="importLabTestsModal" tabindex="-1" aria-labelledby="importLabTestsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form action="{{ route('lab-tests.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-content shadow-lg border-0 rounded-4">
+                <div class="modal-header bg-info text-white py-3 rounded-top-4">
+                    <h5 class="modal-title fs-6 fw-bold" id="importLabTestsModalLabel">
+                        <i class="fas fa-file-excel me-2"></i> استيراد وتحديث أسعار التحاليل من ملف إكسل
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border border-info-subtle small mb-3 rounded-3">
+                        <div class="fw-bold mb-1 text-primary"><i class="fas fa-info-circle me-1"></i> آلية المطابقة والتحديث الذكي:</div>
+                        <ul class="mb-0 ps-3 text-muted">
+                            <li>يمكنك تصدير الجدول الحالي أولاً عبر زر <strong>تصدير إكسل</strong> وتعديل الأسعار فيه ثم إعادة رفعه هنا.</li>
+                            <li>يقوم النظام بمطابقة التحاليل تلقائياً برقم <strong>المعرف (# ID)</strong> أو <strong>الرمز الطبي (Code)</strong> أو الاسم.</li>
+                            <li>يتم تحديث: سعر الكاش، سعر الضمان، حالة شمول الضمان، وحالة التفعيل (نشط/معطل).</li>
+                            <li>الصيغ المدعومة: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code> (الحد الأقصى: 10 ميغابايت).</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="excel_file_lab" class="form-label small fw-bold text-dark">
+                            <i class="fas fa-cloud-arrow-up me-1 text-primary"></i> اختر ملف الإكسل المحدث:
+                        </label>
+                        <input type="file" name="excel_file" id="excel_file_lab" class="form-control rounded-3" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-info text-white btn-sm fw-bold rounded-pill px-4 shadow-sm">
+                        <i class="fas fa-upload me-1"></i> بدء الاستيراد والتحديث
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

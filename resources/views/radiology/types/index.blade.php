@@ -81,7 +81,13 @@
                             <p class="mb-0 opacity-75">إدارة فحوصات الأشعة والسونار والمفراس والرنين مع التحكم الفوري بشمولية الضمان الصحي والداخلية والتعديل الجماعي السريع</p>
                         </div>
                         <div class="d-flex gap-2">
+                            <a href="{{ route('radiology.types.export', request()->query()) }}" class="btn btn-light text-success fw-bold px-4 py-2 rounded-pill shadow-sm">
+                                <i class="fas fa-file-excel me-2"></i>تصدير إكسل
+                            </a>
                             @can('manage radiology types')
+                            <button type="button" class="btn btn-light text-info fw-bold px-4 py-2 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#importRadiologyTypesModal">
+                                <i class="fas fa-file-import me-2"></i>استيراد إكسل
+                            </button>
                             <button type="button" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createRadiologyTypeModal">
                                 <i class="fas fa-plus me-2"></i>إضافة فحص جديد
                             </button>
@@ -902,5 +908,56 @@
     </div>
 </div>
 @endforeach
+
+<!-- نافذة استيراد وتحديث أسعار الأشعة من ملف إكسل -->
+<div class="modal fade" id="importRadiologyTypesModal" tabindex="-1" aria-labelledby="importRadiologyTypesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form action="{{ route('radiology.types.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-content shadow-lg border-0 rounded-4">
+                <div class="modal-header bg-success text-white py-3 rounded-top-4">
+                    <h5 class="modal-title fs-6 fw-bold" id="importRadiologyTypesModalLabel">
+                        <i class="fas fa-file-excel me-2"></i> استيراد وتحديث أسعار خدمات الأشعة من ملف إكسل
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border border-success-subtle small mb-3 rounded-3">
+                        <div class="fw-bold mb-1 text-success"><i class="fas fa-info-circle me-1"></i> آلية المطابقة والتحديث الذكي:</div>
+                        <ul class="mb-0 ps-3 text-muted">
+                            <li>يمكنك تصدير الجدول الحالي أولاً عبر زر <strong>تصدير إكسل</strong> وتعديل الأسعار فيه ثم إعادة رفعه هنا.</li>
+                            <li>يقوم النظام بمطابقة خدمات الأشعة تلقائياً برقم <strong>المعرف (# ID)</strong> أو <strong>الرمز الطبي (Code)</strong> أو الاسم.</li>
+                            <li>يتم تحديث: سعر الكاش، سعر الضمان الصحي (فئة ب)، شمول الضمان، الحاجة لمادة ملونة، وحالة التفعيل (نشط/معطل).</li>
+                            <li>الصيغ المدعومة: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code> (الحد الأقصى: 10 ميغابايت).</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="excel_file_rad" class="form-label small fw-bold text-dark">
+                            <i class="fas fa-cloud-arrow-up me-1 text-success"></i> اختر ملف الإكسل المراد استيراده:
+                        </label>
+                        <input type="file" name="excel_file" id="excel_file_rad" class="form-control rounded-3" accept=".xlsx,.xls,.csv" required>
+                    </div>
+
+                    <div class="form-check form-switch p-3 bg-danger bg-opacity-10 border border-danger-subtle rounded-3 mb-2">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="replace_all" value="1" id="replace_all_rad" checked>
+                        <label class="form-check-label fw-bold small text-danger" for="replace_all_rad">
+                            <i class="fas fa-trash-alt me-1"></i> استبدال محتويات الجدول بالكامل بمحتويات ملف الإكسل (حذف الخدمات غير الموجودة في الإكسل)
+                        </label>
+                        <div class="text-muted" style="font-size: 0.72rem; margin-right: 2.2rem;">
+                            عند تفعيل هذا الخيار سيتم تنظيف الجدول وحذف أي خدمات قديمة لا تظهر في ملف الإكسل، وتثبيت خدمات الإكسل فقط.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success text-white btn-sm fw-bold rounded-pill px-4 shadow-sm">
+                        <i class="fas fa-upload me-1"></i> بدء الاستيراد والتحديث
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 @endcan
 @endpush

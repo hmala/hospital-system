@@ -159,6 +159,11 @@
         </div>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
+            @if($request->isDirectExternal() && !in_array($request->status, ['completed', 'cancelled']))
+                <button type="button" class="btn btn-outline-danger px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#cancelExternalRadModal">
+                    <i class="fas fa-ban me-1"></i> إلغاء الطلب الخارجي
+                </button>
+            @endif
             @if($hasResult)
                 <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn btn-outline-success px-3 py-2 fw-semibold">
                     <i class="fas fa-print me-1"></i> طباعة التقرير الطبي
@@ -236,6 +241,110 @@
             </div>
         </div>
     </div>
+
+    @if(!empty($request->doctor_notes))
+        <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 rounded-3 mb-4 p-3 shadow-xs">
+            <div class="d-flex align-items-center gap-2">
+                <div class="badge bg-warning text-dark p-2 rounded-circle fs-6">
+                    <i class="fas fa-sticky-note"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark mb-1">
+                        <i class="fas fa-user-md text-warning me-1"></i> ملاحظات وتوجيهات الطبيب المحول:
+                    </h6>
+                    <div class="text-dark fw-semibold fs-6">
+                        {{ $request->doctor_notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @php
+        $needsSelection = ($request->status === 'pending_service_selection') || empty($request->radiology_names);
+        $roleNameAr = match($userCategory) {
+            'radiology', 'general' => 'الأشعة العادية (X-Ray)',
+            'ultrasound' => 'السونار (Ultrasound)',
+            'mri' => 'الرنين المغناطيسي (MRI)',
+            'ct' => 'المفراس الحلزوني (CT Scan)',
+            'echo' => 'الإيكو (Echocardiogram)',
+            default => 'الأشعة والتصوير الطبي'
+        };
+    @endphp
+
+    @if($needsSelection)
+        <!-- نظام البحث الفوري الذكي وتحديد فحوصات الأشعة (Smart Autocomplete) -->
+        <div class="calm-card p-3 mb-4 border-primary border-opacity-25 shadow-sm bg-white position-relative">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary text-white p-2 rounded-circle">
+                        <i class="fas fa-search-plus fs-6"></i>
+                    </span>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0">تحديد نوع الفحص الإشعاعي المطلوب</h6>
+                        <small class="text-muted">
+                            القسم المختص: <strong class="text-primary">{{ $roleNameAr }}</strong>
+                            <span class="mx-1">•</span>
+                            <span>إجمالي الفحوصات: {{ $availableRadiologyTypes->count() }} فحص</span>
+                        </small>
+                    </div>
+                </div>
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small">
+                    <i class="fas fa-exclamation-triangle me-1"></i> بانتظار تحديد الفحص للدفع
+                </span>
+            </div>
+
+            <form action="{{ route('radiology-staff.update', $request) }}" method="POST" id="selectRadiologyTypeForm">
+                @csrf
+                @method('PUT')
+
+                <!-- حقل البحث الذكي الفوري -->
+                <div class="position-relative mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 text-primary">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="radiologyFilterSearch" class="form-control border-start-0 py-2 fs-6" 
+                               placeholder="اكتب اسم الفحص بالعربي أو الإنجليزي أو الكود لاختياره مباشرة..." autocomplete="off">
+                        <button class="btn btn-outline-secondary px-3" type="button" id="clearRadFilter">مسح</button>
+                    </div>
+
+                    <!-- القائمة المنسدلة للنتائج المباشرة أثناء الكتابة (Live Search Dropdown) -->
+                    <div id="radiologyDropdownResults" class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 d-none" 
+                         style="top: 100%; left: 0; z-index: 1050; max-height: 280px; overflow-y: auto;">
+                        <div id="dropdownListGroup" class="list-group list-group-flush">
+                            <!-- يتم ملؤها ديناميكياً بواسطة JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- شريط الفحوصات المختارة التي سيتم تأكيدها -->
+                <div class="p-2 rounded-2 bg-light border mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-bold text-dark">
+                            <i class="fas fa-check-double text-success me-1"></i> الفحوصات المختارة للطلب:
+                        </span>
+                        <span class="small text-muted" id="totalPriceDisplay">الإجمالي: 0 د.ع</span>
+                    </div>
+                    <div id="selectedBadgesContainer" class="d-flex flex-wrap gap-2 py-1 align-items-center">
+                        <span class="text-muted small fst-italic" id="noSelectedText">لم يتم اختيار أي فحص بعد. ابحث في الحقل أعلاه لاختيار الفحص.</span>
+                    </div>
+                    <!-- حقول الـ Hidden inputs للفحوصات المختارة -->
+                    <div id="hiddenInputsContainer"></div>
+                </div>
+
+                <!-- زر الحفظ والتأكيد للكاشير -->
+                <div class="d-flex justify-content-between align-items-center pt-1">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1 text-info"></i> بمجرد التأكيد، سيتم إنشاء قيد السعر تلقائياً ويتوجه المريض للكاشير.
+                    </small>
+                    <button type="submit" class="btn btn-primary px-4 py-2 fw-bold shadow-sm" id="submitRadSelectionBtn" disabled>
+                        <i class="fas fa-check-circle me-1"></i> حفظ وتأكيد الفحوصات وتحويل للكاشير
+                    </button>
+                </div>
+            </form>
+        </div>
+    @endif
 
     <!-- 3. Form & Clinical Editor Layout -->
     <form action="{{ route('radiology-staff.update', $request) }}" method="POST" enctype="multipart/form-data">
@@ -417,6 +526,229 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // محرك البحث الفوري المنبثق والوسوم الذكية للفحوصات الإشعاعية
+    const radSearchInput = document.getElementById('radiologyFilterSearch');
+    const clearRadFilter = document.getElementById('clearRadFilter');
+    const radDropdown = document.getElementById('radiologyDropdownResults');
+    const dropdownList = document.getElementById('dropdownListGroup');
+    const selectedBadgesContainer = document.getElementById('selectedBadgesContainer');
+    const hiddenInputsContainer = document.getElementById('hiddenInputsContainer');
+    const noSelectedText = document.getElementById('noSelectedText');
+    const submitRadBtn = document.getElementById('submitRadSelectionBtn');
+    const totalPriceDisplay = document.getElementById('totalPriceDisplay');
+
+    // مصفوفة الفحوصات المتاحة لهذا القسم
+    const allRadTypes = {!! json_encode($availableRadiologyTypesArray ?? []) !!};
+
+    // خريطة لتخزين الفحوصات المختارة حالياً (id => object)
+    const selectedRadTypes = new Map();
+
+    function normalizeArabic(text) {
+        if (!text) return '';
+        return text
+            .toString()
+            .toLowerCase()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .trim();
+    }
+
+    function renderSelectedItems() {
+        if (!selectedBadgesContainer || !hiddenInputsContainer) return;
+
+        selectedBadgesContainer.innerHTML = '';
+        hiddenInputsContainer.innerHTML = '';
+
+        if (selectedRadTypes.size === 0) {
+            if (noSelectedText) noSelectedText.classList.remove('d-none');
+            selectedBadgesContainer.appendChild(noSelectedText);
+            if (submitRadBtn) submitRadBtn.disabled = true;
+            if (totalPriceDisplay) totalPriceDisplay.textContent = 'الإجمالي: 0 د.ع';
+            return;
+        }
+
+        if (noSelectedText) noSelectedText.classList.add('d-none');
+
+        let totalPrice = 0;
+
+        selectedRadTypes.forEach((item, id) => {
+            totalPrice += item.price;
+
+            // 1. عنصر الشارة الملونة مع زر الحذف (Badge Chip)
+            const badge = document.createElement('div');
+            badge.className = 'badge bg-white text-dark border border-primary border-opacity-50 p-2 d-flex align-items-center gap-2 shadow-xs';
+            badge.style.fontSize = '0.82rem';
+            badge.innerHTML = `
+                <i class="fas fa-x-ray text-primary"></i>
+                <div class="text-start">
+                    <span class="fw-bold">${item.name}</span>
+                    <span class="text-muted small mx-1 font-monospace">(${item.code})</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 ms-1">${item.price.toLocaleString()} د.ع</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none remove-rad-btn" data-id="${id}" title="إزالة الفحص">
+                    <i class="fas fa-times-circle fs-6"></i>
+                </button>
+            `;
+            selectedBadgesContainer.appendChild(badge);
+
+            // 2. Hidden input لإرساله مع الفورم
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'radiology_type_ids[]';
+            hiddenInput.value = id;
+            hiddenInputsContainer.appendChild(hiddenInput);
+        });
+
+        if (totalPriceDisplay) {
+            totalPriceDisplay.innerHTML = `الإجمالي: <strong class="text-success">${totalPrice.toLocaleString()} د.ع</strong> (${selectedRadTypes.size} فحص)`;
+        }
+
+        if (submitRadBtn) {
+            submitRadBtn.disabled = (selectedRadTypes.size === 0);
+        }
+    }
+
+    // تفاعل حذف فحص مختار
+    if (selectedBadgesContainer) {
+        selectedBadgesContainer.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.remove-rad-btn');
+            if (removeBtn) {
+                const id = parseInt(removeBtn.getAttribute('data-id'));
+                selectedRadTypes.delete(id);
+                renderSelectedItems();
+            }
+        });
+    }
+
+    // فلترة وبناء القائمة المنسدلة للبحث الفوري
+    function handleRadSearch() {
+        if (!radSearchInput || !radDropdown || !dropdownList) return;
+
+        const query = normalizeArabic(radSearchInput.value);
+
+        if (!query) {
+            radDropdown.classList.add('d-none');
+            dropdownList.innerHTML = '';
+            return;
+        }
+
+        const matches = allRadTypes.filter(t => {
+            const name = normalizeArabic(t.name);
+            const code = normalizeArabic(t.code);
+            return name.includes(query) || code.includes(query);
+        });
+
+        dropdownList.innerHTML = '';
+
+        if (matches.length === 0) {
+            dropdownList.innerHTML = `
+                <div class="p-3 text-center text-muted small">
+                    <i class="fas fa-search-minus me-1 text-secondary"></i> لا توجد فحوصات إشعاعية تطابق "<strong>${radSearchInput.value}</strong>" في قسمك
+                </div>
+            `;
+            radDropdown.classList.remove('d-none');
+            return;
+        }
+
+        matches.slice(0, 15).forEach(t => {
+            const isAlreadySelected = selectedRadTypes.has(t.id);
+            const a = document.createElement('a');
+            a.href = 'javascript:void(0)';
+            a.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-bottom ${isAlreadySelected ? 'bg-light text-muted' : ''}`;
+            a.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas ${isAlreadySelected ? 'fa-check text-success' : 'fa-plus text-primary'}"></i>
+                    <div>
+                        <div class="fw-bold small text-dark">${t.name}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">
+                            <span class="font-monospace">${t.code}</span> • <span>${t.category}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">${t.price.toLocaleString()} د.ع</span>
+                    ${isAlreadySelected ? '<span class="badge bg-secondary ms-1 small">محدد</span>' : ''}
+                </div>
+            `;
+
+            a.addEventListener('click', function() {
+                if (selectedRadTypes.has(t.id)) {
+                    selectedRadTypes.delete(t.id);
+                } else {
+                    selectedRadTypes.set(t.id, t);
+                }
+                renderSelectedItems();
+                radSearchInput.value = '';
+                radDropdown.classList.add('d-none');
+                radSearchInput.focus();
+            });
+
+            dropdownList.appendChild(a);
+        });
+
+        radDropdown.classList.remove('d-none');
+    }
+
+    if (radSearchInput) {
+        radSearchInput.addEventListener('input', handleRadSearch);
+        radSearchInput.addEventListener('focus', function() {
+            if (this.value.trim()) handleRadSearch();
+        });
+    }
+
+    if (clearRadFilter) {
+        clearRadFilter.addEventListener('click', function() {
+            if (radSearchInput) {
+                radSearchInput.value = '';
+                if (radDropdown) radDropdown.classList.add('d-none');
+                radSearchInput.focus();
+            }
+        });
+    }
+
+    // إغلاق القائمة المنسدلة عند النقر خارجها
+    document.addEventListener('click', function(e) {
+        if (radDropdown && !radDropdown.contains(e.target) && e.target !== radSearchInput) {
+            radDropdown.classList.add('d-none');
+        }
+    });
 });
 </script>
+
+<!-- مودال إلغاء الطلب الخارجي المباشر للأشعة -->
+<div class="modal fade" id="cancelExternalRadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء طلب الأشعة والتصوير الخارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('radiology-staff.cancel', $request) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4 text-end">
+                    <p class="fs-6 text-dark mb-2">
+                        هل أنت متأكد من رغبتك في إلغاء طلب الأشعة والتصوير الخارجي للمريض <strong class="text-danger">{{ $pName }}</strong>؟
+                    </p>
+                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور الفحص والمناداة. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light justify-content-between">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">
+                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

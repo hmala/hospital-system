@@ -2,6 +2,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $unpaidAmount = $unpaidAmount ?? $emergency->getUnpaidAmount();
+    $isPaid = $isPaid ?? ($unpaidAmount <= 0 || in_array($emergency->payment_status, ['paid', 'waived']));
+@endphp
 <div class="container-fluid">
     <div class="row mb-2">
         <div class="col-12">
@@ -12,44 +16,124 @@
                     <span class="text-muted ms-2 fs-6">#{{ $emergency->id }}</span>
                 </h4>
                 <div class="no-print d-flex flex-wrap gap-1 align-items-center">
-                    @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged')
-                        <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-danger shadow-sm">
-                                <i class="fas fa-procedures me-1"></i>تحويل للعمليات
+                    @if($emergency->status !== 'transferred' && $emergency->status !== 'discharged' && $emergency->status !== 'cancelled')
+                        <button type="button" class="btn btn-sm btn-info text-white fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#consultationModal">
+                            <i class="fas fa-calendar-plus me-1"></i>طلب استشارة
+                        </button>
+
+                        @if($isPaid)
+                            <div class="dropdown d-inline">
+                                <button class="btn btn-sm btn-dark dropdown-toggle shadow-sm fw-bold d-inline-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-sliders-h me-1 text-warning"></i>
+                                    <span>إجراءات وتحويل وتخريج الحالة</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-start" style="min-width: 230px;">
+                                    <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
+                                        <i class="fas fa-exchange-alt me-1 text-primary"></i> تحويل الحالة
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.transfer-to-surgery', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى صالة العمليات؟ سيتم تسجيله وترحيل بياناته تلقائياً.')">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-danger py-2">
+                                                <i class="fas fa-procedures me-2 text-danger"></i>
+                                                <span>تحويل للعمليات</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-primary py-2">
+                                                <i class="fas fa-bed me-2 text-primary"></i>
+                                                <span>تحويل رقود</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تحويل المريض إلى العيادات الاستشارية وتوثيق خروجه من الطوارئ؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="transferred_to_consultation">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-info py-2">
+                                                <i class="fas fa-clinic-medical me-2 text-info"></i>
+                                                <span class="fw-bold">تحويل للاستشارية</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li class="px-3 py-1 bg-light border-bottom text-muted small fw-bold">
+                                        <i class="fas fa-sign-out-alt me-1 text-success"></i> تسجيل الخروج
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="recovered">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-success py-2">
+                                                <i class="fas fa-user-check me-2 text-success"></i>
+                                                <span>خرج متعافي</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="against_medical_advice">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-secondary py-2">
+                                                <i class="fas fa-user-shield me-2 text-warning"></i>
+                                                <span>خرج على مسؤوليته</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        @else
+                            <button class="btn btn-sm btn-secondary shadow-sm fw-bold d-inline-flex align-items-center disabled" type="button" disabled title="معلق: بانتظار تسديد رسوم الطوارئ بالكاشير (المتبقي: {{ number_format($unpaidAmount) }} د.ع)">
+                                <i class="fas fa-lock me-1 text-warning"></i>
+                                <span>إجراءات وتحويل وتخريج (بانتظار التسديد)</span>
                             </button>
-                        </form>
-                        <form action="{{ route('emergency.transfer-to-admission', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تحويل هذا المريض إلى الرقود؟ سيتم إرسال طلب الحجز للاستعلامات.')">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm">
-                                <i class="fas fa-bed me-1"></i>تحويل رقود
-                            </button>
-                        </form>
-                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متعافي)؟')">
-                            @csrf
-                            <input type="hidden" name="discharge_type" value="recovered">
-                            <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm">
-                                <i class="fas fa-user-check me-1"></i>خرج متعافي
-                            </button>
-                        </form>
-                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج على مسؤوليته)؟')">
-                            @csrf
-                            <input type="hidden" name="discharge_type" value="against_medical_advice">
-                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark fw-bold">
-                                <i class="fas fa-user-shield me-1"></i>على مسؤوليته
-                            </button>
-                        </form>
+                        @endif
+
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#cancelEmergencyModal" title="إلغاء حالة الطوارئ">
+                            <i class="fas fa-ban me-1"></i>إلغاء الحالة
+                        </button>
+                    @elseif($emergency->status === 'cancelled')
+                        <span class="badge bg-danger fs-6 py-1 px-2 shadow-sm">
+                            <i class="fas fa-ban me-1"></i> ملغاة
+                        </span>
                     @elseif($emergency->status === 'discharged')
                         @if($emergency->discharge_type === 'recovered')
-                            <span class="badge bg-success fs-6 py-1 px-2">
+                            <span class="badge bg-success fs-6 py-1 px-2 shadow-sm">
                                 <i class="fas fa-check-circle me-1"></i> خرج متعافي ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
                             </span>
                         @elseif($emergency->discharge_type === 'against_medical_advice')
-                            <span class="badge bg-warning text-dark fs-6 py-1 px-2">
+                            <span class="badge bg-warning text-dark fs-6 py-1 px-2 shadow-sm">
                                 <i class="fas fa-exclamation-triangle me-1"></i> خرج على مسؤوليته ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @elseif($emergency->discharge_type === 'transferred_to_consultation')
+                            <span class="badge bg-info text-dark fs-6 py-1 px-2 shadow-sm fw-bold">
+                                <i class="fas fa-clinic-medical me-1"></i> تحويل للاستشارية ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @else
+                            <span class="badge bg-secondary fs-6 py-1 px-2 shadow-sm">
+                                <i class="fas fa-sign-out-alt me-1"></i> تم الخروج ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
                             </span>
                         @endif
                     @endif
+                    @if($emergency->appointments && $emergency->appointments->count() > 0)
+                        <span class="badge bg-info text-dark fw-bold py-1 px-2 border" title="تم إنشاء طلب استشارة للمريض">
+                            <i class="fas fa-calendar-check text-primary me-1"></i> تم طلب استشارة ({{ $emergency->appointments->count() }})
+                        </span>
+                    @endif
+
+                    @if($isPaid)
+                        <a href="{{ route('emergency.medical-report', $emergency) }}" target="_blank" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" title="فتح وطباعة التقرير الطبي الرسمي للحالة بتوقيع الطبيب ورمز QR">
+                            <i class="fas fa-file-medical-alt me-1"></i>التقرير الطبي للطوارئ
+                        </a>
+                    @else
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold shadow-sm disabled" disabled title="لا يمكن فتح التقرير الطبي إلا بعد تسديد الرسوم في الكاشير (المتبقي: {{ number_format($unpaidAmount) }} د.ع)">
+                            <i class="fas fa-lock me-1 text-danger"></i>التقرير الطبي (معلق بالكاشير)
+                        </button>
+                    @endif
+
                     @if($emergency->payment && $emergency->payment->paid_at)
                         <button onclick="window.print()" class="btn btn-sm btn-primary shadow-sm">
                             <i class="fas fa-print me-1"></i>طباعة
@@ -74,6 +158,44 @@
         <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show no-print" role="alert">
+            {{ session('warning') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(!$isPaid && $emergency->status !== 'cancelled')
+        <div class="alert alert-warning border-2 border-warning shadow-sm mb-3 p-3 no-print" style="border-radius: 12px; background: #fffbeb;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-lock text-warning fs-4 me-1"></i>
+                    <div>
+                        <strong class="text-dark d-block">⚠️ بانتظار تسديد رسوم الطوارئ بالكاشير (المبلغ المستحق: {{ number_format($unpaidAmount) }} د.ع)</strong>
+                        <small class="text-muted">التقرير الطبي الرسمي وإجراءات التحويل (للعمليات أو الرقود) وتخريج الحالة معلقة لحين إبراء الذمة المالية وتسديد الرسوم في الصندوق.</small>
+                    </div>
+                </div>
+                @if(auth()->user()->can('process emergency payments') || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'cashier']))
+                    <a href="{{ route('cashier.index') }}" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm text-dark">
+                        <i class="fas fa-cash-register me-1"></i> التوجه للكاشير للتسديد
+                    </a>
+                @endif
+            </div>
+        </div>
+    @endif
+
+    @if($emergency->status === 'cancelled')
+        <div class="alert alert-danger border-2 border-danger shadow-sm mb-3 p-3 no-print" style="border-radius: 12px; background: #fef2f2;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-ban text-danger fs-4 me-1"></i>
+                <div>
+                    <strong class="text-danger d-block">تم إلغاء حالة الطوارئ هذه</strong>
+                    <small class="text-dark">{{ $emergency->notes }}</small>
+                </div>
+            </div>
         </div>
     @endif
 
@@ -184,9 +306,50 @@
         </div>
     </div>
 
-    <!-- المحتوى الطبي الرئيسي - نظام التبويبات المتكامل (مطابق لمحطة الاستشارية) -->
-    <div class="row mb-4">
-        <div class="col-12">
+    @if($emergency->consultant_notes)
+        <div class="alert alert-info border-2 border-info shadow-sm mb-4 p-3" style="border-radius: 12px; background: #f0fdfa;">
+            <div class="d-flex align-items-start gap-3">
+                <div class="bg-info text-white p-2 rounded-circle fs-4 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <span><i class="fas fa-clipboard-check text-info me-1"></i>رأي وتوصيات الطبيب الاستشاري</span>
+                            @if($emergency->consultantDoctor)
+                                <span class="badge bg-primary text-white">د. {{ $emergency->consultantDoctor->user?->name }} ({{ $emergency->consultantDoctor->specialization }})</span>
+                            @endif
+                        </h6>
+                        @if($emergency->consultation_responded_at)
+                            <small class="text-muted"><i class="fas fa-clock me-1"></i>{{ $emergency->consultation_responded_at->format('Y-m-d H:i') }}</small>
+                        @endif
+                    </div>
+                    <div class="p-3 bg-white rounded border text-dark fw-semibold" style="white-space: pre-line; line-height: 1.7; font-size: 0.95rem;">
+                        {{ $emergency->consultant_notes }}
+                    </div>
+                    @if($emergency->consultant_recommendation)
+                        <div class="mt-2 d-flex align-items-center gap-2">
+                            <span class="text-muted small fw-bold">التوصية المقترحة:</span>
+                            @if($emergency->consultant_recommendation === 'requires_surgery')
+                                <span class="badge bg-danger fs-6 py-1 px-2"><i class="fas fa-procedures me-1"></i>تحويل عاجل لصالة العمليات</span>
+                            @elseif($emergency->consultant_recommendation === 'requires_admission')
+                                <span class="badge bg-warning text-dark fs-6 py-1 px-2"><i class="fas fa-bed me-1"></i>دخول ورقود بالمستشفى</span>
+                            @elseif($emergency->consultant_recommendation === 'discharge_safe')
+                                <span class="badge bg-success fs-6 py-1 px-2"><i class="fas fa-check-circle me-1"></i>مستقر ويمكن تخريجه</span>
+                            @else
+                                <span class="badge bg-info text-dark fs-6 py-1 px-2"><i class="fas fa-clinic-medical me-1"></i>متابعة تحفظية بالطوارئ</span>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- المحتوى الطبي الرئيسي - مقسم إلى شاشة عمل الطوارئ (يمين) والسجل الطبي الدائم (يسار) مطابق لمحطة الاستشارية -->
+    <div class="row g-3 mb-4">
+        <!-- 1. شاشة عمل الطوارئ الرئيسية (التبويبات الـ 4 المستقلة) -->
+        <div class="col-12 col-xl-7 col-lg-7">
             <div class="card border-0 shadow-sm" style="border-radius: 14px; overflow: hidden;">
                 <div class="card-header bg-white border-bottom p-0">
                     <ul class="nav nav-tabs nav-fill border-bottom-0" id="emergencyWorkstationTabs" role="tablist" style="gap: 2px;">
@@ -208,7 +371,7 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold py-3 text-primary d-flex align-items-center justify-content-center gap-2" id="requests-tab" data-bs-toggle="tab" data-bs-target="#tab-requests" type="button" role="tab">
                                 <i class="fas fa-flask fa-lg"></i>
-                                <span>المختبر والأشعة والنتائج</span>
+                                <span>طلب مختبر / أشعة</span>
                                 @php
                                     $requestsTotal = ($emergency->labRequests ? $emergency->labRequests->count() : 0) + ($emergency->radiologyRequests ? $emergency->radiologyRequests->count() : 0);
                                 @endphp
@@ -374,26 +537,62 @@
                                                 <h5 class="mb-0 fw-bold"><i class="fas fa-concierge-bell me-2"></i>الخدمات الطبية والتمريضية المقدمة</h5>
                                             </div>
                                             <div class="card-body p-4">
-                                                <label class="form-label fw-bold">اختر الخدمات المقدمة للحالة في الطوارئ:</label>
-                                                <div class="row g-2 border rounded p-3 bg-white" style="max-height: 280px; overflow-y: auto;">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <label class="form-label fw-bold mb-0">اختر الخدمات المقدمة للحالة في الطوارئ:</label>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span id="serviceSelectedCount" class="badge bg-success-subtle text-success border border-success-subtle small d-none">0 محدد</span>
+                                                        @if(!empty($paidServiceMap) && count($paidServiceMap) > 0)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                                                                <i class="fas fa-lock me-1"></i> {{ count($paidServiceMap) }} خدمات مسددة في الكاشير
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <div class="input-group input-group-sm mb-2">
+                                                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                                    <input type="text" id="serviceSearchInput" class="form-control" placeholder="ابحث باسم الخدمة الطبية أو التمريضية...">
+                                                    <button class="btn btn-outline-secondary d-none" type="button" id="clearServiceSearch"><i class="fas fa-times"></i></button>
+                                                </div>
+                                                <div class="row g-2 border rounded p-3 bg-white" id="servicesContainer" style="max-height: 290px; overflow-y: auto;">
                                                     @php
                                                         $selectedServiceIds = $emergency->services->pluck('id')->toArray();
                                                     @endphp
                                                     @foreach($emergencyServices as $service)
-                                                    <div class="col-12">
-                                                        <div class="form-check d-flex justify-content-between align-items-center">
-                                                            <div>
-                                                                <input class="form-check-input" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ in_array($service->id, $selectedServiceIds) ? 'checked' : '' }}>
-                                                                <label class="form-check-label fw-bold" for="srv_{{ $service->id }}">
-                                                                    {{ $service->name }}
-                                                                </label>
+                                                        @php
+                                                            $isPaid = isset($paidServiceMap[$service->id]);
+                                                            $isSelected = in_array($service->id, $selectedServiceIds);
+                                                        @endphp
+                                                        <div class="col-12 service-item">
+                                                            <div class="form-check d-flex justify-content-between align-items-center p-2 rounded {{ $isPaid ? 'bg-success-subtle bg-opacity-25 border border-success-subtle' : ($isSelected ? 'bg-light border' : '') }}">
+                                                                <div>
+                                                                    @if($isPaid)
+                                                                        <input type="hidden" name="service_ids[]" value="{{ $service->id }}">
+                                                                        <input class="form-check-input service-checkbox" type="checkbox" checked disabled id="srv_{{ $service->id }}">
+                                                                    @else
+                                                                        <input class="form-check-input service-checkbox" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
+                                                                    @endif
+                                                                    <label class="form-check-label fw-bold service-name {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
+                                                                        {{ $service->name }}
+                                                                        @if($isPaid)
+                                                                            <span class="badge bg-success text-white ms-2" style="font-size: 0.72rem;">
+                                                                                <i class="fas fa-check-circle me-1"></i> مسددة (إيصال #{{ $paidServiceMap[$service->id] }})
+                                                                            </span>
+                                                                        @endif
+                                                                    </label>
+                                                                </div>
+                                                                <span class="badge {{ $isPaid ? 'bg-success text-white' : 'bg-success-subtle text-success border border-success-subtle' }}">
+                                                                    {{ number_format($service->price) }} IQD
+                                                                </span>
                                                             </div>
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ number_format($service->price) }} IQD</span>
                                                         </div>
-                                                    </div>
                                                     @endforeach
+                                                    <div id="noServicesFound" class="col-12 text-muted small text-center py-3 d-none">
+                                                        <i class="fas fa-info-circle me-1"></i> لا توجد خدمات مطابقة للبحث
+                                                    </div>
                                                 </div>
-                                                <small class="text-muted d-block mt-2">يتم احتساب أجور الخدمات تلقائياً في حساب الكاشير الخاص بالحالة.</small>
+                                                <div class="alert alert-light border small text-muted mt-2 py-2 mb-0">
+                                                    <i class="fas fa-shield-alt text-success me-1"></i> <strong>الضوابط المالية:</strong> الخدمات المسددة تظهر مقفلة لمنع حذفها المباشر من واجهة الطوارئ لحماية توازن قاصة الكاشير وصحة وصولات المريض. إذا رغب المريض في إلغاء خدمة مسددة واسترجاع قيمتها، يتم ذلك عبر إجراء الاسترجاع المالي (Refund) في الكاشير. أما الخدمات غير المسددة فيمكن إضافتها أو حذفها بحرية تامة.
+                                                </div>
 
                                                 <div class="mt-4 pt-3 border-top text-end">
                                                     <button type="submit" class="btn btn-info text-white fw-bold px-4 shadow-sm">
@@ -806,9 +1005,560 @@
                                     </form>
                                 </div>
                             </div>
+                        </div><!-- /#tab-treatment -->
+                    </div><!-- /#emergencyWorkstationTabsContent -->
+                </div><!-- /.card-body -->
+            </div><!-- /.card -->
+        </div><!-- /.col-12.col-xl-7.col-lg-7 -->
+
+        <!-- 2. السجل الطبي الدائم ونتائج الفحوصات (العمود الأيسر الدائم - مطابق لمحطة الاستشارية) -->
+        <div class="col-12 col-xl-5 col-lg-5">
+            <div class="card shadow-sm border-0 sticky-top" style="top: 80px; z-index: 10; border-radius: 12px; overflow: hidden;">
+                <!-- رأس البطاقة -->
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-notes-medical text-info"></i>
+                        <h6 class="mb-0 fw-bold">السجل الطبي ونتائج الفحوصات</h6>
+                    </div>
+                    @if($emergency->patient)
+                        <a href="{{ route('doctor.patient.history', $emergency->patient) }}" target="_blank" class="btn btn-xs btn-outline-info text-white py-1 px-2" style="font-size: 0.78rem;">
+                            <i class="fas fa-external-link-alt me-1"></i> السجل الزمني الكامل ↗
+                        </a>
+                    @endif
+                </div>
+
+                <!-- أشرطة التبويبات الداخلية للسجل الطبي -->
+                <div class="bg-light p-2 border-bottom">
+                    <ul class="nav nav-pills nav-fill gap-1" id="emergencyHistorySubTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active py-1 px-2 small fw-semibold" id="side-cur-tab" data-bs-toggle="pill" data-bs-target="#side-cur-pane" type="button" role="tab">
+                                <i class="fas fa-bolt text-warning me-1"></i> طلبات الحالة
+                                @php
+                                    $curRequestsCount = ($emergency->labRequests ? $emergency->labRequests->count() : 0) + ($emergency->radiologyRequests ? $emergency->radiologyRequests->count() : 0) + ($emergency->treatments ? $emergency->treatments->count() : 0);
+                                @endphp
+                                @if($curRequestsCount > 0)
+                                    <span class="badge bg-warning text-dark ms-1">{{ $curRequestsCount }}</span>
+                                @endif
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-2 small fw-semibold" id="side-past-lab-tab" data-bs-toggle="pill" data-bs-target="#side-past-lab-pane" type="button" role="tab">
+                                <i class="fas fa-microscope text-primary me-1"></i> تحاليل سابقة
+                                <span class="badge bg-primary ms-1">{{ $pastLabRequests ? $pastLabRequests->count() : 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-2 small fw-semibold" id="side-past-rad-tab" data-bs-toggle="pill" data-bs-target="#side-past-rad-pane" type="button" role="tab">
+                                <i class="fas fa-x-ray text-info me-1"></i> أشعة سابقة
+                                <span class="badge bg-info text-dark ms-1">{{ $pastRadiologyRequests ? $pastRadiologyRequests->count() : 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-2 small fw-semibold" id="side-past-visits-tab" data-bs-toggle="pill" data-bs-target="#side-past-visits-pane" type="button" role="tab">
+                                <i class="fas fa-history text-success me-1"></i> زيارات
+                                <span class="badge bg-secondary ms-1">{{ $pastVisits ? $pastVisits->count() : 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-2 small fw-semibold" id="side-past-surgeries-tab" data-bs-toggle="pill" data-bs-target="#side-past-surgeries-pane" type="button" role="tab">
+                                <i class="fas fa-procedures text-danger me-1"></i> عمليات/طوارئ
+                                <span class="badge bg-danger ms-1">{{ ($pastSurgeries ? $pastSurgeries->count() : 0) + ($pastEmergencies ? $pastEmergencies->count() : 0) }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- جسم السجل الطبي الدائم مع شريط تمرير أنيق -->
+                <div class="card-body p-3 overflow-y-auto" style="max-height: calc(100vh - 180px); min-height: 520px;">
+                    <div class="tab-content" id="emergencyHistorySubTabsContent">
+                        
+                        <!-- 1. طلبات ونتائج الحالة الحالية للطوارئ -->
+                        <div class="tab-pane fade show active" id="side-cur-pane" role="tabpanel">
+                            @php
+                                $curLabRequests = $emergency->labRequests ? $emergency->labRequests->sortByDesc('id') : collect();
+                                $curRadRequests = $emergency->radiologyRequests ? $emergency->radiologyRequests->sortByDesc('id') : collect();
+                                $curTreatments = $emergency->treatments ? $emergency->treatments->sortByDesc('id') : collect();
+                                $curTotal = $curLabRequests->count() + $curRadRequests->count() + $curTreatments->count();
+                            @endphp
+
+                            @if($curTotal > 0)
+                                <div class="d-flex flex-column gap-3">
+                                    {{-- طلبات المختبر الحالية --}}
+                                    @foreach($curLabRequests as $labReq)
+                                        <div class="card border border-primary-subtle shadow-sm rounded-3 overflow-hidden">
+                                            <div class="card-header py-2 px-3 bg-primary-subtle border-primary-subtle d-flex justify-content-between align-items-center">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-microscope me-1"></i> فحص مختبر #{{ $labReq->id }}
+                                                    </span>
+                                                    <small class="text-muted font-monospace">{{ optional($labReq->requested_at ?: $labReq->created_at)->format('H:i') }}</small>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <span class="badge {{ $labReq->status == 'completed' ? 'bg-success' : ($labReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}" style="font-size: 0.72rem;">
+                                                        {{ $labReq->status_text }}
+                                                    </span>
+                                                    @if($labReq->status == 'completed')
+                                                        <a href="{{ route('staff.emergency-lab.print', $labReq) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-print me-1"></i> طباعة
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-2.5">
+                                                @if($labReq->status == 'completed')
+                                                    <div class="table-responsive rounded border mb-0">
+                                                        <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th class="text-start">الفحص</th>
+                                                                    <th>النتيجة</th>
+                                                                    <th>الوحدة</th>
+                                                                    <th>المرجع</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($labReq->labTests as $test)
+                                                                    @php
+                                                                        $rawResult = $test->pivot->result;
+                                                                        $parsed = is_string($rawResult) ? json_decode($rawResult, true) : $rawResult;
+                                                                        $isObj = is_array($parsed);
+                                                                        $val = $isObj ? ($parsed['value'] ?? '') : $rawResult;
+                                                                        $unit = $isObj ? ($parsed['unit'] ?? $test->unit) : $test->unit;
+                                                                        $range = $isObj ? ($parsed['reference_range'] ?? '') : '';
+                                                                        $status = $isObj ? ($parsed['status'] ?? '') : '';
+                                                                        $isAbnormal = in_array($status, ['high', 'low', 'مرتفع', 'منخفض']);
+                                                                    @endphp
+                                                                    <tr class="{{ $isAbnormal ? 'table-warning' : '' }}">
+                                                                        <td class="text-start fw-bold text-dark">{{ $test->name }}</td>
+                                                                        <td>
+                                                                            <span class="badge bg-{{ $isAbnormal ? 'danger' : 'success' }}">{{ $val ?: '-' }}</span>
+                                                                        </td>
+                                                                        <td class="text-muted">{{ $unit ?: '-' }}</td>
+                                                                        <td><small class="text-muted">{{ $range ?: '-' }}</small></td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                @else
+                                                    <div class="alert alert-light border small text-muted mb-0 py-2 d-flex align-items-center gap-2">
+                                                        <i class="fas fa-spinner fa-spin text-warning"></i>
+                                                        <span>قيد المعالجة في المختبر ({{ $labReq->labTests->count() }} فحص)...</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+
+                                    {{-- طلبات الأشعة الحالية --}}
+                                    @foreach($curRadRequests as $radReq)
+                                        <div class="card border border-info-subtle shadow-sm rounded-3 overflow-hidden">
+                                            <div class="card-header py-2 px-3 bg-info-subtle border-info-subtle d-flex justify-content-between align-items-center">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-info text-dark">
+                                                        <i class="fas fa-x-ray me-1"></i> أشعة/سونار #{{ $radReq->id }}
+                                                    </span>
+                                                    <small class="text-muted font-monospace">{{ optional($radReq->requested_at ?: $radReq->created_at)->format('H:i') }}</small>
+                                                </div>
+                                                <span class="badge {{ $radReq->status == 'completed' ? 'bg-success' : 'bg-warning text-dark' }}" style="font-size: 0.72rem;">
+                                                    {{ $radReq->status_text }}
+                                                </span>
+                                            </div>
+                                            <div class="card-body p-2.5 small">
+                                                <div class="fw-bold text-dark mb-1">{{ $radReq->radiologyType?->name ?? 'فحص أشعة' }}</div>
+                                                @if($radReq->status == 'completed' && $radReq->result)
+                                                    @if($radReq->result->findings)
+                                                        <div class="p-2 bg-light rounded border mb-1.5" style="white-space: pre-line;">
+                                                            <strong class="text-dark d-block">المشاهدات:</strong>
+                                                            {{ $radReq->result->findings }}
+                                                        </div>
+                                                    @endif
+                                                    @if($radReq->result->impression)
+                                                        <div class="p-2 bg-primary-subtle text-primary-emphasis rounded border border-primary-subtle fw-semibold">
+                                                            <strong>الانطباع التشخيصي:</strong> {{ $radReq->result->impression }}
+                                                        </div>
+                                                    @endif
+                                                @else
+                                                    <div class="alert alert-light border small text-muted mb-0 py-2">
+                                                        <i class="fas fa-clock text-warning me-1"></i> بانتظار إجراء الفحص والتصوير وصدور التقرير...
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+
+                                    {{-- العلاجات المعطاة حالياً --}}
+                                    @if($curTreatments->count() > 0)
+                                        <div class="card border border-success-subtle shadow-sm rounded-3 overflow-hidden">
+                                            <div class="card-header py-2 px-3 bg-success-subtle border-success-subtle d-flex justify-content-between align-items-center">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-pills me-1"></i> العلاجات المعطاة ({{ $curTreatments->count() }})
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-2.5">
+                                                <div class="d-flex flex-column gap-1.5">
+                                                    @foreach($curTreatments as $tr)
+                                                        <div class="p-2 rounded bg-light border d-flex justify-content-between align-items-center small">
+                                                            <div>
+                                                                <strong class="text-dark">{{ $tr->treatment_name }}</strong>
+                                                                @if($tr->instructions)
+                                                                    <div class="text-muted extra-small">{{ $tr->instructions }}</div>
+                                                                @endif
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <span class="badge bg-secondary-subtle text-dark border">{{ $tr->type }}</span>
+                                                                <small class="text-muted d-block font-monospace">{{ $tr->given_at ? \Carbon\Carbon::parse($tr->given_at)->format('H:i') : '' }}</small>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-clipboard-check fa-3x opacity-25 mb-2"></i>
+                                    <h6 class="fw-bold mb-1">لا توجد طلبات مسجلة لهذه الزيارة بعد</h6>
+                                    <p class="small mb-0">يمكنك طلب تحاليل أو أشعة أو تسجيل أدوية من شاشة العمل على اليمين.</p>
+                                </div>
+                            @endif
                         </div>
 
-                        
+                        <!-- 2. نتائج التحاليل السابقة -->
+                        <div class="tab-pane fade" id="side-past-lab-pane" role="tabpanel">
+                                    @if(isset($pastLabRequests) && $pastLabRequests->count() > 0)
+                                        <div class="d-flex flex-column gap-3">
+                                            @foreach($pastLabRequests as $medRequest)
+                                                @php
+                                                    $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
+                                                    $resultData = is_string($medRequest->result) ? json_decode($medRequest->result, true) : ($medRequest->result ?? []);
+                                                    $testAttachments = $reqDetails['test_attachments'] ?? ($resultData['test_attachments'] ?? []);
+                                                    if (!is_array($testAttachments)) $testAttachments = [];
+                                                    $hasAttachment = !empty($reqDetails['attachment']);
+                                                    $isImageAttachment = $hasAttachment && str_starts_with($reqDetails['attachment_mime'] ?? '', 'image/');
+                                                @endphp
+                                                <div class="card border rounded-3 shadow-sm overflow-hidden">
+                                                    <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-primary"><i class="fas fa-flask me-1"></i> تحليل مخبري</span>
+                                                            <strong class="text-dark small">{{ $medRequest->created_at->format('Y-m-d H:i') }}</strong>
+                                                            <small class="text-muted">({{ $medRequest->created_at->diffForHumans() }})</small>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-1">
+                                                            <span class="badge bg-light text-dark border">د. {{ $medRequest->visit?->doctor?->user?->name ?? 'الطبيب المعالج' }}</span>
+                                                            <span class="badge bg-{{ $medRequest->status === 'completed' ? 'success' : 'warning text-dark' }}">
+                                                                {{ $medRequest->status === 'completed' ? 'مكتمل' : 'قيد الفحص' }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body p-3">
+                                                        @if(!empty($reqDetails['tests']) && is_array($reqDetails['tests']))
+                                                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                                                @foreach($reqDetails['tests'] as $tItem)
+                                                                    <span class="badge bg-light text-dark border font-monospace">{{ $tItem }}</span>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+
+                                                        <!-- المرفقات والتقارير إن وجدت -->
+                                                        @if(!empty($testAttachments) && count($testAttachments) > 0)
+                                                            <div class="d-flex flex-column gap-2 mb-2">
+                                                                <div class="small fw-bold text-success d-flex align-items-center gap-1">
+                                                                    <i class="fas fa-paperclip"></i> تقارير أجهزة الفحص المرفقة:
+                                                                </div>
+                                                                @foreach($testAttachments as $tName => $tAtt)
+                                                                    @php
+                                                                        $tPath = $tAtt['path'] ?? '';
+                                                                        $tUrl = $tPath ? route('lab.attachment', ['request' => $medRequest, 'test' => $tName]) : '';
+                                                                        $tMime = $tAtt['mime'] ?? '';
+                                                                        $tIsImage = str_starts_with($tMime, 'image/');
+                                                                    @endphp
+                                                                    @if($tUrl)
+                                                                        <div class="p-2 rounded border bg-success-subtle border-success-subtle d-flex justify-content-between align-items-center">
+                                                                            <div class="d-flex align-items-center gap-2">
+                                                                                <i class="fas {{ $tIsImage ? 'fa-file-image text-primary' : 'fa-file-pdf text-danger' }}"></i>
+                                                                                <span class="badge bg-success text-white font-monospace">{{ $tName }}</span>
+                                                                                <small class="text-dark fw-semibold">{{ $tAtt['name'] ?? 'تقرير جهاز الفحص' }}</small>
+                                                                            </div>
+                                                                            <a href="{{ $tUrl }}" target="_blank" class="btn btn-xs btn-success fw-bold px-2 py-1" style="font-size: 0.75rem;">
+                                                                                <i class="fas fa-eye me-1"></i> فتح المرفق
+                                                                            </a>
+                                                                        </div>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+
+                                                        @if(isset($resultData['test_results']) && is_array($resultData['test_results']) && count($resultData['test_results']) > 0)
+                                                            <div class="table-responsive mt-2">
+                                                                <table class="table table-sm table-bordered mb-0 align-middle text-center" style="font-size: 0.8rem;">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th class="text-start">الفحص</th>
+                                                                            <th>النتيجة</th>
+                                                                            <th>الوحدة</th>
+                                                                            <th>المعدل الطبيعي</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach($resultData['test_results'] as $testName => $testData)
+                                                                            @php
+                                                                                $value = is_array($testData) ? ($testData['value'] ?? '-') : $testData;
+                                                                                $unit = is_array($testData) ? ($testData['unit'] ?? '-') : '-';
+                                                                                $reference = is_array($testData) ? ($testData['reference'] ?? ($testData['reference_range'] ?? '-')) : '-';
+                                                                                $isAbnormal = is_array($testData) && isset($testData['abnormal']) && $testData['abnormal'];
+                                                                            @endphp
+                                                                            <tr class="{{ $isAbnormal ? 'table-warning' : '' }}">
+                                                                                <td class="text-start fw-bold">{{ $testName }}</td>
+                                                                                <td>
+                                                                                    <span class="badge bg-{{ $isAbnormal ? 'warning' : 'success' }} text-dark fs-6">{{ $value }}</span>
+                                                                                </td>
+                                                                                <td class="text-muted">{{ $unit }}</td>
+                                                                                <td><small class="text-muted">{{ $reference }}</small></td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="text-center py-4 text-muted">
+                                            <i class="fas fa-flask fa-2x opacity-25 mb-2"></i>
+                                            <p class="mb-0">لا توجد تحاليل مخبرية سابقة مسجلة لهذا المريض.</p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- 3. تقارير الأشعة والتصوير السابقة -->
+                                <div class="tab-pane fade" id="side-past-rad-pane" role="tabpanel">
+                                    @if(isset($pastRadiologyRequests) && $pastRadiologyRequests->count() > 0)
+                                        <div class="d-flex flex-column gap-3">
+                                            @foreach($pastRadiologyRequests as $medRequest)
+                                                @php
+                                                    $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
+                                                    $radResult = is_string($medRequest->result) ? json_decode($medRequest->result, true) : ($medRequest->result ?? []);
+                                                    if (!is_array($radResult) && !empty($medRequest->result)) {
+                                                        $radResult = ['findings' => (string)$medRequest->result];
+                                                    }
+                                                    $radFindings = $radResult['findings'] ?? $radResult['result_text'] ?? null;
+                                                    $radImpression = $radResult['impression'] ?? null;
+                                                    $radRecommendations = $radResult['recommendations'] ?? null;
+                                                    $radImages = $radResult['images'] ?? [];
+                                                    $radiologist = $radResult['radiologist'] ?? null;
+                                                @endphp
+                                                <div class="card border rounded-3 shadow-sm overflow-hidden">
+                                                    <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> فحص إشعاعي</span>
+                                                            <strong class="text-dark small">{{ $medRequest->created_at->format('Y-m-d H:i') }}</strong>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-1">
+                                                            @if($radiologist)
+                                                                <span class="badge bg-light text-muted border">طبيب الأشعة: {{ $radiologist }}</span>
+                                                            @endif
+                                                            <span class="badge bg-{{ $medRequest->status === 'completed' ? 'success' : 'warning text-dark' }}">
+                                                                {{ $medRequest->status === 'completed' ? 'مكتمل' : 'قيد الفحص' }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body p-3">
+                                                        @if(!empty($radFindings))
+                                                            <div class="mb-2">
+                                                                <strong class="d-block text-dark small mb-1"><i class="fas fa-microscope text-info me-1"></i> النتائج والمشاهدات (Findings):</strong>
+                                                                <div class="p-2 bg-light rounded border small" style="white-space: pre-line;">{{ $radFindings }}</div>
+                                                            </div>
+                                                        @endif
+                                                        @if(!empty($radImpression))
+                                                            <div class="mb-2">
+                                                                <strong class="d-block text-primary small mb-1"><i class="fas fa-clipboard-check me-1"></i> الانطباع التشخيصي (Impression):</strong>
+                                                                <div class="p-2 bg-primary-subtle text-primary rounded border border-primary-subtle small fw-bold" style="white-space: pre-line;">{{ $radImpression }}</div>
+                                                            </div>
+                                                        @endif
+                                                        @if(!empty($radRecommendations))
+                                                            <div class="mb-2">
+                                                                <strong class="d-block text-secondary small mb-1"><i class="fas fa-comment-medical me-1"></i> التوصيات:</strong>
+                                                                <div class="p-2 bg-light rounded border text-muted small" style="white-space: pre-line;">{{ $radRecommendations }}</div>
+                                                            </div>
+                                                        @endif
+                                                        @if(is_array($radImages) && count($radImages) > 0)
+                                                            <div class="mt-2 pt-2 border-top">
+                                                                <strong class="d-block text-dark small mb-1.5"><i class="fas fa-images text-info me-1"></i> الصور والمرفقات الإشعاعية ({{ count($radImages) }}):</strong>
+                                                                <div class="d-flex flex-wrap gap-2">
+                                                                    @foreach($radImages as $imgIndex => $imgPath)
+                                                                        @php
+                                                                            $imgUrl = asset('storage/' . $imgPath);
+                                                                            $isPdf = str_ends_with(strtolower($imgPath), '.pdf');
+                                                                        @endphp
+                                                                        @if($isPdf)
+                                                                            <a href="{{ $imgUrl }}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1">
+                                                                                <i class="fas fa-file-pdf text-danger"></i>
+                                                                                <span>ملف PDF #{{ $imgIndex + 1 }} ↗</span>
+                                                                            </a>
+                                                                        @else
+                                                                            <a href="{{ $imgUrl }}" target="_blank" class="d-inline-block border rounded overflow-hidden shadow-sm" style="width: 70px; height: 70px;">
+                                                                                <img src="{{ $imgUrl }}" alt="Radiology Image" style="width: 100%; height: 100%; object-fit: cover;">
+                                                                            </a>
+                                                                        @endif
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="text-center py-4 text-muted">
+                                            <i class="fas fa-x-ray fa-2x opacity-25 mb-2"></i>
+                                            <p class="mb-0">لا توجد تقارير أشعة سابقة مسجلة لهذا المريض.</p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- 4. الزيارات الاستشارية السابقة -->
+                                <div class="tab-pane fade" id="side-past-visits-pane" role="tabpanel">
+                                    @if(isset($pastVisits) && $pastVisits->count() > 0)
+                                        <div class="accordion d-flex flex-column gap-2" id="pastVisitsEmergencyAccordion">
+                                            @foreach($pastVisits as $pv)
+                                                @php
+                                                    $pvMeds = $pv->prescribedMedications ?? collect();
+                                                    $pvDiag = $pv->diagnosis ?? [];
+                                                @endphp
+                                                <div class="card border rounded-3 overflow-hidden shadow-sm">
+                                                    <div class="card-header bg-light py-2 px-3 cursor-pointer d-flex justify-content-between align-items-center"
+                                                         data-bs-toggle="collapse" 
+                                                         data-bs-target="#pvCollapse{{ $pv->id }}"
+                                                         style="cursor: pointer;">
+                                                        <div>
+                                                            <strong class="text-dark small d-block">{{ $pv->visit_date ?: $pv->created_at->format('Y-m-d') }}</strong>
+                                                            <small class="text-muted">{{ $pv->created_at->diffForHumans() }}</small>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                                د. {{ $pv->doctor?->user?->name ?? 'طبيب استشاري' }}
+                                                            </span>
+                                                            <span class="badge bg-secondary-subtle text-secondary border">
+                                                                {{ $pv->department?->name ?? 'عيادة استشارية' }}
+                                                            </span>
+                                                            <i class="fas fa-chevron-down text-muted"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div id="pvCollapse{{ $pv->id }}" class="collapse" data-bs-parent="#pastVisitsEmergencyAccordion">
+                                                        <div class="card-body p-3 bg-white">
+                                                            @if(!empty($pv->chief_complaint))
+                                                                <div class="mb-2">
+                                                                    <strong class="text-dark small d-block">الشكوى الرئيسية:</strong>
+                                                                    <p class="mb-1 text-muted small">{{ $pv->chief_complaint }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if(!empty($pvDiag))
+                                                                <div class="mb-2">
+                                                                    <strong class="text-primary small d-block">التشخيص الطبي:</strong>
+                                                                    <p class="mb-1 fw-bold text-dark small">
+                                                                        {{ is_array($pvDiag) ? ($pvDiag['description'] ?? ($pvDiag['name'] ?? ($pvDiag['code'] ?? '-'))) : $pvDiag }}
+                                                                    </p>
+                                                                </div>
+                                                            @endif
+                                                            @if($pvMeds->count() > 0)
+                                                                <div class="mt-2 pt-2 border-top">
+                                                                    <strong class="text-success small d-block mb-1"><i class="fas fa-pills me-1"></i> الأدوية الموصوفة ({{ $pvMeds->count() }}):</strong>
+                                                                    <div class="d-flex flex-wrap gap-1">
+                                                                        @foreach($pvMeds as $med)
+                                                                            <span class="badge bg-light text-dark border small">
+                                                                                {{ $med->name ?? ($med->medicine?->name ?? 'دواء') }} ({{ $med->dosage_frequency ?? ($med->dosage ?? '') }})
+                                                                            </span>
+                                                                        @endforeach
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="text-center py-4 text-muted">
+                                            <i class="fas fa-user-md fa-2x opacity-25 mb-2"></i>
+                                            <p class="mb-0">لا توجد زيارات استشارية سابقة مسجلة لهذا المريض.</p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- 5. العمليات الجراحية وحالات الطوارئ السابقة -->
+                                <div class="tab-pane fade" id="side-past-surgeries-pane" role="tabpanel">
+                                    {{-- العمليات السابقة --}}
+                                    <div class="mb-3">
+                                        <h6 class="fw-bold text-dark border-bottom pb-1 mb-2">
+                                            <i class="fas fa-procedures text-danger me-1"></i> العمليات الجراحية السابقة ({{ isset($pastSurgeries) ? $pastSurgeries->count() : 0 }})
+                                        </h6>
+                                        @if(isset($pastSurgeries) && $pastSurgeries->count() > 0)
+                                            <div class="d-flex flex-column gap-2">
+                                                @foreach($pastSurgeries as $surgery)
+                                                    <div class="card border rounded-3 p-2.5 shadow-sm small">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <strong class="text-danger"><i class="fas fa-scalpel me-1"></i> {{ $surgery->procedure_name ?: 'عملية جراحية' }}</strong>
+                                                            <span class="badge bg-{{ $surgery->status === 'completed' ? 'success' : 'primary' }}">
+                                                                {{ $surgery->status_text ?? $surgery->status }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="text-muted extra-small">
+                                                            <span>التاريخ: {{ $surgery->scheduled_date ? \Carbon\Carbon::parse($surgery->scheduled_date)->format('Y-m-d') : '-' }}</span>
+                                                            <span class="ms-3">الجراح: {{ $surgery->surgeon_name ?: ($surgery->doctor?->user?->name ?? '-') }}</span>
+                                                        </div>
+                                                        @if($surgery->notes)
+                                                            <div class="text-muted extra-small bg-light p-1.5 rounded mt-1">{{ $surgery->notes }}</div>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <p class="text-muted small mb-0">لا توجد عمليات جراحية سابقة مسجلة لهذا المريض.</p>
+                                        @endif
+                                    </div>
+
+                                    {{-- حالات الطوارئ السابقة --}}
+                                    <div>
+                                        <h6 class="fw-bold text-dark border-bottom pb-1 mb-2">
+                                            <i class="fas fa-ambulance text-warning me-1"></i> حالات الطوارئ السابقة ({{ isset($pastEmergencies) ? $pastEmergencies->count() : 0 }})
+                                        </h6>
+                                        @if(isset($pastEmergencies) && $pastEmergencies->count() > 0)
+                                            <div class="d-flex flex-column gap-2">
+                                                @foreach($pastEmergencies as $pe)
+                                                    <div class="card border rounded-3 p-2.5 shadow-sm small">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <strong class="text-dark"><i class="fas fa-ambulance text-warning me-1"></i> حالة طوارئ #{{ $pe->id }}</strong>
+                                                            <span class="badge bg-{{ $pe->status === 'discharged' ? 'secondary' : 'warning text-dark' }}">
+                                                                {{ $pe->status_text }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="text-muted extra-small mb-1">
+                                                            <span>وقت الدخول: {{ $pe->admission_time ? \Carbon\Carbon::parse($pe->admission_time)->format('Y-m-d H:i') : $pe->created_at->format('Y-m-d H:i') }}</span>
+                                                            <span class="ms-2">الطبيب: {{ $pe->doctor?->user?->name ? 'د. ' . $pe->doctor->user->name : '-' }}</span>
+                                                        </div>
+                                                        @if($pe->symptoms)
+                                                            <div class="extra-small mb-0.5"><strong class="text-dark">الأعراض:</strong> <span class="text-muted">{{ $pe->symptoms }}</span></div>
+                                                        @endif
+                                                        @if($pe->diagnosis)
+                                                            <div class="extra-small mb-0.5"><strong class="text-primary">التشخيص:</strong> <span class="text-dark fw-semibold">{{ $pe->diagnosis }}</span></div>
+                                                        @endif
+                                                        @if($pe->treatment_given)
+                                                            <div class="extra-small"><strong class="text-success">العلاج:</strong> <span class="text-muted">{{ $pe->treatment_given }}</span></div>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <p class="text-muted small mb-0">لا توجد حالات طوارئ سابقة أخرى لهذا المريض.</p>
+                                        @endif
+                                    </div>
+                                </div>
 
                     </div>
                 </div>
@@ -933,6 +1683,136 @@
                     </button>
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-save me-2"></i>حفظ القراءات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal طلب استشارة طبية -->
+<div class="modal fade" id="consultationModal" tabindex="-1" aria-labelledby="consultationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ route('emergency.create-consultation', $emergency) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="consultationModalLabel">
+                        <i class="fas fa-user-md me-2"></i>طلب استشارة طبية لحالة الطوارئ
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        يمكنك اختيار طبيب استشاري أو جراح أو أكثر لتحويل المريض للاستشارة مع تسجيل الرسوم تلقائياً في حساب الطوارئ.
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="consult_appointment_date" class="form-label fw-bold">
+                                <i class="fas fa-calendar me-1 text-primary"></i>تاريخ الاستشارة <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="consult_appointment_date" name="appointment_date" 
+                                   value="{{ date('Y-m-d') }}" min="{{ date('Y-m-d') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="consult_appointment_time" class="form-label fw-bold">
+                                <i class="fas fa-clock me-1 text-primary"></i>وقت الاستشارة <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="consult_appointment_time" name="appointment_time" 
+                                   value="{{ date('H:i', strtotime('+1 hour')) }}" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="consult_doctor_ids" class="form-label fw-bold">
+                                <i class="fas fa-stethoscope me-1 text-success"></i>اختر الأطباء الاستشاريين المتاحين اليوم <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="consult_doctor_ids" name="doctor_ids[]" multiple size="6" required>
+                                @forelse($consultantDoctors ?? [] as $doc)
+                                    <option value="{{ $doc->id }}">
+                                        د. {{ $doc->user->name ?? 'طبيب' }} - {{ $doc->department->name ?? 'قسم عام' }} ({{ $doc->specialization ?? 'استشاري' }})
+                                    </option>
+                                @empty
+                                    <option disabled>لا يوجد أطباء استشاريين متوفرين اليوم في المستشفى</option>
+                                @endforelse
+                            </select>
+                            <small class="text-muted">اضغط زر Ctrl (أو Cmd) لتحديد أكثر من طبيب استشاري من المتواجدين اليوم.</small>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="consult_notes" class="form-label fw-bold">
+                                <i class="fas fa-notes-medical me-1 text-primary"></i>ملاحظات وتفاصيل الاستشارة المطلوبة
+                            </label>
+                            <textarea class="form-control" id="consult_notes" name="notes" rows="4" 
+                                      placeholder="اكتب أسباب التحويل، الأعراض المقلقة، التوصيات أو أي أسئلة موجهة للاستشاري...">{{ old('notes') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-info text-white fw-bold">
+                        <i class="fas fa-paper-plane me-1"></i>إرسال طلب الاستشارة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إلغاء حالة الطوارئ -->
+<div class="modal fade" id="cancelEmergencyModal" tabindex="-1" aria-labelledby="cancelEmergencyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-danger text-white p-3">
+                <h5 class="modal-title fw-bold mb-0" id="cancelEmergencyModalLabel">
+                    <i class="fas fa-ban me-2"></i>تأكيد إلغاء حالة الطوارئ #{{ $emergency->id }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('emergency.cancel', $emergency) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4 bg-light text-end">
+                    <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">المريض:</span>
+                            <strong class="text-dark">{{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد' }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">الطبيب المسؤول:</span>
+                            <span class="text-dark">{{ $emergency->doctor?->user?->name ?? 'غير محدد' }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">حالة السداد الحالية:</span>
+                            @if($emergency->payment_status === 'paid')
+                                <span class="badge bg-success">مسدد مسبقاً (سيتم إحالته لاسترجاع الكاشير)</span>
+                            @else
+                                <span class="badge bg-secondary">غير مسدد</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if($emergency->payment_status === 'paid')
+                        <div class="alert alert-warning py-2 px-3 small border-warning">
+                            <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                            <strong>ملاحظة مالية:</strong> هذه الحالة مسددة مسبقاً في الكاشير. عند الإلغاء سيتم تحويل المريض مباشرة إلى <strong>مستحقات الاسترجاع بالكاشير</strong> لصرف واسترداد المبلغ المسدد للمريض.
+                        </div>
+                    @endif
+
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label fw-bold text-dark small">
+                            سبب إلغاء الحالة <span class="text-danger">*</span>:
+                        </label>
+                        <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required
+                                  placeholder="يرجى كتابة سبب الإلغاء بدقة (مثال: عدم الحاجة للعلاج، تحويل خارجي، طلب المريض، إلخ)..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white justify-content-between p-3">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
+                        <i class="fas fa-ban me-1"></i> تأكيد إلغاء الحالة
                     </button>
                 </div>
             </form>
@@ -1562,6 +2442,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelected();
     }
 
+    initLiveFilter('serviceSearchInput', 'clearServiceSearch', '.service-item', '.service-name', 'noServicesFound', 'serviceSelectedCount', '.service-checkbox');
     initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox');
     initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox');
 })();

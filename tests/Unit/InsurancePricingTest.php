@@ -115,4 +115,33 @@ class InsurancePricingTest extends TestCase
         $this->assertEquals(0.00, $catH->getCopayForService('emergency'));
         $this->assertFalse($catH->requires_thermal_stamp);
     }
+
+    /**
+     * Test service with null or zero insurance price falls back to uncovered cash
+     */
+    public function test_radiology_null_or_zero_insurance_price_falls_back_to_uncovered_cash(): void
+    {
+        $rad = new RadiologyType([
+            'base_price' => 25000,
+            'is_hi_active' => true,
+            'hi_price' => null, // Not covered / no price
+            'is_moi_active' => true,
+            'moi_price' => 0.00, // Not covered / no price
+        ]);
+
+        // Health insurance patient
+        $hiPricing = $rad->calculateInsurancePricing('hi', 15.0);
+        $this->assertFalse($hiPricing['is_covered']);
+        $this->assertEquals(25000, $hiPricing['total_amount']);
+        $this->assertEquals(25000, $hiPricing['patient_share']);
+        $this->assertEquals(0, $hiPricing['insurance_share']);
+
+        // MOI patient
+        $moiPricing = $rad->calculateInsurancePricing('moi', 15.0);
+        $this->assertFalse($moiPricing['is_covered']);
+        $this->assertEquals(25000, $moiPricing['total_amount']);
+        $this->assertEquals(25000, $moiPricing['patient_share']);
+        $this->assertEquals(0, $moiPricing['insurance_share']);
+    }
 }
+

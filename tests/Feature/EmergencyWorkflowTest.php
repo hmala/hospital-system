@@ -142,6 +142,9 @@ class EmergencyWorkflowTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('emergency.show', $this->emergency));
 
         $response->assertStatus(200);
+        $response->assertSee('طلب استشارة');
+        $response->assertSee('#consultationModal');
+        $response->assertSee(route('emergency.create-consultation', $this->emergency));
         $response->assertSee('العلامات الحيوية');
         $response->assertSee('التشخيص والخدمات');
         $response->assertSee('المختبر والأشعة');
@@ -185,6 +188,20 @@ class EmergencyWorkflowTest extends TestCase
         $this->emergency->refresh();
         $this->assertEquals('discharged', $this->emergency->status);
         $this->assertEquals('recovered', $this->emergency->discharge_type);
+    }
+
+    public function test_emergency_discharge_transferred_to_consultation_workflow()
+    {
+        $response = $this->actingAs($this->admin)->post(route('emergency.discharge', $this->emergency), [
+            'discharge_type' => 'transferred_to_consultation',
+            'discharge_notes' => 'تحويل إلى العيادة الاستشارية الباطنية للمتابعة',
+        ]);
+
+        $response->assertRedirect();
+        $this->emergency->refresh();
+        $this->assertEquals('discharged', $this->emergency->status);
+        $this->assertEquals('transferred_to_consultation', $this->emergency->discharge_type);
+        $this->assertEquals('تحويل إلى العيادة الاستشارية الباطنية للمتابعة', $this->emergency->discharge_notes);
     }
 
     public function test_nursing_request_status_update()
