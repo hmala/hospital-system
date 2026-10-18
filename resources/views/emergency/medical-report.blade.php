@@ -386,23 +386,18 @@
         /* Watermark Layer (Centered Official System Security Watermark) */
         .report-watermark {
             position: absolute;
-            top: 52%;
+            top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 480px;
-            height: 480px;
+            width: 580px;
+            height: 220px;
             background-repeat: no-repeat;
             background-position: center center;
             background-size: contain;
-            opacity: 0.048;
+            opacity: 0.12;
             pointer-events: none;
-            z-index: 0;
-            filter: grayscale(10%);
-        }
-
-        .report-page > *:not(.report-watermark):not(.page-border-inner) {
-            position: relative;
-            z-index: 1;
+            z-index: 2;
+            mix-blend-mode: multiply;
         }
 
         /* Page Number & System Branding Footer */
@@ -410,13 +405,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 9px;
+            font-size: 9.5px;
             font-weight: 700;
             color: #64748b;
             padding-top: 3px;
             border-top: 0.6px solid #e2e8f0;
             margin-top: 2px;
-            height: 18px;
+            height: 26px;
         }
         .footer-col-right {
             display: flex;
@@ -428,22 +423,26 @@
         .footer-col-center {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             color: #005a9c;
             font-weight: 800;
         }
         .footer-system-logo {
-            height: 15px;
-            max-width: 38px;
+            height: 22px;
+            max-width: 85px;
             object-fit: contain;
             border-radius: 2px;
             vertical-align: middle;
+            background: #ffffff;
+            padding: 1px 4px;
+            border: 0.5px solid #e2e8f0;
         }
         .footer-sys-brand {
-            font-size: 8.5px;
+            font-size: 9px;
             letter-spacing: 0.2px;
             direction: ltr;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: 800;
         }
         .footer-col-left {
             font-weight: 800;
