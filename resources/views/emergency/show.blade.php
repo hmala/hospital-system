@@ -430,7 +430,16 @@
                                                         <label class="form-label fw-bold"><i class="fas fa-vial text-secondary me-1"></i>سكر الدم (mg/dL)</label>
                                                         <input type="number" class="form-control" name="blood_glucose" placeholder="110" min="1" max="1000">
                                                     </div>
-                                                    <div class="col-12 mt-4">
+                                                    <div class="col-sm-12">
+                                                        <label class="form-label fw-bold"><i class="fas fa-brain text-info me-1"></i>مستوى الوعي (GCS - Glasgow Coma Scale)</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text bg-white"><i class="fas fa-brain text-info"></i></span>
+                                                            <input type="text" class="form-control fw-bold" name="gcs" placeholder="15/15" value="{{ old('gcs', $emergency->gcs ?? '15/15') }}">
+                                                            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="this.previousElementSibling.value='15/15'">طبيعي (15/15)</button>
+                                                        </div>
+                                                        <small class="text-muted">مستوى الوعي في استمارة الطوارئ الرسمية (القيمة الطبيعية: 15/15)</small>
+                                                    </div>
+                                                    <div class="col-12 mt-3">
                                                         <button type="submit" class="btn btn-danger w-100 fw-bold py-2 shadow-sm">
                                                             <i class="fas fa-save me-1"></i> حفظ وتحديث العلامات الحيوية
                                                         </button>
@@ -521,12 +530,25 @@
                                             </div>
                                             <div class="card-body p-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-bold">التشخيص الطبي والسريري (Diagnosis)</label>
-                                                    <textarea class="form-control" name="diagnosis" rows="5" placeholder="اكتب التشخيص الطبي للحالة وتوصيات الرعاية...">{{ old('diagnosis', $emergency->diagnosis) }}</textarea>
+                                                    <label class="form-label fw-bold"><i class="fas fa-file-medical text-primary me-1"></i>الشكوى الرئيسية (Chief Complaint)</label>
+                                                    <input type="text" class="form-control" name="symptoms" placeholder="مثال: ألم حاد في البطن، ضيق تنفس، قيء..." value="{{ old('symptoms', $emergency->symptoms) }}">
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-bold">الخطة العلاجية المقترحة (Treatment Plan)</label>
-                                                    <textarea class="form-control" name="treatment_plan" rows="3" placeholder="ملاحظات متابعة الخطة العلاجية...">{{ old('treatment_plan', $emergency->treatment_plan) }}</textarea>
+                                                    <label class="form-label fw-bold"><i class="fas fa-notes-medical text-info me-1"></i>تاريخ المريض الحالي History of Present Illness (HPI)</label>
+                                                    <textarea class="form-control" name="hpi" rows="2" placeholder="اكتب التاريخ المرضي الحالي وتطور الأعراض بالتفصيل...">{{ old('hpi', $emergency->hpi) }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold"><i class="fas fa-stethoscope text-danger me-1"></i>التشخيص الطبي والسريري (Diagnosis)</label>
+                                                    <textarea class="form-control" name="diagnosis" rows="2" placeholder="اكتب التشخيص الطبي للحالة وتوصيات الرعاية...">{{ old('diagnosis', $emergency->diagnosis) }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold text-dark"><i class="fas fa-balance-scale text-warning me-1"></i>الملاحظات الطبية - العدلية (Medico-Legal Notes) ⚖️</label>
+                                                    <textarea class="form-control" name="medico_legal_notes" rows="2" placeholder="توثيق الإصابة والشبهة الجنائية (مثل: حادث سير، مشاجرة، أو: لا توجد شبهة جنائية / حادث عرضي)...">{{ old('medico_legal_notes', $emergency->medico_legal_notes) }}</textarea>
+                                                    <small class="text-muted">تظهر في الوجه الثاني من التقرير الطبي الرسمي</small>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold"><i class="fas fa-clipboard-list text-secondary me-1"></i>ملاحظات إضافية (Additional Notes)</label>
+                                                    <textarea class="form-control" name="notes" rows="2" placeholder="أي ملاحظات أو إرشادات سريرية إضافية...">{{ old('notes', $emergency->notes) }}</textarea>
                                                 </div>
                                             </div>
                                         </div>

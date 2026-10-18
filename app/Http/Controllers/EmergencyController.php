@@ -413,6 +413,9 @@ class EmergencyController extends Controller
             'priority' => $request->priority,
             // fill unspecified fields with defaults so table constraints are satisfied
             'emergency_type' => $request->input('emergency_type', 'general'),
+            'arrival_mode' => $request->input('arrival_mode', 'إسعاف المستشفى (الوصول)'),
+            'referred_from' => $request->input('referred_from'),
+            'gcs' => $request->input('gcs', '15/15'),
             'symptoms' => $request->input('symptoms', ''),
             'vital_signs' => $request->vital_signs, // will be null unless provided elsewhere
             'room_assigned' => $request->room_assigned,
@@ -755,7 +758,12 @@ class EmergencyController extends Controller
             'respiratory_rate' => 'nullable|integer|min:1|max:100',
             'oxygen_saturation' => 'nullable|integer|min:1|max:100',
             'blood_glucose' => 'nullable|numeric|min:1|max:1000',
+            'gcs' => 'nullable|string|max:20',
         ]);
+
+        if ($request->filled('gcs')) {
+            $emergency->update(['gcs' => $request->gcs]);
+        }
 
         // Create a new vital signs record in the dedicated table
         $emergency->vitalSignReadings()->create([
@@ -787,21 +795,44 @@ class EmergencyController extends Controller
             'temperature' => 'nullable|numeric|min:30|max:45',
             'respiratory_rate' => 'nullable|integer|min:1|max:100',
             'oxygen_saturation' => 'nullable|integer|min:1|max:100',
+            'gcs' => 'nullable|string|max:20',
+            'hpi' => 'nullable|string|max:2000',
+            'medico_legal_notes' => 'nullable|string|max:2000',
+            'notes' => 'nullable|string|max:2000',
+            'symptoms' => 'nullable|string|max:2000',
             'diagnosis' => 'nullable|string|max:1000',
             'service_ids' => 'nullable|array',
             'service_ids.*' => 'exists:emergency_services,id',
         ]);
         $vitals = $emergency->vital_signs ?? [];
-        $vitals['blood_pressure'] = $request->blood_pressure;
-        $vitals['heart_rate'] = $request->heart_rate;
-        $vitals['temperature'] = $request->temperature;
-        $vitals['respiratory_rate'] = $request->respiratory_rate;
-        $vitals['oxygen_saturation'] = $request->oxygen_saturation;
+        if ($request->filled('blood_pressure')) $vitals['blood_pressure'] = $request->blood_pressure;
+        if ($request->filled('heart_rate')) $vitals['heart_rate'] = $request->heart_rate;
+        if ($request->filled('temperature')) $vitals['temperature'] = $request->temperature;
+        if ($request->filled('respiratory_rate')) $vitals['respiratory_rate'] = $request->respiratory_rate;
+        if ($request->filled('oxygen_saturation')) $vitals['oxygen_saturation'] = $request->oxygen_saturation;
         $vitals['updated_at'] = now()->toISOString();
-        $emergency->update([
+
+        $medicalUpdate = [
             'vital_signs' => $vitals,
             'diagnosis' => $request->diagnosis,
-        ]);
+        ];
+        if ($request->filled('gcs')) {
+            $medicalUpdate['gcs'] = $request->gcs;
+        }
+        if ($request->has('hpi')) {
+            $medicalUpdate['hpi'] = $request->hpi;
+        }
+        if ($request->has('medico_legal_notes')) {
+            $medicalUpdate['medico_legal_notes'] = $request->medico_legal_notes;
+        }
+        if ($request->has('notes')) {
+            $medicalUpdate['notes'] = $request->notes;
+        }
+        if ($request->has('symptoms')) {
+            $medicalUpdate['symptoms'] = $request->symptoms;
+        }
+
+        $emergency->update($medicalUpdate);
 
         // جلب الخدمات المسددة الحالية مع بيانات pivot لمنع حذفها دون تسوية مالية في الكاشير
         $existingPaidServices = \DB::table('emergency_emergency_service')
@@ -1929,11 +1960,28 @@ class EmergencyController extends Controller
         $request->validate([
             'discharge_type' => 'required|in:recovered,against_medical_advice,transferred_to_consultation',
             'discharge_notes' => 'nullable|string|max:1000', 
+            'discharge_destination' => 'nullable|string|max:100',
+            'discharge_recommendations' => 'nullable|string|max:1000',
         ]);
+
+        $destination = $request->discharge_destination;
+        if (empty($destination)) {
+            if ($request->discharge_type === 'transferred_to_consultation') {
+                $destination = 'تحويل للاستشارية';
+            } elseif ($request->discharge_type === 'against_medical_advice') {
+                $destination = 'خروج على مسؤوليته للمنزل';
+            } else {
+                $destination = 'خروج للمنزل';
+            }
+        }
+
+        $recommendations = $request->discharge_recommendations ?? $request->discharge_notes ?? 'مراجعة العيادة الخارجية';
 
         $updateData = [
             'status' => 'discharged',
             'discharge_type' => $request->discharge_type,
+            'discharge_destination' => $destination,
+            'discharge_recommendations' => $recommendations,
             'discharge_time' => now(),
             'discharge_notes' => $request->discharge_notes,
         ];

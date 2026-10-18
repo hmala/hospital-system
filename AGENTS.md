@@ -57,6 +57,26 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-18 — المرحلة 74: منظومة استمارة تقرير الطوارئ الموحد - الخطوة الأولى: الحقول السريرية والعدلية وواجهات الإدخال Standard Emergency Medical Report Fields & Workstation Input Integration)
+
+### Done
+- **إضافة حقول استمارة تقرير الطوارئ الرسمي الموحد في قاعدة البيانات ([app/Models/Emergency.php](file:///c:/wamp64/www/hospital-system/app/Models/Emergency.php) و [database/migrations/2026_10_18_090000_add_standard_report_fields_to_emergencies_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_18_090000_add_standard_report_fields_to_emergencies_table.php))**:
+  * إضافة أعمدة: `arrival_mode` (طريقة الوصول: إسعاف المستشفى، وصول شخصي، سيارة خاصة، إسعاف خارجي)، `referred_from` (الجهة المحولة)، `gcs` (مستوى الوعي Glasgow Coma Scale مع القيمة الافتراضية `'15/15'`)، `hpi` (تاريخ المرض الحالي History of Present Illness)، `medico_legal_notes` (الملاحظات الطبية - العدلية ⚖️)، `discharge_destination` (الوجهة النهائية عند الخروج)، و `discharge_recommendations` (توصيات وخطة المتابعة).
+  * تحديث مصفوفة `$fillable` في نموذج `Emergency` لدعم الحقول الجديدة بالكامل.
+- **تحديث المتحكم ودورة البيانات ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * في `store`: استقبال وتخزين طريقة الوصول `arrival_mode` والجهة المحولة `referred_from` ومستوى الوعي `gcs`.
+  * في `updateVitals`: استقبال وحفظ مستوى الوعي `gcs` وتحديثه لحظياً مع القراءات الحيوية.
+  * في `updateMedical`: استقبال وحفظ الشكوى الرئيسية `symptoms`، وتاريخ المرض الحالي `hpi`، والتشخيص الطبي `diagnosis`، والملاحظات الطبية العدلية `medico_legal_notes`، والملاحظات الإضافية `notes`.
+  * في `discharge`: اعتماد وتخزين الوجهة النهائية وتوصيات الخروج تلقائياً وفق نوع الخروج أو من الإدخال المباشر.
+- **تحديث واجهات الاستقبال ومحطة كشف وفحص الطوارئ**:
+  * [resources/views/emergency/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/create.blade.php): إضافة قائمة منسدلة أنيقة لطريقة الوصول مع أيقونات معبرة، وحقل الجهة المحولة.
+  * [resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php):
+    - إضافة حقل مستوى الوعي `GCS` في تبويب العلامات الحيوية مع زر ضبط `طبيعي (15/15)`.
+    - إضافة حقول الشكوى الرئيسية، تاريخ المرض الحالي (HPI)، التشخيص، الملاحظات الطبية العدلية ⚖️، والملاحظات الإضافية في تبويب التشخيص والخدمات.
+- **الاختبارات الآلية المكتملة**:
+  * بناء وتشغيل [tests/Feature/EmergencyStandardReportDataTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyStandardReportDataTest.php): `4 passed (15 assertions)`.
+  * اجتياز كامل حزمة اختبارات الطوارئ: `31 passed (160 assertions)`.
+
 ## Session log (2026-10-17 — المرحلة 73: نظام إدارة نمط إدخال نتائج التحاليل المخبرية للمدير وحصر حالات الطوارئ المباشرة بالسعر النقدي 100% كاش Lab Test Result Entry Mode Management & Emergency Direct Cash Enforcement)
 
 ### Done

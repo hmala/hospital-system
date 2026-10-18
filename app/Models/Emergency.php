@@ -45,6 +45,13 @@ class Emergency extends Model
         'patient_migrated',
         'doctor_follow_up_fee',
         'follow_up_payment_id',
+        'arrival_mode',
+        'referred_from',
+        'hpi',
+        'medico_legal_notes',
+        'gcs',
+        'discharge_destination',
+        'discharge_recommendations',
     ];
 
     protected $casts = [

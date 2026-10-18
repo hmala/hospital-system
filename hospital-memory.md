@@ -63,6 +63,26 @@
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
 ### ✅ Completed (المكتمل والمُختبر):
+- **المرحلة 74 (منظومة استمارة تقرير الطوارئ الموحد - الخطوة الأولى: الحقول السريرية والعدلية وواجهات الإدخال Standard Emergency Medical Report Fields & Workstation Input Integration):**
+  * إضافة حقول استمارة التقرير الطبي المعتمد في جدول `emergencies` عبر مايجريشن `2026_10_18_090000_add_standard_report_fields_to_emergencies_table.php`:
+    - `arrival_mode`: طريقة الوصول (إسعاف المستشفى، وصول شخصي، سيارة خاصة، إسعاف خارجي).
+    - `referred_from`: الجهة المحولة إن وجدت.
+    - `gcs`: مستوى الوعي (Glasgow Coma Scale - القيمة الافتراضية `15/15`).
+    - `hpi`: تاريخ المرض الحالي (History of Present Illness).
+    - `medico_legal_notes`: الملاحظات الطبية - العدلية ⚖️.
+    - `discharge_destination`: الوجهة النهائية عند الخروج (خروج للمنزل، تحويل للاستشارية، تحويل للرقود، تحويل للعمليات).
+    - `discharge_recommendations`: خطة وتوصيات المتابعة الطبية.
+  * تحديث نموذج الطوارئ `app/Models/Emergency.php` بإضافة الحقول السبعة إلى `$fillable`.
+  * تطوير المتحكم `app/Http/Controllers/EmergencyController.php`:
+    - دعم واستقبال `arrival_mode` و `referred_from` و `gcs` عند إنشاء الحالة `store`.
+    - دعم وتحديث `gcs` في تحديث العلامات الحيوية `updateVitals`.
+    - دعم وتحديث `symptoms`, `hpi`, `medico_legal_notes`, `notes` في التحديث الطبي والسريري `updateMedical`.
+    - دعم واعتماد `discharge_destination` و `discharge_recommendations` في إجراءات التخريج `discharge`.
+  * تحديث واجهة الاستقبال `resources/views/emergency/create.blade.php`: إضافة قائمة طريقة الوصول مع أيقونات معبرة، وحقل الجهة المحولة.
+  * تحديث محطة كشف الطوارئ `resources/views/emergency/show.blade.php`:
+    - إضافة حقل مستوى الوعي (GCS) في تبويب العلامات الحيوية مع زر ضبط `طبيعي (15/15)`.
+    - إضافة حقول الشكوى، تاريخ المرض الحالي (HPI)، التشخيص، والملاحظات الطبية العدلية ⚖️، والملاحظات الإضافية في تبويب التشخيص والخدمات.
+  * بناء وتشغيل الاختبار الآلي: `tests/Feature/EmergencyStandardReportDataTest.php` بـ 4 اختبارات ناجحة (15 تأكيداً برمجياً)، واجتياز كامل حزمة اختبارات الطوارئ: `31 passed (160 assertions)`.
 - **المرحلة 64 (إدراج حقول توجيهات وملاحظات الطبيب للمختبر والأشعة في محطة الطبيب وربطها الكامل بمحطات المختبر والأشعة Doctor Clinical Notes Input & Lab/Radiology Stations Full Integration):**
   * إضافة حقلين نصيين أنيقين في محطة فحص الطبيب `doctors/visits/show`: أحدهما في تبويب طلبات المختبر `[ 📝 ملاحظات وتوجيهات الطبيب للمختبر ]`، والآخر في تبويب الأشعة والتصوير `[ 📝 ملاحظات وتوجيهات الطبيب لقسم الأشعة ]`.
   * استقبال وتخزين الملاحظات في تفاصيل الطلب `$details['doctor_notes']` عبر `DoctorVisitController::storeRequest`.

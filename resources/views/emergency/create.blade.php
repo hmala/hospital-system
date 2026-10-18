@@ -255,6 +255,32 @@
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
+
+                            <!-- طريقة الوصول والجهة المحولة لتقرير الطوارئ الرسمي -->
+                            <div class="col-md-6 mb-3">
+                                <label for="arrival_mode" class="form-label fw-bold">
+                                    <i class="fas fa-ambulance text-danger me-1"></i> طريقة الوصول <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select @error('arrival_mode') is-invalid @enderror" id="arrival_mode" name="arrival_mode">
+                                    <option value="إسعاف المستشفى (الوصول)" {{ old('arrival_mode', 'إسعاف المستشفى (الوصول)') == 'إسعاف المستشفى (الوصول)' ? 'selected' : '' }}>🚑 إسعاف المستشفى (الوصول)</option>
+                                    <option value="وصول شخصي / مباشر" {{ old('arrival_mode') == 'وصول شخصي / مباشر' ? 'selected' : '' }}>🚶‍♂️ وصول شخصي / مباشر</option>
+                                    <option value="سيارة خاصة" {{ old('arrival_mode') == 'سيارة خاصة' ? 'selected' : '' }}>🚗 سيارة خاصة</option>
+                                    <option value="إسعاف خارجي / دفاع مدني" {{ old('arrival_mode') == 'إسعاف خارجي / دفاع مدني' ? 'selected' : '' }}>🚨 إسعاف خارجي / دفاع مدني</option>
+                                </select>
+                                @error('arrival_mode')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="referred_from" class="form-label fw-bold">
+                                    <i class="fas fa-hospital text-info me-1"></i> الجهة المحولة (إن وجدت)
+                                </label>
+                                <input type="text" class="form-control @error('referred_from') is-invalid @enderror" id="referred_from" name="referred_from" value="{{ old('referred_from') }}" placeholder="مثال: عيادة خارجية، مستشفى آخر، أو اتركها فارغة...">
+                                @error('referred_from')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
 
                         <div class="alert alert-info">
