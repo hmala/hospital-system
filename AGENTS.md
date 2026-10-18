@@ -79,14 +79,19 @@ Consult these files before making changes or proposing fixes:
   * منظومة التنبيه الرقمي العاجل لشعبة الضمان والتسجيل:
     - إضافة زر تفاعلي `[ ⚡ إرسال تنبيه عاجل لمكتب الضمان والتسجيل ]` داخل صندوق التحذير في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php).
     - مسار ومتحكم `InquiryController@notifyInsuranceIncomplete` ينشئ إشعاراً فورياً [app/Notifications/InsuranceIncompleteAlertNotification.php](file:///c:/wamp64/www/hospital-system/app/Notifications/InsuranceIncompleteAlertNotification.php) في قاعدة البيانات وبث Pusher/Echo لموظفي الضمان والتسجيل والمدراء (`thaman`, `receptionist`, `admin`).
-    - الإشعار يحتوي على اسم المريض، النواقص الدقيقة، واسم موظف الاستعلامات المرسل، ورابط ذكي مباشر `route('patients.index', ['search' => ..., 'open_quick' => $id])`.
+    - الإشعار يحتوي على اسم المريض، النواقص الدقيقة، واسم موظف الاستعلامات المرسل، وبيانات المريض لفتح الدراور مباشرة.
+    - بانر تنبيه تفاعلي فوري أعلى جدول المرضى (`#insuranceAlertsContainer`) يظهر لموظف الضمان فوراً بدون الحاجة لرفرش الشاشة نهائياً:
+      * دعم مزدوج: بث لحظي عبر Pusher/Echo + استطلاع فوري خفيف عبر AJAX Polling كل 4 ثوانٍ (`patients.insurance-alerts-poll`).
+      * نغمة صوتية تنبيهية فورية (Web Audio API) وحركة انسيابية عند وصول المريض.
+      * زر `[ ⚡ إكمال النواقص فوراً ]` يفتح دراور إكمال المريض مباشرة (ويدرج المريض بأعلى الجدول حتى لو كان بصفحة أخرى أو مسجلاً حديثاً).
+      * تعليم الإشعار كمقروء تلقائياً وإخفاء الكرت عند الحفظ.
   * توجيه يوزر الضمان (`thaman`) مباشرة إلى شاشة المرضى وإخفاء لوحة التحكم الرئيسية:
     - تعديل `LoginController@redirectTo`: توجيه مستخدمي دور `thaman` تلقائياً بعد تسجيل الدخول مباشرة إلى `/patients`.
     - تعديل `DashboardController@index`: إعادة توجيه أي محاولة دخول لـ `/dashboard` من قبل يوزر الضمان فوراً إلى `patients.index`.
     - تعديل المسار الجذري `/`: تحويل يوزر الضمان المسجل دخوله إلى `patients.index`.
     - تعديل الشريط الجانبي `layouts/app.blade.php`: إخفاء زر "الرئيسية" تماماً ليوزر الضمان واستبداله برابط "سجل وملفات المرضى" المباشر.
   * حماية JavaScript في حدث تقديم الاستمارة `submit` وعند تأكيد الحجز الإضافي لمنع أي محاولة تجاوز.
-  * بناء وتشغيل الاختبارات الآلية: [tests/Feature/InquiryInsuranceDataIncompleteTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryInsuranceDataIncompleteTest.php) (`5 passed, 26 assertions`) واختبار توجيه يوزر الضمان [tests/Feature/ThamanLoginRedirectTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ThamanLoginRedirectTest.php) (`4 passed, 8 assertions`).
+  * بناء وتشغيل الاختبارات الآلية: [tests/Feature/InquiryInsuranceDataIncompleteTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryInsuranceDataIncompleteTest.php) (`5 passed, 26 assertions`) واختبار توجيه يوزر الضمان والتنبيهات الفورية [tests/Feature/ThamanLoginRedirectTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ThamanLoginRedirectTest.php) (`7 passed, 19 assertions`).
 
 ## Session log (2026-10-18 — المرحلة 78: استيراد وتحديث كتالوج المختبر الشامل لـ 865 فحصاً وفك قيد تفرد الكود الطبي ومطابقة هوستنجر السحابية Lab Catalog Full 865 Import, Code Unique Constraint Removal & Hostinger Sync)
 
