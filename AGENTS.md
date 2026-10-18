@@ -57,6 +57,25 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-18 — المرحلة 76: إصلاح نمط إدخال نتائج التحاليل المخبرية، وحل مشكلة تحول الفحوصات المركبة إلى قيم مفردة، وتكامل واجهة تعديل التحليل مع نمط الإدخال Lab Subtests Result Entry Fix & Edit Form Integration)
+
+### Done
+- **حل مشكلة تحول الفحوصات المركبة (Sub-Tests) إلى قيم مفردة في المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) و [resources/views/staff/requests/show-lab.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/show-lab.blade.php))**:
+  * ترقية استعلام وخريطة `$labTestMap` للبحث عن الفحوصات بالاسم الإنجليزي الكامل، وبالكود المختصر، وبالاختصارات الشائعة (مثل `CBC` ➔ `CBC_3DIFF`).
+  * القضاء التام على مشكلة سقوط الفحص إلى خانة إدخال مفردة (`name="test_results[CODE][value]"`) إذا طُلب بالكود أو المختصر.
+  * حماية دوال Blade المساعدة (`getTestIcon`, `getTestUnit`, `normalizeTestIds`, `normalizeTestsField`, `buildSelectedLabTests`) بـ `if (!function_exists(...))` لمنع أخطاء إعادة التصريح (Fatal Error: Cannot redeclare) عند استدعاء العرض أكثر من مرة.
+- **إصلاح مسارات AJAX في شاشة الإعدادات العامة ([resources/views/lab-tests/entry_settings.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/entry_settings.blade.php))**:
+  * تحويل مسارات التحديث الفردي والجماعي إلى روابط نسبية `route('lab-tests.entry-settings.update', [], false)` لتفادي تضارب المنفذ (Port 8000 vs 80) وسياسات CORS، وضمان حفظ التغيير لحظياً على أي بيئة عمل.
+- **تكامل واجهة تعديل الفحص المختبري مع نمط الإدخال ([resources/views/lab-tests/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/edit.blade.php) و [app/Http/Controllers/LabTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestController.php))**:
+  * إضافة قسم تفاعلي كامل لاختيار نمط الإدخال (قيمة مباشرة، قيم فرعية، مرفق جهاز، كلاهما مرن) مباشرة من شاشة تعديل التحليل `/lab-tests/{id}/edit`.
+  * إظهار عداد القيم الفرعية المسجلة حالياً مع زر وصول سريع لإدارة المعايير الفرعية `[ إدارة القيم الفرعية ]`.
+  * تحديث `LabTestController@update` و `@store` لاستقبال وحفظ حقل `result_entry_type`.
+- **مزامنة نمط التحاليل الـ 6 في قاعدتي البيانات**:
+  * تحويل نمط التحاليل الـ 6 (ABG, CBC_3DIFF, CBC_5DIFF, GSE, GUE, SEMEN) في الداتابيز المحلية (`mysql`) وهوستنجر (`remote_hostinger`) إلى `sub_tests`.
+- **الاختبارات الآلية**:
+  * بناء وتشغيل [tests/Feature/LabSubtestsResolutionAndEditTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabSubtestsResolutionAndEditTest.php): `2 passed (6 assertions)`.
+  * اجتياز كامل حزمة اختبارات المختبر: `16 passed (60 assertions)`.
+
 ## Session log (2026-10-18 — المرحلة 75: إعادة هندسة وتصميم استمارة تقرير الطوارئ الموحد ليكون في ورقة واحدة على وجهين مطابقة للتصميم القياسي Standard Duplex Two-Page Emergency Medical Report Form)
 
 ### Done

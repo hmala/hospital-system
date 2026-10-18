@@ -103,6 +103,100 @@
                             </div>
                         </div>
 
+                        <!-- قسم نمط إدخال نتيجة الفحص في المختبر -->
+                        <div class="card mb-4 border-info border-opacity-25 bg-light bg-opacity-25">
+                            <div class="card-header bg-info bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 text-dark fw-bold">
+                                    <i class="fas fa-sliders-h text-info me-1"></i> نمط إدخال نتيجة الفحص في المختبر
+                                </h6>
+                                @if($labTest->subTests()->count() > 0)
+                                    <span class="badge" style="background-color: #6f42c1; color: white;">
+                                        <i class="fas fa-list-ol me-1"></i> يحتوي {{ $labTest->subTests()->count() }} قيمة فرعية
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="card-body">
+                                @php
+                                    $currentEntryType = old('result_entry_type', $labTest->result_entry_type ?: 'single_value');
+                                    $subCount = $labTest->subTests()->count();
+                                @endphp
+                                <div class="row g-2">
+                                    {{-- خيار 1: قيمة مباشرة --}}
+                                    <div class="col-md-3">
+                                        <label class="p-2 border rounded d-block h-100 bg-white {{ $currentEntryType === 'single_value' ? 'border-primary shadow-xs' : '' }}" style="cursor: pointer;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="result_entry_type" id="entry_type_single" value="single_value"
+                                                       {{ $currentEntryType === 'single_value' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold small text-dark d-block" for="entry_type_single">
+                                                    1. قيمة مباشرة
+                                                </label>
+                                            </div>
+                                            <span class="badge bg-primary-subtle text-primary mt-1" style="font-size: 0.68rem;">Single Value</span>
+                                            <div class="text-muted mt-1" style="font-size: 0.72rem;">إدخال قيمة رقمية/نصية مفردة للفحص</div>
+                                        </label>
+                                    </div>
+
+                                    {{-- خيار 2: قيم فرعية مفصلة --}}
+                                    <div class="col-md-3">
+                                        <label class="p-2 border rounded d-block h-100 bg-white {{ $currentEntryType === 'sub_tests' ? 'border-primary shadow-xs' : '' }}" style="cursor: pointer;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="result_entry_type" id="entry_type_subtests" value="sub_tests"
+                                                       {{ $currentEntryType === 'sub_tests' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold small text-dark d-block" for="entry_type_subtests">
+                                                    2. قيم فرعية
+                                                </label>
+                                            </div>
+                                            <span class="badge" style="background-color: rgba(111, 66, 193, 0.15); color: #6f42c1; font-size: 0.68rem;">Sub-Tests</span>
+                                            <div class="text-muted mt-1" style="font-size: 0.72rem;">جدول باراميترات فرعية لكل فحص</div>
+                                            @if($subCount === 0)
+                                                <div class="alert alert-warning py-1 px-1.5 mt-1.5 mb-0" style="font-size: 0.68rem;">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> لا توجد قيم فرعية مسجلة حالياً
+                                                </div>
+                                            @endif
+                                        </label>
+                                    </div>
+
+                                    {{-- خيار 3: مرفق جهاز --}}
+                                    <div class="col-md-3">
+                                        <label class="p-2 border rounded d-block h-100 bg-white {{ $currentEntryType === 'attachment_only' ? 'border-warning shadow-xs' : '' }}" style="cursor: pointer;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="result_entry_type" id="entry_type_attachment" value="attachment_only"
+                                                       {{ $currentEntryType === 'attachment_only' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold small text-dark d-block" for="entry_type_attachment">
+                                                    3. مرفق جهاز
+                                                </label>
+                                            </div>
+                                            <span class="badge bg-warning-subtle text-dark mt-1" style="font-size: 0.68rem;">Attachment</span>
+                                            <div class="text-muted mt-1" style="font-size: 0.72rem;">رفع تقرير PDF أو صورة صادرة من الجهاز</div>
+                                        </label>
+                                    </div>
+
+                                    {{-- خيار 4: كلاهما (مرن) --}}
+                                    <div class="col-md-3">
+                                        <label class="p-2 border rounded d-block h-100 bg-white {{ $currentEntryType === 'flexible' ? 'border-success shadow-xs' : '' }}" style="cursor: pointer;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="result_entry_type" id="entry_type_flexible" value="flexible"
+                                                       {{ $currentEntryType === 'flexible' ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold small text-dark d-block" for="entry_type_flexible">
+                                                    4. كلاهما (مرن)
+                                                </label>
+                                            </div>
+                                            <span class="badge bg-success-subtle text-success mt-1" style="font-size: 0.68rem;">Flexible</span>
+                                            <div class="text-muted mt-1" style="font-size: 0.72rem;">إدخال نتائج وإمكانية إرفاق تقرير إضافي</div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2.5 pt-2 border-top">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i> يحدد هذا الخيار كيفية ظهور الفحص لموظف المختبر عند إدخال نتائج المرضى.
+                                    </small>
+                                    <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}" class="btn btn-xs btn-outline-primary fw-bold py-1 px-2.5" style="font-size: 0.75rem;">
+                                        <i class="fas fa-external-link-alt me-1"></i> إدارة القيم الفرعية ({{ $subCount }})
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- قسم تسعير الضمان الصحي وضمان وزارة الداخلية -->
                         <div class="card mb-4 border-primary border-opacity-25 bg-light bg-opacity-25">
                             <div class="card-header bg-primary bg-opacity-10 py-2">

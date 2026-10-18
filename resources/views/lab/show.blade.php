@@ -12,101 +12,111 @@ $labTest = LabTestResult::where('visit_id', $request->visit_id)
 // الحصول على جميع التحاليل النشطة للاستخدام في JavaScript
 $labTests = LabTest::active()->get()->keyBy('name');
 
-function getTestIcon($testName) {
-    $name = strtolower($testName);
+if (!function_exists('getTestIcon')) {
+    function getTestIcon($testName) {
+        $name = strtolower($testName);
 
-    if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) {
-        return 'fas fa-tint text-danger';
-    } elseif (strpos($name, 'ضغط') !== false || strpos($name, 'pressure') !== false) {
-        return 'fas fa-heartbeat text-danger';
-    } elseif (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) {
-        return 'fas fa-oil-can text-warning';
-    } elseif (strpos($name, 'دم') !== false || strpos($name, 'blood') !== false || strpos($name, 'cbc') !== false) {
-        return 'fas fa-tint text-danger';
-    } elseif (strpos($name, 'بول') !== false || strpos($name, 'urine') !== false) {
-        return 'fas fa-flask text-warning';
-    } elseif (strpos($name, 'كبد') !== false || strpos($name, 'liver') !== false || strpos($name, 'sgot') !== false || strpos($name, 'sgpt') !== false) {
-        return 'fas fa-lungs text-success';
-    } elseif (strpos($name, 'كلى') !== false || strpos($name, 'kidney') !== false || strpos($name, 'urea') !== false || strpos($name, 'creatinine') !== false) {
-        return 'fas fa-kidney text-info';
-    } elseif (strpos($name, 'هرمون') !== false || strpos($name, 'hormone') !== false || strpos($name, 'tsh') !== false) {
-        return 'fas fa-atom text-purple';
-    } elseif (strpos($name, 'فيروس') !== false || strpos($name, 'virus') !== false) {
-        return 'fas fa-virus text-danger';
-    } elseif (strpos($name, 'بكتيريا') !== false || strpos($name, 'bacteria') !== false) {
-        return 'fas fa-bacterium text-success';
-    } else {
-        return 'fas fa-vial text-primary';
-    }
-}
-
-function getTestUnit($testName, $labTests) {
-    if (isset($labTests[$testName]) && !empty($labTests[$testName]->unit)) {
-        return $labTests[$testName]->unit;
-    }
-    $name = strtolower($testName);
-    if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) return 'mg/dL';
-    if (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) return 'mg/dL';
-    if (strpos($name, 'بيليروبين') !== false || strpos($name, 'bilirubin') !== false) return 'mg/dL';
-    if (strpos($name, 'كرياتينين') !== false || strpos($name, 'creatinine') !== false) return 'mg/dL';
-    if (strpos($name, 'يوريا') !== false || strpos($name, 'urea') !== false) return 'mg/dL';
-    if (strpos($name, 'sgot') !== false || strpos($name, 'ast') !== false || strpos($name, 'sgpt') !== false || strpos($name, 'alt') !== false) return 'U/L';
-    if (strpos($name, 'هيموغلوبين') !== false || strpos($name, 'hemoglobin') !== false || strpos($name, 'hb') !== false) return 'g/dL';
-    if (strpos($name, 'wbc') !== false || strpos($name, 'platelets') !== false) return '/µL';
-    return '';
-}
-
-function normalizeTestIds($testIds) {
-    if (empty($testIds)) return [];
-    if (is_string($testIds)) {
-        $decoded = json_decode($testIds, true);
-        if (is_array($decoded)) return $decoded;
-        return array_filter(array_map('trim', explode(',', $testIds)), fn($item) => $item !== '');
-    }
-    if (is_array($testIds)) return $testIds;
-    return [];
-}
-
-function normalizeTestsField($tests) {
-    if (empty($tests)) return [];
-    if (is_string($tests)) {
-        $decoded = json_decode($tests, true);
-        if (is_array($decoded)) return $decoded;
-        return array_filter(array_map('trim', explode(',', $tests)), fn($item) => $item !== '');
-    }
-    if (is_array($tests)) return $tests;
-    return [];
-}
-
-function buildSelectedLabTests($requestDetails) {
-    $testsList = [];
-    if (!is_array($requestDetails)) return $testsList;
-
-    if (!empty($requestDetails['package_id'])) {
-        $pkg = \App\Models\Package::find($requestDetails['package_id']);
-        if ($pkg) {
-            $testsList = array_merge($testsList, $pkg->labTests->pluck('name')->toArray());
+        if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) {
+            return 'fas fa-tint text-danger';
+        } elseif (strpos($name, 'ضغط') !== false || strpos($name, 'pressure') !== false) {
+            return 'fas fa-heartbeat text-danger';
+        } elseif (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) {
+            return 'fas fa-oil-can text-warning';
+        } elseif (strpos($name, 'دم') !== false || strpos($name, 'blood') !== false || strpos($name, 'cbc') !== false) {
+            return 'fas fa-tint text-danger';
+        } elseif (strpos($name, 'بول') !== false || strpos($name, 'urine') !== false) {
+            return 'fas fa-flask text-warning';
+        } elseif (strpos($name, 'كبد') !== false || strpos($name, 'liver') !== false || strpos($name, 'sgot') !== false || strpos($name, 'sgpt') !== false) {
+            return 'fas fa-lungs text-success';
+        } elseif (strpos($name, 'كلى') !== false || strpos($name, 'kidney') !== false || strpos($name, 'urea') !== false || strpos($name, 'creatinine') !== false) {
+            return 'fas fa-kidney text-info';
+        } elseif (strpos($name, 'هرمون') !== false || strpos($name, 'hormone') !== false || strpos($name, 'tsh') !== false) {
+            return 'fas fa-atom text-purple';
+        } elseif (strpos($name, 'فيروس') !== false || strpos($name, 'virus') !== false) {
+            return 'fas fa-virus text-danger';
+        } elseif (strpos($name, 'بكتيريا') !== false || strpos($name, 'bacteria') !== false) {
+            return 'fas fa-bacterium text-success';
+        } else {
+            return 'fas fa-vial text-primary';
         }
     }
+}
 
-    if (!empty($requestDetails['lab_test_ids'])) {
-        $ids = normalizeTestIds($requestDetails['lab_test_ids']);
-        foreach ($ids as $testId) {
-            if ($testId === '') continue;
-            $labTest = \App\Models\LabTest::find($testId);
-            if ($labTest) {
-                $testsList[] = $labTest->name;
+if (!function_exists('getTestUnit')) {
+    function getTestUnit($testName, $labTests) {
+        if (isset($labTests[$testName]) && !empty($labTests[$testName]->unit)) {
+            return $labTests[$testName]->unit;
+        }
+        $name = strtolower($testName);
+        if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) return 'mg/dL';
+        if (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) return 'mg/dL';
+        if (strpos($name, 'بيليروبين') !== false || strpos($name, 'bilirubin') !== false) return 'mg/dL';
+        if (strpos($name, 'كرياتينين') !== false || strpos($name, 'creatinine') !== false) return 'mg/dL';
+        if (strpos($name, 'يوريا') !== false || strpos($name, 'urea') !== false) return 'mg/dL';
+        if (strpos($name, 'sgot') !== false || strpos($name, 'ast') !== false || strpos($name, 'sgpt') !== false || strpos($name, 'alt') !== false) return 'U/L';
+        if (strpos($name, 'هيموغلوبين') !== false || strpos($name, 'hemoglobin') !== false || strpos($name, 'hb') !== false) return 'g/dL';
+        if (strpos($name, 'wbc') !== false || strpos($name, 'platelets') !== false) return '/µL';
+        return '';
+    }
+}
+
+if (!function_exists('normalizeTestIds')) {
+    function normalizeTestIds($testIds) {
+        if (empty($testIds)) return [];
+        if (is_string($testIds)) {
+            $decoded = json_decode($testIds, true);
+            if (is_array($decoded)) return $decoded;
+            return array_filter(array_map('trim', explode(',', $testIds)), fn($item) => $item !== '');
+        }
+        if (is_array($testIds)) return $testIds;
+        return [];
+    }
+}
+
+if (!function_exists('normalizeTestsField')) {
+    function normalizeTestsField($tests) {
+        if (empty($tests)) return [];
+        if (is_string($tests)) {
+            $decoded = json_decode($tests, true);
+            if (is_array($decoded)) return $decoded;
+            return array_filter(array_map('trim', explode(',', $tests)), fn($item) => $item !== '');
+        }
+        if (is_array($tests)) return $tests;
+        return [];
+    }
+}
+
+if (!function_exists('buildSelectedLabTests')) {
+    function buildSelectedLabTests($requestDetails) {
+        $testsList = [];
+        if (!is_array($requestDetails)) return $testsList;
+
+        if (!empty($requestDetails['package_id'])) {
+            $pkg = \App\Models\Package::find($requestDetails['package_id']);
+            if ($pkg) {
+                $testsList = array_merge($testsList, $pkg->labTests->pluck('name')->toArray());
             }
         }
-    }
 
-    if (isset($requestDetails['tests'])) {
-        $tests = normalizeTestsField($requestDetails['tests']);
-        $testsList = array_merge($testsList, $tests);
-    }
+        if (!empty($requestDetails['lab_test_ids'])) {
+            $ids = normalizeTestIds($requestDetails['lab_test_ids']);
+            foreach ($ids as $testId) {
+                if ($testId === '') continue;
+                $labTest = \App\Models\LabTest::find($testId);
+                if ($labTest) {
+                    $testsList[] = $labTest->name;
+                }
+            }
+        }
 
-    $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string) $item) !== '');
-    return array_values(array_unique($testsList));
+        if (isset($requestDetails['tests'])) {
+            $tests = normalizeTestsField($requestDetails['tests']);
+            $testsList = array_merge($testsList, $tests);
+        }
+
+        $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string) $item) !== '');
+        return array_values(array_unique($testsList));
+    }
 }
 
 $requestDetails = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
@@ -591,9 +601,35 @@ $age = $patient?->age ?? null;
             $patientGender = $gender ?? 'both';
             $patientAge    = (int) ($age ?? 0);
             $testsList = buildSelectedLabTests($requestDetails);
-            $labTestMap = \App\Models\LabTest::with(['subTests' => function($q) {
+            
+            // خريطة أسماء بديلة واختصارات شائعة لربط التحاليل بدقة
+            $codeAliases = [
+                'CBC' => 'CBC_3DIFF',
+            ];
+            $normalizedSearchTerms = array_values(array_unique(array_merge(
+                $testsList,
+                array_map(fn($t) => $codeAliases[$t] ?? $t, $testsList)
+            )));
+
+            $rawLabTests = \App\Models\LabTest::with(['subTests' => function($q) {
                 $q->orderBy('sort_order')->orderBy('id');
-            }, 'references'])->whereIn('name', $testsList)->get()->keyBy('name');
+            }, 'references'])->where(function($query) use ($normalizedSearchTerms) {
+                $query->whereIn('name', $normalizedSearchTerms)
+                      ->orWhereIn('code', $normalizedSearchTerms);
+            })->get();
+
+            $labTestMap = collect();
+            foreach ($rawLabTests as $ltItem) {
+                $labTestMap[$ltItem->name] = $ltItem;
+                if ($ltItem->code) {
+                    $labTestMap[$ltItem->code] = $ltItem;
+                }
+            }
+            foreach ($codeAliases as $alias => $targetCode) {
+                if (isset($labTestMap[$targetCode]) && !isset($labTestMap[$alias])) {
+                    $labTestMap[$alias] = $labTestMap[$targetCode];
+                }
+            }
             $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
             
             $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);
