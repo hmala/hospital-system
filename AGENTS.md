@@ -81,6 +81,8 @@ Consult these files before making changes or proposing fixes:
   * حماية جميع أزرار وروابط الواتساب في الواجهات بـ `@can('send lab whatsapp')`: تظهر الصلاحية في شاشة تعديل الأدوار `/roles/{role}/edit` كخيار تفعيل/إطفاء ضمن بطاقة الواتساب المستقلة، وعند إلغاء تحديدها يختفي زر الواتساب فوراً من كافة شاشات المختبر لهذا الدور.
 - **الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
   * اجتياز كامل لـ 7 اختبارات ميزة تغطي تهيئة الرقم الدولي، توليد رابط الواتساب، الدخول الآمن للتقرير بالرمز، منع الدخول بدون رمز، وظهور الأزرار عند منح الصلاحية واختفائها تماماً عند سحب الصلاحية (`7 passed, 25 assertions`) واجتياز حزمة المختبر الكاملة (`36 passed, 159 assertions`).
+- **خطة التوسع المستقبلية لمنظومة الواتساب (WhatsApp Expansion Roadmap)**:
+  * توثيق مفاتيح التحكم السبعة في الذاكرة المركزية `hospital-memory.md` لتفعيلها تباعاً حسب أقسام المستشفى: (المختبر ✅ منجز، السونار، الرنين، المفراس، الإيكو، الأشعة السينية، والوصفات الطبية) ضمن بطاقة "خدمات ومراسلات الواتساب" الموحدة في شاشة الصلاحيات.
 
 ## Session log (2026-10-18 — المرحلة 79: إكمال نواقص بيانات المرضى السريع وقفل حجز الضمان الصحي عند وجود نواقص بملف المريض وترقية واجهة الاختيار للبطاقات التفاعلية Patient Incomplete Profile Completion, Insurance Booking Lock & Interactive Option Cards)
 
