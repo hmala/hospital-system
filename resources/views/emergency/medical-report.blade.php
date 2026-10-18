@@ -102,7 +102,7 @@
             max-height: 296mm;
             margin: 0 auto 25px auto;
             background: #ffffff;
-            padding: 10mm 12mm 8mm 12mm;
+            padding: 8mm 12mm 6mm 12mm;
             box-shadow: 0 4px 20px rgba(0,0,0,0.12);
             position: relative;
             box-sizing: border-box;
@@ -394,24 +394,75 @@
             background-repeat: no-repeat;
             background-position: center center;
             background-size: contain;
-            opacity: 0.12;
+            opacity: 0.08;
             pointer-events: none;
-            z-index: 2;
-            mix-blend-mode: multiply;
+            z-index: 0;
+            filter: grayscale(15%);
         }
 
-        /* Page Number & System Branding Footer */
+        /* Dedicated Official System Branding Strip (Above Footer) */
+        .system-branding-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 5px 0 3px 0;
+            padding: 3px 12px;
+            background: #ffffff;
+            border: 1px solid #bae6fd;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,90,156,0.06);
+            height: 30px;
+            box-sizing: border-box;
+        }
+        .strip-badge-label {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #005a9c;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .strip-badge-label i {
+            color: #10b981;
+            font-size: 11px;
+        }
+        .strip-logo-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            height: 100%;
+        }
+        .strip-logo-img {
+            max-height: 24px;
+            max-width: 140px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+        .strip-subtext {
+            font-size: 8.5px;
+            font-weight: 700;
+            color: #475569;
+            direction: ltr;
+            letter-spacing: 0.2px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            white-space: nowrap;
+        }
+
+        /* Page Number Footer */
         .page-num-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 9.5px;
+            font-size: 9px;
             font-weight: 700;
             color: #64748b;
-            padding-top: 3px;
+            padding-top: 2px;
             border-top: 0.6px solid #e2e8f0;
-            margin-top: 2px;
-            height: 26px;
+            height: 16px;
         }
         .footer-col-right {
             display: flex;
@@ -419,30 +470,6 @@
             gap: 5px;
             color: #475569;
             font-size: 8.5px;
-        }
-        .footer-col-center {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #005a9c;
-            font-weight: 800;
-        }
-        .footer-system-logo {
-            height: 22px;
-            max-width: 85px;
-            object-fit: contain;
-            border-radius: 2px;
-            vertical-align: middle;
-            background: #ffffff;
-            padding: 1px 4px;
-            border: 0.5px solid #e2e8f0;
-        }
-        .footer-sys-brand {
-            font-size: 9px;
-            letter-spacing: 0.2px;
-            direction: ltr;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-weight: 800;
         }
         .footer-col-left {
             font-weight: 800;
@@ -453,12 +480,12 @@
 
         /* Page 2 Large Textareas */
         .large-notes-box {
-            padding: 8px 10px;
+            padding: 6px 10px;
             font-size: 11px;
             color: #1e293b;
             line-height: 1.45;
-            min-height: 120px;
-            max-height: 140px;
+            min-height: 105px;
+            max-height: 125px;
             white-space: pre-line;
             overflow: hidden;
         }
@@ -468,20 +495,20 @@
             display: grid;
             grid-template-columns: 1fr 140px 150px;
             gap: 8px;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             align-items: stretch;
         }
 
         .auth-cell {
             border: 1px solid #7dd3fc;
             border-radius: 3px;
-            padding: 6px;
+            padding: 5px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
             background: #ffffff;
-            height: 135px;
+            height: 125px;
         }
         .auth-cell-header {
             font-size: 10.5px;
@@ -1006,15 +1033,22 @@
             </div>
         </div>
 
+        <!-- System Branding Strip (Above Footer) -->
+        <div class="system-branding-strip">
+            <span class="strip-badge-label">
+                <i class="fas fa-check-circle"></i> النظام الطبي المعتمد
+            </span>
+            <div class="strip-logo-wrapper">
+                <img src="{{ $systemLogoSrc }}" alt="HERAMZ RP Logo" class="strip-logo-img">
+            </div>
+            <span class="strip-subtext">HERAMZ RP • Electronic Hospital Management & Healthcare Automation</span>
+        </div>
+
         <!-- Footer Page 1 -->
         <div class="page-num-footer">
             <div class="footer-col-right">
-                <i class="fas fa-hospital-alt" style="color: #005a9c;"></i>
-                <span>مستشفى الكفاءات الأهلي — استمارة طبية معتمدة للطوارئ</span>
-            </div>
-            <div class="footer-col-center">
-                <img src="{{ $systemLogoSrc }}" alt="System Logo" class="footer-system-logo">
-                <span class="footer-sys-brand">HERAMZ RP • Electronic Hospital System</span>
+                <i class="fas fa-shield-alt" style="color: #005a9c;"></i>
+                <span>مستشفى الكفاءات الأهلي — وثيقة طبية رسمية معتمدة ومحمية رقمياً</span>
             </div>
             <div class="footer-col-left">
                 Page 1 of 2
@@ -1157,15 +1191,22 @@
             </div>
         </div>
 
+        <!-- System Branding Strip (Above Footer) -->
+        <div class="system-branding-strip">
+            <span class="strip-badge-label">
+                <i class="fas fa-check-circle"></i> النظام الطبي المعتمد
+            </span>
+            <div class="strip-logo-wrapper">
+                <img src="{{ $systemLogoSrc }}" alt="HERAMZ RP Logo" class="strip-logo-img">
+            </div>
+            <span class="strip-subtext">HERAMZ RP • Electronic Hospital Management & Healthcare Automation</span>
+        </div>
+
         <!-- Footer Page 2 -->
         <div class="page-num-footer">
             <div class="footer-col-right">
-                <i class="fas fa-file-medical-alt" style="color: #005a9c;"></i>
-                <span>قسم الطوارئ والعناية الحرجة — التقرير الطبي الموحد</span>
-            </div>
-            <div class="footer-col-center">
-                <img src="{{ $systemLogoSrc }}" alt="System Logo" class="footer-system-logo">
-                <span class="footer-sys-brand">HERAMZ RP • Electronic Hospital System</span>
+                <i class="fas fa-shield-alt" style="color: #005a9c;"></i>
+                <span>قسم الطوارئ والعناية الحرجة — وثيقة طبية رسمية معتمدة ومحمية رقمياً</span>
             </div>
             <div class="footer-col-left">
                 Page 2 of 2
