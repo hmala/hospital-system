@@ -80,9 +80,13 @@ Consult these files before making changes or proposing fixes:
     - إضافة زر تفاعلي `[ ⚡ إرسال تنبيه عاجل لمكتب الضمان والتسجيل ]` داخل صندوق التحذير في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php).
     - مسار ومتحكم `InquiryController@notifyInsuranceIncomplete` ينشئ إشعاراً فورياً [app/Notifications/InsuranceIncompleteAlertNotification.php](file:///c:/wamp64/www/hospital-system/app/Notifications/InsuranceIncompleteAlertNotification.php) في قاعدة البيانات وبث Pusher/Echo لموظفي الضمان والتسجيل والمدراء (`thaman`, `receptionist`, `admin`).
     - الإشعار يحتوي على اسم المريض، النواقص الدقيقة، واسم موظف الاستعلامات المرسل، ورابط ذكي مباشر `route('patients.index', ['search' => ..., 'open_quick' => $id])`.
-    - عند ضغط موظف الضمان على الإشعار في جرسه 🔔، تفتح شاشة المرضى وينزلق فوراً دراور الإكمال السريع التلقائي (`open_quick`) لإدخال النواقص خلال ثوانٍ.
+  * توجيه يوزر الضمان (`thaman`) مباشرة إلى شاشة المرضى وإخفاء لوحة التحكم الرئيسية:
+    - تعديل `LoginController@redirectTo`: توجيه مستخدمي دور `thaman` تلقائياً بعد تسجيل الدخول مباشرة إلى `/patients`.
+    - تعديل `DashboardController@index`: إعادة توجيه أي محاولة دخول لـ `/dashboard` من قبل يوزر الضمان فوراً إلى `patients.index`.
+    - تعديل المسار الجذري `/`: تحويل يوزر الضمان المسجل دخوله إلى `patients.index`.
+    - تعديل الشريط الجانبي `layouts/app.blade.php`: إخفاء زر "الرئيسية" تماماً ليوزر الضمان واستبداله برابط "سجل وملفات المرضى" المباشر.
   * حماية JavaScript في حدث تقديم الاستمارة `submit` وعند تأكيد الحجز الإضافي لمنع أي محاولة تجاوز.
-  * بناء وتشغيل الاختبار الآلي: [tests/Feature/InquiryInsuranceDataIncompleteTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryInsuranceDataIncompleteTest.php) (`5 passed, 26 assertions`).
+  * بناء وتشغيل الاختبارات الآلية: [tests/Feature/InquiryInsuranceDataIncompleteTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryInsuranceDataIncompleteTest.php) (`5 passed, 26 assertions`) واختبار توجيه يوزر الضمان [tests/Feature/ThamanLoginRedirectTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ThamanLoginRedirectTest.php) (`4 passed, 8 assertions`).
 
 ## Session log (2026-10-18 — المرحلة 78: استيراد وتحديث كتالوج المختبر الشامل لـ 865 فحصاً وفك قيد تفرد الكود الطبي ومطابقة هوستنجر السحابية Lab Catalog Full 865 Import, Code Unique Constraint Removal & Hostinger Sync)
 

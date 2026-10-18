@@ -32,6 +32,10 @@ class LoginController extends Controller
             return route('doctor.visits.index');
         }
 
+        if ($user && $user->hasRole('thaman')) {
+            return route('patients.index');
+        }
+
         return '/dashboard';
     }
 

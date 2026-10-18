@@ -27,7 +27,13 @@ use Illuminate\Support\Facades\Auth;
 Route::pattern('radiology', '[0-9]+');
 
 Route::get('/', function () {
-    return Auth::check() ? redirect('/dashboard') : redirect('/login');
+    if (Auth::check()) {
+        if (Auth::user()->hasRole('thaman')) {
+            return redirect()->route('patients.index');
+        }
+        return redirect('/dashboard');
+    }
+    return redirect('/login');
 });
 
 // Test route

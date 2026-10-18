@@ -721,6 +721,10 @@
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
                                 <i class="fas fa-stethoscope me-2"></i>عيادتي وزيارات المرضى
                             </a>
+                        @elseif(auth()->check() && auth()->user()->hasRole('thaman'))
+                            <a class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" href="{{ route('patients.index') }}">
+                                <i class="fas fa-user-injured me-2"></i>سجل وملفات المرضى
+                            </a>
                         @else
                             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                                 <i class="fas fa-home me-2"></i>الرئيسية
