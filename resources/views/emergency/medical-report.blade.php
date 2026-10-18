@@ -383,14 +383,73 @@
             background-color: #f8fafc;
         }
 
-        /* Page Number Footer */
+        /* Watermark Layer (Centered Official System Security Watermark) */
+        .report-watermark {
+            position: absolute;
+            top: 52%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 480px;
+            height: 480px;
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: contain;
+            opacity: 0.048;
+            pointer-events: none;
+            z-index: 0;
+            filter: grayscale(10%);
+        }
+
+        .report-page > *:not(.report-watermark):not(.page-border-inner) {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Page Number & System Branding Footer */
         .page-num-footer {
-            text-align: center;
-            font-size: 9.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
             font-weight: 700;
             color: #64748b;
-            padding-top: 4px;
-            border-top: 0.5px solid #e2e8f0;
+            padding-top: 3px;
+            border-top: 0.6px solid #e2e8f0;
+            margin-top: 2px;
+            height: 18px;
+        }
+        .footer-col-right {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #475569;
+            font-size: 8.5px;
+        }
+        .footer-col-center {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #005a9c;
+            font-weight: 800;
+        }
+        .footer-system-logo {
+            height: 15px;
+            max-width: 38px;
+            object-fit: contain;
+            border-radius: 2px;
+            vertical-align: middle;
+        }
+        .footer-sys-brand {
+            font-size: 8.5px;
+            letter-spacing: 0.2px;
+            direction: ltr;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .footer-col-left {
+            font-weight: 800;
+            color: #005a9c;
+            direction: ltr;
+            font-size: 9.5px;
         }
 
         /* Page 2 Large Textareas */
@@ -589,6 +648,12 @@
         $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/signatures/doctor_244.png')));
     }
 
+    // Official System Logo (Login & Sidebar Logo) for Watermark & Footer
+    $systemLogoFile = public_path('images/logo.jpeg');
+    $systemLogoSrc = file_exists($systemLogoFile)
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($systemLogoFile))
+        : asset('images/logo.jpeg');
+
     // Triage badge calculation
     $priority = $emergency->priority ?? 'urgent';
     $triageLabel = 'عاجلة (Urgent - Yellow)';
@@ -708,6 +773,7 @@
     <!-- الوجه الأول: FRONT FACE (Page 1 of 2)     -->
     <!-- ========================================== -->
     <div class="report-page">
+        <div class="report-watermark" style="background-image: url('{{ $systemLogoSrc }}');"></div>
         <div class="page-border-inner"></div>
 
         <div>
@@ -943,7 +1009,17 @@
 
         <!-- Footer Page 1 -->
         <div class="page-num-footer">
-            Page 1 of 2
+            <div class="footer-col-right">
+                <i class="fas fa-hospital-alt" style="color: #005a9c;"></i>
+                <span>مستشفى الكفاءات الأهلي — استمارة طبية معتمدة للطوارئ</span>
+            </div>
+            <div class="footer-col-center">
+                <img src="{{ $systemLogoSrc }}" alt="System Logo" class="footer-system-logo">
+                <span class="footer-sys-brand">HERAMZ RP • Electronic Hospital System</span>
+            </div>
+            <div class="footer-col-left">
+                Page 1 of 2
+            </div>
         </div>
     </div>
 
@@ -951,6 +1027,7 @@
     <!-- الوجه الثاني: BACK FACE (Page 2 of 2)      -->
     <!-- ========================================== -->
     <div class="report-page">
+        <div class="report-watermark" style="background-image: url('{{ $systemLogoSrc }}');"></div>
         <div class="page-border-inner"></div>
 
         <div>
@@ -1083,7 +1160,17 @@
 
         <!-- Footer Page 2 -->
         <div class="page-num-footer">
-            Page 2 of 2
+            <div class="footer-col-right">
+                <i class="fas fa-file-medical-alt" style="color: #005a9c;"></i>
+                <span>قسم الطوارئ والعناية الحرجة — التقرير الطبي الموحد</span>
+            </div>
+            <div class="footer-col-center">
+                <img src="{{ $systemLogoSrc }}" alt="System Logo" class="footer-system-logo">
+                <span class="footer-sys-brand">HERAMZ RP • Electronic Hospital System</span>
+            </div>
+            <div class="footer-col-left">
+                Page 2 of 2
+            </div>
         </div>
     </div>
 
