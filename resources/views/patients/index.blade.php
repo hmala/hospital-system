@@ -241,8 +241,9 @@
                                     $missingPhone = empty($patient->user?->phone);
                                     $missingNid = empty($patient->national_id);
                                     $missingGender = empty($patient->user?->gender);
+                                    $missingAge = empty($patient->age);
                                     $missingIns = ($patient->insurance_type === 'hi' && empty($insNum));
-                                    $isInc = $missingPhone || $missingNid || $missingGender || $missingIns;
+                                    $isInc = $missingPhone || $missingNid || $missingGender || $missingAge || $missingIns;
                                 @endphp
                                 <tr id="patient-row-{{ $patient->id }}">
                                     <td class="fw-bold text-muted">{{ $loop->iteration }}</td>
@@ -259,7 +260,9 @@
                                                         {{ $patient->user && $patient->user->gender == 'male' ? 'ذكر' : ($patient->user && $patient->user->gender == 'female' ? 'أنثى' : '⚠️ الجنس غير محدد') }}
                                                     </span>
                                                     @if($patient->age)
-                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style="font-size: 0.70rem;">{{ $patient->age }} سنة</span>
+                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 patient-age-badge" style="font-size: 0.70rem;">{{ $patient->age }} سنة</span>
+                                                    @else
+                                                        <span class="badge bg-warning bg-opacity-15 text-dark border border-warning border-opacity-50 patient-age-badge" style="font-size: 0.70rem;">⚠️ العمر غير مسجل</span>
                                                     @endif
                                                     @if($patient->blood_type)
                                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.70rem;">{{ $patient->blood_type }}</span>
@@ -282,6 +285,11 @@
                                                 <i class="fas fa-exclamation-triangle text-warning me-1"></i>بحاجة إكمال
                                             </span>
                                             <div class="d-flex flex-wrap gap-1 justify-content-center mt-1 missing-tags-box">
+                                                @if($missingAge)
+                                                    <span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-75" style="font-size: 0.65rem;">
+                                                        <i class="fas fa-hourglass-half text-warning me-1"></i>العمر مفقود
+                                                    </span>
+                                                @endif
                                                 @if($missingPhone)
                                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.65rem;">
                                                         <i class="fas fa-phone-slash me-1"></i>هاتف مفقود
@@ -400,6 +408,7 @@
                                                     data-gender="{{ $patient->user?->gender }}" 
                                                     data-ins="{{ $insNum }}" 
                                                     data-nid="{{ $patient->national_id }}" 
+                                                    data-age="{{ $patient->age }}"
                                                     data-dob="{{ $patient->user?->date_of_birth ? $patient->user->date_of_birth->format('Y-m-d') : '' }}"
                                                     data-cat="{{ $patient->healthInsuranceCategory?->name }}"
                                                     title="إكمال وتدقيق بيانات المريض سريعاً">
@@ -672,6 +681,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const missing = patient.missing_fields || [];
             let missingTagsHtml = '';
             if (patient.is_incomplete) {
+                if (missing.includes('age')) {
+                    missingTagsHtml += `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-75" style="font-size: 0.68rem;"><i class="fas fa-hourglass-half text-warning me-1"></i>العمر مفقود</span> `;
+                }
                 if (missing.includes('phone')) {
                     missingTagsHtml += `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.68rem;"><i class="fas fa-phone-slash me-1"></i>هاتف مفقود</span> `;
                 }
@@ -695,7 +707,8 @@ document.addEventListener('DOMContentLoaded', function() {
                           data-gender="${patient.user ? (patient.user.gender || '') : ''}" 
                           data-ins="${patient.insurance_number || ''}" 
                           data-nid="${patient.national_id || ''}" 
-                          data-dob=""
+                          data-age="${patient.age || ''}" 
+                          data-dob="${patient.dob || ''}" 
                           data-cat="${patient.insurance_category || 'ضمان صحي'}"
                           title="إكمال وتدقيق بيانات المريض سريعاً">
                         <i class="fas fa-user-edit me-1"></i>إكمال
@@ -721,7 +734,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="badge ${patient.user && patient.user.gender ? 'bg-light text-secondary border' : 'bg-warning bg-opacity-15 text-dark border border-warning border-opacity-50'} patient-gender-badge" style="font-size: 0.70rem;">
                                     ${patient.user && patient.user.gender === 'male' ? 'ذكر' : (patient.user && patient.user.gender === 'female' ? 'أنثى' : '⚠️ الجنس غير محدد')}
                                 </span>
-                                ${patient.age ? `<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style="font-size: 0.70rem;">${patient.age} سنة</span>` : ''}
+                                ${patient.age ? `<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 patient-age-badge" style="font-size: 0.70rem;">${patient.age} سنة</span>` : `<span class="badge bg-warning bg-opacity-15 text-dark border border-warning border-opacity-50 patient-age-badge" style="font-size: 0.70rem;">⚠️ العمر غير مسجل</span>`}
                                 ${patient.blood_type ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.70rem;">${patient.blood_type}</span>` : ''}
                             </div>
                             <div class="patient-nid-container">
@@ -909,6 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const gender = btn.getAttribute('data-gender') || '';
         const ins = btn.getAttribute('data-ins') || '';
         const nid = btn.getAttribute('data-nid') || '';
+        const age = btn.getAttribute('data-age') || '';
         const dob = btn.getAttribute('data-dob') || '';
         const cat = btn.getAttribute('data-cat') || 'ضمان صحي';
 
@@ -934,8 +948,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <div class="inline-alert alert d-none mb-3 py-2 px-3 small" role="alert"></div>
 
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-3 col-sm-6">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-xl-2 col-md-4 col-sm-6">
                                 <label class="form-label fw-bold text-dark small mb-1">
                                     <i class="fas fa-phone text-primary me-1"></i>رقم الهاتف <span class="text-danger">*</span>
                                 </label>
@@ -945,7 +959,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
 
-                            <div class="col-md-2 col-sm-6">
+                            <div class="col-xl-2 col-md-4 col-sm-6">
                                 <label class="form-label fw-bold text-dark small mb-1">
                                     <i class="fas fa-venus-mars text-info me-1"></i>الجنس <span class="text-danger">*</span>
                                 </label>
@@ -956,21 +970,28 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </select>
                             </div>
 
-                            <div class="col-md-2 col-sm-6">
+                            <div class="col-xl-2 col-md-4 col-sm-6">
                                 <label class="form-label fw-bold text-dark small mb-1">
-                                    <i class="fas fa-id-card text-success me-1"></i>رقم بطاقة/دفتر الضمان
+                                    <i class="fas fa-calendar-alt text-primary me-1"></i>تاريخ الميلاد
                                 </label>
-                                <input type="text" class="form-control form-control-sm in-ins font-monospace" value="${ins}" placeholder="رقم الهوية التأمينية">
+                                <input type="date" class="form-control form-control-sm in-dob font-monospace" value="${dob}">
                             </div>
 
-                            <div class="col-md-2 col-sm-6">
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="fas fa-id-card text-success me-1"></i>رقم بطاقة الضمان
+                                </label>
+                                <input type="text" class="form-control form-control-sm in-ins font-monospace" value="${ins}" placeholder="رقم البطاقة">
+                            </div>
+
+                            <div class="col-xl-2 col-md-4 col-sm-6">
                                 <label class="form-label fw-bold text-dark small mb-1">
                                     <i class="fas fa-fingerprint text-secondary me-1"></i>البطاقة الموحدة
                                 </label>
                                 <input type="text" class="form-control form-control-sm in-nid font-monospace" value="${nid}" placeholder="أرقام فقط" dir="ltr">
                             </div>
 
-                            <div class="col-md-3 col-sm-12 d-flex gap-2">
+                            <div class="col-xl-2 col-md-4 col-sm-12 d-flex gap-1">
                                 <button type="submit" class="btn btn-primary btn-sm fw-bold flex-grow-1 in-submit-btn">
                                     <span class="spinner-border spinner-border-sm me-1 d-none in-spinner" role="status"></span>
                                     <i class="fas fa-save me-1 in-save-icon"></i>حفظ واعتماد
@@ -991,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // التركيز التلقائي على أول حقل ناقص
         const phoneInput = drawerTr.querySelector('.in-phone');
         const genderSelect = drawerTr.querySelector('.in-gender');
+        const dobInput = drawerTr.querySelector('.in-dob');
         const insInput = drawerTr.querySelector('.in-ins');
         const nidInput = drawerTr.querySelector('.in-nid');
 
@@ -998,6 +1020,8 @@ document.addEventListener('DOMContentLoaded', function() {
             phoneInput.focus();
         } else if (!gender) {
             genderSelect.focus();
+        } else if (!dob) {
+            dobInput.focus();
         } else if (!ins) {
             insInput.focus();
         } else {
@@ -1024,6 +1048,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const phoneVal = form.querySelector('.in-phone').value.trim();
         const genderVal = form.querySelector('.in-gender').value;
+        const dobVal = form.querySelector('.in-dob') ? form.querySelector('.in-dob').value.trim() : '';
         const insVal = form.querySelector('.in-ins').value.trim();
         const nidVal = form.querySelector('.in-nid').value.trim();
 
@@ -1035,6 +1060,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = {
             phone: phoneVal,
             gender: genderVal,
+            date_of_birth: dobVal,
             insurance_number: insVal,
             national_id: nidVal,
         };
@@ -1077,6 +1103,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     genderBadge.textContent = (genderVal === 'male') ? 'ذكر' : 'أنثى';
                 }
 
+                // تحديث وسم العمر
+                const ageBadge = parentRow.querySelector('.patient-age-badge');
+                if (data.patient && data.patient.age) {
+                    if (ageBadge) {
+                        ageBadge.className = 'badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 patient-age-badge';
+                        ageBadge.textContent = `${data.patient.age} سنة`;
+                    } else {
+                        const metaBadges = parentRow.querySelector('.patient-meta-badges');
+                        if (metaBadges) {
+                            const newAgeSpan = document.createElement('span');
+                            newAgeSpan.className = 'badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 patient-age-badge';
+                            newAgeSpan.style.fontSize = '0.70rem';
+                            newAgeSpan.textContent = `${data.patient.age} سنة`;
+                            metaBadges.appendChild(newAgeSpan);
+                        }
+                    }
+                }
+
                 // تحديث وسم رقم الضمان
                 const insNumBox = parentRow.querySelector('.insurance-num-box');
                 if (insNumBox && insVal) {
@@ -1087,6 +1131,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 const nidBox = parentRow.querySelector('.patient-nid-container');
                 if (nidBox && nidVal) {
                     nidBox.innerHTML = `<small class="text-muted font-monospace d-block mt-1" style="font-size: 0.75rem;"><i class="fas fa-fingerprint me-1"></i>${nidVal}</small>`;
+                }
+
+                // تحديث سمات زر الإكمال السريع بالبيانات الجديدة
+                const quickBtn = parentRow.querySelector('.btn-quick-complete');
+                if (quickBtn && data.patient) {
+                    quickBtn.setAttribute('data-phone', data.patient.phone || '');
+                    quickBtn.setAttribute('data-gender', data.patient.gender || '');
+                    quickBtn.setAttribute('data-age', data.patient.age || '');
+                    quickBtn.setAttribute('data-dob', data.patient.date_of_birth || '');
+                    quickBtn.setAttribute('data-ins', data.patient.insurance_number || '');
+                    quickBtn.setAttribute('data-nid', data.patient.national_id || '');
                 }
 
                 // تحديث عمود حالة السجل إلى مكتمل
@@ -1100,7 +1155,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 // إزالة زر إكمال من عمود الإجراءات
-                const quickBtn = parentRow.querySelector('.btn-quick-complete');
                 if (quickBtn) {
                     quickBtn.remove();
                 }
@@ -1150,6 +1204,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(form);
         form.submit();
     });
+
+    // فتح دراور الإكمال السريع تلقائياً إذا تم التوجيه من إشعار الضمان
+    const urlParams = new URLSearchParams(window.location.search);
+    const openQuickId = urlParams.get('open_quick');
+    if (openQuickId) {
+        setTimeout(() => {
+            const targetBtn = document.querySelector(`.btn-quick-complete[data-id="${openQuickId}"]`);
+            if (targetBtn) {
+                targetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetBtn.click();
+            }
+        }, 350);
+    }
 });
 </script>
 @endsection

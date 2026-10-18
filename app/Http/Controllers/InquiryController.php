@@ -327,6 +327,17 @@ class InquiryController extends Controller
         $patient = Patient::find($httpRequest->patient_id);
         $requestTypes = $httpRequest->request_type;
         $applyInsurance = $httpRequest->input('apply_insurance', '1') == '1';
+
+        // قفل رقابي: منع إتمام الحجز على حساب الضمان الصحي في حال وجود أي نقص بالبيانات الأساسية
+        if ($applyInsurance && $patient && $patient->insurance_type && $patient->insurance_type !== 'none') {
+            $missingFields = $patient->getMissingInsuranceFields();
+            if (!empty($missingFields)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', '⛔ لا يمكن إتمام الحجز بنظام الضمان الصحي: بيانات المريض غير مكتملة لدى شعبة الضمان (مفقود: ' . implode('، ', $missingFields) . '). يرجى توجيه المريض لمكتب التسجيل والضمان لإكمال بياناته أولاً، أو اختيار الحجز النقدي (كاش).');
+            }
+        }
+
         $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
 
         // التحقق من الصلاحيات لكل نوع طلب
@@ -1819,6 +1830,52 @@ class InquiryController extends Controller
         }
 
         return response()->json(['has_active' => false]);
+    }
+
+    /**
+     * إرسال تنبيه عاجل لموظفي شعبة الضمان والتسجيل لإكمال نواقص مريض الضمان
+     */
+    public function notifyInsuranceIncomplete(HttpRequest $request)
+    {
+        $request->validate([
+            'patient_id' => 'required|exists:patients,id',
+        ]);
+
+        $patient = Patient::with('user')->findOrFail($request->patient_id);
+        $missing = $patient->getMissingInsuranceFields();
+
+        if (empty($missing)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بيانات المريض مكتملة بالفعل ولا توجد نواقص مسجلة.',
+            ]);
+        }
+
+        // المستلمون: موظفو الضمان وموظفو الاستقبال والتسجيل والمدراء
+        $targetRoles = \Spatie\Permission\Models\Role::whereIn('name', ['thaman', 'receptionist'])->pluck('name')->toArray();
+        $recipients = !empty($targetRoles) ? User::role($targetRoles)->get() : collect();
+        $adminRoles = \Spatie\Permission\Models\Role::whereIn('name', ['admin', 'admin-hsop'])->pluck('name')->toArray();
+        $admins = !empty($adminRoles) ? User::role($adminRoles)->get() : collect();
+        $recipients = $recipients->concat($admins)->unique('id');
+
+        $sender = Auth::user();
+        $notification = new \App\Notifications\InsuranceIncompleteAlertNotification($patient, $missing, $sender);
+
+        foreach ($recipients as $recipient) {
+            try {
+                $recipient->notify($notification);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed sending insurance notification to user ' . $recipient->id . ': ' . $e->getMessage());
+            }
+        }
+
+        $missingText = implode('، ', $missing);
+        $patientName = $patient->user?->name ?? 'المريض';
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم إرسال التنبيه العاجل بنجاح لشعبة الضمان والتسجيل للمريض ({$patientName}) والنواقص ({$missingText}). يرجى توجيه المريض لمكتبهم الآن.",
+        ]);
     }
 }
 

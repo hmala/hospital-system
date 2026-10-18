@@ -57,6 +57,53 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-18 — المرحلة 79: إكمال نواقص بيانات المرضى السريع وقفل حجز الضمان الصحي عند وجود نواقص بملف المريض وترقية واجهة الاختيار للبطاقات التفاعلية Patient Incomplete Profile Completion, Insurance Booking Lock & Interactive Option Cards)
+
+### Done
+- **إظهار رقم هاتف المريض في كارت شاشة المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * إضافة رقم هاتف المريض إلى بطاقة "بيانات المريض والطلب" مع أيقونة اتصال ورابط مباشر `tel:`.
+  * بناء اختبار ميزة: [tests/Feature/LabShowPatientPhoneTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabShowPatientPhoneTest.php) (`1 passed, 4 assertions`).
+- **إضافة حقل تاريخ الميلاد وإظهار العمر التلقائي في صف الإكمال السريع ([resources/views/patients/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/patients/index.blade.php) و [app/Http/Controllers/PatientController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/PatientController.php))**:
+  * إضافة حقل `date_of_birth` في دراور الإكمال السريع السلس (`btn-quick-complete`) مع 6 أعمدة متناسقة (`col-xl-2`).
+  * استقبال تاريخ الميلاد في `quickUpdate` وتحديث `users.date_of_birth` واحتساب العمر التلقائي وإعادته في استجابة الـ AJAX.
+  * تحديث شارة العمر في سطر جدول المريض لحظياً دون إعادة تحميل الصفحة، وحل مشكلة 7,919 مريض مسجلين بدون مواليد بسبب التسجيل السريع القديم.
+  * اجتياز كامل للاختبارات: [tests/Feature/PatientCompletionAndQuickUpdateTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PatientCompletionAndQuickUpdateTest.php) (`4 passed, 18 assertions`).
+- **منظومة قفل الحجز تحت مظلة الضمان الصحي عند وجود أي نقص سريري أو إداري**:
+  * بناء دالتي `getMissingInsuranceFields()` و `isInsuranceDataComplete()` في نموذج [app/Models/Patient.php](file:///c:/wamp64/www/hospital-system/app/Models/Patient.php) للتحقق من الحقول الـ 5 الإلزامية: (رقم بطاقة/دفتر الضمان، البطاقة الموحدة/الرقم الوطني، رقم الهاتف، الجنس، تاريخ الميلاد).
+  * حماية صارمة في الواجهة الخلفية [app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php) لمنع تمرير أي حجز ضمان مع نواقص وإرجاع تنبيه إداري يوضح الحقول المفقودة بدقة.
+  * ترقية واجهة اختيار التغطية في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php) إلى **بطاقتين تفاعليتين لمسيتين (Selectable Visual Cards)** بدلاً من نقاط الراديو أو مربعات الاختيار التقليدية:
+    - **بطاقة الضمان 🛡️**: تظهر بالأخضر عند التفعيل، وتقفل تلقائياً باللون الأحمر مع شارة `🔒 مقفل (نواقص بملف الضمان)` عند وجود نقص.
+    - **بطاقة الحجز النقدي (كاش) 💵**: تفعل تلقائياً كخيار بديل مباشر للمتابعة الفورية للمريض.
+    - إضافة دالة الجافاسكربت `selectInsuranceMode()` للتبديل اللحظي عند النقر على أي جزء من البطاقة.
+  * تصميم صندوق تنبيه تحذيري بارز ومكتوب بعبارات واضحة جداً يوضح للموظف الحقول المفقودة كشارات حمراء وخطي العمل المتاحين أمامه فوراً.
+  * منظومة التنبيه الرقمي العاجل لشعبة الضمان والتسجيل:
+    - إضافة زر تفاعلي `[ ⚡ إرسال تنبيه عاجل لمكتب الضمان والتسجيل ]` داخل صندوق التحذير في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php).
+    - مسار ومتحكم `InquiryController@notifyInsuranceIncomplete` ينشئ إشعاراً فورياً [app/Notifications/InsuranceIncompleteAlertNotification.php](file:///c:/wamp64/www/hospital-system/app/Notifications/InsuranceIncompleteAlertNotification.php) في قاعدة البيانات وبث Pusher/Echo لموظفي الضمان والتسجيل والمدراء (`thaman`, `receptionist`, `admin`).
+    - الإشعار يحتوي على اسم المريض، النواقص الدقيقة، واسم موظف الاستعلامات المرسل، ورابط ذكي مباشر `route('patients.index', ['search' => ..., 'open_quick' => $id])`.
+    - عند ضغط موظف الضمان على الإشعار في جرسه 🔔، تفتح شاشة المرضى وينزلق فوراً دراور الإكمال السريع التلقائي (`open_quick`) لإدخال النواقص خلال ثوانٍ.
+  * حماية JavaScript في حدث تقديم الاستمارة `submit` وعند تأكيد الحجز الإضافي لمنع أي محاولة تجاوز.
+  * بناء وتشغيل الاختبار الآلي: [tests/Feature/InquiryInsuranceDataIncompleteTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryInsuranceDataIncompleteTest.php) (`5 passed, 26 assertions`).
+
+## Session log (2026-10-18 — المرحلة 78: استيراد وتحديث كتالوج المختبر الشامل لـ 865 فحصاً وفك قيد تفرد الكود الطبي ومطابقة هوستنجر السحابية Lab Catalog Full 865 Import, Code Unique Constraint Removal & Hostinger Sync)
+
+### Done
+- **النسخ الاحتياطي الحصين**:
+  * أخذ نسخة احتياطية كاملة لجدول `lab_tests` و `lab_test_sub_tests` للوكل في `storage/app/backups/lab_tests_backup_2026_10_18_190644.sql`.
+  * أخذ نسخة احتياطية كاملة لهوستنجر السحابية في `storage/app/backups/hostinger_lab_tests_backup_2026_10_18_191208.sql`.
+- **إلغاء قيد تفرد الكود الطبي واستيعاب الفحوصات المكررة سريرياً**:
+  * بناء وتشغيل مايجريشن [database/migrations/2026_10_18_192000_drop_unique_code_from_lab_tests_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_18_192000_drop_unique_code_from_lab_tests_table.php) لإزالة `lab_tests_code_unique` وتحويله إلى `lab_tests_code_index`.
+  * تطبيق نفس الفهرس على قاعدة بيانات هوستنجر بنجاح.
+- **تطوير محرك الاستيراد والتزامن الشامل ([app/Imports/LabTestsImport.php](file:///c:/wamp64/www/hospital-system/app/Imports/LabTestsImport.php))**:
+  * دعم إدراج الفحوصات الجديدة تلقائياً (`$createdCount`) عند عدم وجودها في الجدول.
+  * دعم كشف وتعيين القسم الرئيسي `main_category` والتصنيف الفرعي `subcategory`.
+  * تحصين السجلات والطلبات السابقة من الحذف.
+- **مزامنة واستيراد الـ 865 فحصاً كاملاً**:
+  * استيراد الـ 865 فحصاً وتحديث الأسعار ومسميات الفحوصات وإدراج الـ 234 فحصاً الجديد على قاعدة البيانات المحلية (`hospital_pho`).
+  * استيراد وتحديث نفس الـ 865 فحصاً على قاعدة بيانات هوستنجر السحابية (`u175868711_her2020`).
+  * تطابق تام لعدد الفحوصات: **865 فحصاً محلياً = 865 فحصاً سحابياً**.
+- **الاختبارات الآلية**:
+  * اجتياز كامل لحزمة اختبارات أسعار وتعديل التحاليل (`7 passed, 28 assertions`).
+
 ## Session log (2026-10-18 — المرحلة 77: تصحيح وتوحيد مسار زر العودة للكاشير في صفحة الوصل واستمارة دفع الطلبات الطبية Cashier Receipt & Request Payment Return Link Correction)
 
 ### Done

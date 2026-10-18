@@ -40,12 +40,13 @@ class LabTestController extends Controller
         ]);
 
         try {
-            $import = new LabTestsImport();
+            $replace = $request->boolean('replace_existing', false);
+            $import = new LabTestsImport($replace);
             Excel::import($import, $request->file('excel_file'));
 
             return redirect()->back()->with(
                 'success',
-                "تم استيراد وتحديث {$import->updatedCount} فحصاً مخبرياً بنجاح من ملف الإكسل (تم تخطي {$import->skippedCount} غير مطابق أو لم يطرأ عليه تغيير)."
+                "تم استيراد الفحوصات بنجاح: تم تحديث {$import->updatedCount} فحصاً، وإضافة {$import->createdCount} فحصاً جديداً من ملف الإكسل (تم تخطي {$import->skippedCount})."
             );
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة ملف الإكسل: ' . $e->getMessage());

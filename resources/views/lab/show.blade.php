@@ -131,6 +131,7 @@ $hasAnyAttachment = $hasAttachment || count($testAttachments) > 0;
 $testsList = buildSelectedLabTests($requestDetails);
 $patient = $request->visit?->patient;
 $patientUser = $patient?->user;
+$patientPhone = $patientUser?->phone ?: ($patient?->phone ?? ($requestDetails['patient_phone'] ?? ($request->visit?->emergency?->emergencyPatient?->phone ?? null)));
 $gender = $patientUser?->gender ?? ($patient?->gender ?? 'male');
 $age = $patient?->age ?? null;
 @endphp
@@ -240,8 +241,27 @@ $age = $patient?->age ?? null;
                             </div>
                         </div>
 
+                        <!-- رقم الهاتف -->
+                        <div class="col-xl-2 col-md-6 col-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-success-subtle text-success rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">رقم الهاتف</small>
+                                    @if($patientPhone)
+                                        <a href="tel:{{ $patientPhone }}" class="text-dark fw-bold text-decoration-none font-monospace fs-6" dir="ltr" title="انقر للاتصال">
+                                            {{ $patientPhone }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted small">غير مسجل</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- العمر والجنس -->
-                        <div class="col-xl-2 col-md-3 col-6">
+                        <div class="col-xl-2 col-md-4 col-6">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="bg-info-subtle text-info rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
                                     <i class="fas {{ $gender === 'female' ? 'fa-venus text-danger' : 'fa-mars text-primary' }}"></i>
@@ -257,22 +277,22 @@ $age = $patient?->age ?? null;
                         </div>
 
                         <!-- فصيلة الدم -->
-                        <div class="col-xl-2 col-md-3 col-6">
+                        <div class="col-xl-1 col-md-2 col-6">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="bg-danger-subtle text-danger rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
                                     <i class="fas fa-tint"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">فصيلة الدم</small>
-                                    <strong class="text-danger fw-bold">{{ $patient?->blood_type ?: 'غير مسجلة' }}</strong>
+                                    <small class="text-muted d-block">الفصيلة</small>
+                                    <strong class="text-danger fw-bold">{{ $patient?->blood_type ?: '—' }}</strong>
                                 </div>
                             </div>
                         </div>
 
                         <!-- الطبيب المرسل -->
-                        <div class="col-xl-3 col-md-6">
+                        <div class="col-xl-2 col-md-6">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="bg-success-subtle text-success rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                <div class="bg-primary-subtle text-primary rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
                                     <i class="fas fa-user-md"></i>
                                 </div>
                                 <div>

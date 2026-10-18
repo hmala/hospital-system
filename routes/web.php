@@ -237,6 +237,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inquiry/documents/{document}/file', [InquiryController::class, 'serveDocumentFile'])->name('inquiry.documents.file');
     Route::delete('/inquiry/documents/{document}', [InquiryController::class, 'deletePatientDocument'])->name('inquiry.documents.delete');
     Route::get('/inquiry/check-active-booking', [InquiryController::class, 'checkActiveBooking'])->name('inquiry.check-active-booking');
+    Route::post('/inquiry/notify-insurance-incomplete', [InquiryController::class, 'notifyInsuranceIncomplete'])->name('inquiry.notify-insurance-incomplete');
     Route::resource('inquiry', InquiryController::class);
     
     // إدارة المشتريات والمستودع
