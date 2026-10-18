@@ -289,6 +289,12 @@ class RoleManagementController extends Controller
                 'color' => 'warning',
                 'description' => 'محطات الجراح والتخدير والتمريض والمقيم، صالات العمليات، وإدارة الأسرّة والغرف'
             ],
+            'whatsapp' => [
+                'name' => 'خدمات ومراسلات الواتساب (WhatsApp)',
+                'icon' => 'fab fa-whatsapp',
+                'color' => 'success',
+                'description' => 'إرسال ومشاركة التقارير والنتائج الطبية مع المرضى عبر واتساب للأقسام المختلفة'
+            ],
             'system_admin' => [
                 'name' => 'إدارة النظام والإعدادات',
                 'icon' => 'fa-cogs',
@@ -396,7 +402,6 @@ class RoleManagementController extends Controller
             'delete lab tests' => ['label' => 'حذف فحص مختبري', 'action' => 'حذف', 'badge' => 'danger'],
             'process lab requests' => ['label' => 'محطة المختبر (سحب العينات وإدخال واعتماد النتائج)', 'action' => 'معالجة', 'badge' => 'success'],
             'manage surgery lab tests' => ['label' => 'إدارة واختيار تحاليل العمليات الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],
-            'send lab whatsapp' => ['label' => 'إرسال ومشاركة نتائج التحاليل للمرضى عبر واتساب', 'action' => 'إرسال', 'badge' => 'success'],
             'view packages' => ['label' => 'عرض باقات الفحص الطبي الشامل', 'action' => 'عرض', 'badge' => 'info'],
             'create packages' => ['label' => 'إضافة باقة فحوصات جديدة', 'action' => 'إضافة', 'badge' => 'success'],
             'edit packages' => ['label' => 'تعديل باقات الفحوصات والأسعار', 'action' => 'تعديل', 'badge' => 'warning'],
@@ -457,11 +462,19 @@ class RoleManagementController extends Controller
             'view activity logs' => ['label' => 'عرض سجل حركات ونشاط الموظفين والرقابة الإدارية', 'action' => 'عرض', 'badge' => 'info'],
             'delete activity logs' => ['label' => 'تنظيف وأرشفة سجل الحركات القديم', 'action' => 'حذف', 'badge' => 'danger'],
             'manage database sync' => ['label' => 'مزامنة وسحب ورفع قواعد البيانات السحابية', 'action' => 'إدارة', 'badge' => 'danger'],
+
+            // 📲 10. خدمات ومراسلات الواتساب (WhatsApp)
+            'send lab whatsapp' => ['label' => 'إرسال ومشاركة نتائج التحاليل المخبرية للمرضى عبر واتساب', 'action' => 'إرسال', 'badge' => 'success'],
         ];
     }
 
     private function permissionGroup(string $permissionName): string
     {
+        // 0. WhatsApp Services
+        if (str_contains($permissionName, 'whatsapp')) {
+            return 'whatsapp';
+        }
+
         // 1. Inquiry & Bookings (All Reception & Inpatient Booking Types)
         if (str_starts_with($permissionName, 'inquiry.') || in_array($permissionName, [
             'view inquiries', 'create inquiries', 'manage inquiries', 

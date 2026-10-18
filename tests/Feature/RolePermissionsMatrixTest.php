@@ -78,6 +78,7 @@ class RolePermissionsMatrixTest extends TestCase
         $response->assertSee('الصيدلية والمخزن الطبي');
         $response->assertSee('قسم الطوارئ');
         $response->assertSee('العمليات الجراحية والرقود');
+        $response->assertSee('خدمات ومراسلات الواتساب');
         $response->assertSee('إدارة النظام والإعدادات');
     }
 

@@ -190,7 +190,7 @@
                                         <!-- عنوان وأيقونة القسم والوصف -->
                                         <div class="d-flex align-items-center min-w-0 me-3">
                                             <div class="module-icon-box rounded-3 bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} d-flex align-items-center justify-content-center me-3 flex-shrink-0">
-                                                <i class="fas {{ $moduleInfo['icon'] }} fs-5"></i>
+                                                <i class="{{ str_contains($moduleInfo['icon'], 'fab') || str_contains($moduleInfo['icon'], 'fa-brands') ? $moduleInfo['icon'] : 'fas ' . $moduleInfo['icon'] }} fs-5"></i>
                                             </div>
                                             <div class="min-w-0">
                                                 <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
