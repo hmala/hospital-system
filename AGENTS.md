@@ -74,9 +74,12 @@ Consult these files before making changes or proposing fixes:
   * زر في شريط الموظف `[ 💬 إرسال واتساب للمريض ]` لفتح محادثة واتساب بنقرة واحدة من صفحة الطباعة.
 - **إضافة أزرار واتساب التفاعلية في شاشات المختبر**:
   * جدول طلبات المختبر ([resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php)): إضافة زر واتساب أخضر أنيق في عمود "الإجراءات" للفحوصات المكتملة.
-  * شاشة تفاصيل طلب المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php)): إضافة زر واتساب في الشريط العلوي للإجراءات، وبجوار رقم هاتف المريض في كارت البيانات.
+- **منظومة التحكم بالأدوار والصلاحيات (Role-Based WhatsApp Access Control)**:
+  * إضافة صلاحية مخصصة `send lab whatsapp` (إرسال ومشاركة نتائج التحاليل للمرضى عبر واتساب) ضمن مصفوفة صلاحيات المختبر في [app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php) و [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php).
+  * إنشاء وتشغيل مايجريشن [database/migrations/2026_10_18_230000_add_send_lab_whatsapp_permission.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_18_230000_add_send_lab_whatsapp_permission.php) وتعيينها لأدوار `admin` و `lab_staff`.
+  * حماية جميع أزرار وروابط الواتساب في الواجهات بـ `@can('send lab whatsapp')`: تظهر الصلاحية في شاشة تعديل الأدوار `/roles/{role}/edit` كخيار تفعيل/إطفاء، وعند إلغاء تحديدها يختفي زر الواتساب فوراً من كافة شاشات المختبر لهذا الدور.
 - **الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
-  * اجتياز كامل لـ 6 اختبارات ميزة تغطي تهيئة الرقم الدولي، توليد رابط الواتساب، الدخول الآمن للتقرير بالرمز، منع الدخول بدون رمز، وظهور الأزرار في الواجهات (`6 passed, 16 assertions`).
+  * اجتياز كامل لـ 7 اختبارات ميزة تغطي تهيئة الرقم الدولي، توليد رابط الواتساب، الدخول الآمن للتقرير بالرمز، منع الدخول بدون رمز، وظهور الأزرار عند منح الصلاحية واختفائها تماماً عند سحب الصلاحية (`7 passed, 25 assertions`) واجتياز حزمة المختبر الكاملة (`36 passed, 159 assertions`).
 
 ## Session log (2026-10-18 — المرحلة 79: إكمال نواقص بيانات المرضى السريع وقفل حجز الضمان الصحي عند وجود نواقص بملف المريض وترقية واجهة الاختيار للبطاقات التفاعلية Patient Incomplete Profile Completion, Insurance Booking Lock & Interactive Option Cards)
 

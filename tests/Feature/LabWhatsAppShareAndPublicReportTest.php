@@ -52,9 +52,10 @@ class LabWhatsAppShareAndPublicReportTest extends TestCase
 
         $role = Role::firstOrCreate(['name' => 'lab_staff']);
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view lab tests']);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'send lab whatsapp']);
         $this->staffUser = User::factory()->create(['name' => 'فني المختبر']);
         $this->staffUser->assignRole($role);
-        $this->staffUser->givePermissionTo('view lab tests');
+        $this->staffUser->givePermissionTo(['view lab tests', 'send lab whatsapp']);
 
         $patientUser = User::factory()->create([
             'name' => 'عبدالله أحمد كاظم',
@@ -157,5 +158,23 @@ class LabWhatsAppShareAndPublicReportTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('إرسال النتيجة عبر واتساب');
         $response->assertSee('https://wa.me/9647701234567', false);
+    }
+
+    public function test_whatsapp_button_hidden_when_user_lacks_send_lab_whatsapp_permission(): void
+    {
+        // سحب الصلاحية من المستخدم (إطفاء الميزة لهذا الدور)
+        $this->staffUser->revokePermissionTo('send lab whatsapp');
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // فحص جدول المختبر العام: يجب ألا يظهر زر الواتساب إطلاقاً
+        $indexResponse = $this->actingAs($this->staffUser)->get(route('lab.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertDontSee('https://wa.me/9647701234567', false);
+
+        // فحص شاشة التفاصيل: يجب ألا تظهر أزرار الواتساب إطلاقاً
+        $showResponse = $this->actingAs($this->staffUser)->get(route('lab.show', $this->labRequest));
+        $showResponse->assertStatus(200);
+        $showResponse->assertDontSee('https://wa.me/9647701234567', false);
+        $showResponse->assertDontSee('إرسال النتيجة عبر واتساب');
     }
 }

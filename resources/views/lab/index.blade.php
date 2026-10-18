@@ -538,17 +538,19 @@
                                                        title="طباعة التقرير الطبي">
                                                         <i class="fas fa-print me-1"></i> طباعة
                                                     </a>
-                                                    @php
-                                                        $waUrl = $req->getWhatsAppShareUrl();
-                                                        $patientPhone = $req->getPatientPhone();
-                                                    @endphp
-                                                    <a href="{{ $waUrl }}" 
-                                                       target="_blank" 
-                                                       class="btn btn-sm fw-bold px-2 py-1 shadow-sm text-white" 
-                                                       style="background-color: #25d366; border-color: #20ba5a;"
-                                                       title="{{ $patientPhone ? 'إرسال النتيجة للمريض عبر واتساب (' . $patientPhone . ')' : 'إرسال النتيجة عبر واتساب' }}">
-                                                        <i class="fab fa-whatsapp me-1"></i> واتساب
-                                                    </a>
+                                                    @can('send lab whatsapp')
+                                                        @php
+                                                            $waUrl = $req->getWhatsAppShareUrl();
+                                                            $patientPhone = $req->getPatientPhone();
+                                                        @endphp
+                                                        <a href="{{ $waUrl }}" 
+                                                           target="_blank" 
+                                                           class="btn btn-sm fw-bold px-2 py-1 shadow-sm text-white" 
+                                                           style="background-color: #25d366; border-color: #20ba5a;"
+                                                           title="{{ $patientPhone ? 'إرسال النتيجة للمريض عبر واتساب (' . $patientPhone . ')' : 'إرسال النتيجة عبر واتساب' }}">
+                                                            <i class="fab fa-whatsapp me-1"></i> واتساب
+                                                        </a>
+                                                    @endcan
                                                 @else
                                                     <a href="{{ route('lab.show', $req) }}" 
                                                        class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-sm" 

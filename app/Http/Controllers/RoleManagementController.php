@@ -62,6 +62,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -124,6 +125,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -394,6 +396,7 @@ class RoleManagementController extends Controller
             'delete lab tests' => ['label' => 'حذف فحص مختبري', 'action' => 'حذف', 'badge' => 'danger'],
             'process lab requests' => ['label' => 'محطة المختبر (سحب العينات وإدخال واعتماد النتائج)', 'action' => 'معالجة', 'badge' => 'success'],
             'manage surgery lab tests' => ['label' => 'إدارة واختيار تحاليل العمليات الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],
+            'send lab whatsapp' => ['label' => 'إرسال ومشاركة نتائج التحاليل للمرضى عبر واتساب', 'action' => 'إرسال', 'badge' => 'success'],
             'view packages' => ['label' => 'عرض باقات الفحص الطبي الشامل', 'action' => 'عرض', 'badge' => 'info'],
             'create packages' => ['label' => 'إضافة باقة فحوصات جديدة', 'action' => 'إضافة', 'badge' => 'success'],
             'edit packages' => ['label' => 'تعديل باقات الفحوصات والأسعار', 'action' => 'تعديل', 'badge' => 'warning'],

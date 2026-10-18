@@ -733,14 +733,16 @@
                 🖨️ طباعة التقرير
             </button>
 
-            @php
-                $waShareUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
-            @endphp
-            @if($waShareUrl)
-                <a href="{{ $waShareUrl }}" target="_blank" class="toolbar-btn" style="background: #25d366; color: #fff;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
-                    💬 إرسال واتساب للمريض
-                </a>
-            @endif
+            @can('send lab whatsapp')
+                @php
+                    $waShareUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+                @endphp
+                @if($waShareUrl)
+                    <a href="{{ $waShareUrl }}" target="_blank" class="toolbar-btn" style="background: #25d366; color: #fff;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
+                        💬 إرسال واتساب للمريض
+                    </a>
+                @endif
+            @endcan
 
             <div class="mode-toggle-group">
                 <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
