@@ -165,6 +165,14 @@ $age = $patient?->age ?? null;
                         <a href="{{ route('lab.print', $request) }}" target="_blank" class="btn btn-outline-dark fw-bold shadow-sm px-3" title="طباعة قائمة التحاليل المطلوبة / تقرير النتائج">
                             <i class="fas fa-print me-1 text-primary"></i> طباعة {{ $request->status === 'completed' ? 'التقرير' : 'طلب التحاليل' }}
                         </a>
+                        @php
+                            $waShareUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+                        @endphp
+                        @if($waShareUrl)
+                            <a href="{{ $waShareUrl }}" target="_blank" class="btn fw-bold shadow-sm px-3 text-white" style="background-color: #25d366; border-color: #20ba5a;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
+                                <i class="fab fa-whatsapp me-1"></i> إرسال النتيجة عبر واتساب
+                            </a>
+                        @endif
                     @endif
 
                     @if(!$isBloodBankRequest)
@@ -250,9 +258,19 @@ $age = $patient?->age ?? null;
                                 <div>
                                     <small class="text-muted d-block">رقم الهاتف</small>
                                     @if($patientPhone)
-                                        <a href="tel:{{ $patientPhone }}" class="text-dark fw-bold text-decoration-none font-monospace fs-6" dir="ltr" title="انقر للاتصال">
-                                            {{ $patientPhone }}
-                                        </a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="tel:{{ $patientPhone }}" class="text-dark fw-bold text-decoration-none font-monospace fs-6" dir="ltr" title="انقر للاتصال">
+                                                {{ $patientPhone }}
+                                            </a>
+                                            @php
+                                                $waDirectUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+                                            @endphp
+                                            @if($waDirectUrl)
+                                                <a href="{{ $waDirectUrl }}" target="_blank" class="badge rounded-pill text-white text-decoration-none px-2 py-1 ms-1 shadow-2xs" style="background-color: #25d366; font-size: 0.70rem;" title="مراسلة المريض عبر واتساب">
+                                                    <i class="fab fa-whatsapp"></i> واتساب
+                                                </a>
+                                            @endif
+                                        </div>
                                     @else
                                         <span class="text-muted small">غير مسجل</span>
                                     @endif

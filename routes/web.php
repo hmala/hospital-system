@@ -65,6 +65,10 @@ Route::get('/departments', [DepartmentController::class, 'publicIndex'])
 Route::get('/emergency/{emergency}/verify-report', [\App\Http\Controllers\EmergencyController::class, 'verifyReport'])
     ->name('emergency.verify-report');
 
+// التقرير الطبي العام المعتمد لنتائج المختبر (متاح للمريض عبر الواتساب برابط مشفر وآمن)
+Route::get('/lab/results/view/{request}', [\App\Http\Controllers\LabPublicReportController::class, 'view'])
+    ->name('lab.public-report');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');

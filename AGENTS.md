@@ -57,6 +57,27 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-18 — المرحلة 80: مشاركة نتائج التحاليل المخبرية عبر واتساب وبوابة التقرير الطبي المعتمد الآمنة Lab WhatsApp Result Sharing & Secure Public Report Portal)
+
+### Done
+- **تطوير نموذج الطلبات الطبية ([app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php))**:
+  * دالة `getPatientPhone()` لمعالجة وتوحيد أرقام الهواتف العراقية للنمط الدولي (`964...`) تلقائياً.
+  * دالة `getPublicReportToken()` لتوليد رمز توقيع رقمي HMAC sha256 محكم ومشفر لحماية تقرير المريض من التخمين والتلاعب.
+  * دالة `getPublicReportUrl()` لإنشاء رابط استعراض التقرير العام الآمن.
+  * دالة `getWhatsAppShareUrl()` لتوليد رابط `https://wa.me/{phone}?text=...` محمل برسالة رسمية تحتوي على اسم المستشفى، نوع التحليل، ورابط مباشر لاستعراض التقرير المعتمد.
+- **متحكم وبوابة التقرير الطبي العام الآمن ([app/Http/Controllers/LabPublicReportController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabPublicReportController.php))**:
+  * مسار مستقل عام `/lab/results/view/{request}` يتيح للمريض فتح التقرير الطبي المعتمد فوراً من الهاتف عبر الرابط المشفر دون الحاجة لتسجيل دخول أو حساب بالمستشفى.
+  * حماية صارمة لمنع الوصول غير المصرح به عند عدم تطابق رمز التحقق الرقمي HMAC.
+- **ترقية صفحة التقرير الطبي ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * إضافة تنسيقات متجاوبة للهواتف الذكية (`@media screen and (max-width: 768px)`).
+  * شريط علوي أنيق للمريض يحتوي على زر مباشر `[ 📥 تحميل / حفظ كـ PDF ]` يستدعي حفظ الـ PDF تلقائياً عند النقر.
+  * زر في شريط الموظف `[ 💬 إرسال واتساب للمريض ]` لفتح محادثة واتساب بنقرة واحدة من صفحة الطباعة.
+- **إضافة أزرار واتساب التفاعلية في شاشات المختبر**:
+  * جدول طلبات المختبر ([resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php)): إضافة زر واتساب أخضر أنيق في عمود "الإجراءات" للفحوصات المكتملة.
+  * شاشة تفاصيل طلب المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php)): إضافة زر واتساب في الشريط العلوي للإجراءات، وبجوار رقم هاتف المريض في كارت البيانات.
+- **الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
+  * اجتياز كامل لـ 6 اختبارات ميزة تغطي تهيئة الرقم الدولي، توليد رابط الواتساب، الدخول الآمن للتقرير بالرمز، منع الدخول بدون رمز، وظهور الأزرار في الواجهات (`6 passed, 16 assertions`).
+
 ## Session log (2026-10-18 — المرحلة 79: إكمال نواقص بيانات المرضى السريع وقفل حجز الضمان الصحي عند وجود نواقص بملف المريض وترقية واجهة الاختيار للبطاقات التفاعلية Patient Incomplete Profile Completion, Insurance Booking Lock & Interactive Option Cards)
 
 ### Done

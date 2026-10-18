@@ -252,6 +252,90 @@ class Request extends Model
     }
 
     /**
+     * استخراج وتنسيق رقم هاتف المريض بالصيغة الدولية المعتمدة للواتساب
+     */
+    public function getPatientPhone(): ?string
+    {
+        $patient = $this->visit?->patient;
+        $patientUser = $patient?->user;
+        $details = is_string($this->details) ? json_decode($this->details, true) : $this->details;
+        
+        $phone = $patientUser?->phone 
+            ?: ($patient?->phone 
+            ?? ($details['patient_phone'] 
+            ?? ($this->visit?->emergency?->emergencyPatient?->phone ?? null)));
+
+        if (!$phone) return null;
+
+        // تنظيف الرقم من أي مسافات أو رموز
+        $clean = preg_replace('/[^0-9]/', '', (string)$phone);
+        if (empty($clean)) return null;
+
+        // إذا كان بالصيغة العراقية المحلية: 07XXXXXXXXX (11 رقماً تبدأ بـ 07)
+        if (str_starts_with($clean, '07') && strlen($clean) === 11) {
+            return '964' . substr($clean, 1);
+        }
+
+        // إذا كان يبدأ بـ 7 ومكون من 10 أرقام (بدون الصفر الأولي)
+        if (str_starts_with($clean, '7') && strlen($clean) === 10) {
+            return '964' . $clean;
+        }
+
+        // إذا كان يبدأ بـ 00964
+        if (str_starts_with($clean, '00964')) {
+            return substr($clean, 2);
+        }
+
+        return $clean;
+    }
+
+    /**
+     * توليد توكن تشفيري آمن للرابط العام المخصص للمريض
+     */
+    public function getPublicReportToken(): string
+    {
+        return hash_hmac('sha256', $this->id . '|' . ($this->created_at?->timestamp ?? 0), config('app.key') ?: 'kafaat_hospital_secret_key');
+    }
+
+    /**
+     * رابط التقرير الطبي العام الآمن للمريض دون الحاجة لتسجيل دخول
+     */
+    public function getPublicReportUrl(): string
+    {
+        return route('lab.public-report', [
+            'request' => $this->id,
+            'token' => $this->getPublicReportToken(),
+        ]);
+    }
+
+    /**
+     * توليد رابط مشاركة النتيجة عبر واتساب برسالة رسمية متكاملة
+     */
+    public function getWhatsAppShareUrl(): ?string
+    {
+        $phone = $this->getPatientPhone();
+        $patientName = $this->visit?->patient?->user?->name 
+            ?? ($this->visit?->patient?->name ?? 'المريض');
+        $reportUrl = $this->getPublicReportUrl();
+
+        $text = "السلام عليكم ورحمة الله وبركاته\n"
+              . "الأخ/الأخت: {$patientName} المحترم،\n\n"
+              . "نود إعلامكم بأن نتائج الفحوصات المخبرية الخاصة بكم لدى مستشفى الكفاءات الأهلي للطلب رقم (#{$this->id}) جاهزة ومكتملة.\n\n"
+              . "📄 يمكنكم الاطلاع على التقرير الطبي والنتائج المعتمدة مباشرة عبر الرابط التالي:\n"
+              . "{$reportUrl}\n\n"
+              . "مع تمنياتنا لكم بالصحة والعافية.\n"
+              . "مختبر مستشفى الكفاءات الأهلي 🏥";
+
+        $encodedText = rawurlencode($text);
+
+        if ($phone) {
+            return "https://wa.me/{$phone}?text={$encodedText}";
+        }
+
+        return "https://api.whatsapp.com/send?text={$encodedText}";
+    }
+
+    /**
      * Ensure visit status updates when all related requests complete (only for direct/standalone requests without a doctor consultation).
      */
     protected static function booted()

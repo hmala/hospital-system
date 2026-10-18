@@ -39,6 +39,26 @@
             box-sizing: border-box;
         }
 
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 6px;
+            }
+            .report-page {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                padding: 12mm 6mm 25mm 6mm !important;
+                box-shadow: none !important;
+            }
+            .print-toolbar {
+                right: 50% !important;
+                transform: translateX(50%) !important;
+                width: 94% !important;
+                justify-content: center !important;
+                font-size: 12px !important;
+            }
+        }
+
         /* Watermark Background */
         .report-page::before {
             content: "";
@@ -655,31 +675,52 @@
 </head>
 <body>
 
-    <!-- Action Toolbar (Hidden during print) -->
-    <div class="print-toolbar">
-        <button class="toolbar-btn btn-print" onclick="window.print()">
-            🖨️ طباعة التقرير
-        </button>
-
-        <div class="mode-toggle-group">
-            <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
-                📄 ورق مروس (Letterhead)
-            </button>
-            <button type="button" class="mode-btn" id="btnModeFull" onclick="setPrintMode('full')">
-                📑 ورق أبيض كامل (Full)
+    @if(!empty($isPublicView))
+        <!-- Public Patient Toolbar (Hidden during print) -->
+        <div class="print-toolbar" style="background: rgba(16, 185, 129, 0.95); right: 50%; transform: translateX(50%); border-radius: 30px; padding: 8px 20px; gap: 15px;">
+            <span style="color: #fff; font-weight: bold; font-size: 13.5px;">
+                🏥 مستشفى الكفاءات الأهلي — التقرير الطبي المعتمد
+            </span>
+            <button class="toolbar-btn btn-print" onclick="window.print()" style="background: #ffffff; color: #047857; font-weight: 800; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                📥 تحميل / حفظ كـ PDF
             </button>
         </div>
+    @else
+        <!-- Action Toolbar for Staff (Hidden during print) -->
+        <div class="print-toolbar">
+            <button class="toolbar-btn btn-print" onclick="window.print()">
+                🖨️ طباعة التقرير
+            </button>
 
-        <div class="margin-control-group" id="marginControls">
-            <label for="topMarginInput">المسافة العلوية:</label>
-            <input type="number" id="topMarginInput" min="10" max="120" step="1" value="45" oninput="changeTopMargin(this.value)">
-            <span>مم</span>
+            @php
+                $waShareUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+            @endphp
+            @if($waShareUrl)
+                <a href="{{ $waShareUrl }}" target="_blank" class="toolbar-btn" style="background: #25d366; color: #fff;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
+                    💬 إرسال واتساب للمريض
+                </a>
+            @endif
+
+            <div class="mode-toggle-group">
+                <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
+                    📄 ورق مروس (Letterhead)
+                </button>
+                <button type="button" class="mode-btn" id="btnModeFull" onclick="setPrintMode('full')">
+                    📑 ورق أبيض كامل (Full)
+                </button>
+            </div>
+
+            <div class="margin-control-group" id="marginControls">
+                <label for="topMarginInput">المسافة العلوية:</label>
+                <input type="number" id="topMarginInput" min="10" max="120" step="1" value="45" oninput="changeTopMargin(this.value)">
+                <span>مم</span>
+            </div>
+
+            <button class="toolbar-btn btn-close-window" onclick="window.history.back()">
+                ✕ رجوع
+            </button>
         </div>
-
-        <button class="toolbar-btn btn-close-window" onclick="window.history.back()">
-            ✕ رجوع
-        </button>
-    </div>
+    @endif
 
     @php
         // Helper: Convert Arabic Name to English Transliteration
