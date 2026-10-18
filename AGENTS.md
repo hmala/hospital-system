@@ -57,6 +57,18 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-18 — المرحلة 77: تصحيح وتوحيد مسار زر العودة للكاشير في صفحة الوصل واستمارة دفع الطلبات الطبية Cashier Receipt & Request Payment Return Link Correction)
+
+### Done
+- **تصحيح مسار زر العودة للكاشير في صفحة إيصال القبض ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php))**:
+  * إزالة الشرط القديم المقيد لدور `consultation_receptionist` الذي كان يعيد الموظف إلى واجهة توفر الأطباء (`consultant-availability.index`).
+  * ربط زر "العودة للكاشير" مباشرة بمسار الكاشير `route('cashier.index')` لضمان استمرارية عمل الموظف داخل واجهة الكاشير ومتابعة تسديد المرضى.
+- **تحديث أزرار العودة في استمارة دفع الطلبات الطبية ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * توحيد روابط أزرار الرجوع العلوية والسفلية لتوجه إلى `route('cashier.index')` بدلاً من الخروج إلى شاشة توفر الأطباء.
+- **الاختبارات الآلية الحصينة ([tests/Feature/CashierReceiptReturnLinkTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierReceiptReturnLinkTest.php))**:
+  * بناء اختبار ميزة للتأكد من ظهور رابط `cashier.index` لموظف استعلامات الاستشارية وعدم ظهور رابط `consultant-availability.index`: `1 passed (4 assertions)`.
+  * نجاح كامل لحزمة اختبارات الصلاحيات والكاشير: `11 passed (179 assertions)`.
+
 ## Session log (2026-10-18 — المرحلة 76: إصلاح نمط إدخال نتائج التحاليل المخبرية، وحل مشكلة تحول الفحوصات المركبة إلى قيم مفردة، وتكامل واجهة تعديل التحليل مع نمط الإدخال Lab Subtests Result Entry Fix & Edit Form Integration)
 
 ### Done

@@ -20,7 +20,7 @@
             <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary px-4 rounded-pill shadow-sm" target="_blank">
                 <i class="fas fa-print me-1"></i> طباعة الوصل
             </a>
-            <a href="{{ auth()->user()->hasRole('consultation_receptionist') && !auth()->user()->hasRole('admin') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-outline-secondary px-3 rounded-pill">
+            <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary px-3 rounded-pill">
                 <i class="fas fa-arrow-right me-1"></i> العودة للكاشير
             </a>
         </div>
