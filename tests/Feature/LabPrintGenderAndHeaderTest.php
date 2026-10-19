@@ -250,13 +250,13 @@ class LabPrintGenderAndHeaderTest extends TestCase
         // اختبار استعراض صفحة التقرير
         $response = $this->actingAs($this->labStaff)->get(route('lab.print', $reqCurrent));
         $response->assertStatus(200);
-        $response->assertSee('Previous (آخر 3 نتائج)');
+        $response->assertSee('prev-vertical-box');
         $response->assertSee('11.8');
         $response->assertSee('10.5');
         $response->assertSee('12.6'); // النتيجة الحالية
     }
 
-    public function test_lab_print_shows_dash_when_no_previous_results(): void
+    public function test_lab_print_does_not_show_vertical_box_when_no_previous_results(): void
     {
         $visit = Visit::create([
             'patient_id' => $this->malePatient->id,
@@ -285,8 +285,8 @@ class LabPrintGenderAndHeaderTest extends TestCase
 
         $response = $this->actingAs($this->labStaff)->get(route('lab.print', $req));
         $response->assertStatus(200);
-        $response->assertSee('Previous (آخر 3 نتائج)');
-        $response->assertSee('prev-empty-dash');
+        $response->assertDontSee('<div class="prev-vertical-box">', false);
+        $response->assertSee('85');
     }
 }
 

@@ -566,7 +566,7 @@
         /* Test Table Column Headers (Matching image double blue line) */
         .tests-header-bar {
             display: grid;
-            grid-template-columns: 1.85fr 0.95fr 1.55fr 0.65fr;
+            grid-template-columns: 2.2fr 1fr 1fr;
             border-top: 1.5px solid #2b5899;
             border-bottom: 1.5px solid #2b5899;
             padding: 6px 4px;
@@ -600,8 +600,8 @@
 
         .test-main-row {
             display: grid;
-            grid-template-columns: 1.85fr 0.95fr 1.55fr 0.65fr;
-            align-items: center;
+            grid-template-columns: 2.2fr 1fr 1fr;
+            align-items: flex-start;
             margin-bottom: 3px;
         }
 
@@ -614,11 +614,64 @@
         .test-value-cell {
             text-align: center;
             font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .current-val-line {
+            display: inline-flex;
+            align-items: baseline;
+            justify-content: center;
+        }
+
+        .prev-vertical-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 3px;
+            padding-top: 3px;
+            border-top: 1px dashed #cbd5e1;
+            width: 88%;
+            gap: 2px;
+        }
+
+        .prev-vertical-row {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+
+        .prev-val-chip {
+            font-size: 11px;
+            font-weight: 800;
+            color: #1e4b88;
+        }
+
+        .prev-val-chip.high {
+            color: #b91c1c;
+        }
+
+        .prev-val-chip.low {
+            color: #b45309;
+        }
+
+        .prev-date-text {
+            font-size: 9px;
+            color: #64748b;
+            font-weight: 600;
         }
 
         .test-value-cell.right {
             text-align: center;
             padding-right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .val-normal {
@@ -723,66 +776,9 @@
             margin-left: 4px;
         }
 
-        .test-prev-cell {
-            text-align: center;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .prev-results-wrap {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            gap: 4px;
-            flex-wrap: nowrap;
-        }
-
-        .prev-item-chip {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            padding: 1px 4px;
-            min-width: 44px;
-            line-height: 1.15;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .prev-item-val {
-            font-size: 11px;
-            font-weight: 800;
-            color: #1e4b88;
-        }
-
-        .prev-item-val.high {
-            color: #b91c1c;
-        }
-
-        .prev-item-val.low {
-            color: #b45309;
-        }
-
-        .prev-item-date {
-            font-size: 8px;
-            color: #64748b;
-            font-weight: 600;
-            letter-spacing: -0.2px;
-        }
-
-        .prev-empty-dash {
-            color: #94a3b8;
-            font-size: 13px;
-            font-weight: bold;
-        }
-
         .test-meta-row {
             display: grid;
-            grid-template-columns: 1.85fr 0.95fr 1.55fr 0.65fr;
+            grid-template-columns: 2.2fr 1fr 1fr;
             align-items: baseline;
             font-size: 12.5px;
             color: #444;
@@ -800,7 +796,7 @@
             font-size: 12.5px;
         }
 
-        .meta-prev-blank {
+        .meta-status-blank {
             display: block;
         }
 
@@ -1336,8 +1332,7 @@
             <!-- Column Headers -->
             <div class="tests-header-bar">
                 <div class="header-col">Laboratory Test Results</div>
-                <div class="header-col center">Current Result</div>
-                <div class="header-col center">Previous (آخر 3 نتائج)</div>
+                <div class="header-col center">Conventional Units</div>
                 <div class="header-col right">Status</div>
             </div>
 
@@ -1386,27 +1381,25 @@
                                 {{ $res->test_name }}
                             </div>
                             <div class="test-value-cell">
-                                <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
-                                @if($unit)
-                                    <span class="unit-label">{{ $unit }}</span>
-                                @endif
-                            </div>
-                            <div class="test-prev-cell">
+                                <div class="current-val-line">
+                                    <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
+                                    @if($unit)
+                                        <span class="unit-label">{{ $unit }}</span>
+                                    @endif
+                                </div>
                                 @if(!empty($prevItems) && count($prevItems) > 0)
-                                    <div class="prev-results-wrap">
+                                    <div class="prev-vertical-box">
                                         @foreach($prevItems as $p)
                                             @php
                                                 $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
                                                 $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
                                             @endphp
-                                            <div class="prev-item-chip" title="التاريخ: {{ $p['date'] }}">
-                                                <span class="prev-item-val {{ $pClass }}">{{ $p['value'] }}</span>
-                                                <span class="prev-item-date">{{ $p['date_short'] }}</span>
+                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
+                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
                                             </div>
                                         @endforeach
                                     </div>
-                                @else
-                                    <span class="prev-empty-dash">—</span>
                                 @endif
                             </div>
                             <div class="test-value-cell right">
@@ -1429,7 +1422,6 @@
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $refRange }}</div>
-                            <div class="meta-prev-blank"></div>
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif
@@ -1470,25 +1462,23 @@
                         <div class="test-main-row">
                             <div class="test-name">{{ is_numeric($tName) ? 'Test #' . ($tName + 1) : $tName }}</div>
                             <div class="test-value-cell">
-                                <span class="{{ $valClass }}">{{ $valStr }}</span>
-                                @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
-                            </div>
-                            <div class="test-prev-cell">
+                                <div class="current-val-line">
+                                    <span class="{{ $valClass }}">{{ $valStr }}</span>
+                                    @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
+                                </div>
                                 @if(!empty($prevItems) && count($prevItems) > 0)
-                                    <div class="prev-results-wrap">
+                                    <div class="prev-vertical-box">
                                         @foreach($prevItems as $p)
                                             @php
                                                 $pStatus = calcLabStatus($p['value'], $refStr, $p['status'] ?? 'normal');
-                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
+                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos')) ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low')) ? 'low' : '');
                                             @endphp
-                                            <div class="prev-item-chip" title="التاريخ: {{ $p['date'] }}">
-                                                <span class="prev-item-val {{ $pClass }}">{{ $p['value'] }}</span>
-                                                <span class="prev-item-date">{{ $p['date_short'] }}</span>
+                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
+                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
                                             </div>
                                         @endforeach
                                     </div>
-                                @else
-                                    <span class="prev-empty-dash">—</span>
                                 @endif
                             </div>
                             <div class="test-value-cell right">
@@ -1509,7 +1499,6 @@
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $refStr }}</div>
-                            <div class="meta-prev-blank"></div>
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif
@@ -1555,23 +1544,21 @@
                                 {{ $tName }}
                             </div>
                             <div class="test-value-cell">
-                                <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
-                                @if($tUnit)
-                                    <span class="unit-label">{{ $tUnit }}</span>
-                                @endif
-                            </div>
-                            <div class="test-prev-cell">
+                                <div class="current-val-line">
+                                    <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
+                                    @if($tUnit)
+                                        <span class="unit-label">{{ $tUnit }}</span>
+                                    @endif
+                                </div>
                                 @if(!empty($prevItems) && count($prevItems) > 0)
-                                    <div class="prev-results-wrap">
+                                    <div class="prev-vertical-box">
                                         @foreach($prevItems as $p)
-                                            <div class="prev-item-chip" title="التاريخ: {{ $p['date'] }}">
-                                                <span class="prev-item-val">{{ $p['value'] }}</span>
-                                                <span class="prev-item-date">{{ $p['date_short'] }}</span>
+                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-val-chip">{{ $p['value'] }}</span>
+                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
                                             </div>
                                         @endforeach
                                     </div>
-                                @else
-                                    <span class="prev-empty-dash">—</span>
                                 @endif
                             </div>
                             <div class="test-value-cell right">
@@ -1584,7 +1571,6 @@
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $tRef }}</div>
-                            <div class="meta-prev-blank"></div>
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif

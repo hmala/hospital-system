@@ -57,25 +57,24 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
-## Session log (2026-10-19 — المرحلة 84: عمود السجل التراكمي لآخر 3 نتائج سابقة لكل فحص مخبري في تقرير الطباعة Lab Print Cumulative Previous Results Column & Delta Check History)
+## Session log (2026-10-19 — المرحلة 84: السجل التراكمي لآخر 3 نتائج سابقة لكل فحص مخبري عمودياً أسفل النتيجة الحالية Lab Print Cumulative Previous Results & Delta Check History)
 
 ### Done
 - **تطوير نموذج الطلبات الطبية ([app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php))**:
   * إضافة علاقة `labResults()` تربط الطلب بنتائجه المخبرية في جدول `lab_results`.
   * إضافة دالة `getPreviousLabResultsMap()` لاستخراج آخر 3 نتائج معتمدة سابقة لنفس المريض (`patient_id`) لكل تحليل مخبري قبل الطلب الحالي، مرتبة تنازلياً حسب تاريخ وتوقيت الفحص، مع دعم الاستخراج المزدوج من جدول `lab_results` الفعلي وحقل `requests.result` القديم، ومنع التكرارات لنفس الطلب.
-- **إضافة عمود مخصص في جدول نتائج الفحوصات المخبرية المطبوعة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
-  * ترقية ترويسة الجدول إلى 4 أعمدة رئيسية:
-    1. `Laboratory Test Results` (اسم التحليل والمدى الطبيعي).
-    2. `Current Result` (النتيجة الحالية ووحدة القياس).
-    3. `Previous (آخر 3 نتائج)` (عمود السجل التاريخي التراكمي).
-    4. `Status` (حالة النتيجة: Normal / High / Low / Abnormal).
-  * تصميم كبسولات النتائج السابقة (`.prev-item-chip`) بنمط سريري ناعم مضغوط يعرض القيمة الرقمية بخط عريض والترميز اللوني (`high` بالأحمر، `low` بالأصفر/البرتقالي، `normal` بالأزرق الملكي)، وأسفلها تاريخ الفحص المختصر (`d/m/y`).
-  * في حال لم تكن هناك أي نتائج سابقة لنفس الفحص لهذا المريض، يُعرض خط رمادي بسيط ومرتب (`—`) يحافظ على نظافة التقرير دون أخذ مساحة رأسية.
-  * ضبط مقاسات الأعمدة المتناسقة لطباعة A4 الدقيقة ومنع تجاوز الصفحة.
+- **عرض النتائج السابقة عمودياً أسفل النتيجة الحالية في جدول الفحوصات ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * الإبقاء على الهيكلية الثلاثية الكلاسيكية المعتمدة للجدول (اسم الفحص | النتيجة ووحدة القياس Conventional Units | الحالة Status) المتطابقة مع تقارير المستشفيات المرجعية.
+  * في خانة النتيجة (`test-value-cell`):
+    - تظهر النتيجة الحالية في السطر الأول بخط عريض مع وحدة القياس.
+    - أسفل النتيجة الحالية مباشرة تظهر النتائج السابقة **مرتبة عمودياً (`.prev-vertical-box`)** يفصلها خط منقط ناعم:
+      * كل سطر سابق يحتوي على القيمة مع لون دال على الحالة (أحمر للمرتفع، أصفر للمنخفض، أزرق للطبيعي) متبوعة بتاريخ الفحص المختصر `(d/m/y)`.
+    - في حال كان هذا أول فحص للمريض ولا توجد نتائج سابقة، لا يشغل أي مساحة رأسية إضافية ويبقى السطر على مقاسه القياسي.
+  * محاذاة عناصر السطر إلى الأعلى (`align-items: flex-start`) لضمان محاذاة اسم التحليل والمدى الطبيعي وشارة الحالة بدقة تامة.
 - **الاختبارات الآلية الحصينة**:
-  * ترقية اختبار الميزة [tests/Feature/LabPrintGenderAndHeaderTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabPrintGenderAndHeaderTest.php) بإضافة حالتي اختبار:
-    - فحص ظهور آخر نتيجتين سابقتين والنتيجة الحالية لمريضة لديها 3 زيارات متتالية لنفس الفحص (`test_lab_print_displays_previous_results_for_same_patient`).
-    - فحص ظهور الشارة الافتراضية (`—`) عند عدم وجود نتائج سابقة للمريض (`test_lab_print_shows_dash_when_no_previous_results`).
+  * ترقية اختبار الميزة [tests/Feature/LabPrintGenderAndHeaderTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabPrintGenderAndHeaderTest.php):
+    - فحص ظهور الصندوق العمودي للنتائج السابقة `prev-vertical-box` وقيم الفحوصات وتواريخها لمريضة لديها زيارات سابقة لنفس الفحص (`test_lab_print_displays_previous_results_for_same_patient`).
+    - فحص عدم ظهور الصندوق العمودي نهائياً عند عدم وجود نتائج سابقة للمريض (`test_lab_print_does_not_show_vertical_box_when_no_previous_results`).
   * اجتياز كامل للاختبارات (`5 passed, 29 assertions`) واجتياز حزمة المختبر كاملة (`46 passed, 207 assertions`).
 
 ## Session log (2026-10-19 — المرحلة 83: تصحيح قراءة وتحديد جنس المريض وترقية ترويسة تقرير المختبر لتطابق الطوارئ والأشعة Lab Print Patient Gender Resolution Fix & Unified Emergency/Radiology Header Style)
