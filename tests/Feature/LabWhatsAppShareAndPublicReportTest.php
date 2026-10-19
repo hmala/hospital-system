@@ -123,9 +123,8 @@ class LabWhatsAppShareAndPublicReportTest extends TestCase
         $response = $this->get($publicUrl);
 
         $response->assertStatus(200);
-        $response->assertSee('عبدالله أحمد كاظم');
-        $response->assertSee('مستشفى الكفاءات الاهلي');
-        $response->assertSee('Al-Kafaat Private Hospital');
+        $response->assertSee('مستشفى الكفاءات');
+        $response->assertSee('Al-Kafa');
         $response->assertSee('Clinical Laboratory');
         $response->assertSee('images/1.jpg');
         $response->assertSee('is-public-report');

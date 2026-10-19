@@ -147,6 +147,23 @@ class Patient extends Model
             \Carbon\Carbon::parse($this->user->date_of_birth)->age : null;
     }
 
+    public function getGenderAttribute(): ?string
+    {
+        return $this->attributes['gender'] ?? ($this->user?->gender ?? null);
+    }
+
+    public function getGenderDisplayAttribute(): string
+    {
+        $g = strtolower((string) ($this->gender ?? ''));
+        if (in_array($g, ['male', 'm', 'ذكر'], true)) {
+            return 'ذكر';
+        }
+        if (in_array($g, ['female', 'f', 'أنثى', 'انثى'], true)) {
+            return 'أنثى';
+        }
+        return 'غير محدد';
+    }
+
     /**
      * فحص الحقول الأساسية الإلزامية لمريض الضمان الصحي
      */

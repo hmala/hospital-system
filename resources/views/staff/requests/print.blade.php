@@ -132,6 +132,7 @@
 
         /* Letterhead Mode Styles (for pre-printed official hospital letterhead paper) */
         body.letterhead-mode .report-header,
+        body.letterhead-mode .document-title-banner,
         body.letterhead-mode .decorative-border,
         body.letterhead-mode .corner-pattern,
         body.letterhead-mode .hospital-contact-line,
@@ -152,6 +153,8 @@
         /* Ensure Public View always shows the full header, borders, and footer regardless of print mode */
         body.is-public-report .report-header,
         body.is-public-report.letterhead-mode .report-header,
+        body.is-public-report .document-title-banner,
+        body.is-public-report.letterhead-mode .document-title-banner,
         body.is-public-report .decorative-border,
         body.is-public-report.letterhead-mode .decorative-border,
         body.is-public-report .corner-pattern,
@@ -261,69 +264,109 @@
             font-size: 13px;
         }
 
-        /* Header Section */
+        /* Header Layout (Matching Emergency & Radiology) */
         .report-header {
-            text-align: center;
-            margin-bottom: 22px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #1e7e8f;
-        }
-
-        .header-top-row {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
-            position: relative;
+            align-items: center;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #005a9c;
         }
 
-        .hospital-logo-side {
-            text-align: left;
-            min-width: 140px;
+        .header-hospital-ar {
+            text-align: right;
+            flex: 1;
+            direction: rtl;
+        }
+        .header-hospital-ar h2 {
+            font-size: 17px;
+            font-weight: 900;
+            color: #005a9c;
+            margin: 0 0 2px 0;
+            line-height: 1.2;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .header-hospital-ar h4 {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #0284c7;
+            margin: 0 0 1px 0;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .header-hospital-ar p {
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 600;
+            margin: 0;
         }
 
-        .hospital-logo-img {
-            height: 75px;
-            max-width: 150px;
+        .header-logo {
+            text-align: center;
+            width: 120px;
+            padding: 0 10px;
+        }
+        .header-logo img, .hospital-logo-img {
+            max-width: 100px;
+            max-height: 80px;
             object-fit: contain;
         }
 
-        .clinical-lab-center {
-            text-align: center;
-            flex-grow: 1;
+        .header-hospital-en {
+            text-align: left;
+            direction: ltr;
+            flex: 1;
         }
-
-        .hospital-title-side {
-            text-align: right;
-            min-width: 180px;
-        }
-
-        .hospital-name-ar {
-            font-size: 16.5px;
-            font-weight: 800;
+        .header-hospital-en h2 {
+            font-size: 15px;
+            font-weight: 900;
             color: #005a9c;
-            font-family: 'Tajawal', 'Cairo', 'Tahoma', sans-serif;
-            margin-bottom: 2px;
-            direction: rtl;
-            line-height: 1.25;
-        }
-
-        .hospital-name-en {
-            font-size: 11px;
-            color: #475569;
-            font-weight: 700;
-            letter-spacing: 0.4px;
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            margin: 0 0 2px 0;
             line-height: 1.2;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .header-hospital-en h4 {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #0284c7;
+            margin: 0 0 1px 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .header-hospital-en p {
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 600;
+            margin: 0;
         }
 
-        .clinical-lab-banner {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 26px;
-            font-weight: bold;
-            font-style: italic;
-            color: #005a9c;
-            letter-spacing: 0.5px;
+        /* Document Title Banner (Matching Emergency & Radiology) */
+        .document-title-banner {
+            background: linear-gradient(90deg, #005a9c 0%, #0284c7 100%);
+            color: #ffffff;
+            text-align: center;
+            padding: 6px 14px;
+            border-radius: 6px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .document-title-banner h3 {
+            font-size: 13.5px;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: 0.3px;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .report-code-badge {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            direction: ltr;
         }
 
         /* Patient Info Grid (Matching image exactly) */
@@ -862,13 +905,22 @@
             }
         }
 
-        $rawName = $request->visit?->patient?->user?->name ?? 'Patient';
+        $patientModel = $request->visit?->patient ?? ($request->patient_id ? \App\Models\Patient::find($request->patient_id) : null);
+        $patientUser = $patientModel?->user;
+
+        $rawName = $patientUser?->name ?? ($patientModel?->name ?? 'Patient');
         $arabicName = $rawName;
         $englishName = transliterateArabicName($rawName);
 
-        $patientAge = $request->visit?->patient?->age ?? '';
-        $rawGender = strtolower($request->visit?->patient?->gender ?? '');
-        $genderEn = ($rawGender === 'female' || $rawGender === 'أنثى') ? 'Female' : 'Male';
+        $patientAge = $patientModel?->age ?? ($patientUser?->date_of_birth ? \Carbon\Carbon::parse($patientUser->date_of_birth)->age : '');
+        $rawGender = trim(strtolower((string)($patientUser?->gender ?? $patientModel?->gender ?? '')));
+        if (in_array($rawGender, ['female', 'f', 'أنثى', 'انثى'], true)) {
+            $genderEn = 'Female';
+        } elseif (in_array($rawGender, ['male', 'm', 'ذكر'], true)) {
+            $genderEn = 'Male';
+        } else {
+            $genderEn = '—';
+        }
 
         $rawDoctor = $request->visit?->doctor?->user?->name ?? '';
         $doctorEn = $rawDoctor ? (str_starts_with($rawDoctor, 'د.') || str_starts_with($rawDoctor, 'الدكتور') ? transliterateArabicName($rawDoctor) : 'Dr. ' . transliterateArabicName($rawDoctor)) : '';
@@ -932,6 +984,17 @@
         $isBloodBankRequest = $isBloodBankRequest ?? ($request->type === 'blood_bank' || data_get($request->details, 'blood_bank', false));
         $badgeText = $isBloodBankRequest ? 'Blood Bank' : 'Clinical Laboratory';
         $badgeIcon = $isBloodBankRequest ? 'blood-bank-icon.svg' : 'lab-icon.svg';
+
+        $hospitalLogoPath = public_path('images/1.jpg');
+        if (!file_exists($hospitalLogoPath)) {
+            $hospitalLogoPath = public_path('images/hospital-logo.svg');
+        }
+        $hospitalLogoSrc = asset('images/1.jpg');
+        if (file_exists($hospitalLogoPath)) {
+            $ext = pathinfo($hospitalLogoPath, PATHINFO_EXTENSION);
+            $mime = ($ext === 'svg') ? 'image/svg+xml' : (($ext === 'png') ? 'image/png' : 'image/jpeg');
+            $hospitalLogoSrc = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($hospitalLogoPath));
+        }
     @endphp
 
     <div class="report-page">
@@ -942,24 +1005,32 @@
             <div class="corner-pattern bottom-left"></div>
         </div>
 
-        <!-- Header Section -->
+        <!-- Header Section (Matching Emergency & Radiology) -->
         <div class="report-header">
-            <div class="header-top-row">
-                <!-- Left: Hospital Logo (in place of Lab Icon badge) -->
-                <div class="hospital-logo-side">
-                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
-                </div>
+            <div class="header-hospital-ar">
+                <h2>مستشفى الكفاءات الأهلي</h2>
+                <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
+                <p>{{ $isBloodBankRequest ? 'خدمات فحص ومطابقة وتوفير الدم ومشتقاته' : 'الفحوصات السريرية والتشخيصية المعتمدة' }}</p>
+            </div>
+            <div class="header-logo">
+                <img src="{!! $hospitalLogoSrc !!}" 
+                     alt="Hospital Logo" 
+                     class="hospital-logo-img" 
+                     onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
+                     style="max-height: 80px; max-width: 100px; object-fit: contain;">
+            </div>
+            <div class="header-hospital-en">
+                <h2>Al-Kafa'at Private Hospital</h2>
+                <h4>{{ $isBloodBankRequest ? 'Blood Bank & Transfusion Dept.' : 'Clinical Laboratory Dept.' }}</h4>
+                <p>{{ $isBloodBankRequest ? 'Blood Screening & Transfusion Services' : 'Diagnostic & Pathology Services' }}</p>
+            </div>
+        </div>
 
-                <!-- Center: Clinical Laboratory Title -->
-                <div class="clinical-lab-center">
-                    <div class="clinical-lab-banner">Clinical Laboratory</div>
-                </div>
-
-                <!-- Right: Hospital Name in Arabic & English -->
-                <div class="hospital-title-side">
-                    <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
-                    <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
-                </div>
+        <!-- Document Title Banner (Matching Emergency & Radiology) -->
+        <div class="document-title-banner">
+            <h3>{{ $isBloodBankRequest ? 'استمارة فحص ومطابقة مصرف الدم (Blood Bank Report)' : 'تقرير نتائج الفحوصات المخبرية (Clinical Laboratory Report)' }}</h3>
+            <div class="report-code-badge">
+                LAB-#{{ $request->id }}
             </div>
         </div>
 
