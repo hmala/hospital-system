@@ -141,6 +141,99 @@ class Request extends Model
         return $this->hasMany(\App\Models\Payment::class, 'request_id');
     }
 
+    public function labResults()
+    {
+        return $this->hasMany(\App\Models\LabResult::class, 'request_id');
+    }
+
+    /**
+     * جلب خريطة آخر 3 نتائج سابقة لكل فحص مخبري لنفس المريض (Cumulative Previous Results)
+     *
+     * @return array<string, array<int, array{request_id: int, value: string, unit: string, status: string, date: string, date_short: string}>>
+     */
+    public function getPreviousLabResultsMap(): array
+    {
+        $patientId = $this->visit?->patient_id ?? $this->patient_id;
+        if (!$patientId) {
+            return [];
+        }
+
+        $resultsMap = [];
+
+        // 1. استخراج النتائج السابقة من جدول lab_results لزيارات نفس المريض قبل الطلب الحالي
+        $prevResults = \App\Models\LabResult::whereHas('request.visit', function($q) use ($patientId) {
+                $q->where('patient_id', $patientId);
+            })
+            ->where('request_id', '!=', $this->id)
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
+            ->where('value', '!=', '—')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get(['id', 'request_id', 'test_name', 'value', 'unit', 'status', 'created_at']);
+
+        foreach ($prevResults as $row) {
+            $key = mb_strtolower(trim($row->test_name));
+            if (!isset($resultsMap[$key])) {
+                $resultsMap[$key] = [];
+            }
+            if (count($resultsMap[$key]) < 3) {
+                $existingReqIds = array_column($resultsMap[$key], 'request_id');
+                if (!in_array($row->request_id, $existingReqIds)) {
+                    $resultsMap[$key][] = [
+                        'request_id' => $row->request_id,
+                        'value' => (string)$row->value,
+                        'unit' => (string)($row->unit ?? ''),
+                        'status' => (string)($row->status ?? 'normal'),
+                        'date' => $row->created_at ? $row->created_at->format('d-M-Y') : '',
+                        'date_short' => $row->created_at ? $row->created_at->format('d/m/y') : '',
+                    ];
+                }
+            }
+        }
+
+        // 2. فحص الطلبات السابقة المخزنة بصيغة JSON القديمة في requests.result (إن وجدت)
+        $prevJsonRequests = static::whereHas('visit', function($q) use ($patientId) {
+                $q->where('patient_id', $patientId);
+            })
+            ->where('id', '!=', $this->id)
+            ->where('type', 'lab')
+            ->whereNotNull('result')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->limit(10)
+            ->get(['id', 'result', 'created_at']);
+
+        foreach ($prevJsonRequests as $pReq) {
+            $pResData = is_string($pReq->result) ? json_decode($pReq->result, true) : $pReq->result;
+            $pTestResults = is_array($pResData) ? ($pResData['test_results'] ?? []) : [];
+            foreach ($pTestResults as $tName => $tVal) {
+                $tKey = mb_strtolower(trim((string)$tName));
+                if (!isset($resultsMap[$tKey])) {
+                    $resultsMap[$tKey] = [];
+                }
+                if (count($resultsMap[$tKey]) < 3) {
+                    $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : (string)$tVal;
+                    if ($valStr !== '' && $valStr !== '—') {
+                        $existingReqIds = array_column($resultsMap[$tKey], 'request_id');
+                        if (!in_array($pReq->id, $existingReqIds)) {
+                            $resultsMap[$tKey][] = [
+                                'request_id' => $pReq->id,
+                                'value' => $valStr,
+                                'unit' => is_array($tVal) ? ($tVal['unit'] ?? '') : '',
+                                'status' => is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal',
+                                'date' => $pReq->created_at ? $pReq->created_at->format('d-M-Y') : '',
+                                'date_short' => $pReq->created_at ? $pReq->created_at->format('d/m/y') : '',
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $resultsMap;
+    }
+
     /**
      * التحقق مما إذا كان الطلب طلباً خارجياً / مباشراً من الاستعلامات أو الصندوق
      */

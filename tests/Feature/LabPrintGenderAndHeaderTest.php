@@ -153,4 +153,140 @@ class LabPrintGenderAndHeaderTest extends TestCase
         $this->assertEquals('male', $this->malePatient->gender);
         $this->assertEquals('ذكر', $this->malePatient->gender_display);
     }
+
+    public function test_lab_print_displays_previous_results_for_same_patient(): void
+    {
+        // 1. الزيارة الأولى للمريضة (قبل شهرين)
+        $visit1 = Visit::create([
+            'patient_id' => $this->femalePatient->id,
+            'department_id' => $this->department->id,
+            'visit_type' => 'laboratory',
+            'chief_complaint' => 'تحليل سابق',
+            'visit_date' => now()->subMonths(2),
+            'visit_time' => now(),
+            'status' => 'completed',
+        ]);
+        $req1 = MedicalRequest::create([
+            'visit_id' => $visit1->id,
+            'type' => 'lab',
+            'description' => 'طلب مختبر سابق 1',
+            'status' => 'completed',
+            'created_at' => now()->subMonths(2),
+        ]);
+        \App\Models\LabResult::create([
+            'visit_id' => $visit1->id,
+            'request_id' => $req1->id,
+            'test_name' => 'Hemoglobin',
+            'value' => '10.5',
+            'unit' => 'g/dL',
+            'status' => 'low',
+            'reference_range' => '12-16',
+            'created_at' => now()->subMonths(2),
+        ]);
+
+        // 2. الزيارة الثانية للمريضة (قبل أسبوعين)
+        $visit2 = Visit::create([
+            'patient_id' => $this->femalePatient->id,
+            'department_id' => $this->department->id,
+            'visit_type' => 'laboratory',
+            'chief_complaint' => 'تحليل متابعة',
+            'visit_date' => now()->subWeeks(2),
+            'visit_time' => now(),
+            'status' => 'completed',
+        ]);
+        $req2 = MedicalRequest::create([
+            'visit_id' => $visit2->id,
+            'type' => 'lab',
+            'description' => 'طلب مختبر سابق 2',
+            'status' => 'completed',
+            'created_at' => now()->subWeeks(2),
+        ]);
+        \App\Models\LabResult::create([
+            'visit_id' => $visit2->id,
+            'request_id' => $req2->id,
+            'test_name' => 'Hemoglobin',
+            'value' => '11.8',
+            'unit' => 'g/dL',
+            'status' => 'low',
+            'reference_range' => '12-16',
+            'created_at' => now()->subWeeks(2),
+        ]);
+
+        // 3. الزيارة الحالية للمريضة (اليوم)
+        $visitCurrent = Visit::create([
+            'patient_id' => $this->femalePatient->id,
+            'department_id' => $this->department->id,
+            'visit_type' => 'laboratory',
+            'chief_complaint' => 'فحص اليوم',
+            'visit_date' => now(),
+            'visit_time' => now(),
+            'status' => 'completed',
+        ]);
+        $reqCurrent = MedicalRequest::create([
+            'visit_id' => $visitCurrent->id,
+            'type' => 'lab',
+            'description' => 'طلب مختبر حالي',
+            'status' => 'completed',
+            'created_at' => now(),
+        ]);
+        \App\Models\LabResult::create([
+            'visit_id' => $visitCurrent->id,
+            'request_id' => $reqCurrent->id,
+            'test_name' => 'Hemoglobin',
+            'value' => '12.6',
+            'unit' => 'g/dL',
+            'status' => 'normal',
+            'reference_range' => '12-16',
+            'created_at' => now(),
+        ]);
+
+        // اختبار دالة getPreviousLabResultsMap على نموذج الطلب
+        $prevMap = $reqCurrent->getPreviousLabResultsMap();
+        $this->assertArrayHasKey('hemoglobin', $prevMap);
+        $this->assertCount(2, $prevMap['hemoglobin']);
+        $this->assertEquals('11.8', $prevMap['hemoglobin'][0]['value']);
+        $this->assertEquals('10.5', $prevMap['hemoglobin'][1]['value']);
+
+        // اختبار استعراض صفحة التقرير
+        $response = $this->actingAs($this->labStaff)->get(route('lab.print', $reqCurrent));
+        $response->assertStatus(200);
+        $response->assertSee('Previous (آخر 3 نتائج)');
+        $response->assertSee('11.8');
+        $response->assertSee('10.5');
+        $response->assertSee('12.6'); // النتيجة الحالية
+    }
+
+    public function test_lab_print_shows_dash_when_no_previous_results(): void
+    {
+        $visit = Visit::create([
+            'patient_id' => $this->malePatient->id,
+            'department_id' => $this->department->id,
+            'visit_type' => 'laboratory',
+            'chief_complaint' => 'أول فحص',
+            'visit_date' => now(),
+            'visit_time' => now(),
+            'status' => 'completed',
+        ]);
+        $req = MedicalRequest::create([
+            'visit_id' => $visit->id,
+            'type' => 'lab',
+            'description' => 'أول طلب مختبر',
+            'status' => 'completed',
+        ]);
+        \App\Models\LabResult::create([
+            'visit_id' => $visit->id,
+            'request_id' => $req->id,
+            'test_name' => 'Serum Ferritin',
+            'value' => '85',
+            'unit' => 'ng/mL',
+            'status' => 'normal',
+            'reference_range' => '30-400',
+        ]);
+
+        $response = $this->actingAs($this->labStaff)->get(route('lab.print', $req));
+        $response->assertStatus(200);
+        $response->assertSee('Previous (آخر 3 نتائج)');
+        $response->assertSee('prev-empty-dash');
+    }
 }
+

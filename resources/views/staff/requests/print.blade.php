@@ -566,7 +566,7 @@
         /* Test Table Column Headers (Matching image double blue line) */
         .tests-header-bar {
             display: grid;
-            grid-template-columns: 2.2fr 1fr 1fr;
+            grid-template-columns: 1.85fr 0.95fr 1.55fr 0.65fr;
             border-top: 1.5px solid #2b5899;
             border-bottom: 1.5px solid #2b5899;
             padding: 6px 4px;
@@ -600,8 +600,8 @@
 
         .test-main-row {
             display: grid;
-            grid-template-columns: 2.2fr 1fr 1fr;
-            align-items: baseline;
+            grid-template-columns: 1.85fr 0.95fr 1.55fr 0.65fr;
+            align-items: center;
             margin-bottom: 3px;
         }
 
@@ -723,9 +723,66 @@
             margin-left: 4px;
         }
 
+        .test-prev-cell {
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .prev-results-wrap {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+
+        .prev-item-chip {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 1px 4px;
+            min-width: 44px;
+            line-height: 1.15;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .prev-item-val {
+            font-size: 11px;
+            font-weight: 800;
+            color: #1e4b88;
+        }
+
+        .prev-item-val.high {
+            color: #b91c1c;
+        }
+
+        .prev-item-val.low {
+            color: #b45309;
+        }
+
+        .prev-item-date {
+            font-size: 8px;
+            color: #64748b;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .prev-empty-dash {
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
         .test-meta-row {
             display: grid;
-            grid-template-columns: 2.2fr 1fr 1fr;
+            grid-template-columns: 1.85fr 0.95fr 1.55fr 0.65fr;
             align-items: baseline;
             font-size: 12.5px;
             color: #444;
@@ -741,6 +798,10 @@
             text-align: center;
             color: #444;
             font-size: 12.5px;
+        }
+
+        .meta-prev-blank {
+            display: block;
         }
 
         .test-device-row {
@@ -1080,6 +1141,18 @@
         $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
         $testsCount = $labResults->count();
 
+        $prevResultsMap = method_exists($request, 'getPreviousLabResultsMap') ? $request->getPreviousLabResultsMap() : [];
+        $findPrevResults = function($testName) use ($prevResultsMap) {
+            $norm = mb_strtolower(trim((string)$testName));
+            if (isset($prevResultsMap[$norm])) return $prevResultsMap[$norm];
+            $clean = mb_strtolower(trim(preg_replace('/\s*\(.*?\)\s*/', '', (string)$testName)));
+            if (!empty($clean) && isset($prevResultsMap[$clean])) return $prevResultsMap[$clean];
+            foreach ($prevResultsMap as $k => $list) {
+                if ($k === $norm || $k === $clean) return $list;
+            }
+            return [];
+        };
+
         if ($testsCount === 0 && !empty($request->result)) {
             $parsedRes = is_string($request->result) ? json_decode($request->result, true) : $request->result;
             $savedArr = $parsedRes['test_results'] ?? [];
@@ -1263,7 +1336,8 @@
             <!-- Column Headers -->
             <div class="tests-header-bar">
                 <div class="header-col">Laboratory Test Results</div>
-                <div class="header-col center">Conventional Units</div>
+                <div class="header-col center">Current Result</div>
+                <div class="header-col center">Previous (آخر 3 نتائج)</div>
                 <div class="header-col right">Status</div>
             </div>
 
@@ -1279,6 +1353,7 @@
                         $val = trim($res->value ?? '');
                         $unit = trim($res->unit ?? '');
                         $refRange = trim($res->reference_range ?? '');
+                        $prevItems = $findPrevResults($res->test_name);
 
                         // تقييم الحالة ديناميكياً بدقة
                         $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
@@ -1316,6 +1391,24 @@
                                     <span class="unit-label">{{ $unit }}</span>
                                 @endif
                             </div>
+                            <div class="test-prev-cell">
+                                @if(!empty($prevItems) && count($prevItems) > 0)
+                                    <div class="prev-results-wrap">
+                                        @foreach($prevItems as $p)
+                                            @php
+                                                $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
+                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
+                                            @endphp
+                                            <div class="prev-item-chip" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-item-val {{ $pClass }}">{{ $p['value'] }}</span>
+                                                <span class="prev-item-date">{{ $p['date_short'] }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="prev-empty-dash">—</span>
+                                @endif
+                            </div>
                             <div class="test-value-cell right">
                                 @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
                                     <span class="val-status-high">High</span>
@@ -1336,6 +1429,7 @@
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $refRange }}</div>
+                            <div class="meta-prev-blank"></div>
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif
@@ -1356,6 +1450,7 @@
                         $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : $tVal;
                         $unitStr = is_array($tVal) ? ($tVal['unit'] ?? '') : '';
                         $refStr = is_array($tVal) ? ($tVal['reference_range'] ?? '') : '';
+                        $prevItems = $findPrevResults($tName);
                         $statusStr = calcLabStatus($valStr, $refStr, is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal');
 
                         $valClass = 'val-normal';
@@ -1378,6 +1473,24 @@
                                 <span class="{{ $valClass }}">{{ $valStr }}</span>
                                 @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
                             </div>
+                            <div class="test-prev-cell">
+                                @if(!empty($prevItems) && count($prevItems) > 0)
+                                    <div class="prev-results-wrap">
+                                        @foreach($prevItems as $p)
+                                            @php
+                                                $pStatus = calcLabStatus($p['value'], $refStr, $p['status'] ?? 'normal');
+                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
+                                            @endphp
+                                            <div class="prev-item-chip" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-item-val {{ $pClass }}">{{ $p['value'] }}</span>
+                                                <span class="prev-item-date">{{ $p['date_short'] }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="prev-empty-dash">—</span>
+                                @endif
+                            </div>
                             <div class="test-value-cell right">
                                 @if($statusStr === 'high' || $statusStr === 'positive' || str_contains($statusStr, 'high') || str_contains($statusStr, 'pos'))
                                     <span class="val-status-high">High</span>
@@ -1396,6 +1509,7 @@
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $refStr }}</div>
+                            <div class="meta-prev-blank"></div>
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif
@@ -1415,6 +1529,7 @@
                         $tUnit = is_array($reqTestItem) ? ($reqTestItem['unit'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->unit ?? '') : '');
                         $tRef = is_array($reqTestItem) ? ($reqTestItem['reference_range'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->reference_range ?? '') : '');
                         $tCat = is_array($reqTestItem) ? ($reqTestItem['category'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->category ?? '') : '');
+                        $prevItems = $findPrevResults($tName);
 
                         if (empty($tUnit) || empty($tRef)) {
                             $dbTest = \App\Models\LabTest::where('name', $tName)->first();
@@ -1445,6 +1560,20 @@
                                     <span class="unit-label">{{ $tUnit }}</span>
                                 @endif
                             </div>
+                            <div class="test-prev-cell">
+                                @if(!empty($prevItems) && count($prevItems) > 0)
+                                    <div class="prev-results-wrap">
+                                        @foreach($prevItems as $p)
+                                            <div class="prev-item-chip" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-item-val">{{ $p['value'] }}</span>
+                                                <span class="prev-item-date">{{ $p['date_short'] }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="prev-empty-dash">—</span>
+                                @endif
+                            </div>
                             <div class="test-value-cell right">
                                 <span class="badge" style="background-color: #f1f5f9; color: #64748b; font-size: 11px; border: 1px solid #cbd5e1; font-weight: normal;">Pending</span>
                             </div>
@@ -1455,6 +1584,7 @@
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
                             <div class="meta-conv-range">{{ $tRef }}</div>
+                            <div class="meta-prev-blank"></div>
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif
