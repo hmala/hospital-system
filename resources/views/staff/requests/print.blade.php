@@ -88,9 +88,9 @@
             inset: 0;
             background-image: url('{{ asset('images/1.jpg') }}');
             background-repeat: no-repeat;
-            background-position: center 52%;
-            background-size: 52% auto;
-            opacity: 0.06;
+            background-position: center 50%;
+            background-size: 45% auto;
+            opacity: 0.045;
             pointer-events: none;
             z-index: 0;
         }
@@ -100,29 +100,30 @@
             z-index: 1;
         }
 
-        /* Decorative Border */
+        /* Decorative Border (Matching Emergency & Radiology) */
         .decorative-border {
             position: absolute;
-            top: 8mm;
-            right: 8mm;
-            bottom: 8mm;
-            left: 8mm;
-            border: 1.5px solid #1e7e8f;
+            top: 6mm;
+            right: 6mm;
+            bottom: 6mm;
+            left: 6mm;
+            border: 1px solid #7dd3fc;
             pointer-events: none;
             z-index: 0;
+            border-radius: 2px;
         }
 
         .corner-pattern {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            opacity: 0.18;
+            width: 45px;
+            height: 45px;
+            opacity: 0.15;
         }
 
         .corner-pattern.top-right {
             top: 0;
             right: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%231e7e8f"/></svg>');
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%23005a9c"/></svg>');
         }
 
         :root {
@@ -369,57 +370,197 @@
             direction: ltr;
         }
 
-        /* Patient Info Grid (Matching image exactly) */
-        .patient-info-grid {
+        /* Patient Info Card (Upgraded 3-Zone Grey Clinical Card with QR) */
+        .patient-info-card {
+            background-color: #f8fafc;
+            border: 1.2px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 14px;
+            margin-bottom: 14px;
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 6px 30px;
-            margin-bottom: 18px;
-            font-size: 13px;
+            grid-template-columns: 1.35fr 1.25fr 92px;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .patient-zone-main, .patient-zone-order {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .patient-zone-qr {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px dashed #cbd5e1;
+            padding-left: 10px;
+        }
+
+        .qr-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-img {
+            width: 70px;
+            height: 70px;
+            background: #ffffff;
+            padding: 2px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .qr-tag {
+            font-size: 9px;
+            font-weight: 800;
+            color: #005a9c;
+            margin-top: 3px;
+            letter-spacing: 0.5px;
+            direction: ltr;
+        }
+
+        .qr-caption {
+            font-size: 8px;
+            color: #64748b;
+            font-weight: 700;
+            margin-top: 1px;
+            white-space: nowrap;
+        }
+
+        .badge-coverage {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .badge-insurance {
+            background-color: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .badge-cash {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
         }
 
         .info-row {
             display: flex;
             align-items: center;
-            line-height: 1.5;
-            margin-bottom: 4px;
+            line-height: 1.45;
+            font-size: 12.5px;
         }
 
         .info-pill {
             background-color: #e5e8ec;
-            color: #1a1a1a;
+            color: #1e293b;
             font-weight: bold;
-            font-size: 12.5px;
-            padding: 2px 8px;
+            font-size: 11.5px;
+            padding: 1px 7px;
             border-radius: 4px;
-            min-width: 120px;
+            min-width: 95px;
             display: inline-block;
         }
 
         .info-colon {
-            margin: 0 8px;
+            margin: 0 6px;
             font-weight: bold;
-            color: #333;
+            color: #475569;
         }
 
         .val-arabic-name {
-            color: #1e4b88;
+            color: #005a9c;
             font-weight: bold;
-            font-size: 14.5px;
+            font-size: 13.5px;
             font-family: 'Tahoma', Arial, sans-serif;
             direction: rtl;
         }
 
         .val-english-name {
-            color: #8b0000;
+            color: #334155;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12.5px;
         }
 
         .info-val-text {
-            color: #111;
+            color: #0f172a;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
+        }
+
+        /* Official Authentication & Signatures Block */
+        .auth-block {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 16px;
+            background-color: #f8fafc;
+            margin-top: 14px;
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 20px;
+            align-items: center;
+            page-break-inside: avoid;
+        }
+
+        .auth-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .signature-box-empty {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sig-empty-line {
+            width: 85%;
+            height: 38px;
+            border-bottom: 1.5px dashed #005a9c;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 11px;
+            font-style: italic;
+        }
+        .sig-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #005a9c;
+            margin-bottom: 2px;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .sig-subtitle {
+            font-size: 10.5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .stamp-circle-box {
+            width: 78px;
+            height: 78px;
+            border: 2px dashed #005a9c;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #005a9c;
+            background: #ffffff;
+            padding: 4px;
         }
 
         /* Test Table Column Headers (Matching image double blue line) */
@@ -700,11 +841,12 @@
             .decorative-border {
                 display: block !important;
                 position: absolute;
-                top: 8mm;
-                right: 8mm;
-                bottom: 8mm;
-                left: 8mm;
-                border: 1.5px solid #1e7e8f;
+                top: 6mm;
+                right: 6mm;
+                bottom: 6mm;
+                left: 6mm;
+                border: 1px solid #7dd3fc;
+                border-radius: 2px;
             }
 
             .report-page::before {
@@ -925,6 +1067,10 @@
         $rawDoctor = $request->visit?->doctor?->user?->name ?? '';
         $doctorEn = $rawDoctor ? (str_starts_with($rawDoctor, 'د.') || str_starts_with($rawDoctor, 'الدكتور') ? transliterateArabicName($rawDoctor) : 'Dr. ' . transliterateArabicName($rawDoctor)) : '';
 
+        $patientPhone = method_exists($request, 'getPatientPhone') ? $request->getPatientPhone() : ($patientUser?->phone ?? ($patientModel?->phone ?? '—'));
+        $isInsured = ($patientModel?->insurance_type && $patientModel->insurance_type !== 'none') || ($request->insurance_type && $request->insurance_type !== 'none') || !empty($patientModel?->insurance_card_no) || !empty($patientModel?->insurance_number);
+        $verifyUrl = method_exists($request, 'getPublicReportUrl') ? $request->getPublicReportUrl() : url('/lab/results/view/' . $request->id);
+
         $sampleNo = 'IQ' . ($request->created_at ? $request->created_at->format('y') : date('y')) . '/' . str_pad($request->id, 7, '0', STR_PAD_LEFT);
         $patientNo = ($request->created_at ? $request->created_at->format('y') : date('y')) . '/' . str_pad($request->visit?->patient_id ?? $request->patient_id ?? $request->id, 7, '0', STR_PAD_LEFT);
 
@@ -1034,10 +1180,10 @@
             </div>
         </div>
 
-        <!-- Patient Info Box -->
-        <div class="patient-info-grid">
-            <!-- Left Column -->
-            <div>
+        <!-- Patient Info Card (3-Zone Grey Clinical Card with QR) -->
+        <div class="patient-info-card">
+            <!-- Left Zone: Patient Demographics -->
+            <div class="patient-zone-main">
                 <div class="info-row">
                     <span class="info-pill">Patient Name</span>
                     <span class="info-colon">:</span>
@@ -1049,48 +1195,49 @@
                     <span class="val-english-name">{{ $englishName }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-pill">Age</span>
+                    <span class="info-pill">Age / Sex</span>
                     <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }}</span>
+                    <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }} &nbsp;•&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></span>
                 </div>
                 <div class="info-row">
-                    <span class="info-pill">Sex</span>
+                    <span class="info-pill">Phone No.</span>
                     <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $genderEn }}</span>
+                    <span class="info-val-text" style="direction: ltr; text-align: right;">{{ $patientPhone ?: '—' }}</span>
                 </div>
+            </div>
+
+            <!-- Middle Zone: Order, Doctor & Coverage -->
+            <div class="patient-zone-order">
                 <div class="info-row">
                     <span class="info-pill">Consultant</span>
                     <span class="info-colon">:</span>
                     <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
                 </div>
-            </div>
-
-            <!-- Right Column -->
-            <div>
                 <div class="info-row">
                     <span class="info-pill">Sample No.</span>
                     <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleNo }}</span>
+                    <span class="info-val-text" style="color: #005a9c; font-weight: 800;">{{ $sampleNo }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-pill">Patient No.</span>
+                    <span class="info-pill">Date / Time</span>
                     <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $patientNo }}</span>
+                    <span class="info-val-text">{{ $sampleDate }} &nbsp;•&nbsp; {{ $sampleTime }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-pill">Sample Date</span>
+                    <span class="info-pill">Coverage</span>
                     <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleDate }}</span>
+                    <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
+                        {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
+                    </span>
                 </div>
-                <div class="info-row">
-                    <span class="info-pill">Sample Time</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleTime }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Number Of Tests</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $testsCount }}</span>
+            </div>
+
+            <!-- Right Zone: Direct QR Code -->
+            <div class="patient-zone-qr">
+                <div class="qr-box">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
+                    <span class="qr-tag">LAB-#{{ $request->id }}</span>
+                    <span class="qr-caption">مسح للنتائج</span>
                 </div>
             </div>
         </div>
@@ -1324,6 +1471,33 @@
                 </div>
             @endif
         @endif
+
+        <!-- Official Authentication & Signatures Block (مكان التوقيع فارغ للاختبار) -->
+        <div class="auth-block">
+            <!-- 1. Specialist / Medical Lab Scientist Signature -->
+            <div class="auth-cell">
+                <div class="signature-box-empty">
+                    <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                    <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
+                    <div class="sig-empty-line">
+                        (مكان التوقيع والاعتماد)
+                    </div>
+                    <div style="font-size: 10px; color: #64748b; font-weight: 700; margin-top: 2px;">
+                        التاريخ: {{ now()->format('Y-m-d') }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Official Hospital / Dept Stamp -->
+            <div class="auth-cell">
+                <div class="stamp-circle-box">
+                    <div style="font-size: 8px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                    <div style="font-size: 9.5px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
+                    <div style="font-size: 8.5px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                    <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                </div>
+            </div>
+        </div>
 
         <!-- Footer: Always at the bottom of every page on print and bottom on screen -->
         <div class="report-footer-wrapper">

@@ -57,6 +57,26 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-19 — المرحلة 83: تصحيح قراءة وتحديد جنس المريض وترقية ترويسة تقرير المختبر لتطابق الطوارئ والأشعة Lab Print Patient Gender Resolution Fix & Unified Emergency/Radiology Header Style)
+
+### Done
+- **تصحيح تحديد وقراءة جنس المريض في تقرير المختبر وكافة شاشات النظام**:
+  * إضافة دالتي الوصول (`Accessor`) في نموذج المريض [app/Models/Patient.php](file:///c:/wamp64/www/hospital-system/app/Models/Patient.php):
+    - `getGenderAttribute()`: قراءة الجنس تلقائياً من جدول المستخدمين المرتبط `user->gender` بدلاً من إرجاع `null` بسبب عدم وجود عمود `gender` في جدول `patients`.
+    - `getGenderDisplayAttribute()`: إرجاع التسمية العربية المعربة الموحدة (`ذكر` / `أنثى` / `غير محدد`).
+  * تصحيح دالة استخراج الجنس في قالب طباعة المختبر [resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php):
+    - فحص الجنس من ملف المريض واليوزر مباشرة ودعم كافة صيغ الإناث (`female`, `أنثى`, `f`, `انثى`) لطباعة `Female`.
+    - معالجة الحالة التي جعلت المريضة هيفاء مدلول لفته (طلب #191) تظهر كـ `Male` لعدم العثور على حقل الجنس في نموذج المريض والرجوع للوضع الافتراضي الخاطئ.
+- **ترقية وتوحيد ترويسة تقرير المختبر المعتمد لتطابق تصميم الطوارئ والأشعة**:
+  * إعادة بناء وترقية ترويسة تقرير المختبر [resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php) لتصبح ثلاثية الأعمدة متطابقة تماماً مع استمارة الطوارئ والأشعة:
+    - الجانب الأيمن: ترويسة مستشفى الكفاءات الأهلي وقسم المختبر والتحاليل الطبية بالعربي.
+    - المنتصف: شعار المستشفى الملكي الأصلي (`images/1.jpg`) مشفر ومضمن بتقنية Base64 لمنع أي مشاكل بالمسارات أو شهادات الأمان وسيرفرات الطباعة.
+    - الجانب الأيسر: اسم المستشفى والقسم باللغة الإنكليزية (`Al-Kafa'at Private Hospital - Clinical Laboratory Dept.`).
+    - شريط العنوان الكحلي المتدرج الملكي (Document Title Banner) متضمناً كود التقرير والطلب `LAB-#{id}`.
+    - توحيد لون إطار الصفحة (Border) إلى الأزرق الملكي المتناسق `#005a9c` مع زوايا إشعاعية خفيفة.
+- **الاختبارات الآلية**:
+  * بناء وتشغيل اختبار الميزة [tests/Feature/LabPrintGenderAndHeaderTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabPrintGenderAndHeaderTest.php) واجتيازه بنجاح (`3 passed, 17 assertions`) واجتياز حزمة المختبر كاملة (`44 passed, 195 assertions`).
+
 ## Session log (2026-10-19 — المرحلة 82: إصلاح ظهور المشاهدات والنتائج وترقية تقرير الأشعة والسونار المعتمد لتصميم الطوارئ مع مربع توقيع فارغ للاختبار Radiology & Ultrasound Findings Display Fix & Emergency-Style Report Upgrade)
 
 ### Done
