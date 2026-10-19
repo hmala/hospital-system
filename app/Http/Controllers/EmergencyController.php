@@ -829,7 +829,7 @@ class EmergencyController extends Controller
             $medicalUpdate['notes'] = $request->notes;
         }
         if ($request->has('symptoms')) {
-            $medicalUpdate['symptoms'] = $request->symptoms;
+            $medicalUpdate['symptoms'] = $request->symptoms ?? '';
         }
 
         $emergency->update($medicalUpdate);
