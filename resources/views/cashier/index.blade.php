@@ -529,6 +529,29 @@
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                <div class="p-3 border-top bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                    <div class="small text-muted">
+                                                        <i class="fas fa-info-circle text-primary me-1"></i>
+                                                        يعرض تبويب <strong>الكل</strong> أحدث المعاملات المجمعة. لتصفح كامل الصفحات المقسمة والمفهرسة، اختر التبويب المطلوب:
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        @if($canConsultation)
+                                                            <button type="button" class="btn btn-outline-warning btn-sm fw-bold px-2 py-1 text-dark" onclick="document.getElementById('tab-appointments-btn').click()">
+                                                                <i class="fas fa-calendar-check me-1"></i> كشفية الاستشارية ({{ $appointmentsCount }})
+                                                            </button>
+                                                        @endif
+                                                        @if($canMedicalRequests)
+                                                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-requests-btn').click()">
+                                                                <i class="fas fa-flask me-1"></i> التحاليل والأشعة ({{ $requestsCount }})
+                                                            </button>
+                                                        @endif
+                                                        @if($canEmergency)
+                                                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-emergency-btn').click()">
+                                                                <i class="fas fa-ambulance me-1"></i> الطوارئ ({{ $emergencyCount }})
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </div>
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
