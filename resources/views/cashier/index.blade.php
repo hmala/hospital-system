@@ -19,23 +19,50 @@
                     </p>
                 </div>
 
-                <!-- فلتر نطاق التاريخ للمقبوضات المعلقة -->
-                <div class="btn-group bg-white p-1 rounded-pill shadow-sm border" role="group">
-                    <a href="{{ route('cashier.index', ['date_filter' => 'today']) }}" 
-                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? 'today') === 'today' ? 'btn-primary text-white' : 'btn-light text-dark' }}">
-                        <i class="fas fa-calendar-day me-1"></i> معلقات اليوم
-                    </a>
-                    <a href="{{ route('cashier.index', ['date_filter' => 'previous']) }}" 
-                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'previous' ? 'btn-warning text-dark' : 'btn-light text-dark' }}">
-                        <i class="fas fa-history me-1"></i> المعلقات السابقة
-                        @if(($previousPendingCount ?? 0) > 0)
-                            <span class="badge bg-danger rounded-pill ms-1">{{ $previousPendingCount }}</span>
+                <!-- فلتر نطاق التاريخ للمقبوضات المعلقة والبحث المباشر -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <form method="GET" action="{{ route('cashier.index') }}" class="d-flex align-items-center gap-2">
+                        <input type="hidden" name="date_filter" value="{{ $dateFilter ?? 'today' }}">
+                        <div class="input-group input-group-sm shadow-sm" style="min-width: 240px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" name="search" class="form-control border-start-0" placeholder="بحث باسم المريض، الهاتف، رقم الوصل..." value="{{ $search ?? '' }}">
+                            @if(!empty($search))
+                                <a href="{{ route('cashier.index', ['date_filter' => $dateFilter ?? 'today', 'custom_date' => $customDate ?? '']) }}" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
+                            @endif
+                            <button type="submit" class="btn btn-primary fw-bold px-3">بحث</button>
+                        </div>
+                    </form>
+
+                    <div class="btn-group bg-white p-1 rounded-pill shadow-sm border" role="group">
+                        <a href="{{ route('cashier.index', ['date_filter' => 'today', 'search' => $search ?? '']) }}" 
+                           class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? 'today') === 'today' ? 'btn-primary text-white' : 'btn-light text-dark' }}">
+                            <i class="fas fa-calendar-day me-1"></i> معلقات اليوم
+                        </a>
+                        <a href="{{ route('cashier.index', ['date_filter' => 'previous', 'search' => $search ?? '']) }}" 
+                           class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'previous' ? 'btn-warning text-dark' : 'btn-light text-dark' }}">
+                            <i class="fas fa-history me-1"></i> المعلقات السابقة
+                            @if(($previousPendingCount ?? 0) > 0)
+                                <span class="badge bg-danger rounded-pill ms-1">{{ $previousPendingCount }}</span>
+                            @endif
+                        </a>
+                        <a href="{{ route('cashier.index', ['date_filter' => 'all', 'search' => $search ?? '']) }}" 
+                           class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'all' ? 'btn-secondary text-white' : 'btn-light text-dark' }}">
+                            <i class="fas fa-infinity me-1"></i> كافة التواريخ
+                        </a>
+                    </div>
+
+                    <!-- اختيار تأريخ محدد -->
+                    <form method="GET" action="{{ route('cashier.index') }}" class="d-flex align-items-center gap-1 bg-white p-1 rounded-pill border shadow-sm">
+                        <input type="hidden" name="date_filter" value="custom">
+                        @if(!empty($search))
+                            <input type="hidden" name="search" value="{{ $search }}">
                         @endif
-                    </a>
-                    <a href="{{ route('cashier.index', ['date_filter' => 'all']) }}" 
-                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'all' ? 'btn-secondary text-white' : 'btn-light text-dark' }}">
-                        <i class="fas fa-infinity me-1"></i> كافة التواريخ
-                    </a>
+                        <span class="ps-2 text-muted small"><i class="fas fa-calendar-alt text-primary"></i></span>
+                        <input type="date" name="custom_date" class="form-control form-control-sm border-0 bg-transparent" style="max-width: 140px; font-size: 0.8rem;" value="{{ $customDate ?? request('custom_date') }}" onchange="this.form.submit()">
+                        @if(($dateFilter ?? '') === 'custom' && !empty($customDate))
+                            <span class="badge bg-success rounded-pill me-1"><i class="fas fa-check"></i></span>
+                        @endif
+                    </form>
                 </div>
             </div>
         </div>
@@ -582,6 +609,12 @@
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                @if(isset($pendingAppointments) && $pendingAppointments->hasPages())
+                                                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                        <span class="small text-muted">عرض {{ $pendingAppointments->firstItem() }} إلى {{ $pendingAppointments->lastItem() }} من أصل {{ $pendingAppointments->total() }} موعد</span>
+                                                        {{ $pendingAppointments->links() }}
+                                                    </div>
+                                                @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -758,6 +791,12 @@
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                @if(isset($pendingMedicalRequests) && $pendingMedicalRequests->hasPages())
+                                                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                        <span class="small text-muted">عرض {{ $pendingMedicalRequests->firstItem() }} إلى {{ $pendingMedicalRequests->lastItem() }} من أصل {{ $pendingMedicalRequests->total() }} طلب</span>
+                                                        {{ $pendingMedicalRequests->links() }}
+                                                    </div>
+                                                @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -771,52 +810,58 @@
                                         @if($canEmergency)
                                         <div class="tab-pane fade" id="tab-emergency" role="tabpanel">
                                             @if($emergencyCount > 0)
-                                                <div class="table-responsive">
-                                                    <table class="table table-hover align-middle mb-0">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th>رقم الإشعار</th>
-                                                                <th>المريض</th>
-                                                                <th>درجة الخطورة</th>
-                                                                <th>الخدمات</th>
-                                                                <th class="text-end">المبلغ المطلوب</th>
-                                                                <th>التاريخ والوقت</th>
-                                                                <th class="text-center">الإجراء</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            @foreach($pendingEmergencyPayments ?? [] as $payment)
-                                                                @php
-                                                                    $em = $payment->emergency;
-                                                                    $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
-                                                                    $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
-                                                                @endphp
-                                                                <tr>
-                                                                    <td><strong>#{{ $payment->id }}</strong></td>
-                                                                    <td>
-                                                                        <div class="fw-semibold">{{ $patientName }}</div>
-                                                                        <small class="text-muted">{{ $patientId }}</small>
-                                                                    </td>
-                                                                    <td>
-                                                                        <span class="badge bg-{{ $payment->emergency->priority_color }} px-2 py-1">
-                                                                            {{ $payment->emergency->priority_text }}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
-                                                                    </td>
-                                                                    <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
-                                                                    <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
-                                                                    <td class="text-center">
-                                                                        <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الطوارئ
-                                                                        </a>
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                 <div class="table-responsive">
+                                                     <table class="table table-hover align-middle mb-0">
+                                                         <thead class="table-light">
+                                                             <tr>
+                                                                 <th>رقم الإشعار</th>
+                                                                 <th>المريض</th>
+                                                                 <th>درجة الخطورة</th>
+                                                                 <th>الخدمات</th>
+                                                                 <th class="text-end">المبلغ المطلوب</th>
+                                                                 <th>التاريخ والوقت</th>
+                                                                 <th class="text-center">الإجراء</th>
+                                                             </tr>
+                                                         </thead>
+                                                         <tbody>
+                                                             @foreach($pendingEmergencyPayments ?? [] as $payment)
+                                                                 @php
+                                                                     $em = $payment->emergency;
+                                                                     $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
+                                                                     $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                 @endphp
+                                                                 <tr>
+                                                                     <td><strong>#{{ $payment->id }}</strong></td>
+                                                                     <td>
+                                                                         <div class="fw-semibold">{{ $patientName }}</div>
+                                                                         <small class="text-muted">{{ $patientId }}</small>
+                                                                     </td>
+                                                                     <td>
+                                                                         <span class="badge bg-{{ $payment->emergency->priority_color }} px-2 py-1">
+                                                                             {{ $payment->emergency->priority_text }}
+                                                                         </span>
+                                                                     </td>
+                                                                     <td>
+                                                                         <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                     </td>
+                                                                     <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
+                                                                     <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
+                                                                     <td class="text-center">
+                                                                         <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                             <i class="fas fa-money-bill-wave me-1"></i> تسديد الطوارئ
+                                                                         </a>
+                                                                     </td>
+                                                                 </tr>
+                                                             @endforeach
+                                                         </tbody>
+                                                     </table>
+                                                 </div>
+                                                 @if(isset($pendingEmergencyPayments) && $pendingEmergencyPayments->hasPages())
+                                                     <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                         <span class="small text-muted">عرض {{ $pendingEmergencyPayments->firstItem() }} إلى {{ $pendingEmergencyPayments->lastItem() }} من أصل {{ $pendingEmergencyPayments->total() }} حالة</span>
+                                                         {{ $pendingEmergencyPayments->links() }}
+                                                     </div>
+                                                 @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>

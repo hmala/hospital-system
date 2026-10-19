@@ -40,7 +40,9 @@ class CashierController extends Controller
         }
 
         $today = Carbon::today();
-        $dateFilter = request('date_filter', 'today'); // 'today' (default), 'previous', 'all'
+        $dateFilter = request('date_filter', 'today'); // 'today' (default), 'previous', 'all', 'custom'
+        $customDate = request('custom_date');
+        $search = trim(request('search', ''));
 
         // إجمالي المعلقات السابقة (قبل اليوم)
         $previousPendingAptsCount = Appointment::where('payment_status', 'pending')
@@ -83,11 +85,27 @@ class CashierController extends Controller
             $pendingAppointmentsQuery->whereDate('appointment_date', $today);
         } elseif ($dateFilter === 'previous') {
             $pendingAppointmentsQuery->whereDate('appointment_date', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingAppointmentsQuery->whereDate('appointment_date', $customDate);
+        }
+
+        if ($search) {
+            $pendingAppointmentsQuery->where(function($q) use ($search) {
+                $q->where('id', $search)
+                  ->orWhereHas('patient.user', function($qu) use ($search) {
+                      $qu->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('patient', function($qp) use ($search) {
+                      $qp->where('national_id', 'like', "%{$search}%");
+                  });
+            });
         }
 
         $pendingAppointments = $pendingAppointmentsQuery
             ->orderBy('appointment_date', 'asc')
-            ->paginate(15, ['*'], 'appointments_page');
+            ->paginate(15, ['*'], 'appointments_page')
+            ->appends(request()->query());
 
         // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات
         $pendingRequestsQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
@@ -117,11 +135,28 @@ class CashierController extends Controller
             $pendingRequestsQuery->whereDate('created_at', $today);
         } elseif ($dateFilter === 'previous') {
             $pendingRequestsQuery->whereDate('created_at', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingRequestsQuery->whereDate('created_at', $customDate);
+        }
+
+        if ($search) {
+            $pendingRequestsQuery->where(function($q) use ($search) {
+                $q->where('id', $search)
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('visit.patient.user', function($qu) use ($search) {
+                      $qu->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('visit.patient', function($qp) use ($search) {
+                      $qp->where('national_id', 'like', "%{$search}%");
+                  });
+            });
         }
 
         $pendingRequests = $pendingRequestsQuery
             ->orderBy('created_at', 'desc')
-            ->paginate(15, ['*'], 'requests_page');
+            ->paginate(15, ['*'], 'requests_page')
+            ->appends(request()->query());
 
         // جلب خدمات الطوارئ المعلقة الدفع
         $pendingEmergencyQuery = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'emergency.services', 'appointment.doctor.user'])
@@ -134,11 +169,29 @@ class CashierController extends Controller
             $pendingEmergencyQuery->whereDate('created_at', $today);
         } elseif ($dateFilter === 'previous') {
             $pendingEmergencyQuery->whereDate('created_at', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingEmergencyQuery->whereDate('created_at', $customDate);
+        }
+
+        if ($search) {
+            $pendingEmergencyQuery->where(function($q) use ($search) {
+                $q->where('id', $search)
+                  ->orWhere('emergency_id', $search)
+                  ->orWhereHas('emergency.patient.user', function($qu) use ($search) {
+                      $qu->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('emergency.emergencyPatient', function($qe) use ($search) {
+                      $qe->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
         }
 
         $pendingEmergencyPayments = $pendingEmergencyQuery
             ->orderBy('created_at', 'desc')
-            ->paginate(15, ['*'], 'emergency_page');
+            ->paginate(15, ['*'], 'emergency_page')
+            ->appends(request()->query());
 
         // إحصائيات اليوم المحسنة
         $todayPayments = Payment::whereDate('paid_at', $today)
@@ -234,6 +287,8 @@ class CashierController extends Controller
             'todayPayments', 
             'monthlyStats', 
             'dateFilter', 
+            'customDate',
+            'search',
             'previousPendingCount'
         ));
     }
