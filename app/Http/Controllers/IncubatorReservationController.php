@@ -48,32 +48,24 @@ class IncubatorReservationController extends Controller
             abort(403, 'غير مصرح لك بإنشاء حجز حاضنة خدج');
         }
 
-        // الحصول على المريض إذا تم تمريره
+        // الحصول على المريض إذا تم تمريره مسبقاً في الرابط
         $patient = null;
         $existingReservation = null;
 
-        if ($request->has('patient_id')) {
-            $patient = Patient::with('user')->findOrFail($request->patient_id);
+        if ($request->filled('patient_id')) {
+            $patient = Patient::with(['user', 'healthInsuranceCategory'])->find($request->patient_id);
 
-            // التحقق من عمر المريض - الحاضنات للخدج فقط (أقل من سنة)
-            if ($patient->age >= 1) {
-                return redirect()->back()
-                               ->with('error', 'عذراً، حاضنات الخدج مخصصة للأطفال حديثي الولادة فقط (أقل من سنة)');
+            if ($patient) {
+                // تحقق سريع: هل للطفل/الأم حجز نشط بالفعل؟ (حتى نظهر تحذير فور دخول الصفحة)
+                $existingReservation = IncubatorReservation::where('patient_id', $patient->id)
+                    ->whereIn('status', [IncubatorReservation::STATUS_PENDING, IncubatorReservation::STATUS_ADMITTED])
+                    ->with('incubator')
+                    ->first();
             }
-
-            // تحقق سريع: هل للطفل حجز نشط بالفعل؟ (حتى نظهر تحذير فور دخول الصفحة)
-            $existingReservation = IncubatorReservation::where('patient_id', $patient->id)
-                ->whereIn('status', [IncubatorReservation::STATUS_PENDING, IncubatorReservation::STATUS_ADMITTED])
-                ->with('incubator')
-                ->first();
         }
 
-        // فلترة المرضى - إظهار الأطفال فقط (أقل من سنة)
-        $patients = Patient::with('user')
-                          ->get()
-                          ->filter(function ($p) {
-                              return $p->age !== null && $p->age < 1;
-                          });
+        // تم الاستغناء عن جلب كل المرضى مسبقاً، واعتمدنا البحث المباشر السريع (Live Search)
+        $patients = $patient ? collect([$patient]) : collect();
 
         // اختيار نوع الحاضنة كمحدد للفرز
         $selectedType = $request->input('incubator_type');
@@ -127,6 +119,7 @@ class IncubatorReservationController extends Controller
 
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,id',
+            'baby_name' => 'nullable|string|max:255',
             'incubator_id' => 'required|exists:incubators,id',
             'incubator_type' => 'nullable|in:normal,capsule',
             'nicu_service_id' => 'nullable|exists:nicu_services,id',
@@ -145,20 +138,24 @@ class IncubatorReservationController extends Controller
             'insurance_card_no' => 'nullable|string|max:100',
         ]);
 
-        // سحب اسم الطفل تلقائياً من بيانات المريض
+        // سحب وتوليد اسم الطفل (استخدام الاسم المدخل أو توليده تلقائياً من اسم الأم/المسؤول)
         $patientUser = Patient::with('user')->findOrFail($validated['patient_id']);
-        $validated['baby_name'] = optional($patientUser->user)->name ?? 'غير معروف';
+        $motherOrGuardianName = optional($patientUser->user)->name ?? 'غير معروف';
+
+        if (!empty($validated['baby_name'])) {
+            $validated['baby_name'] = trim($validated['baby_name']);
+        } else {
+            $validated['baby_name'] = str_starts_with($motherOrGuardianName, 'طفل')
+                ? $motherOrGuardianName
+                : ('طفل ' . $motherOrGuardianName);
+        }
+
         $validated['current_weight'] = $validated['birth_weight'] ?? null;
         $validated['insurance_type'] = $validated['insurance_type'] ?? 'none';
 
-        // التحقق من عمر المريض
-        if ($patientUser->age >= 1) {
-            return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'عذراً، حاضنات الخدج مخصصة للأطفال حديثي الولادة فقط (أقل من سنة)');
-        }
+        // تم إلغاء شرط العمر للسماح بحجز الحاضنة باسم الأم أو المسؤول
 
-        // التحقق من أن الطفل ليس لديه حجز نشط حالياً
+        // التحقق من أن المريض ليس لديه حجز نشط حالياً
         $existingPatientReservation = IncubatorReservation::where('patient_id', $validated['patient_id'])
             ->whereIn('status', [IncubatorReservation::STATUS_PENDING, IncubatorReservation::STATUS_ADMITTED])
             ->first();
@@ -166,7 +163,7 @@ class IncubatorReservationController extends Controller
         if ($existingPatientReservation) {
             return redirect()->back()
                            ->withInput()
-                           ->with('error', 'هذا الطفل لديه حجز نشط بالفعل في الحاضنة رقم ' . $existingPatientReservation->incubator->incubator_number . '. يجب إنهاء الحجز الحالي أولاً.');
+                           ->with('error', 'هذا المريض لديه حجز نشط بالفعل في الحاضنة رقم ' . $existingPatientReservation->incubator->incubator_number . '. يجب إنهاء الحجز الحالي أولاً.');
         }
 
         // التحقق من توفر الحاضنة
@@ -387,6 +384,52 @@ class IncubatorReservationController extends Controller
 
         return redirect()->route('incubator-reservations.show', $newReservation)
                         ->with('success', 'تم نقل الطفل إلى الحاضنة الجديدة بنجاح');
+    }
+
+    /**
+     * البحث المباشر السريع عن المرضى (الأم أو المسؤول) لحجز الحاضنة (AJAX)
+     */
+    public function searchPatients(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        
+        if (!$isAdmin && (!$user || (!$user->can('create incubator reservations') && !$user->hasAnyRole(['doctor', 'receptionist', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك بالبحث لحجز حاضنات الخدج');
+        }
+
+        $query = trim($request->get('query') ?? $request->get('term') ?? '');
+
+        if (empty($query)) {
+            return response()->json([]);
+        }
+
+        $patients = Patient::with(['user', 'healthInsuranceCategory'])
+            ->where(function ($q) use ($query) {
+                $q->whereHas('user', function ($uq) use ($query) {
+                    $uq->where('name', 'LIKE', "%{$query}%")
+                       ->orWhere('phone', 'LIKE', "%{$query}%");
+                })
+                ->orWhere('id', $query)
+                ->orWhere('national_id', 'LIKE', "%{$query}%");
+            })
+            ->limit(15)
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'name' => optional($p->user)->name ?? 'غير معروف',
+                    'phone' => optional($p->user)->phone ?? ($p->phone ?? 'لا يوجد هاتف'),
+                    'age' => $p->age,
+                    'gender' => $p->gender,
+                    'national_id' => $p->national_id,
+                    'insurance_type' => $p->insurance_type ?? 'none',
+                    'policy_category' => $p->healthInsuranceCategory?->code ?? null,
+                    'insurance_card_no' => $p->insurance_card_no ?? null,
+                ];
+            });
+
+        return response()->json($patients);
     }
 
     /**

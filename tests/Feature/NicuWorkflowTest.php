@@ -712,5 +712,97 @@ class NicuWorkflowTest extends TestCase
             return isset($stats['normal']) && isset($stats['capsule']) && !isset($stats['oxygen']);
         });
     }
+
+    public function test_patient_live_search_and_adult_mother_reservation_with_baby_name(): void
+    {
+        // 1. إنشاء مريضة بالغة (الأم) بعمر 27 سنة
+        $motherUser = \App\Models\User::factory()->create([
+            'name' => 'فاطمة حسن علي',
+            'phone' => '07701234567',
+        ]);
+        $motherPatient = \App\Models\Patient::create([
+            'user_id' => $motherUser->id,
+            'age' => 27,
+            'gender' => 'female',
+            'phone' => '07701234567',
+            'insurance_type' => 'none',
+        ]);
+
+        // 2. اختبار البحث المباشر السريع بالاسم وبالهاتف
+        $searchByNameResponse = $this->actingAs($this->admin)->getJson(
+            route('incubator-reservations.search-patients', ['query' => 'فاطمة'])
+        );
+        $searchByNameResponse->assertOk();
+        $searchByNameResponse->assertJsonFragment(['name' => 'فاطمة حسن علي']);
+
+        $searchByPhoneResponse = $this->actingAs($this->admin)->getJson(
+            route('incubator-reservations.search-patients', ['query' => '07701234567'])
+        );
+        $searchByPhoneResponse->assertOk();
+        $searchByPhoneResponse->assertJsonFragment(['name' => 'فاطمة حسن علي']);
+
+        // 3. اختبار الحجز باسم الأم بدون إدخال اسم الطفل (يولد تلقائياً طفل + اسم الأم)
+        $inc1 = Incubator::create([
+            'incubator_number' => 'INC-SEARCH-01',
+            'incubator_type' => 'normal',
+            'status' => 'available',
+            'daily_fee' => 0,
+            'is_active' => true,
+        ]);
+
+        $service = NicuService::first();
+
+        $storeResponse1 = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $motherPatient->id,
+            'incubator_id' => $inc1->id,
+            'nicu_service_id' => $service->id,
+            'gestational_age' => '35 أسبوع',
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '10:00',
+        ]);
+
+        $storeResponse1->assertRedirect();
+        $res1 = IncubatorReservation::where('incubator_id', $inc1->id)->first();
+        $this->assertNotNull($res1);
+        $this->assertEquals('طفل فاطمة حسن علي', $res1->baby_name);
+        $this->assertEquals($motherPatient->id, $res1->patient_id);
+
+        // 4. اختبار الحجز مع إدخال اسم طفل مخصص صريحاً
+        $fatherUser = \App\Models\User::factory()->create([
+            'name' => 'كرار حميد جاسم',
+            'phone' => '07809876543',
+        ]);
+        $fatherPatient = \App\Models\Patient::create([
+            'user_id' => $fatherUser->id,
+            'age' => 32,
+            'gender' => 'male',
+            'phone' => '07809876543',
+            'insurance_type' => 'none',
+        ]);
+
+        $inc2 = Incubator::create([
+            'incubator_number' => 'INC-SEARCH-02',
+            'incubator_type' => 'capsule',
+            'status' => 'available',
+            'daily_fee' => 0,
+            'is_active' => true,
+        ]);
+
+        $storeResponse2 = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $fatherPatient->id,
+            'baby_name' => 'يوسف كرار حميد',
+            'incubator_id' => $inc2->id,
+            'nicu_service_id' => $service->id,
+            'gestational_age' => '31 أسبوع',
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '11:00',
+        ]);
+
+        $storeResponse2->assertRedirect();
+        $res2 = IncubatorReservation::where('incubator_id', $inc2->id)->first();
+        $this->assertNotNull($res2);
+        $this->assertEquals('يوسف كرار حميد', $res2->baby_name);
+        $this->assertEquals($fatherPatient->id, $res2->patient_id);
+    }
 }
 

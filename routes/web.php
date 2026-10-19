@@ -686,6 +686,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('incubator-reservations')->name('incubator-reservations.')->group(function () {
         Route::get('/', [\App\Http\Controllers\IncubatorReservationController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\IncubatorReservationController::class, 'create'])->name('create');
+        Route::get('/search-patients', [\App\Http\Controllers\IncubatorReservationController::class, 'searchPatients'])->name('search-patients');
         Route::post('/', [\App\Http\Controllers\IncubatorReservationController::class, 'store'])->name('store');
         Route::get('/occupied', [\App\Http\Controllers\IncubatorReservationController::class, 'occupied'])->name('occupied');
         Route::get('/{incubatorReservation}', [\App\Http\Controllers\IncubatorReservationController::class, 'show'])->name('show');

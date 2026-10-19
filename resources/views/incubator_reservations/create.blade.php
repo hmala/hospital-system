@@ -118,21 +118,6 @@ label.incubator-card {
         </div>
     @endif
 
-    @if($patients->count() == 0)
-        <div class="alert alert-warning" role="alert">
-            <h5 class="alert-heading">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                تنبيه هام
-            </h5>
-            <p class="mb-0">
-                لا يوجد أطفال (أقل من سنة) مسجلين في النظام. حاضنات الخدج مخصصة للأطفال حديثي الولادة فقط.
-            </p>
-            <hr>
-            <p class="mb-0">
-                يرجى تسجيل طفل جديد أولاً من قسم المرضى، والتأكد من إدخال العمر بشكل صحيح.
-            </p>
-        </div>
-    @endif
 
     <div class="row">
         <div class="col-lg-8 mx-auto">
@@ -205,46 +190,99 @@ label.incubator-card {
                             </div>
                         </div>
 
-                        <!-- بيانات المريض (الأم) -->
+                        <!-- بيانات المريض (الأم أو المسؤول) والطفل الخديج -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <h6 class="border-bottom pb-2 mb-3">
                                     <i class="fas fa-user-circle me-2 text-info"></i>
-                                    بيانات المريض (الأم أو المسؤول)
+                                    بيانات المريض (الأم أو المسؤول) والطفل الخديج
                                 </h6>
                             </div>
 
                             <div class="col-md-12 mb-3">
-                                <label for="patient_id" class="form-label">
-                                    اختر المريض <span class="text-danger">*</span>
-                                </label>
-                                <select name="patient_id" id="patient_id" 
-                                        class="form-select @error('patient_id') is-invalid @enderror" required>
-                                    <option value="">-- اختر المريض --</option>
-                                    @foreach($patients as $p)
-                                        <option value="{{ $p->id }}" 
-                                                {{ (old('patient_id') ?? $patient?->id) == $p->id ? 'selected' : '' }}>
-                                            {{ optional($p->user)->name ?? 'غير معروف' }} - {{ optional($p->user)->phone ?? 'لا يوجد هاتف' }} 
-                                            @if($p->age !== null)
-                                                ({{ $p->age < 1 ? 'أقل من سنة' : $p->age . ' سنة' }})
-                                            @endif
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('patient_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                @if($patients->count() == 0)
-                                    <small class="text-danger">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        لا يوجد أطفال (أقل من سنة) مسجلين في النظام
-                                    </small>
-                                @else
-                                    <small class="text-muted">
+                                <!-- الحقل المخفي لمعرف المريض -->
+                                <input type="hidden" name="patient_id" id="patient_id" value="{{ old('patient_id', $patient?->id ?? '') }}" required>
+
+                                <!-- واجهة البحث المباشر عن المريض -->
+                                <div id="patientSearchContainer" style="{{ old('patient_id') || isset($patient) ? 'display: none;' : '' }}">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-search text-primary me-1"></i>
+                                        ابحث عن المريض (الأم أو المسؤول) <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="position-relative">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                            <input type="text" 
+                                                   class="form-control border-start-0 @error('patient_id') is-invalid @enderror" 
+                                                   id="patientSearchInput" 
+                                                   placeholder="اكتب اسم المريض أو رقم الهاتف..."
+                                                   autocomplete="off">
+                                            <a href="{{ route('patients.create') }}" target="_blank" class="btn btn-outline-info" title="تسجيل مريض جديد في النظام">
+                                                <i class="fas fa-user-plus me-1"></i> مريض جديد
+                                            </a>
+                                        </div>
+                                        <div id="patientSearchSpinner" class="position-absolute" style="left: 125px; top: 10px; display: none;">
+                                            <span class="spinner-border spinner-border-sm text-primary"></span>
+                                        </div>
+                                        <!-- قائمة نتائج البحث المنبثقة -->
+                                        <div id="patientSearchResults" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; max-height: 280px; overflow-y: auto; display: none;"></div>
+                                    </div>
+                                    @error('patient_id')
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ $message }}</div>
+                                    @enderror
+                                    <div class="form-text text-muted mt-1">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        يظهر فقط الأطفال حديثي الولادة (أقل من سنة)
-                                    </small>
-                                @endif
+                                        اكتب جزءاً من اسم المريض أو رقم الهاتف للبحث الفوري واختيار الملف.
+                                    </div>
+                                </div>
+
+                                <!-- بطاقة المريض المختار -->
+                                <div id="selectedPatientCard" class="card border-primary bg-light shadow-sm" style="{{ old('patient_id') || isset($patient) ? '' : 'display: none;' }}">
+                                    <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 46px; height: 46px;">
+                                                <i class="fas fa-female fa-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-primary" id="selectedPatientName">
+                                                    {{ old('patient_name', optional($patient?->user)->name ?? '') }}
+                                                </h6>
+                                                <div class="small text-muted d-flex flex-wrap gap-2 mt-1 align-items-center">
+                                                    <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ optional($patient?->user)->phone ?? 'لا يوجد هاتف' }}</span></span>
+                                                    <span class="badge bg-secondary" id="selectedPatientIdBadge">#{{ old('patient_id', $patient?->id ?? '') }}</span>
+                                                    <span class="badge bg-info text-dark" id="selectedPatientAgeBadge" style="{{ isset($patient) && $patient->age !== null ? '' : 'display: none;' }}">
+                                                        <span id="selectedPatientAgeText">{{ isset($patient) && $patient->age !== null ? ($patient->age < 1 ? 'أقل من سنة' : $patient->age . ' سنة') : '' }}</span>
+                                                    </span>
+                                                    <span class="badge bg-success" id="selectedPatientInsuranceBadge" style="{{ isset($patient) && $patient->insurance_type === 'hi' ? '' : 'display: none;' }}">
+                                                        <i class="fas fa-shield-alt me-1"></i><span id="selectedPatientInsuranceText">مشمول بالضمان الصحي</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="clearSelectedPatientBtn">
+                                            <i class="fas fa-times me-1"></i> تغيير المريض
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- حقل اسم الطفل الخديج (اختياري) -->
+                            <div class="col-md-12 mb-2">
+                                <label for="baby_name" class="form-label fw-bold">
+                                    <i class="fas fa-baby text-primary me-1"></i>
+                                    اسم الطفل الخديج 
+                                    <small class="text-muted fw-normal">(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)</small>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fas fa-id-badge text-primary"></i></span>
+                                    <input type="text" name="baby_name" id="baby_name" 
+                                           class="form-control @error('baby_name') is-invalid @enderror" 
+                                           placeholder="مثال: طفل مريم علي / حيدر احمد" 
+                                           value="{{ old('baby_name') }}">
+                                </div>
+                                @error('baby_name')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
 
@@ -546,6 +584,168 @@ document.addEventListener('DOMContentLoaded', function() {
         const existingModal = new bootstrap.Modal(document.getElementById('existingReservationModal'));
         existingModal.show();
     @endif
+
+    // البحث الحي عن المرضى (Live Patient Search)
+    const patientSearchInput = document.getElementById('patientSearchInput');
+    const patientSearchResults = document.getElementById('patientSearchResults');
+    const patientSearchSpinner = document.getElementById('patientSearchSpinner');
+    const patientSearchContainer = document.getElementById('patientSearchContainer');
+    const selectedPatientCard = document.getElementById('selectedPatientCard');
+    const selectedPatientName = document.getElementById('selectedPatientName');
+    const selectedPatientPhone = document.getElementById('selectedPatientPhone');
+    const selectedPatientIdBadge = document.getElementById('selectedPatientIdBadge');
+    const selectedPatientAgeBadge = document.getElementById('selectedPatientAgeBadge');
+    const selectedPatientAgeText = document.getElementById('selectedPatientAgeText');
+    const selectedPatientInsuranceBadge = document.getElementById('selectedPatientInsuranceBadge');
+    const clearSelectedPatientBtn = document.getElementById('clearSelectedPatientBtn');
+    const patientIdInput = document.getElementById('patient_id');
+    const babyNameInput = document.getElementById('baby_name');
+
+    let searchTimeout = null;
+
+    if (patientSearchInput) {
+        patientSearchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+
+            if (query.length < 1) {
+                patientSearchResults.style.display = 'none';
+                patientSearchResults.innerHTML = '';
+                return;
+            }
+
+            if (patientSearchSpinner) patientSearchSpinner.style.display = 'block';
+
+            searchTimeout = setTimeout(() => {
+                fetch(`{{ route('incubator-reservations.search-patients') }}?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (patientSearchSpinner) patientSearchSpinner.style.display = 'none';
+                        patientSearchResults.innerHTML = '';
+
+                        if (!data || data.length === 0) {
+                            patientSearchResults.innerHTML = `
+                                <div class="list-group-item text-center py-3 text-muted">
+                                    <i class="fas fa-user-slash me-1"></i> لا توجد نتائج مطابقة
+                                    <br>
+                                    <a href="{{ route('patients.create') }}" target="_blank" class="btn btn-sm btn-link mt-1">
+                                        <i class="fas fa-plus"></i> تسجيل مريض جديد الآن
+                                    </a>
+                                </div>
+                            `;
+                            patientSearchResults.style.display = 'block';
+                            return;
+                        }
+
+                        data.forEach(p => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'list-group-item list-group-item-action py-2 px-3 text-start';
+                            const ageStr = p.age !== null && p.age !== undefined ? (p.age < 1 ? 'أقل من سنة' : p.age + ' سنة') : 'العمر غير مسجل';
+                            const isInsured = p.insurance_type === 'hi';
+
+                            btn.innerHTML = `
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="text-primary"><i class="fas fa-user me-1 text-secondary"></i>${p.name}</strong>
+                                        <div class="small text-muted">
+                                            <i class="fas fa-phone me-1"></i>${p.phone} 
+                                            ${p.national_id ? ' | رقم الهوية: ' + p.national_id : ''}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-secondary mb-1">${ageStr}</span>
+                                        ${isInsured ? '<br><span class="badge bg-success">ضمان صحي</span>' : ''}
+                                    </div>
+                                </div>
+                            `;
+
+                            btn.addEventListener('click', function() {
+                                selectPatient(p);
+                            });
+
+                            patientSearchResults.appendChild(btn);
+                        });
+
+                        patientSearchResults.style.display = 'block';
+                    })
+                    .catch(err => {
+                        console.error('Search error:', err);
+                        if (patientSearchSpinner) patientSearchSpinner.style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        // إغلاق النتائج عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            if (patientSearchInput && patientSearchResults && !patientSearchInput.contains(e.target) && !patientSearchResults.contains(e.target)) {
+                patientSearchResults.style.display = 'none';
+            }
+        });
+    }
+
+    function selectPatient(p) {
+        if (!patientIdInput) return;
+        patientIdInput.value = p.id;
+        if (selectedPatientName) selectedPatientName.textContent = p.name;
+        if (selectedPatientPhone) selectedPatientPhone.textContent = p.phone;
+        if (selectedPatientIdBadge) selectedPatientIdBadge.textContent = '#' + p.id;
+
+        if (selectedPatientAgeBadge && selectedPatientAgeText) {
+            if (p.age !== null && p.age !== undefined) {
+                selectedPatientAgeText.textContent = p.age < 1 ? 'أقل من سنة' : p.age + ' سنة';
+                selectedPatientAgeBadge.style.display = 'inline-block';
+            } else {
+                selectedPatientAgeBadge.style.display = 'none';
+            }
+        }
+
+        if (selectedPatientInsuranceBadge) {
+            if (p.insurance_type === 'hi') {
+                selectedPatientInsuranceBadge.style.display = 'inline-block';
+                // تفعيل خيار الضمان الصحي تلقائياً إن كان المريض مشمولاً
+                const hiRadio = document.getElementById('type_hi');
+                if (hiRadio && !hiRadio.checked) {
+                    hiRadio.checked = true;
+                    hiRadio.dispatchEvent(new Event('change'));
+                }
+                if (p.policy_category) {
+                    const polCat = document.getElementById('policy_category');
+                    if (polCat) {
+                        polCat.value = p.policy_category;
+                        polCat.dispatchEvent(new Event('change'));
+                    }
+                }
+                if (p.insurance_card_no) {
+                    const cardInput = document.getElementById('insurance_card_no');
+                    if (cardInput && !cardInput.value) {
+                        cardInput.value = p.insurance_card_no;
+                    }
+                }
+            } else {
+                selectedPatientInsuranceBadge.style.display = 'none';
+            }
+        }
+
+        // اقتراح اسم الطفل إذا كان حقله فارغاً
+        if (babyNameInput && !babyNameInput.value) {
+            babyNameInput.placeholder = p.name.startsWith('طفل') ? p.name : ('طفل ' + p.name);
+        }
+
+        if (patientSearchResults) patientSearchResults.style.display = 'none';
+        if (patientSearchContainer) patientSearchContainer.style.display = 'none';
+        if (selectedPatientCard) selectedPatientCard.style.display = 'block';
+    }
+
+    if (clearSelectedPatientBtn) {
+        clearSelectedPatientBtn.addEventListener('click', function() {
+            if (patientIdInput) patientIdInput.value = '';
+            if (patientSearchInput) patientSearchInput.value = '';
+            if (selectedPatientCard) selectedPatientCard.style.display = 'none';
+            if (patientSearchContainer) patientSearchContainer.style.display = 'block';
+            if (patientSearchInput) patientSearchInput.focus();
+        });
+    }
 
     // التبديل الديناميكي بين الكاش والضمان الصحي
     const typeRadios = document.querySelectorAll('input[name="insurance_type"]');
