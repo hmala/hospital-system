@@ -35,6 +35,26 @@
         $isInsured = ($insuranceType && $insuranceType !== 'none');
 
         $verifyUrl = url('/radiology-staff/requests/' . $radiology->id . '/show');
+
+        // Official Al-Kafa'at Hospital Logo (Base64 embedded for 100% online/offline reliability)
+        $hospitalLogoSrc = null;
+        $logoCandidates = [
+            public_path('images/logo.jpeg'),
+            public_path('images/1.jpg'),
+            public_path('images/لوغو.png'),
+            public_path('images/hospital-logo.svg'),
+        ];
+        foreach ($logoCandidates as $cand) {
+            if (file_exists($cand) && filesize($cand) > 0) {
+                $ext = strtolower(pathinfo($cand, PATHINFO_EXTENSION));
+                $mime = ($ext === 'svg') ? 'image/svg+xml' : (($ext === 'png') ? 'image/png' : 'image/jpeg');
+                $hospitalLogoSrc = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($cand));
+                break;
+            }
+        }
+        if (!$hospitalLogoSrc) {
+            $hospitalLogoSrc = asset('images/logo.jpeg');
+        }
     @endphp
 
     <title>تقرير فحص السونار والأشعة - #{{ $radiology->id }} - {{ $patientName }}</title>
@@ -158,7 +178,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background-image: url('{{ asset('images/1.jpg') }}');
+            background-image: url('{!! $hospitalLogoSrc !!}');
             background-repeat: no-repeat;
             background-position: center 48%;
             background-size: 50% auto;
@@ -627,7 +647,7 @@
                         <p>وحدة الموجات فوق الصوتية والتشخيص الإشعاعي المعتمد</p>
                     </div>
                     <div class="header-logo">
-                        <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
+                        <img src="{!! $hospitalLogoSrc !!}" alt="شعار مستشفى الكفاءات الأهلي" style="max-height: 85px; max-width: 120px; object-fit: contain;">
                     </div>
                     <div class="header-hospital-en">
                         <h2>Al-Kafa'at Private Hospital</h2>
