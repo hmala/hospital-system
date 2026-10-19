@@ -643,6 +643,14 @@ class RadiologyStaffController extends Controller
                 ->first();
         }
 
+        if (empty($resultData['findings']) && $radiologyRequest && $radiologyRequest->result) {
+            $resultData['findings'] = $radiologyRequest->result->findings ?? '';
+            $resultData['impression'] = $resultData['impression'] ?? ($radiologyRequest->result->impression ?? '');
+            $resultData['recommendations'] = $resultData['recommendations'] ?? ($radiologyRequest->result->recommendations ?? '');
+            $resultData['images'] = $resultData['images'] ?? ($radiologyRequest->result->images ?? []);
+            $resultData['radiologist'] = $resultData['radiologist'] ?? optional($radiologyRequest->result->radiologist)->name;
+        }
+
         // تحديد أنواع الأشعة المتاحة لهذا الموظف بناءً على تخصصه
         $userCategory = $this->getRadiologyCategoryForUser($user);
         $typesQuery = \App\Models\RadiologyType::where('is_active', true);
@@ -833,58 +841,81 @@ class RadiologyStaffController extends Controller
      */
     public function print(MedicalRequest $request)
     {
-        $request->load(['visit.patient.user', 'visit.doctor.user']);
+        $request->load(['visit.patient.user', 'visit.doctor.user', 'visit.department']);
 
-        // Check if there is a RadiologyRequest
-        $radiology = null;
+        // Check if there is an associated RadiologyRequest
+        $radiologyReq = null;
         if ($request->visit_id) {
-            $radiology = \App\Models\RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType', 'result.radiologist'])
+            $radiologyReq = \App\Models\RadiologyRequest::with(['patient.user', 'doctor.user', 'radiologyType', 'result.radiologist'])
                 ->where('visit_id', $request->visit_id)
                 ->first();
         }
 
-        if (!$radiology) {
+        // Get result data from MedicalRequest first, then fallback to RadiologyResult if empty
+        $resultData = [];
+        if ($request->result) {
             $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-            if (!is_array($resultData)) $resultData = ['findings' => (string)($request->result ?? '')];
+            if (!is_array($resultData)) {
+                $resultData = ['findings' => (string)$request->result];
+            }
+        }
 
+        // Fallback to RadiologyResult if findings are not in MedicalRequest
+        if (empty($resultData['findings']) && $radiologyReq && $radiologyReq->result) {
+            $resultData['findings'] = $radiologyReq->result->findings ?? '';
+            $resultData['impression'] = $resultData['impression'] ?? ($radiologyReq->result->impression ?? '');
+            $resultData['recommendations'] = $resultData['recommendations'] ?? ($radiologyReq->result->recommendations ?? '');
+            $resultData['images'] = $resultData['images'] ?? ($radiologyReq->result->images ?? []);
+            $resultData['radiologist'] = $resultData['radiologist'] ?? optional($radiologyReq->result->radiologist)->name;
+            $resultData['reported_at'] = $resultData['reported_at'] ?? $radiologyReq->result->reported_at;
+        }
+
+        // Build unified robust $radiology object for the view
+        $radiologyType = null;
+        if ($radiologyReq && $radiologyReq->radiologyType) {
+            $radiologyType = $radiologyReq->radiologyType;
+        } else {
             $radiologyType = (object)[
                 'name' => implode(', ', $request->radiology_names) ?: ($request->description ?: 'فحص تصوير'),
                 'code' => 'RAD-' . $request->id,
                 'category' => $request->subtype ?? 'الأشعة والتصوير'
             ];
-
-            $radiologistObj = (object)[
-                'name' => $resultData['radiologist'] ?? auth()->user()->name
-            ];
-
-            $resultObj = (object)[
-                'findings' => $resultData['findings'] ?? '',
-                'impression' => $resultData['impression'] ?? '',
-                'recommendations' => $resultData['recommendations'] ?? '',
-                'images' => $resultData['images'] ?? [],
-                'reported_at' => !empty($resultData['reported_at']) ? \Carbon\Carbon::parse($resultData['reported_at']) : now(),
-                'radiologist' => $radiologistObj
-            ];
-
-            $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-            if (!is_array($details)) $details = [];
-
-            $radiology = (object)[
-                'id' => $request->id,
-                'patient' => $request->visit?->patient,
-                'doctor' => $request->visit?->doctor,
-                'radiologyType' => $radiologyType,
-                'clinical_indication' => $details['clinical_indication'] ?? $request->description,
-                'specific_instructions' => $details['notes'] ?? '',
-                'notes' => $details['notes'] ?? '',
-                'created_at' => $request->created_at,
-                'status' => $request->status,
-                'result' => $resultObj,
-                'payment_status' => $request->payment_status,
-            ];
         }
 
-        return view('radiology.print', compact('radiology'));
+        $radiologistObj = (object)[
+            'name' => $resultData['radiologist'] ?? auth()->user()->name
+        ];
+
+        $resultObj = (object)[
+            'findings' => $resultData['findings'] ?? '',
+            'impression' => $resultData['impression'] ?? '',
+            'recommendations' => $resultData['recommendations'] ?? '',
+            'images' => $resultData['images'] ?? [],
+            'reported_at' => !empty($resultData['reported_at']) ? \Carbon\Carbon::parse($resultData['reported_at']) : ($request->updated_at ?? now()),
+            'radiologist' => $radiologistObj
+        ];
+
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($details)) $details = [];
+
+        $radiology = (object)[
+            'id' => $request->id,
+            'patient' => $request->visit?->patient ?? $radiologyReq?->patient,
+            'doctor' => $request->visit?->doctor ?? $radiologyReq?->doctor,
+            'radiologyType' => $radiologyType,
+            'clinical_indication' => $details['clinical_indication'] ?? $request->description ?? $radiologyReq?->clinical_indication ?? '',
+            'specific_instructions' => $details['notes'] ?? '',
+            'notes' => $details['notes'] ?? '',
+            'created_at' => $request->created_at,
+            'requested_date' => $request->created_at ?? now(),
+            'status' => $request->status,
+            'result' => $resultObj,
+            'payment_status' => $request->payment_status,
+            'insurance_type' => $request->insurance_type ?? optional($request->visit)->patient?->insurance_type ?? 'none',
+            'medical_request' => $request,
+        ];
+
+        return view('radiology.print', compact('radiology', 'request'));
     }
 
     /**

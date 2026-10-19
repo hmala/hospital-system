@@ -24,6 +24,7 @@ class Request extends Model
 
     protected $casts = [
         'details' => 'array',
+        'result' => 'array',
     ];
 
     public function getTotalAmountAttribute()

@@ -164,11 +164,9 @@
                     <i class="fas fa-ban me-1"></i> إلغاء الطلب الخارجي
                 </button>
             @endif
-            @if($hasResult)
-                <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn btn-outline-success px-3 py-2 fw-semibold">
-                    <i class="fas fa-print me-1"></i> طباعة التقرير الطبي
-                </a>
-            @endif
+            <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn {{ $hasResult ? 'btn-outline-success' : 'btn-outline-primary' }} px-3 py-2 fw-semibold">
+                <i class="fas fa-print me-1"></i> {{ $hasResult ? 'طباعة التقرير الطبي المعتمد' : 'معاينة / طباعة استمارة التقرير' }}
+            </a>
             <a href="{{ route('radiology-staff.index') }}" class="btn btn-light border px-3 py-2 text-secondary fw-semibold">
                 <i class="fas fa-arrow-right me-1"></i> العودة لطابور الفحص
             </a>
