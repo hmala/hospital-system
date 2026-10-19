@@ -28,4 +28,12 @@ class UserLabTestGroup extends Model
     {
         return $this->belongsToMany(LabTest::class, 'user_lab_test_group_lab_test', 'group_id', 'lab_test_id');
     }
+
+    /**
+     * Accessor للتوافق المباشر مع استدعاء tests
+     */
+    public function getTestsAttribute()
+    {
+        return $this->labTests;
+    }
 }

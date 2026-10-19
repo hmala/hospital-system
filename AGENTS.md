@@ -57,6 +57,22 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-19 — المرحلة 87: إصلاح باقاتي السريعة للمختبر وتفعيل الفلترة اللحظية الذكية وإلغاء التحديد بالنقر المزدوج Doctor Consultation Quick Lab Packages Fix, Instant Filter & Toggle Deselection)
+
+### Done
+- **إصلاح أزرار الباقات السريعة وعداد الفحوصات ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php) & [app/Models/UserLabTestGroup.php](file:///c:/wamp64/www/hospital-system/app/Models/UserLabTestGroup.php))**:
+  * حل مشكلة عدم استجابة باقات المختبر السريعة للطبيب: استبدال استدعاء `$pkg->tests` الذي كان يرجع `null` بالخاصية الصحيحة `$pkg->labTests->pluck('id')` و `$pkg->labTests->pluck('name')`.
+  * إضافة دالة الـ Accessor المتوافقة `getTestsAttribute()` في نموذج `UserLabTestGroup` لضمان عدم حدوث أي خطأ عند استدعاء `$group->tests`.
+  * تصحيح شارة عداد الفحوصات في الباقة لتعرض العدد الفعلي لفحوصات الباقة `{{ $pkg->labTests->count() }}`.
+- **الفلترة اللحظية الذكية وعرض فحوصات الباقة فقط**:
+  * عند النقر على الباقة لأول مرة، يتم اختيار كافة فحوصاتها وتصفية شبكة التحاليل فورياً لعرض فحوصات الباقة فقط، لتمكين الطبيب من مراجعتها وتعديلها بسهولة دون التشتت في شبكة الـ 600+ فحص.
+  * إظهار شريط إشعار تفاعلي أنيق أعلى الشبكة (`#docLabActiveFilterNotice`) يوضح اسم الباقة النشطة وعدد الفحوصات وزر `[ إلغاء الفلترة وعرض كافة الفحوصات ]`.
+  * إضافة تبويب سريع في شريط الفئات: **[ 🎯 المختارة فقط ]** (`SELECTED_ONLY`) لعرض كافة الفحوصات المحددة حالياً في أي وقت.
+- **إلغاء التحديد وإلغاء الفلترة عند النقر مجدداً على الباقة (Toggle Deselection & Reset)**:
+  * عند النقر مرة ثانية على زر نفس الباقة المفعلة أو إذا كانت كافة فحوصاتها محددة بالفعل، يتم تلقائياً إلغاء تحديد كافة فحوصات هذه الباقة (`cb.checked = false`)، وإلغاء فلترة الباقة لتعود الشبكة لعرض كافة الفحوصات، وتحديث شريط الفحوصات المختارة فورياً.
+- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorLabQuickPackagesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorLabQuickPackagesTest.php))**:
+  * إنشاء واجتياز اختبار الميزة بنجاح كامل (`2 passed, 9 assertions`).
+
 ## Session log (2026-10-19 — المرحلة 86: ترقية موضع التشخيص الطبي ICD-10 لكارت عريض بارز وفصل حقل التوصيات وإلغاء التعبئة التلقائية Doctor Consultation ICD-10 Full-Width Prominence & Clean Clinical Notes)
 
 ### Done

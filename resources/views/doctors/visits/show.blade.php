@@ -1098,11 +1098,12 @@
                                         @foreach($labTestGroups as $pkg)
                                             <button type="button" 
                                                     class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 doc-lab-quick-pkg-btn" 
-                                                    data-tests="{{ json_encode($pkg->tests) }}"
+                                                    data-test-ids="{{ json_encode($pkg->labTests->pluck('id')) }}"
+                                                    data-tests="{{ json_encode($pkg->labTests->pluck('name')) }}"
                                                     data-pkg-name="{{ $pkg->name }}">
                                                 <i class="fas fa-layer-group me-1 opacity-75"></i>
                                                 <strong>{{ $pkg->name }}</strong>
-                                                <span class="badge bg-primary-subtle text-primary rounded-pill ms-1">{{ count($pkg->tests ?? []) }}</span>
+                                                <span class="badge bg-primary-subtle text-primary rounded-pill ms-1">{{ $pkg->labTests->count() }}</span>
                                             </button>
                                         @endforeach
                                     </div>
@@ -1192,6 +1193,9 @@
                                     <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 doc-cat-pill active" data-category="ALL">
                                         الكل <span class="badge bg-white text-primary ms-1">{{ $labTests->count() }}</span>
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 doc-cat-pill" data-category="SELECTED_ONLY" id="docLabFilterSelectedBtn">
+                                        <i class="fas fa-check-circle me-1"></i> المختارة فقط <span class="badge bg-success-subtle text-success ms-1 doc-lab-selected-count">0</span>
+                                    </button>
                                     @foreach($grouped as $category => $tests)
                                         <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-cat-pill" data-category="{{ $category }}">
                                             {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $tests->count() }}</span>
@@ -1211,9 +1215,28 @@
                                 @endif
                             </div>
 
+                            <!-- شريط إشعار فلترة الباقة النشطة -->
+                            <div id="docLabActiveFilterNotice" class="d-none alert alert-info py-2 px-3 mb-2 rounded-3 border-info d-flex align-items-center justify-content-between shadow-xs">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                        <i class="fas fa-layer-group"></i>
+                                    </div>
+                                    <span class="small fw-semibold text-dark">
+                                        يتم الآن عرض تحاليل باقة: <strong id="docLabActivePkgTitle" class="text-primary"></strong> (<span id="docLabActivePkgCount">0</span> تحليل)
+                                    </span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill small" id="docLabResetPkgFilterBtn">
+                                    <i class="fas fa-times me-1"></i> إلغاء الفلترة وعرض الكل
+                                </button>
+                            </div>
+
                             <!-- 5. شبكة بطاقات التحاليل (Compact Grid) -->
                             <div id="docLabTestsGridContainer" style="max-height: 420px; overflow-y: auto; padding-right: 4px;">
                                 <div class="row g-2" id="docLabItemsGrid">
+                                    <div id="docLabNoFilterResults" class="col-12 text-center py-4 text-muted d-none">
+                                        <i class="fas fa-filter fa-2x mb-2 text-secondary opacity-50"></i>
+                                        <p class="mb-0 fw-semibold">لا توجد تحاليل مطابقة للفلتر المحدد.</p>
+                                    </div>
                                     @foreach($labTests as $test)
                                         @php
                                             $testCat = $catMap[strtolower(trim($test->subcategory ?? ''))] ?? ($test->subcategory ?: ($test->main_category ?: 'تحاليل عامة'));
@@ -4626,6 +4649,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let activeCategory = 'ALL';
         let activeInsuranceFilter = '{{ $isPatientInsurance ? "insurance" : "all" }}';
+        let activePackageTestIds = null;
+        let activePackageNames = null;
+        let activePackageBtn = null;
 
         // 1. تحديث حالة البطاقة والشارة
         function updateCardVisual(chk) {
@@ -4684,6 +4710,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectedChipsContainer.appendChild(chip);
                 });
             }
+
+            // تحديث حالة أزرار الباقات السريعة
+            pkgBtns.forEach(btn => {
+                let testIds = [];
+                let testNames = [];
+                try { testIds = JSON.parse(btn.getAttribute('data-test-ids') || '[]') || []; } catch(e) { testIds = []; }
+                try { testNames = JSON.parse(btn.getAttribute('data-tests') || '[]') || []; } catch(e) { testNames = []; }
+                const targetIds = (Array.isArray(testIds) ? testIds : []).map(id => String(id));
+                const targetNames = (Array.isArray(testNames) ? testNames : []).map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || ''))).filter(Boolean);
+
+                const matches = labCheckboxes.filter(cb => {
+                    const cbId = String(cb.getAttribute('data-test-id') || '');
+                    const cbName = normalizeText(cb.getAttribute('data-test-name') || cb.value || '');
+                    return (cbId && targetIds.includes(cbId)) || (cbName && targetNames.includes(cbName));
+                });
+
+                if (matches.length > 0 && matches.every(cb => cb.checked)) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary', 'active');
+                } else {
+                    btn.classList.remove('btn-primary', 'active');
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
         }
 
         // 3. ربط تغيير مربعات الاختيار
@@ -4694,21 +4744,47 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 4. فلترة بطاقات التحاليل حسب القسم والبحث والضمان
+        // 4. فلترة بطاقات التحاليل حسب القسم والبحث والضمان والباقة النشطة
         function filterGrid() {
             const q = normalizeText(searchInput.value);
+            let visibleCount = 0;
+
             labCols.forEach(col => {
+                const id = String(col.getAttribute('data-id') || '');
                 const name = normalizeText(col.getAttribute('data-test-name') || '');
                 const code = normalizeText(col.getAttribute('data-test-code') || '');
                 const cat = col.getAttribute('data-category') || '';
                 const isIns = col.getAttribute('data-is-insurance') === '1';
+                const chk = col.querySelector('.doc-lab-chk');
+                const isChecked = chk && chk.checked;
 
-                const matchesCat = (activeCategory === 'ALL' || cat === activeCategory);
+                // 1. فلترة الباقة النشطة (إذا كان الطبيب قد ضغط على باقة سريعة)
+                let matchesPkg = true;
+                if (activePackageTestIds !== null) {
+                    matchesPkg = activePackageTestIds.includes(id) || (activePackageNames && activePackageNames.includes(name));
+                }
+
+                // 2. فلترة التصنيف الطبي أو المختارة فقط
+                let matchesCat = true;
+                if (activeCategory === 'SELECTED_ONLY') {
+                    matchesCat = isChecked;
+                } else if (activeCategory !== 'ALL') {
+                    matchesCat = (cat === activeCategory);
+                }
+
+                // 3. فلترة البحث والضمان
                 const matchesSearch = (!q || name.includes(q) || code.includes(q));
                 const matchesInsurance = (activeInsuranceFilter === 'all' || isIns);
 
-                col.style.display = (matchesCat && matchesSearch && matchesInsurance) ? '' : 'none';
+                const isVisible = matchesPkg && matchesCat && matchesSearch && matchesInsurance;
+                col.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
             });
+
+            const noResultsEl = document.getElementById('docLabNoFilterResults');
+            if (noResultsEl) {
+                noResultsEl.classList.toggle('d-none', visibleCount > 0);
+            }
         }
 
         // أزرار فلتر الضمان للمختبر
@@ -4843,25 +4919,60 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // 6. أزرار تصفية الأقسام (Category Pills)
+        function resetPackageFilter() {
+            activePackageTestIds = null;
+            activePackageNames = null;
+            activePackageBtn = null;
+            pkgBtns.forEach(b => {
+                b.classList.remove('btn-primary', 'shadow');
+                b.classList.add('btn-outline-primary');
+            });
+            const filterNotice = document.getElementById('docLabActiveFilterNotice');
+            if (filterNotice) filterNotice.classList.add('d-none');
+            filterGrid();
+        }
+
+        const resetPkgBtn = document.getElementById('docLabResetPkgFilterBtn');
+        if (resetPkgBtn) {
+            resetPkgBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                resetPackageFilter();
+            });
+        }
+
+        // 6. أزرار تصفية الأقسام (Category Pills) والمختارة فقط
         categoryPills.forEach(pill => {
             pill.addEventListener('click', function() {
+                // إلغاء فلتر الباقة عند النقر على تصنيف
+                if (activePackageBtn) {
+                    activePackageTestIds = null;
+                    activePackageNames = null;
+                    activePackageBtn = null;
+                    pkgBtns.forEach(b => {
+                        b.classList.remove('btn-primary', 'shadow');
+                        b.classList.add('btn-outline-primary');
+                    });
+                    const filterNotice = document.getElementById('docLabActiveFilterNotice');
+                    if (filterNotice) filterNotice.classList.add('d-none');
+                }
+
                 categoryPills.forEach(p => {
-                    p.classList.remove('btn-primary', 'active');
+                    p.classList.remove('btn-primary', 'btn-success', 'active', 'text-white');
                     p.classList.add('btn-outline-secondary');
                     const b = p.querySelector('.badge');
                     if (b) {
-                        b.classList.remove('bg-white', 'text-primary');
+                        b.classList.remove('bg-white', 'text-primary', 'text-success');
                         b.classList.add('bg-secondary-subtle', 'text-secondary');
                     }
                 });
 
+                const isSelectedBtn = this.getAttribute('data-category') === 'SELECTED_ONLY';
                 this.classList.remove('btn-outline-secondary');
-                this.classList.add('btn-primary', 'active');
+                this.classList.add(isSelectedBtn ? 'btn-success' : 'btn-primary', 'active', 'text-white');
                 const badge = this.querySelector('.badge');
                 if (badge) {
                     badge.classList.remove('bg-secondary-subtle', 'text-secondary');
-                    badge.classList.add('bg-white', 'text-primary');
+                    badge.classList.add('bg-white', isSelectedBtn ? 'text-success' : 'text-primary');
                 }
 
                 activeCategory = this.getAttribute('data-category');
@@ -4869,42 +4980,102 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 7. باقات المفضلات السريعة (Quick Groups)
+        // 7. باقات المفضلات السريعة (Quick Groups) - اختيار الفحوصات وتصفية الشبكة فورياً
         pkgBtns.forEach(btn => {
             btn.addEventListener('click', function() {
-                let testsArr = [];
+                let testIds = [];
+                let testNames = [];
                 try {
-                    testsArr = JSON.parse(this.getAttribute('data-tests') || '[]');
-                } catch(e) {
-                    testsArr = [];
+                    testIds = JSON.parse(this.getAttribute('data-test-ids') || '[]') || [];
+                } catch(e) { testIds = []; }
+                try {
+                    testNames = JSON.parse(this.getAttribute('data-tests') || '[]') || [];
+                } catch(e) { testNames = []; }
+
+                const targetIds = (Array.isArray(testIds) ? testIds : []).map(id => String(id));
+                const targetNames = (Array.isArray(testNames) ? testNames : [])
+                    .map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || '')))
+                    .filter(Boolean);
+
+                const matchingCheckboxes = labCheckboxes.filter(cb => {
+                    const cbId = String(cb.getAttribute('data-test-id') || '');
+                    const cbName = normalizeText(cb.getAttribute('data-test-name') || cb.value || '');
+                    return (cbId && targetIds.includes(cbId)) || (cbName && targetNames.includes(cbName));
+                });
+
+                if (matchingCheckboxes.length === 0) {
+                    alert('لم يتم العثور على أي تحاليل مفعلة لهذه الباقة في القائمة الحالية.');
+                    return;
                 }
-                const targetNames = testsArr.map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || ''))).filter(Boolean);
 
-                let allAlreadyChecked = true;
-                targetNames.forEach(tName => {
-                    const match = labCheckboxes.find(cb => normalizeText(cb.getAttribute('data-test-name') || cb.value) === tName);
-                    if (match && !match.checked) allAlreadyChecked = false;
-                });
+                // عند النقر مجدداً على نفس الباقة المفعلة أو إذا كانت كافة فحوصاتها محددة مسبقاً: إلغاء التحديد وإلغاء الفلترة
+                const isCurrentActive = (activePackageBtn === this);
+                const allAlreadyChecked = matchingCheckboxes.length > 0 && matchingCheckboxes.every(cb => cb.checked);
 
-                const newCheckedState = !allAlreadyChecked;
-
-                targetNames.forEach(tName => {
-                    const match = labCheckboxes.find(cb => normalizeText(cb.getAttribute('data-test-name') || cb.value) === tName);
-                    if (match) {
-                        match.checked = newCheckedState;
-                        updateCardVisual(match);
-                    }
-                });
-
-                if (newCheckedState) {
-                    this.classList.remove('btn-outline-primary');
-                    this.classList.add('btn-primary');
-                } else {
-                    this.classList.remove('btn-primary');
+                if (isCurrentActive || allAlreadyChecked) {
+                    matchingCheckboxes.forEach(cb => {
+                        cb.checked = false;
+                        updateCardVisual(cb);
+                    });
+                    this.classList.remove('btn-primary', 'shadow', 'active');
                     this.classList.add('btn-outline-primary');
+                    if (isCurrentActive) {
+                        resetPackageFilter();
+                    } else {
+                        filterGrid();
+                    }
+                    renderSelectedChips();
+                    return;
                 }
 
+                // إلغاء تفعيل أي باقة سابقة
+                pkgBtns.forEach(b => {
+                    b.classList.remove('btn-primary', 'shadow', 'active');
+                    b.classList.add('btn-outline-primary');
+                });
+
+                // تفعيل وتحديد كافة فحوصات هذه الباقة
+                matchingCheckboxes.forEach(cb => {
+                    cb.checked = true;
+                    updateCardVisual(cb);
+                });
+
+                // تمييز زر الباقة الحالية
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary', 'shadow');
+                activePackageBtn = this;
+                activePackageTestIds = targetIds;
+                activePackageNames = targetNames;
+
+                // تحديث شريط إشعار الباقة النشطة
+                const filterNotice = document.getElementById('docLabActiveFilterNotice');
+                const pkgTitle = document.getElementById('docLabActivePkgTitle');
+                const pkgCount = document.getElementById('docLabActivePkgCount');
+                if (filterNotice) {
+                    if (pkgTitle) pkgTitle.textContent = this.getAttribute('data-pkg-name') || 'الباقة';
+                    if (pkgCount) pkgCount.textContent = matchingCheckboxes.length;
+                    filterNotice.classList.remove('d-none');
+                }
+
+                // إرجاع تبويب الفئات إلى "الكل" حتى لا يتعارض مع فلتر الباقة
+                categoryPills.forEach(p => {
+                    p.classList.remove('btn-primary', 'btn-success', 'active', 'text-white');
+                    p.classList.add('btn-outline-secondary');
+                });
+                const allPill = document.querySelector('.doc-cat-pill[data-category="ALL"]');
+                if (allPill) {
+                    allPill.classList.remove('btn-outline-secondary');
+                    allPill.classList.add('btn-primary', 'active');
+                }
+                activeCategory = 'ALL';
+
+                // تطبيق الفلترة الفورية لعرض فحوصات هذه الباقة فقط
+                filterGrid();
                 renderSelectedChips();
+
+                // التمرير السلس لأعلى شبكة التحاليل
+                const gridContainer = document.getElementById('docLabTestsGridContainer');
+                if (gridContainer) gridContainer.scrollTop = 0;
             });
         });
 
@@ -4915,10 +5086,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     chk.checked = false;
                     updateCardVisual(chk);
                 });
-                pkgBtns.forEach(b => {
-                    b.classList.remove('btn-primary');
-                    b.classList.add('btn-outline-primary');
-                });
+                resetPackageFilter();
                 renderSelectedChips();
             });
         }
