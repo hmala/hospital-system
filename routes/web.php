@@ -408,6 +408,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/visits/{visit}/appointment/print', [DoctorVisitController::class, 'printAppointment'])->name('visits.appointment.print');
         Route::get('/visits/{visit}/substitution-requests', [DoctorVisitController::class, 'getSubstitutionRequests'])->name('visits.substitution-requests');
         Route::post('/prescriptions/items/{item}/respond-substitution', [DoctorVisitController::class, 'respondToSubstitution'])->name('prescriptions.items.respond-substitution');
+        Route::get('/icd10/search', [DoctorVisitController::class, 'searchIcd10'])->name('icd10.search');
     });
     
     // مسارات المريض للزيارات

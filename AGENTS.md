@@ -57,6 +57,32 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-19 — المرحلة 85: محرك البحث الذكي لتشخيصات ICD-10 بالأعمدة الثلاثة وترقية تبويب الفحص والتشخيص المنظم في الاستشارية Doctor Outpatient ICD-10 Live 3-Column Search & Balanced Tab Layout)
+
+### Done
+- **محرك البحث اللحظي لتشخيصات ICD-10 بالأعمدة الثلاثة ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * إضافة دالة `searchIcd10(HttpRequest $request)` تبحث في أعمدة `code` و `description_ar` و `description` مع ترتيب ذكي يبدأ بالمطابقة الدقيقة ثم بدايات النصوص، مع تحديد حد أقصى للنتائج لمنع أي بطء.
+  * تسجيل المسار السريع `GET /doctor/icd10/search` في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php).
+  * لا يتم عرض أو إرجاع أي نتائج إذا كان حقل البحث فارغاً (تطبيقاً لشرط "لا يعرض إلا عند بدء الكتابة").
+- **ترقية وتنظيم تبويب الفحص والتشخيص ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * **شريط العلامات الحيوية الرقمية (Digital Vitals Strip)**:
+    - بطاقات مصغرة متناسقة لكافة المؤشرات الحيوية (الضغط الانقباضي والانبساطي، النبض، الحرارة، التنفس، الأكسجين، الوزن، الطول).
+    - **حاسبة مؤشر كتلة الجسم الحية (Live BMI Calculator)**: حساب آلي فوري لمؤشر كتلة الجسم فور إدخال الوزن والطول وإظهار شارة ملونة ذكية (طبيعي / نقص وزن / وزن زائد / سمنة).
+  * **الصف الثنائي المتوازن (Two Balanced Columns Layout)**:
+    - **الجانب الأيمن**: كارت الشكوى السريرية والفحص الطبي (Physical Examination) بمساحة كتابة مريحة وواضحة.
+    - **الجانب الأيسر**: كارت التشخيص الطبي المعتمد (ICD-10):
+      * حقل البحث الذكي مع شارات اللغات وزر مسح سريع ومؤشر تحميل.
+      * قائمة منسدلة أنيقة (`icd10-autocomplete-dropdown`) تظهر شارة الرمز الطبي، الاسم بالعربي، الاسم بالإنكليزي، وتصنيف المرض.
+      * **بطاقة تأكيد التشخيص المختار النشطة (`selected_diagnosis_card`)**: تظهر فور اختيار التشخيص متضمنة الرمز والاسم وزر إلغاء واختيار تشخيص آخر.
+      * خيار التشخيص المخصص اليدوي (`other`).
+      * مربع ملاحظات وتفاصيل التشخيص الإضافية.
+  * **تسهيل التحقق والحفظ المرن**:
+    - جعل `diagnosis.description` اختيارياً (`nullable`) مع ملئه تلقائياً باسم التشخيص عند عدم كتابة ملاحظات إضافية، لمنع فشل الـ Validation وتسهيل عمل الطبيب.
+- **عرض التشخيص في استعراض الزيارة للقراءة فقط ([resources/views/doctors/visits/show-readonly.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show-readonly.blade.php))**:
+  * إظهار كود التشخيص بشارة ملونة واسم التشخيص العربي والإنجليزي والملاحظات بتنسيق سريري واضح.
+- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorIcd10SearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorIcd10SearchTest.php))**:
+  * اجتياز كامل لـ 6 اختبارات ميزة تغطي البحث بالرمز، العربي، الإنكليزي، الحقل الفارغ، حفظ التشخيص، ورسم المكونات الجديدة (`6 passed, 24 assertions`).
+
 ## Session log (2026-10-19 — المرحلة 84: السجل التراكمي لآخر 3 نتائج سابقة لكل فحص مخبري عمودياً أسفل النتيجة الحالية Lab Print Cumulative Previous Results & Delta Check History)
 
 ### Done

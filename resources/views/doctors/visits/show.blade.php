@@ -151,23 +151,89 @@
     z-index: 3;
 }
 
-/* تحسين مظهر datalist */
-datalist {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    max-height: 200px;
+/* تحسينات القائمة المنسدلة الذكية لتشخيصات ICD-10 */
+.icd10-autocomplete-wrapper {
+    position: relative;
+}
+.icd10-autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: 1060;
+    max-height: 380px;
     overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
-
-datalist option {
-    padding: 8px 12px;
-    border-bottom: 1px solid #f8f9fa;
-    transition: background-color 0.2s ease;
+.icd10-dropdown-header {
+    background-color: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
 }
-
-datalist option:hover {
-    background-color: #f8f9fa;
+.icd10-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    text-align: right;
+}
+.icd10-item:hover, .icd10-item.active {
+    background-color: #eff6ff !important;
+}
+.icd10-item:last-child {
+    border-bottom: none;
+}
+.icd10-code-badge {
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: linear-gradient(135deg, #005a9c, #0284c7);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+.icd10-title-ar {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.icd10-title-en {
+    color: #475569;
+    font-style: italic;
+    font-size: 0.85rem;
+    direction: ltr;
+    display: inline-block;
+}
+.icd10-category-badge {
+    font-size: 0.73rem;
+    color: #64748b;
+    background-color: #f1f5f9;
+    padding: 2px 7px;
+    border-radius: 4px;
+    max-width: 60%;
+}
+.icd10-empty-hint {
+    padding: 18px 14px;
+    text-align: center;
+    color: #64748b;
+}
+.icd10-custom-option {
+    background-color: #f8fafc;
+    border-top: 2px dashed #cbd5e1;
+    font-weight: 600;
+    color: #0284c7;
+}
+.icd10-custom-option:hover {
+    background-color: #e0f2fe !important;
 }
 
 /* تحسين النص المساعد */
@@ -719,162 +785,250 @@ datalist option:hover {
                     @endif
 
                     <!-- تاب 1: الفحص السريري والتشخيص -->
+                    <!-- تاب 1: الفحص السريري والتشخيص المنظم -->
                     <div id="examinationCollapse" class="workstation-panel show">
                         <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" id="examinationDiagnosisForm">
                             @csrf
                             @method('PUT')
 
-                            <!-- العلامات الحيوية -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 text-primary fw-bold pb-2 border-bottom d-flex align-items-center justify-content-between">
-                                    <span><i class="fas fa-heartbeat text-danger me-2"></i>العلامات الحيوية (Vital Signs)</span>
-                                    @if($examinationComplete)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle small">مكتملة</span>
-                                    @endif
-                                </h6>
-                                @php
-                                    $vitalSigns = $visit->vital_signs ?? [];
-                                @endphp
-                                <div class="row g-2">
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-tint text-danger me-1"></i>ضغط الدم الانقباضي
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" name="vital_signs[blood_pressure_systolic]" value="{{ old('vital_signs.blood_pressure_systolic', $vitalSigns['blood_pressure_systolic'] ?? '') }}" placeholder="120">
-                                            <span class="input-group-text">mmHg</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-tint text-info me-1"></i>ضغط الدم الانبساطي
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" name="vital_signs[blood_pressure_diastolic]" value="{{ old('vital_signs.blood_pressure_diastolic', $vitalSigns['blood_pressure_diastolic'] ?? '') }}" placeholder="80">
-                                            <span class="input-group-text">mmHg</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-heart text-danger me-1"></i>النبض (Pulse)
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" name="vital_signs[heart_rate]" value="{{ old('vital_signs.heart_rate', $vitalSigns['heart_rate'] ?? '') }}" placeholder="72">
-                                            <span class="input-group-text">bpm</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-thermometer-half text-warning me-1"></i>الحرارة (Temp)
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" step="0.1" class="form-control" name="vital_signs[temperature]" value="{{ old('vital_signs.temperature', $vitalSigns['temperature'] ?? '') }}" placeholder="36.5">
-                                            <span class="input-group-text">°C</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-wind text-primary me-1"></i>معدل التنفس (Resp)
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" name="vital_signs[respiratory_rate]" value="{{ old('vital_signs.respiratory_rate', $vitalSigns['respiratory_rate'] ?? '') }}" placeholder="16">
-                                            <span class="input-group-text">rpm</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-lungs text-success me-1"></i>الأكسجين (SpO2)
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" name="vital_signs[oxygen_saturation]" value="{{ old('vital_signs.oxygen_saturation', $vitalSigns['oxygen_saturation'] ?? '') }}" placeholder="98">
-                                            <span class="input-group-text">%</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-6 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-weight text-secondary me-1"></i>الوزن (Weight)
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" step="0.1" class="form-control" name="vital_signs[weight]" value="{{ old('vital_signs.weight', $vitalSigns['weight'] ?? '') }}" placeholder="70.5">
-                                            <span class="input-group-text">kg</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-6 mb-2">
-                                        <label class="form-label small fw-semibold">
-                                            <i class="fas fa-ruler-vertical text-secondary me-1"></i>الطول (Height)
-                                        </label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" step="0.1" class="form-control" name="vital_signs[height]" value="{{ old('vital_signs.height', $vitalSigns['height'] ?? '') }}" placeholder="170">
-                                            <span class="input-group-text">cm</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            @php
+                                $vitalSigns = $visit->vital_signs ?? [];
+                                $diagnosisData = $visit->diagnosis ?? [];
+                                $hasSelectedDiag = !empty($diagnosisData['code']) || !empty($diagnosisData['actual_code']);
+                                $initialCode = $diagnosisData['actual_code'] ?? ($diagnosisData['code'] ?? '');
+                                $initialText = $diagnosisData['code'] ?? '';
+                            @endphp
 
-                            <!-- الفحص السريري والشكوى -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 text-primary fw-bold pb-2 border-bottom">
-                                    <i class="fas fa-notes-medical text-primary me-2"></i>الشكوى والفحص السريري (Physical Examination)
-                                </h6>
-                                <div class="form-floating mb-3">
-                                    <textarea class="form-control" name="physical_examination" id="physical_examination" style="height: 100px;" placeholder="اكتب نتائج الفحص السريري والشكوى الرئيسية...">{{ old('physical_examination', $visit->physical_examination ?? '') }}</textarea>
-                                    <label for="physical_examination">الشكوى الرئيسية والفحص السريري</label>
-                                </div>
-                            </div>
-
-                            <!-- التشخيص ICD-10 -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 text-primary fw-bold pb-2 border-bottom d-flex align-items-center justify-content-between">
-                                    <span><i class="fas fa-stethoscope text-info me-2"></i>التشخيص الطبي (ICD-10 Diagnosis)</span>
-                                    @if($diagnosisComplete)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle small">مكتمل</span>
-                                    @endif
-                                </h6>
-                                @php
-                                    $diagnosisData = $visit->diagnosis ?? [];
-                                @endphp
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">رمز أو وصف التشخيص (ICD-10)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-primary text-white">
-                                                <i class="fas fa-search"></i>
+                            <!-- 1. بطاقة العلامات الحيوية الرقمية (Digital Vitals Strip) -->
+                            <div class="card border-0 shadow-sm rounded-3 mb-3 bg-light bg-opacity-50">
+                                <div class="card-header bg-white border-bottom py-2 px-3 d-flex flex-wrap align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                            <i class="fas fa-heartbeat"></i>
+                                        </div>
+                                        <h6 class="mb-0 fw-bold text-dark fs-6">العلامات الحيوية (Vital Signs)</h6>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span id="bmi_indicator_badge" class="badge bg-secondary small fw-bold px-2 py-1 d-none">
+                                            <i class="fas fa-weight-scale me-1"></i>BMI: --
+                                        </span>
+                                        @if($examinationComplete)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle small fw-semibold">
+                                                <i class="fas fa-check-circle me-1"></i>مكتملة
                                             </span>
-                                            <input type="text"
-                                                   class="form-control diagnosis-input"
-                                                   id="diagnosis_code"
-                                                   name="diagnosis[code]"
-                                                   placeholder="اكتب رمز أو وصف التشخيص..."
-                                                   value="{{ old('diagnosis.code', $diagnosisData['code'] ?? '') }}"
-                                                   autocomplete="off"
-                                                   list="icd10-list"
-                                                   title="ابدأ الكتابة للبحث في رموز ICD-10">
-                                            <input type="hidden" id="diagnosis_code_hidden" name="diagnosis[actual_code]" value="{{ old('diagnosis.actual_code', $diagnosisData['actual_code'] ?? $diagnosisData['code'] ?? '') }}">
-                                            <datalist id="icd10-list">
-                                                @foreach($icd10Codes as $code)
-                                                    <option value="{{ $code->code }} - {{ $code->description_ar ?: $code->description }}" data-code="{{ $code->code }}" data-search="{{ $code->code }} {{ $code->description_ar ?: '' }} {{ $code->description }}">
-                                                @endforeach
-                                                <option value="أخرى (أدخل يدوياً)" data-code="other" data-search="other أخرى يدوياً">
-                                            </datalist>
-                                        </div>
+                                        @endif
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="custom-code-container {{ old('diagnosis.code', $diagnosisData['code'] ?? '') == 'other' ? '' : 'd-none' }} mb-2">
-                                            <input type="text" class="form-control" name="diagnosis[custom_code]" id="custom_code" placeholder="أدخل رمز ICD مخصص" value="{{ old('diagnosis.custom_code', $diagnosisData['custom_code'] ?? '') }}">
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="row g-2">
+                                        <!-- ضغط الدم الانقباضي -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-tint text-danger me-1"></i>الانقباضي (Systolic)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control fw-bold" name="vital_signs[blood_pressure_systolic]" value="{{ old('vital_signs.blood_pressure_systolic', $vitalSigns['blood_pressure_systolic'] ?? '') }}" placeholder="120">
+                                                <span class="input-group-text text-muted bg-white">mmHg</span>
+                                            </div>
                                         </div>
-                                        <div class="form-floating">
-                                            <textarea class="form-control" name="diagnosis[description]" id="diagnosis_description" style="height: 80px;" placeholder="تفاصيل وملاحظات التشخيص">{{ old('diagnosis.description', $diagnosisData['description'] ?? '') }}</textarea>
-                                            <label for="diagnosis_description">تفاصيل وملاحظات التشخيص</label>
+
+                                        <!-- ضغط الدم الانبساطي -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-tint text-info me-1"></i>الانبساطي (Diastolic)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control fw-bold" name="vital_signs[blood_pressure_diastolic]" value="{{ old('vital_signs.blood_pressure_diastolic', $vitalSigns['blood_pressure_diastolic'] ?? '') }}" placeholder="80">
+                                                <span class="input-group-text text-muted bg-white">mmHg</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- النبض -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-heart text-danger me-1"></i>النبض (Pulse)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control fw-bold" name="vital_signs[heart_rate]" value="{{ old('vital_signs.heart_rate', $vitalSigns['heart_rate'] ?? '') }}" placeholder="72">
+                                                <span class="input-group-text text-muted bg-white">bpm</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- الحرارة -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-thermometer-half text-warning me-1"></i>الحرارة (Temp)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" step="0.1" class="form-control fw-bold" name="vital_signs[temperature]" value="{{ old('vital_signs.temperature', $vitalSigns['temperature'] ?? '') }}" placeholder="36.5">
+                                                <span class="input-group-text text-muted bg-white">°C</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- معدل التنفس -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-wind text-primary me-1"></i>التنفس (Resp)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control fw-bold" name="vital_signs[respiratory_rate]" value="{{ old('vital_signs.respiratory_rate', $vitalSigns['respiratory_rate'] ?? '') }}" placeholder="16">
+                                                <span class="input-group-text text-muted bg-white">rpm</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- الأكسجين -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-lungs text-success me-1"></i>الأكسجين (SpO2)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control fw-bold" name="vital_signs[oxygen_saturation]" value="{{ old('vital_signs.oxygen_saturation', $vitalSigns['oxygen_saturation'] ?? '') }}" placeholder="98">
+                                                <span class="input-group-text text-muted bg-white">%</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- الوزن -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-weight text-secondary me-1"></i>الوزن (Weight)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" step="0.1" class="form-control fw-bold vital-weight" name="vital_signs[weight]" value="{{ old('vital_signs.weight', $vitalSigns['weight'] ?? '') }}" placeholder="70">
+                                                <span class="input-group-text text-muted bg-white">kg</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- الطول -->
+                                        <div class="col-6 col-md-3 col-xl-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">
+                                                <i class="fas fa-ruler-vertical text-secondary me-1"></i>الطول (Height)
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" step="0.1" class="form-control fw-bold vital-height" name="vital_signs[height]" value="{{ old('vital_signs.height', $vitalSigns['height'] ?? '') }}" placeholder="170">
+                                                <span class="input-group-text text-muted bg-white">cm</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- زر الحفظ -->
-                            <div class="d-flex justify-content-end pt-3 border-top">
-                                <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm">
-                                    <i class="fas fa-save me-1"></i> حفظ الفحص والتشخيص
-                                </button>
+                            <!-- 2. الصف الثنائي المتوازن: الفحص السريري + التشخيص الطبي المعتمد -->
+                            <div class="row g-3 mb-3">
+                                <!-- الجانب الأيمن: الشكوى والفحص السريري -->
+                                <div class="col-lg-6">
+                                    <div class="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                                        <div class="card-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                    <i class="fas fa-notes-medical"></i>
+                                                </div>
+                                                <h6 class="mb-0 fw-bold text-dark fs-6">الشكوى والفحص السريري</h6>
+                                            </div>
+                                            <small class="text-muted">Physical Examination</small>
+                                        </div>
+                                        <div class="card-body p-3 d-flex flex-column">
+                                            <div class="form-floating flex-grow-1">
+                                                <textarea class="form-control border-light-subtle shadow-none" name="physical_examination" id="physical_examination" style="height: 160px; min-height: 140px; font-size: 0.95rem; line-height: 1.6;" placeholder="اكتب نتائج الفحص السريري والشكوى الرئيسية...">{{ old('physical_examination', $visit->physical_examination ?? '') }}</textarea>
+                                                <label for="physical_examination" class="text-muted">اكتب الشكوى الرئيسية للمريض، التاريخ المرضي، ونتائج الفحص السريري...</label>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fas fa-info-circle me-1 text-primary"></i>يمكنك توثيق الأعراض السريرية للمريض أو الضغط على اختصارات الفحص المعتادة.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- الجانب الأيسر: التشخيص الطبي ICD-10 -->
+                                <div class="col-lg-6">
+                                    <div class="card border-0 shadow-sm rounded-3 h-100 bg-white" style="border-top: 3px solid #005a9c !important;">
+                                        <div class="card-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                    <i class="fas fa-stethoscope"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold text-dark fs-6">التشخيص الطبي المعتمد (ICD-10)</h6>
+                                                </div>
+                                            </div>
+                                            @if($diagnosisComplete)
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle small fw-semibold">
+                                                    <i class="fas fa-check-circle me-1"></i>مكتمل
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body p-3 d-flex flex-column gap-2">
+                                            <!-- حقل البحث الذكي بالأعمدة الثلاثة -->
+                                            <div>
+                                                <label class="form-label small fw-semibold text-dark d-flex align-items-center justify-content-between mb-1">
+                                                    <span>رمز أو اسم التشخيص (ICD-10)</span>
+                                                    <span class="badge bg-light text-muted border small fw-normal">يقبل: الرمز • العربي • English</span>
+                                                </label>
+                                                <div class="position-relative icd10-autocomplete-wrapper">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text bg-primary text-white border-primary">
+                                                            <i class="fas fa-search" id="icd10-search-icon"></i>
+                                                        </span>
+                                                        <input type="text"
+                                                               class="form-control diagnosis-input shadow-none"
+                                                               id="diagnosis_code"
+                                                               name="diagnosis[code]"
+                                                               placeholder="اكتب للبحث (مثال: J00 أو التهاب أو Gastritis)..."
+                                                               value="{{ old('diagnosis.code', $diagnosisData['code'] ?? '') }}"
+                                                               autocomplete="off"
+                                                               title="ابدأ بالكتابة للبحث">
+                                                        <button type="button" class="btn btn-outline-secondary {{ !empty($diagnosisData['code']) ? '' : 'd-none' }}" id="btn-clear-diagnosis" title="مسح الحقل">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    <input type="hidden" id="diagnosis_code_hidden" name="diagnosis[actual_code]" value="{{ old('diagnosis.actual_code', $diagnosisData['actual_code'] ?? $diagnosisData['code'] ?? '') }}">
+                                                    
+                                                    <!-- القائمة المنسدلة الذكية للنتائج (مخفية كلياً ولا تظهر إلا عند الكتابة) -->
+                                                    <div id="icd10_dropdown" class="icd10-autocomplete-dropdown shadow-lg d-none"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- بطاقة التشخيص المختار النشطة (Selected Diagnosis Confirmation Card) -->
+                                            <div id="selected_diagnosis_card" class="p-2 rounded-3 border bg-primary bg-opacity-10 border-primary border-opacity-25 d-flex align-items-center justify-content-between {{ $hasSelectedDiag ? '' : 'd-none' }}">
+                                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                                    <span class="badge bg-primary font-monospace px-2 py-1 fs-6" id="selected_code_badge">{{ $initialCode }}</span>
+                                                    <div class="text-truncate">
+                                                        <strong class="d-block text-dark small" id="selected_ar_text">{{ $initialText }}</strong>
+                                                        <span class="text-muted small fst-italic text-truncate d-none" id="selected_en_text"></span>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2" id="btn_remove_selected_diag" title="إلغاء واختيار تشخيص آخر">
+                                                    <i class="fas fa-times-circle fs-5"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- حاوية الكود المخصص إذا تم اختيار أخرى -->
+                                            <div class="custom-code-container {{ old('diagnosis.code', $diagnosisData['code'] ?? '') == 'other' ? '' : 'd-none' }}">
+                                                <label class="form-label small fw-semibold text-primary mb-1">رمز ICD مخصص يدوي:</label>
+                                                <input type="text" class="form-control form-control-sm" name="diagnosis[custom_code]" id="custom_code" placeholder="أدخل رمز مخصص..." value="{{ old('diagnosis.custom_code', $diagnosisData['custom_code'] ?? '') }}">
+                                            </div>
+
+                                            <!-- تفاصيل وملاحظات التشخيص الإضافية -->
+                                            <div class="form-floating flex-grow-1 mt-1">
+                                                <textarea class="form-control border-light-subtle shadow-none" name="diagnosis[description]" id="diagnosis_description" style="height: 85px;" placeholder="تفاصيل وملاحظات التشخيص">{{ old('diagnosis.description', $diagnosisData['description'] ?? '') }}</textarea>
+                                                <label for="diagnosis_description" class="text-muted">تفاصيل أو توصيات سريرية متعلقة بالتشخيص...</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. شريط الحفظ والتأكيد السفلي -->
+                            <div class="card border-0 shadow-sm rounded-3 bg-white p-3 d-flex flex-wrap flex-row align-items-center justify-content-between gap-2">
+                                <div class="text-muted small">
+                                    <i class="fas fa-check-double text-success me-1"></i>
+                                    يتم حفظ الفحص السريري، العلامات الحيوية، والتشخيص في ملف المريض فوراً.
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="submit" class="btn btn-success px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+                                        <i class="fas fa-save"></i>
+                                        <span>حفظ الفحص والتشخيص</span>
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -3261,128 +3415,356 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-// وظيفة البحث المباشر في قائمة ICD-10
-document.getElementById('diagnosis_code').addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase().trim();
-    const datalist = document.getElementById('icd10-list');
-    const options = datalist.querySelectorAll('option');
+    // منظومة البحث الذكي اللحظي في تشخيصات ICD-10 بالأعمدة الثلاثة (الرمز، العربي، الإنكليزي)
+    (function() {
+        const input = document.getElementById('diagnosis_code');
+        const hiddenInput = document.getElementById('diagnosis_code_hidden');
+        const dropdown = document.getElementById('icd10_dropdown');
+        const searchIcon = document.getElementById('icd10-search-icon');
+        const clearBtn = document.getElementById('btn-clear-diagnosis');
+        const customContainer = document.querySelector('.custom-code-container');
+        const customCodeInput = document.getElementById('custom_code');
+        const descTextarea = document.getElementById('diagnosis_description');
 
-    if (searchTerm.length === 0) {
-        // إظهار جميع الخيارات إذا لم يكن هناك بحث
-        options.forEach(option => {
-            option.style.display = 'block';
+        if (!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let activeIndex = -1;
+        let currentResults = [];
+
+        // تحديث ظهور زر المسح عند التحميل
+        if (input.value && input.value.trim().length > 0) {
+            if (clearBtn) clearBtn.classList.remove('d-none');
+        }
+
+        // إغلاق القائمة عند النقر في أي مكان خارج الحقل
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.icd10-autocomplete-wrapper')) {
+                closeDropdown();
+            }
         });
-        return;
-    }
 
-    let hasResults = false;
-    let visibleCount = 0;
-    const maxVisible = 10; // حد أقصى للنتائج المعروضة
-
-    options.forEach(option => {
-        const fullValue = option.value.toLowerCase();
-        const searchData = (option.getAttribute('data-search') || '').toLowerCase();
-
-        // البحث في القيمة الكاملة (رمز + وصف) والبيانات المساعدة
-        const matches = fullValue.includes(searchTerm) || searchData.includes(searchTerm);
-
-        if (matches && visibleCount < maxVisible) {
-            option.style.display = 'block';
-            hasResults = true;
-            visibleCount++;
-        } else {
-            option.style.display = 'none';
+        function closeDropdown() {
+            dropdown.classList.add('d-none');
+            dropdown.innerHTML = '';
+            activeIndex = -1;
+            setLoading(false);
         }
-    });
 
-    // إضافة تأثير بصري عند البحث
-    if (searchTerm.length > 0) {
-        this.classList.add('animate__animated', 'animate__pulse');
-        setTimeout(() => {
-            this.classList.remove('animate__animated', 'animate__pulse');
-        }, 300);
-    }
-
-    // تحديث placeholder حسب النتائج
-    if (hasResults) {
-        this.style.borderColor = '#28a745'; // أخضر للنجاح
-    } else if (searchTerm.length > 0) {
-        this.style.borderColor = '#ffc107'; // أصفر للتحذير
-    } else {
-        this.style.borderColor = '#e9ecef'; // اللون الافتراضي
-    }
-});
-
-// تحسين تجربة المستخدم - البحث التلقائي والتركيز
-document.getElementById('diagnosis_code').addEventListener('focus', function() {
-    // إضافة تأثير عند التركيز
-    this.parentElement.classList.add('focused');
-
-    // إذا كان فارغاً، أضف placeholder مشجع
-    if (this.value === '') {
-        this.placeholder = 'اكتب هنا للبحث في رموز ICD-10...';
-    }
-});
-
-document.getElementById('diagnosis_code').addEventListener('blur', function() {
-    // إزالة التأثير عند فقدان التركيز
-    this.parentElement.classList.remove('focused');
-
-    // إعادة الplaceholder الأصلي
-    if (this.value === '') {
-        this.placeholder = 'اكتب رمز أو وصف التشخيص...';
-    }
-});
-
-// معالجة تغيير قيمة حقل التشخيص
-document.getElementById('diagnosis_code').addEventListener('change', function() {
-    const selectedValue = this.value;
-    const datalist = document.getElementById('icd10-list');
-    const options = datalist.querySelectorAll('option');
-    const hiddenInput = document.getElementById('diagnosis_code_hidden');
-
-    // البحث عن الخيار المحدد للحصول على الرمز الفعلي
-    let actualCode = selectedValue; // افتراضياً نفس القيمة
-
-    for (let option of options) {
-        if (option.value === selectedValue) {
-            actualCode = option.getAttribute('data-code') || selectedValue;
-            break;
+        function setLoading(isLoading) {
+            if (!searchIcon) return;
+            if (isLoading) {
+                searchIcon.className = 'fas fa-spinner fa-spin text-primary';
+            } else {
+                searchIcon.className = 'fas fa-search';
+            }
         }
-    }
 
-    // إذا لم نجد الخيار في datalist، حاول استخراج الرمز من القيمة المحددة
-    if (actualCode === selectedValue && selectedValue.includes(' - ')) {
-        actualCode = selectedValue.split(' - ')[0].trim();
-    }
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
 
-    // تحديث الحقل المخفي بالرمز الفعلي
-    hiddenInput.value = actualCode;
+        // البحث اللحظي عند الكتابة فقط (لا يعرض شيئاً عند التركيز وهو فارغ)
+        input.addEventListener('input', function() {
+            const query = this.value.trim();
 
-    if (selectedValue && selectedValue !== '') {
-        // إضافة تأثير نجاح
-        this.classList.add('animate__animated', 'animate__bounceIn');
-        setTimeout(() => {
-            this.classList.remove('animate__animated', 'animate__bounceIn');
-        }, 500);
-    }
+            if (clearBtn) {
+                if (query.length > 0) {
+                    clearBtn.classList.remove('d-none');
+                } else {
+                    clearBtn.classList.add('d-none');
+                }
+            }
 
-    const customCodeContainer = document.querySelector('.custom-code-container');
-    if (actualCode === 'other') {
-        customCodeContainer.style.display = 'block';
-        customCodeContainer.classList.add('animate__animated', 'animate__fadeIn');
-        setTimeout(() => {
-            customCodeContainer.classList.remove('animate__animated', 'animate__fadeIn');
-        }, 500);
-    } else {
-        customCodeContainer.classList.add('animate__animated', 'animate__fadeOut');
-        setTimeout(() => {
-            customCodeContainer.style.display = 'none';
-            customCodeContainer.classList.remove('animate__animated', 'animate__fadeOut');
-            document.getElementById('custom_code').value = '';
-        }, 300);
-    }
-});
+            // شرط جوهري: إذا كان الحقل فارغاً، تغلق القائمة فوراً ولا يعرض أي شيء
+            if (query.length < 1) {
+                closeDropdown();
+                hiddenInput.value = '';
+                return;
+            }
+
+            clearTimeout(debounceTimer);
+            setLoading(true);
+
+            debounceTimer = setTimeout(() => {
+                fetch(`{{ route('doctor.icd10.search') }}?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setLoading(false);
+                    currentResults = data || [];
+                    renderDropdown(query, currentResults);
+                })
+                .catch(err => {
+                    console.error('ICD10 Search Error:', err);
+                    setLoading(false);
+                });
+            }, 220);
+        });
+
+        function renderDropdown(query, results) {
+            activeIndex = -1;
+            dropdown.innerHTML = '';
+
+            if (!results || results.length === 0) {
+                dropdown.innerHTML = `
+                    <div class="icd10-empty-hint">
+                        <div class="mb-2 text-muted"><i class="fas fa-search me-1"></i> لا توجد نتائج مطابقة لـ "<strong>${escapeHtml(query)}</strong>"</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-fallback-custom">
+                            <i class="fas fa-edit me-1"></i> إدخال تشخيص مخصص يدوياً
+                        </button>
+                    </div>
+                `;
+                dropdown.classList.remove('d-none');
+
+                const fallbackBtn = document.getElementById('btn-fallback-custom');
+                if (fallbackBtn) {
+                    fallbackBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        selectCustom();
+                    });
+                }
+                return;
+            }
+
+            // شريط ترويسة النتائج
+            const header = document.createElement('div');
+            header.className = 'icd10-dropdown-header d-flex justify-content-between align-items-center';
+            header.innerHTML = `
+                <span><i class="fas fa-stethoscope me-1 text-primary"></i> نتائج التشخيص (${results.length})</span>
+                <small class="text-muted">انقر للاختيار أو تنقل بالأسهم</small>
+            `;
+            dropdown.appendChild(header);
+
+            results.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'icd10-item';
+                row.setAttribute('data-index', index);
+                row.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between mb-1 gap-2">
+                        <span class="icd10-code-badge">${escapeHtml(item.code)}</span>
+                        ${item.category ? `<span class="icd10-category-badge text-truncate" title="${escapeHtml(item.category)}"><i class="fas fa-tag me-1"></i>${escapeHtml(item.category)}</span>` : ''}
+                    </div>
+                    <div class="icd10-title-ar">${escapeHtml(item.description_ar || item.description)}</div>
+                    ${item.description ? `<div class="icd10-title-en text-truncate"><span class="text-muted me-1">EN:</span>${escapeHtml(item.description)}</div>` : ''}
+                `;
+
+                row.addEventListener('click', function() {
+                    selectItem(item);
+                });
+
+                dropdown.appendChild(row);
+            });
+
+            // خيار إدخال يدوي في ذيل القائمة
+            const customOption = document.createElement('div');
+            customOption.className = 'icd10-item icd10-custom-option';
+            customOption.innerHTML = `<i class="fas fa-plus-circle me-1 text-primary"></i> تشخيص آخر غير مدرج (إدخال يدوي مخصص)`;
+            customOption.addEventListener('click', function() {
+                selectCustom();
+            });
+            dropdown.appendChild(customOption);
+
+            dropdown.classList.remove('d-none');
+        }
+
+        const selectedDiagCard = document.getElementById('selected_diagnosis_card');
+        const selectedCodeBadge = document.getElementById('selected_code_badge');
+        const selectedArText = document.getElementById('selected_ar_text');
+        const selectedEnText = document.getElementById('selected_en_text');
+        const removeDiagBtn = document.getElementById('btn_remove_selected_diag');
+
+        function updateSelectedDiagCard(code, ar, en) {
+            if (!selectedDiagCard) return;
+            if (code) {
+                if (selectedCodeBadge) selectedCodeBadge.textContent = code;
+                if (selectedArText) selectedArText.textContent = ar || code;
+                if (selectedEnText) {
+                    if (en && en !== ar) {
+                        selectedEnText.textContent = en;
+                        selectedEnText.classList.remove('d-none');
+                    } else {
+                        selectedEnText.classList.add('d-none');
+                    }
+                }
+                selectedDiagCard.classList.remove('d-none');
+            } else {
+                selectedDiagCard.classList.add('d-none');
+            }
+        }
+
+        // زر إلغاء اختيار التشخيص في البطاقة
+        if (removeDiagBtn) {
+            removeDiagBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                resetDiagnosis();
+            });
+        }
+
+        function resetDiagnosis() {
+            input.value = '';
+            hiddenInput.value = '';
+            updateSelectedDiagCard(null);
+            if (clearBtn) clearBtn.classList.add('d-none');
+            closeDropdown();
+            if (customContainer) {
+                customContainer.style.display = 'none';
+                customContainer.classList.add('d-none');
+                if (customCodeInput) customCodeInput.value = '';
+            }
+            input.focus();
+        }
+
+        function selectItem(item) {
+            const arName = (item.description_ar || '').trim();
+            const enName = (item.description || '').trim();
+            
+            let label = item.code;
+            if (arName && enName && arName !== enName) {
+                label += ` - ${arName} (${enName})`;
+            } else if (arName) {
+                label += ` - ${arName}`;
+            } else if (enName) {
+                label += ` - ${enName}`;
+            }
+
+            input.value = label;
+            hiddenInput.value = item.code;
+
+            // تحديث بطاقة التشخيص المختار
+            updateSelectedDiagCard(item.code, arName, enName);
+
+            // تعبئة حقل تفاصيل وملاحظات التشخيص تلقائياً بالاسم إذا كان فارغاً
+            if (descTextarea && (!descTextarea.value || descTextarea.value.trim() === '')) {
+                descTextarea.value = (arName && enName && arName !== enName) ? `${arName} - ${enName}` : (arName || enName || item.code);
+            }
+
+            // إخفاء حقل الكود المخصص إذا كان ظاهراً
+            if (customContainer) {
+                customContainer.style.display = 'none';
+                customContainer.classList.add('d-none');
+                if (customCodeInput) customCodeInput.value = '';
+            }
+
+            if (clearBtn) clearBtn.classList.remove('d-none');
+            closeDropdown();
+
+            // تأثير بصري للنجاح
+            input.classList.add('animate__animated', 'animate__pulse');
+            setTimeout(() => input.classList.remove('animate__animated', 'animate__pulse'), 400);
+        }
+
+        function selectCustom() {
+            input.value = 'أخرى (تشخيص مخصص)';
+            hiddenInput.value = 'other';
+            updateSelectedDiagCard('أخرى', 'تشخيص مخصص غير مدرج', 'Custom Diagnosis');
+
+            if (customContainer) {
+                customContainer.style.display = 'block';
+                customContainer.classList.remove('d-none');
+                if (customCodeInput) {
+                    customCodeInput.focus();
+                }
+            }
+
+            if (clearBtn) clearBtn.classList.remove('d-none');
+            closeDropdown();
+        }
+
+        // زر المسح السريع
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                resetDiagnosis();
+            });
+        }
+
+        // التنقل بالأسهم ومفتاح Enter و Escape
+        input.addEventListener('keydown', function(e) {
+            if (dropdown.classList.contains('d-none')) return;
+
+            const items = dropdown.querySelectorAll('.icd10-item');
+            if (!items || items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex++;
+                if (activeIndex >= items.length) activeIndex = 0;
+                updateActiveItem(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex--;
+                if (activeIndex < 0) activeIndex = items.length - 1;
+                updateActiveItem(items);
+            } else if (e.key === 'Enter') {
+                if (activeIndex >= 0 && activeIndex < items.length) {
+                    e.preventDefault();
+                    items[activeIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+
+        function updateActiveItem(items) {
+            items.forEach((it, idx) => {
+                if (idx === activeIndex) {
+                    it.classList.add('active');
+                    it.scrollIntoView({ block: 'nearest' });
+                } else {
+                    it.classList.remove('active');
+                }
+            });
+        }
+
+        // حاسبة مؤشر كتلة الجسم الحية (Live BMI Calculator)
+        const weightInput = document.querySelector('.vital-weight');
+        const heightInput = document.querySelector('.vital-height');
+        const bmiBadge = document.getElementById('bmi_indicator_badge');
+
+        function calcBMI() {
+            if (!weightInput || !heightInput || !bmiBadge) return;
+            const w = parseFloat(weightInput.value);
+            const h = parseFloat(heightInput.value);
+
+            if (w > 0 && h > 0) {
+                const heightInMeters = h / 100;
+                const bmi = (w / (heightInMeters * heightInMeters)).toFixed(1);
+                let label = 'طبيعي';
+                let cls = 'bg-success text-white';
+
+                if (bmi < 18.5) {
+                    label = 'نقص وزن';
+                    cls = 'bg-info text-dark';
+                } else if (bmi >= 25 && bmi < 30) {
+                    label = 'وزن زائد';
+                    cls = 'bg-warning text-dark';
+                } else if (bmi >= 30) {
+                    label = 'سمنة';
+                    cls = 'bg-danger text-white';
+                }
+
+                bmiBadge.innerHTML = `<i class="fas fa-weight-scale me-1"></i>BMI: ${bmi} (${label})`;
+                bmiBadge.className = `badge ${cls} small fw-bold px-2 py-1`;
+                bmiBadge.classList.remove('d-none');
+            } else {
+                bmiBadge.classList.add('d-none');
+            }
+        }
+
+        if (weightInput && heightInput) {
+            weightInput.addEventListener('input', calcBMI);
+            heightInput.addEventListener('input', calcBMI);
+            // حساب أولي عند فتح الصفحة إذا كانت البيانات مسجلة
+            calcBMI();
+        }
+    })();
 });
 </script>
 

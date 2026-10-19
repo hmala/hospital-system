@@ -583,7 +583,7 @@ class DoctorVisitController extends Controller
         // إذا كانت البيانات تحتوي على تشخيص، فتتحقق منه
         if ($request->has('diagnosis')) {
             $rules['diagnosis'] = 'required|array';
-            $rules['diagnosis.description'] = 'required|string|max:1000';
+            $rules['diagnosis.description'] = 'nullable|string|max:1000';
             $rules['diagnosis.code'] = 'nullable|string';
             $rules['diagnosis.custom_code'] = 'nullable|string|max:10';
         }
@@ -616,7 +616,7 @@ class DoctorVisitController extends Controller
         $request->validate($rules);
 
         // إذا كان هناك تشخيص واختير "أخرى"، تأكد من وجود custom_code
-        if ($request->has('diagnosis') && $request->diagnosis['code'] === 'other' && empty($request->diagnosis['custom_code'])) {
+        if ($request->has('diagnosis') && ($request->diagnosis['code'] === 'other' || ($request->diagnosis['actual_code'] ?? '') === 'other') && empty($request->diagnosis['custom_code'])) {
             return back()->withErrors(['diagnosis.custom_code' => 'يرجى إدخال رمز ICD مخصص عند اختيار "أخرى".']);
         }
 
@@ -632,7 +632,11 @@ class DoctorVisitController extends Controller
         }
 
         if ($request->has('diagnosis')) {
-            $updateData['diagnosis'] = $request->diagnosis;
+            $diag = $request->diagnosis;
+            if (empty($diag['description']) && !empty($diag['code'])) {
+                $diag['description'] = $diag['code'];
+            }
+            $updateData['diagnosis'] = $diag;
         }
 
         if ($request->has('treatment_plan')) {
@@ -1520,4 +1524,41 @@ class DoctorVisitController extends Controller
             ]);
         }
     }
+
+    /**
+     * البحث الذكي اللحظي في رموز وتشخيصات ICD-10
+     * يبحث في الأعمدة الثلاثة: الرمز (code)، الوصف العربي (description_ar)، والوصف الإنجليزي (description)
+     */
+    public function searchIcd10(HttpRequest $request)
+    {
+        $q = trim($request->get('q', ''));
+        if (mb_strlen($q) < 1) {
+            return response()->json([]);
+        }
+
+        $user = Auth::user();
+        $doctorSpecialization = $user?->doctor?->specialization;
+
+        // استعلام فوري يبحث في الأعمدة الثلاثة ويرتب النتائج بالأولوية
+        $results = \App\Models\ICD10Code::query()
+            ->where(function ($query) use ($q) {
+                $query->where('code', 'LIKE', "%{$q}%")
+                      ->orWhere('description', 'LIKE', "%{$q}%")
+                      ->orWhere('description_ar', 'LIKE', "%{$q}%");
+            })
+            ->orderByRaw("
+                CASE 
+                    WHEN code = ? THEN 1
+                    WHEN code LIKE ? THEN 2
+                    WHEN description_ar LIKE ? THEN 3
+                    WHEN description LIKE ? THEN 4
+                    ELSE 5
+                END
+            ", [$q, "{$q}%", "{$q}%", "{$q}%"])
+            ->limit(40)
+            ->get(['id', 'code', 'description', 'description_ar', 'category']);
+
+        return response()->json($results);
+    }
 }
+

@@ -90,8 +90,20 @@
 
             @if($visit->diagnosis)
                 <div class="mb-3">
-                    <h6>التشخيص:</h6>
-                    <p>{{ is_array($visit->diagnosis) ? ($visit->diagnosis['description'] ?? '') : $visit->diagnosis }}</p>
+                    <h6 class="fw-bold text-primary"><i class="fas fa-stethoscope me-1"></i>التشخيص الطبي (ICD-10):</h6>
+                    @if(is_array($visit->diagnosis))
+                        @if(!empty($visit->diagnosis['code']))
+                            <div class="mb-1">
+                                <span class="badge bg-primary font-monospace">{{ $visit->diagnosis['actual_code'] ?? '' }}</span>
+                                <span class="fw-semibold text-dark ms-1">{{ $visit->diagnosis['code'] }}</span>
+                            </div>
+                        @endif
+                        @if(!empty($visit->diagnosis['description']) && $visit->diagnosis['description'] !== ($visit->diagnosis['code'] ?? ''))
+                            <p class="text-muted small mb-0">{{ $visit->diagnosis['description'] }}</p>
+                        @endif
+                    @else
+                        <p class="mb-0">{{ $visit->diagnosis }}</p>
+                    @endif
                 </div>
             @endif
 
