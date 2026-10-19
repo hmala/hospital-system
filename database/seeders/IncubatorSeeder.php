@@ -30,29 +30,27 @@ class IncubatorSeeder extends Seeder
             ]);
         }
 
-        // إنشاء 16 حاضنة بأنواع مختلفة
+        // إنشاء 16 حاضنة بنوعين معتمدين (حاضنة اعتيادية، وكبسولة علاج ضوئي)
         $incubators = [
-            // حاضنات عادية (1-6)
-            ['number' => '1', 'type' => 'normal', 'fee' => 50000],
-            ['number' => '2', 'type' => 'normal', 'fee' => 50000],
-            ['number' => '3', 'type' => 'normal', 'fee' => 50000],
-            ['number' => '4', 'type' => 'normal', 'fee' => 50000],
-            ['number' => '5', 'type' => 'normal', 'fee' => 50000],
-            ['number' => '6', 'type' => 'normal', 'fee' => 50000],
+            // حاضنات اعتيادية (1-14)
+            ['number' => '1', 'type' => 'normal', 'fee' => 0],
+            ['number' => '2', 'type' => 'normal', 'fee' => 0],
+            ['number' => '3', 'type' => 'normal', 'fee' => 0],
+            ['number' => '4', 'type' => 'normal', 'fee' => 0],
+            ['number' => '5', 'type' => 'normal', 'fee' => 0],
+            ['number' => '6', 'type' => 'normal', 'fee' => 0],
+            ['number' => '7', 'type' => 'normal', 'fee' => 0],
+            ['number' => '8', 'type' => 'normal', 'fee' => 0],
+            ['number' => '9', 'type' => 'normal', 'fee' => 0],
+            ['number' => '10', 'type' => 'normal', 'fee' => 0],
+            ['number' => '11', 'type' => 'normal', 'fee' => 0],
+            ['number' => '12', 'type' => 'normal', 'fee' => 0],
+            ['number' => '13', 'type' => 'normal', 'fee' => 0],
+            ['number' => '14', 'type' => 'normal', 'fee' => 0],
             
-            // حاضنات بأكسجين (7-11)
-            ['number' => '7', 'type' => 'oxygen', 'fee' => 75000],
-            ['number' => '8', 'type' => 'oxygen', 'fee' => 75000],
-            ['number' => '9', 'type' => 'oxygen', 'fee' => 75000],
-            ['number' => '10', 'type' => 'oxygen', 'fee' => 75000],
-            ['number' => '11', 'type' => 'oxygen', 'fee' => 75000],
-            
-            // حاضنات بعلاج ضوئي (12-16)
-            ['number' => '12', 'type' => 'phototherapy', 'fee' => 80000],
-            ['number' => '13', 'type' => 'phototherapy', 'fee' => 80000],
-            ['number' => '14', 'type' => 'phototherapy', 'fee' => 80000],
-            ['number' => '15', 'type' => 'phototherapy', 'fee' => 80000],
-            ['number' => '16', 'type' => 'phototherapy', 'fee' => 80000],
+            // كبسولات علاج ضوئي مكثف (15-16)
+            ['number' => '15', 'type' => 'capsule', 'fee' => 0],
+            ['number' => '16', 'type' => 'capsule', 'fee' => 0],
         ];
 
         foreach ($incubators as $incData) {
@@ -81,10 +79,8 @@ class IncubatorSeeder extends Seeder
     private function getDescription(string $type): string
     {
         return match($type) {
-            'normal' => 'حاضنة عادية للخدج - مجهزة بأنظمة التحكم بدرجة الحرارة والرطوبة',
-            'oxygen' => 'حاضنة مزودة بنظام أكسجين - للحالات التي تتطلب دعم تنفسي',
-            'phototherapy' => 'حاضنة مزودة بعلاج ضوئي - لعلاج الصفراء (اليرقان الوليدي)',
-            default => 'حاضنة للعناية بالخدج',
+            'capsule' => 'كبسولة علاج ضوئي مكثف للخدج (Phototherapy Capsule)',
+            default => 'حاضنة عناية فائقة للخدج (Incubator)',
         };
     }
 }

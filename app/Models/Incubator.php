@@ -29,12 +29,14 @@ class Incubator extends Model
     ];
 
     /**
-     * أنواع الحاضنات والكبسولات
+     * أنواع الحاضنات والكبسولات المعتمدة
      */
     const TYPE_NORMAL = 'normal';
-    const TYPE_OXYGEN = 'oxygen';
-    const TYPE_PHOTOTHERAPY = 'phototherapy';
     const TYPE_CAPSULE = 'capsule';
+
+    // ثوابت للتوافق القديم
+    const TYPE_OXYGEN = 'normal';
+    const TYPE_PHOTOTHERAPY = 'normal';
 
     /**
      * حالات الحاضنة
@@ -73,69 +75,63 @@ class Incubator extends Model
     /**
      * الحصول على اسم نوع الحاضنة بالعربية
      */
-    public function getTypeNameAttribute(): string
-    {
-        return match($this->incubator_type) {
-            self::TYPE_OXYGEN => 'حاضنة + أكسجين',
-            self::TYPE_PHOTOTHERAPY => 'حاضنة + علاج ضوئي',
-            self::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
-            default => 'حاضنة عادية',
-        };
-    }
+     public function getTypeNameAttribute(): string
+     {
+         return match($this->incubator_type) {
+             self::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
+             default => 'حاضنة',
+         };
+     }
 
-    /**
-     * الحصول على اسم الحالة بالعربية
-     */
-    public function getStatusNameAttribute(): string
-    {
-        return match($this->status) {
-            self::STATUS_AVAILABLE => 'متاحة',
-            self::STATUS_OCCUPIED => 'محجوزة',
-            self::STATUS_MAINTENANCE => 'صيانة',
-            self::STATUS_STERILIZING => 'قيد التعقيم والتطهير',
-            default => 'غير معروف',
-        };
-    }
+     /**
+      * الحصول على اسم الحالة بالعربية
+      */
+     public function getStatusNameAttribute(): string
+     {
+         return match($this->status) {
+             self::STATUS_AVAILABLE => 'متاحة',
+             self::STATUS_OCCUPIED => 'محجوزة',
+             self::STATUS_MAINTENANCE => 'صيانة',
+             self::STATUS_STERILIZING => 'قيد التعقيم والتطهير',
+             default => 'غير معروف',
+         };
+     }
 
-    /**
-     * الحصول على لون الحالة
-     */
-    public function getStatusColorAttribute(): string
-    {
-        return match($this->status) {
-            self::STATUS_AVAILABLE => 'success',
-            self::STATUS_OCCUPIED => 'danger',
-            self::STATUS_MAINTENANCE => 'warning',
-            self::STATUS_STERILIZING => 'info',
-            default => 'secondary',
-        };
-    }
+     /**
+      * الحصول على لون الحالة
+      */
+     public function getStatusColorAttribute(): string
+     {
+         return match($this->status) {
+             self::STATUS_AVAILABLE => 'success',
+             self::STATUS_OCCUPIED => 'danger',
+             self::STATUS_MAINTENANCE => 'warning',
+             self::STATUS_STERILIZING => 'info',
+             default => 'secondary',
+         };
+     }
 
-    /**
-     * الحصول على لون نوع الحاضنة
-     */
-    public function getTypeColorAttribute(): string
-    {
-        return match($this->incubator_type) {
-            self::TYPE_OXYGEN => 'info',
-            self::TYPE_PHOTOTHERAPY => 'purple',
-            self::TYPE_CAPSULE => 'dark',
-            default => 'primary',
-        };
-    }
+     /**
+      * الحصول على لون نوع الحاضنة
+      */
+     public function getTypeColorAttribute(): string
+     {
+         return match($this->incubator_type) {
+             self::TYPE_CAPSULE => 'dark',
+             default => 'primary',
+         };
+     }
 
-    /**
-     * الحصول على أيقونة نوع الحاضنة
-     */
-    public function getTypeIconAttribute(): string
-    {
-        return match($this->incubator_type) {
-            self::TYPE_OXYGEN => 'fa-lungs',
-            self::TYPE_PHOTOTHERAPY => 'fa-sun',
-            self::TYPE_CAPSULE => 'fa-capsules',
-            default => 'fa-baby',
-        };
-    }
+     /**
+      * الحصول على أيقونة نوع الحاضنة
+      */
+     public function getTypeIconAttribute(): string
+     {
+         return match($this->incubator_type) {
+             self::TYPE_CAPSULE => 'fa-capsules',
+             default => 'fa-baby',
+         };
+     }
 
     /**
      * التحقق من توفر الحاضنة

@@ -78,9 +78,7 @@ class IncubatorReservationController extends Controller
         // اختيار نوع الحاضنة كمحدد للفرز
         $selectedType = $request->input('incubator_type');
         $incubatorTypes = [
-            Incubator::TYPE_NORMAL => 'حاضنة عادية',
-            Incubator::TYPE_OXYGEN => 'حاضنة + أكسجين',
-            Incubator::TYPE_PHOTOTHERAPY => 'حاضنة + علاج ضوئي',
+            Incubator::TYPE_NORMAL => 'حاضنة',
             Incubator::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
         ];
 
@@ -130,7 +128,7 @@ class IncubatorReservationController extends Controller
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'incubator_id' => 'required|exists:incubators,id',
-            'incubator_type' => 'nullable|in:normal,oxygen,phototherapy,capsule',
+            'incubator_type' => 'nullable|in:normal,capsule',
             'nicu_service_id' => 'nullable|exists:nicu_services,id',
             'doctor_id' => 'nullable|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',

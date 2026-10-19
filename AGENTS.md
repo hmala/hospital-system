@@ -55,6 +55,31 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-10-19 — تبسيط وتوحيد أنواع الحاضنات الفيزيائية إلى نوعين: حاضنة وكبسولة علاج ضوئي)
+
+### Done
+- **قاعدة البيانات وميغريشن توحيد أنواع الحاضنات**:
+  * إنشاء وتنفيذ ميغريشن `2026_10_19_110000_simplify_incubator_types_to_two_types.php` لتحويل السجلات القديمة ذات الأنواع الملغاة (`oxygen`, `phototherapy`) تلقائياً إلى نوع الحاضنة المعتمد (`normal`).
+- **تحديث النموذج Eloquent (`Incubator.php`)**:
+  * حصر الثوابت المعتمدة للأنواع في: `TYPE_NORMAL = 'normal'` و `TYPE_CAPSULE = 'capsule'`.
+  * الإبقاء على ثوابت توافقية للمراجع القديمة (`TYPE_OXYGEN = 'normal'` و `TYPE_PHOTOTHERAPY = 'normal'`).
+  * تحديث دوال الخصائص التلقائية:
+    - `getTypeNameAttribute`: تُرجع «حاضنة» لنوع `normal`، و«كبسولة علاج ضوئي» لنوع `capsule`.
+    - `getTypeColorAttribute`: تُرجع `primary` للحاضنة، و `dark` للكبسولة.
+    - `getTypeIconAttribute`: تُرجع `fa-baby` للحاضنة، و `fa-capsules` للكبسولة.
+- **تحديث المتحكمات والتحقق من المدخلات (`IncubatorController` و `IncubatorReservationController`)**:
+  * تحديث قواعد التحقق (`validation rules`) في الإضافة والتعديل لتقتصر حصراً على: `in:normal,capsule`.
+  * حصر إحصائيات الحاضنات في `IncubatorController::index` على إجمالي الحاضنات والكبسولات (`normal`, `capsule`).
+  * تحديث مصفوفة أنواع الحاضنات في استمارة الحجز `IncubatorReservationController::create` لعرض الخيارين فقط.
+- **تحديث الواجهات (Blade Views)**:
+  * واجهة تعديل الحاضنة (`resources/views/incubators/edit.blade.php`): تقليص القائمة المنسدلة إلى «حاضنة» و«كبسولة علاج ضوئي».
+  * واجهة إنشاء حاضنة جديدة (`resources/views/incubators/create.blade.php`): تقليص القائمة المنسدلة إلى الخيارين المعتمدين.
+  * واجهة إدارة الحاضنات (`resources/views/incubators/index.blade.php`): تحديث التبويبات العلوية وشبكة العرض لتشمل تبويب الكل، تبويب حاضنة، وتبويب كبسولة علاج ضوئي، مع تصحيح إغلاق قسم الـ Blade.
+- **الاختبارات وضمان الجودة والشجرة المعرفية**:
+  * إضافة اختبار شامل `test_incubator_types_simplified_to_normal_and_capsule` في `NicuWorkflowTest.php` للتحقق من المسميات، الأيقونات، قواعد التحقق من النوع، والواجهات.
+  * اجتياز 21 اختباراً بنجاح 100% (140 assertions).
+  * تحديث الشجرة المعرفية Graphify: 5,129 عقدة و 8,515 علاقة عبر 1,174 ملفاً.
+
 ## Session log (2026-10-19 — تسعيرة الضمان الصحي HIA ومنظومة شرائح العمر الحملي للخدج وحسابات التحمل)
 
 ### Done

@@ -42,8 +42,7 @@ class IncubatorController extends Controller
             'occupied' => $incubators->where('status', Incubator::STATUS_OCCUPIED)->count(),
             'maintenance' => $incubators->where('status', Incubator::STATUS_MAINTENANCE)->count(),
             'normal' => $incubators->where('incubator_type', Incubator::TYPE_NORMAL)->count(),
-            'oxygen' => $incubators->where('incubator_type', Incubator::TYPE_OXYGEN)->count(),
-            'phototherapy' => $incubators->where('incubator_type', Incubator::TYPE_PHOTOTHERAPY)->count(),
+            'capsule' => $incubators->where('incubator_type', Incubator::TYPE_CAPSULE)->count(),
         ];
 
         return view('incubators.index', compact('incubators', 'stats', 'rooms'));
@@ -78,7 +77,7 @@ class IncubatorController extends Controller
 
         $validated = $request->validate([
             'incubator_number' => 'required|string|unique:incubators,incubator_number',
-            'incubator_type' => 'required|in:normal,oxygen,phototherapy,capsule',
+            'incubator_type' => 'required|in:normal,capsule',
             'room_id' => 'nullable|exists:rooms,id',
             'daily_fee' => 'required|numeric|min:0',
             'camera_stream_url' => 'nullable|string|max:500',
@@ -137,7 +136,7 @@ class IncubatorController extends Controller
 
         $validated = $request->validate([
             'incubator_number' => 'required|string|unique:incubators,incubator_number,' . $incubator->id,
-            'incubator_type' => 'required|in:normal,oxygen,phototherapy,capsule',
+            'incubator_type' => 'required|in:normal,capsule',
             'status' => 'required|in:available,occupied,maintenance,sterilizing',
             'room_id' => 'nullable|exists:rooms,id',
             'daily_fee' => 'required|numeric|min:0',

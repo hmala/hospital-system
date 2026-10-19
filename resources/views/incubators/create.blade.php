@@ -30,10 +30,8 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">النوع <span class="text-danger">*</span></label>
                                 <select name="incubator_type" class="form-select @error('incubator_type') is-invalid @enderror" required>
-                                    <option value="normal" {{ old('incubator_type') == 'normal' ? 'selected' : '' }}>حاضنة عادية</option>
-                                    <option value="oxygen" {{ old('incubator_type') == 'oxygen' ? 'selected' : '' }}>حاضنة + أكسجين</option>
-                                    <option value="phototherapy" {{ old('incubator_type') == 'phototherapy' ? 'selected' : '' }}>حاضنة + علاج ضوئي</option>
-                                    <option value="capsule" {{ old('incubator_type') == 'capsule' ? 'selected' : '' }}>كبسولة علاج ضوئي (Capsule)</option>
+                                    <option value="normal" {{ old('incubator_type') == 'normal' ? 'selected' : '' }}>حاضنة</option>
+                                    <option value="capsule" {{ old('incubator_type') == 'capsule' ? 'selected' : '' }}>كبسولة علاج ضوئي</option>
                                 </select>
                                 @error('incubator_type')
                                     <div class="invalid-feedback">{{ $message }}</div>

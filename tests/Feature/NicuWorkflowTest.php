@@ -653,5 +653,64 @@ class NicuWorkflowTest extends TestCase
         $this->assertEquals('رقود حديثي الولادة لليوم الواحد شامل الخدمات التمريضية و الفندقية المحدث', $service->official_claim_name);
         $this->assertTrue($service->is_hi_active);
     }
+
+    public function test_incubator_types_simplified_to_normal_and_capsule(): void
+    {
+        // 1. اختبار مسميات وأيقونات النوعين المعتمدين
+        $normalInc = Incubator::create([
+            'incubator_number' => 'TEST-NORM-01',
+            'incubator_type' => Incubator::TYPE_NORMAL,
+            'status' => Incubator::STATUS_AVAILABLE,
+            'daily_fee' => 0,
+            'is_active' => true,
+        ]);
+        $this->assertEquals('حاضنة', $normalInc->type_name);
+        $this->assertEquals('primary', $normalInc->type_color);
+        $this->assertEquals('fa-baby', $normalInc->type_icon);
+
+        $capsuleInc = Incubator::create([
+            'incubator_number' => 'TEST-CAPS-01',
+            'incubator_type' => Incubator::TYPE_CAPSULE,
+            'status' => Incubator::STATUS_AVAILABLE,
+            'daily_fee' => 0,
+            'is_active' => true,
+        ]);
+        $this->assertEquals('كبسولة علاج ضوئي', $capsuleInc->type_name);
+        $this->assertEquals('dark', $capsuleInc->type_color);
+        $this->assertEquals('fa-capsules', $capsuleInc->type_icon);
+
+        // 2. اختبار إنشاء حاضنة عبر المتحكم بنوع معتمد
+        $storeResponse = $this->actingAs($this->admin)->post(route('incubators.store'), [
+            'incubator_number' => 'TEST-NORM-02',
+            'incubator_type' => 'normal',
+            'daily_fee' => 0,
+        ]);
+        $storeResponse->assertRedirect(route('incubators.index'));
+
+        // 3. رفض أي نوع قديم ملغي مثل oxygen
+        $invalidResponse = $this->actingAs($this->admin)->post(route('incubators.store'), [
+            'incubator_number' => 'TEST-OXY-FAIL',
+            'incubator_type' => 'oxygen',
+            'daily_fee' => 0,
+        ]);
+        $invalidResponse->assertSessionHasErrors(['incubator_type']);
+
+        // 4. اختبار تحديث الحاضنة إلى كبسولة
+        $updateResponse = $this->actingAs($this->admin)->put(route('incubators.update', $normalInc), [
+            'incubator_number' => $normalInc->incubator_number,
+            'incubator_type' => 'capsule',
+            'status' => 'available',
+            'daily_fee' => 0,
+        ]);
+        $updateResponse->assertRedirect(route('incubators.index'));
+        $this->assertEquals('capsule', $normalInc->fresh()->incubator_type);
+
+        // 5. التحقق من عرض الواجهة وإحصائيات النوعين
+        $indexResponse = $this->actingAs($this->admin)->get(route('incubators.index'));
+        $indexResponse->assertOk();
+        $indexResponse->assertViewHas('stats', function ($stats) {
+            return isset($stats['normal']) && isset($stats['capsule']) && !isset($stats['oxygen']);
+        });
+    }
 }
 
