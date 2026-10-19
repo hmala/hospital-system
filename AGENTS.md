@@ -57,6 +57,25 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-19 — المرحلة 82: إصلاح ظهور المشاهدات والنتائج وترقية تقرير الأشعة والسونار المعتمد لتصميم الطوارئ مع مربع توقيع فارغ للاختبار Radiology & Ultrasound Findings Display Fix & Emergency-Style Report Upgrade)
+
+### Done
+- **إصلاح مشكلة عدم ظهور المشاهدات والنتائج الإشعاعية في التقرير المطبوع**:
+  * إضافة كاستينغ `'result' => 'array'` في نموذج الطلبات الطبية [app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php) لمنع تحويل المصفوفات تلقائياً ومطابقة بيانات التقرير الطبي.
+  * تعديل دالتي `show` و `print` في [app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php) لتوحيد وقراءة حقول المشاهدات (`findings`)، الانطباع التشخيصي (`impression`)، التوصيات الطبية (`recommendations`)، والصور المرفقة من السجل الفعلي وحمايتها من التجاهل أو إرجاع قيم فارغة.
+  * إتاحة زر "طباعة / معاينة التقرير" دائماً في شاشة محطة السونار والأشعة [resources/views/radiology-staff/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/show.blade.php) لتمكين المعاينة الفورية قبل وبعد الاعتماد.
+- **ترقية تصميم استمارة التقرير الطبي للأشعة والسونار المعتمد لتطابق تقرير الطوارئ**:
+  * إعادة بناء وتصميم قالب التقرير الطبي [resources/views/radiology/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/print.blade.php) وفق مقاس A4 الدقيق مع خط Cairo العربي الطبي، الترويسة المزدوجة بشعار المستشفى، إطار البوردر الملكي الداخلي، وشريط التحكم العلوي المتجاوب (طباعة، حفظ PDF، رجوع).
+  * بطاقة بيانات المريض والطلب الشاملة (الاسم، العمر، الجنس، الهاتف، رقم الإضبارة، شارة التغطية كاش/ضمان، الطبيب المحول، العيادة، التاريخ، ورقم الـ RAD).
+  * بطاقة فحص السونار/الأشعة المطلوبة وصندوق المشاهدات والتقرير السريري المفصل.
+  * مربعات التمييز التشخيصي للانطباع الطبي والتوصيات السريرية والصور المرفقة إن وجدت.
+  * قسم الاعتماد والتوقيع الرسمي متضمناً:
+    - **مربع توقيع فارغ (Empty Signature Line & Stamp Area)** مخصص للاختبار اليدوي والتدقيق كما طلب المستخدم.
+    - خاتم مستشفى الكفاءات الأهلي وقسم الأشعة المعتمد.
+    - الرمز الإلكتروني المعتمد (QR Code) الذكي المباشر للتحقق.
+- **الاختبارات الآلية**:
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/RadiologyPrintReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RadiologyPrintReportTest.php) بنجاح واجتياز حزمة الأشعة كاملة (`24 passed, 115 assertions`).
+
 ## Session log (2026-10-19 — المرحلة 81: منظومة التحكم اللحظي والذكي بتشغيل وإطفاء الفحوصات المختبرية ومطابقة الضمان الصحي Lab Tests Instant Activation & Smart Insurance Bulk Controls)
 
 ### Done
