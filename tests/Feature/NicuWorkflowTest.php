@@ -541,5 +541,117 @@ class NicuWorkflowTest extends TestCase
         $this->assertNull($log1->fresh()->end_time);
         $this->assertEquals($ventService->id, $reservation->fresh()->nicu_service_id);
     }
+
+    public function test_insured_reservation_applies_hi_pricing_and_stores_coverage_details(): void
+    {
+        $cpapService = NicuService::where('code', 'incubator_cpap')->first();
+        $this->assertNotNull($cpapService);
+        $this->assertEquals(250000, $cpapService->daily_fee);
+        $this->assertEquals(200000, $cpapService->hi_price);
+
+        $response = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $this->babyPatient->id,
+            'incubator_id' => $this->incubator->id,
+            'nicu_service_id' => $cpapService->id,
+            'doctor_id' => $this->doctor->id,
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '10:00',
+            'birth_weight' => 1800,
+            'gestational_age' => '34 أسبوع',
+            'admission_source' => 'internal',
+            'insurance_type' => 'hi',
+            'policy_category' => 'E',
+            'insurance_card_no' => 'HIA-998877',
+            'encounter_number' => 'ENC-2026-4455',
+        ]);
+
+        $response->assertRedirect();
+        $reservation = IncubatorReservation::where('patient_id', $this->babyPatient->id)->first();
+        $this->assertNotNull($reservation);
+        $this->assertEquals('hi', $reservation->insurance_type);
+        $this->assertEquals('E', $reservation->policy_category);
+        $this->assertEquals('34 أسبوع', $reservation->gestational_age);
+        $this->assertEquals('HIA-998877', $reservation->insurance_card_no);
+        $this->assertEquals('ENC-2026-4455', $reservation->encounter_number);
+        $this->assertTrue($reservation->is_insured);
+        $this->assertEquals(34, $reservation->gestational_weeks);
+
+        // Initial service log should use the approved HI fee (200,000)
+        $initialLog = $reservation->serviceLogs()->first();
+        $this->assertNotNull($initialLog);
+        $this->assertEquals(200000, (float)$initialLog->daily_fee);
+        $this->assertEquals(200000, (float)$initialLog->total_cost);
+    }
+
+    public function test_gestational_age_coverage_tiers_calculation(): void
+    {
+        $billingService = app(NicuBillingService::class);
+        $dailyFee = 200000.0;
+
+        // 1. الفئة الأولى (>= 34 أسبوع)
+        // الأيام 1-5: 75% ضمان / 25% مريض
+        $day1 = $billingService->getInsuranceCoverageForDay(1, $dailyFee, 35, 'E');
+        $this->assertEquals(75.0, $day1['hia_percent']);
+        $this->assertEquals(25.0, $day1['patient_percent']);
+        $this->assertEquals(150000.0, $day1['hia_share']);
+        $this->assertEquals(50000.0, $day1['patient_share']);
+
+        // الأيام 6-10: 50% ضمان / 50% مريض
+        $day7 = $billingService->getInsuranceCoverageForDay(7, $dailyFee, 35, 'E');
+        $this->assertEquals(50.0, $day7['hia_percent']);
+        $this->assertEquals(50.0, $day7['patient_percent']);
+        $this->assertEquals(100000.0, $day7['hia_share']);
+        $this->assertEquals(100000.0, $day7['patient_share']);
+
+        // تجاوز 10 أيام: 0% ضمان / 100% مريض
+        $day11 = $billingService->getInsuranceCoverageForDay(11, $dailyFee, 35, 'E');
+        $this->assertEquals(0.0, $day11['hia_percent']);
+        $this->assertEquals(100.0, $day11['patient_percent']);
+        $this->assertEquals(0.0, $day11['hia_share']);
+        $this->assertEquals(200000.0, $day11['patient_share']);
+
+        // 2. الفئة A (إعفاء تام 100%)
+        $dayCatA = $billingService->getInsuranceCoverageForDay(12, $dailyFee, 35, 'A');
+        $this->assertEquals(100.0, $dayCatA['hia_percent']);
+        $this->assertEquals(0.0, $dayCatA['patient_percent']);
+        $this->assertEquals(200000.0, $dayCatA['hia_share']);
+        $this->assertEquals(0.0, $dayCatA['patient_share']);
+
+        // 3. خداجة شديدة (<28 أسبوع) مستمرة بعد اليوم 16
+        $dayExtreme = $billingService->getInsuranceCoverageForDay(18, $dailyFee, 26, 'E');
+        $this->assertEquals(10.0, $dayExtreme['hia_percent']);
+        $this->assertEquals(90.0, $dayExtreme['patient_percent']);
+        $this->assertEquals(20000.0, $dayExtreme['hia_share']);
+        $this->assertEquals(180000.0, $dayExtreme['patient_share']);
+
+        // 4. رقود ردهة اعتيادي خارج الخدج (90% ضمان / 10% مريض)
+        $dayWard = $billingService->getInsuranceCoverageForDay(3, $dailyFee, null, 'E', 'pediatric_inpatient');
+        $this->assertEquals(90.0, $dayWard['hia_percent']);
+        $this->assertEquals(10.0, $dayWard['patient_percent']);
+        $this->assertEquals(180000.0, $dayWard['hia_share']);
+        $this->assertEquals(20000.0, $dayWard['patient_share']);
+    }
+
+    public function test_admin_can_update_service_hi_price_and_official_claim_name(): void
+    {
+        $service = NicuService::where('code', 'incubator_o2')->first();
+        $this->assertNotNull($service);
+
+        $response = $this->actingAs($this->admin)->put(route('nicu.services.update', $service), [
+            'name' => $service->name,
+            'daily_fee' => 210000,
+            'hi_price' => 160000,
+            'official_claim_name' => 'رقود حديثي الولادة لليوم الواحد شامل الخدمات التمريضية و الفندقية المحدث',
+            'is_active' => '1',
+            'is_hi_active' => '1',
+        ]);
+
+        $response->assertRedirect(route('nicu.services.index'));
+        $service->refresh();
+        $this->assertEquals(210000, (float)$service->daily_fee);
+        $this->assertEquals(160000, (float)$service->hi_price);
+        $this->assertEquals('رقود حديثي الولادة لليوم الواحد شامل الخدمات التمريضية و الفندقية المحدث', $service->official_claim_name);
+        $this->assertTrue($service->is_hi_active);
+    }
 }
 

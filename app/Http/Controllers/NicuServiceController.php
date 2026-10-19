@@ -38,11 +38,15 @@ class NicuServiceController extends Controller
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:100|unique:nicu_services,code',
             'daily_fee' => 'required|numeric|min:0',
+            'hi_price' => 'nullable|numeric|min:0',
+            'official_claim_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'nullable',
+            'is_hi_active' => 'nullable',
         ]);
 
         $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['is_hi_active'] = $request->boolean('is_hi_active', true);
 
         NicuService::create($validated);
 
@@ -63,11 +67,15 @@ class NicuServiceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'daily_fee' => 'required|numeric|min:0',
+            'hi_price' => 'nullable|numeric|min:0',
+            'official_claim_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'nullable',
+            'is_hi_active' => 'nullable',
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['is_hi_active'] = $request->has('is_hi_active');
 
         $service->update($validated);
 

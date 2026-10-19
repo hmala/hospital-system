@@ -36,6 +36,13 @@ class IncubatorReservation extends Model
         'discharge_type',
         'camera_token',
         'camera_active',
+        'insurance_type',
+        'policy_category',
+        'encounter_number',
+        'insurance_card_no',
+        'patient_share_amount',
+        'insurance_share_amount',
+        'coverage_summary',
     ];
 
     protected $casts = [
@@ -44,10 +51,35 @@ class IncubatorReservation extends Model
         'admission_time' => 'datetime:H:i',
         'discharge_time' => 'datetime:H:i',
         'total_cost' => 'decimal:2',
+        'patient_share_amount' => 'decimal:2',
+        'insurance_share_amount' => 'decimal:2',
+        'coverage_summary' => 'array',
         'expected_duration' => 'integer',
         'current_weight' => 'integer',
         'camera_active' => 'boolean',
     ];
+
+    /**
+     * استخراج عدد أسابيع الحمل كرقم صحيح
+     */
+    public function getGestationalWeeksAttribute(): ?int
+    {
+        if (empty($this->gestational_age)) {
+            return null;
+        }
+        if (preg_match('/(\d+)/', (string)$this->gestational_age, $matches)) {
+            return (int)$matches[1];
+        }
+        return null;
+    }
+
+    /**
+     * فحص هل الحجز مشمول بالضمان الصحي
+     */
+    public function getIsInsuredAttribute(): bool
+    {
+        return in_array(strtolower((string)($this->insurance_type ?? 'none')), ['hi', 'moi', 'health_insurance']);
+    }
 
     /**
      * حالات الحجز

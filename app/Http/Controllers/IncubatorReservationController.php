@@ -141,12 +141,17 @@ class IncubatorReservationController extends Controller
             'admission_time' => 'required|date_format:H:i',
             'medical_notes' => 'nullable|string',
             'admission_notes' => 'nullable|string',
+            'insurance_type' => 'nullable|string|in:none,hi,moi,health_insurance',
+            'policy_category' => 'nullable|string|max:50',
+            'encounter_number' => 'nullable|string|max:100',
+            'insurance_card_no' => 'nullable|string|max:100',
         ]);
 
         // سحب اسم الطفل تلقائياً من بيانات المريض
         $patientUser = Patient::with('user')->findOrFail($validated['patient_id']);
         $validated['baby_name'] = optional($patientUser->user)->name ?? 'غير معروف';
         $validated['current_weight'] = $validated['birth_weight'] ?? null;
+        $validated['insurance_type'] = $validated['insurance_type'] ?? 'none';
 
         // التحقق من عمر المريض
         if ($patientUser->age >= 1) {
@@ -200,24 +205,23 @@ class IncubatorReservationController extends Controller
         if ($reservation->nicu_service_id) {
             $service = \App\Models\NicuService::find($reservation->nicu_service_id);
             if ($service) {
+                $effectiveFee = (float)$service->getEffectiveFee($reservation->insurance_type ?? 'none');
                 \App\Models\NicuServiceLog::create([
                     'reservation_id' => $reservation->id,
                     'nicu_service_id' => $service->id,
-                    'daily_fee' => $service->daily_fee,
+                    'daily_fee' => $effectiveFee,
                     'start_time' => \Carbon\Carbon::parse($reservation->admission_date->format('Y-m-d') . ' ' . $reservation->admission_time->format('H:i')),
                     'end_time' => null,
                     'days_count' => 1,
-                    'total_cost' => $service->daily_fee,
+                    'total_cost' => $effectiveFee,
                     'reason_for_switch' => 'تسجيل دخول واستقبال أولي',
                     'switched_by' => $user->id,
                 ]);
             }
         }
 
-        // حساب التكلفة المتوقعة
-        $reservation->update([
-            'total_cost' => $reservation->calculateExpectedCost()
-        ]);
+        // حساب تفاصيل الإقامة والحصص التأمينية
+        app(\App\Services\NicuBillingService::class)->calculateStayDetails($reservation);
 
         return redirect()->route('nicu.show', $reservation)
                         ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.');

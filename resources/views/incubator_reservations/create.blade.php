@@ -147,6 +147,64 @@ label.incubator-card {
                     <form action="{{ route('incubator-reservations.store') }}" method="POST">
                         @csrf
 
+                        <!-- نوع الحساب والتغطية المالية -->
+                        <div class="card p-3 mb-4 bg-light border-0 shadow-sm" style="border-radius: 12px;">
+                            <div class="row align-items-center">
+                                <div class="col-md-5 mb-2 mb-md-0">
+                                    <label class="form-label fw-bold mb-1 text-dark">
+                                        <i class="fas fa-file-invoice-dollar text-primary me-1"></i>
+                                        نوع الحساب والتغطية المالية <span class="text-danger">*</span>
+                                    </label>
+                                    <p class="text-muted small mb-0">حدد ما إذا كان الحجز كاش (خاص) أو مشمولاً بالضمان الصحي العراقي (HIA)</p>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="btn-group w-100 shadow-sm" role="group">
+                                        <input type="radio" class="btn-check" name="insurance_type" id="type_cash" value="none" autocomplete="off" {{ old('insurance_type', 'none') === 'none' ? 'checked' : '' }}>
+                                        <label class="btn btn-outline-primary fw-bold py-2" for="type_cash">
+                                            <i class="fas fa-money-bill-wave me-1"></i> كاش / خاص
+                                        </label>
+
+                                        <input type="radio" class="btn-check" name="insurance_type" id="type_hi" value="hi" autocomplete="off" {{ old('insurance_type') === 'hi' ? 'checked' : '' }}>
+                                        <label class="btn btn-outline-success fw-bold py-2" for="type_hi">
+                                            <i class="fas fa-shield-alt me-1"></i> ضمان صحي (HIA)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- قسم تفاصيل الضمان الصحي (يظهر فقط عند اختيار ضمان صحي) -->
+                        <div id="insuranceDetailsSection" class="card border border-success-subtle bg-success bg-opacity-10 p-3 mb-4 {{ old('insurance_type') === 'hi' ? '' : 'd-none' }}" style="border-radius: 12px;">
+                            <h6 class="fw-bold text-success mb-3">
+                                <i class="fas fa-id-card me-2"></i> بيانات وثيقة الضمان الصحي والمطالبة الإلكترونية
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="policy_category" class="form-label fw-bold">فئة المشمول بالضمان <span class="text-danger">*</span></label>
+                                    <select name="policy_category" id="policy_category" class="form-select border-success">
+                                        <option value="E" {{ old('policy_category', 'E') === 'E' ? 'selected' : '' }}>الفئة E (موظفو دوائر الدولة المشمولون)</option>
+                                        <option value="H" {{ old('policy_category') === 'H' ? 'selected' : '' }}>الفئة H (المتقاعدون / المواطنون المشمولون)</option>
+                                        <option value="A" {{ old('policy_category') === 'A' ? 'selected' : '' }}>الفئة A (الرعاية الاجتماعية / الشهداء - إعفاء 100%)</option>
+                                        <option value="D" {{ old('policy_category') === 'D' ? 'selected' : '' }}>الفئة D (قوى الأمن الداخلي والدفاع)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة الضمان الصحي</label>
+                                    <input type="text" name="insurance_card_no" id="insurance_card_no" class="form-control" placeholder="مثال: HIA-987654321" value="{{ old('insurance_card_no') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="encounter_number" class="form-label fw-bold">رقم مراجعة / مطالبة الضمان</label>
+                                    <input type="text" name="encounter_number" id="encounter_number" class="form-control" placeholder="مثال: ENC-2026-00123" value="{{ old('encounter_number') }}">
+                                </div>
+                                <div class="col-12">
+                                    <div class="alert alert-info py-2 px-3 mb-0 small" id="tierPreviewAlert">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <span id="tierPreviewText">يتم احتساب التغطية وفق ضوابط هيئة الضمان الصحي للعمر الحملي.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- بيانات المريض (الأم) -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -307,7 +365,12 @@ label.incubator-card {
                                 <select name="nicu_service_id" id="nicu_service_id" class="form-select @error('nicu_service_id') is-invalid @enderror" required>
                                     <option value="">-- اختر الباقة السريرية --</option>
                                     @foreach($nicuServices as $service)
-                                        <option value="{{ $service->id }}" {{ old('nicu_service_id') == $service->id ? 'selected' : '' }}>
+                                        <option value="{{ $service->id }}" 
+                                                data-name="{{ $service->name }}"
+                                                data-cash="{{ $service->daily_fee }}"
+                                                data-hi="{{ $service->hi_price > 0 && $service->is_hi_active ? $service->hi_price : $service->daily_fee }}"
+                                                data-claim="{{ $service->official_claim_name ?? '' }}"
+                                                {{ old('nicu_service_id') == $service->id ? 'selected' : '' }}>
                                             {{ $service->name }} — {{ number_format($service->daily_fee) }} د.ع/يوم
                                         </option>
                                     @endforeach
@@ -335,8 +398,18 @@ label.incubator-card {
                             </div>
 
                             <div class="col-md-4 mb-3">
-                                <label for="gestational_age" class="form-label fw-bold">عمر الحمل (أسابيع)</label>
-                                <input type="text" name="gestational_age" id="gestational_age" class="form-control" placeholder="مثال: 32 أسبوع" value="{{ old('gestational_age') }}">
+                                <label for="gestational_age" class="form-label fw-bold">
+                                    عمر الحمل (بالأسابيع) <span class="text-danger">*</span>
+                                </label>
+                                <select name="gestational_age" id="gestational_age" class="form-select" required>
+                                    <option value="">-- اختر عمر الحمل --</option>
+                                    <option value="أقل من 28 أسبوع" {{ old('gestational_age') == 'أقل من 28 أسبوع' ? 'selected' : '' }}>أقل من 28 أسبوعاً (&lt;28 - شديد الخداجة)</option>
+                                    @for($w = 28; $w <= 40; $w++)
+                                        <option value="{{ $w }} أسبوع" {{ old('gestational_age') == ($w . ' أسبوع') ? 'selected' : '' }}>
+                                            {{ $w }} أسبوعاً {{ $w >= 37 ? '(كامل النمو)' : ($w >= 34 ? '(خداجة متأخرة)' : ($w >= 32 ? '(خداجة متوسطة)' : '(خداجة مبكرة)')) }}
+                                        </option>
+                                    @endfor
+                                </select>
                             </div>
 
                             <div class="col-md-4 mb-3">
@@ -473,6 +546,95 @@ document.addEventListener('DOMContentLoaded', function() {
         const existingModal = new bootstrap.Modal(document.getElementById('existingReservationModal'));
         existingModal.show();
     @endif
+
+    // التبديل الديناميكي بين الكاش والضمان الصحي
+    const typeRadios = document.querySelectorAll('input[name="insurance_type"]');
+    const insuranceDetails = document.getElementById('insuranceDetailsSection');
+    const serviceSelect = document.getElementById('nicu_service_id');
+    const gestationalSelect = document.getElementById('gestational_age');
+    const policyCategorySelect = document.getElementById('policy_category');
+    const tierPreviewText = document.getElementById('tierPreviewText');
+    const tierPreviewAlert = document.getElementById('tierPreviewAlert');
+
+    function updateServicePrices() {
+        const isHi = document.getElementById('type_hi') && document.getElementById('type_hi').checked;
+        if (serviceSelect) {
+            Array.from(serviceSelect.options).forEach(opt => {
+                if (!opt.value) return;
+                const name = opt.getAttribute('data-name') || opt.text.split('—')[0].trim();
+                const cashFee = parseFloat(opt.getAttribute('data-cash')) || 0;
+                const hiFee = parseFloat(opt.getAttribute('data-hi')) || cashFee;
+
+                if (isHi) {
+                    opt.text = `${name} — ${hiFee.toLocaleString('en-US')} د.ع/يوم (تسعيرة الضمان المعتمدة)`;
+                } else {
+                    opt.text = `${name} — ${cashFee.toLocaleString('en-US')} د.ع/يوم`;
+                }
+            });
+        }
+    }
+
+    function updateTierPreview() {
+        if (!tierPreviewText) return;
+        const isHi = document.getElementById('type_hi') && document.getElementById('type_hi').checked;
+        if (!isHi) return;
+
+        const category = policyCategorySelect ? policyCategorySelect.value : 'E';
+        const ageVal = gestationalSelect ? gestationalSelect.value : '';
+        let weeks = null;
+        if (ageVal.includes('<') || ageVal.includes('أقل')) {
+            weeks = 26;
+        } else {
+            const m = ageVal.match(/\d+/);
+            if (m) weeks = parseInt(m[0]);
+        }
+
+        if (category === 'A') {
+            tierPreviewAlert.className = 'alert alert-success py-2 px-3 mb-0 small';
+            tierPreviewText.innerHTML = '<strong>الفئة A (الرعاية الاجتماعية / الشهداء):</strong> إعفاء تام وتغطية 100% لكامل مدة الرقود بدون أي أجور أو نسبة تحمل على المريض.';
+            return;
+        }
+
+        tierPreviewAlert.className = 'alert alert-info py-2 px-3 mb-0 small';
+
+        if (!weeks) {
+            tierPreviewText.innerHTML = '<strong>تغطية الضمان:</strong> يرجى اختيار عمر الحمل بالأسابيع لمعاينة شرائح التحمل المعتمدة وزارياً.';
+            return;
+        }
+
+        if (weeks >= 34) {
+            tierPreviewText.innerHTML = `<strong>عمر الحمل (${weeks} أسبوع - أقصى تغطية 10 أيام):</strong> الأيام 1-5 تغطية 75% (المريض 25%) | الأيام 6-10 تغطية 50% (المريض 50%) | أكثر من 10 أيام 100% على حساب المريض.`;
+        } else if (weeks >= 32) {
+            tierPreviewText.innerHTML = `<strong>عمر الحمل (${weeks} أسبوع - أقصى تغطية 15 يوماً):</strong> الأيام 1-5 تغطية 75% | الأيام 6-10 تغطية 50% | الأيام 11-15 تغطية 25% | بعد 15 يوماً 100% على حساب المريض.`;
+        } else if (weeks >= 28) {
+            tierPreviewText.innerHTML = `<strong>عمر الحمل (${weeks} أسبوع - أقصى تغطية 20 يوماً):</strong> الأيام 1-5 تغطية 75% | الأيام 6-10 تغطية 50% | الأيام 11-15 تغطية 25% | الأيام 16-20 تغطية 10% | بعد 20 يوماً 100% على حساب المريض.`;
+        } else {
+            tierPreviewText.innerHTML = `<strong>عمر الحمل (&lt;28 أسبوع - استثناء خداجة شديدة):</strong> الأيام 1-5 تغطية 75% | الأيام 6-10 تغطية 50% | الأيام 11-15 تغطية 25% | الأيام 16 فما فوق تغطية مستمرة 10% (تحمل المريض 90%).`;
+        }
+    }
+
+    typeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked && this.value === 'hi') {
+                insuranceDetails.classList.remove('d-none');
+            } else {
+                insuranceDetails.classList.add('d-none');
+            }
+            updateServicePrices();
+            updateTierPreview();
+        });
+    });
+
+    if (gestationalSelect) {
+        gestationalSelect.addEventListener('change', updateTierPreview);
+    }
+    if (policyCategorySelect) {
+        policyCategorySelect.addEventListener('change', updateTierPreview);
+    }
+
+    // تشغيل التحديث الأولي عند تحميل الصفحة
+    updateServicePrices();
+    updateTierPreview();
 });
 </script>
 @endsection
