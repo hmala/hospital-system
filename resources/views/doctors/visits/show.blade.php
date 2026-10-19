@@ -154,83 +154,91 @@
 /* تحسينات القائمة المنسدلة الذكية لتشخيصات ICD-10 */
 .icd10-autocomplete-wrapper {
     position: relative;
+    overflow: visible !important;
+    z-index: 1060 !important;
 }
 .icd10-autocomplete-dropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     right: 0;
     left: 0;
-    z-index: 1060;
-    max-height: 380px;
+    width: 100% !important;
+    z-index: 999999 !important;
+    max-height: 420px;
     overflow-y: auto;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: #ffffff !important;
+    border: 2px solid #005a9c !important;
+    border-radius: 10px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 90, 156, 0.2) !important;
 }
 .icd10-dropdown-header {
-    background-color: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #475569;
+    background: linear-gradient(135deg, #f0f7ff, #e0f2fe);
+    border-bottom: 2px solid #bae6fd;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0369a1;
 }
 .icd10-item {
-    padding: 10px 14px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 12px 18px;
+    border-bottom: 1px solid #e2e8f0;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: all 0.18s ease;
     text-align: right;
+    background: #ffffff;
 }
 .icd10-item:hover, .icd10-item.active {
-    background-color: #eff6ff !important;
+    background-color: #f0f7ff !important;
+    border-right: 4px solid #005a9c;
 }
 .icd10-item:last-child {
     border-bottom: none;
 }
 .icd10-code-badge {
     font-family: monospace;
-    font-weight: 700;
-    font-size: 0.85rem;
+    font-weight: 800;
+    font-size: 0.92rem;
     background: linear-gradient(135deg, #005a9c, #0284c7);
     color: #ffffff;
-    padding: 2px 8px;
-    border-radius: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
     letter-spacing: 0.5px;
     display: inline-block;
 }
 .icd10-title-ar {
     font-weight: 700;
     color: #0f172a;
-    font-size: 0.95rem;
-    line-height: 1.4;
+    font-size: 1rem;
+    line-height: 1.5;
 }
 .icd10-title-en {
     color: #475569;
     font-style: italic;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     direction: ltr;
     display: inline-block;
 }
 .icd10-category-badge {
-    font-size: 0.73rem;
-    color: #64748b;
+    font-size: 0.78rem;
+    color: #475569;
     background-color: #f1f5f9;
-    padding: 2px 7px;
-    border-radius: 4px;
-    max-width: 60%;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
 }
 .icd10-empty-hint {
-    padding: 18px 14px;
+    padding: 24px 18px;
     text-align: center;
     color: #64748b;
+    background: #ffffff;
 }
 .icd10-custom-option {
     background-color: #f8fafc;
-    border-top: 2px dashed #cbd5e1;
-    font-weight: 600;
+    border-top: 2px dashed #0284c7;
+    font-weight: 700;
     color: #0284c7;
+    padding: 12px 18px;
 }
 .icd10-custom-option:hover {
     background-color: #e0f2fe !important;
@@ -912,11 +920,82 @@
                                 </div>
                             </div>
 
-                            <!-- 2. الصف الثنائي المتوازن: الفحص السريري + التشخيص الطبي المعتمد -->
-                            <div class="row g-3 mb-3">
+                            <!-- 2. كارت التشخيص الطبي المعتمد (ICD-10) - بعرض كامل مخصص وبارز -->
+                            <div class="card border-0 shadow-sm rounded-3 bg-white mb-3 position-relative" style="border-top: 3px solid #005a9c !important; overflow: visible !important; z-index: 1050 !important;">
+                                <div class="card-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                            <i class="fas fa-stethoscope"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark fs-6">التشخيص الطبي المعتمد (ICD-10)</h6>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-light text-primary border border-primary-subtle small fw-semibold">
+                                            <i class="fas fa-search me-1"></i>يقبل: الرمز • العربي • English
+                                        </span>
+                                        @if($diagnosisComplete)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle small fw-semibold">
+                                                <i class="fas fa-check-circle me-1"></i>مكتمل
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="card-body p-3" style="overflow: visible !important;">
+                                    <!-- حقل البحث الذكي الموسع بالأعمدة الثلاثة -->
+                                    <div class="position-relative icd10-autocomplete-wrapper" style="z-index: 1060 !important;">
+                                        <div class="input-group input-group-lg shadow-sm">
+                                            <span class="input-group-text bg-primary text-white border-primary px-3">
+                                                <i class="fas fa-search" id="icd10-search-icon"></i>
+                                            </span>
+                                            <input type="text"
+                                                   class="form-control diagnosis-input"
+                                                   id="diagnosis_code"
+                                                   name="diagnosis[code]"
+                                                   placeholder="اكتب للبحث في التشخيصات الطبية (مثال: J00 أو التهاب أو Gastritis أو داء السكري)..."
+                                                   value="{{ old('diagnosis.code', $diagnosisData['code'] ?? '') }}"
+                                                   autocomplete="off"
+                                                   style="font-size: 1.02rem;"
+                                                   title="ابدأ بالكتابة للبحث">
+                                            <button type="button" class="btn btn-outline-secondary px-3 {{ !empty($diagnosisData['code']) ? '' : 'd-none' }}" id="btn-clear-diagnosis" title="مسح الحقل">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" id="diagnosis_code_hidden" name="diagnosis[actual_code]" value="{{ old('diagnosis.actual_code', $diagnosisData['actual_code'] ?? $diagnosisData['code'] ?? '') }}">
+                                        
+                                        <!-- القائمة المنسدلة الذكية للنتائج بعرض كامل ومريح للعين -->
+                                        <div id="icd10_dropdown" class="icd10-autocomplete-dropdown shadow-lg d-none"></div>
+                                    </div>
+
+                                    <!-- بطاقة التشخيص المختار النشطة (Selected Diagnosis Confirmation Card) -->
+                                    <div id="selected_diagnosis_card" class="mt-2 p-2 px-3 rounded-3 border bg-primary bg-opacity-10 border-primary border-opacity-25 d-flex align-items-center justify-content-between {{ $hasSelectedDiag ? '' : 'd-none' }}">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="badge bg-primary font-monospace px-3 py-2 fs-6" id="selected_code_badge">{{ $initialCode }}</span>
+                                            <div>
+                                                <strong class="d-block text-dark fs-6" id="selected_ar_text">{{ $initialText }}</strong>
+                                                <span class="text-muted small fst-italic d-none" id="selected_en_text"></span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" id="btn_remove_selected_diag" title="إلغاء واختيار تشخيص آخر">
+                                            <i class="fas fa-times"></i>
+                                            <span>تغيير التشخيص</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- حاوية الكود المخصص إذا تم اختيار أخرى -->
+                                    <div class="custom-code-container mt-2 {{ old('diagnosis.code', $diagnosisData['code'] ?? '') == 'other' ? '' : 'd-none' }}">
+                                        <label class="form-label small fw-semibold text-primary mb-1">رمز ICD مخصص يدوي:</label>
+                                        <input type="text" class="form-control form-control-sm" name="diagnosis[custom_code]" id="custom_code" placeholder="أدخل رمز مخصص..." value="{{ old('diagnosis.custom_code', $diagnosisData['custom_code'] ?? '') }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. الصف الثنائي المتوازن: الفحص السريري + تفاصيل وتوصيات التشخيص -->
+                            <div class="row g-3 mb-3 position-relative" style="z-index: 10 !important;">
                                 <!-- الجانب الأيمن: الشكوى والفحص السريري -->
                                 <div class="col-lg-6">
-                                    <div class="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                                    <div class="card border-0 shadow-sm rounded-3 h-100 bg-white" style="border-top: 3px solid #0d6efd !important;">
                                         <div class="card-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
@@ -928,90 +1007,36 @@
                                         </div>
                                         <div class="card-body p-3 d-flex flex-column">
                                             <div class="form-floating flex-grow-1">
-                                                <textarea class="form-control border-light-subtle shadow-none" name="physical_examination" id="physical_examination" style="height: 160px; min-height: 140px; font-size: 0.95rem; line-height: 1.6;" placeholder="اكتب نتائج الفحص السريري والشكوى الرئيسية...">{{ old('physical_examination', $visit->physical_examination ?? '') }}</textarea>
+                                                <textarea class="form-control border-light-subtle shadow-none" name="physical_examination" id="physical_examination" style="height: 140px; min-height: 120px; font-size: 0.95rem; line-height: 1.6;" placeholder="اكتب نتائج الفحص السريري والشكوى الرئيسية...">{{ old('physical_examination', $visit->physical_examination ?? '') }}</textarea>
                                                 <label for="physical_examination" class="text-muted">اكتب الشكوى الرئيسية للمريض، التاريخ المرضي، ونتائج الفحص السريري...</label>
                                             </div>
                                             <small class="text-muted d-block mt-2">
-                                                <i class="fas fa-info-circle me-1 text-primary"></i>يمكنك توثيق الأعراض السريرية للمريض أو الضغط على اختصارات الفحص المعتادة.
+                                                <i class="fas fa-info-circle me-1 text-primary"></i>توثيق الأعراض السريرية للمريض ونتائج الفحص الطبي.
                                             </small>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- الجانب الأيسر: التشخيص الطبي ICD-10 -->
+                                <!-- الجانب الأيسر: تفاصيل وتوصيات التشخيص المخصصة للطبيب -->
                                 <div class="col-lg-6">
-                                    <div class="card border-0 shadow-sm rounded-3 h-100 bg-white" style="border-top: 3px solid #005a9c !important;">
+                                    <div class="card border-0 shadow-sm rounded-3 h-100 bg-white" style="border-top: 3px solid #198754 !important;">
                                         <div class="card-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
                                             <div class="d-flex align-items-center gap-2">
-                                                <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                                    <i class="fas fa-stethoscope"></i>
+                                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                    <i class="fas fa-clipboard-check"></i>
                                                 </div>
-                                                <div>
-                                                    <h6 class="mb-0 fw-bold text-dark fs-6">التشخيص الطبي المعتمد (ICD-10)</h6>
-                                                </div>
+                                                <h6 class="mb-0 fw-bold text-dark fs-6">تفاصيل وتوصيات التشخيص</h6>
                                             </div>
-                                            @if($diagnosisComplete)
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle small fw-semibold">
-                                                    <i class="fas fa-check-circle me-1"></i>مكتمل
-                                                </span>
-                                            @endif
+                                            <small class="text-muted">Clinical Notes & Advice</small>
                                         </div>
-                                        <div class="card-body p-3 d-flex flex-column gap-2">
-                                            <!-- حقل البحث الذكي بالأعمدة الثلاثة -->
-                                            <div>
-                                                <label class="form-label small fw-semibold text-dark d-flex align-items-center justify-content-between mb-1">
-                                                    <span>رمز أو اسم التشخيص (ICD-10)</span>
-                                                    <span class="badge bg-light text-muted border small fw-normal">يقبل: الرمز • العربي • English</span>
-                                                </label>
-                                                <div class="position-relative icd10-autocomplete-wrapper">
-                                                    <div class="input-group">
-                                                        <span class="input-group-text bg-primary text-white border-primary">
-                                                            <i class="fas fa-search" id="icd10-search-icon"></i>
-                                                        </span>
-                                                        <input type="text"
-                                                               class="form-control diagnosis-input shadow-none"
-                                                               id="diagnosis_code"
-                                                               name="diagnosis[code]"
-                                                               placeholder="اكتب للبحث (مثال: J00 أو التهاب أو Gastritis)..."
-                                                               value="{{ old('diagnosis.code', $diagnosisData['code'] ?? '') }}"
-                                                               autocomplete="off"
-                                                               title="ابدأ بالكتابة للبحث">
-                                                        <button type="button" class="btn btn-outline-secondary {{ !empty($diagnosisData['code']) ? '' : 'd-none' }}" id="btn-clear-diagnosis" title="مسح الحقل">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" id="diagnosis_code_hidden" name="diagnosis[actual_code]" value="{{ old('diagnosis.actual_code', $diagnosisData['actual_code'] ?? $diagnosisData['code'] ?? '') }}">
-                                                    
-                                                    <!-- القائمة المنسدلة الذكية للنتائج (مخفية كلياً ولا تظهر إلا عند الكتابة) -->
-                                                    <div id="icd10_dropdown" class="icd10-autocomplete-dropdown shadow-lg d-none"></div>
-                                                </div>
+                                        <div class="card-body p-3 d-flex flex-column">
+                                            <div class="form-floating flex-grow-1">
+                                                <textarea class="form-control border-light-subtle shadow-none" name="diagnosis[description]" id="diagnosis_description" style="height: 140px; min-height: 120px; font-size: 0.95rem; line-height: 1.6;" placeholder="تفاصيل وتوصيات الطبيب للمريض...">{{ old('diagnosis.description', $diagnosisData['description'] ?? '') }}</textarea>
+                                                <label for="diagnosis_description" class="text-muted">تعليمات الطبيب، إرشادات العلاج، وتوصيات الحمية والراحة للمريض...</label>
                                             </div>
-
-                                            <!-- بطاقة التشخيص المختار النشطة (Selected Diagnosis Confirmation Card) -->
-                                            <div id="selected_diagnosis_card" class="p-2 rounded-3 border bg-primary bg-opacity-10 border-primary border-opacity-25 d-flex align-items-center justify-content-between {{ $hasSelectedDiag ? '' : 'd-none' }}">
-                                                <div class="d-flex align-items-center gap-2 overflow-hidden">
-                                                    <span class="badge bg-primary font-monospace px-2 py-1 fs-6" id="selected_code_badge">{{ $initialCode }}</span>
-                                                    <div class="text-truncate">
-                                                        <strong class="d-block text-dark small" id="selected_ar_text">{{ $initialText }}</strong>
-                                                        <span class="text-muted small fst-italic text-truncate d-none" id="selected_en_text"></span>
-                                                    </div>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2" id="btn_remove_selected_diag" title="إلغاء واختيار تشخيص آخر">
-                                                    <i class="fas fa-times-circle fs-5"></i>
-                                                </button>
-                                            </div>
-
-                                            <!-- حاوية الكود المخصص إذا تم اختيار أخرى -->
-                                            <div class="custom-code-container {{ old('diagnosis.code', $diagnosisData['code'] ?? '') == 'other' ? '' : 'd-none' }}">
-                                                <label class="form-label small fw-semibold text-primary mb-1">رمز ICD مخصص يدوي:</label>
-                                                <input type="text" class="form-control form-control-sm" name="diagnosis[custom_code]" id="custom_code" placeholder="أدخل رمز مخصص..." value="{{ old('diagnosis.custom_code', $diagnosisData['custom_code'] ?? '') }}">
-                                            </div>
-
-                                            <!-- تفاصيل وملاحظات التشخيص الإضافية -->
-                                            <div class="form-floating flex-grow-1 mt-1">
-                                                <textarea class="form-control border-light-subtle shadow-none" name="diagnosis[description]" id="diagnosis_description" style="height: 85px;" placeholder="تفاصيل وملاحظات التشخيص">{{ old('diagnosis.description', $diagnosisData['description'] ?? '') }}</textarea>
-                                                <label for="diagnosis_description" class="text-muted">تفاصيل أو توصيات سريرية متعلقة بالتشخيص...</label>
-                                            </div>
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fas fa-shield-alt me-1 text-success"></i>حقل اختياري مخصص لملاحظاتك وتوصياتك السريرية الخاصة دون تكرار اسم التشخيص.
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -3429,6 +3454,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input || !dropdown) return;
 
         let debounceTimer = null;
+        let searchAbortController = null;
         let activeIndex = -1;
         let currentResults = [];
 
@@ -3449,6 +3475,10 @@ document.addEventListener('DOMContentLoaded', function() {
             dropdown.innerHTML = '';
             activeIndex = -1;
             setLoading(false);
+            if (searchAbortController) {
+                searchAbortController.abort();
+                searchAbortController = null;
+            }
         }
 
         function setLoading(isLoading) {
@@ -3467,7 +3497,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return div.innerHTML;
         }
 
-        // البحث اللحظي عند الكتابة فقط (لا يعرض شيئاً عند التركيز وهو فارغ)
+        // البحث اللحظي فائق السرعة مع إلغاء الطلبات السابقة لمنع أي بطء أو تضارب
         input.addEventListener('input', function() {
             const query = this.value.trim();
 
@@ -3479,8 +3509,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            // إلغاء أي طلب سابق قيد الانتظار فوراً
+            if (searchAbortController) {
+                searchAbortController.abort();
+                searchAbortController = null;
+            }
+
             // شرط جوهري: إذا كان الحقل فارغاً، تغلق القائمة فوراً ولا يعرض أي شيء
             if (query.length < 1) {
+                clearTimeout(debounceTimer);
                 closeDropdown();
                 hiddenInput.value = '';
                 return;
@@ -3490,7 +3527,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setLoading(true);
 
             debounceTimer = setTimeout(() => {
+                searchAbortController = new AbortController();
+
                 fetch(`{{ route('doctor.icd10.search') }}?q=${encodeURIComponent(query)}`, {
+                    signal: searchAbortController.signal,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
@@ -3503,10 +3543,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderDropdown(query, currentResults);
                 })
                 .catch(err => {
+                    if (err.name === 'AbortError') return;
                     console.error('ICD10 Search Error:', err);
                     setLoading(false);
                 });
-            }, 220);
+            }, 240);
         });
 
         function renderDropdown(query, results) {
@@ -3534,6 +3575,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            const fragment = document.createDocumentFragment();
+
             // شريط ترويسة النتائج
             const header = document.createElement('div');
             header.className = 'icd10-dropdown-header d-flex justify-content-between align-items-center';
@@ -3541,7 +3584,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span><i class="fas fa-stethoscope me-1 text-primary"></i> نتائج التشخيص (${results.length})</span>
                 <small class="text-muted">انقر للاختيار أو تنقل بالأسهم</small>
             `;
-            dropdown.appendChild(header);
+            fragment.appendChild(header);
 
             results.forEach((item, index) => {
                 const row = document.createElement('div');
@@ -3560,7 +3603,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectItem(item);
                 });
 
-                dropdown.appendChild(row);
+                fragment.appendChild(row);
             });
 
             // خيار إدخال يدوي في ذيل القائمة
@@ -3570,8 +3613,9 @@ document.addEventListener('DOMContentLoaded', function() {
             customOption.addEventListener('click', function() {
                 selectCustom();
             });
-            dropdown.appendChild(customOption);
+            fragment.appendChild(customOption);
 
+            dropdown.appendChild(fragment);
             dropdown.classList.remove('d-none');
         }
 
@@ -3640,11 +3684,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // تحديث بطاقة التشخيص المختار
             updateSelectedDiagCard(item.code, arName, enName);
-
-            // تعبئة حقل تفاصيل وملاحظات التشخيص تلقائياً بالاسم إذا كان فارغاً
-            if (descTextarea && (!descTextarea.value || descTextarea.value.trim() === '')) {
-                descTextarea.value = (arName && enName && arName !== enName) ? `${arName} - ${enName}` : (arName || enName || item.code);
-            }
 
             // إخفاء حقل الكود المخصص إذا كان ظاهراً
             if (customContainer) {

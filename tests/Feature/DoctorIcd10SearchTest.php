@@ -217,4 +217,25 @@ class DoctorIcd10SearchTest extends TestCase
         $response->assertSee('selected_diagnosis_card');
         $response->assertDontSee('<datalist id="icd10-list">', false);
     }
+
+    /** @test */
+    public function doctor_can_save_diagnosis_with_empty_description()
+    {
+        $response = $this->actingAs($this->doctorUser)
+            ->put(route('doctor.visits.update', $this->visit), [
+                'diagnosis' => [
+                    'code' => 'J00 - التهاب الخيشوم الحاد (Acute nasopharyngitis)',
+                    'actual_code' => 'J00',
+                    'description' => '', // فارغ
+                ],
+            ]);
+
+        $response->assertRedirect();
+
+        $this->visit->refresh();
+        $this->assertNotNull($this->visit->diagnosis);
+        $this->assertEquals('J00', $this->visit->diagnosis['actual_code'] ?? null);
+        $this->assertNotEmpty($this->visit->diagnosis['description']);
+    }
 }
+

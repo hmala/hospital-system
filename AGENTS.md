@@ -57,6 +57,22 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-19 — المرحلة 86: ترقية موضع التشخيص الطبي ICD-10 لكارت عريض بارز وفصل حقل التوصيات وإلغاء التعبئة التلقائية Doctor Consultation ICD-10 Full-Width Prominence & Clean Clinical Notes)
+
+### Done
+- **فصل التوصيات وإلغاء التعبئة التلقائية ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إلغاء نسخ اسم التشخيص تلقائياً إلى خانة تفاصيل وتوصيات التشخيص (`diagnosis[description]`) عند اختيار عنصر من القائمة، ليظل الحقل نظيفاً تماماً ومفرغاً لتعليمات وتوصيات الطبيب للمريض.
+- **ترقية موضع ومظهر التشخيص الطبي ICD-10 المعتمد (Full-Width Hero Section)**:
+  * نقل قسم التشخيص الطبي من العمود النصفي الضيق إلى كارت عريض بارز (`col-12`) أسفل العلامات الحيوية مباشرة.
+  * حقل بحث واسع (`input-group-lg`) مع أيقونة بحث متفاعلة وزر مسح سريع ومؤشر تحميل.
+  * ترقية القائمة المنسدلة المقترحة لتفتح بعرض كامل 100% مع طبقة عليا فائقة (`z-index: 99999 !important`) وإطار كحلي واضح (`2px solid #005a9c`) وظلال مرتفعة ومنع أي قص (`overflow: visible !important`).
+  * بطاقة تأكيد التشخيص المختار النشطة في سطر عريض وواضح وزر سريع لتغيير التشخيص.
+- **الصف الثنائي المتوازن للملاحظات السريرية**:
+  * توزيع الفحص السريري (Physical Examination) في الجانب الأيمن، وتفاصيل وتوصيات التشخيص في الجانب الأيسر بارتفاع متناسق ومريح.
+- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorIcd10SearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorIcd10SearchTest.php))**:
+  * إضافة اختبار التحقق من إمكانية حفظ التشخيص بحقل توصيات فارغ (`doctor_can_save_diagnosis_with_empty_description`).
+  * اجتياز كامل لكافة الاختبارات (`7 passed, 28 assertions`).
+
 ## Session log (2026-10-19 — المرحلة 85: محرك البحث الذكي لتشخيصات ICD-10 بالأعمدة الثلاثة وترقية تبويب الفحص والتشخيص المنظم في الاستشارية Doctor Outpatient ICD-10 Live 3-Column Search & Balanced Tab Layout)
 
 ### Done

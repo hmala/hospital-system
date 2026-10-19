@@ -1526,27 +1526,38 @@ class DoctorVisitController extends Controller
     }
 
     /**
-     * البحث الذكي اللحظي في رموز وتشخيصات ICD-10
+     * البحث الذكي اللحظي فائق السرعة في رموز وتشخيصات ICD-10
      * يبحث في الأعمدة الثلاثة: الرمز (code)، الوصف العربي (description_ar)، والوصف الإنجليزي (description)
+     * مع تحسينات الأداء لمنع أي ثقل أو بطء عند الكتابة
      */
     public function searchIcd10(HttpRequest $request)
     {
         $q = trim($request->get('q', ''));
-        if (mb_strlen($q) < 1) {
+        $len = mb_strlen($q);
+        if ($len < 1) {
             return response()->json([]);
         }
 
-        $user = Auth::user();
-        $doctorSpecialization = $user?->doctor?->specialization;
+        // تحسين أداء وسرعة الاستعلام:
+        // إذا كان حرفاً أو حرفين: نعتمد المطابقة بالبدايات (Prefix Match) لتجنب فحص آلاف السجلات
+        // إذا كان 3 أحرف فأكثر: بحث شامل مع أولوية البدايات، مع حد أقصى 15 نتيجة فائقة السرعة
+        $query = \App\Models\ICD10Code::query();
 
-        // استعلام فوري يبحث في الأعمدة الثلاثة ويرتب النتائج بالأولوية
-        $results = \App\Models\ICD10Code::query()
-            ->where(function ($query) use ($q) {
-                $query->where('code', 'LIKE', "%{$q}%")
-                      ->orWhere('description', 'LIKE', "%{$q}%")
-                      ->orWhere('description_ar', 'LIKE', "%{$q}%");
-            })
-            ->orderByRaw("
+        if ($len <= 2) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('code', 'LIKE', "{$q}%")
+                    ->orWhere('description_ar', 'LIKE', "{$q}%")
+                    ->orWhere('description', 'LIKE', "{$q}%");
+            });
+        } else {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('code', 'LIKE', "{$q}%")
+                    ->orWhere('description_ar', 'LIKE', "%{$q}%")
+                    ->orWhere('description', 'LIKE', "%{$q}%");
+            });
+        }
+
+        $results = $query->orderByRaw("
                 CASE 
                     WHEN code = ? THEN 1
                     WHEN code LIKE ? THEN 2
@@ -1555,7 +1566,7 @@ class DoctorVisitController extends Controller
                     ELSE 5
                 END
             ", [$q, "{$q}%", "{$q}%", "{$q}%"])
-            ->limit(40)
+            ->limit(15)
             ->get(['id', 'code', 'description', 'description_ar', 'category']);
 
         return response()->json($results);
