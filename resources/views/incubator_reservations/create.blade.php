@@ -61,6 +61,120 @@ label.incubator-card {
 .incubator-card[data-available="0"] .card-body {
     pointer-events: none;
 }
+
+/* تنسيقات Select2 للبحث السريع عن الطبيب المشرف */
+.select2-container--bootstrap-5 .select2-selection--single {
+    min-height: 38px !important;
+    height: 38px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.375rem !important;
+    padding: 0.375rem 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+    background-color: #ffffff !important;
+    font-size: 0.95rem !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    outline: 0 !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    color: #1e293b !important;
+    padding-right: 0 !important;
+    padding-left: 25px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__placeholder {
+    color: #6c757d !important;
+    font-weight: normal !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    left: 10px !important;
+    right: auto !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__clear {
+    position: absolute !important;
+    left: 28px !important;
+    right: auto !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 1.1rem !important;
+    color: #dc3545 !important;
+    font-weight: bold !important;
+}
+
+.select2-dropdown {
+    border: 1px solid #86b7fe !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    font-size: 0.9rem !important;
+    z-index: 1060 !important;
+    overflow: hidden !important;
+}
+
+.select2-search--dropdown {
+    padding: 8px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.select2-search--dropdown .select2-search__field {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    outline: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.9rem !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.select2-search--dropdown .select2-search__field:focus {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2) !important;
+}
+
+.select2-results__options {
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    padding: 4px 0 !important;
+}
+
+.select2-results__option {
+    padding: 8px 14px !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    color: #1e293b !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.select2-results__option--highlighted[aria-selected] {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.select2-results__option[aria-selected="true"] {
+    background-color: #e0edff !important;
+    color: #0d6efd !important;
+    font-weight: 700 !important;
+}
 </style>
 @endsection
 
@@ -419,15 +533,20 @@ label.incubator-card {
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="doctor_id" class="form-label fw-bold">الطبيب الأخصائي المشرف</label>
-                                <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror">
-                                    <option value="">-- اختر الطبيب المشرف --</option>
+                                <label for="doctor_id" class="form-label fw-bold">
+                                    <i class="fas fa-user-md text-primary me-1"></i> الطبيب الأخصائي المشرف
+                                </label>
+                                <select name="doctor_id" id="doctor_id" class="form-select select2-doctor @error('doctor_id') is-invalid @enderror" data-placeholder="-- ابحث عن الطبيب المشرف بالاسم أو التخصص... --">
+                                    <option value=""></option>
                                     @foreach($doctors as $d)
                                         <option value="{{ $d->id }}" {{ old('doctor_id') == $d->id ? 'selected' : '' }}>
-                                            {{ optional($d->user)->name }} ({{ $d->specialization ?? 'أخصائي' }})
+                                            {{ optional($d->user)->name }} ({{ $d->specialization ?? 'أخصائي خدج وأطفال' }})
                                         </option>
                                     @endforeach
                                 </select>
+                                @error('doctor_id')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
 
                             <div class="col-md-4 mb-3">
@@ -522,6 +641,25 @@ label.incubator-card {
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // تفعيل البحث السريع والذكي للأطباء عبر Select2
+    if (window.jQuery && typeof $.fn.select2 !== 'undefined') {
+        $('#doctor_id').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            width: '100%',
+            placeholder: '-- ابحث عن الطبيب المشرف بالاسم أو التخصص... --',
+            allowClear: true,
+            language: {
+                noResults: function() {
+                    return 'لا توجد نتائج مطابقة للبحث';
+                },
+                searching: function() {
+                    return 'جاري البحث...';
+                }
+            }
+        });
+    }
+
     const typeSelect = document.getElementById('incubator_type');
     const radios = Array.from(document.querySelectorAll('input.incubator-radio'));
 

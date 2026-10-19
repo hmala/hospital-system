@@ -804,5 +804,18 @@ class NicuWorkflowTest extends TestCase
         $this->assertEquals('يوسف كرار حميد', $res2->baby_name);
         $this->assertEquals($fatherPatient->id, $res2->patient_id);
     }
+
+    public function test_incubator_reservation_create_page_renders_with_searchable_doctor_select(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('incubator-reservations.create', [
+            'incubator_id' => $this->incubator->id,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('select2-doctor');
+        $response->assertSee('ابحث عن الطبيب المشرف بالاسم أو التخصص');
+        $response->assertSee(optional($this->doctor->user)->name);
+        $response->assertSee('أخصائي طب الأطفال وحديثي الولادة');
+    }
 }
 
