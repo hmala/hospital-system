@@ -57,6 +57,27 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-19 — المرحلة 81: منظومة التحكم اللحظي والذكي بتشغيل وإطفاء الفحوصات المختبرية ومطابقة الضمان الصحي Lab Tests Instant Activation & Smart Insurance Bulk Controls)
+
+### Done
+- **التحكم المفرد اللحظي (Single Quick Toggle AJAX)**:
+  * مفتاحان تفاعليان بأسلوب iOS Switch لكل فحص مختبري في شاشة الكتالوج [resources/views/lab-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/index.blade.php):
+    1. **الحالة العامة (`is_active`)**: تفعيل/تعطيل فوري عبر AJAX. عند إطفاء الفحص يختفي فورياً وكلياً من عيادات الأطباء في الاستشارية، الاستعلامات، الطوارئ، العمليات، وقوائم البحث والباقات.
+    2. **الضمان الصحي (`is_hi_active`)**: تفعيل/تعطيل الفحص ضمن مظلة الضمان الصحي فورياً عبر AJAX مع شارات تمييز الفحوصات المسعرة بالضمان عن غير المسعرة.
+  * تحديث لحظي للشارات البصرية وحالة الصف بدون الحاجة لإعادة تحميل الصفحة نهائياً مع إشعار توست خفيف.
+- **التحكم الكلي الذكي والجماعي (Smart Bulk Actions & Floating Bar)**:
+  * زر ذكي بنقرة واحدة: `[ ⚡ إطفاء كافة الفحوصات خارج الضمان ]` يتيح إطفاء جميع الفحوصات غير المشمولة بتسعير الضمان (440 فحصاً مسعرة بصفر أو null) عاماً أو عن الضمان فقط عبر نافذة تأكيد منبثقة تفاعلية.
+  * زر ذكي بنقرة واحدة: `[ 🛡️ تفعيل كافة المسعرة بالضمان ]` لإعادة تفعيل وتشغيل جميع الفحوصات المعتمدة والمسعرة بالضمان في المحطات دفعة واحدة.
+  * مربعات اختيار جماعية (`Checkboxes`) مع شريط عائم سفلي ذكي يظهر عند تحديد فحص أو أكثر للتحكم الجماعي (تفعيل عام، تعطيل عام، تفعيل للضمان، إيقاف عن الضمان).
+- **الواجهة والإحصائيات والفلاتر المتقدمة**:
+  * 4 بطاقات إحصائيات سريعة أعلى الصفحة (إجمالي الفحوصات، الفحوصات النشطة عاماً، المعطلة، والمشمولة بالضمان).
+  * فلترة جديدة دقيقة للفحوصات: (مشمولة بالضمان فقط / خارج الضمان فقط / الكل) مع تحديد عدد النتائج بالصفحة (25 إلى 500).
+- **تطوير المتحكم والمسارات**:
+  * دوال `quickToggle`, `bulkToggleStatus`, `bulkDisableNonInsurance` في [app/Http/Controllers/LabTestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabTestController.php).
+  * تسجيل المسارات في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) تحت بادئة `lab-tests`.
+- **الاختبارات الآلية الحصينة**:
+  * بناء وتشغيل [tests/Feature/LabTestActivationAndBulkControlTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabTestActivationAndBulkControlTest.php) بنجاح كامل (`5 passed, 20 assertions`) واجتياز حزمة المختبر كاملة (`41 passed, 179 assertions`).
+
 ## Session log (2026-10-18 — المرحلة 80: مشاركة نتائج التحاليل المخبرية عبر واتساب وبوابة التقرير الطبي المعتمد الآمنة Lab WhatsApp Result Sharing & Secure Public Report Portal)
 
 ### Done

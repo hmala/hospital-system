@@ -74,9 +74,20 @@ class LabTestController extends Controller
         }
 
 
-        // فلترة حسب الحالة
-        if (request('status') !== null) {
+        // فلترة حسب الحالة العامة
+        if (request('status') !== null && request('status') !== '') {
             $query->where('is_active', request('status') === 'active');
+        }
+
+        // فلترة حسب حالة الضمان الصحي
+        if (request('insurance_status') === 'insured') {
+            $query->where('is_hi_active', true)->where('hi_price', '>', 0);
+        } elseif (request('insurance_status') === 'non_insured') {
+            $query->where(function($q) {
+                $q->where('is_hi_active', false)
+                  ->orWhereNull('hi_price')
+                  ->orWhere('hi_price', '<=', 0);
+            });
         }
 
         // البحث بالاسم أو الكود
@@ -88,7 +99,28 @@ class LabTestController extends Controller
             });
         }
 
-        $labTests = $query->orderBy('main_category')->orderBy('subcategory')->orderBy('name')->paginate(20);
+        $perPage = (int) request('per_page', 25);
+        if (!in_array($perPage, [20, 25, 50, 100, 200, 500])) {
+            $perPage = 25;
+        }
+
+        $labTests = $query->orderBy('main_category')->orderBy('subcategory')->orderBy('name')->paginate($perPage)->withQueryString();
+
+        // إحصائيات سريعة للتحكم الشامل
+        $stats = [
+            'total' => LabTest::count(),
+            'active' => LabTest::where('is_active', true)->count(),
+            'inactive' => LabTest::where('is_active', false)->count(),
+            'hi_active' => LabTest::where('is_hi_active', true)->where('hi_price', '>', 0)->count(),
+            'hi_inactive' => LabTest::where(function($q) {
+                $q->where('is_hi_active', false)
+                  ->orWhereNull('hi_price')
+                  ->orWhere('hi_price', '<=', 0);
+            })->count(),
+            'hi_unpriced' => LabTest::where(function($q) {
+                $q->whereNull('hi_price')->orWhere('hi_price', '<=', 0);
+            })->count(),
+        ];
 
         // الحصول على جميع التصنيفات الرئيسية والفرعية الموجودة
         $mainCategories = LabTest::select('main_category')->distinct()->whereNotNull('main_category')->pluck('main_category')->toArray();
@@ -109,7 +141,7 @@ class LabTestController extends Controller
             'other' => 'أخرى'
         ];
 
-        return view('lab-tests.index', compact('labTests', 'categories', 'mainCategories', 'subcategories'));
+        return view('lab-tests.index', compact('labTests', 'categories', 'mainCategories', 'subcategories', 'stats'));
     }
 
     public function create()
@@ -292,6 +324,142 @@ class LabTestController extends Controller
         $status = $labTest->is_active ? 'تفعيل' : 'إلغاء تفعيل';
 
         return redirect()->back()->with('success', "تم {$status} الفحص المختبري بنجاح");
+    }
+
+    /**
+     * تبديل فوري وحفظ لحظي عبر AJAX لحالة الفحص (العامة أو الضمان)
+     */
+    public function quickToggle(Request $request, LabTest $labTest)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole(['admin', 'lab_staff'])) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل حالة الفحوصات'], 403);
+        }
+
+        $request->validate([
+            'field' => 'required|in:is_active,is_hi_active,is_moi_active',
+            'value' => 'nullable|boolean',
+        ]);
+
+        $field = $request->input('field');
+        $newValue = $request->has('value') ? $request->boolean('value') : !$labTest->{$field};
+
+        $labTest->update([$field => $newValue]);
+
+        $labels = [
+            'is_active' => 'الحالة العامة',
+            'is_hi_active' => 'حالة الضمان الصحي',
+            'is_moi_active' => 'حالة تأمين الداخلية',
+        ];
+
+        $statusText = $newValue ? 'تفعيل' : 'تعطيل';
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم {$statusText} {$labels[$field]} للفحص ({$labTest->name}) بنجاح",
+            'is_active' => (bool) $labTest->is_active,
+            'is_hi_active' => (bool) $labTest->is_hi_active,
+            'is_moi_active' => (bool) $labTest->is_moi_active,
+            'field' => $field,
+            'new_value' => $newValue,
+        ]);
+    }
+
+    /**
+     * تبديل جماعي لحالة مجموعة من الفحوصات المختارة
+     */
+    public function bulkToggleStatus(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole(['admin', 'lab_staff'])) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+            }
+            abort(403, 'غير مصرح لك بتعديل حالة الفحوصات');
+        }
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:lab_tests,id',
+            'field' => 'required|in:is_active,is_hi_active,is_moi_active',
+            'status' => 'required|in:active,inactive,0,1,true,false',
+        ]);
+
+        $field = $request->input('field', 'is_active');
+        $statusInput = $request->input('status');
+        $isActive = in_array($statusInput, ['active', '1', 1, true, 'true'], true);
+
+        $ids = $request->input('ids', []);
+        $count = LabTest::whereIn('id', $ids)->update([$field => $isActive]);
+
+        $labels = [
+            'is_active' => 'العام',
+            'is_hi_active' => 'بالضمان الصحي',
+            'is_moi_active' => 'بتأمين الداخلية',
+        ];
+        $statusText = $isActive ? 'تفعيل' : 'تعطيل';
+        $message = "تم {$statusText} {$count} فحص {$labels[$field]} بنجاح";
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'count' => $count,
+                'field' => $field,
+                'is_active' => $isActive,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    /**
+     * تحكم ذكي كلي بالفحوصات خارج الضمان (غير المسعرة بالضمان أو المسعرة بصفر)
+     */
+    public function bulkDisableNonInsurance(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->can('edit lab tests') && !$user->hasRole(['admin', 'lab_staff'])) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+            }
+            abort(403, 'غير مصرح لك بتعديل حالة الفحوصات');
+        }
+
+        $action = $request->input('action', 'general_disable'); 
+        // 1. 'general_disable': إطفاء عام للفحوصات التي ليس لها تسعير ضمان
+        // 2. 'hi_disable': إطفاء عن الضمان فقط للفحوصات التي ليس لها تسعير ضمان
+        // 3. 'enable_all_insured': تفعيل عام وبالضمان لكل فحص مسعر بالضمان (> 0)
+
+        if ($action === 'general_disable') {
+            $count = LabTest::where(function($q) {
+                $q->whereNull('hi_price')->orWhere('hi_price', '<=', 0);
+            })->update(['is_active' => false]);
+            $message = "تم إطفاء وتنزيل {$count} فحص خارج الضمان من محطات النظام بالكامل.";
+        } elseif ($action === 'hi_disable') {
+            $count = LabTest::where(function($q) {
+                $q->whereNull('hi_price')->orWhere('hi_price', '<=', 0);
+            })->update(['is_hi_active' => false]);
+            $message = "تم إيقاف {$count} فحص غير مشمول بالضمان عن مظلة التأمين الصحي.";
+        } elseif ($action === 'enable_all_insured') {
+            $count = LabTest::where('hi_price', '>', 0)->update([
+                'is_active' => true,
+                'is_hi_active' => true,
+            ]);
+            $message = "تم تفعيل {$count} فحص معتمد ومسعر بالضمان الصحي في كافة المحطات بنجاح.";
+        } else {
+            return redirect()->back()->with('error', 'إجراء غير معروف');
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'count' => $count,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     public function toggleFavorite(LabTest $labTest)

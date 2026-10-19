@@ -584,6 +584,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{labTest}/edit', [\App\Http\Controllers\LabTestController::class, 'edit'])->name('edit');
         Route::put('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'update'])->name('update');
         Route::delete('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-toggle-status', [\App\Http\Controllers\LabTestController::class, 'bulkToggleStatus'])->name('bulk-toggle-status');
+        Route::post('/bulk-disable-non-insurance', [\App\Http\Controllers\LabTestController::class, 'bulkDisableNonInsurance'])->name('bulk-disable-non-insurance');
+        Route::post('/{labTest}/quick-toggle', [\App\Http\Controllers\LabTestController::class, 'quickToggle'])->name('quick-toggle');
         Route::post('/{labTest}/toggle-status', [\App\Http\Controllers\LabTestController::class, 'toggleStatus'])->name('toggle-status');
         Route::post('/{labTest}/toggle-favorite', [\App\Http\Controllers\LabTestController::class, 'toggleFavorite'])->name('toggle-favorite');
 
