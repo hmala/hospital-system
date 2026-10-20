@@ -143,6 +143,7 @@ class LabPrintGenderAndHeaderTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Sex');
         $response->assertSee('Male');
+        $response->assertSee('class="report-header" style="direction: rtl;"', false);
     }
 
     public function test_patient_model_gender_accessor_delegates_to_user_gender(): void

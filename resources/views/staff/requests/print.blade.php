@@ -268,6 +268,7 @@
         /* Header Layout (Matching Emergency & Radiology) */
         .report-header {
             display: flex;
+            direction: rtl;
             justify-content: space-between;
             align-items: center;
             padding-bottom: 8px;
@@ -1221,7 +1222,7 @@
         </div>
 
         <!-- Header Section (Matching Emergency & Radiology) -->
-        <div class="report-header">
+        <div class="report-header" style="direction: rtl;">
             <div class="header-hospital-ar">
                 <h2>مستشفى الكفاءات الأهلي</h2>
                 <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
